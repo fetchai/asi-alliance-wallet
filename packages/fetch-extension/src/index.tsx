@@ -90,9 +90,8 @@ import { ValidatorListPage } from "./pages-new/validator-list";
 import { Delegate } from "./pages-new/validator/delegate";
 import { Redelegate } from "./pages-new/validator/redelegate";
 import { Unstake } from "./pages-new/validator/unstake";
-import { AxelarBridgeCosmos } from "./pages-unused/axelar-bridge/axelar-bridge-cosmos";
-import { AxelarBridgeEVM } from "./pages-unused/axelar-bridge/axelar-bridge-evm";
-import { ValidatorList } from "./pages-unused/validator-list";
+import { AxelarBridgeCosmos } from "./pages/axelar-bridge/axelar-bridge-cosmos";
+import { AxelarBridgeEVM } from "./pages/axelar-bridge/axelar-bridge-evm";
 import { AgentChatSection } from "./pages/agent-chat-section";
 import { ApproveAddChainByNetworkPage } from "./pages/approveAddChainByNetwork";
 import { ApproveSwitchAccountByAddressPage } from "./pages/approveSwitchAccountPage";
@@ -121,7 +120,6 @@ import { BlockList } from "./pages/setting/chat/block";
 import { Privacy } from "./pages/setting/chat/privacy";
 import { ReadRecipt } from "./pages/setting/chat/readRecipt";
 import { SettingEndpointsPage } from "./pages/setting/endpoints";
-import { StakeComplete } from "./pages/validator/stake-complete";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
 
@@ -452,16 +450,8 @@ ReactDOM.render(
                             element={<ReadRecipt />}
                           />
                           <Route
-                            path="/validators/:operation"
-                            element={<ValidatorList />}
-                          />
-                          <Route
                             path="/validators/:validator_address/:operation"
                             element={<Validator />}
-                          />
-                          <Route
-                            path="/stake-complete/:validator_address"
-                            element={<StakeComplete />}
                           />
                           <Route path="/proposal" element={<Proposals />} />
                           <Route
