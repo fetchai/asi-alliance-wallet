@@ -27,6 +27,9 @@
 
 .ledgerModalBody {
   background-color: #000d3d;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
   border: 1px solid rgba(255, 255, 255, 0.4);
   background-image: url("../../../public/assets/svg/wireframe/bg.svg");
 }

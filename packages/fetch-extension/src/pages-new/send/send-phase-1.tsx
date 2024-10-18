@@ -31,13 +31,23 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
       setFromPhase1(true);
     }, []);
 
-    const spendableBalances = queries.cosmos.querySpendableBalances
-      .getQueryBech32Address(accountInfo.bech32Address)
-      .balances?.find(
-        (bal) =>
-          sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-          bal.currency.coinMinimalDenom
-      );
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const spendableBalances = isEvm
+      ? queries.queryBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances?.find(
+            (bal) =>
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
+              bal.currency.coinMinimalDenom
+          )?.balance
+      : queries.cosmos.querySpendableBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances?.find(
+            (bal) =>
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
+              bal.currency.coinMinimalDenom
+          );
+
     const balance = spendableBalances
       ? spendableBalances
       : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
@@ -127,7 +137,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
             navigate("/send", { state: { isFromPhase1: true } });
           }}
           styleProps={{
-            width: "100%",
+            width: "94%",
             padding: "12px",
             height: "56px",
             margin: "0 auto",

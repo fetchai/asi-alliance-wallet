@@ -41,7 +41,6 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
           style={{
             background: "rgba(255,255,255,0.1)",
             marginBottom: "8px",
-            height: "78px",
             padding: "18px",
           }}
           leftImageStyle={{ background: "transparent" }}
@@ -85,7 +84,6 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
             background: "rgba(255,255,255,0.1)",
             marginBottom: "8px",
             height: "78px",
-            padding: "18px",
           }}
           leftImageStyle={{ background: "transparent" }}
           heading={intl.formatMessage({
@@ -108,8 +106,7 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
           leftImage={require("@assets/svg/wireframe/auto-lock-timer.svg")}
           style={{
             background: "rgba(255,255,255,0.1)",
-            height: "78px",
-            padding: "18px",
+            paddingLeft: "18px",
           }}
           leftImageStyle={{ background: "transparent" }}
           heading={intl.formatMessage({

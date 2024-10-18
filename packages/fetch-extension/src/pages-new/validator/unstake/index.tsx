@@ -271,7 +271,7 @@ export const Unstake = observer(() => {
           <ButtonV2
             text=""
             styleProps={{
-              width: "100%",
+              width: "94%",
               padding: "12px",
               height: "56px",
               margin: "0 auto",

@@ -252,8 +252,8 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
   >("");
-
   const { queriesStore, priceStore, accountStore, chainStore } = useStore();
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
   const queryBalances = queriesStore
@@ -288,10 +288,6 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
     const inUsd = value && value.shrink(true).maxDecimals(6).toString();
     return inUsd;
   };
-  useEffect(() => {
-    const valueInUsd = convertToFiatCurrency(balance);
-    setInputInFiatCurrency(valueInUsd);
-  }, [amountConfig.sendCurrency]);
 
   const balancesMap = new Map(
     queryBalances.balances.map((bal) => [
@@ -299,6 +295,17 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
       bal.balance,
     ])
   );
+
+  const balanceETH =
+    balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
+    new CoinPretty(amountConfig.sendCurrency, new Int(0));
+
+  useEffect(() => {
+    const currentChainBalance = isEvm ? balanceETH : balance;
+    const valueInUsd = convertToFiatCurrency(currentChainBalance);
+    setInputInFiatCurrency(valueInUsd);
+  }, [amountConfig.sendCurrency]);
+
   return (
     <React.Fragment>
       <Label style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
@@ -321,7 +328,11 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
             }}
           >
             {" "}
-            {`Available: ${balance.shrink(true).maxDecimals(6).toString()} `}
+            {`Available: ${
+              isEvm
+                ? balanceETH.shrink(true).maxDecimals(6).toString()
+                : balance.shrink(true).maxDecimals(6).toString()
+            } `}
             {inputInFiatCurrency &&
               `(${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`}
           </div>
