@@ -188,7 +188,7 @@ export const getEnumKeyByEnumValue = <T extends Record<string, string>>(
 
 export const convertEpochToDate = (
   epochTime: number,
-  formatType: string = "DD MMM YYYY"
+  formatType: string = "DD MMM YYYY hh:mm A"
 ) => {
   const date = new Date(epochTime * 1000); // Multiply by 1000 to convert seconds to milliseconds
   return moment(date).format(formatType);

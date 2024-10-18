@@ -124,11 +124,13 @@ export const AssetView = observer(() => {
       : "0";
 
   const getVestedBalance = () =>
-    (Number(getOriginalVestingBalance()) - Number(vestingBalance())).toString();
+    getVestingBalance(
+      Number(getOriginalVestingBalance()) - Number(vestingBalance())
+    ).toString();
   const vestingBalance = () => {
     if (vestingInfo["@type"] == VestingType.Continuous.toString()) {
       if (totalNumber > clearDecimals(spendableNumber)) {
-        return (
+        return getVestingBalance(
           Number(totalNumber) - Number(clearDecimals(spendableNumber))
         ).toString();
       } else if (

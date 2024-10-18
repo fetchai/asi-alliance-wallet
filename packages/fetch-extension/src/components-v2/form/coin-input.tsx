@@ -261,7 +261,10 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
     .queryBalances.getQueryBech32Address(amountConfig.sender);
 
   const selectableCurrencies = (
-    overrideSelectableCurrencies || amountConfig.sendableCurrencies
+    overrideSelectableCurrencies ||
+    queries.cosmos.querySpendableBalances
+      .getQueryBech32Address(accountInfo.bech32Address)
+      .balances.map((b) => b.currency)
   )
     .filter((cur) => {
       const bal = queryBalances.getBalanceFromCurrency(cur);

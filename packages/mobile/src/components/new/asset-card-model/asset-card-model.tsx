@@ -19,8 +19,14 @@ export const AssetCardModel: FunctionComponent<{
 }> = ({ close, title, isOpen, amountConfig }) => {
   const style = useStyle();
   const safeAreaInsets = useSafeAreaInsets();
-  const { queriesStore, priceStore, analyticsStore } = useStore();
+  const { queriesStore, priceStore, analyticsStore, accountStore, chainStore } =
+    useStore();
   const [search, setSearch] = useState("");
+
+  const chainId = chainStore.current.chainId;
+  const account = accountStore.getAccount(chainId);
+  const queries = queriesStore.get(chainId);
+
   const queryBalances = queriesStore
     .get(amountConfig.chainId)
     .queryBalances.getQueryBech32Address(amountConfig.sender);
@@ -36,7 +42,6 @@ export const AssetCardModel: FunctionComponent<{
 
   const [filterCurrencies, setFilterCurrencies] =
     useState(selectableCurrencies);
-  // console.log(selectableCurrencies);
 
   useEffect(() => {
     const searchTrim = search.trim();
@@ -51,10 +56,9 @@ export const AssetCardModel: FunctionComponent<{
     return value && value.shrink(true).maxDecimals(6).toString();
   };
   const balancesMap = new Map(
-    queryBalances.balances.map((bal) => [
-      bal.currency.coinMinimalDenom,
-      bal.balance,
-    ])
+    queries.cosmos.querySpendableBalances
+      .getQueryBech32Address(account.bech32Address)
+      .balances.map((b) => [b.currency.coinMinimalDenom, b])
   );
 
   if (!isOpen) {

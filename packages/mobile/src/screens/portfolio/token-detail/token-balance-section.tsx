@@ -78,11 +78,13 @@ export const TokenBalanceSection: FunctionComponent<{
       : "0";
 
   const getVestedBalance = () =>
-    (Number(getOriginalVestingBalance()) - Number(vestingBalance())).toString();
+    getVestingBalance(
+      Number(getOriginalVestingBalance()) - Number(vestingBalance())
+    ).toString();
   const vestingBalance = () => {
     if (vestingInfo["@type"] == VestingType.Continuous.toString()) {
       if (totalNumber > clearDecimals(spendableNumber)) {
-        return (
+        return getVestingBalance(
           Number(totalNumber) - Number(clearDecimals(spendableNumber))
         ).toString();
       } else if (
@@ -333,7 +335,10 @@ export const TokenBalanceSection: FunctionComponent<{
                         ]) as ViewStyle
                       }
                     >
-                      {convertEpochToDate(vestingStartTimeStamp, "DD MMM YYYY")}
+                      {convertEpochToDate(
+                        vestingStartTimeStamp,
+                        "DD MMM YYYY hh:mm A"
+                      )}
                     </Text>
                   </View>
                 )}
@@ -364,7 +369,10 @@ export const TokenBalanceSection: FunctionComponent<{
                       ]) as ViewStyle
                     }
                   >
-                    {convertEpochToDate(vestingEndTimeStamp, "DD MMM YYYY")}
+                    {convertEpochToDate(
+                      vestingEndTimeStamp,
+                      "DD MMM YYYY hh:mm A"
+                    )}
                   </Text>
                 </View>
                 <View
