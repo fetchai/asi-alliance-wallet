@@ -71,11 +71,11 @@ export const AddEvmChain: FunctionComponent = () => {
         },
       },
     ],
+    chainSymbolImageUrl: "",
     features: ["evm"],
     explorerUrl: "",
   };
   const [newChainInfo, setNewChainInfo] = useState(initialState);
-
   const getChainInfo = async (rpcUrl: string) => {
     setLoading(true);
     try {
@@ -166,6 +166,7 @@ export const AddEvmChain: FunctionComponent = () => {
           rest: rpcUrl,
           chainId: chainId.toString(),
           chainName: chainData.name,
+          chainSymbolImageUrl: chainData.chainSymbolImageUrl,
           bech32Config: Bech32Address.defaultBech32Config(symbol.toLowerCase()),
           explorerUrl:
             chainData.explorers && chainData.explorers.length > 0
@@ -176,7 +177,6 @@ export const AddEvmChain: FunctionComponent = () => {
         const warningMessage =
           "We've fetched the chain ID based on the provided RPC. You will need to enter other details manually.";
         setInfo(warningMessage);
-        Toast.show({ type: "info", text1: warningMessage });
       }
     } catch (error) {
       setNewChainInfo({ ...initialState, rpc: rpcUrl });
@@ -199,7 +199,6 @@ export const AddEvmChain: FunctionComponent = () => {
       return false;
     }
   };
-
   const handleChange = async (name: string, value: string) => {
     const rpcUrl = value.trim();
     setInfo("");
@@ -207,7 +206,11 @@ export const AddEvmChain: FunctionComponent = () => {
     analyticsStore.logEvent("add_evm_chain_click");
 
     if (name === "rpc") {
-      setNewChainInfo({ ...newChainInfo, rpc: rpcUrl, chainId: "" });
+      setNewChainInfo({
+        ...newChainInfo,
+        rpc: rpcUrl,
+        chainId: "",
+      });
 
       if (isUrlValid(rpcUrl)) {
         await getChainInfo(rpcUrl);
@@ -269,21 +272,20 @@ export const AddEvmChain: FunctionComponent = () => {
   const handleSubmit = async () => {
     try {
       await chainStore.addEVMChainInfo(newChainInfo);
-      chainStore.selectChain(newChainInfo.chainId);
-      navigation.goBack();
-
       Toast.show({
         type: "success",
         text1: "Chain added successfully!",
       });
+      chainStore.selectChain(newChainInfo.chainId);
+      chainStore.saveLastViewChainId();
+      navigation.goBack();
     } catch (error) {
       Toast.show({
         type: "error",
-        text1: error,
+        text1: error?.message,
       });
     }
   };
-
   return (
     <PageWithScrollView
       backgroundMode="image"

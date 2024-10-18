@@ -25,11 +25,6 @@ export const LedgerEvmModel: FunctionComponent = observer(() => {
   }, [chainStore, chainStore.current.chainId]);
 
   const isOpen = (() => {
-    console.log(
-      "Welcome",
-      account.rejectionReason,
-      account.rejectionReason?.message
-    );
     if (
       account.rejectionReason &&
       account.rejectionReason.message ===

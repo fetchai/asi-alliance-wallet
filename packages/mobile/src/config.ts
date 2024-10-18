@@ -96,7 +96,6 @@ export const EmbedChainInfos: ChainInfo[] = [
           "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
       },
     ],
-    chainSymbolImageUrl: "",
     feeCurrencies: [
       {
         coinDenom: "ETH",
@@ -110,6 +109,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/eip155:1/chain.png",
     features: ["evm"],
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
@@ -160,6 +161,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/eip155:56/chain.png",
     features: ["evm"],
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",

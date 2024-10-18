@@ -45,6 +45,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
     const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
       chainInfo.features?.includes("evm")
     );
+
     useEffect(() => {
       const searchTrim = search.trim().toLowerCase();
       const filteredChains =

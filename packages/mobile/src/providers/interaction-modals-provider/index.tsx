@@ -11,6 +11,7 @@ import { KeyRingStatus } from "@keplr-wallet/background";
 import { NetworkErrorModal } from "modals/network";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { LoadingScreenModal } from "providers/loading-screen/modal";
+import { SuggestChainModal } from "modals/chain-suggestion";
 
 export const InteractionModalsProvider: FunctionComponent = observer(
   ({ children }) => {
@@ -18,6 +19,7 @@ export const InteractionModalsProvider: FunctionComponent = observer(
       keyRingStore,
       ledgerInitStore,
       permissionStore,
+      chainSuggestStore,
       signInteractionStore,
       walletConnectStore,
     } = useStore();
@@ -112,6 +114,13 @@ export const InteractionModalsProvider: FunctionComponent = observer(
           }
           close={() => {
             signInteractionStore.rejectAll();
+          }}
+        />
+
+        <SuggestChainModal
+          isOpen={chainSuggestStore.waitingSuggestedChainInfo !== undefined}
+          close={() => {
+            chainSuggestStore.rejectAll();
           }}
         />
         <LedgerGranterModal

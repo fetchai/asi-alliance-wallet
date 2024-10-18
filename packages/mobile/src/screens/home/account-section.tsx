@@ -273,6 +273,18 @@ export const AccountSection: FunctionComponent<{
     }
   }, [activityStore.getPendingTxn]);
 
+  function getAddress() {
+    if (isEvm || account.hasEthereumHexAddress) {
+      if (account.ethereumHexAddress.length === 42)
+        return `${account.ethereumHexAddress.slice(
+          0,
+          10
+        )}...${account.ethereumHexAddress.slice(-3)}`;
+    }
+
+    return account.bech32Address || "...";
+  }
+
   return (
     <View style={style.flatten(["padding-x-page"]) as ViewStyle}>
       <View
@@ -379,11 +391,7 @@ export const AccountSection: FunctionComponent<{
             {account.name}
           </Text>
           <AddressCopyable
-            address={
-              isEvm || account.hasEthereumHexAddress
-                ? account.ethereumHexAddress
-                : account.bech32Address
-            }
+            address={getAddress()}
             isEvm={isEvm}
             maxCharacters={16}
           />

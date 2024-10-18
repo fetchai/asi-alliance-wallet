@@ -48,9 +48,11 @@ export class ChainSuggestStore {
     return `https://github.com/${this.communityChainInfoRepo.organizationName}/${this.communityChainInfoRepo.repoName}`;
   }
 
-  getCommunityChainInfoUrl(chainId: string): string {
+  getCommunityChainInfoUrl(chainId: string, isEvmOnlyChain?: boolean): string {
     const chainIdHelper = ChainIdHelper.parse(chainId);
-    return `${this.communityChainInfoRepoUrl}/blob/${this.communityChainInfoRepo.branchName}/cosmos/${chainIdHelper.identifier}.json`;
+    return `${this.communityChainInfoRepoUrl}/blob/${
+      this.communityChainInfoRepo.branchName
+    }/${isEvmOnlyChain ? "evm" : "cosmos"}/${chainIdHelper.identifier}.json`;
   }
 
   getCommunityChainInfo(chainId: string): {
