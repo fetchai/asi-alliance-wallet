@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useRef, useState } from "react";
-import { LineChart, Path as ChartPath } from "react-native-svg-charts";
+import { LineChart } from "react-native-svg-charts";
 import * as shape from "d3-shape";
 import {
   Defs,
@@ -41,16 +41,6 @@ export const AndroidLineChart: FunctionComponent<{
         <Stop offset={"100%"} stopColor={loading ? "#37373E" : "#5F38FB"} />
       </LinearGradient>
     </Defs>
-  );
-
-  const Shadow = () => (
-    <ChartPath
-      key={"shadow"}
-      y={2}
-      fill={"none"}
-      strokeWidth={4}
-      stroke={"rgba(134, 65, 244, 0.2)"}
-    />
   );
 
   const [positionX, setPositionX] = useState(-1); // The currently selected X coordinate position
@@ -171,8 +161,7 @@ export const AndroidLineChart: FunctionComponent<{
         style={{ height: dynamicHeight }}
         data={valueList}
         contentInset={{ top: 20, bottom: 20 }}
-        animate={true}
-        animationDuration={1200}
+        animate={false}
         curve={shape.curveNatural}
         svg={{
           strokeWidth: 2,
@@ -182,7 +171,6 @@ export const AndroidLineChart: FunctionComponent<{
         <CustomLine />
         <Gradient />
         <Tooltip />
-        <Shadow />
       </LineChart>
     </View>
   );

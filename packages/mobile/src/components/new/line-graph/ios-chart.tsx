@@ -39,10 +39,12 @@ export const IOSLineChart: FunctionComponent<{
       data={data}
       curved={true}
       //   animation variable
-      isAnimated={true}
-      animationDuration={1200}
-      animateOnDataChange={true}
-      onDataChangeAnimationDuration={300}
+
+      isAnimated={false}
+      // animationDuration={1200}
+      // animateOnDataChange={true}
+      // onDataChangeAnimationDuration={300}
+
       // data points variable
       hideDataPoints={true}
       adjustToWidth={true}
