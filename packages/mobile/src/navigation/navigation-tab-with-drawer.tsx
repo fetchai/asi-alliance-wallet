@@ -69,7 +69,10 @@ export const MainTabNavigation: FunctionComponent = () => {
       if (
         isBg &&
         keychainStore.isAutoLockOn &&
-        !focusedScreen.name?.startsWith("Register")
+        !(
+          focusedScreen.name?.startsWith("Register") ||
+          focusedScreen.name?.startsWith("Setting.SecurityAndPrivacy")
+        )
       ) {
         try {
           await keyRingStore.lock();
