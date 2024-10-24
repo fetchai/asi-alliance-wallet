@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useCallback } from "react";
-import { Button } from "reactstrap";
+import { ButtonV2 } from "@components-v2/buttons/button";
 
 import { FormattedMessage } from "react-intl";
 
@@ -34,27 +34,36 @@ export const ConfirmDialog: FunctionComponent<{
       </div>
       <div className={style["buttons"]}>
         {!hideNoButton && (
-          <Button
-            type="button"
-            size="sm"
-            color="default"
-            outline
-            onClick={(e) => {
+          <ButtonV2
+            text={no ? no : <FormattedMessage id="confirm.no" />}
+            styleProps={{
+              padding: "10px",
+              height: "40px",
+              fontSize: "0.9rem",
+              background: "transparent",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.4)",
+            }}
+            onClick={(e: any) => {
               if (onReject) {
                 onReject();
               }
               e.preventDefault();
             }}
-          >
-            {no ? no : <FormattedMessage id="confirm.no" />}
-          </Button>
+          />
         )}
-        <Button
-          type="button"
-          size="sm"
-          color="primary"
+        <ButtonV2
+          text={yes ? yes : <FormattedMessage id="confirm.yes" />}
+          styleProps={{
+            padding: "10px",
+            height: "40px",
+            fontSize: "0.9rem",
+            background: "white",
+            color: "black",
+            border: "1px solid rgba(255,255,255,0.4)",
+          }}
           onClick={useCallback(
-            (e) => {
+            (e: any) => {
               if (onConfirm) {
                 onConfirm();
               }
@@ -62,9 +71,7 @@ export const ConfirmDialog: FunctionComponent<{
             },
             [onConfirm]
           )}
-        >
-          {yes ? yes : <FormattedMessage id="confirm.yes" />}
-        </Button>
+        />
       </div>
     </div>
   );

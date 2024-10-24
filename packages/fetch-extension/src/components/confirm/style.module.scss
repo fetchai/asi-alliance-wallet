@@ -3,12 +3,24 @@
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
 
 .modal {
-  padding: 12px;
+  padding: 15px 12px 15px;
+  background-color: #000d3d;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background-image: url("../../public/assets/svg/wireframe/bg.svg");
+}
+
+.modalBackdrop {
+  background: rgba(39, 14, 141, 0.8);
+  backdrop-filter: blur(3px);
+  opacity: 1 !important;
 }
 
 .modalDialog {
   @include media-breakpoint-down(xs) {
-    margin: 32px;
+    margin: 20px;
 
     &:global(.modal-dialog-centered) {
       height: calc(100% - (32px * 2));
@@ -24,12 +36,16 @@
     justify-content: center;
     align-items: center;
 
-    margin: 0 32px 12px;
+    margin: 0 15px 12px;
+
+    img {
+      filter: invert(1);
+    }
 
     h1 {
       text-align: center;
       font-size: 1.15rem;
-      color: black;
+      color: white;
       font-weight: bold;
       margin: 0;
     }
@@ -37,8 +53,8 @@
     p {
       margin-bottom: 0;
       text-align: center;
-      font-size: 0.85rem;
-      color: $gray-700;
+      font-size: 0.9rem;
+      color: white;
       font-weight: normal;
       line-height: 1.4;
     }
@@ -47,7 +63,7 @@
   .buttons {
     display: flex;
     justify-content: center;
-
+    gap: 40px;
     button {
       width: 80px;
 

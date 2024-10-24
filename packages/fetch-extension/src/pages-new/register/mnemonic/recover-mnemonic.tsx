@@ -127,6 +127,7 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
             }}
             style={{
               backgroundColor: "rgba(255,255,255,0.1)",
+              display: "flex",
               height: "78px",
               fontSize: "14px",
               padding: "18px",
@@ -150,6 +151,7 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
               }}
               style={{
                 backgroundColor: "rgba(255,255,255,0.1)",
+                display: "flex",
                 height: "78px",
                 fontSize: "14px",
                 padding: "18px",
@@ -179,6 +181,7 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
             style={{
               backgroundColor: "rgba(255,255,255,0.1)",
               height: "78px",
+              display: "flex",
               fontSize: "14px",
               padding: "18px",
             }}

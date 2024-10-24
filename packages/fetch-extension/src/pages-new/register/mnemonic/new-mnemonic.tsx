@@ -124,6 +124,7 @@ export const NewMnemonicPage: FunctionComponent<{
           <Card
             leftImageStyle={{ height: "32px", width: "32px" }}
             style={{
+              display: "flex",
               backgroundColor: "rgba(255,255,255,0.1)",
               height: "78px",
               fontSize: "14px",
