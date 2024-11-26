@@ -8,7 +8,7 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { useGasSimulator } from "@keplr-wallet/hooks";
 import { useNavigate } from "react-router";
 import { useLanguage } from "../../languages";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Int, Dec, DecUtils } from "@keplr-wallet/unit";
 import { observer } from "mobx-react-lite";
 import { TransxStatus } from "@components-v2/transx-status";
 import { useLocation } from "react-router";
@@ -172,6 +172,19 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const txStateIsValid = sendConfigError == null;
 
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
+
+    const parseAmount = (amount: string, decimals: number) => {
+      const decimalAmount = new Dec(amount ? amount : "0");
+
+      const scaledAmount = decimalAmount
+        .mul(DecUtils.getTenExponentNInPrecisionRange(decimals))
+        .truncate()
+        .toString();
+
+      const parsedAmount = BigInt(scaledAmount);
+      return parsedAmount;
+    };
+
     return (
       <div>
         <div className={style["editCard"]}>
@@ -181,7 +194,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 sendConfigs.amountConfig
                   ? new CoinPretty(
                       sendConfigs.amountConfig?.sendCurrency,
-                      BigInt(sendConfigs.amountConfig.amount * 10 ** decimals)
+                      parseAmount(sendConfigs.amountConfig.amount, decimals)
                     )
                   : new CoinPretty(
                       sendConfigs.amountConfig?.sendCurrency,

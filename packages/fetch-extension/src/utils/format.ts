@@ -215,3 +215,8 @@ export const removeTrailingZeros = (number: string) => {
 };
 
 export const removeComma = (value: string) => value.replace(/,/g, "");
+
+export const validateDecimalPlaces = (value: string, maxDigits = 20) => {
+  const decimalRegex = new RegExp(`^\\d+(\\.\\d{0,${maxDigits}})?$`);
+  return decimalRegex.test(value);
+};
