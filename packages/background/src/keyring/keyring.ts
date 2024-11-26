@@ -1155,6 +1155,10 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
+    if (this.password !== "" && this.status !== KeyRingStatus.UNLOCKED) {
+      await this.unlock(this.password);
+    }
+
     if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
       throw new Error("Key ring is locked or not initialized");
     }
@@ -1184,6 +1188,10 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
+    if (this.password !== "" && this.status !== KeyRingStatus.UNLOCKED) {
+      await this.unlock(this.password);
+    }
+
     if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
       throw new Error("Key ring is locked or not initialized");
     }
@@ -1212,6 +1220,10 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
+    if (this.password !== "" && this.status !== KeyRingStatus.UNLOCKED) {
+      await this.unlock(this.password);
+    }
+
     if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
       throw new Error("Key ring is locked or not initialized");
     }
@@ -1249,6 +1261,10 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
+    if (this.password !== "" && this.status !== KeyRingStatus.UNLOCKED) {
+      await this.unlock(this.password);
+    }
+
     if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
       throw new Error("Key ring is locked or not initialized");
     }
