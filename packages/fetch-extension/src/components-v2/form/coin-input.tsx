@@ -14,7 +14,11 @@ import {
 } from "@keplr-wallet/hooks";
 import { AppCurrency } from "@keplr-wallet/types";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
-import { parseDollarAmount, parseExponential } from "@utils/format";
+import {
+  parseDollarAmount,
+  parseExponential,
+  validateDecimalPlaces,
+} from "@utils/format";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
 import { FormGroup, Label } from "reactstrap";
@@ -165,24 +169,33 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                 }
                 onChange={(e: any) => {
                   e.preventDefault();
+                  let value = e.target.value;
+                  if (value !== "" && !validateDecimalPlaces(value)) {
+                    return;
+                  }
+
+                  if (value !== "0") {
+                    // Remove leading zeros
+                    value = value.replace(/^0+(?!\.)/, "");
+                  }
 
                   if (
-                    e.target.value < 10 ** 9 ||
-                    e.target.value === "0" ||
-                    e.target.value === ""
+                    Number(value) < 10 ** 9 ||
+                    value === "0" ||
+                    value === ""
                   ) {
                     if (
                       parseExponential(
                         amountConfig.amount,
                         amountConfig.sendCurrency.coinDecimals
                       ).toString().length > 1 &&
-                      isNaN(parseFloat(e.target.value))
+                      isNaN(parseFloat(value))
                     ) {
                       return;
                     }
                     isToggleClicked === true
                       ? parseDollarAmount(inputInFiatCurrency)
-                      : amountConfig.setAmount(e.target.value);
+                      : amountConfig.setAmount(value);
                   }
                 }}
                 min={0}
