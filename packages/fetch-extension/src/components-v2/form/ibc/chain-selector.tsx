@@ -13,7 +13,7 @@ export const DestinationChainSelector: FunctionComponent<{
   ibcChannelConfig: IIBCChannelConfig;
   setIsIBCRegisterPageOpen: any;
 }> = observer(({ ibcChannelConfig, setIsIBCRegisterPageOpen }) => {
-  const { chainStore, ibcChannelStore } = useStore();
+  const { chainStore, ibcChannelStore, analyticsStore } = useStore();
   const ibcChannelInfo = ibcChannelStore.get(chainStore.current.chainId);
 
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -38,7 +38,12 @@ export const DestinationChainSelector: FunctionComponent<{
           type="button"
           id={selectorId}
           className={style["selector"]}
-          onClick={() => setIsSelectorOpen(!isSelectorOpen)}
+          onClick={() => {
+            setIsSelectorOpen(!isSelectorOpen);
+            analyticsStore.logEvent("select_chain_click", {
+              pageName: "IBC Transfer",
+            });
+          }}
         >
           {ibcChannelConfig.channel ? (
             chainStore.getChain(ibcChannelConfig.channel.counterpartyChainId)
@@ -74,6 +79,9 @@ export const DestinationChainSelector: FunctionComponent<{
             e.preventDefault();
             setIsIBCRegisterPageOpen(true);
             setIsSelectorOpen(false);
+            analyticsStore.logEvent("select_new_chain_click", {
+              pageName: "IBC Transfer",
+            });
           }}
         />
         {ibcChannelInfo.getTransferChannels().map((channel) => {

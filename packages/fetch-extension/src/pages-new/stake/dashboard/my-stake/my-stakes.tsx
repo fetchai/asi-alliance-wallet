@@ -103,6 +103,9 @@ export const MyStakes = observer(
 
           let gas: number;
           try {
+            analyticsStore.logEvent("claim_all_staking_reward_click", {
+              pageName: "Stake",
+            });
             // Gas adjustment is 1.5
             // Since there is currently no convenient way to adjust the gas adjustment on the UI,
             // Use high gas adjustment to prevent failure.
@@ -122,9 +125,10 @@ export const MyStakes = observer(
             undefined,
             {
               onBroadcasted: () => {
-                analyticsStore.logEvent("Claim reward tx broadcasted", {
+                analyticsStore.logEvent("claim_txn_broadcasted", {
                   chainId: chainStore.current.chainId,
                   chainName: chainStore.current.chainName,
+                  pageName: "Stake",
                 });
                 notification.push({
                   type: "primary",
@@ -173,6 +177,11 @@ export const MyStakes = observer(
               duration: 0.25,
             },
           });
+          analyticsStore.logEvent("claim_txn_broadcasted_fail", {
+            chainId: chainStore.current.chainId,
+            chainName: chainStore.current.chainName,
+            pageName: "Stake",
+          });
         } finally {
           setIsWithdrawingRewards(false);
 
@@ -198,7 +207,14 @@ export const MyStakes = observer(
       <div className={style["row"]}>
         <ButtonV2
           text="Stake more"
-          onClick={() => navigate("/validator/validator-list")}
+          onClick={() => {
+            analyticsStore.logEvent("stake_click", {
+              chainId: chainStore.current.chainId,
+              chainName: chainStore.current.chainName,
+              pageName: "Stake",
+            });
+            navigate("/validator/validator-list");
+          }}
           styleProps={{
             height: "44px",
             marginTop: "32px",
@@ -360,7 +376,13 @@ export const MyStakes = observer(
 );
 
 const DelegateReward: FunctionComponent = observer(() => {
-  const { chainStore, accountStore, queriesStore, activityStore } = useStore();
+  const {
+    chainStore,
+    accountStore,
+    queriesStore,
+    activityStore,
+    analyticsStore,
+  } = useStore();
 
   const navigate = useNavigate();
 
@@ -409,6 +431,9 @@ const DelegateReward: FunctionComponent = observer(() => {
   const handleClaim = async (validatorAddress: string) => {
     setIsWithdrawingRewards(true);
     try {
+      analyticsStore.logEvent("claim_click", {
+        pageName: "Stake",
+      });
       await account.cosmos.sendWithdrawDelegationRewardMsgs(
         [validatorAddress],
         "",
@@ -416,6 +441,11 @@ const DelegateReward: FunctionComponent = observer(() => {
         undefined,
         {
           onBroadcasted() {
+            analyticsStore.logEvent("claim_txn_broadcasted", {
+              chainId: chainStore.current.chainId,
+              chainName: chainStore.current.chainName,
+              pageName: "Stake",
+            });
             notification.push({
               type: "primary",
               placement: "top-center",
@@ -446,6 +476,11 @@ const DelegateReward: FunctionComponent = observer(() => {
       );
     } catch (err) {
       console.error(err);
+      analyticsStore.logEvent("claim_txn_broadcasted_fail", {
+        chainId: chainStore.current.chainId,
+        chainName: chainStore.current.chainName,
+        pageName: "Stake",
+      });
       if (err.toString().includes("Error: Request rejected")) {
         navigate(`/validators/${validatorAddress}`);
       }

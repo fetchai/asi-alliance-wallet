@@ -10,7 +10,8 @@ import { getTokenIcon } from "@utils/get-token-icon";
 import { observer } from "mobx-react-lite";
 import styles from "@components-v2/card/style.module.scss";
 export const NativeTokens = observer(() => {
-  const { chainStore, accountStore, queriesStore, priceStore } = useStore();
+  const { chainStore, accountStore, queriesStore, priceStore, analyticsStore } =
+    useStore();
   const [nativeToken, setNativeToken] = useState<any>("");
   const [tokenIcon, setTokenIcon] = useState<string>("");
 
@@ -122,6 +123,9 @@ export const NativeTokens = observer(() => {
           heading={totalDenom}
           subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}
           onClick={() => {
+            analyticsStore.logEvent("native_token_click", {
+              pageName: "Portfolio",
+            });
             navigate({
               pathname: "/asset",
               search: `?tokenDetails=${NativeTokenDetailsString}&balance=${NativeTokenBalanceString}`,

@@ -126,6 +126,7 @@ export class RootStore {
       feeType?: FeeType | undefined;
       rpc?: string;
       rest?: string;
+      tabName?: string;
       pageName?: string;
       isClaimAll?: boolean;
       selectedPrivacySetting?: string;
@@ -133,6 +134,8 @@ export class RootStore {
       message?: string;
       action?: string;
       accountType?: string;
+      validatorName?: string;
+      toValidatorName?: string;
     },
     {
       registerType?: "seed" | "google" | "ledger" | "keystone" | "qr";

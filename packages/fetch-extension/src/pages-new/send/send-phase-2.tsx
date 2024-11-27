@@ -206,6 +206,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           memoConfig={configs ? configs.memo : sendConfigs.memoConfig}
           label={intl.formatMessage({ id: "send.input.recipient" })}
           value={configs ? configs.recipient : ""}
+          pageName="Send"
         />
 
         <MemoInput
@@ -251,6 +252,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             e.preventDefault();
             if (accountInfo.isReadyToSendMsgs && txStateIsValid) {
               try {
+                analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
                 const stdFee = sendConfigs.feeConfig.toStdFee();
 
                 const tx = accountInfo.makeSendTokenTx(
@@ -295,7 +297,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                       navigateOnTxnEvents(txnNavigationOptions);
                     },
                     onBroadcasted: () => {
-                      analyticsStore.logEvent("Send token tx broadcasted", {
+                      analyticsStore.logEvent("send_txn_broadcasted", {
                         chainId: chainStore.current.chainId,
                         chainName: chainStore.current.chainName,
                         feeType: sendConfigs.feeConfig.feeType,
@@ -384,6 +386,12 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                     },
                   });
                 } else {
+                  analyticsStore.logEvent("send_txn_broadcasted_fail", {
+                    chainId: chainStore.current.chainId,
+                    chainName: chainStore.current.chainName,
+                    feeType: sendConfigs.feeConfig.feeType,
+                    message: e?.message ?? "",
+                  });
                   notification.push({
                     type: "warning",
                     placement: "top-center",

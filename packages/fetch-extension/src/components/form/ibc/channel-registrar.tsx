@@ -73,7 +73,9 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
                           key={chainInfo.chainId}
                           onClick={(e) => {
                             e.preventDefault();
-
+                            analyticsStore.logEvent("select_chain_click", {
+                              pageName: "Add IBC Chain",
+                            });
                             setSelectedChainId(chainInfo.chainId);
                             setError("");
                           }}
@@ -102,6 +104,11 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
                 isNaN(parseFloat(field)) ? field : `channel-${field}`
               );
               setError("");
+              analyticsStore.logEvent("add_ibc_channel_name_click", {
+                chainId: chainStore.current.chainId,
+                chainName: chainStore.current.chainName,
+                pageName: "Add IBC Chain",
+              });
             }}
             error={error}
           />
@@ -119,6 +126,7 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
               analyticsStore.logEvent("save_ibc_channel_name_click", {
                 chainId: chainStore.current.chainId,
                 chainName: chainStore.current.chainName,
+                pageName: "Add IBC Chain",
               });
               const queries = queriesStore.get(chainStore.current.chainId);
 

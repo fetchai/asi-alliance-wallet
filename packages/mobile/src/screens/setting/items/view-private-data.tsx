@@ -25,7 +25,7 @@ export const SettingViewPrivateDataItem: FunctionComponent = () => {
         onPress={() => {
           setIsOpenModal(true);
           analyticsStore.logEvent("view_mnemonic_seed_click", {
-            pageName: "More",
+            pageName: "Security & Privacy",
           });
         }}
         style={style.flatten(["height-72", "padding-18"]) as ViewStyle}

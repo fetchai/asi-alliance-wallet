@@ -36,6 +36,13 @@ export const ActivityPage: FunctionComponent = observer(() => {
       Proposals: "Gov Proposals",
       Transactions: "Transactions",
     };
+    const eventName =
+      activeTabId === tabIds.Transactions
+        ? "activity_transaction_tab_click"
+        : "activity_gov_proposal_tab_click";
+    analyticsStore.logEvent(eventName, {
+      pageName: "Activity",
+    });
 
     if (tab === "Proposals") {
       setActiveTabId(tabIds[tab]);

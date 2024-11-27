@@ -236,7 +236,9 @@ const KeyRingToolsIcon: FunctionComponent<{
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              analyticsStore.logEvent("delete_account_click", { action: "No" });
+              analyticsStore.logEvent("delete_account_click", {
+                action: "Cancel",
+              });
               navigate(`/setting/clear/${index}`);
             }}
           >

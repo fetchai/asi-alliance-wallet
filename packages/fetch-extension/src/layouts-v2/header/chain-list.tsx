@@ -96,6 +96,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   }}
                   onClick={(e: any) => {
                     e.preventDefault();
+                    analyticsStore.logEvent("manage_networks_click", {
+                      pageName: "Home",
+                    });
                     navigate("/manage-networks");
                   }}
                   text={"Manage networks"}
@@ -138,7 +141,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     messageAndGroupListenerUnsubscribe();
 
                     if (Object.values(properties).length > 0) {
-                      analyticsStore.logEvent("Chain changed", properties);
+                      analyticsStore.logEvent("chain_change_click", properties);
                     }
                     if (setIsSelectNetOpen) {
                       setIsSelectNetOpen(false);
@@ -211,7 +214,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   messageAndGroupListenerUnsubscribe();
                   // navigate("/");
                   if (Object.values(properties).length > 0) {
-                    analyticsStore.logEvent("Chain changed", properties);
+                    analyticsStore.logEvent("chain_change_click", properties);
                   }
                   if (setIsSelectNetOpen) {
                     setIsSelectNetOpen(false);
@@ -277,6 +280,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   }}
                   onClick={(e: any) => {
                     e.preventDefault();
+                    analyticsStore.logEvent("manage_networks_click", {
+                      pageName: "Home",
+                    });
                     navigate("/manage-networks");
                   }}
                   text={"Manage networks"}
@@ -319,7 +325,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     messageAndGroupListenerUnsubscribe();
 
                     if (Object.values(properties).length > 0) {
-                      analyticsStore.logEvent("Chain changed", properties);
+                      analyticsStore.logEvent("chain_change_click", properties);
                     }
                     if (setIsSelectNetOpen) {
                       setIsSelectNetOpen(false);
@@ -342,7 +348,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     ];
     return (
       <div className={style["chainListContainer"]}>
-        <TabsPanel tabs={tabs} />
+        <TabsPanel
+          tabs={tabs}
+          onTabChange={(tabId: string) => {
+            analyticsStore.logEvent(`${tabId.toLowerCase()}_tab_click`, {
+              pageName: "Home",
+            });
+          }}
+        />
       </div>
     );
   }

@@ -35,6 +35,7 @@ const bottomNav = [
 
 export const BottomNav = () => {
   const [isAssetsOpen, setIsAssetsOpen] = useState(false);
+  const { analyticsStore } = useStore();
   return !isAssetsOpen ? (
     <div className={style["bottomNavContainer"]}>
       <HomeTab />
@@ -42,7 +43,10 @@ export const BottomNav = () => {
       <button
         style={{ cursor: "pointer" }}
         className={style["toggle"]}
-        onClick={() => setIsAssetsOpen(!isAssetsOpen)}
+        onClick={() => {
+          setIsAssetsOpen(!isAssetsOpen);
+          analyticsStore.logEvent("fund_transfer_tab_click");
+        }}
       >
         <img src={require("@assets/svg/wireframe/openAsset.svg")} alt="" />
       </button>

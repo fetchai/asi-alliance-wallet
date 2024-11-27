@@ -23,6 +23,7 @@ import { useStore } from "../../../stores";
 import style from "./style.module.scss";
 import { useLanguage } from "../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { Staking } from "@keplr-wallet/stores";
 
 export const Unstake = observer(() => {
   const location = useLocation();
@@ -89,12 +90,22 @@ export const Unstake = observer(() => {
   const FiatCurrency = inputInFiatCurrency
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
-
+  const queries = queriesStore.get(chainStore.current.chainId);
   const availableBalance = `${balance
     .trim(true)
     .shrink(true)
     .maxDecimals(6)
     .toString()}${FiatCurrency}`;
+  const validator =
+    queries.cosmos.queryValidators
+      .getQueryStatus(Staking.BondStatus.Bonded)
+      .getValidator(validatorAddress) ||
+    queries.cosmos.queryValidators
+      .getQueryStatus(Staking.BondStatus.Unbonding)
+      .getValidator(validatorAddress) ||
+    queries.cosmos.queryValidators
+      .getQueryStatus(Staking.BondStatus.Unbonded)
+      .getValidator(validatorAddress);
 
   const errorText: string | undefined = useMemo(() => {
     if (error) {
@@ -138,10 +149,11 @@ export const Unstake = observer(() => {
           duration: 0.25,
         },
       });
-
-      analyticsStore.logEvent("Unstake tx broadcasted", {
+      analyticsStore.logEvent("unstake_txn_broadcasted", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
+        validatorName: validator?.description.moniker,
+        feeType: sendConfigs.feeConfig.feeType,
       });
     },
     onFulfill: (tx: any) => {
@@ -163,6 +175,9 @@ export const Unstake = observer(() => {
 
   const unstakeClicked = async () => {
     try {
+      analyticsStore.logEvent("unstake_txn_click", {
+        pageName: "Stake Validator",
+      });
       await account.cosmos
         .makeUndelegateTx(amountConfig.amount, validatorAddress)
         .send(feeConfig.toStdFee(), memoConfig.memo, undefined, txnResult);
@@ -176,6 +191,12 @@ export const Unstake = observer(() => {
         transition: {
           duration: 0.25,
         },
+      });
+      analyticsStore.logEvent("unstake_txn_broadcasted_fail", {
+        chainId: chainStore.current.chainId,
+        chainName: chainStore.current.chainName,
+        feeType: sendConfigs.feeConfig.feeType,
+        message: e?.message ?? "",
       });
     } finally {
       const txnNavigationOptions = {

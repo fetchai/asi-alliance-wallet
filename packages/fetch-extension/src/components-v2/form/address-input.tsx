@@ -25,6 +25,7 @@ import {
 import { getBeneficiaryAddress } from "../../name-service/fns-apis";
 import { Card } from "../card";
 import { Dropdown } from "@components-v2/dropdown";
+import { useStore } from "../../stores";
 
 export interface AddressInputProps {
   recipientConfig: IRecipientConfig | IRecipientConfigWithICNS;
@@ -35,7 +36,7 @@ export interface AddressInputProps {
   label?: string;
 
   disableAddressBook?: boolean;
-
+  pageName?: string;
   disabled?: boolean;
   value: string;
 }
@@ -53,9 +54,12 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
     disableAddressBook,
     disabled = false,
     value,
+    pageName,
   }) => {
     const intl = useIntl();
     const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
+    const { analyticsStore } = useStore();
+
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);
       crypto.getRandomValues(bytes);
@@ -218,13 +222,23 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
               <Button
                 className={styleAddressInput["righContentButtons"]}
                 disabled={true}
+                onClick={() => {
+                  analyticsStore.logEvent("recipient_address_click", {
+                    pageName,
+                  });
+                }}
               >
                 <img src={require("@assets/svg/wireframe/qrcode.svg")} alt="" />{" "}
               </Button>
               {!disableAddressBook && memoConfig ? (
                 <Button
                   className={styleAddressInput["righContentButtons"]}
-                  onClick={() => setIsAddressBookOpen(true)}
+                  onClick={() => {
+                    setIsAddressBookOpen(true);
+                    analyticsStore.logEvent("recipient_address_click", {
+                      pageName,
+                    });
+                  }}
                   disabled={disabled}
                 >
                   <img src={require("@assets/svg/wireframe/at.svg")} alt="" />
@@ -264,6 +278,9 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
           title={"Choose recipient"}
           closeClicked={() => {
             setIsAddressBookOpen(false);
+            analyticsStore.logEvent("add_new_address_click", {
+              pageName,
+            });
           }}
         >
           <ContactBookPage

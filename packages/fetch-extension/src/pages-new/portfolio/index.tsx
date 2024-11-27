@@ -11,8 +11,8 @@ import { isFeatureAvailable } from "@utils/index";
 export const Portfolio = () => {
   const navigate = useNavigate();
   const [isClaimRewardsOpen, setIsClaimRewardsOpen] = useState(false);
+  const { chainStore, analyticsStore } = useStore();
 
-  const { chainStore } = useStore();
   const tabs = [
     { id: "Tokens", component: <TokensView /> },
     {
@@ -26,6 +26,7 @@ export const Portfolio = () => {
       ),
     },
   ];
+
   return (
     <HeaderLayout
       showBottomMenu={true}
@@ -33,7 +34,15 @@ export const Portfolio = () => {
       onBackButton={() => navigate("/")}
     >
       <div className={style["title"]}>Portfolio</div>
-      <TabsPanel tabHeight="calc(100vh - 296px)" tabs={tabs} />
+      <TabsPanel
+        tabHeight="calc(100vh - 296px)"
+        tabs={tabs}
+        onTabChange={(tabId: string) => {
+          analyticsStore.logEvent(`${tabId.toLowerCase()}_tab_click`, {
+            pageName: "Portfolio",
+          });
+        }}
+      />
     </HeaderLayout>
   );
 };

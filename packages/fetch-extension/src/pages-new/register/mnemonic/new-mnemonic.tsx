@@ -80,7 +80,7 @@ export const NewMnemonicIntro: FunctionComponent<{
           e.preventDefault();
 
           registerConfig.setType(TypeNewMnemonic);
-          analyticsStore.logEvent("Create account started", {
+          analyticsStore.logEvent("create_a_new_wallet_click", {
             registerType: "seed",
           });
         }}
@@ -170,7 +170,7 @@ export const NewMnemonicPage: FunctionComponent<{
               e.preventDefault();
               setIsMainPage(false);
               registerConfig.setType(TypeNewMnemonic);
-              analyticsStore.logEvent("Create account started", {
+              analyticsStore.logEvent("create_new_seed_phrase_click", {
                 registerType: "seed",
               });
             }}
@@ -227,7 +227,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       ];
       const [checkBox1Checked, setCheckBox1Checked] = useState(false);
       const [checkBox2Checked, setCheckBox2Checked] = useState(false);
-
+      const { analyticsStore } = useStore();
       const [activeTab, setActiveTab] = useState(tabs[0].id);
 
       useEffect(() => {
@@ -329,7 +329,14 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
               <ButtonV2
                 styleProps={{ marginBottom: "20px", height: "56px" }}
                 disabled={!checkBox1Checked || !checkBox2Checked}
-                onClick={() => setContinueClicked(true)}
+                onClick={() => {
+                  analyticsStore.logEvent("register_next_click", {
+                    pageName: "Register",
+                    registerType: "seed",
+                    accountType: "mnemonic",
+                  });
+                  setContinueClicked(true);
+                }}
                 text=""
               >
                 Continue
@@ -594,7 +601,6 @@ export const VerifyMnemonicModePage: FunctionComponent<{
             ))}
           </div>
         </div>
-
         <ButtonV2
           text=""
           disabled={
@@ -624,6 +630,9 @@ export const VerifyMnemonicModePage: FunctionComponent<{
               analyticsStore.setUserProperties({
                 registerType: "seed",
                 accountType: "mnemonic",
+              });
+              analyticsStore.logEvent("register_done_click", {
+                registerType: "seed",
               });
             } catch (e) {
               alert(e.message ? e.message : e.toString());

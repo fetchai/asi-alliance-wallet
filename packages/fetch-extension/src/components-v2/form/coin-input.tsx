@@ -252,7 +252,8 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
   >("");
-  const { queriesStore, priceStore, accountStore, chainStore } = useStore();
+  const { queriesStore, priceStore, accountStore, chainStore, analyticsStore } =
+    useStore();
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -320,7 +321,12 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
           padding: "12px 18px",
           marginBottom: "0px",
         }}
-        onClick={() => setIsOpenTokenSelector(!isOpenTokenSelector)}
+        onClick={() => {
+          setIsOpenTokenSelector(!isOpenTokenSelector);
+          analyticsStore.logEvent("send_from_click", {
+            pageName: "Send",
+          });
+        }}
         heading={<div>{amountConfig.sendCurrency.coinDenom}</div>}
         rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
         subheading={
@@ -345,7 +351,9 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
         setIsOpen={setIsOpenTokenSelector}
         isOpen={isOpenTokenSelector}
         title="Asset"
-        closeClicked={() => setIsOpenTokenSelector(false)}
+        closeClicked={() => {
+          setIsOpenTokenSelector(false);
+        }}
       >
         {selectableCurrencies.map((currency) => {
           const currencyBalance =
@@ -363,6 +371,9 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
               onClick={async (e: any) => {
                 e.preventDefault();
                 amountConfig.setSendCurrency(currency);
+                analyticsStore.logEvent("select_token_click", {
+                  pageName: "Send",
+                });
               }}
               rightContent={`${currencyBalance
                 .shrink(true)

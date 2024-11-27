@@ -48,6 +48,9 @@ export const MoreLanguagePage: FunctionComponent = () => {
         })}
         onClick={useCallback(() => {
           language.setLanguage("en");
+          analyticsStore.logEvent("language_change_click", {
+            pageName: "Language",
+          });
           navigate("/");
         }, [navigate, language])}
         rightContent={

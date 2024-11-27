@@ -101,7 +101,7 @@ export const ProposalDetail = observer(() => {
     proposal?.proposalStatus === Governance.ProposalStatus.VOTING_PERIOD;
 
   const { setIsDropdownOpen } = useDropdown();
-
+  const { analyticsStore } = useStore();
   return (
     <HeaderLayout
       showChainName={false}
@@ -137,6 +137,14 @@ export const ProposalDetail = observer(() => {
             <Link
               to={`https://www.mintscan.io/fetchai/proposals/${id}`}
               target="_blank"
+              onClick={() => {
+                analyticsStore.logEvent(
+                  "proposal_view_in_block_explorer_click",
+                  {
+                    pageName: "Proposals",
+                  }
+                );
+              }}
             >
               <Card
                 style={{

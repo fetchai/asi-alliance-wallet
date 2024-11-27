@@ -75,6 +75,9 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
           className={style["plusIcon"]}
           onClick={() => {
             navigate("/more/token/add");
+            analyticsStore.logEvent("add_token_icon_click", {
+              pageName: "Manage Tokens",
+            });
           }}
         >
           {" "}
@@ -177,6 +180,9 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
                         }),
                       })
                     ) {
+                      analyticsStore.logEvent("token_delete_click", {
+                        action: confirm ? "Yes" : "No",
+                      });
                       await tokensStore
                         .getTokensOf(chainStore.current.chainId)
                         .removeToken(cosmwasmToken);
@@ -224,6 +230,9 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
               text="Add Token"
               onClick={() => {
                 navigate("/more/token/add");
+                analyticsStore.logEvent("add_token_click", {
+                  pageName: "Manage Tokens",
+                });
               }}
             />
           </div>

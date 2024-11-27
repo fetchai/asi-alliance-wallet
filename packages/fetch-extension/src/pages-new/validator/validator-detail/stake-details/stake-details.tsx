@@ -11,8 +11,13 @@ import { TXNTYPE } from "../../../../config";
 export const StakeDetails = observer(
   ({ validatorAddress }: { validatorAddress: string }) => {
     const navigate = useNavigate();
-    const { chainStore, accountStore, queriesStore, activityStore } =
-      useStore();
+    const {
+      chainStore,
+      accountStore,
+      queriesStore,
+      activityStore,
+      analyticsStore,
+    } = useStore();
     const account = accountStore.getAccount(chainStore.current.chainId);
     const queries = queriesStore.get(chainStore.current.chainId);
     const location = useLocation();
@@ -39,6 +44,9 @@ export const StakeDetails = observer(
     const handleClaim = async () => {
       setIsWithdrawingRewards(true);
       try {
+        analyticsStore.logEvent("claim_click", {
+          pageName: "Validator Details",
+        });
         await accountInfo.cosmos.sendWithdrawDelegationRewardMsgs(
           [validatorAddress],
           "",
@@ -55,6 +63,11 @@ export const StakeDetails = observer(
                 transition: {
                   duration: 0.25,
                 },
+              });
+              analyticsStore.logEvent("claim_txn_broadcasted", {
+                chainId: chainStore.current.chainId,
+                chainName: chainStore.current.chainName,
+                pageName: "Validator Details",
               });
             },
             onFulfill: (tx: any) => {
@@ -79,6 +92,11 @@ export const StakeDetails = observer(
         }, 200);
       } catch (err) {
         console.error(err);
+        analyticsStore.logEvent("claim_txn_broadcasted_fail", {
+          chainId: chainStore.current.chainId,
+          chainName: chainStore.current.chainName,
+          pageName: "Validator Details",
+        });
         if (err.toString().includes("Error: Request rejected")) {
           navigate(`/validator/${validatorAddress}`, {
             state: { previousAddress: previousAddress },
@@ -142,7 +160,14 @@ export const StakeDetails = observer(
                 marginTop: "0px",
               }}
               text="Unstake"
-              onClick={() => navigate(`/validator/${validatorAddress}/unstake`)}
+              onClick={() => {
+                analyticsStore.logEvent("unstake_click", {
+                  chainId: chainStore.current.chainId,
+                  chainName: chainStore.current.chainName,
+                  pageName: "Validator Detail",
+                });
+                navigate(`/validator/${validatorAddress}/unstake`);
+              }}
             />
 
             <ButtonV2

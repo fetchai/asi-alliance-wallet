@@ -24,6 +24,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     priceStore,
     keyRingStore,
     activityStore,
+    analyticsStore,
   } = useStore();
   const navigate = useNavigate();
   const language = useLanguage();
@@ -196,7 +197,12 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
       )}
       <button
         className={style["portfolio"]}
-        onClick={() => navigate("/portfolio")}
+        onClick={() => {
+          analyticsStore.logEvent("view_portfolio_click", {
+            pageName: "Home",
+          });
+          navigate("/portfolio");
+        }}
       >
         View portfolio
       </button>

@@ -46,17 +46,24 @@ export const ActivityRow = observer(({ node }: { node: any }) => {
   const details = node.option;
   const { proposalId, transaction, id } = node;
   const { status } = transaction;
-  const { queriesStore, chainStore } = useStore();
+  const { queriesStore, chainStore, analyticsStore } = useStore();
 
   const current = chainStore.current;
   const queries = queriesStore.get(current.chainId);
   const proposal = queries.cosmos.queryGovernance.getProposal(proposalId || "");
+  const handleClick = () => {
+    analyticsStore.logEvent("activity_transactions_click", {
+      tabName: "Gov Proposals",
+      pageName: "Activity",
+    });
+  };
   return (
     <React.Fragment>
       <a
         href={`https://www.mintscan.io/fetchai/tx/${id}`}
         target="_blank"
         rel="noreferrer"
+        onClick={handleClick}
       >
         <div className={style["activityRow"]}>
           <div className={style["middle"]}>

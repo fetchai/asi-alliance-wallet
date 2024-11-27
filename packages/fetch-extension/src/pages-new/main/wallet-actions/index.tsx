@@ -16,8 +16,13 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
   ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
 
-    const { accountStore, chainStore, queriesStore, activityStore } =
-      useStore();
+    const {
+      accountStore,
+      chainStore,
+      queriesStore,
+      activityStore,
+      analyticsStore,
+    } = useStore();
 
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const queries = queriesStore.get(chainStore.current.chainId);
@@ -64,7 +69,13 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
               )
             }
             heading={"Send"}
-            onClick={() => navigate("/send")}
+            onClick={() => {
+              navigate("/send");
+              analyticsStore.logEvent("send_click", {
+                tabName: "fund_transfer_tab",
+                pageName: "Home",
+              });
+            }}
           />
 
           <Card
@@ -78,6 +89,10 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
             heading={"Receive"}
             onClick={() => {
               navigate("/receive");
+              analyticsStore.logEvent("receive_click", {
+                tabName: "fund_transfer_tab",
+                pageName: "Home",
+              });
             }}
           />
 
@@ -92,6 +107,10 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
             heading={"Native Bridge"}
             onClick={() => {
               navigate("/bridge");
+              analyticsStore.logEvent("native_bridge_click", {
+                tabName: "fund_transfer_tab",
+                pageName: "Home",
+              });
             }}
           />
         </Dropdown>

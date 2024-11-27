@@ -147,7 +147,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
                         await keyRingStore.changeKeyRing(i);
-                        analyticsStore.logEvent("Account changed");
+                        analyticsStore.logEvent("change_wallet_click");
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();
                         proposalStore.resetProposals();

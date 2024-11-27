@@ -121,8 +121,8 @@ export const AddressBookPage: FunctionComponent<{
           onClick={(e: any) => {
             e.preventDefault();
             e.stopPropagation();
-            analyticsStore.logEvent("add_new_address_click", {
-              pageName: "Drawer",
+            analyticsStore.logEvent("add_new_address_book_click", {
+              pageName: "Address Book",
             });
             setAddAddressModalOpen(true);
           }}
@@ -191,6 +191,10 @@ export const AddressBookPage: FunctionComponent<{
                         }),
                       })
                     ) {
+                      analyticsStore.logEvent("delete_address_click", {
+                        pageName: "More",
+                        action: confirm ? "Yes" : "No",
+                      });
                       await addressBookConfig.removeAddressBook(index);
                     }
                   }}
@@ -210,7 +214,7 @@ export const AddressBookPage: FunctionComponent<{
                   e.preventDefault();
                   e.stopPropagation();
                   analyticsStore.logEvent("add_new_address_click", {
-                    pageName: "Drawer",
+                    pageName: "Address Book",
                   });
                   setAddAddressModalOpen(true);
                 }}

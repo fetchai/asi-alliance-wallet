@@ -15,7 +15,7 @@ type Sort = "APR" | "Voting Power" | "Name";
 export const ValidatorListPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
 
-  const { chainStore, queriesStore } = useStore();
+  const { chainStore, queriesStore, analyticsStore } = useStore();
   const queries = queriesStore.get(chainStore.current.chainId);
 
   const [search, setSearch] = useState("");
@@ -130,7 +130,12 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
       >
         <div
           className={style["sort-selector"]}
-          onClick={() => setIsSortModalOpen((prev) => !prev)}
+          onClick={() => {
+            setIsSortModalOpen((prev) => !prev);
+            analyticsStore.logEvent("stake_validator_click", {
+              pageName: "Stake",
+            });
+          }}
         >
           <div>
             Sort by

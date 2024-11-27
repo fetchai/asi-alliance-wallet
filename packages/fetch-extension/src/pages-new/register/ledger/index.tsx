@@ -227,6 +227,13 @@ export const ImportLedgerPage: FunctionComponent<{
                   <FormattedMessage id="register.create.button.next" />
                 )
               }
+              onClick={() => {
+                analyticsStore.logEvent("register_next_click", {
+                  registerType: "ledger",
+                  accountType: "ledger",
+                  pageName: "Register",
+                });
+              }}
               disabled={registerConfig.isLoading}
               styleProps={{
                 height: "56px",

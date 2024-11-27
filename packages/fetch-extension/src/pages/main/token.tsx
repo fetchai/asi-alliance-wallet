@@ -272,7 +272,7 @@ export const TokensView: FunctionComponent = observer(() => {
               balance={token}
               onClick={() => {
                 analyticsStore.logEvent("send_click", {
-                  pageName: "Token List",
+                  pageName: "Token Detail",
                 });
                 navigate({
                   pathname: "/send",

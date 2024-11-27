@@ -41,7 +41,7 @@ const ChainElement: FunctionComponent<{
         messageAndGroupListenerUnsubscribe();
         navigate("/");
         if (Object.values(properties).length > 0) {
-          analyticsStore.logEvent("Chain changed", properties);
+          analyticsStore.logEvent("chain_change_click", properties);
         }
       }}
     >

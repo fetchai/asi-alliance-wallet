@@ -40,7 +40,7 @@ export const LockPage: FunctionComponent = observer(() => {
     },
   });
 
-  const { keyRingStore } = useStore();
+  const { keyRingStore, analyticsStore } = useStore();
   const [loading, setLoading] = useState(false);
 
   const interactionInfo = useInteractionInfo(() => {
@@ -55,7 +55,6 @@ export const LockPage: FunctionComponent = observer(() => {
           setLoading(true);
           try {
             await keyRingStore.unlock(data.password);
-
             const msg = new StartAutoLockMonitoringMsg();
             const requester = new InExtensionMessageRequester();
             // Make sure to notify that auto lock service to start check locking after duration.
@@ -72,6 +71,7 @@ export const LockPage: FunctionComponent = observer(() => {
                 await delay(100);
                 if (window.location.href.includes("#/unlock")) {
                   window.close();
+                  analyticsStore.logEvent("sign_in_click");
                 }
               } else {
                 navigate("/", { replace: true });

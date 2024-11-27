@@ -356,11 +356,11 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                 e.preventDefault();
 
                 await chainSuggestStore.reject();
-
                 if (
                   interactionInfo.interaction &&
                   !interactionInfo.interactionInternal
                 ) {
+                  analyticsStore.logEvent("reject_click");
                   window.close();
                 } else {
                   navigate("/");
@@ -389,6 +389,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   });
                   chainStore.selectChain(chainInfo.chainId);
                   chainStore.saveLastViewChainId();
+                  analyticsStore.logEvent("approve_click");
                 }
 
                 if (

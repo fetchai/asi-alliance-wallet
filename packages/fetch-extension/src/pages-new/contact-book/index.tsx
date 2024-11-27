@@ -42,7 +42,7 @@ export const ContactBookPage: FunctionComponent<{
 }> = observer(({ onBackButton, selectHandler, ibcChannelConfig }) => {
   const intl = useIntl();
   const navigate = useNavigate();
-  const { chainStore, uiConfigStore } = useStore();
+  const { chainStore, uiConfigStore, analyticsStore } = useStore();
   const current = chainStore.current;
   const location = useLocation();
   const chatSectionParams =
@@ -109,7 +109,9 @@ export const ContactBookPage: FunctionComponent<{
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-
+            analyticsStore.logEvent("edit_address_icon_click", {
+              pageName: "Address Book",
+            });
             setAddAddressModalOpen(true);
             setAddAddressModalIndex(index);
           }}
@@ -121,7 +123,9 @@ export const ContactBookPage: FunctionComponent<{
           onClick={async (e) => {
             e.preventDefault();
             e.stopPropagation();
-
+            analyticsStore.logEvent("delete_address_icon_click ", {
+              pageName: "Address Book",
+            });
             if (
               await confirm.confirm({
                 img: (
@@ -142,6 +146,10 @@ export const ContactBookPage: FunctionComponent<{
               setAddAddressModalOpen(false);
               setAddAddressModalIndex(-1);
               await addressBookConfig.removeAddressBook(index);
+              analyticsStore.logEvent("delete_address_click", {
+                pageName: "Address Book",
+                action: confirm ? "Yes" : "No",
+              });
             }
           }}
         />
@@ -242,7 +250,12 @@ export const ContactBookPage: FunctionComponent<{
               marginTop: "24px",
             }}
             text={"Add an address"}
-            onClick={() => setAddAddressModalOpen(true)}
+            onClick={() => {
+              setAddAddressModalOpen(true);
+              analyticsStore.logEvent("add_new_address_click", {
+                pageName: "Address book",
+              });
+            }}
           />
         </div>
       )}

@@ -43,6 +43,7 @@ export interface FeeButtonsProps {
 
   gasLabel?: string;
   gasSimulator?: IGasSimulator;
+  pageName?: string;
 
   showFeeCurrencySelectorUnderSetGas?: boolean;
 }
@@ -183,6 +184,7 @@ export const FeeButtonsInner: FunctionComponent<
     | "gasConfig"
     | "gasLabel"
     | "showFeeCurrencySelectorUnderSetGas"
+    | "pageName"
   > & { feeButtonState: FeeButtonState }
 > = observer(
   ({
@@ -194,6 +196,7 @@ export const FeeButtonsInner: FunctionComponent<
     gasLabel,
     gasSimulator,
     showFeeCurrencySelectorUnderSetGas,
+    pageName,
   }) => {
     const [isFeeDropdownOpen, setIsFeeDropdownOpen] = useState(false);
 
@@ -203,7 +206,7 @@ export const FeeButtonsInner: FunctionComponent<
       }
     }, [feeConfig, feeConfig.feeCurrency, feeConfig.fee]);
 
-    const { chainStore } = useStore();
+    const { chainStore, analyticsStore } = useStore();
 
     const intl = useIntl();
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
@@ -331,6 +334,10 @@ export const FeeButtonsInner: FunctionComponent<
               onClick={(e: MouseEvent) => {
                 feeConfig.setFeeType("low");
                 e.preventDefault();
+                analyticsStore.logEvent("fee_type_select", {
+                  pageName: pageName,
+                  feeType: "low",
+                });
               }}
               style={{
                 padding: "18px 16px",
@@ -435,6 +442,10 @@ export const FeeButtonsInner: FunctionComponent<
               onClick={(e: MouseEvent) => {
                 feeConfig.setFeeType("average");
                 e.preventDefault();
+                analyticsStore.logEvent("fee_type_select", {
+                  pageName: pageName,
+                  feeType: "average",
+                });
               }}
               style={{
                 padding: "18px 16px",
@@ -512,6 +523,10 @@ export const FeeButtonsInner: FunctionComponent<
               onClick={(e: MouseEvent) => {
                 feeConfig.setFeeType("high");
                 e.preventDefault();
+                analyticsStore.logEvent("fee_type_select", {
+                  pageName: pageName,
+                  feeType: "high",
+                });
               }}
               style={{
                 padding: "18px 16px",
@@ -589,6 +604,10 @@ export const FeeButtonsInner: FunctionComponent<
                   feeButtonState.setIsGasInputOpen(
                     !feeButtonState.isGasInputOpen
                   );
+
+                  analyticsStore.logEvent("fee_advance_click", {
+                    pageName: pageName,
+                  });
                 }}
               />
               {/* <div>

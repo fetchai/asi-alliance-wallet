@@ -24,7 +24,13 @@ import { Link } from "react-router-dom";
 import { FormattedMessage } from "react-intl";
 
 export const AssetView = observer(() => {
-  const { activityStore, accountStore, queriesStore, chainStore } = useStore();
+  const {
+    activityStore,
+    accountStore,
+    queriesStore,
+    chainStore,
+    analyticsStore,
+  } = useStore();
   const location = useLocation();
   const [tokenInfo, setTokenInfo] = useState<any>();
   const [tokenIcon, setTokenIcon] = useState<string>("");
@@ -442,7 +448,12 @@ export const AssetView = observer(() => {
               gap: "4px",
               justifyContent: "center",
             }}
-            onClick={() => navigate("/receive")}
+            onClick={() => {
+              navigate("/receive");
+              analyticsStore.logEvent("receive_click", {
+                pageName: "Token Detail",
+              });
+            }}
             text={"Receive"}
           >
             <img
@@ -460,7 +471,16 @@ export const AssetView = observer(() => {
               justifyContent: "center",
               opacity: isSendDisabled ? 0.5 : 1,
             }}
-            onClick={!isSendDisabled ? () => navigate("/send") : () => {}}
+            onClick={
+              !isSendDisabled
+                ? () => {
+                    navigate("/send");
+                    analyticsStore.logEvent("send_click", {
+                      pageName: "Token Detail",
+                    });
+                  }
+                : undefined
+            }
             text={"Send"}
           >
             {isSendDisabled ? (
@@ -484,7 +504,14 @@ export const AssetView = observer(() => {
               justifyContent: "center",
               marginBottom: "48px",
             }}
-            onClick={() => navigate("/validator/validator-list")}
+            onClick={() => {
+              navigate("/validator/validator-list");
+              analyticsStore.logEvent("stake_click", {
+                chainId: chainStore.current.chainId,
+                chainName: chainStore.current.chainName,
+                pageName: "Token Detail",
+              });
+            }}
             text={"Stake"}
           >
             <img

@@ -19,8 +19,14 @@ export const Tokens = observer(() => {
   const language = useLanguage();
   const notification = useNotification();
   const fiatCurrency = language.fiatCurrency;
-  const { chainStore, accountStore, queriesStore, tokensStore, priceStore } =
-    useStore();
+  const {
+    chainStore,
+    accountStore,
+    queriesStore,
+    tokensStore,
+    priceStore,
+    analyticsStore,
+  } = useStore();
   const current = chainStore.current;
   const accountInfo = accountStore.getAccount(current.chainId);
   const loadingIndicator = useLoadingIndicator();
@@ -148,6 +154,9 @@ export const Tokens = observer(() => {
                 padding: "18px",
               }}
               onClick={() => {
+                analyticsStore.logEvent("token_click", {
+                  pageName: "Portfolio",
+                });
                 navigate({
                   pathname: "/asset",
                   search: `?tokenDetails=${tokenString}&balance=${tokenBalanceString}`,

@@ -179,9 +179,12 @@ export const Redelegate = observer(() => {
         },
       });
 
-      analyticsStore.logEvent("Redelegate tx broadcasted", {
+      analyticsStore.logEvent("redelegate_txn_broadcasted", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
+        validatorName: validator?.description.moniker,
+        toValidatorName: validator?.description.moniker,
+        feeType: sendConfigs.feeConfig.feeType,
       });
     },
     onFulfill: (tx: any) => {
@@ -203,6 +206,9 @@ export const Redelegate = observer(() => {
 
   const redelegateClicked = async () => {
     try {
+      analyticsStore.logEvent("redelegate_txn_click", {
+        pageName: "Stake Validator",
+      });
       await account.cosmos
         .makeBeginRedelegateTx(
           amountConfig.amount,
@@ -220,6 +226,12 @@ export const Redelegate = observer(() => {
         transition: {
           duration: 0.25,
         },
+      });
+      analyticsStore.logEvent("redelegate_txn_broadcasted_fail", {
+        chainId: chainStore.current.chainId,
+        chainName: chainStore.current.chainName,
+        feeType: sendConfigs.feeConfig.feeType,
+        message: e?.message ?? "",
       });
     } finally {
       const txnNavigationOptions = {

@@ -58,7 +58,9 @@ export const DeleteWallet: FunctionComponent = () => {
   const onBackUpMnemonicButtonClick = useCallback(
     (e: MouseEvent) => {
       e.preventDefault();
-
+      analyticsStore.logEvent("back_up_mnemonic_seed_click", {
+        pageName: "Home",
+      });
       navigate(`/more/export/${index}`);
     },
     [navigate, index]
@@ -134,7 +136,12 @@ export const DeleteWallet: FunctionComponent = () => {
               }}
               data-loading={loading}
               text={""}
-              onClick={() => setIsConfirmationOpen(true)}
+              onClick={() => {
+                setIsConfirmationOpen(true);
+                analyticsStore.logEvent("confirm_click", {
+                  pageName: "Home",
+                });
+              }}
             >
               <FormattedMessage id="setting.clear.button.confirm" />
             </ButtonV2>
@@ -172,7 +179,12 @@ export const DeleteWallet: FunctionComponent = () => {
               }}
               data-loading={loading}
               text={""}
-              onClick={() => setIsConfirmationOpen(false)}
+              onClick={() => {
+                setIsConfirmationOpen(false);
+                analyticsStore.logEvent("delete_account_click", {
+                  action: "Cancel",
+                });
+              }}
             >
               <FormattedMessage id="setting.clear.confirm.button-cancel" />
             </ButtonV2>
@@ -196,7 +208,7 @@ export const DeleteWallet: FunctionComponent = () => {
                     data.password
                   );
                   analyticsStore.logEvent("delete_account_click", {
-                    action: "Yes",
+                    action: "Remove",
                   });
                   navigate("/");
                 } catch (e) {

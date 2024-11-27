@@ -118,7 +118,7 @@ export const NativeTab = observer(({ filterTop }: { filterTop?: string }) => {
   const handleFilterChange = (selectedFilter: string[]) => {
     setFilter(selectedFilter);
     analyticsStore.logEvent("activity_filter_click", {
-      pageName: "Transaction Tab",
+      pageName: "Token Detail",
     });
   };
 

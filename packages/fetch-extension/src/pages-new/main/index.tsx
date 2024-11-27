@@ -28,7 +28,7 @@ export const MainPage: FunctionComponent = observer(() => {
 
   const userState = chatStore.userDetailsStore;
   useEffect(() => {
-    analyticsStore.logEvent("Home tab click");
+    analyticsStore.logEvent("home_tab_click");
     analyticsStore.setUserProperties({
       totalAccounts: keyRingStore.multiKeyStoreInfo.length,
     });
@@ -118,7 +118,12 @@ export const MainPage: FunctionComponent = observer(() => {
         isOpen={isOptionsOpen}
         setIsOpen={setIsOptionsOpen}
         title="Change Wallet"
-        closeClicked={() => setIsOptionsOpen(false)}
+        closeClicked={() => {
+          setIsOptionsOpen(false);
+          analyticsStore.logEvent("change_wallet_click", {
+            pageName: "Home",
+          });
+        }}
       >
         <SetKeyRingPage />
       </Dropdown>

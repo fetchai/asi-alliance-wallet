@@ -31,8 +31,9 @@ export const WalletOptions = observer(
           }}
           onClick={(e: any) => {
             e.preventDefault();
-            analyticsStore.logEvent("Add additional account started");
-
+            analyticsStore.logEvent("add_new_wallet_click", {
+              pageName: "Home",
+            });
             browser.tabs.create({
               url: "/popup.html#/register",
             });
@@ -50,6 +51,9 @@ export const WalletOptions = observer(
           onClick={() => {
             setIsOptionsOpen(true);
             setIsSelectWalletOpen(false);
+            analyticsStore.logEvent("change_wallet_click", {
+              pageName: "Home",
+            });
           }}
         />
         <Card
@@ -63,6 +67,9 @@ export const WalletOptions = observer(
           onClick={(e: any) => {
             e.preventDefault();
             e.stopPropagation();
+            analyticsStore.logEvent("rename_wallet_click", {
+              pageName: "Home",
+            });
             navigate(`/setting/keyring/change/name/${accountIndex}`);
           }}
         />
@@ -77,6 +84,9 @@ export const WalletOptions = observer(
           onClick={(e: any) => {
             e.preventDefault();
             e.stopPropagation();
+            analyticsStore.logEvent("delete_wallet_click", {
+              pageName: "Home",
+            });
             navigate(`/setting/clear/${accountIndex}`);
           }}
           headingStyle={{

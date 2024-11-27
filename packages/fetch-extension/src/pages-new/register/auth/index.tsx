@@ -131,7 +131,7 @@ export const AuthIntro: FunctionComponent<{
               }
             } catch (e) {
             } finally {
-              analyticsStore.logEvent("Create/Import account started", {
+              analyticsStore.logEvent("continue_with_google_click", {
                 registerType: "google",
               });
             }

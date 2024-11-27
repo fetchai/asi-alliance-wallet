@@ -23,6 +23,9 @@ export const CurrencyPge: FunctionComponent = observer(() => {
 
   const handleClick = (currency: string) => {
     language.setFiatCurrency(currency);
+    analyticsStore.logEvent("currency_change_click", {
+      pageName: "More",
+    });
     navigate({ pathname: "/" });
   };
 

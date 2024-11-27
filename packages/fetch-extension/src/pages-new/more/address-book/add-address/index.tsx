@@ -15,6 +15,7 @@ import { useNotification } from "@components/notification";
 import { validateAgentAddress } from "@utils/validate-agent";
 import style from "../style.module.scss";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { useStore } from "../../../../stores";
 /**
  *
  * @param closeModal
@@ -37,7 +38,7 @@ export const AddAddress: FunctionComponent<{
     const [name, setName] = useState("");
     const location = useLocation();
     const notification = useNotification();
-
+    const { analyticsStore } = useStore();
     const chatSectionParams =
       (location.state as chatSectionParams) || defaultParamValues;
     useEffect(() => {
@@ -112,7 +113,9 @@ export const AddAddress: FunctionComponent<{
             onClick={async (e: any) => {
               e.preventDefault();
               e.stopPropagation();
-
+              analyticsStore.logEvent("save_new_address_click", {
+                pageName: "Add an Address",
+              });
               if (!recipientConfig.recipient) {
                 throw new Error("Invalid address");
               }

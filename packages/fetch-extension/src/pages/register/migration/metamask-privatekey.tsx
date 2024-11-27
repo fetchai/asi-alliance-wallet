@@ -205,7 +205,18 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
             />
           </React.Fragment>
         )}
-        <Button color="primary" type="submit" block>
+        <Button
+          color="primary"
+          type="submit"
+          block
+          onClick={() => {
+            analyticsStore.logEvent("register_next_click", {
+              registerType: "seed",
+              accountType: "mnemonic",
+              pageName: "Register",
+            });
+          }}
+        >
           <FormattedMessage id="register.create.button.next" />
         </Button>
       </Form>

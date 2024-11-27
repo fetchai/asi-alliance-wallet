@@ -284,7 +284,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     try {
                       accountSwitchStore.approve(address);
                       keyRingStore.changeKeyRing(addressIndex);
-                      analyticsStore.logEvent("Account changed");
+                      analyticsStore.logEvent("change_wallet_click");
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();
                       chatStore.messagesStore.resetChatList();

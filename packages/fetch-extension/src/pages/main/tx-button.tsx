@@ -143,7 +143,7 @@ export const TxButtonView: FunctionComponent = observer(() => {
         onClick={(e) => {
           e.preventDefault();
           if (hasAssets) {
-            analyticsStore.logEvent("send_click", { pageName: "Home Tab" });
+            analyticsStore.logEvent("send_click", { pageName: "Home" });
             navigate("/send");
           }
         }}

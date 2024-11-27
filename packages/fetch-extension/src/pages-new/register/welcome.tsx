@@ -3,8 +3,10 @@ import React, { FunctionComponent } from "react";
 import styleWelcome from "./welcome.module.scss";
 // import { Button } from "reactstrap";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { useStore } from "../../stores";
 
 export const WelcomePage: FunctionComponent = () => {
+  const { analyticsStore } = useStore();
   return (
     <div style={{ marginLeft: "-27px" }}>
       <img
@@ -28,6 +30,9 @@ export const WelcomePage: FunctionComponent = () => {
           height: "56px",
         }}
         onClick={() => {
+          analyticsStore.logEvent("start_using_your_wallet_click", {
+            pageName: "Register",
+          });
           if (typeof browser !== "undefined") {
             browser.tabs.getCurrent().then((tab) => {
               if (tab.id) {

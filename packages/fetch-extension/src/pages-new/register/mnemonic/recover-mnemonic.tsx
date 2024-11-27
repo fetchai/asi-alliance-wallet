@@ -81,7 +81,8 @@ export const RecoverMnemonicIntro: FunctionComponent<{
           e.preventDefault();
 
           registerConfig.setType(TypeRecoverMnemonic);
-          analyticsStore.logEvent("Import account started", {
+          analyticsStore.logEvent("import_a_wallet_click", {
+            pageName: "Register",
             registerType: "seed",
           });
         }}
@@ -136,9 +137,10 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
               e.preventDefault();
               setSelectedCard("recover");
               registerConfig.setType(TypeRecoverMnemonic);
-              analyticsStore.logEvent("Import account started", {
-                registerType: "seed",
-              });
+              analyticsStore.logEvent(
+                "use_a_seed_phrase_or_a_private_key_click",
+                { pageName: "Register", registerType: "seed" }
+              );
             }}
             leftImage={keyIcon}
             heading={"Use a seed phrase or a private key"}
@@ -160,8 +162,10 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
                 e.preventDefault();
                 setSelectedCard(AccountSetupType.CONNECT_HARDWARE);
                 registerConfig.setType(TypeRecoverMnemonic);
-                analyticsStore.logEvent("Import account started", {
-                  registerType: "seed",
+                analyticsStore.logEvent("connect_hardware_wallet_click", {
+                  registerType: "ledger",
+                  accountType: "ledger",
+                  pageName: "Register",
                 });
               }}
               leftImage={require("@assets/svg/wireframe/hardware.svg")}
@@ -189,8 +193,10 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
               e.preventDefault();
               setSelectedCard(AccountSetupType.MIGRATE_ETH);
               registerConfig.setType(TypeRecoverMnemonic);
-              analyticsStore.logEvent("Import account started", {
+              analyticsStore.logEvent("migrate_from_eth_click", {
                 registerType: "seed",
+                pageName: "Register",
+                accountType: "mnemonic",
               });
             }}
             leftImage={require("@assets/svg/wireframe/metamask-icon.svg")}
@@ -675,6 +681,12 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   }}
                   data-loading={registerConfig.isLoading}
                   disabled={registerConfig.isLoading}
+                  onClick={() => {
+                    analyticsStore.logEvent("register_next_click", {
+                      pageName: "Register",
+                      registerType: "seed",
+                    });
+                  }}
                 />
               </div>
             </Form>

@@ -127,10 +127,11 @@ export const Delegate: FunctionComponent = observer(() => {
           duration: 0.25,
         },
       });
-
-      analyticsStore.logEvent("Stake tx broadcasted", {
+      analyticsStore.logEvent("stake_txn_broadcasted", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
+        validatorName: validator?.description.moniker,
+        feeType: sendConfigs.feeConfig.feeType,
       });
     },
     onFulfill: (tx: any) => {
@@ -151,6 +152,7 @@ export const Delegate: FunctionComponent = observer(() => {
   };
   const stakeClicked = async () => {
     try {
+      analyticsStore.logEvent("stake_txn_click", { pageName: "Stake" });
       await account.cosmos
         .makeDelegateTx(sendConfigs.amountConfig.amount, validatorAddress)
         .send(
@@ -169,6 +171,12 @@ export const Delegate: FunctionComponent = observer(() => {
         transition: {
           duration: 0.25,
         },
+      });
+      analyticsStore.logEvent("stake_txn_broadcasted_fail", {
+        chainId: chainStore.current.chainId,
+        chainName: chainStore.current.chainName,
+        feeType: sendConfigs.feeConfig.feeType,
+        message: e?.message ?? "",
       });
     } finally {
       const txnNavigationOptions = {

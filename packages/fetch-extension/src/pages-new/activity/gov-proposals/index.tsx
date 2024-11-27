@@ -47,7 +47,8 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
     const handleFilterChange = (selectedFilter: string[]) => {
       setFilter(selectedFilter);
       analyticsStore.logEvent("activity_filter_click", {
-        pageName: "Transaction Tab",
+        tabName: "Gov Proposal",
+        pageName: "Activity",
       });
     };
 

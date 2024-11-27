@@ -16,7 +16,7 @@ export const Menu: FunctionComponent = observer(() => {
       <div
         className={styleMenu["item"]}
         onClick={() => {
-          analyticsStore.logEvent("address_book_click", { pageName: "drawer" });
+          analyticsStore.logEvent("address_book_click", { pageName: "More" });
           navigate({
             pathname: "/more/address-book",
           });
@@ -31,7 +31,7 @@ export const Menu: FunctionComponent = observer(() => {
           navigate({
             pathname: "/setting",
           });
-          analyticsStore.logEvent("settings_click", { pageName: "Drawer" });
+          analyticsStore.logEvent("settings_click", { pageName: "More" });
         }}
       >
         <FormattedMessage id="main.menu.settings" />

@@ -201,6 +201,7 @@ const GovtProposal = ({
   onSearchTermChange: React.Dispatch<React.SetStateAction<string>>;
 }) => {
   const navigate = useNavigate();
+  const { analyticsStore } = useStore();
   return (
     <SearchBar
       valuesArray={proposals}
@@ -219,6 +220,9 @@ const GovtProposal = ({
           }}
           onClick={() => {
             navigate(`/proposal-detail/${proposal.proposal_id}`);
+            analyticsStore.logEvent("proposal_item_click", {
+              pageName: "More",
+            });
           }}
         >
           <GovtProposalRow key={index} proposal={proposal} />
@@ -246,7 +250,6 @@ const GovtProposalFilterDropdown = ({
   handleFilterChange: () => Promise<void>;
 }) => {
   const filters = ["Active", "Voted", "Closed"];
-
   useEffect(() => {
     setSelectedFilter(appliedFilter);
   }, [isOpen]);

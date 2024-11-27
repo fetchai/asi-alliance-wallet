@@ -29,7 +29,7 @@ export const SelectValidatorList = observer(
     sort: Sort;
     setIsSortModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   }) => {
-    const { chainStore } = useStore();
+    const { chainStore, analyticsStore } = useStore();
 
     const [search, setSearch] = useState("");
 
@@ -119,6 +119,9 @@ export const SelectValidatorList = observer(
                   setClickedValidator(validator);
                   setShowValidatorListDropDown(false);
                   setShowValidatorDropdown(true);
+                  analyticsStore.logEvent("stake_validator_click", {
+                    pageName: "Validator Details",
+                  });
                 }}
                 selected={selectedValidator === validator}
               />

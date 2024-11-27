@@ -31,7 +31,7 @@ export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
   priceStore: CoinGeckoPriceStore;
-
+  pageName?: string;
   className?: string;
   label?: string;
   feeSelectLabels?: {
@@ -206,13 +206,19 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
 export const FeeButtonsInner: FunctionComponent<
   Pick<
     FeeButtonsProps,
-    "feeConfig" | "priceStore" | "label" | "feeSelectLabels" | "gasSimulator"
+    | "feeConfig"
+    | "priceStore"
+    | "label"
+    | "feeSelectLabels"
+    | "gasSimulator"
+    | "pageName"
   > & { feeButtonState: FeeButtonState }
 > = observer(
   ({
     feeConfig,
     priceStore,
     label,
+    pageName,
     feeSelectLabels = { low: "Low", average: "Average", high: "High" },
     feeButtonState,
   }) => {
@@ -222,7 +228,7 @@ export const FeeButtonsInner: FunctionComponent<
       }
     }, [feeConfig, feeConfig.feeCurrency, feeConfig.fee]);
 
-    const { chainStore } = useStore();
+    const { chainStore, analyticsStore } = useStore();
 
     const intl = useIntl();
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
@@ -295,6 +301,10 @@ export const FeeButtonsInner: FunctionComponent<
           <Card
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("low");
+              analyticsStore.logEvent("fee_type_select", {
+                pageName: pageName,
+                feeType: "low",
+              });
               e.preventDefault();
             }}
             style={{
@@ -347,6 +357,10 @@ export const FeeButtonsInner: FunctionComponent<
             }
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("average");
+              analyticsStore.logEvent("fee_type_select", {
+                pageName: pageName,
+                feeType: "average",
+              });
               e.preventDefault();
             }}
             style={{
@@ -385,6 +399,10 @@ export const FeeButtonsInner: FunctionComponent<
             }
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("high");
+              analyticsStore.logEvent("fee_type_select", {
+                pageName: pageName,
+                feeType: "high",
+              });
               e.preventDefault();
             }}
             style={{
@@ -426,6 +444,10 @@ export const FeeButtonsInner: FunctionComponent<
             onClick={(e) => {
               e.preventDefault();
               feeButtonState.setIsGasInputOpen(!feeButtonState.isGasInputOpen);
+              if (pageName)
+                analyticsStore.logEvent("fee_advance_click", {
+                  pageName: pageName,
+                });
             }}
           >
             {/* XXX: In fact, it is not only set gas, but fee currency can also be set depending on the option. */}

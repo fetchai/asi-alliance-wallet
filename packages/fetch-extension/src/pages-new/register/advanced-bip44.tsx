@@ -6,6 +6,7 @@ import { action, computed, makeObservable, observable } from "mobx";
 import { observer } from "mobx-react-lite";
 import { BIP44HDPath } from "@keplr-wallet/background";
 import style from "./style.module.scss";
+import { useStore } from "../../stores";
 
 export class BIP44Option {
   @observable
@@ -83,6 +84,7 @@ export const AdvancedBIP44Option: FunctionComponent<{
   bip44Option: BIP44Option;
 }> = observer(({ bip44Option }) => {
   const intl = useIntl();
+  const { analyticsStore } = useStore();
 
   const confirm = useConfirm();
 
@@ -121,6 +123,9 @@ export const AdvancedBIP44Option: FunctionComponent<{
         onClick={(e) => {
           e.preventDefault();
           toggleOpen();
+          analyticsStore.logEvent("register_advance_click", {
+            pageName: "Register",
+          });
         }}
       >
         <FormattedMessage id="register.bip44.button.advanced" />

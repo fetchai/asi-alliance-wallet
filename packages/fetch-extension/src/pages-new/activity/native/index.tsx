@@ -121,7 +121,7 @@ export const NativeTab = observer(() => {
 
   // const handleClick = () => {
   //   analyticsStore.logEvent("activity_transactions_click", {
-  //     pageName: "Transaction Tab",
+  //     pageName: "Transactions",
   //   });
   //   setLoadingRequest(true);
   //   fetchNodes(activityStore.getPageInfo.endCursor, "");
@@ -131,7 +131,8 @@ export const NativeTab = observer(() => {
     setFilter(selectedFilter);
     setSelectedFilter(selectedFilter);
     analyticsStore.logEvent("activity_filter_click", {
-      pageName: "Transaction Tab",
+      tabName: "Transactions",
+      pageName: "Activity",
     });
   };
 

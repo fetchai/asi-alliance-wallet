@@ -214,7 +214,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
                 backgroundBlur={false}
                 onPress={() => {
                   setIsOpenModal(true);
-                  analyticsStore.logEvent("filter_click", {
+                  analyticsStore.logEvent("activity_filter_click", {
                     pageName: "Token Detail",
                   });
                 }}

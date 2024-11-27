@@ -115,7 +115,9 @@ export const AddressBookPage: FunctionComponent<{
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            analyticsStore.logEvent("edit_address_book_click");
+            analyticsStore.logEvent("edit_address_icon_click", {
+              pageName: "Address Book",
+            });
             setAddAddressModalOpen(true);
             setAddAddressModalIndex(index);
           }}
@@ -127,8 +129,9 @@ export const AddressBookPage: FunctionComponent<{
           onClick={async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            analyticsStore.logEvent("delete_address_book_click", {
-              action: "No",
+            analyticsStore.logEvent("delete_address_click", {
+              action: confirm ? "Yes" : "No",
+              pageName: "Address Book",
             });
 
             if (
@@ -148,9 +151,6 @@ export const AddressBookPage: FunctionComponent<{
                 }),
               })
             ) {
-              analyticsStore.logEvent("delete_address_book_click", {
-                action: "Yes",
-              });
               setAddAddressModalOpen(false);
               setAddAddressModalIndex(-1);
               addressBookConfig.removeAddressBook(index);
@@ -188,7 +188,7 @@ export const AddressBookPage: FunctionComponent<{
             ? onBackButton
             : () => {
                 analyticsStore.logEvent("back_click", {
-                  pageName: "Address Book Page",
+                  pageName: "Address Book",
                 });
                 navigate(-1);
               }
@@ -256,7 +256,7 @@ export const AddressBookPage: FunctionComponent<{
                     e.preventDefault();
                     e.stopPropagation();
                     analyticsStore.logEvent("add_new_address_click", {
-                      pageName: "Drawer",
+                      pageName: "More",
                     });
                     setAddAddressModalOpen(true);
                   }}

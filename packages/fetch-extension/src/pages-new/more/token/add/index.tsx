@@ -167,7 +167,6 @@ export const AddTokenPage: FunctionComponent = observer(() => {
       <Form
         className={style["container"]}
         onSubmit={form.handleSubmit(async (data) => {
-          analyticsStore.logEvent("add_token_submit_click");
           if (
             tokenInfo?.decimals != null &&
             tokenInfo.name &&
@@ -189,6 +188,9 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                 await tokensStore.approveSuggestedToken(currency);
               } else {
                 await tokensOf.addToken(currency);
+                analyticsStore.logEvent("save_click", {
+                  pageName: "Add a Token",
+                });
               }
             } else {
               let viewingKey = data.viewingKey;

@@ -12,8 +12,13 @@ export const ValidatorDetails = observer(
   ({ validatorAddress }: { validatorAddress: string }) => {
     const navigate = useNavigate();
 
-    const { chainStore, accountStore, queriesStore, activityStore } =
-      useStore();
+    const {
+      chainStore,
+      accountStore,
+      queriesStore,
+      activityStore,
+      analyticsStore,
+    } = useStore();
     const account = accountStore.getAccount(chainStore.current.chainId);
     const queries = queriesStore.get(chainStore.current.chainId);
 
@@ -34,6 +39,14 @@ export const ValidatorDetails = observer(
         unbondings: unbondings,
       };
     }, [queryDelegations, validatorAddress]);
+
+    function isStake() {
+      return (
+        amount &&
+        parseFloat(amount?.maxDecimals(4).trim(true).toString().split(" ")[0]) >
+          0.00001
+      );
+    }
 
     return (
       <div
@@ -85,6 +98,9 @@ export const ValidatorDetails = observer(
                 disabled={activityStore.getPendingTxnTypes[TXNTYPE.redelegate]}
                 text="Redelegate"
                 onClick={() => {
+                  analyticsStore.logEvent("redelegate_click", {
+                    pageName: "Validator Details",
+                  });
                   if (activityStore.getPendingTxnTypes[TXNTYPE.redelegate])
                     return;
                   navigate(`/validator/${validatorAddress}/redelegate`);
@@ -104,18 +120,17 @@ export const ValidatorDetails = observer(
               justifyContent: "center",
               marginTop: "0px",
             }}
-            text={`${
-              amount &&
-              parseFloat(
-                amount?.maxDecimals(4).trim(true).toString().split(" ")[0]
-              ) > 0.00001
-                ? "Stake"
-                : "Stake with this validator"
-            }`}
+            text={`${isStake() ? "Stake" : "Stake with this validator"}`}
             disabled={activityStore.getPendingTxnTypes[TXNTYPE.delegate]}
             onClick={() => {
               if (activityStore.getPendingTxnTypes[TXNTYPE.delegate]) return;
               navigate(`/validator/${validatorAddress}/delegate`);
+              analyticsStore.logEvent(
+                isStake() ? "stake_more_click" : "stake_with_validator_click",
+                {
+                  pageName: "Validator Details",
+                }
+              );
             }}
           >
             {activityStore.getPendingTxnTypes[TXNTYPE.delegate] && (

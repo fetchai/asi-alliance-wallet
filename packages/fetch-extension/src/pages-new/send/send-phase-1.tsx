@@ -22,7 +22,8 @@ interface SendPhase1Props {
 export const SendPhase1: React.FC<SendPhase1Props> = observer(
   ({ setIsNext, sendConfigs, setFromPhase1 }) => {
     const [isChangeWalletOpen, setIsChangeWalletOpen] = useState(false);
-    const { chainStore, accountStore, queriesStore } = useStore();
+    const { chainStore, accountStore, queriesStore, analyticsStore } =
+      useStore();
     const queries = queriesStore.get(chainStore.current.chainId);
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const navigate = useNavigate();
@@ -125,7 +126,12 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           }}
           heading={accountInfo.name}
           rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
-          onClick={() => setIsChangeWalletOpen(!isChangeWalletOpen)}
+          onClick={() => {
+            setIsChangeWalletOpen(!isChangeWalletOpen);
+            analyticsStore.logEvent("send_from_click", {
+              pageName: "Send",
+            });
+          }}
         />
         <ButtonV2
           disabled={
@@ -136,6 +142,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           onClick={() => {
             setIsNext(true);
             navigate("/send", { state: { isFromPhase1: true } });
+            analyticsStore.logEvent("next_click", { pageName: "Send" });
           }}
           styleProps={{
             width: "94%",
@@ -153,7 +160,12 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           isOpen={isChangeWalletOpen}
           setIsOpen={setIsChangeWalletOpen}
           title="Select Wallet"
-          closeClicked={() => setIsChangeWalletOpen(false)}
+          closeClicked={() => {
+            setIsChangeWalletOpen(false);
+            analyticsStore.logEvent("select_wallet_click", {
+              pageName: "Send",
+            });
+          }}
         >
           <SetKeyRingPage navigateTo={"/send"} />
         </Dropdown>

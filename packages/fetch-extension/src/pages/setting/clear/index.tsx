@@ -75,7 +75,7 @@ export const ClearPage: FunctionComponent = observer(() => {
               // Make sure that password is valid and keyring is cleared.
               await keyRingStore.deleteKeyRing(parseInt(index), data.password);
               analyticsStore.logEvent("delete_account_click", {
-                action: "Yes",
+                action: "Remove",
               });
               navigate("/");
             } catch (e) {

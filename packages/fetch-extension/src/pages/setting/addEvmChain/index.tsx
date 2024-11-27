@@ -249,6 +249,9 @@ export const AddEvmChain: FunctionComponent = () => {
     try {
       chainStore.addEVMChainInfo(newChainInfo);
       chainStore.selectChain(newChainInfo.chainId);
+      analyticsStore.logEvent("add_chain_click", {
+        pageName: "Add new EVM chain",
+      });
     } catch (error) {
       console.log("error", error);
     }

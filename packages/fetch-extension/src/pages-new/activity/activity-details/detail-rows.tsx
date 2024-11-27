@@ -5,6 +5,7 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { useNavigate } from "react-router";
 import { AppCurrency } from "@keplr-wallet/types";
 import { DetailRow } from "./detail-row";
+import { useStore } from "../../../stores";
 
 export const DetailRows = ({ details }: { details: any }) => {
   const currency: AppCurrency = {
@@ -16,14 +17,30 @@ export const DetailRows = ({ details }: { details: any }) => {
   const fees = JSON.parse(details.fees);
   const { feeNumber, feeAlphabetic } = details;
   const navigate = useNavigate();
+  const { chainStore, analyticsStore } = useStore();
   const handleClick = () => {
     const mintscanURL = `https://www.mintscan.io/fetchai/tx/${details.hash}/`;
     window.open(mintscanURL, "_blank");
+    analyticsStore.logEvent("view_on_mintscan_click", {
+      chainId: chainStore.current.chainId,
+      chainName: chainStore.current.chainName,
+      pageName: "Activity Detail",
+    });
   };
   const handleValidatorClicked = () => {
     navigate(`/validator/${details.validatorAddress}/delegate`);
+    analyticsStore.logEvent("stake_click", {
+      chainId: chainStore.current.chainId,
+      chainName: chainStore.current.chainName,
+      pageName: "Activity Detail",
+    });
   };
   const handleSendClicked = () => {
+    analyticsStore.logEvent("send_click", {
+      chainId: chainStore.current.chainId,
+      chainName: chainStore.current.chainName,
+      pageName: "Activity Detail",
+    });
     navigate("/send", {
       replace: true,
       state: {

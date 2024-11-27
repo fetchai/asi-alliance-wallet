@@ -35,6 +35,7 @@ export const WalletDetailsView = observer(
       queriesStore,
       uiConfigStore,
       activityStore,
+      analyticsStore,
     } = useStore();
     const userState = chatStore.userDetailsStore;
 
@@ -364,7 +365,12 @@ export const WalletDetailsView = observer(
             </div>
           </div>
           <Button
-            onClick={() => setIsSelectWalletOpen(true)}
+            onClick={() => {
+              setIsSelectWalletOpen(true);
+              analyticsStore.logEvent("account_icon_click", {
+                pageName: "Home",
+              });
+            }}
             className={style["change-net"]}
           >
             <img
@@ -423,7 +429,12 @@ export const WalletDetailsView = observer(
               gap: "2px",
               cursor: "pointer",
             }}
-            onClick={() => navigate("/stake")}
+            onClick={() => {
+              analyticsStore.logEvent("claim_all_staking_reward_click", {
+                pageName: "Home",
+              });
+              navigate("/stake");
+            }}
           >
             <div
               style={{

@@ -16,7 +16,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
   const intl = useIntl();
   const navigate = useNavigate();
 
-  const { chainStore } = useStore();
+  const { chainStore, analyticsStore } = useStore();
 
   const [cosmosSearchTerm, setCosmosSearchTerm] = useState("");
   const [evmSearchTerm, setEvmSearchTerm] = useState("");
@@ -143,7 +143,15 @@ export const ManageNetworks: FunctionComponent = observer(() => {
       }}
     >
       <div className={style["chainListContainer"]}>
-        <TabsPanel onTabChange={setSelectedTab} tabs={tabs} />
+        <TabsPanel
+          onTabChange={(tabId: string) => {
+            setSelectedTab;
+            analyticsStore.logEvent(`${tabId.toLowerCase()}_tab_click`, {
+              pageName: "Home",
+            });
+          }}
+          tabs={tabs}
+        />
       </div>
     </HeaderLayout>
   );

@@ -48,7 +48,7 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
           heading={"View mnemonic seed"}
           onClick={() => {
             navigate(`/more/export/${accountIndex}`);
-            analyticsStore.logEvent("wallet_access_permissions_click", {
+            analyticsStore.logEvent("view_mnemonic_seed_click", {
               pageName: "Security & Privacy",
             });
           }}

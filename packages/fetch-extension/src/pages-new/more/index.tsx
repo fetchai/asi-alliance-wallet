@@ -57,28 +57,48 @@ export const MorePage: FunctionComponent = () => {
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/currency.svg")}
         heading={"Currency"}
-        onClick={() => navigate("/more/currency")}
+        onClick={() => {
+          navigate("/more/currency");
+          analyticsStore.logEvent("currency_click", {
+            pageName: "More",
+          });
+        }}
       />
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
         heading={"Manage Tokens"}
-        onClick={() => navigate("/more/token/manage")}
+        onClick={() => {
+          navigate("/more/token/manage");
+          analyticsStore.logEvent("manage_tokens_click", {
+            pageName: "More",
+          });
+        }}
       />
       <Card
         leftImageStyle={{ background: "transparent", height: "18px" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/at.svg")}
         heading={"Address Book"}
-        onClick={() => navigate("/more/address-book")}
+        onClick={() => {
+          navigate("/more/address-book");
+          analyticsStore.logEvent("address_book_click", {
+            pageName: "More",
+          });
+        }}
       />
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/language.svg")}
         heading={"Language"}
-        onClick={() => navigate("/more/language")}
+        onClick={() => {
+          navigate("/more/language");
+          analyticsStore.logEvent("language_click", {
+            pageName: "More",
+          });
+        }}
       />
 
       {/* 
@@ -95,7 +115,12 @@ export const MorePage: FunctionComponent = () => {
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/security.svg")}
         heading={"Security & privacy"}
-        onClick={() => navigate("/more/security-privacy")}
+        onClick={() => {
+          navigate("/more/security-privacy");
+          analyticsStore.logEvent("security_and_privacy_click", {
+            pageName: "More",
+          });
+        }}
       />
 
       <Card
@@ -103,7 +128,12 @@ export const MorePage: FunctionComponent = () => {
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/chain-list-access.svg")}
         heading={"Link ASI Mobile Wallet"}
-        onClick={() => navigate("/more/export-to-mobile")}
+        onClick={() => {
+          navigate("/more/export-to-mobile");
+          analyticsStore.logEvent("link_asi_mobile_wallet_click", {
+            pageName: "More",
+          });
+        }}
       />
 
       <div
@@ -158,7 +188,7 @@ export const MorePage: FunctionComponent = () => {
         onClick={(e: any) => {
           e.preventDefault();
           analyticsStore.logEvent("ibc_transfer_click", {
-            pageName: "More Tab",
+            pageName: "More",
           });
           navigate("/ibc-transfer");
         }}
@@ -171,7 +201,9 @@ export const MorePage: FunctionComponent = () => {
           heading={"Proposals"}
           onClick={(e: any) => {
             e.preventDefault();
-            analyticsStore.logEvent("proposal_view_click");
+            analyticsStore.logEvent("proposal_view_click", {
+              pageName: "More",
+            });
             navigate("/proposal");
           }}
         />

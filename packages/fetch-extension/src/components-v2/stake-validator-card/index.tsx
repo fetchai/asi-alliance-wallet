@@ -5,6 +5,7 @@ import { Address } from "@components/address";
 import { useNavigate } from "react-router";
 import { Link } from "react-router-dom";
 import { VALIDATOR_URL } from "../../config.ui.var";
+import { useStore } from "../../stores";
 
 interface ItemData {
   title: string;
@@ -34,7 +35,7 @@ export const StakeValidatorCard = ({
   chainID: string;
 }) => {
   const navigate = useNavigate();
-
+  const { analyticsStore } = useStore();
   const data: ItemData[] = [
     {
       title: "Delegated",
@@ -58,7 +59,12 @@ export const StakeValidatorCard = ({
     <div
       className={style["stake-validator-container"]}
       style={{ color: "white", cursor: "pointer" }}
-      onClick={() => navigate(`/validator/${validatorAddress}`)}
+      onClick={() => {
+        navigate(`/validator/${validatorAddress}`);
+        analyticsStore.logEvent("stake_validator_click", {
+          pageName: "Stake",
+        });
+      }}
     >
       <div className={style["validator-info"]}>
         <div className={style["validator-info-left"]}>
