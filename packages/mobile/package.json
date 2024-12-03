@@ -13,11 +13,10 @@
   "scripts": {
     "clean": "sh ./scripts/clean.sh",
     "clean:watchman": "sh ./scripts/clean-watchman.sh",
-    "android": "yarn build:background && yarn build:provider && echo 'Building Android' && expo run:android",
-    "ios": "yarn build:background && yarn build:provider && echo 'Building iOS' && expo run:ios",
+    "android": "yarn build:provider && echo 'Building Android' && expo run:android",
+    "ios": "yarn build:provider && echo 'Building iOS' && expo run:ios",
     "android:connect": "adb reverse tcp:8081 tcp:8081",
     "typecheck": "tsc",
-    "build:background": "echo 'Building build:background' && sh ./scripts/fix-background-module.sh && yarn workspace @keplr-wallet/background build",
     "build:provider": "echo 'Building build:provider' && tsc --project tsconfig.provider.json && browserify -p tinyify build/injected/index.js -o build/injected/injected-provider.bundle.js && cp -rf build/injected/injected-provider.bundle.js android/app/src/main/assets/.",
     "start": "expo start --dev-client",
     "start:reset": "expo start --dev-client --reset-cache",

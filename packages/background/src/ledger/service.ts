@@ -360,32 +360,24 @@ export class LedgerService {
 
   // Test that the exntesion's granting ledger page is opened.
   async testLedgerGrantUIOpened() {
+    // Introduce a delay before starting the check loop
     await delay(1000);
 
     while (true) {
-      try {
-        const views = browser.extension.getViews();
-        let find = false;
-        for (const view of views) {
-          if (
-            view.location.href.includes(
-              browser.runtime.getURL("popup.html#/ledger-grant")
-            )
-          ) {
-            find = true;
-            break;
-          }
-        }
+      // Check if the element representing the Ledger grant UI exists on the page
+      const ledgerGrantUI = document.querySelector(
+        "div[data-role='ledger-grant']"
+      );
 
-        if (!find) {
-          throw new Error("Ledger init aborted");
-        }
-      } catch (e) {
-        console.log("testLedgerGrantUIOpened:error", e);
+      if (!ledgerGrantUI) {
+        throw new Error("Ledger init aborted");
       }
 
-      await delay(1000);
+      // If found, break out of the loop
+      console.log("Ledger grant UI detected.");
+      break;
     }
+    await delay(1000);
   }
 
   /**

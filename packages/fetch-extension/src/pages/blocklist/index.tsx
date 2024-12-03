@@ -5,8 +5,11 @@ import React, { FunctionComponent } from "react";
 import { URLTempAllowMsg } from "@keplr-wallet/background";
 import ReactDOM from "react-dom";
 import style from "./style.module.scss";
+import { useAutoLockMonitoring } from "../../use-auto-lock-monitoring";
 
 export const BlocklistPage: FunctionComponent = () => {
+  useAutoLockMonitoring();
+
   const origin =
     new URLSearchParams(window.location.search).get("origin") || "";
 

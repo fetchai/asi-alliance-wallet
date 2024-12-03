@@ -65,6 +65,15 @@ const { initFn } = init(
         message: params.message,
       });
     },
+  },
+  (callback: () => void) => {
+    browser.idle.onStateChanged.addListener(
+      (newState: browser.idle.IdleState) => {
+        if ((newState as any) === "locked") {
+          callback();
+        }
+      }
+    );
   }
 );
 

@@ -3,6 +3,9 @@ import {
   GetAutoLockAccountDurationMsg,
   UpdateAutoLockAccountDurationMsg,
   StartAutoLockMonitoringMsg,
+  GetLockOnSleepMsg,
+  SetLockOnSleepMsg,
+  GetAutoLockStateMsg,
 } from "./messages";
 import { AutoLockAccountService } from "./service";
 
@@ -25,6 +28,15 @@ export const getHandler: (service: AutoLockAccountService) => Handler = (
         return handleStartAutoLockMonitoringMsg(service)(
           env,
           msg as StartAutoLockMonitoringMsg
+        );
+      case GetLockOnSleepMsg:
+        return handleGetLockOnSleepMsg(service)(env, msg as GetLockOnSleepMsg);
+      case SetLockOnSleepMsg:
+        return handleSetLockOnSleepMsg(service)(env, msg as SetLockOnSleepMsg);
+      case GetAutoLockStateMsg:
+        return handleGetAutoLockStateMsg(service)(
+          env,
+          msg as GetAutoLockStateMsg
         );
       default:
         throw new Error("Unknown msg type");
@@ -57,5 +69,32 @@ const handleStartAutoLockMonitoringMsg: (
 ) => InternalHandler<StartAutoLockMonitoringMsg> = (service) => {
   return () => {
     return service.startAppStateCheckTimer();
+  };
+};
+
+const handleGetLockOnSleepMsg: (
+  service: AutoLockAccountService
+) => InternalHandler<GetLockOnSleepMsg> = (service) => {
+  return () => {
+    return service.getLockOnSleep();
+  };
+};
+
+const handleSetLockOnSleepMsg: (
+  service: AutoLockAccountService
+) => InternalHandler<SetLockOnSleepMsg> = (service) => {
+  return (_, msg) => {
+    return service.setLockOnSleep(msg.lockOnSleep);
+  };
+};
+
+const handleGetAutoLockStateMsg: (
+  service: AutoLockAccountService
+) => InternalHandler<GetAutoLockStateMsg> = (service) => {
+  return () => {
+    return {
+      duration: service.getAutoLockDuration(),
+      lockOnSleep: service.getLockOnSleep(),
+    };
   };
 };

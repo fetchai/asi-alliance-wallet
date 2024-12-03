@@ -62,6 +62,9 @@ const { initFn } = init(
       console.log(`Notification: ${params.title}, ${params.message}`);
     },
   },
+  () => {
+    // TODO
+  },
   {
     defaultMode: "ble",
     transportIniters: {

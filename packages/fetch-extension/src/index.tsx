@@ -123,6 +123,7 @@ import { ReadRecipt } from "./pages/setting/chat/readRecipt";
 import { SettingEndpointsPage } from "./pages/setting/endpoints";
 import { StakeComplete } from "./pages/validator/stake-complete";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
 
 const queryClient = new QueryClient();
 
@@ -211,6 +212,12 @@ const StateRenderer: FunctionComponent = observer(() => {
   }
 });
 
+const AutoLockMonitor: FunctionComponent = observer(() => {
+  useAutoLockMonitoring();
+
+  return null;
+});
+
 ReactDOM.render(
   <QueryClientProvider client={queryClient}>
     <StoreProvider>
@@ -223,6 +230,7 @@ ReactDOM.render(
             <NotificationProvider>
               <ConfirmProvider>
                 <ErrorBoundary>
+                  <AutoLockMonitor />
                   <HashRouter>
                     <DropdownContextProvider>
                       <ChatStoreProvider>

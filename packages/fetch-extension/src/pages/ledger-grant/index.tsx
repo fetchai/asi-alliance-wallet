@@ -14,6 +14,7 @@ import style from "./style.module.scss";
 import { Buffer } from "buffer/";
 import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 import delay from "delay";
+import { useAutoLockMonitoring } from "../../use-auto-lock-monitoring";
 
 const PrimaryLoading: FunctionComponent = () => {
   return (
@@ -132,6 +133,8 @@ const FailedLoading: FunctionComponent = () => {
 };
 
 export const LedgerGrantFullScreenPage: FunctionComponent = () => {
+  useAutoLockMonitoring();
+
   const request: {
     app: LedgerApp;
     cosmosLikeApp: string;

@@ -56,6 +56,7 @@ export function init(
   },
   commonCrypto: CommonCrypto,
   notification: Notification,
+  addDeviceLockedListener: (callback: () => void) => void,
   ledgerOptions: Partial<LedgerOptions> = {},
   experimentalOptions: Partial<{
     suggestChain: Partial<{
@@ -123,7 +124,9 @@ export function init(
   );
 
   const autoLockAccountService = new AutoLocker.AutoLockAccountService(
-    storeCreator("auto-lock-account")
+    storeCreator("auto-lock-account"),
+    keyRingService,
+    addDeviceLockedListener
   );
 
   const chainUpdaterService = new Updater.ChainUpdaterService(
@@ -197,7 +200,7 @@ export function init(
       backgroundTxService.init(chainsService, permissionService);
       phishingListService.init();
       // No need to wait because user can't interact with app right after launch.
-      await autoLockAccountService.init(keyRingService);
+      await autoLockAccountService.init();
       // No need to wait because user can't interact with app right after launch.
       await analyticsService.init();
       await messagingService.init(keyRingService);
