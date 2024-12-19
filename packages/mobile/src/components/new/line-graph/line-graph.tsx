@@ -112,7 +112,8 @@ export const LineGraph: FunctionComponent<{
           const timestamp = new Date().getTime();
 
           tokenState = {
-            diff: Math.abs(percentageDiff),
+            percentageDiff: Math.abs(percentageDiff),
+            diff: diff * 100,
             time: getTimeLabel(),
             timestamp,
             type,

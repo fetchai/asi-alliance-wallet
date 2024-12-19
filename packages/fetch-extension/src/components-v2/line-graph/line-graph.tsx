@@ -90,7 +90,12 @@ export const LineGraph: React.FC<LineGraphProps> = ({
 
           const type = diff >= 0 ? "positive" : "negative";
 
-          setTokenState({ diff: Math.abs(percentageDiff), time, type });
+          setTokenState({
+            percentageDiff: Math.abs(percentageDiff),
+            diff: diff * 100,
+            time,
+            type,
+          });
         }
         setPrices(newPrices);
         setLoading(false);

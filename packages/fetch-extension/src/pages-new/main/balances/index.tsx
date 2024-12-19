@@ -101,8 +101,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
 
   const changeInDollarsValue =
     tokenState.type === "positive"
-      ? (parseFloat(totalNumber) * tokenState.diff) / 100
-      : -(parseFloat(totalNumber) * tokenState.diff) / 100;
+      ? tokenState.diff / 100
+      : -tokenState.diff / 100;
 
   const changeInDollarsClass =
     tokenState.type === "positive"
@@ -136,7 +136,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
               </div>
               <div className={style["changeInPer"]}>
                 ( {tokenState.type === "positive" ? "+" : "-"}
-                {parseFloat(tokenState.diff).toFixed(2)} %)
+                {parseFloat(tokenState.percentageDiff).toFixed(1)} %)
               </div>
               <div className={style["day"]}>{tokenState.time}</div>
             </div>
@@ -161,7 +161,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             rewards.isFetching ? (
               <Skeleton height="21px" />
             ) : totalPrice ? (
-              ` ${totalPrice.toString()} `
+              ` ${totalPrice.toString()} ${fiatCurrency.toUpperCase()}`
             ) : (
               ` ${total
                 .shrink(true)
@@ -184,11 +184,11 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                   style["changeInDollars"] + " " + changeInDollarsClass
                 }
               >
-                {changeInDollarsValue.toFixed(4)} {totalDenom}
+                {changeInDollarsValue.toFixed(4)} {fiatCurrency.toUpperCase()}
               </div>
               <div className={style["changeInPer"]}>
                 ({tokenState.type === "positive" ? "+" : "-"}
-                {parseFloat(tokenState.diff).toFixed(2)} %)
+                {parseFloat(tokenState.percentageDiff).toFixed(1)} %)
               </div>
               <div className={style["day"]}>{tokenState.time}</div>
             </div>

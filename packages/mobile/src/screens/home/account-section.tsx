@@ -117,8 +117,8 @@ export const AccountSection: FunctionComponent<{
     );
   const changeInDollarsValue =
     tokenState.type === "positive"
-      ? (parseFloat(totalNumber) * tokenState.diff) / 100
-      : -(parseFloat(totalNumber) * tokenState.diff) / 100;
+      ? tokenState.diff / 100
+      : -tokenState.diff / 100;
 
   const accountOrChainChanged =
     activityStore.getAddress !== account.bech32Address ||
@@ -418,10 +418,17 @@ export const AccountSection: FunctionComponent<{
                 ) as ViewStyle
               }
             >
-              {tokenState.type === "positive" && "+"}
-              {changeInDollarsValue.toFixed(4)} {totalDenom}(
-              {tokenState.type === "positive" ? "+" : "-"}
-              {parseFloat(tokenState.diff).toFixed(2)} %)
+              {`${
+                tokenState.type === "positive" ? "+" : ""
+              }${changeInDollarsValue.toFixed(
+                4
+              )} ${priceStore.defaultVsCurrency.toUpperCase()} (${
+                tokenState.type === "positive" ? "+" : "-"
+              }${
+                Number.isNaN(parseFloat(tokenState.percentageDiff))
+                  ? "0"
+                  : parseFloat(tokenState.percentageDiff).toFixed(1)
+              } %)`}
             </Text>
             <Text
               style={

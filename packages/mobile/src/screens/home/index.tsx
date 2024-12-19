@@ -52,6 +52,7 @@ export const HomeScreen: FunctionComponent = observer(() => {
     useStore();
 
   const [tokenState, setTokenState] = useState({
+    percentageDiff: 0,
     diff: 0,
     time: "TODAY",
     type: "positive",
