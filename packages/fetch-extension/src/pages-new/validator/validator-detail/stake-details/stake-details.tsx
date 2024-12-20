@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useStore } from "../../../../stores";
 import style from "../style.module.scss";
 import { TXNTYPE } from "../../../../config";
+import { handleLedgerResign } from "@utils/index";
 
 export const StakeDetails = observer(
   ({ validatorAddress }: { validatorAddress: string }) => {
@@ -17,6 +18,7 @@ export const StakeDetails = observer(
       queriesStore,
       activityStore,
       analyticsStore,
+      ledgerInitStore,
     } = useStore();
     const account = accountStore.getAccount(chainStore.current.chainId);
     const queries = queriesStore.get(chainStore.current.chainId);
@@ -92,6 +94,15 @@ export const StakeDetails = observer(
         }, 200);
       } catch (err) {
         console.error(err);
+        /// Handling ledger resign issue if ledger is not connected
+        if (err.toString().includes("Error: document is not defined")) {
+          await handleLedgerResign(ledgerInitStore, () => {
+            handleClaim();
+          });
+
+          return;
+        }
+
         analyticsStore.logEvent("claim_txn_broadcasted_fail", {
           chainId: chainStore.current.chainId,
           chainName: chainStore.current.chainName,

@@ -23,6 +23,7 @@ import { TXNTYPE } from "../../../config";
 import { useIntl } from "react-intl";
 import { useLanguage } from "../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { handleLedgerResign } from "@utils/index";
 
 type Sort = "APR" | "Voting Power" | "Name";
 
@@ -41,6 +42,7 @@ export const Redelegate = observer(() => {
     analyticsStore,
     priceStore,
     activityStore,
+    ledgerInitStore,
   } = useStore();
   const account = accountStore.getAccount(chainStore.current.chainId);
 
@@ -217,6 +219,15 @@ export const Redelegate = observer(() => {
         )
         .send(feeConfig.toStdFee(), memoConfig.memo, undefined, txnResult);
     } catch (e) {
+      /// Handling ledger resign issue if ledger is not connected
+      if (e.toString().includes("Error: document is not defined")) {
+        await handleLedgerResign(ledgerInitStore, () => {
+          redelegateClicked();
+        });
+
+        return;
+      }
+
       notification.push({
         type: "danger",
         placement: "top-center",

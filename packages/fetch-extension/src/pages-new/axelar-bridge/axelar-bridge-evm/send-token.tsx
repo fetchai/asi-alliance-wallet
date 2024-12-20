@@ -7,6 +7,7 @@ import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
 import { formatActivityHash } from "@utils/format";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { handleLedgerResign } from "@utils/index";
 
 interface SendTokenProps {
   sendConfigs: any;
@@ -14,7 +15,7 @@ interface SendTokenProps {
 
 export const SendToken: React.FC<SendTokenProps> = observer(
   ({ sendConfigs }) => {
-    const { chainStore, accountStore } = useStore();
+    const { chainStore, accountStore, ledgerInitStore } = useStore();
     const current = chainStore.current;
     const accountInfo = accountStore.getAccount(current.chainId);
     const notification = useNotification();
@@ -85,6 +86,15 @@ export const SendToken: React.FC<SendTokenProps> = observer(
           );
           setIsTrsnxInProgress(false);
         } catch (e) {
+          /// Handling ledger resign issue if ledger is not connected
+          if (e.toString().includes("Error: document is not defined")) {
+            await handleLedgerResign(ledgerInitStore, () => {
+              handleEVMSendToken();
+            });
+
+            return;
+          }
+
           notification.push({
             type: "warning",
             placement: "top-center",

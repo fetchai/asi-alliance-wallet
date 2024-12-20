@@ -18,6 +18,7 @@ import { useStore } from "../../../stores";
 import { useLanguage } from "../../../languages";
 import style from "./style.module.scss";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { handleLedgerResign } from "@utils/index";
 
 export const Delegate: FunctionComponent = observer(() => {
   const location = useLocation();
@@ -32,6 +33,7 @@ export const Delegate: FunctionComponent = observer(() => {
     accountStore,
     queriesStore,
     analyticsStore,
+    ledgerInitStore,
     priceStore,
     activityStore,
   } = useStore();
@@ -162,6 +164,15 @@ export const Delegate: FunctionComponent = observer(() => {
           txnResult
         );
     } catch (e) {
+      /// Handling ledger resign issue if ledger is not connected
+      if (e.toString().includes("Error: document is not defined")) {
+        await handleLedgerResign(ledgerInitStore, () => {
+          stakeClicked();
+        });
+
+        return;
+      }
+
       notification.push({
         type: "danger",
         placement: "top-center",

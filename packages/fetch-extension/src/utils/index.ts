@@ -8,6 +8,8 @@ import {
   CHAIN_ID_LOCAL_TEST_NETWORK,
   CHAIN_ID_REMOTE_TEST_NETWORK,
 } from "../config.ui.var";
+import delay from "delay";
+import { LedgerInitStore } from "@keplr-wallet/stores";
 
 // translate the contact address into the address book name if it exists
 export function getUserName(
@@ -67,4 +69,18 @@ export function isFeatureAvailable(chainId: string): boolean {
     CHAIN_ID_LOCAL_TEST_NETWORK,
     CHAIN_ID_REMOTE_TEST_NETWORK,
   ].includes(chainId);
+}
+
+export async function handleLedgerResign(
+  ledgerInitStore: LedgerInitStore,
+  callback: () => void
+) {
+  while (true) {
+    if (ledgerInitStore.isLedgerReSign) {
+      ledgerInitStore.setLedgerReSign(false);
+      callback();
+      break;
+    }
+    await delay(5000);
+  }
 }

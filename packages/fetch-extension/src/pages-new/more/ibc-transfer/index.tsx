@@ -35,6 +35,7 @@ import { Dropdown } from "@components-v2/dropdown";
 import { SetKeyRingPage } from "../../keyring-dev";
 import { TXNTYPE } from "../../../config";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { handleLedgerResign } from "@utils/index";
 
 export const IBCTransferPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ export const IBCTransferPage: FunctionComponent = observer(() => {
     queriesStore,
     uiConfigStore,
     analyticsStore,
+    ledgerInitStore,
   } = useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
@@ -104,6 +106,85 @@ export const IBCTransferPage: FunctionComponent = observer(() => {
     (toChainId && chainStore.getChain(toChainId).chainName) || "";
   const [isIBCRegisterPageOpen, setIsIBCRegisterPageOpen] = useState(false);
 
+  async function processIBCTxn() {
+    if (ibcTransferConfigs.channelConfig.channel) {
+      try {
+        analyticsStore.logEvent("ibc_txn_submit_click");
+        const tx = accountInfo.cosmos.makeIBCTransferTx(
+          ibcTransferConfigs.channelConfig.channel,
+          ibcTransferConfigs.amountConfig.amount,
+          ibcTransferConfigs.amountConfig.sendCurrency,
+          ibcTransferConfigs.recipientConfig.recipient
+        );
+
+        await tx.send(
+          ibcTransferConfigs.feeConfig.toStdFee(),
+          ibcTransferConfigs.memoConfig.memo,
+          {
+            preferNoSetFee: true,
+            preferNoSetMemo: true,
+          },
+          {
+            onBroadcasted: () => {
+              analyticsStore.logEvent("ibc_txn_broadcasted", {
+                chainId: chainStore.current.chainId,
+                chainName: chainStore.current.chainName,
+                feeType: ibcTransferConfigs.feeConfig.feeType,
+                toChainId,
+                toChainName,
+              });
+            },
+          }
+        );
+
+        const txnNavigationOptions = {
+          redirect: () => {
+            navigate("/");
+          },
+          txInProgress: accountInfo.txInProgress,
+          txType: TXNTYPE.ibcTransfer,
+        };
+        navigateOnTxnEvents(txnNavigationOptions);
+      } catch (e) {
+        /// Handling ledger resign issue if ledger is not connected
+        if (e.toString().includes("Error: document is not defined")) {
+          await handleLedgerResign(ledgerInitStore, () => {
+            processIBCTxn();
+          });
+
+          return;
+        }
+
+        analyticsStore.logEvent("ibc_txn_broadcasted_fail", {
+          chainId: chainStore.current.chainId,
+          chainName: chainStore.current.chainName,
+          feeType: ibcTransferConfigs.feeConfig.feeType,
+          toChainId,
+          toChainName,
+          message: e?.message ?? "",
+        });
+        const txnNavigationOptions = {
+          redirect: () => {
+            navigate("/", { replace: true });
+          },
+          txInProgress: accountInfo.txInProgress,
+          txType: TXNTYPE.ibcTransfer,
+        };
+        navigateOnTxnEvents(txnNavigationOptions);
+        notification.push({
+          type: "warning",
+          placement: "top-center",
+          duration: 5,
+          content: `Fail to transfer token: ${e.message}`,
+          canDelete: true,
+          transition: {
+            duration: 0.25,
+          },
+        });
+      }
+    }
+  }
+
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -140,73 +221,7 @@ export const IBCTransferPage: FunctionComponent = observer(() => {
           gasConfig={ibcTransferConfigs.gasConfig}
           gasSimulator={gasSimulator}
           onSubmit={async () => {
-            if (ibcTransferConfigs.channelConfig.channel) {
-              try {
-                analyticsStore.logEvent("ibc_txn_submit_click");
-                const tx = accountInfo.cosmos.makeIBCTransferTx(
-                  ibcTransferConfigs.channelConfig.channel,
-                  ibcTransferConfigs.amountConfig.amount,
-                  ibcTransferConfigs.amountConfig.sendCurrency,
-                  ibcTransferConfigs.recipientConfig.recipient
-                );
-
-                await tx.send(
-                  ibcTransferConfigs.feeConfig.toStdFee(),
-                  ibcTransferConfigs.memoConfig.memo,
-                  {
-                    preferNoSetFee: true,
-                    preferNoSetMemo: true,
-                  },
-                  {
-                    onBroadcasted: () => {
-                      analyticsStore.logEvent("ibc_txn_broadcasted", {
-                        chainId: chainStore.current.chainId,
-                        chainName: chainStore.current.chainName,
-                        feeType: ibcTransferConfigs.feeConfig.feeType,
-                        toChainId,
-                        toChainName,
-                      });
-                    },
-                  }
-                );
-
-                const txnNavigationOptions = {
-                  redirect: () => {
-                    navigate("/");
-                  },
-                  txInProgress: accountInfo.txInProgress,
-                  txType: TXNTYPE.ibcTransfer,
-                };
-                navigateOnTxnEvents(txnNavigationOptions);
-              } catch (e) {
-                analyticsStore.logEvent("ibc_txn_broadcasted_fail", {
-                  chainId: chainStore.current.chainId,
-                  chainName: chainStore.current.chainName,
-                  feeType: ibcTransferConfigs.feeConfig.feeType,
-                  toChainId,
-                  toChainName,
-                  message: e?.message ?? "",
-                });
-                const txnNavigationOptions = {
-                  redirect: () => {
-                    navigate("/", { replace: true });
-                  },
-                  txInProgress: accountInfo.txInProgress,
-                  txType: TXNTYPE.ibcTransfer,
-                };
-                navigateOnTxnEvents(txnNavigationOptions);
-                notification.push({
-                  type: "warning",
-                  placement: "top-center",
-                  duration: 5,
-                  content: `Fail to transfer token: ${e.message}`,
-                  canDelete: true,
-                  transition: {
-                    duration: 0.25,
-                  },
-                });
-              }
-            }
+            await processIBCTxn();
           }}
         />
       ) : null}

@@ -192,7 +192,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
 
     if (initErrorOn === undefined) {
       setInitSucceed(true);
-
+      ledgerInitStore.setLedgerReSign(true);
       await ledgerInitStore.resume();
     }
   };

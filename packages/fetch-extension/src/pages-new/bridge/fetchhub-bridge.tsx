@@ -14,6 +14,7 @@ import { Card } from "@components-v2/card";
 import { TXNTYPE } from "../../config";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { handleLedgerResign } from "@utils/index";
 
 export const FetchhubBridge: FunctionComponent<{
   limit: string;
@@ -29,6 +30,7 @@ export const FetchhubBridge: FunctionComponent<{
     keyRingStore,
     analyticsStore,
     priceStore,
+    ledgerInitStore,
   } = useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const notification = useNotification();
@@ -155,6 +157,15 @@ export const FetchhubBridge: FunctionComponent<{
         }
       );
     } catch (e) {
+      /// Handling ledger resign issue if ledger is not connected
+      if (e.toString().includes("Error: document is not defined")) {
+        await handleLedgerResign(ledgerInitStore, () => {
+          onSubmit();
+        });
+
+        return;
+      }
+
       const txnNavigationOptions = {
         redirect: () => {
           navigate("/");

@@ -25,6 +25,7 @@ import { Card } from "@components-v2/card";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { TXNTYPE } from "../../config";
+import { handleLedgerResign } from "@utils/index";
 
 export const EthereumBridge: FunctionComponent<{
   limit: string;
@@ -258,6 +259,7 @@ export const Approve: FunctionComponent<{
       accountStore,
       queriesStore,
       analyticsStore,
+      ledgerInitStore,
     } = useStore();
 
     const approveGasSimulator = useGasSimulator(
@@ -278,6 +280,90 @@ export const Approve: FunctionComponent<{
           );
       }
     );
+
+    async function processTxn() {
+      try {
+        const stdFee = feeConfig.toStdFee();
+
+        const tx = accountStore
+          .getAccount(chainStore.current.chainId)
+          .ethereum.makeApprovalTx(
+            amountConfig.amount,
+            queriesStore.get(chainStore.current.chainId).evm
+              .queryNativeFetBridge.nativeBridgeAddress,
+            currency
+          );
+
+        await tx.send(
+          stdFee,
+          "",
+          {
+            preferNoSetFee: true,
+            preferNoSetMemo: true,
+          },
+          {
+            onFulfill(tx) {
+              if (tx.status && tx.status === 1) {
+                notification.push({
+                  placement: "top-center",
+                  type: "success",
+                  duration: 2,
+                  content: "Approval Successful",
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+              } else {
+                notification.push({
+                  placement: "top-center",
+                  type: "danger",
+                  duration: 2,
+                  content: "Approval Failed, try again",
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+              }
+            },
+            onBroadcasted() {
+              gasConfig.setGas(0);
+              navigate(
+                `/bridge?defaultRecipient=${recipientConfig.recipient}&defaultAmount=${amountConfig.amount}`
+              );
+              analyticsStore.logEvent("Bridge token approval tx broadcasted", {
+                chainId: chainStore.current.chainId,
+                chainName: chainStore.current.chainName,
+              });
+            },
+          }
+        );
+      } catch (e) {
+        /// Handling ledger resign issue if ledger is not connected
+        if (e.toString().includes("Error: document is not defined")) {
+          await handleLedgerResign(ledgerInitStore, () => {
+            processTxn();
+          });
+
+          return;
+        }
+
+        navigate(
+          `/bridge?defaultRecipient=${recipientConfig.recipient}&defaultAmount=${amountConfig.amount}`
+        );
+        notification.push({
+          placement: "top-center",
+          type: "danger",
+          duration: 2,
+          content: `Approval Failed: ${e.message}`,
+          canDelete: true,
+          transition: {
+            duration: 0.25,
+          },
+        });
+      }
+    }
 
     return (
       <form className={style["formContainer"]}>
@@ -308,82 +394,7 @@ export const Approve: FunctionComponent<{
             disabled={!isValid}
             onClick={async (e) => {
               e.preventDefault();
-
-              try {
-                const stdFee = feeConfig.toStdFee();
-
-                const tx = accountStore
-                  .getAccount(chainStore.current.chainId)
-                  .ethereum.makeApprovalTx(
-                    amountConfig.amount,
-                    queriesStore.get(chainStore.current.chainId).evm
-                      .queryNativeFetBridge.nativeBridgeAddress,
-                    currency
-                  );
-
-                await tx.send(
-                  stdFee,
-                  "",
-                  {
-                    preferNoSetFee: true,
-                    preferNoSetMemo: true,
-                  },
-                  {
-                    onFulfill(tx) {
-                      if (tx.status && tx.status === 1) {
-                        notification.push({
-                          placement: "top-center",
-                          type: "success",
-                          duration: 2,
-                          content: "Approval Successful",
-                          canDelete: true,
-                          transition: {
-                            duration: 0.25,
-                          },
-                        });
-                      } else {
-                        notification.push({
-                          placement: "top-center",
-                          type: "danger",
-                          duration: 2,
-                          content: "Approval Failed, try again",
-                          canDelete: true,
-                          transition: {
-                            duration: 0.25,
-                          },
-                        });
-                      }
-                    },
-                    onBroadcasted() {
-                      gasConfig.setGas(0);
-                      navigate(
-                        `/bridge?defaultRecipient=${recipientConfig.recipient}&defaultAmount=${amountConfig.amount}`
-                      );
-                      analyticsStore.logEvent(
-                        "Bridge token approval tx broadcasted",
-                        {
-                          chainId: chainStore.current.chainId,
-                          chainName: chainStore.current.chainName,
-                        }
-                      );
-                    },
-                  }
-                );
-              } catch (e) {
-                navigate(
-                  `/bridge?defaultRecipient=${recipientConfig.recipient}&defaultAmount=${amountConfig.amount}`
-                );
-                notification.push({
-                  placement: "top-center",
-                  type: "danger",
-                  duration: 2,
-                  content: `Approval Failed: ${e.message}`,
-                  canDelete: true,
-                  transition: {
-                    duration: 0.25,
-                  },
-                });
-              }
+              await processTxn();
             }}
           >
             <FormattedMessage id="ibc.transfer.next" />
@@ -407,7 +418,13 @@ export const Bridge: FunctionComponent<{
   const navigate = useNavigate();
   const notification = useNotification();
 
-  const { chainStore, priceStore, accountStore, analyticsStore } = useStore();
+  const {
+    chainStore,
+    priceStore,
+    accountStore,
+    analyticsStore,
+    ledgerInitStore,
+  } = useStore();
 
   const bridgeGasSimulator = useGasSimulator(
     new ExtensionKVStore("gas-simulator.native-bridge.bridge"),
@@ -422,6 +439,83 @@ export const Bridge: FunctionComponent<{
         .ethereum.makeNativeBridgeTx(bridgeAmount, recipient);
     }
   );
+
+  async function processBridgeTxn() {
+    try {
+      const stdFee = feeConfig.toStdFee();
+
+      const tx = accountStore
+        .getAccount(chainStore.current.chainId)
+        .ethereum.makeNativeBridgeTx(bridgeAmount, recipient);
+
+      await tx.send(
+        stdFee,
+        "",
+        {
+          preferNoSetFee: true,
+          preferNoSetMemo: true,
+        },
+        {
+          onFulfill(tx) {
+            if (tx.status && tx.status === 1) {
+              notification.push({
+                placement: "top-center",
+                type: "success",
+                duration: 2,
+                content: "Bridge Successful",
+                canDelete: true,
+                transition: {
+                  duration: 0.25,
+                },
+              });
+            } else {
+              notification.push({
+                placement: "top-center",
+                type: "danger",
+                duration: 2,
+                content: "Bridge Failed, try again",
+                canDelete: true,
+                transition: {
+                  duration: 0.25,
+                },
+              });
+            }
+            navigate("/");
+          },
+          onBroadcasted() {
+            navigate(`/bridge`);
+            analyticsStore.logEvent("Bridge token tx broadcasted", {
+              chainId: chainStore.current.chainId,
+              chainName: chainStore.current.chainName,
+            });
+          },
+        }
+      );
+    } catch (e) {
+      /// Handling ledger resign issue if ledger is not connected
+      if (e.toString().includes("Error: document is not defined")) {
+        await handleLedgerResign(ledgerInitStore, () => {
+          processBridgeTxn();
+        });
+
+        return;
+      }
+
+      navigate(
+        `/bridge?defaultRecipient=${recipient}&defaultAmount=${bridgeAmount}`
+      );
+      notification.push({
+        placement: "top-center",
+        type: "danger",
+        duration: 2,
+        content: `Bridge Failed: ${e.message}`,
+        canDelete: true,
+        transition: {
+          duration: 0.25,
+        },
+      });
+    }
+  }
 
   return (
     <form className={style["formContainer"]}>
@@ -454,71 +548,7 @@ export const Bridge: FunctionComponent<{
           onClick={async (e) => {
             e.preventDefault();
 
-            try {
-              const stdFee = feeConfig.toStdFee();
-
-              const tx = accountStore
-                .getAccount(chainStore.current.chainId)
-                .ethereum.makeNativeBridgeTx(bridgeAmount, recipient);
-
-              await tx.send(
-                stdFee,
-                "",
-                {
-                  preferNoSetFee: true,
-                  preferNoSetMemo: true,
-                },
-                {
-                  onFulfill(tx) {
-                    if (tx.status && tx.status === 1) {
-                      notification.push({
-                        placement: "top-center",
-                        type: "success",
-                        duration: 2,
-                        content: "Bridge Successful",
-                        canDelete: true,
-                        transition: {
-                          duration: 0.25,
-                        },
-                      });
-                    } else {
-                      notification.push({
-                        placement: "top-center",
-                        type: "danger",
-                        duration: 2,
-                        content: "Bridge Failed, try again",
-                        canDelete: true,
-                        transition: {
-                          duration: 0.25,
-                        },
-                      });
-                    }
-                    navigate("/");
-                  },
-                  onBroadcasted() {
-                    navigate(`/bridge`);
-                    analyticsStore.logEvent("Bridge token tx broadcasted", {
-                      chainId: chainStore.current.chainId,
-                      chainName: chainStore.current.chainName,
-                    });
-                  },
-                }
-              );
-            } catch (e) {
-              navigate(
-                `/bridge?defaultRecipient=${recipient}&defaultAmount=${bridgeAmount}`
-              );
-              notification.push({
-                placement: "top-center",
-                type: "danger",
-                duration: 2,
-                content: `Bridge Failed: ${e.message}`,
-                canDelete: true,
-                transition: {
-                  duration: 0.25,
-                },
-              });
-            }
+            await processBridgeTxn();
           }}
         >
           <FormattedMessage id="ibc.transfer.next" />

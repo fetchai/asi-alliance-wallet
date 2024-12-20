@@ -8,9 +8,10 @@ import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 import { useNotification } from "@components/notification";
 import { useStore } from "../../stores";
 import { Buffer } from "buffer/";
+import { handleLedgerResign } from "@utils/index";
 
 export const AuthZPage: FunctionComponent = () => {
-  const { chainStore, accountStore } = useStore();
+  const { chainStore, accountStore, ledgerInitStore } = useStore();
 
   const account = accountStore.getAccount(chainStore.current.chainId);
 
@@ -120,6 +121,15 @@ export const AuthZPage: FunctionComponent = () => {
       );
       navigate("/", { replace: true });
     } catch (e) {
+      /// Handling ledger resign issue if ledger is not connected
+      if (e.toString().includes("Error: document is not defined")) {
+        await handleLedgerResign(ledgerInitStore, () => {
+          onClickRevokeButton(grant);
+        });
+
+        return;
+      }
+
       if (e.message === "Request rejected") {
         if (location.pathname === "/authz") {
           return;

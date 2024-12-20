@@ -17,6 +17,7 @@ import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
 import { getPathname } from "@utils/pathname";
 import { useNotification } from "@components/notification";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { handleLedgerResign } from "@utils/index";
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -45,7 +46,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       analyticsStore,
       activityStore,
       keyRingStore,
+      ledgerInitStore,
     } = useStore();
+
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const navigate = useNavigate();
     const notification = useNotification();
@@ -185,6 +188,195 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       return parsedAmount;
     };
 
+    async function processTxn() {
+      if (accountInfo.isReadyToSendMsgs && txStateIsValid) {
+        try {
+          analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
+          const stdFee = sendConfigs.feeConfig.toStdFee();
+
+          const tx = accountInfo.makeSendTokenTx(
+            sendConfigs.amountConfig.amount,
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            sendConfigs.amountConfig.sendCurrency!,
+            sendConfigs.recipientConfig.recipient
+          );
+
+          await tx.send(
+            stdFee,
+            sendConfigs.memoConfig.memo,
+            {
+              preferNoSetFee: true,
+              preferNoSetMemo: true,
+            },
+            {
+              onBroadcastFailed: (e: any) => {
+                console.log(e);
+                const txnNavigationOptions = {
+                  redirect: () => {
+                    navigate("/send", {
+                      replace: true,
+                      state: { trnsxStatus: "failed", isNext: true },
+                    });
+                  },
+                  txType: TXNTYPE.send,
+                  txInProgress: accountInfo.txInProgress,
+                  toastNotification: () => {
+                    notification.push({
+                      type: "warning",
+                      placement: "top-center",
+                      duration: 5,
+                      content: `Transaction Failed`,
+                      canDelete: true,
+                      transition: {
+                        duration: 0.25,
+                      },
+                    });
+                  },
+                };
+                navigateOnTxnEvents(txnNavigationOptions);
+              },
+              onBroadcasted: () => {
+                analyticsStore.logEvent("send_txn_broadcasted", {
+                  chainId: chainStore.current.chainId,
+                  chainName: chainStore.current.chainName,
+                  feeType: sendConfigs.feeConfig.feeType,
+                });
+                const txnNavigationOptions = {
+                  redirect: () => {
+                    navigate("/send", {
+                      replace: true,
+                      state: { trnsxStatus: "pending", isNext: true },
+                    });
+                  },
+                  txType: TXNTYPE.send,
+                  txInProgress: accountInfo.txInProgress,
+                  toastNotification: () => {
+                    notification.push({
+                      type: "primary",
+                      placement: "top-center",
+                      duration: 2,
+                      content: `Transaction broadcasted`,
+                      canDelete: true,
+                      transition: {
+                        duration: 0.25,
+                      },
+                    });
+                  },
+                };
+                navigateOnTxnEvents(txnNavigationOptions);
+                if (keyRingStore.keyRingType === "ledger") {
+                  navigate("/send");
+                }
+              },
+              onFulfill: (tx: any) => {
+                const istxnSuccess = tx.code ? false : true;
+                const txnNavigationOptions = {
+                  redirect: () => {
+                    navigate("/send", {
+                      replace: true,
+                      state: { trnsxStatus: "success", isNext: true },
+                    });
+                  },
+                  pagePathname: "send",
+                  txType: TXNTYPE.send,
+                  txInProgress: accountInfo.txInProgress,
+                  toastNotification: () => {
+                    notification.push({
+                      type: istxnSuccess ? "success" : "danger",
+                      placement: "top-center",
+                      duration: 5,
+                      content: istxnSuccess
+                        ? `Transaction Completed`
+                        : `Transaction Failed`,
+                      canDelete: true,
+                      transition: {
+                        duration: 0.25,
+                      },
+                    });
+                  },
+                };
+                navigateOnTxnEvents(txnNavigationOptions);
+              },
+            }
+          );
+          if (!isDetachedPage) {
+            const currentPathName = getPathname();
+            if (currentPathName === "send") {
+              navigate("/send", {
+                replace: true,
+                state: { trnsxStatus: "pending", isNext: true },
+              });
+            }
+          }
+        } catch (e) {
+          /// Handling ledger resign issue if ledger is not connected
+          if (e.toString().includes("Error: document is not defined")) {
+            await handleLedgerResign(ledgerInitStore, () => {
+              processTxn();
+            });
+
+            return;
+          }
+
+          const currentPathName = getPathname();
+          if (!isDetachedPage && currentPathName === "send") {
+            navigate("/send", {
+              replace: true,
+              state: {
+                isNext: true,
+                isFromPhase1: false,
+                configs: {
+                  amount: sendConfigs.amountConfig.amount,
+                  sendCurr: sendConfigs.amountConfig.sendCurrency,
+                  recipient: sendConfigs.recipientConfig.recipient,
+                  memo: sendConfigs.memoConfig.memo,
+                },
+              },
+            });
+          } else {
+            analyticsStore.logEvent("send_txn_broadcasted_fail", {
+              chainId: chainStore.current.chainId,
+              chainName: chainStore.current.chainName,
+              feeType: sendConfigs.feeConfig.feeType,
+              message: e?.message ?? "",
+            });
+            notification.push({
+              type: "warning",
+              placement: "top-center",
+              duration: 5,
+              content: `Transaction Failed`,
+              canDelete: true,
+              transition: {
+                duration: 0.25,
+              },
+            });
+
+            if (keyRingStore.keyRingType === "ledger") {
+              navigate("/send", {
+                replace: true,
+                state: {
+                  isNext: true,
+                  isFromPhase1: false,
+                  configs: {
+                    amount: sendConfigs.amountConfig.amount,
+                    sendCurr: sendConfigs.amountConfig.sendCurrency,
+                    recipient: sendConfigs.recipientConfig.recipient,
+                    memo: sendConfigs.memoConfig.memo,
+                  },
+                },
+              });
+            }
+          }
+        } finally {
+          // XXX: If the page is in detached state,
+          // close the window without waiting for tx to commit. analytics won't work.
+          if (isDetachedPage) {
+            window.close();
+          }
+        }
+      }
+    }
+
     return (
       <div>
         <div className={style["editCard"]}>
@@ -263,167 +455,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           }}
           onClick={async (e: any) => {
             e.preventDefault();
-            if (accountInfo.isReadyToSendMsgs && txStateIsValid) {
-              try {
-                analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
-                const stdFee = sendConfigs.feeConfig.toStdFee();
-
-                const tx = accountInfo.makeSendTokenTx(
-                  sendConfigs.amountConfig.amount,
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                  sendConfigs.amountConfig.sendCurrency!,
-                  sendConfigs.recipientConfig.recipient
-                );
-
-                await tx.send(
-                  stdFee,
-                  sendConfigs.memoConfig.memo,
-                  {
-                    preferNoSetFee: true,
-                    preferNoSetMemo: true,
-                  },
-                  {
-                    onBroadcastFailed: (e: any) => {
-                      console.log(e);
-                      const txnNavigationOptions = {
-                        redirect: () => {
-                          navigate("/send", {
-                            replace: true,
-                            state: { trnsxStatus: "failed", isNext: true },
-                          });
-                        },
-                        txType: TXNTYPE.send,
-                        txInProgress: accountInfo.txInProgress,
-                        toastNotification: () => {
-                          notification.push({
-                            type: "warning",
-                            placement: "top-center",
-                            duration: 5,
-                            content: `Transaction Failed`,
-                            canDelete: true,
-                            transition: {
-                              duration: 0.25,
-                            },
-                          });
-                        },
-                      };
-                      navigateOnTxnEvents(txnNavigationOptions);
-                    },
-                    onBroadcasted: () => {
-                      analyticsStore.logEvent("send_txn_broadcasted", {
-                        chainId: chainStore.current.chainId,
-                        chainName: chainStore.current.chainName,
-                        feeType: sendConfigs.feeConfig.feeType,
-                      });
-                      const txnNavigationOptions = {
-                        redirect: () => {
-                          navigate("/send", {
-                            replace: true,
-                            state: { trnsxStatus: "pending", isNext: true },
-                          });
-                        },
-                        txType: TXNTYPE.send,
-                        txInProgress: accountInfo.txInProgress,
-                        toastNotification: () => {
-                          notification.push({
-                            type: "primary",
-                            placement: "top-center",
-                            duration: 2,
-                            content: `Transaction broadcasted`,
-                            canDelete: true,
-                            transition: {
-                              duration: 0.25,
-                            },
-                          });
-                        },
-                      };
-                      navigateOnTxnEvents(txnNavigationOptions);
-                      if (keyRingStore.keyRingType === "ledger") {
-                        navigate("/send");
-                      }
-                    },
-                    onFulfill: (tx: any) => {
-                      const istxnSuccess = tx.code ? false : true;
-                      const txnNavigationOptions = {
-                        redirect: () => {
-                          navigate("/send", {
-                            replace: true,
-                            state: { trnsxStatus: "success", isNext: true },
-                          });
-                        },
-                        pagePathname: "send",
-                        txType: TXNTYPE.send,
-                        txInProgress: accountInfo.txInProgress,
-                        toastNotification: () => {
-                          notification.push({
-                            type: istxnSuccess ? "success" : "danger",
-                            placement: "top-center",
-                            duration: 5,
-                            content: istxnSuccess
-                              ? `Transaction Completed`
-                              : `Transaction Failed`,
-                            canDelete: true,
-                            transition: {
-                              duration: 0.25,
-                            },
-                          });
-                        },
-                      };
-                      navigateOnTxnEvents(txnNavigationOptions);
-                    },
-                  }
-                );
-                if (!isDetachedPage) {
-                  const currentPathName = getPathname();
-                  if (currentPathName === "send") {
-                    navigate("/send", {
-                      replace: true,
-                      state: { trnsxStatus: "pending", isNext: true },
-                    });
-                  }
-                }
-              } catch (e) {
-                const currentPathName = getPathname();
-                if (!isDetachedPage && currentPathName === "send") {
-                  navigate("/send", {
-                    replace: true,
-                    state: {
-                      isNext: true,
-                      isFromPhase1: false,
-                      configs: {
-                        amount: sendConfigs.amountConfig.amount,
-                        sendCurr: sendConfigs.amountConfig.sendCurrency,
-                        recipient: sendConfigs.recipientConfig.recipient,
-                        memo: sendConfigs.memoConfig.memo,
-                      },
-                    },
-                  });
-                } else {
-                  analyticsStore.logEvent("send_txn_broadcasted_fail", {
-                    chainId: chainStore.current.chainId,
-                    chainName: chainStore.current.chainName,
-                    feeType: sendConfigs.feeConfig.feeType,
-                    message: e?.message ?? "",
-                  });
-                  notification.push({
-                    type: "warning",
-                    placement: "top-center",
-                    duration: 5,
-                    content: `Transaction Failed`,
-                    canDelete: true,
-                    transition: {
-                      duration: 0.25,
-                    },
-                  });
-                }
-              } finally {
-                // XXX: If the page is in detached state,
-                // close the window without waiting for tx to commit. analytics won't work.
-                if (isDetachedPage) {
-                  window.close();
-                }
-              }
-            }
+            await processTxn();
           }}
           data-loading={accountInfo.isSendingMsg === "send"}
           disabled={!accountInfo.isReadyToSendMsgs || !txStateIsValid}
