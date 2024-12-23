@@ -1,5 +1,4 @@
 import React, { FunctionComponent } from "react";
-import { BackButton } from "../index";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Input, TextArea } from "@components/form";
 import style from "../style.module.scss";
@@ -9,6 +8,19 @@ import { Buffer } from "buffer";
 import { parseEthPrivateKey } from "@fetchai/eth-migration";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { useStore } from "../../../stores";
+
+export const BackButton: FunctionComponent<{ onClick: () => void }> = ({
+  onClick,
+}) => {
+  return (
+    <div className={style["backButton"]}>
+      <Button color="link" onClick={onClick}>
+        <i className="fas fa-angle-left" style={{ marginRight: "8px" }} />
+        <FormattedMessage id="register.button.back" />
+      </Button>
+    </div>
+  );
+};
 
 interface FormData {
   name: string;
