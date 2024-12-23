@@ -3,7 +3,7 @@ import { AxelarQueryAPI } from "@axelar-network/axelarjs-sdk";
 import { useNotification } from "@components/notification";
 import { formatAmount } from "@utils/format";
 import React, { useCallback, useEffect, useState } from "react";
-// import { TooltipForDomainNames } from "../fetch-name-service/domain-details";
+import { TooltipForDomainNames } from "../fetch-name-service/domain-details";
 import style from "./style.module.scss";
 
 interface GasAndDetailsProps {
@@ -164,7 +164,7 @@ export const GasAndDetails: React.FC<GasAndDetailsProps> = ({
             style={{ cursor: "pointer" }}
             onClick={() => copyAddress(depositAddress)}
           >
-            {/* {<TooltipForDomainNames domainName={depositAddress} />} */}
+            {<TooltipForDomainNames domainName={depositAddress} />}
           </div>
         </div>
       ) : null}
