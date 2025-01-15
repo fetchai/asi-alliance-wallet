@@ -33,6 +33,7 @@ import * as Location from "expo-location";
 import { LocationAccuracy } from "expo-location";
 import DeviceInfo from "react-native-device-info";
 import { LedgerLocationErrorModel } from "modals/ledger/ledger-error";
+import { LedgerInitError } from "@keplr-wallet/background";
 
 interface FormData {
   name: string;
@@ -81,6 +82,7 @@ export const LedgerScreen: FunctionComponent = () => {
   } = useForm<FormData>();
 
   const [isCreating, setIsCreating] = useState(false);
+  const [isLedgerException, setIsLedgerException] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [isBLEAvailable, setIsBLEAvailable] = useState(false);
@@ -248,6 +250,17 @@ export const LedgerScreen: FunctionComponent = () => {
     }
   };
 
+  useEffect(() => {
+    console.log(
+      "Ledger::1",
+      isLedgerException,
+      ledgerInitStore.isInitCompleted
+    );
+    if (isLedgerException && ledgerInitStore.isInitCompleted) {
+      submit();
+    }
+  }, [ledgerInitStore.isInitCompleted, isLedgerException]);
+
   const fetchCurrentLocation = () => {
     Location.getCurrentPositionAsync({
       accuracy: LocationAccuracy.Highest,
@@ -258,13 +271,18 @@ export const LedgerScreen: FunctionComponent = () => {
   };
 
   const submit = handleSubmit(async () => {
+    analyticsStore.logEvent("register_next_click", {
+      registerType: "ledger",
+      accountType: "ledger",
+      pageName: "Register",
+    });
+
     setShowPassword(false);
     if (Platform.OS === "android" && location == undefined) {
       setLocationError("Location services are disabled");
       return;
     }
     setIsCreating(true);
-
     try {
       await registerConfig.createLedger(
         getValues("name"),
@@ -292,8 +310,9 @@ export const LedgerScreen: FunctionComponent = () => {
       });
     } catch (e) {
       ledgerInitStore.abortAll();
+      setIsLedgerException(true);
       // Definitely, the error can be thrown when the ledger connection failed
-      console.log(e);
+      console.log("Ledger:Creation", e, e instanceof LedgerInitError);
     } finally {
       setIsCreating(false);
     }
@@ -576,11 +595,6 @@ export const LedgerScreen: FunctionComponent = () => {
         loading={isCreating}
         onPress={() => {
           submit();
-          analyticsStore.logEvent("register_next_click", {
-            registerType: "ledger",
-            accountType: "ledger",
-            pageName: "Register",
-          });
         }}
         disabled={!isBLEAvailable}
       />

@@ -216,6 +216,9 @@ export class LedgerService {
           ledgerApp,
           cosmosLikeApp
         );
+        this.interactionService.dispatchEvent(APP_PORT, "ledger-init", {
+          event: "init-success",
+        });
         return {
           ledger,
         };

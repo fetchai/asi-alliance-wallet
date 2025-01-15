@@ -23,6 +23,9 @@ export type LedgerInitDataType =
       success: boolean;
     }
   | {
+      event: "init-success";
+    }
+  | {
       // Should interact to resume the ledger initing on the background.
       event: "init-failed";
       ledgerApp: LedgerApp;
@@ -106,6 +109,22 @@ export class LedgerInitStore {
     if (datas.length > 0) {
       const data = datas[datas.length - 1];
       if (data.data.event === "sign-txn-guide" && data.data.isShow) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  @computed
+  get isInitCompleted(): boolean {
+    const datas =
+      this.interactionStore.getEvents<LedgerInitDataType>("ledger-init");
+
+    console.log("Datas:", datas);
+    if (datas.length > 0) {
+      const data = datas[datas.length - 1];
+      if (data.data.event === "init-success") {
         return true;
       }
     }

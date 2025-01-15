@@ -1,4 +1,9 @@
-import { Ledger, LedgerApp, LedgerInitErrorOn } from "@keplr-wallet/background";
+import {
+  Ledger,
+  LedgerApp,
+  LedgerInitError,
+  LedgerInitErrorOn,
+} from "@keplr-wallet/background";
 import React, { FunctionComponent, useState } from "react";
 import { useStyle } from "styles/index";
 import { BluetoothMode } from ".";
@@ -12,6 +17,7 @@ export const LedgerNanoBLESelector: FunctionComponent<{
   setMainContent: any;
   setBluetoothMode: any;
   setIsPairingText: any;
+  setReconnecting: any;
   setIsPaired: any;
 
   onCanResume: () => void;
@@ -22,6 +28,7 @@ export const LedgerNanoBLESelector: FunctionComponent<{
   setMainContent,
   setBluetoothMode,
   setIsPairingText,
+  setReconnecting,
   setIsPaired,
 }) => {
   const style = useStyle();
@@ -33,6 +40,7 @@ export const LedgerNanoBLESelector: FunctionComponent<{
     let initErrorOn: LedgerInitErrorOn | undefined;
 
     try {
+      setReconnecting(false);
       setIsPaired(false);
       setIsConnecting(true);
       setMainContent("");
@@ -65,7 +73,12 @@ export const LedgerNanoBLESelector: FunctionComponent<{
         setIsPaired(false);
       }, 6000);
     } catch (e) {
-      console.log(e);
+      console.log(
+        "Ledger-Selector:",
+        e,
+        e.errorOn,
+        e instanceof LedgerInitError
+      );
       if (e.errorOn != null) {
         initErrorOn = e.errorOn;
         if (initErrorOn === LedgerInitErrorOn.App) {
@@ -79,8 +92,10 @@ export const LedgerNanoBLESelector: FunctionComponent<{
           setIsConnecting(false);
         }
       } else {
-        initErrorOn = LedgerInitErrorOn.Unknown;
+        setMainContent("Please unlock ledger nano X");
+        setIsConnecting(false);
       }
+      setReconnecting(true);
 
       await TransportBLE.disconnect(deviceId);
     }

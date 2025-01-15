@@ -62,6 +62,7 @@ export const LedgerGranterModal: FunctionComponent<{
   );
   const [paired, setIsPaired] = useState<boolean>(false);
   const [isFinding, setIsFinding] = useState(false);
+  const [isReconnecting, setReconnecting] = useState(false);
 
   const [devices, setDevices] = useState<
     {
@@ -213,7 +214,7 @@ export const LedgerGranterModal: FunctionComponent<{
         unsubscriber();
       }
     };
-  }, [isBLEAvailable, permissionStatus]);
+  }, [isBLEAvailable, permissionStatus, isReconnecting]);
 
   const decideLedgerImage = (bluetoothMode: BluetoothMode) => {
     switch (bluetoothMode) {
@@ -408,6 +409,7 @@ export const LedgerGranterModal: FunctionComponent<{
                   setBluetoothMode={setBluetoothMode}
                   setIsPairingText={setIsPairingText}
                   setIsPaired={setIsPaired}
+                  setReconnecting={setReconnecting}
                   onCanResume={async () => {
                     resumed.current = true;
                     await ledgerInitStore.resumeAll(device.id);
