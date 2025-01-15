@@ -67,6 +67,7 @@ const { initFn } = init(
   },
   {
     defaultMode: "ble",
+    platform: "mobile",
     transportIniters: {
       ble: async (deviceId?: string) => {
         const lastDeviceId = await getLastUsedLedgerDeviceId();

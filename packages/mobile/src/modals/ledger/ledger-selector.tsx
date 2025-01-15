@@ -1,4 +1,9 @@
-import { Ledger, LedgerApp, LedgerInitErrorOn } from "@keplr-wallet/background";
+import {
+  Ledger,
+  LedgerApp,
+  LedgerInitError,
+  LedgerInitErrorOn,
+} from "@keplr-wallet/background";
 import React, { FunctionComponent, useState } from "react";
 import { useStyle } from "styles/index";
 import { BluetoothMode } from ".";
@@ -55,17 +60,14 @@ export const LedgerNanoBLESelector: FunctionComponent<{
         setIsPairingText(`Paired with ${name}`);
       }, 2000);
       await ledger.close();
-      setTimeout(function () {
-        onCanResume();
-        setBluetoothMode(BluetoothMode.Ledger);
-        setIsPairingText("Waiting for bluetooth signal...");
-        setMainContent(
-          "press and hold two buttons at the same time and enter your pin"
-        );
-        setIsPaired(false);
-      }, 6000);
+      onCanResume();
     } catch (e) {
-      console.log(e);
+      console.log(
+        "Ledger-Selector:",
+        e,
+        e.errorOn,
+        e instanceof LedgerInitError
+      );
       if (e.errorOn != null) {
         initErrorOn = e.errorOn;
         if (initErrorOn === LedgerInitErrorOn.App) {
@@ -79,9 +81,9 @@ export const LedgerNanoBLESelector: FunctionComponent<{
           setIsConnecting(false);
         }
       } else {
-        initErrorOn = LedgerInitErrorOn.Unknown;
+        setMainContent("Please unlock ledger nano X");
+        setIsConnecting(false);
       }
-
       await TransportBLE.disconnect(deviceId);
     }
   };

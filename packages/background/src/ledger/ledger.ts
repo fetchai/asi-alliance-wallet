@@ -122,7 +122,6 @@ export class Ledger {
       if (transport) {
         await transport.close();
       }
-      console.log("Testing1::", e.message);
 
       if (
         e.message === "Device is on screen saver" ||
