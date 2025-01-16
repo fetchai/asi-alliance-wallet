@@ -3,7 +3,7 @@
 
   "name": "ASI Alliance Wallet",
   "description": "The official ASI Alliance Wallet for interacting with the ASI ledger",
-  "version": "0.19.3",
+  "version": "0.19.4",
   "icons": {
     "16": "assets/icon-16.png",
     "48": "assets/icon-48.png",
