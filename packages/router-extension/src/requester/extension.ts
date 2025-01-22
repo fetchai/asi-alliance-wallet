@@ -2,6 +2,7 @@ import {
   MessageRequester,
   Message,
   JSONUint8Array,
+  WalletError,
 } from "@keplr-wallet/router";
 import { getKeplrExtensionRouterId } from "../utils";
 
@@ -37,7 +38,17 @@ export class InExtensionMessageRequester implements MessageRequester {
       if (typeof result.error === "string") {
         throw new Error(result.error);
       } else {
-        throw new Error(result.error.message);
+        if ("module" in result.error) {
+          if (typeof result.error.module === "string") {
+            throw new WalletError(
+              result.error.module,
+              result.error.code,
+              result.error.message
+            );
+          }
+        } else {
+          throw new Error(result.error.message);
+        }
       }
     }
 
@@ -76,7 +87,17 @@ export class InExtensionMessageRequester implements MessageRequester {
       if (typeof result.error === "string") {
         throw new Error(result.error);
       } else {
-        throw new Error(result.error.message);
+        if ("module" in result.error) {
+          if (typeof result.error.module === "string") {
+            throw new WalletError(
+              result.error.module,
+              result.error.code,
+              result.error.message
+            );
+          }
+        } else {
+          throw new Error(result.error.message);
+        }
       }
     }
 

@@ -11,7 +11,8 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { ledgerUSBVendorId } from "@ledgerhq/devices";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { LedgerGrantView } from "../../../pages/ledger";
+import { LedgerSetupView } from "../../../pages/ledger";
+import { useNotification } from "@components/notification";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -45,6 +46,7 @@ export const ImportLedgerPage: FunctionComponent<{
   setSelectedCard: any;
 }> = observer(({ registerConfig, setSelectedCard }) => {
   const intl = useIntl();
+  const notification = useNotification();
   const bip44Option = useBIP44Option(118);
   const [isShowLedgerSetup, setShowLedgerSetup] = useState<boolean>(false);
   const { analyticsStore, ledgerInitStore } = useStore();
@@ -93,6 +95,21 @@ export const ImportLedgerPage: FunctionComponent<{
       if (isShowUSBPermission) {
         await ensureUSBPermission();
       }
+    } catch (e) {
+      notification.push({
+        type: "warning",
+        placement: "top-center",
+        duration: 5,
+        content: "Please select a device to continue.",
+        canDelete: true,
+        transition: {
+          duration: 0.25,
+        },
+      });
+      return;
+    }
+
+    try {
       await registerConfig.createLedger(
         name,
         password,
@@ -110,7 +127,7 @@ export const ImportLedgerPage: FunctionComponent<{
   }
 
   return isShowLedgerSetup ? (
-    <LedgerGrantView
+    <LedgerSetupView
       onBackPress={() => setShowLedgerSetup(false)}
       onInitSucceed={async () =>
         createLedger(getValues()["name"], getValues()["password"])

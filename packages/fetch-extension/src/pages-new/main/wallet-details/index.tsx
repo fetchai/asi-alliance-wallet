@@ -1,7 +1,7 @@
 import { Address } from "@components/address";
 import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
-import { KeplrError } from "@keplr-wallet/router";
+import { WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { formatAddress, separateNumericAndDenom } from "@utils/format";
 import React, { useCallback, useEffect, useState } from "react";
@@ -268,7 +268,7 @@ export const WalletDetailsView = observer(
                     tooltip={(() => {
                       if (
                         accountInfo.rejectionReason &&
-                        accountInfo.rejectionReason instanceof KeplrError &&
+                        accountInfo.rejectionReason instanceof WalletError &&
                         accountInfo.rejectionReason.module === "keyring" &&
                         accountInfo.rejectionReason.code === 152
                       ) {

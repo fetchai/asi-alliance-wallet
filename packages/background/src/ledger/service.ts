@@ -1,22 +1,24 @@
 import {
   Ledger,
   LedgerApp,
-  LedgerInitError,
-  LedgerInitErrorOn,
   LedgerWebHIDIniter,
   LedgerWebUSBIniter,
 } from "./ledger";
 
 import delay from "delay";
 
-import { APP_PORT, Env } from "@keplr-wallet/router";
+import { APP_PORT, Env, WalletError } from "@keplr-wallet/router";
 import { BIP44HDPath } from "../keyring";
 import { KVStore } from "@keplr-wallet/common";
 import { InteractionService } from "../interaction";
 import { LedgerOptions } from "./options";
 import { Buffer } from "buffer/";
 import { EthSignType } from "@keplr-wallet/types";
-import { ErrFailedInit, ErrPublicKeyUnmatched } from "./types";
+import {
+  ErrFailedInit,
+  ErrModuleLedgerSign,
+  ErrPublicKeyUnmatched,
+} from "./types";
 
 export class LedgerService {
   private previousInitAborter: ((e: Error) => void) | undefined;
@@ -117,8 +119,8 @@ export class LedgerService {
             Buffer.from(expectedPubKey).toString("hex") !==
             Buffer.from(pubKey).toString("hex")
           ) {
-            throw new LedgerInitError(
-              LedgerInitErrorOn.App,
+            throw new WalletError(
+              ErrModuleLedgerSign,
               ErrPublicKeyUnmatched,
               "Unmatched public key"
             );
@@ -179,8 +181,8 @@ export class LedgerService {
             Buffer.from(expectedPubKey).toString("hex") !==
             Buffer.from(pubKey).toString("hex")
           ) {
-            throw new LedgerInitError(
-              LedgerInitErrorOn.App,
+            throw new WalletError(
+              ErrModuleLedgerSign,
               ErrPublicKeyUnmatched,
               "Unmatched public key"
             );
@@ -251,8 +253,8 @@ export class LedgerService {
       try {
         const transportIniter = this.options.transportIniters[mode];
         if (!transportIniter) {
-          throw new LedgerInitError(
-            LedgerInitErrorOn.App,
+          throw new WalletError(
+            ErrModuleLedgerSign,
             ErrFailedInit,
             `Unknown mode: ${mode}`
           );

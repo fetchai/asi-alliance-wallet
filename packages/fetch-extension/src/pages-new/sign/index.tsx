@@ -25,15 +25,20 @@ import { EthSignType } from "@keplr-wallet/types";
 import { Dropdown } from "@components-v2/dropdown";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { LedgerApp } from "@keplr-wallet/background";
-import { LedgerBox } from "./ledger-guide-box";
+import {
+  GetSidePanelEnabledMsg,
+  GetSidePanelIsSupportedMsg,
+  LedgerApp,
+} from "@keplr-wallet/background";
+import { LedgerBox, LedgerGuideBoxProps } from "./ledger-guide-box";
 import { useUSBDevices } from "@utils/ledger";
-
-interface LedgerGuideBoxInfo {
-  title: string;
-  subtitle: string;
-  isWarning: boolean;
-}
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { BACKGROUND_PORT, WalletError } from "@keplr-wallet/router";
+import {
+  ErrFailedInit,
+  ErrFailedUnknown,
+} from "@keplr-wallet/background/src/ledger/types";
+import { ErrModuleLedgerSign } from "@keplr-wallet/background/build/ledger/types";
 
 export const SignPageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -57,8 +62,9 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const [approveButtonClicked, setApproveButtonClicked] = useState(false);
   const { testUSBDevices } = useUSBDevices();
   const [ledgerInfo, setLedgerInfo] = useState<
-    LedgerGuideBoxInfo | undefined
+    LedgerGuideBoxProps | undefined
   >();
+  const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
 
   const current = chainStore.current;
   // There are services that sometimes use invalid tx to sign arbitrary data on the sign page.
@@ -82,21 +88,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
 
   const signDocHelper = useSignDocHelper(feeConfig, memoConfig);
   amountConfig.setSignDocHelper(signDocHelper);
-
-  // Events are failing in manifest v3
-  // useEffect(() => {
-  //   const data = ledgerInitStore.isShowSignTxnGuide;
-  //   if (data) {
-  //     setLedgerInfo({
-  //       title: "Sign on Ledger",
-  //       subtitle:
-  //         "To proceed, please review and approve the transaction on your Ledger device.",
-  //       isWarning: false,
-  //     });
-  //   } else {
-  //     setLedgerInfo(undefined);
-  //   }
-  // }, [ledgerInitStore.isShowSignTxnGuide]);
 
   useEffect(() => {
     if (signInteractionStore.waitingData) {
@@ -272,6 +263,33 @@ export const SignPageV2: FunctionComponent = observer(() => {
     },
   ];
 
+  useEffect(() => {
+    const msg = new GetSidePanelIsSupportedMsg();
+    new InExtensionMessageRequester()
+      .sendMessage(BACKGROUND_PORT, msg)
+      .then((_) => {
+        const msg = new GetSidePanelEnabledMsg();
+        new InExtensionMessageRequester()
+          .sendMessage(BACKGROUND_PORT, msg)
+          .then((res) => {
+            setSidePanelEnabled(res.enabled);
+          });
+      });
+  }, []);
+
+  function calculateHeight() {
+    /// Adjusting tab height according to ledger guide box
+    if (sidePanelEnabled) {
+      return ledgerInfo ? "70%" : "80%";
+    }
+
+    return ledgerInfo
+      ? ledgerInfo.ledgerError.code === ErrFailedInit
+        ? "245px"
+        : "265px"
+      : "320px";
+  }
+
   return (
     <div>
       {
@@ -282,7 +300,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
         isLoaded ? (
           <div>
             <Dropdown
-              styleProp={{ height: "579px" }}
+              styleProp={{ height: "98%" }}
               title={"Confirm transaction"}
               closeClicked={() => {
                 if (window.history.length > 1) {
@@ -294,10 +312,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
               setIsOpen={setIsOpen}
               isOpen={isOpen}
             >
-              <TabsPanel
-                tabs={tabs}
-                tabHeight={ledgerInfo ? "255px" : "320px"}
-              />
+              <TabsPanel tabs={tabs} tabHeight={calculateHeight()} />
               {ledgerInfo ? (
                 <div
                   style={{
@@ -309,7 +324,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                   <LedgerBox
                     isWarning={ledgerInfo.isWarning}
                     title={ledgerInfo.title}
-                    message={ledgerInfo.subtitle}
+                    ledgerError={ledgerInfo.ledgerError}
                   />
                 </div>
               ) : null}
@@ -373,7 +388,9 @@ export const SignPageV2: FunctionComponent = observer(() => {
                           if (
                             !(await testUSBDevices(ledgerInitStore.isWebHID))
                           ) {
-                            throw new Error(
+                            throw new WalletError(
+                              ErrModuleLedgerSign,
+                              ErrFailedInit,
                               "Connect and unlock your Ledger device."
                             );
                           } else {
@@ -388,10 +405,13 @@ export const SignPageV2: FunctionComponent = observer(() => {
 
                         if (keyRingStore.keyRingType === "ledger") {
                           setLedgerInfo({
-                            title: "Sign on Ledger",
-                            subtitle:
-                              "To proceed, please review and approve the transaction on your Ledger device.",
                             isWarning: false,
+                            title: "Sign on Ledger",
+                            ledgerError: new WalletError(
+                              ErrModuleLedgerSign,
+                              ErrFailedUnknown,
+                              "To proceed, please review and approve the transaction on your Ledger device."
+                            ),
                           });
                         }
 
@@ -414,11 +434,16 @@ export const SignPageV2: FunctionComponent = observer(() => {
                       } catch (e) {
                         setApproveButtonClicked(false);
 
-                        setLedgerInfo({
-                          title: "Error",
-                          subtitle: e.message,
-                          isWarning: true,
-                        });
+                        if (
+                          e instanceof WalletError &&
+                          e.module === ErrModuleLedgerSign
+                        ) {
+                          setLedgerInfo({
+                            isWarning: true,
+                            title: "Error",
+                            ledgerError: e,
+                          });
+                        }
                       }
                     }}
                   />

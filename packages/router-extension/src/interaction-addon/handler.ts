@@ -2,7 +2,7 @@ import {
   Env,
   Handler,
   InternalHandler,
-  KeplrError,
+  WalletError,
   Message,
 } from "@keplr-wallet/router";
 import { InteractionAddonService } from "./service";
@@ -16,7 +16,7 @@ export const getHandler: (service: InteractionAddonService) => Handler = (
       case ReplacePageMsg:
         return handleReplacePageMsg(service)(env, msg as ReplacePageMsg);
       default:
-        throw new KeplrError(
+        throw new WalletError(
           "extension-interaction-addon",
           100,
           "Unknown msg type"

@@ -1,15 +1,16 @@
-import {
-  Ledger,
-  LedgerApp,
-  LedgerInitError,
-  LedgerInitErrorOn,
-} from "@keplr-wallet/background";
+import { Ledger, LedgerApp } from "@keplr-wallet/background";
 import React, { FunctionComponent, useState } from "react";
 import { useStyle } from "styles/index";
 import { BluetoothMode } from ".";
 import { ViewStyle } from "react-native";
 import { BlurButton } from "components/new/button/blur-button";
 import TransportBLE from "@ledgerhq/react-native-hw-transport-ble";
+import { WalletError } from "@keplr-wallet/router";
+import {
+  ErrCodeAppNotInitialised,
+  ErrCodeDeviceLocked,
+  ErrModuleLedgerSign,
+} from "@keplr-wallet/background/build/ledger/types";
 
 export const LedgerNanoBLESelector: FunctionComponent<{
   deviceId: string;
@@ -35,8 +36,6 @@ export const LedgerNanoBLESelector: FunctionComponent<{
   const [isConnecting, setIsConnecting] = useState(false);
 
   const testLedgerConnection = async () => {
-    let initErrorOn: LedgerInitErrorOn | undefined;
-
     try {
       setIsPaired(false);
       setIsConnecting(true);
@@ -62,21 +61,14 @@ export const LedgerNanoBLESelector: FunctionComponent<{
       await ledger.close();
       onCanResume();
     } catch (e) {
-      console.log(
-        "Ledger-Selector:",
-        e,
-        e.errorOn,
-        e instanceof LedgerInitError
-      );
-      if (e.errorOn != null) {
-        initErrorOn = e.errorOn;
-        if (initErrorOn === LedgerInitErrorOn.App) {
+      if (e instanceof WalletError && e.module === ErrModuleLedgerSign) {
+        if (e.code === ErrCodeAppNotInitialised) {
           setBluetoothMode(BluetoothMode.Device);
           setMainContent(
             "Open Cosmos app on your ledger and pair with ASI Alliance Wallet"
           );
           setIsConnecting(false);
-        } else if (initErrorOn === LedgerInitErrorOn.Transport) {
+        } else if (e.code === ErrCodeDeviceLocked) {
           setMainContent("Please unlock ledger nano X");
           setIsConnecting(false);
         }
