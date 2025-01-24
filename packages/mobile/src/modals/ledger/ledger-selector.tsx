@@ -9,6 +9,7 @@ import { WalletError } from "@keplr-wallet/router";
 import {
   ErrCodeAppNotInitialised,
   ErrCodeDeviceLocked,
+  ErrFailedInit,
   ErrModuleLedgerSign,
 } from "@keplr-wallet/background/build/ledger/types";
 
@@ -32,7 +33,6 @@ export const LedgerNanoBLESelector: FunctionComponent<{
 }) => {
   const style = useStyle();
 
-  // const [pairingText, setIsPairingText] = useState<string>("");
   const [isConnecting, setIsConnecting] = useState(false);
 
   const testLedgerConnection = async () => {
@@ -62,8 +62,13 @@ export const LedgerNanoBLESelector: FunctionComponent<{
       onCanResume();
     } catch (e) {
       if (e instanceof WalletError && e.module === ErrModuleLedgerSign) {
-        if (e.code === ErrCodeAppNotInitialised) {
-          setBluetoothMode(BluetoothMode.Device);
+        setBluetoothMode(BluetoothMode.Device);
+        if (e.code === ErrFailedInit) {
+          setMainContent(
+            "press and hold two buttons at the same time and enter your pin"
+          );
+          setIsConnecting(false);
+        } else if (e.code === ErrCodeAppNotInitialised) {
           setMainContent(
             "Open Cosmos app on your ledger and pair with ASI Alliance Wallet"
           );
