@@ -2,7 +2,7 @@ import {
   Env,
   Handler,
   InternalHandler,
-  KeplrError,
+  WalletError,
   Message,
 } from "@keplr-wallet/router";
 import { SidePanelService } from "./service";
@@ -33,7 +33,7 @@ export const getHandler: (service: SidePanelService) => Handler = (
           msg as SetSidePanelEnabledMsg
         );
       default:
-        throw new KeplrError("sidePanll", 221, "Unknown msg type");
+        throw new WalletError("sidePanll", 221, "Unknown msg type");
     }
   };
 };

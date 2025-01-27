@@ -1,188 +1,69 @@
-/* eslint-disable react/no-deprecated */
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import React, { FunctionComponent, useState } from "react";
+import React, { ChangeEvent, FunctionComponent, useState } from "react";
+import "../../styles/global.scss";
+
+import style from "./style.module.scss";
+import { FormattedMessage, useIntl } from "react-intl";
+import classnames from "classnames";
+import {
+  NotificationProvider,
+  NotificationStoreProvider,
+  useNotification,
+} from "@components/notification";
+import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 import {
   Ledger,
   LedgerApp,
-  LedgerGetWebHIDFlagMsg,
   LedgerWebHIDIniter,
   LedgerWebUSBIniter,
 } from "@keplr-wallet/background";
-import ReactDOM from "react-dom";
-import style from "./style.module.scss";
-import { Buffer } from "buffer/";
-import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 import delay from "delay";
+import { StoreProvider, useStore } from "../../stores";
+import ReactDOM from "react-dom";
+import { observer } from "mobx-react-lite";
 import { useAutoLockMonitoring } from "../../use-auto-lock-monitoring";
 
-const PrimaryLoading: FunctionComponent = () => {
-  return (
-    <svg
-      className={style["spin"]}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle cx="12.5" cy="5.5" r="1.5" fill="#2C47CD" />
-      <circle cx="12.5" cy="19.5" r="1.5" fill="#8E9FF2" />
-      <circle
-        cx="19.5"
-        cy="12.5"
-        r="1.5"
-        fill="#E2E8FF"
-        transform="rotate(90 19.5 12.5)"
-      />
-      <circle
-        cx="5.5"
-        cy="12.5"
-        r="1.5"
-        fill="#4762E7"
-        transform="rotate(90 5.5 12.5)"
-      />
-      <circle
-        cx="17.45"
-        cy="7.55"
-        r="1.5"
-        fill="#F1F3FC"
-        transform="rotate(45 17.45 7.55)"
-      />
-      <circle
-        cx="7.55"
-        cy="17.45"
-        r="1.5"
-        fill="#5B74F2"
-        transform="rotate(45 7.55 17.45)"
-      />
-      <circle
-        cx="17.45"
-        cy="17.45"
-        r="1.5"
-        fill="#B3BEF7"
-        transform="rotate(135 17.45 17.45)"
-      />
-      <circle
-        cx="7.551"
-        cy="7.55"
-        r="1.5"
-        fill="#3550D8"
-        transform="rotate(135 7.55 7.55)"
-      />
-    </svg>
+import { AppIntlProvider } from "../../languages";
+import {
+  AdditionalIntlMessages,
+  LanguageToFiatCurrency,
+} from "../../config.ui";
+import { LoadingIndicatorProvider } from "@components/loading-indicator";
+import { ConfirmProvider } from "@components/confirm";
+import { ErrorBoundary } from "../../error-boundary";
+import { HashRouter, Route, Routes } from "react-router-dom";
+import { DropdownContextProvider } from "@components-v2/dropdown/dropdown-context";
+import { ChatStoreProvider } from "@components/chat/store";
+
+export const LedgerGrantPage: FunctionComponent = observer(() => {
+  const intl = useIntl();
+  const notification = useNotification();
+  const { ledgerInitStore } = useStore();
+  const [status, setStatus] = useState<"select" | "failed" | "success">(
+    "select"
   );
-};
-
-const FailedLoading: FunctionComponent = () => {
-  return (
-    <svg
-      className={style["spin"]}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle cx="12.5" cy="5.5" r="1.5" fill="#5B0A1A" />
-      <circle cx="12.5" cy="19.5" r="1.5" fill="#FB486C" />
-      <circle
-        cx="19.5"
-        cy="12.5"
-        r="1.5"
-        fill="#FFD8E0"
-        transform="rotate(90 19.5 12.5)"
-      />
-      <circle
-        cx="5.5"
-        cy="12.5"
-        r="1.5"
-        fill="#A61F3A"
-        transform="rotate(90 5.5 12.5)"
-      />
-      <circle
-        cx="17.45"
-        cy="7.55"
-        r="1.5"
-        fill="#FFF7F8"
-        transform="rotate(45 17.45 7.55)"
-      />
-      <circle
-        cx="7.55"
-        cy="17.45"
-        r="1.5"
-        fill="#F0224B"
-        transform="rotate(45 7.55 17.45)"
-      />
-      <circle
-        cx="17.45"
-        cy="17.45"
-        r="1.5"
-        fill="#FC91A6"
-        transform="rotate(135 17.45 17.45)"
-      />
-      <circle
-        cx="7.551"
-        cy="7.55"
-        r="1.5"
-        fill="#771A2D"
-        transform="rotate(135 7.55 7.55)"
-      />
-    </svg>
-  );
-};
-
-export const LedgerGrantFullScreenPage: FunctionComponent = () => {
-  useAutoLockMonitoring();
-
-  const request: {
-    app: LedgerApp;
+  const [showWebHIDWarning, setShowWebHIDWarning] = useState(false);
+  const [isLoading, setIsLoading] = useState<{
     cosmosLikeApp: string;
-  } = (() => {
-    const r = new URLSearchParams(window.location.search).get("request");
-    if (!r) {
-      return {
-        app: LedgerApp.Cosmos,
-        cosmosLikeApp: "Cosmos",
-      };
-    }
+    loading: boolean;
+  }>({
+    cosmosLikeApp: "",
+    loading: false,
+  });
 
-    return JSON.parse(Buffer.from(r, "base64").toString());
-  })();
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasFailed, setHasFailed] = useState(false);
-  const [succeded, setSucceded] = useState(false);
-
-  const getPermission = async () => {
-    setIsLoading(true);
+  const handlePermission = async (app: LedgerApp, cosmosLikeApp: string) => {
+    setIsLoading({ cosmosLikeApp, loading: true });
 
     try {
-      const msgRequester = new InExtensionMessageRequester();
-      const isWebHID = await msgRequester.sendMessage(
-        BACKGROUND_PORT,
-        new LedgerGetWebHIDFlagMsg()
-      );
-      const transportIniter = isWebHID
+      const transportIniter = ledgerInitStore.isWebHID
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
 
       try {
-        await CosmosApp.openApp(
-          transport,
-          (() => {
-            if (request.app === LedgerApp.Ethereum) {
-              return "Ethereum";
-            }
-            return request.cosmosLikeApp || "Cosmos";
-          })()
-        );
+        await CosmosApp.openApp(transport, cosmosLikeApp);
       } catch (e) {
         console.log(e);
       } finally {
-        await transport.close();
-
         await delay(500);
 
         let ledger: Ledger | undefined;
@@ -190,120 +71,297 @@ export const LedgerGrantFullScreenPage: FunctionComponent = () => {
           ledger = await Ledger.init(
             transportIniter,
             undefined,
-            request.app,
-            request.cosmosLikeApp
+            app,
+            cosmosLikeApp
           );
         } finally {
           await ledger?.close();
         }
 
-        setSucceded(true);
+        setStatus("success");
       }
     } catch (e) {
       console.log(e);
 
-      setHasFailed(true);
+      setStatus("failed");
     } finally {
-      setIsLoading(false);
+      setIsLoading({ cosmosLikeApp: "", loading: false });
     }
   };
 
+  const toggleWebHIDFlag = async (e: ChangeEvent) => {
+    e.preventDefault();
+
+    if (!ledgerInitStore.isWebHID && !(await Ledger.isWebHIDSupported())) {
+      setShowWebHIDWarning(true);
+      return;
+    }
+    setShowWebHIDWarning(false);
+
+    await ledgerInitStore.setWebHID(!ledgerInitStore.isWebHID);
+  };
   return (
-    <div className={style["container"]}>
-      <div className={style["inner"]}>
-        <div>
+    <div className={classnames(style["container"])}>
+      <div className={style["logoContainer"]}>
+        <div className={classnames(style["logoInnerContainer"])}>
           <img
-            style={{
-              width: "58px",
-              height: "58px",
-              marginRight: "12px",
-            }}
-            src={require("../../public/assets/logo-256.svg")}
-            alt="logo"
-          />
-          <img
-            style={{
-              height: "58px",
-            }}
-            src={require("../../public/assets/brand-text.png")}
+            className={style["icon"]}
+            src={require("@assets/png/ASI-Logo-Icon-white.png")}
             alt="logo"
           />
         </div>
-        <div>
-          <h1 className={style["title"]}>Allow Browser to Connect to Ledger</h1>
-          <p className={style["description"]}>
-            We’ve identified a Chrome related bug where attempting to connect a
-            hardware wallet in a popup may cause browser to crash. As a
-            temporary measure, you can give Ledger permission in this page.
-            Click the button below then try again.
-          </p>
-          {!succeded ? (
-            <button
-              className={style["buttonText"]}
-              style={{
-                color: hasFailed ? "#F0224B" : "#314FDF",
-                opacity: isLoading ? 0.5 : 1,
-                cursor: isLoading ? "progress" : "pointer",
-              }}
-              onClick={(e) => {
-                e.preventDefault();
+      </div>
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "start",
+          height: "95%",
+        }}
+      >
+        <div className={style["ledgerContainer"]}>
+          <div className={style["pageTitle"]}>
+            Allow Browser to Connect to Ledger
+          </div>
+          <div className={style["pageSubTitle"]}>
+            You need to reapprove connection to your Ledger. Select the
+            appropriate app, and after successfully connecting with your Ledger
+            device, close this page and retry your previous transaction
+            (signing).
+          </div>
+          {(() => {
+            switch (status) {
+              case "failed":
+                return (
+                  <button
+                    className={style["buttonText"]}
+                    style={{
+                      marginTop: "24px",
+                      color: "#F0224B",
+                      opacity: isLoading.loading ? 0.5 : 1,
+                      cursor: isLoading.loading ? "progress" : "pointer",
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
 
-                if (isLoading) {
-                  return;
-                }
-
-                getPermission();
-              }}
-            >
-              {hasFailed ? "Failed - Try Again" : "Connect browser to Ledger"}
-              <div
-                style={{
-                  marginLeft: "4px",
-                  display: "flex",
-                  alignItems: "center",
-                  height: "1px",
-                }}
-              >
-                {isLoading ? (
-                  hasFailed ? (
-                    <FailedLoading />
-                  ) : (
-                    <PrimaryLoading />
-                  )
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="25"
-                    fill="none"
-                    viewBox="0 0 24 25"
+                      setStatus("select");
+                    }}
                   >
-                    <path
-                      stroke={hasFailed ? "#F0224B" : "#314FDF"}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12.563 5.75l6.75 6.75-6.75 6.75m5.812-6.75H4.687"
+                    {"Failed! Try Again"}
+                    <div
+                      style={{
+                        marginLeft: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        height: "1px",
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="25"
+                        fill="none"
+                        viewBox="0 0 24 25"
+                      >
+                        <path
+                          stroke={"#F0224B"}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12.563 5.75l6.75 6.75-6.75 6.75m5.812-6.75H4.687"
+                        />
+                      </svg>
+                    </div>
+                  </button>
+                );
+              case "success":
+                return (
+                  <div
+                    style={{
+                      fontSize: "16px",
+                      color: "#22AC71",
+                      cursor: "auto",
+                    }}
+                  >
+                    Success! You can close this web page.
+                  </div>
+                );
+              case "select":
+                return (
+                  <React.Fragment>
+                    <div className="custom-control custom-checkbox">
+                      <input
+                        className={`custom-control-input ${style["ledgerCheckbox"]}`}
+                        id="use-webhid"
+                        type="checkbox"
+                        checked={ledgerInitStore.isWebHID}
+                        onChange={toggleWebHIDFlag}
+                        disabled={isLoading.loading}
+                      />
+                      <label
+                        className={`custom-control-label ${style["ledgerCheckboxLabel"]}`}
+                        htmlFor="use-webhid"
+                      >
+                        <FormattedMessage id="ledger.option.webhid.checkbox" />
+                      </label>
+                    </div>
+                    {showWebHIDWarning ? (
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          marginBottom: "20px",
+                          color: "white",
+                        }}
+                      >
+                        <FormattedMessage
+                          id="ledger.option.webhid.warning"
+                          values={{
+                            link: (
+                              <a
+                                href="chrome://flags/#enable-experimental-web-platform-features"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => {
+                                  navigator.clipboard
+                                    .writeText(
+                                      "chrome://flags/#enable-experimental-web-platform-features"
+                                    )
+                                    .then(() => {
+                                      notification.push({
+                                        placement: "top-center",
+                                        type: "success",
+                                        duration: 2,
+                                        content: intl.formatMessage({
+                                          id: "ledger.option.webhid.link.copied",
+                                        }),
+                                        canDelete: true,
+                                        transition: {
+                                          duration: 0.25,
+                                        },
+                                      });
+                                    });
+                                }}
+                              >
+                                chrome://flags/#enable-experimental-web-platform-features
+                              </a>
+                            ),
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                    <div style={{ flex: 1 }} />
+                    <Instruction
+                      icon={
+                        <img
+                          src={require("@assets/img/atom-o.svg")}
+                          style={{ height: "30px" }}
+                          alt="cosmos"
+                        />
+                      }
+                      title={intl.formatMessage({ id: "ledger.cosmos" })}
+                      paragraph={
+                        "Click here to grant permission for Cosmos access."
+                      }
+                      isLoading={isLoading.cosmosLikeApp === "Cosmos"}
+                      onClick={async () => {
+                        if (!isLoading.loading) {
+                          await handlePermission(LedgerApp.Cosmos, "Cosmos");
+                        }
+                      }}
                     />
-                  </svg>
-                )}
-              </div>
-            </button>
-          ) : (
-            <div
-              className={style["buttonText"]}
-              style={{
-                color: "#22AC71",
-                cursor: "auto",
-              }}
-            >
-              Success! You can close this web page.
-            </div>
-          )}
+                    <Instruction
+                      icon={
+                        <img
+                          src={require("@assets//img/ethereum.svg")}
+                          style={{ height: "36px" }}
+                          alt="eth"
+                        />
+                      }
+                      title={intl.formatMessage({ id: "ledger.ethereum" })}
+                      paragraph={
+                        "Click here to grant permission for Ethereum access."
+                      }
+                      isLoading={isLoading.cosmosLikeApp === "Ethereum"}
+                      onClick={async () => {
+                        if (!isLoading.loading) {
+                          await handlePermission(
+                            LedgerApp.Ethereum,
+                            "Ethereum"
+                          );
+                        }
+                      }}
+                    />
+                  </React.Fragment>
+                );
+            }
+          })()}
         </div>
+      </div>
+    </div>
+  );
+});
+
+const Instruction: FunctionComponent<{
+  icon: React.ReactElement;
+  title: string;
+  paragraph: string;
+  isLoading: boolean;
+  onClick: () => void;
+}> = ({ icon, title, paragraph, isLoading = false, children, onClick }) => {
+  return (
+    <div
+      className={classnames(style["instruction"])}
+      onClick={onClick}
+      style={{ cursor: "pointer" }}
+    >
+      <div className={style["icon"]}>{icon}</div>
+      <div className={style["inner"]}>
+        <h1>{title}</h1>
+        {isLoading ? (
+          <i className="fas fa-spinner fa-spin ml-2" />
+        ) : (
+          <p>{paragraph}</p>
+        )}
+        {children}
       </div>
     </div>
   );
 };
 
-ReactDOM.render(<LedgerGrantFullScreenPage />, document.getElementById("app"));
+const AutoLockMonitor: FunctionComponent = observer(() => {
+  useAutoLockMonitoring();
+
+  return null;
+});
+
+ReactDOM.render(
+  <StoreProvider>
+    <AppIntlProvider
+      additionalMessages={AdditionalIntlMessages}
+      languageToFiatCurrency={LanguageToFiatCurrency}
+    >
+      <LoadingIndicatorProvider>
+        <NotificationStoreProvider>
+          <NotificationProvider>
+            <ConfirmProvider>
+              <ErrorBoundary>
+                <AutoLockMonitor />
+                <HashRouter>
+                  <DropdownContextProvider>
+                    <ChatStoreProvider>
+                      <Routes>
+                        <Route path="/" element={<LedgerGrantPage />} />
+                      </Routes>
+                    </ChatStoreProvider>
+                  </DropdownContextProvider>
+                </HashRouter>
+              </ErrorBoundary>
+            </ConfirmProvider>
+          </NotificationProvider>
+        </NotificationStoreProvider>
+      </LoadingIndicatorProvider>
+    </AppIntlProvider>
+  </StoreProvider>,
+  document.getElementById("app")
+);

@@ -184,6 +184,18 @@ export const LedgerScreen: FunctionComponent = () => {
           ],
           { cancelable: false }
         );
+      } else if (newState === State.Unsupported) {
+        Alert.alert(
+          "Bluetooth Unavailable",
+          "This device does not support Bluetooth connectivity.",
+          [
+            {
+              text: "Close",
+              style: "cancel",
+            },
+          ],
+          { cancelable: false }
+        );
       }
     }, true);
     return () => {
@@ -258,13 +270,19 @@ export const LedgerScreen: FunctionComponent = () => {
   };
 
   const submit = handleSubmit(async () => {
+    analyticsStore.logEvent("register_next_click", {
+      registerType: "ledger",
+      accountType: "ledger",
+      pageName: "Register",
+    });
+
     setShowPassword(false);
     if (Platform.OS === "android" && location == undefined) {
       setLocationError("Location services are disabled");
       return;
     }
-    setIsCreating(true);
 
+    setIsCreating(true);
     try {
       await registerConfig.createLedger(
         getValues("name"),
@@ -293,7 +311,7 @@ export const LedgerScreen: FunctionComponent = () => {
     } catch (e) {
       ledgerInitStore.abortAll();
       // Definitely, the error can be thrown when the ledger connection failed
-      console.log(e);
+      console.log("Ledger:Creation", e);
     } finally {
       setIsCreating(false);
     }
@@ -576,11 +594,6 @@ export const LedgerScreen: FunctionComponent = () => {
         loading={isCreating}
         onPress={() => {
           submit();
-          analyticsStore.logEvent("register_next_click", {
-            registerType: "ledger",
-            accountType: "ledger",
-            pageName: "Register",
-          });
         }}
         disabled={!isBLEAvailable}
       />

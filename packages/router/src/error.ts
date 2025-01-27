@@ -1,4 +1,4 @@
-export class KeplrError extends Error {
+export class WalletError extends Error {
   public readonly module: string;
   public readonly code: number;
 
@@ -7,6 +7,6 @@ export class KeplrError extends Error {
     this.module = module;
     this.code = code;
 
-    Object.setPrototypeOf(this, KeplrError.prototype);
+    Object.setPrototypeOf(this, WalletError.prototype);
   }
 }

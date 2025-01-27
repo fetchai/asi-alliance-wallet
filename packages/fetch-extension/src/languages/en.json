@@ -395,6 +395,8 @@
   "ledger.confirm.success.paragraph": "This page will automatically close in 3 seconds",
   "ledger.confirm.rejected": "Rejected by Ledger",
   "ledger.confirm.rejected.paragraph": "This page will automatically close in 3 seconds",
+  "ledger.cosmos": "Cosmos",
+  "ledger.ethereum": "Ethereum",
 
   "fee-buttons.select.low": "Low",
   "fee-buttons.select.average": "Average",

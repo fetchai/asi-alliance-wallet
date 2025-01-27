@@ -104,6 +104,13 @@ export const LedgerGranterModal: FunctionComponent<{
     if (!resumed.current) {
       ledgerInitStore.abortAll();
     }
+
+    setBluetoothMode(BluetoothMode.Ledger);
+    setIsPairingText("Waiting for bluetooth signal...");
+    setMainContent(
+      "press and hold two buttons at the same time and enter your pin"
+    );
+    setIsPaired(false);
   });
 
   useEffect(() => {
@@ -161,10 +168,9 @@ export const LedgerGranterModal: FunctionComponent<{
           next: (e: { type: string; descriptor: any }) => {
             if (e.type === "add") {
               const device = e.descriptor;
-              if (!_devices.find((d) => d.id === device.id)) {
-                console.log(
-                  `Ledger device found (id: ${device.id}, name: ${device.name})`
-                );
+              const isDevice = !_devices.find((d) => d.id === device.id);
+
+              if (isDevice) {
                 _devices = [
                   ..._devices,
                   {

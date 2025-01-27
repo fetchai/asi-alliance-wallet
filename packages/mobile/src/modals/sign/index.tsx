@@ -352,7 +352,7 @@ export const SignModal: FunctionComponent<{
               );
             }
           } catch (error) {
-            console.log(error);
+            console.log("Sign:Error", error);
           }
         }}
       />

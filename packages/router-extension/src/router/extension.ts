@@ -3,7 +3,7 @@ import {
   MessageSender,
   Result,
   EnvProducer,
-  KeplrError,
+  WalletError,
 } from "@keplr-wallet/router";
 import { getKeplrExtensionRouterId } from "../utils";
 
@@ -70,7 +70,7 @@ export class ExtensionRouter extends Router {
       console.log(
         `Failed to process msg ${message.type}: ${e?.message || e?.toString()}`
       );
-      if (e instanceof KeplrError) {
+      if (e instanceof WalletError) {
         return Promise.resolve({
           error: {
             code: e.code,
