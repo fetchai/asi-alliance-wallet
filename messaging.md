@@ -384,7 +384,7 @@ To send a message, you need to perform the following steps:
       }
     ```
 
-4. When the message is succesfully sent, the backend service creates a new group between sender and target if it is the first message between the 2.
+4. When the message is successfully sent, the backend service creates a new group between sender and target if it is the first message between the 2.
 
 ### Get all chat groups
 
