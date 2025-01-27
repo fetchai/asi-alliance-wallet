@@ -779,7 +779,7 @@ variables:
 #### How does update Group Timestamp work
 
 in every group, each user has 2 properties:
-- lastSeenTimestamp: This value is used to get the seen timestamp from the user perspective. For example whenever the user opens a particular group chat, the seen timestamp is updated to the corresponding value. This helps to detect the presence of new unread messages and align the group chat UI to the top of the new unread messsages whenever the group chat is opened by the user.
+- lastSeenTimestamp: This value is used to get the seen timestamp from the user perspective. For example whenever the user opens a particular group chat, the seen timestamp is updated to the corresponding value. This helps to detect the presence of new unread messages and align the group chat UI to the top of the new unread messages whenever the group chat is opened by the user.
 - groupLastSeenTimestamp: This value is used to get the last seen timestamp of a user from another user's perspective present in the group. This is used to detect if a particular message is read by the other user or not. So if userA's group last seen timestamp is 10 AM, all the other users in the group can see this value and know that the messages before 10 AM is read by user A.
 
 Both these values are ideally encrypted. Since lastSeenTimestamp is for the user itself, it is encrypted using the user's public key. The groupLastSeenTimestamp is for the other members in the group, so it is encrypted using the other user's public key.
