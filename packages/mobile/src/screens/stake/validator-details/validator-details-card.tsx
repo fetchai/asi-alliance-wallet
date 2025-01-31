@@ -95,7 +95,9 @@ export const ValidatorDetailsCard: FunctionComponent<{
     {
       title: "Voting power",
       value: votingPower
-        ? `${votingPower.split(" ")[0]} ${votingPower.split(" ")[1]}`
+        ? `${Number(votingPower.split(" ")[0]).toLocaleString("en-US")} ${
+            votingPower.split(" ")[1]
+          }`
         : "NA",
     },
   ];

@@ -240,7 +240,21 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
             ]) as ViewStyle
           }
         >
-          {staked.trim(true).shrink(true).maxDecimals(6).toString()}
+          {`${Number(
+            staked
+              .trim(true)
+              .shrink(true)
+              .maxDecimals(6)
+              .toString()
+              .split(" ")[0]
+          ).toLocaleString("en-US")} ${
+            staked
+              .trim(true)
+              .shrink(true)
+              .maxDecimals(6)
+              .toString()
+              .split(" ")[1]
+          }`}
         </Text>
       </View>
       <StakeAmountInput
@@ -266,7 +280,9 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${availableBalance}`}</Text>
+      >{`Available: ${Number(availableBalance.split(" ")[0]).toLocaleString(
+        "en-US"
+      )} ${availableBalance.split(" ")[1]}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}

@@ -203,7 +203,11 @@ export const PortfolioStakingCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={stakableReward.trim(true).shrink(true).toString()}
+        earnedAmount={`${Number(
+          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
+        ).toLocaleString("en-US")} ${
+          stakableReward.trim(true).shrink(true).toString().split(" ")[1]
+        }`}
         onPress={onSubmit}
         buttonLoading={
           isSendingTx || accountInfo.txTypeInProgress === "withdrawRewards"

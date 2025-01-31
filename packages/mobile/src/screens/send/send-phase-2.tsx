@@ -254,7 +254,9 @@ export const SendPhase2: FunctionComponent<{
               style.flatten(["color-white@60%", "text-caption2"]) as ViewStyle
             }
           >
-            {getAmountLabel()}
+            {`${Number(getAmountLabel().split(" ")[0]).toLocaleString(
+              "en-US"
+            )} ${getAmountLabel().split(" ")[1]}`}
           </Text>
         </View>
         <BlurButton

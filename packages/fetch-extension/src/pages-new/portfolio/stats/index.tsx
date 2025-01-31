@@ -329,7 +329,8 @@ export const Stats = observer(
                 <div className={style["label"]}>Available</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {stakableBalInUI.toFixed(2)} {` ${stakableDenom} `}
+                    {Number(stakableBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
+                    {` ${stakableDenom} `}
                     <span className={style["label"]}>
                       ({stakablePercentage.toFixed(1)}%)
                     </span>
@@ -375,7 +376,8 @@ export const Stats = observer(
                 <div className={style["label"]}>Staked</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {stakedBalInUI.toFixed(2)} {` ${stakedDenom} `}
+                    {Number(stakedBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
+                    {` ${stakedDenom} `}
                     <span className={style["label"]}>
                       ({stakedPercentage.toFixed(1)}
                       %)
@@ -422,7 +424,8 @@ export const Stats = observer(
                 <div className={style["label"]}>Staking rewards</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {rewardsBalInUI.toFixed(2)} {` ${rewardDenom} `}
+                    {Number(rewardsBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
+                    {` ${rewardDenom} `}
                     <span className={style["label"]}>
                       ({rewardsPercentage.toFixed(1)}%)
                     </span>
@@ -544,7 +547,10 @@ export const Stats = observer(
                 You’ve earned
               </div>
               <div style={{ fontWeight: 500, lineHeight: "17.5px" }}>
-                {parseFloat(rewardsBalNumber).toFixed(2)} {` ${rewardDenom} `}
+                {Number(parseFloat(rewardsBalNumber).toFixed(2)).toLocaleString(
+                  "en-US"
+                )}{" "}
+                {` ${rewardDenom} `}
               </div>
             </div>
 

@@ -426,7 +426,7 @@ export const AccountSection: FunctionComponent<{
               }${
                 Number.isNaN(parseFloat(tokenState.percentageDiff))
                   ? "0"
-                  : parseFloat(tokenState.percentageDiff).toFixed(1)
+                  : parseFloat(tokenState.percentageDiff)?.toFixed(1)
               } %)`}
             </Text>
             <Text
@@ -578,7 +578,11 @@ export const AccountSection: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={stakableReward.trim(true).shrink(true).toString()}
+        earnedAmount={`${Number(
+          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
+        ).toLocaleString("en-US")} ${
+          stakableReward.trim(true).shrink(true).toString().split(" ")[1]
+        }`}
         onPress={onSubmit}
         buttonLoading={loadingClaimButton}
       />

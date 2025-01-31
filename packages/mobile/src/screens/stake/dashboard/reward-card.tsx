@@ -370,7 +370,11 @@ export const MyRewardCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={pendingStakableReward.shrink(true).trim(true).toString()}
+        earnedAmount={`${Number(
+          pendingStakableReward.shrink(true).trim(true).toString().split(" ")[0]
+        ).toLocaleString("en-US")} ${
+          pendingStakableReward.shrink(true).trim(true).toString().split(" ")[1]
+        }`}
         onPress={handleAllClaim}
         buttonLoading={
           isSendingTx ||
@@ -604,7 +608,21 @@ const DelegateReward: FunctionComponent<{
                     style.flatten(["body3", "color-white@60%"]) as ViewStyle
                   }
                 >
-                  {rewards.maxDecimals(8).trim(true).shrink(true).toString()}
+                  {`${Number(
+                    rewards
+                      .maxDecimals(8)
+                      .trim(true)
+                      .shrink(true)
+                      .toString()
+                      .split(" ")[0]
+                  ).toLocaleString("en-US")} ${
+                    rewards
+                      .maxDecimals(8)
+                      .trim(true)
+                      .shrink(true)
+                      .toString()
+                      .split(" ")[1]
+                  }`}
                 </Text>
               </View>
             </View>
@@ -671,7 +689,9 @@ const DelegateReward: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={claimData.reward}
+        earnedAmount={`${Number(claimData.reward.split(" ")[0]).toLocaleString(
+          "en-US"
+        )} ${claimData.reward.split(" ")[1]}`}
         onPress={() => handleClaim(claimData.validatorAddress)}
         buttonLoading={isSendingTx == claimData.validatorAddress}
       />

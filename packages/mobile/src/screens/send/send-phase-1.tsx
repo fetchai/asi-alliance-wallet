@@ -126,7 +126,9 @@ export const SendPhase1: FunctionComponent<{
           }
           mainHeading="Asset"
           heading={sendConfigs.amountConfig.sendCurrency.coinDenom}
-          subHeading={`Available: ${availableBalance}`}
+          subHeading={`Available: ${Number(
+            availableBalance.split(" ")[0]
+          ).toLocaleString("en-US")} ${availableBalance.split(" ")[1]}`}
           trailingIcon={<ChevronDownIcon size={12} />}
           onPress={() => {
             setOpenAssetModel(true);

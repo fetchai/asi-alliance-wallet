@@ -142,7 +142,7 @@ export const TokenBalanceSection: FunctionComponent<{
               ]) as ViewStyle
             }
           >
-            {removeTrailingZeros(totalNumber)}
+            {Number(removeTrailingZeros(totalNumber)).toLocaleString("en-US")}
           </Text>
           <Text
             style={

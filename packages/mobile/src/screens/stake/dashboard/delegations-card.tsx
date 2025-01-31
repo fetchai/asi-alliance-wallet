@@ -232,11 +232,22 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {amount
-                          .maxDecimals(4)
-                          .trim(true)
-                          .shrink(true)
-                          .toString()}
+                        {Number(
+                          amount
+                            .maxDecimals(4)
+                            .trim(true)
+                            .shrink(true)
+                            .toString()
+                            .split(" ")[0]
+                        ).toLocaleString("en-US")}{" "}
+                        {
+                          amount
+                            .maxDecimals(4)
+                            .trim(true)
+                            .shrink(true)
+                            .toString()
+                            .split(" ")[1]
+                        }
                       </Text>
                     </View>
                     <View style={style.flatten(["items-end"])}>
@@ -305,11 +316,22 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {reward
-                          .maxDecimals(6)
-                          .trim(true)
-                          .shrink(true)
-                          .toString()}
+                        {Number(
+                          reward
+                            .maxDecimals(6)
+                            .trim(true)
+                            .shrink(true)
+                            .toString()
+                            .split(" ")[0]
+                        ).toLocaleString("en-US")}{" "}
+                        {
+                          reward
+                            .maxDecimals(6)
+                            .trim(true)
+                            .shrink(true)
+                            .toString()
+                            .split(" ")[1]
+                        }
                       </Text>
                       <Text
                         style={

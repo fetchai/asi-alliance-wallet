@@ -90,7 +90,11 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
         />
       }
       title={totalDenom}
-      subtitle={stakable.shrink(true).maxDecimals(6).toString()}
+      subtitle={`${Number(
+        stakable.shrink(true).maxDecimals(6).toString().split(" ")[0]
+      ).toLocaleString("en-US")} ${
+        stakable.shrink(true).maxDecimals(6).toString().split(" ")[1]
+      }`}
       trailingStart={totalPrice ? `${totalPrice.toString()}` : ""}
       trailingEnd={totalPrice ? priceStore.defaultVsCurrency.toUpperCase() : ""}
       bottomContent={

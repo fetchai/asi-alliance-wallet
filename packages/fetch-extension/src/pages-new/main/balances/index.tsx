@@ -114,7 +114,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
       {isEvm ? (
         <div className={style["balance-field"]}>
           <div className={style["balance"]}>
-            {totalNumber} <div className={style["denom"]}>{totalDenom}</div>
+            {Number(totalNumber).toLocaleString("en-US")}{" "}
+            <div className={style["denom"]}>{totalDenom}</div>
           </div>
           <div className={style["inUsd"]}>
             {totalPrice && ` ${totalPrice.toString()} `}
@@ -152,7 +153,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
               <Skeleton height="37.5px" />
             ) : (
               <React.Fragment>
-                {totalNumber} <div className={style["denom"]}>{totalDenom}</div>
+                {Number(totalNumber).toLocaleString("en-US")}{" "}
+                <div className={style["denom"]}>{totalDenom}</div>
               </React.Fragment>
             )}
           </div>
