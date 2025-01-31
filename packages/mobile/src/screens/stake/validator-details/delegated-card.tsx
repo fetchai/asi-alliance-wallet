@@ -190,14 +190,16 @@ export const DelegatedCard: FunctionComponent<{
                 ]) as ViewStyle
               }
             >
-              {`${
+              {`${Number(
                 staked
                   .trim(true)
                   .shrink(true)
                   .maxDecimals(10)
                   .toString()
                   .split(" ")[0]
-              } ${staked.trim(true).shrink(true).toString().split(" ")[1]}`}
+              ).toLocaleString("en-US")} ${
+                staked.trim(true).shrink(true).toString().split(" ")[1]
+              }`}
             </Text>
           </View>
           <View
@@ -230,14 +232,14 @@ export const DelegatedCard: FunctionComponent<{
                 ]) as ViewStyle
               }
             >
-              {`${
+              {`${Number(
                 stakableReward
                   .trim(true)
                   .shrink(true)
                   .maxDecimals(10)
                   .toString()
                   .split(" ")[0]
-              } ${
+              ).toLocaleString("en-US")} ${
                 stakableReward.trim(true).shrink(true).toString().split(" ")[1]
               }`}
             </Text>
@@ -341,7 +343,11 @@ export const DelegatedCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={stakableReward.trim(true).shrink(true).toString()}
+        earnedAmount={`${Number(
+          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
+        ).toLocaleString("en-US")} ${
+          stakableReward.trim(true).shrink(true).toString().split(" ")[1]
+        }`}
         onPress={handleClaim}
         buttonLoading={
           isSendingTx ||

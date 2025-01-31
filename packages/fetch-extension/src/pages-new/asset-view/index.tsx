@@ -30,6 +30,7 @@ export const AssetView = observer(() => {
     queriesStore,
     chainStore,
     analyticsStore,
+    priceStore,
   } = useStore();
   const location = useLocation();
   const [tokenInfo, setTokenInfo] = useState<any>();
@@ -92,8 +93,8 @@ export const AssetView = observer(() => {
   if (assetValues) {
     changeInDollarsValue =
       assetValues?.type === "positive"
-        ? (parseFloat(totalNumber) * assetValues.diff) / 100
-        : -(parseFloat(totalNumber) * assetValues.diff) / 100;
+        ? assetValues.diff / 100
+        : -assetValues.diff / 100;
   }
 
   const vestingInfo = queries.cosmos.queryAccount.getQueryBech32Address(
@@ -189,12 +190,12 @@ export const AssetView = observer(() => {
             <div
               className={style["changeInDollars"] + " " + changeInDollarsClass}
             >
-              {changeInDollarsValue !== null && changeInDollarsValue.toFixed(4)}{" "}
-              {totalDenom}
+              {priceStore.getFiatCurrency(fiatCurrency)?.symbolName}{" "}
+              {changeInDollarsValue !== null && changeInDollarsValue.toFixed(4)}
             </div>
             <div className={style["changeInPer"]}>
               ( {assetValues.type === "positive" ? "+" : "-"}
-              {parseFloat(assetValues.diff).toFixed(2)} %)
+              {parseFloat(assetValues.percentageDiff).toFixed(1)} %)
             </div>
             <div className={style["day"]}>{assetValues.time}</div>
           </div>
@@ -212,7 +213,8 @@ export const AssetView = observer(() => {
         <div>
           <div className={style["balance-field"]}>
             <div className={style["balance"]}>
-              {totalNumber} <div className={style["denom"]}>{totalDenom}</div>
+              {Number(totalNumber).toLocaleString("en-US")}{" "}
+              <div className={style["denom"]}>{totalDenom}</div>
             </div>
             <div className={style["inUsd"]}>
               {balances?.balanceInUsd
