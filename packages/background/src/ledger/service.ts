@@ -343,7 +343,7 @@ export class LedgerService {
           retryCount,
         };
       } catch (e) {
-        console.log(e);
+        console.log("Mobile-Ledger:Error", e);
 
         const timeoutAbortController = new AbortController();
 
