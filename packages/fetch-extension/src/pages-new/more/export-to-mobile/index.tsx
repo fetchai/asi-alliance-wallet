@@ -24,6 +24,7 @@ import { Dropdown } from "@components-v2/dropdown";
 import { PasswordInput } from "@components-v2/form";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
+import { useNotification } from "@components/notification";
 
 export interface QRCodeSharedData {
   // The uri for the wallet connect
@@ -62,7 +63,6 @@ export const ExportToMobilePage: FunctionComponent = () => {
       setIsDropdownOpen(false);
     }
   }, [exportKeyRingDatas]);
-
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -99,6 +99,7 @@ export const ExportToMobilePage: FunctionComponent = () => {
       >
         <EnterPasswordToExportKeyRingView
           onSetExportKeyRingDatas={setExportKeyRingDatas}
+          setIsDropdownOpen={setIsDropdownOpen}
         />
       </Dropdown>
     </HeaderLayout>
@@ -111,7 +112,8 @@ interface FormData {
 
 export const EnterPasswordToExportKeyRingView: FunctionComponent<{
   onSetExportKeyRingDatas: (datas: ExportKeyRingData[]) => void;
-}> = observer(({ onSetExportKeyRingDatas }) => {
+  setIsDropdownOpen: any;
+}> = observer(({ onSetExportKeyRingDatas, setIsDropdownOpen }) => {
   const { keyRingStore } = useStore();
 
   const intl = useIntl();
@@ -126,7 +128,8 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
       password: "",
     },
   });
-
+  const navigate = useNavigate();
+  const notification = useNotification();
   const [loading, setLoading] = useState(false);
 
   return (
@@ -145,9 +148,24 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
         onSubmit={handleSubmit(async (data) => {
           setLoading(true);
           try {
-            onSetExportKeyRingDatas(
-              await keyRingStore.exportKeyRingDatas(data.password)
+            const keyRingData = await keyRingStore.exportKeyRingDatas(
+              data.password
             );
+            if (keyRingData.length == 0) {
+              notification.push({
+                type: "danger",
+                placement: "top-center",
+                duration: 5,
+                content: `The Ledger account cannot be exported`,
+                canDelete: true,
+                transition: {
+                  duration: 0.5,
+                },
+              });
+              setIsDropdownOpen(false);
+              navigate("/more");
+            }
+            onSetExportKeyRingDatas(keyRingData);
           } catch (e) {
             console.log("Fail to decrypt: " + e.message);
             setError("password", {
