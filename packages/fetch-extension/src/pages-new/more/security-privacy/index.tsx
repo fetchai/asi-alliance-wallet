@@ -45,9 +45,15 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
           }}
           leftImageStyle={{ background: "transparent" }}
           leftImage={require("@assets/svg/wireframe/key.svg")}
-          heading={"View mnemonic seed"}
+          heading={`View ${
+            keyRingStore.keyRingType === "mnemonic"
+              ? "mnemonic seed"
+              : "Private key"
+          }`}
           onClick={() => {
-            navigate(`/more/export/${accountIndex}`);
+            navigate(`/more/export/${accountIndex}`, {
+              state: { type: keyRingStore.keyRingType },
+            });
             analyticsStore.logEvent("view_mnemonic_seed_click", {
               pageName: "Security & Privacy",
             });

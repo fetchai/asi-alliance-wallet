@@ -11,7 +11,6 @@ import { Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { WarningView } from "./warning-view";
 import classnames from "classnames";
-import queryString from "query-string";
 import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
@@ -34,9 +33,7 @@ export const ExportPage: FunctionComponent = observer(() => {
   const notification = useNotification();
   const { keyRingStore, analyticsStore } = useStore();
 
-  const query = queryString.parse(location.search);
-
-  const type = query["type"] ?? "mnemonic";
+  const type = location.state.type ?? "mnemonic";
 
   const [loading, setLoading] = useState(false);
   const [keyRing, setKeyRing] = useState("");
@@ -61,7 +58,9 @@ export const ExportPage: FunctionComponent = observer(() => {
 
   useEffect(() => {
     if (keyRing) {
-      setDisplayKeyRing(keyRing.split(" "));
+      type === "mnemonic"
+        ? setDisplayKeyRing(keyRing.split(" "))
+        : setDisplayKeyRing([keyRing]);
     }
   }, [keyRing]);
 
@@ -72,7 +71,9 @@ export const ExportPage: FunctionComponent = observer(() => {
         placement: "top-center",
         type: "success",
         duration: 5,
-        content: "Mnemonic copied to clipboard!",
+        content: `${
+          type === "mnemonic" ? "Mnemonic" : "Private key"
+        } copied to clipboard!`,
         canDelete: true,
         transition: {
           duration: 0.25,
@@ -116,16 +117,56 @@ export const ExportPage: FunctionComponent = observer(() => {
                 marginBottom: "30px",
               }}
             >
-              {displayKeyRing.map((key) => (
-                <div
-                  style={{
-                    fontSize: "26px",
-                  }}
-                  key={key}
-                >
-                  {key}
-                </div>
-              ))}
+              {type === "mnemonic"
+                ? displayKeyRing.map((key) => (
+                    <div
+                      style={{
+                        fontSize: "26px",
+                      }}
+                      key={key}
+                    >
+                      {key}
+                    </div>
+                  ))
+                : displayKeyRing[0] &&
+                  (type === "ledger" ? (
+                    Object.keys(JSON.parse(displayKeyRing[0])).map((key) => (
+                      <div
+                        key={key}
+                        style={{
+                          marginBottom: "24px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "26px",
+                            alignItems: "center",
+                            marginBottom: "18px",
+                          }}
+                        >
+                          {key}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {JSON.parse(displayKeyRing[0])[key]}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        fontSize: "18px",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      {displayKeyRing[0]}
+                    </div>
+                  ))}
             </div>
             <ButtonV2
               styleProps={{
