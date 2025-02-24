@@ -74,11 +74,11 @@ export const LedgerNanoBLESelector: FunctionComponent<{
           );
           setIsConnecting(false);
         } else if (e.code === ErrCodeDeviceLocked) {
-          setMainContent("Please unlock ledger nano X");
+          setMainContent(`Please unlock ledger ${name}`);
           setIsConnecting(false);
         }
       } else {
-        setMainContent("Please unlock ledger nano X");
+        setMainContent(`Please unlock ledger ${name}`);
         setIsConnecting(false);
       }
       await TransportBLE.disconnect(deviceId);

@@ -33,7 +33,11 @@ export const SettingViewPrivateDataItem: FunctionComponent = () => {
       <PasswordInputModal
         isOpen={isOpenModal}
         close={() => setIsOpenModal(false)}
-        title={"Enter your password to view your mnemonic seed"}
+        title={`Enter your password to view your ${
+          keyRingStore.keyRingType === "mnemonic"
+            ? "mnemonic seed"
+            : "private key"
+        }`}
         onEnterPassword={async (password) => {
           const index = keyRingStore.multiKeyStoreInfo.findIndex(
             (keyStore) => keyStore.selected

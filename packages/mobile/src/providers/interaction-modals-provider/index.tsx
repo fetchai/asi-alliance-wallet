@@ -114,10 +114,12 @@ export const InteractionModalsProvider: FunctionComponent = observer(
             signInteractionStore.rejectAll();
           }}
         />
-        <LedgerGranterModal
-          isOpen={ledgerInitStore.isInitNeeded}
-          close={() => ledgerInitStore.abortAll()}
-        />
+        {ledgerInitStore.isInitNeeded && (
+          <LedgerGranterModal
+            isOpen={ledgerInitStore.isInitNeeded}
+            close={() => ledgerInitStore.abortAll()}
+          />
+        )}
         <NetworkErrorModal
           isOpen={openNetworkModel}
           close={() => {

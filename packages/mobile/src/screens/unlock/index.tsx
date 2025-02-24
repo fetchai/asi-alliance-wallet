@@ -179,7 +179,12 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       await keychainStore.tryUnlockWithBiometry();
     } catch (e) {
       console.log(e);
-      if (!e.message.includes("code: 13")) {
+      if (e.message.includes("Unmatched mac")) {
+        Toast.show({
+          type: "error",
+          text1: e.message,
+        });
+      } else if (!e.message.includes("code: 13")) {
         Toast.show({
           type: "error",
           text1: `${e.message.slice(e.message.indexOf("msg:") + 5)}`,
