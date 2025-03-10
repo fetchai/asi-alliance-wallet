@@ -175,7 +175,9 @@ export const DelegateScreen: FunctionComponent = observer(() => {
     {
       title: "Voting power",
       value: votingPower
-        ? `${votingPower.split(" ")[0]} ${votingPower.split(" ")[1]}`
+        ? `${Number(votingPower.split(" ")[0]).toLocaleString("en-US")} ${
+            votingPower.split(" ")[1]
+          }`
         : "NA",
     },
     {
@@ -361,7 +363,11 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${availableBalance}`}</Text>
+      >{`Available: ${Number(
+        availableBalance.toString().split(" ")[0]
+      ).toLocaleString("en-US")} ${
+        availableBalance.toString().split(" ")[1]
+      }`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}

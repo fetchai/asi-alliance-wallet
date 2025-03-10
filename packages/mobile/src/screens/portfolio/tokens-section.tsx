@@ -141,13 +141,15 @@ export const TokensSection: FunctionComponent = observer(() => {
                 />
               }
               title={token.balance.currency.coinDenom}
-              subtitle={`${token.balance
-                .trim(true)
-                .shrink(true)
-                .maxDecimals(6)
-                .upperCase(true)
-                .hideDenom(true)
-                .toString()} ${balanceCoinDenom(token.balance)}`}
+              subtitle={`${Number(
+                token.balance
+                  .trim(true)
+                  .shrink(true)
+                  .maxDecimals(6)
+                  .upperCase(true)
+                  .hideDenom(true)
+                  .toString()
+              ).toLocaleString("en-US")} ${balanceCoinDenom(token.balance)}`}
               trailingStart={amount}
               trailingEnd={currency}
             />
