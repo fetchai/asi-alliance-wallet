@@ -8,6 +8,7 @@ interface LineGraphViewProps {
   tokenName: string | undefined;
   setTokenState: any;
   tokenState: any;
+  setTokenCurrentPrice?: any;
 }
 
 const tabs = [
@@ -37,6 +38,7 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
   tokenName,
   setTokenState,
   tokenState,
+  setTokenCurrentPrice,
 }) => {
   const [activeTab, setActiveTab] = useState<any>(tabs[0]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -56,6 +58,7 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
         loading={loading}
         setLoading={setLoading}
         vsCurrency={fiatCurrency}
+        setTokenCurrentPrice={setTokenCurrentPrice}
       />
       {tokenState?.diff && (
         <div style={{ marginBottom: "-18px" }}>

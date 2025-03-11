@@ -126,24 +126,26 @@ export const formatAmount = (amount: string) => {
 
 export const separateNumericAndDenom = (value: any) => {
   const [numericPart, denomPart] = value
-    ? value.replace(",", "").split(" ")
+    ? value.replaceAll(",", "").split(" ")
     : ["", ""];
   return { numericPart, denomPart };
 };
 
 export const parseDollarAmount = (dollarString: any) => {
-  const match = dollarString.match(
-    /(?<=\D|\b)(\d{1,2}(?:,\d{2})*(?:,\d{3})*|\d{1,3}(?:,\d{3})*)(?:\.\d+)?(?=\b|\D)/g
-  );
-  let cleanedMatches = [];
+  if (dollarString) {
+    const match = dollarString.match(
+      /(?<=\D|\b)(\d{1,2}(?:,\d{2})*(?:,\d{3})*|\d{1,3}(?:,\d{3})*)(?:\.\d+)?(?=\b|\D)/g
+    );
+    let cleanedMatches = [];
 
-  if (match) {
-    // removes commas from matched result
-    cleanedMatches = match.map((match: any) => match.replace(/,/g, ""));
-  }
+    if (match) {
+      // removes commas from matched result
+      cleanedMatches = match.map((match: any) => match.replace(/,/g, ""));
+    }
 
-  if (cleanedMatches && cleanedMatches.length > 0) {
-    return parseFloat(cleanedMatches[0]);
+    if (cleanedMatches && cleanedMatches.length > 0) {
+      return parseFloat(cleanedMatches[0]);
+    }
   }
   return NaN;
 };

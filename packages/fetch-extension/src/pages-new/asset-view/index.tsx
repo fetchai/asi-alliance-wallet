@@ -39,6 +39,7 @@ export const AssetView = observer(() => {
 
   const [balances, setBalances] = useState<any>();
   const [assetValues, setAssetValues] = useState<any>();
+  const [tokenCurrentPrice, setTokenCurrentPrice] = useState<number>(0);
   const navigate = useNavigate();
   const language = useLanguage();
   const fiatCurrency = language.fiatCurrency;
@@ -174,9 +175,7 @@ export const AssetView = observer(() => {
         )}
         <div className={style["name"]}>{tokenInfo?.coinDenom}</div>
         <div className={style["price-in-usd"]}>
-          {balances?.balanceInUsd
-            ? `${balances?.balanceInUsd} ${fiatCurrency.toUpperCase()}`
-            : `0 ${fiatCurrency.toUpperCase()}`}
+          {`${tokenCurrentPrice} ${fiatCurrency.toUpperCase()}`}
         </div>
 
         {assetValues?.diff && (
@@ -206,6 +205,7 @@ export const AssetView = observer(() => {
           tokenName={tokenInfo?.coinGeckoId}
           setTokenState={setAssetValues}
           tokenState={assetValues}
+          setTokenCurrentPrice={setTokenCurrentPrice}
         />
       )}
       <div className={style["balances"]}>

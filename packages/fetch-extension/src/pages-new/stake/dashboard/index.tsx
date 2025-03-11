@@ -210,7 +210,7 @@ export const Dashboard = observer(() => {
                     {Number(stakableBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
                     {` ${stakableDenom} `}
                     <span className={style["label"]}>
-                      ({stakablePercentage.toFixed(1)}%)
+                      ({stakablePercentage.toFixed(2)}%)
                     </span>
                   </div>
                 ) : (
@@ -257,7 +257,7 @@ export const Dashboard = observer(() => {
                     {Number(stakedBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
                     {` ${stakedDenom} `}
                     <span className={style["label"]}>
-                      ({stakedPercentage.toFixed(1)}
+                      ({stakedPercentage.toFixed(2)}
                       %)
                     </span>
                   </div>
@@ -305,7 +305,7 @@ export const Dashboard = observer(() => {
                     {Number(rewardsBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
                     {` ${rewardDenom} `}
                     <span className={style["label"]}>
-                      ({rewardsPercentage.toFixed(1)}%)
+                      ({rewardsPercentage.toFixed(2)}%)
                     </span>
                   </div>
                 ) : (
@@ -353,7 +353,7 @@ export const Dashboard = observer(() => {
                       {Number(vestingBalance()).toFixed(2)}{" "}
                       {` ${spendableDenom} `}
                       <span className={style["label"]}>
-                        ({vestingPercentage.toFixed(1)}%)
+                        ({vestingPercentage.toFixed(2)}%)
                       </span>
                     </div>
                   ) : (

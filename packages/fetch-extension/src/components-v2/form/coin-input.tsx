@@ -150,7 +150,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
             </div>
             <div className={styleCoinInput["input-wrapper"]}>
               <input
-                placeholder={`0.00`}
+                placeholder={`0`}
                 className={classnames(
                   "form-control-alternative",
                   styleCoinInput["input"],
@@ -160,7 +160,8 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                 type="number"
                 step="any"
                 value={
-                  isToggleClicked === true
+                  isToggleClicked &&
+                  amountConfig.sendCurrency["coinGeckoId"] !== undefined
                     ? parseDollarAmount(inputInFiatCurrency).toString()
                     : parseExponential(
                         amountConfig.amount,
@@ -193,7 +194,8 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                     ) {
                       return;
                     }
-                    isToggleClicked === true
+                    isToggleClicked &&
+                    amountConfig.sendCurrency["coinGeckoId"] !== undefined
                       ? parseDollarAmount(inputInFiatCurrency)
                       : amountConfig.setAmount(value);
                   }
@@ -203,13 +205,15 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
               />
 
               <span>
-                {isToggleClicked === true
+                {isToggleClicked &&
+                amountConfig.sendCurrency["coinGeckoId"] !== undefined
                   ? fiatCurrency.toUpperCase()
                   : amountConfig.sendCurrency.coinDenom.split(" ")[0]}
               </span>
             </div>
             <div className={styleCoinInput["amount-usd"]}>
-              {isToggleClicked === true
+              {isToggleClicked ||
+              amountConfig.sendCurrency["coinGeckoId"] == undefined
                 ? `${amountConfig.amount} ${amountConfig.sendCurrency.coinDenom}`
                 : inputInFiatCurrency}
             </div>
@@ -223,12 +227,14 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
               className={styleCoinInput["widgetButton"]}
               onClick={isClicked}
               disabled={
-                !SUPPORTED_LOCALE_FIAT_CURRENCIES.includes(fiatCurrency)
+                !SUPPORTED_LOCALE_FIAT_CURRENCIES.includes(fiatCurrency) ||
+                amountConfig.sendCurrency["coinGeckoId"] == undefined
               }
             >
               <img src={require("@assets/svg/wireframe/chevron.svg")} alt="" />
               {`Change to ${
-                !isToggleClicked
+                !isToggleClicked ||
+                amountConfig.sendCurrency["coinGeckoId"] == undefined
                   ? fiatCurrency.toUpperCase()
                   : amountConfig.sendCurrency.coinDenom
               }`}

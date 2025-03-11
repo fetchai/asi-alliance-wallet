@@ -12,6 +12,7 @@ interface LineGraphProps {
   loading: boolean;
   setLoading: any;
   vsCurrency: string;
+  setTokenCurrentPrice?: any;
 }
 
 interface PriceData {
@@ -26,6 +27,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
   loading,
   setLoading,
   vsCurrency,
+  setTokenCurrentPrice,
 }) => {
   const [prices, setPrices] = useState<PriceData[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +168,13 @@ export const LineGraph: React.FC<LineGraphProps> = ({
       },
     ],
   };
+  if (setTokenCurrentPrice) {
+    if (chartData.datasets[0].data.length !== 0 && setTokenCurrentPrice) {
+      setTokenCurrentPrice(Number(chartData.datasets[0].data.slice(-1)[0]));
+    } else {
+      setTokenCurrentPrice(0);
+    }
+  }
 
   return (
     <div className={style["line-graph"]}>
