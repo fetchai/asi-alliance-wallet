@@ -169,7 +169,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     ],
   };
   if (setTokenCurrentPrice) {
-    if (chartData.datasets[0].data.length !== 0 && setTokenCurrentPrice) {
+    if (chartData.datasets[0].data.length !== 0) {
       setTokenCurrentPrice(Number(chartData.datasets[0].data.slice(-1)[0]));
     } else {
       setTokenCurrentPrice(0);
