@@ -44,8 +44,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
 
   const style = useStyle();
 
-  const { chainStore, accountStore, queriesStore, analyticsStore, priceStore } =
-    useStore();
+  const { chainStore, accountStore, queriesStore, analyticsStore } = useStore();
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -153,26 +152,6 @@ export const TokenDetail: FunctionComponent = observer(() => {
         >
           {tokenInfo.coinDenom}
         </Text>
-        {balances.balanceInUsd ? (
-          <View
-            style={
-              style.flatten([
-                "flex-row",
-                "margin-y-4",
-                "justify-center",
-              ]) as ViewStyle
-            }
-          >
-            <Text
-              style={
-                style.flatten(["color-white", "text-caption1"]) as ViewStyle
-              }
-            >
-              {balances.balanceInUsd}{" "}
-              {priceStore.defaultVsCurrency.toUpperCase()}
-            </Text>
-          </View>
-        ) : null}
       </View>
       {tokenInfo.coinGeckoId ? (
         <TokenGraphSection
