@@ -6,6 +6,8 @@ import { useNavigate } from "react-router";
 import { AppCurrency } from "@keplr-wallet/types";
 import { DetailRow } from "./detail-row";
 import { useStore } from "../../../stores";
+import { useNotification } from "@components/notification";
+import { useIntl } from "react-intl";
 
 export const DetailRows = ({ details }: { details: any }) => {
   const currency: AppCurrency = {
@@ -17,10 +19,12 @@ export const DetailRows = ({ details }: { details: any }) => {
   const fees = JSON.parse(details.fees);
   const { feeNumber, feeAlphabetic } = details;
   const navigate = useNavigate();
+  const notification = useNotification();
+  const intl = useIntl();
   const { chainStore, analyticsStore } = useStore();
   const handleClick = () => {
     const mintscanURL = `https://www.mintscan.io/fetchai/tx/${details.hash}/`;
-    window.open(mintscanURL, "_blank");
+    window.open(mintscanURL, "_blank", "noopener,noreferrer");
     analyticsStore.logEvent("view_on_mintscan_click", {
       chainId: chainStore.current.chainId,
       chainName: chainStore.current.chainName,
@@ -58,11 +62,28 @@ export const DetailRows = ({ details }: { details: any }) => {
     });
   };
 
+  async function copyAddress(address: string) {
+    await navigator.clipboard.writeText(address);
+    notification.push({
+      placement: "top-center",
+      type: "success",
+      duration: 2,
+      content: intl.formatMessage({
+        id: "main.address.copied",
+      }),
+      canDelete: true,
+      transition: {
+        duration: 0.25,
+      },
+    });
+  }
+
   return (
     <div className={style["detail-rows"]}>
       <DetailRow
         label="Transaction Hash"
         value={formatActivityHash(details.hash)}
+        onClick={() => copyAddress(details.hash)}
       />
       <DetailRow label="Chain ID" value={details.chainId} />
       {details.verb !== "Sent" &&
@@ -79,12 +100,12 @@ export const DetailRows = ({ details }: { details: any }) => {
               label="Fees"
               value={fees.length > 0 ? `${feeNumber} ${feeAlphabetic}` : "-"}
             />
-            <DetailRow
-              label="Memo"
-              value={details.memo == "" ? "-" : details.memo}
-            />
           </React.Fragment>
         )}
+      <DetailRow
+        label="Memo"
+        value={details.memo.length > 0 ? details.memo : "-"}
+      />
       <DetailRow
         label={`Total ${details.verb === "Sent" ? "estimated" : "amount"}`}
         value={`${details.amountNumber} ${details.amountAlphabetic}`}
