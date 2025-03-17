@@ -19,7 +19,7 @@ export const parseDollarAmount = (dollarString: any) => {
   return 0;
 };
 
-export const formatActivityHash = (address: string) => {
+export const formatToTruncated = (address: string) => {
   if (address?.length > 12)
     return (
       address.substring(0, 8) +

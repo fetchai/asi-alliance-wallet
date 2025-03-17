@@ -13,6 +13,16 @@ export const formatAddress = (address: string) => {
   else return address;
 };
 
+export const formatToTruncated = (address: string) => {
+  if (address?.length > 12)
+    return (
+      address.substring(0, 8) +
+      "..." +
+      address.substring(address.length - 4, address.length)
+    );
+  else return address;
+};
+
 export const formatGroupName = (address: string) => {
   if (address?.length > 15)
     return (
@@ -61,10 +71,6 @@ export const shortenNumber = (value: string, decimal = 18) => {
   return result;
 };
 
-export const formatActivityHash = (address: string) => {
-  if (address?.length > 12) return address.substring(0, 10) + "...";
-  else return address;
-};
 export const formatString = (address: string) => {
   if (address?.length > 30) return address.substring(0, 30) + "...";
   else return address;

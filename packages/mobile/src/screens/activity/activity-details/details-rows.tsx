@@ -1,6 +1,6 @@
 import React, { ReactElement } from "react";
 import { FlatList, View, ViewStyle } from "react-native";
-import { formatActivityHash } from "utils/format/format";
+import { formatToTruncated } from "utils/format/format";
 import { useStyle } from "styles/index";
 import { CardDivider } from "components/card";
 import { DetailRow } from "screens/activity/activity-details/activity-row";
@@ -38,7 +38,7 @@ export const DetailRows = ({ details }: { details: any }) => {
   const style = useStyle();
   const { chainStore, analyticsStore } = useStore();
   const fees = JSON.parse(details.fees);
-  const mintScanURL = `https://www.mintscan.io/fetchai/tx/${details.hash}/`;
+  const url = `https://companion.fetch.ai/${chainStore.current.chainId}/transactions/${details.hash}/`;
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const currency: AppCurrency = {
@@ -93,7 +93,7 @@ export const DetailRows = ({ details }: { details: any }) => {
     navigation.navigate("Others", {
       screen: "WebView",
       params: {
-        url: mintScanURL,
+        url: url,
       },
     });
     analyticsStore.logEvent("view_on_mintscan_click", {
@@ -159,7 +159,7 @@ export const DetailRows = ({ details }: { details: any }) => {
   const data: ItemData[] = [
     {
       title: "Transaction hash",
-      value: formatActivityHash(details.hash),
+      value: formatToTruncated(details.hash),
       hash: details.hash.toString(),
     },
     {
@@ -249,7 +249,7 @@ export const DetailRows = ({ details }: { details: any }) => {
         )}
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
           <BlurButton
-            text="View on Mintscan"
+            text="View on Companion app"
             backgroundBlur={false}
             borderRadius={64}
             containerStyle={

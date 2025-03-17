@@ -7,7 +7,7 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { PageWithScrollView } from "components/page";
 import { useStore } from "stores/index";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { formatAddress } from "utils/format/format";
+import { formatAddress, formatToTruncated } from "utils/format/format";
 import { LeftRightCrossIcon } from "components/new/icon/left-right-cross";
 import { IconButton } from "components/new/button/icon";
 import { getActivityIcon, getDetails } from "utils/stable-sort";
@@ -75,9 +75,9 @@ export const ActivityDetails = observer(() => {
       case Boolean(details.toAddress):
         return formatAddress(details.toAddress);
       case Boolean(details.validatorAddress):
-        return formatAddress(details.validatorAddress);
+        return formatToTruncated(details.validatorAddress);
       case Boolean(details.validatorDstAddress):
-        return formatAddress(details.validatorDstAddress);
+        return formatToTruncated(details.validatorDstAddress);
       case details.verb == "IBC transfer":
         return formatAddress(details.receiver);
       default:

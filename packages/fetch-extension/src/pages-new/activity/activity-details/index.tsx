@@ -5,7 +5,7 @@ import style from "./style.module.scss";
 import moment from "moment";
 import { Card } from "@components-v2/card";
 import { useStore } from "../../../stores";
-import { formatAddress } from "@utils/format";
+import { formatAddress, formatToTruncated } from "@utils/format";
 import { useLanguage } from "../../../languages";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { AppCurrency } from "@keplr-wallet/types";
@@ -55,7 +55,7 @@ export const ActivityDetails = observer(() => {
       case Boolean(details.validatorAddress):
         return (
           <div>
-            {formatAddress(details.validatorAddress)}
+            {formatToTruncated(details.validatorAddress)}
             <div>
               {details.validatorCount > 0
                 ? ` +${details.validatorCount} others`
@@ -64,7 +64,7 @@ export const ActivityDetails = observer(() => {
           </div>
         );
       case Boolean(details.validatorDstAddress):
-        return formatAddress(details.validatorDstAddress);
+        return formatToTruncated(details.validatorDstAddress);
       case details.verb == "IBC transfer":
         return formatAddress(details.receiver);
       default:

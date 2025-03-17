@@ -8,11 +8,11 @@ import {
 } from "@react-navigation/native";
 import { BlurButton } from "components/new/button/blur-button";
 import { useStore } from "stores/index";
-import { formatActivityHash } from "utils/format/format";
+import { formatToTruncated } from "utils/format/format";
 
 const getHash = (proposal: any) => {
   if (proposal && proposal.id) {
-    return formatActivityHash(proposal.id);
+    return formatToTruncated(proposal.id);
   }
   return null;
 };
@@ -64,7 +64,7 @@ export const GovActivityRow: FunctionComponent<{
         navigation.navigate("Others", {
           screen: "WebView",
           params: {
-            url: `https://www.mintscan.io/fetchai/tx/${id}`,
+            url: `https://companion.fetch.ai/${chainStore.current.chainId}/transactions/${id}`,
           },
         });
       }}

@@ -60,7 +60,7 @@ export const ActivityRow = observer(({ node }: { node: any }) => {
   return (
     <React.Fragment>
       <a
-        href={`https://www.mintscan.io/fetchai/tx/${id}`}
+        href={`https://companion.fetch.ai/${chainStore.current.chainId}/transactions/${id}`}
         target="_blank"
         rel="noreferrer"
         onClick={handleClick}
