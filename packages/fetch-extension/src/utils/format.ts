@@ -13,7 +13,7 @@ export const formatAddress = (address: string) => {
   else return address;
 };
 
-export const formatActivityHash = (address: string) => {
+export const formatToTruncated = (address: string) => {
   if (address?.length > 12)
     return (
       address.substring(0, 8) +
