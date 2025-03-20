@@ -844,7 +844,7 @@
 				CODE_SIGN_ENTITLEMENTS = mobile/mobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 26;
 				DEVELOPMENT_TEAM = T62N9GYJ92;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = mobile/Info.plist;
@@ -855,7 +855,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.5;
+				MARKETING_VERSION = 1.0.6;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -880,7 +880,7 @@
 				CODE_SIGN_ENTITLEMENTS = mobile/mobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 26;
 				DEVELOPMENT_TEAM = T62N9GYJ92;
 				INFOPLIST_FILE = mobile/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ASI Alliance Wallet";
@@ -890,7 +890,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.5;
+				MARKETING_VERSION = 1.0.6;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
