@@ -261,7 +261,7 @@ export const DetailRows = ({ details }: { details: any }) => {
                 "justify-center",
               ]) as ViewStyle
             }
-            textStyle={style.flatten(["body3"]) as ViewStyle}
+            textStyle={style.flatten(["body3", "text-center"]) as ViewStyle}
             onPress={() => {
               if (!networkIsConnected) {
                 Toast.show({

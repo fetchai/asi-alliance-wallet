@@ -22,8 +22,8 @@ export const GovActivityRow: FunctionComponent<{
 }> = ({ node }) => {
   const { queriesStore, chainStore, analyticsStore } = useStore();
 
-  const { proposalId, transaction, id } = node;
-  const { status } = transaction;
+  const { proposalId, transaction } = node;
+  const { status, id } = transaction;
 
   const style = useStyle();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();

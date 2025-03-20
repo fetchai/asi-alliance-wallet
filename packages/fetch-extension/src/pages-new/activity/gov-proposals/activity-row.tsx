@@ -44,8 +44,8 @@ const cardStatusTitle = (details: string) => {
 
 export const ActivityRow = observer(({ node }: { node: any }) => {
   const details = node.option;
-  const { proposalId, transaction, id } = node;
-  const { status } = transaction;
+  const { proposalId, transaction } = node;
+  const { status, id } = transaction;
   const { queriesStore, chainStore, analyticsStore } = useStore();
 
   const current = chainStore.current;
