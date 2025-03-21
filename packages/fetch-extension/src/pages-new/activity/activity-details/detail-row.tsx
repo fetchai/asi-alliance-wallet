@@ -13,7 +13,7 @@ export const DetailRow = ({
   return (
     <React.Fragment>
       <div className={style["container"]}>
-        <div>{label}</div>
+        <div style={{ marginRight: "20px" }}>{label}</div>
         <div
           style={{
             display: "flex",

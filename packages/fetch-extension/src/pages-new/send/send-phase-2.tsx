@@ -219,9 +219,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           value={configs ? configs.recipient : ""}
           pageName="Send"
         />
-
         <MemoInput
-          memoConfig={configs ? configs.memo : sendConfigs.memoConfig}
+          memoConfig={sendConfigs.memoConfig}
+          value={configs ? configs.memo : undefined}
           label={intl.formatMessage({ id: "send.input.memo" })}
         />
 

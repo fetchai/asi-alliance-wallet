@@ -1,10 +1,11 @@
 import { IMemoConfig } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useMemo, useState } from "react";
+import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
 import { FormFeedback, Input } from "reactstrap";
 import style from "./memo.module.scss";
 export interface MemoInputProps {
   memoConfig: IMemoConfig;
+  value?: string;
   label?: string;
   className?: string;
   rows?: number;
@@ -13,7 +14,7 @@ export interface MemoInputProps {
 
 // TODO: Handle the max memo bytes length for each chain.
 export const MemoInput: FunctionComponent<MemoInputProps> = observer(
-  ({ memoConfig, rows, disabled = false }) => {
+  ({ memoConfig, value, rows, disabled = false }) => {
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);
       crypto.getRandomValues(bytes);
@@ -29,6 +30,12 @@ export const MemoInput: FunctionComponent<MemoInputProps> = observer(
         }
       }
     }, [error]);
+
+    useEffect(() => {
+      if (value) {
+        memoConfig.setMemo(value);
+      }
+    }, [value]);
 
     return (
       <React.Fragment>

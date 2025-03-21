@@ -1,6 +1,6 @@
 export const PopupSize = {
   width: 360,
-  height: 580,
+  height: 600,
 };
 
 const lastWindowIds: Record<string, number | undefined> = {};
