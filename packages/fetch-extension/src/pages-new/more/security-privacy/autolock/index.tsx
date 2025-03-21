@@ -52,16 +52,6 @@ export const AutoLockPage: FunctionComponent = () => {
       });
   }, [setValue]);
 
-  function updateAutoLockDuration(input: string) {
-    let duration = parseInt(input);
-    if (duration >= 0) {
-      duration = duration * 60000;
-      const msg = new UpdateAutoLockAccountDurationMsg(duration);
-      new InExtensionMessageRequester().sendMessage(BACKGROUND_PORT, msg);
-    }
-    navigate(-1);
-  }
-
   const [isLoading, setIsLoading] = useState(false);
 
   return (
@@ -84,7 +74,20 @@ export const AutoLockPage: FunctionComponent = () => {
         <Form
           onSubmit={handleSubmit(async (data) => {
             setIsLoading(true);
-            updateAutoLockDuration(data.duration);
+
+            const duration = parseInt(data.duration);
+
+            const msg = new UpdateAutoLockAccountDurationMsg(
+              !Number.isNaN(duration) && duration >= 0 ? duration * 60000 : 0
+            );
+
+            await new InExtensionMessageRequester().sendMessage(
+              BACKGROUND_PORT,
+              msg
+            );
+
+            setIsLoading(false);
+            navigate(-1);
           })}
         >
           <Input
