@@ -29,6 +29,7 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { txnTypeKey } from "components/new/txn-status.tsx";
+import { numberLocalFormat } from "utils/format/format";
 
 interface ItemData {
   title: string;
@@ -175,7 +176,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
     {
       title: "Voting power",
       value: votingPower
-        ? `${Number(votingPower.split(" ")[0]).toLocaleString("en-US")} ${
+        ? `${numberLocalFormat(votingPower.split(" ")[0])} ${
             votingPower.split(" ")[1]
           }`
         : "NA",
@@ -363,11 +364,9 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${Number(
+      >{`Available: ${numberLocalFormat(
         availableBalance.toString().split(" ")[0]
-      ).toLocaleString("en-US")} ${
-        availableBalance.toString().split(" ")[1]
-      }`}</Text>
+      )} ${availableBalance.toString().split(" ")[1]}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}
