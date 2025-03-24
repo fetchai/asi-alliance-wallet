@@ -13,7 +13,10 @@ import {
   ParamListBase,
   useNavigation,
 } from "@react-navigation/native";
-import { separateNumericAndDenom } from "utils/format/format";
+import {
+  numberLocalFormat,
+  separateNumericAndDenom,
+} from "utils/format/format";
 
 export const TokensSection: FunctionComponent = observer(() => {
   const style = useStyle();
@@ -141,7 +144,7 @@ export const TokensSection: FunctionComponent = observer(() => {
                 />
               }
               title={token.balance.currency.coinDenom}
-              subtitle={`${Number(
+              subtitle={`${numberLocalFormat(
                 token.balance
                   .trim(true)
                   .shrink(true)
@@ -149,7 +152,7 @@ export const TokensSection: FunctionComponent = observer(() => {
                   .upperCase(true)
                   .hideDenom(true)
                   .toString()
-              ).toLocaleString("en-US")} ${balanceCoinDenom(token.balance)}`}
+              )} ${balanceCoinDenom(token.balance)}`}
               trailingStart={amount}
               trailingEnd={currency}
             />

@@ -19,6 +19,7 @@ import {
 import { StakeCard } from "screens/stake/dashboard/stake-card";
 import { txType } from "components/new/txn-status.tsx";
 import { observer } from "mobx-react-lite";
+import { numberLocalFormat } from "utils/format/format";
 
 export const PortfolioStakingCard: FunctionComponent<{
   cardStyle?: ViewStyle;
@@ -203,11 +204,9 @@ export const PortfolioStakingCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${Number(
+        earnedAmount={`${numberLocalFormat(
           stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        ).toLocaleString("en-US")} ${
-          stakableReward.trim(true).shrink(true).toString().split(" ")[1]
-        }`}
+        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
         onPress={onSubmit}
         buttonLoading={
           isSendingTx || accountInfo.txTypeInProgress === "withdrawRewards"

@@ -8,7 +8,10 @@ import { useStyle } from "styles/index";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
 import { TokenSymbolUsingChainInfo } from "components/token-symbol/token-symbol-chain";
-import { separateNumericAndDenom } from "utils/format/format";
+import {
+  numberLocalFormat,
+  separateNumericAndDenom,
+} from "utils/format/format";
 import {
   NavigationProp,
   ParamListBase,
@@ -90,11 +93,9 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
         />
       }
       title={totalDenom}
-      subtitle={`${Number(
+      subtitle={`${numberLocalFormat(
         stakable.shrink(true).maxDecimals(6).toString().split(" ")[0]
-      ).toLocaleString("en-US")} ${
-        stakable.shrink(true).maxDecimals(6).toString().split(" ")[1]
-      }`}
+      )} ${stakable.shrink(true).maxDecimals(6).toString().split(" ")[1]}`}
       trailingStart={totalPrice ? `${totalPrice.toString()}` : ""}
       trailingEnd={totalPrice ? priceStore.defaultVsCurrency.toUpperCase() : ""}
       bottomContent={

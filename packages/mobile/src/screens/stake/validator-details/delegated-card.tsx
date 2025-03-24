@@ -18,6 +18,7 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import { txnTypeKey, txType } from "components/new/txn-status.tsx";
+import { numberLocalFormat } from "utils/format/format";
 
 export const DelegatedCard: FunctionComponent<{
   containerStyle?: ViewStyle;
@@ -190,16 +191,14 @@ export const DelegatedCard: FunctionComponent<{
                 ]) as ViewStyle
               }
             >
-              {`${Number(
+              {`${numberLocalFormat(
                 staked
                   .trim(true)
                   .shrink(true)
                   .maxDecimals(10)
                   .toString()
                   .split(" ")[0]
-              ).toLocaleString("en-US")} ${
-                staked.trim(true).shrink(true).toString().split(" ")[1]
-              }`}
+              )} ${staked.trim(true).shrink(true).toString().split(" ")[1]}`}
             </Text>
           </View>
           <View
@@ -232,14 +231,14 @@ export const DelegatedCard: FunctionComponent<{
                 ]) as ViewStyle
               }
             >
-              {`${Number(
+              {`${numberLocalFormat(
                 stakableReward
                   .trim(true)
                   .shrink(true)
                   .maxDecimals(10)
                   .toString()
                   .split(" ")[0]
-              ).toLocaleString("en-US")} ${
+              )} ${
                 stakableReward.trim(true).shrink(true).toString().split(" ")[1]
               }`}
             </Text>
@@ -343,11 +342,9 @@ export const DelegatedCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${Number(
+        earnedAmount={`${numberLocalFormat(
           stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        ).toLocaleString("en-US")} ${
-          stakableReward.trim(true).shrink(true).toString().split(" ")[1]
-        }`}
+        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
         onPress={handleClaim}
         buttonLoading={
           isSendingTx ||

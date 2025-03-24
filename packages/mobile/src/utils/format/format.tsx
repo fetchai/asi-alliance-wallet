@@ -1,5 +1,6 @@
 import { Buffer } from "buffer/";
 import { AGENT_ADDRESS } from "../../config";
+import { Platform } from "react-native";
 
 export const separateNumericAndDenom = (value: any) => {
   const data = value ? value.split(" ") : ["", ""];
@@ -152,3 +153,10 @@ export const removeTrailingZeros = (number: string) => {
 };
 
 export const removeComma = (value: string) => value.replace(/,/g, "");
+
+export const numberLocalFormat = (number: string) => {
+  if (Platform.OS == "android") {
+    return Number(number).toLocaleString("en-US");
+  }
+  return number;
+};

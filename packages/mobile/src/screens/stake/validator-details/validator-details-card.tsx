@@ -4,7 +4,11 @@ import { Staking } from "@keplr-wallet/stores";
 import { FlatList, Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
-import { shortenNumber, titleCase } from "utils/format/format";
+import {
+  numberLocalFormat,
+  shortenNumber,
+  titleCase,
+} from "utils/format/format";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { ValidatorThumbnail } from "components/thumbnail";
 import { BlurBackground } from "components/new/blur-background/blur-background";
@@ -95,7 +99,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
     {
       title: "Voting power",
       value: votingPower
-        ? `${Number(votingPower.split(" ")[0]).toLocaleString("en-US")} ${
+        ? `${numberLocalFormat(votingPower.split(" ")[0])} ${
             votingPower.split(" ")[1]
           }`
         : "NA",
