@@ -11,11 +11,11 @@
   },
 
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup-loading.html",
     "default_title": "ASI Alliance Wallet"
   },
   "side_panel": {
-    "default_path": "sidePanel.html"
+    "default_path": "sidepanel-loading.html"
   },
   "background": {
     "service_worker": "background.bundle.js"

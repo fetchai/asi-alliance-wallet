@@ -195,6 +195,7 @@ const StateRenderer: FunctionComponent = observer(() => {
         style={{
           height: "100%",
           backgroundColor: "#030e3b",
+          backgroundSize: "cover",
           backgroundImage: `url(${require("@assets/svg/wireframe/bg-onboarding.svg")})`,
         }}
       >
