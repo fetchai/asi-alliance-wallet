@@ -324,7 +324,7 @@ ReactDOM.render(
                             element={<AddTokenPage />}
                           />
                           <Route
-                            path="/more/token/buy"
+                            path="/more/token/buy/:provider"
                             element={<BuyTokenPage />}
                           />
                           <Route
