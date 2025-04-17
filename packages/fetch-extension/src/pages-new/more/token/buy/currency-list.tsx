@@ -41,6 +41,7 @@ export const CurrencyList: FunctionComponent<{
                 padding: "18px",
                 fontSize: "13px",
                 borderRadius: "12px",
+                cursor: "pointer",
                 backdropFilter: "blur(10px)",
                 flexWrap: "wrap",
                 alignItems: "center",

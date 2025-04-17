@@ -93,8 +93,19 @@ export const MorePage: FunctionComponent = () => {
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
         heading={"Buy Crypto"}
+        subheading={"Using Kado"}
         onClick={() => {
-          navigate("/more/token/buy");
+          navigate("/more/token/buy/kado");
+        }}
+      />
+      <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+        heading={"Buy Crypto"}
+        subheading={"Using Moonpay"}
+        onClick={() => {
+          navigate("/more/token/buy/moonpay");
         }}
       />
       <Card
