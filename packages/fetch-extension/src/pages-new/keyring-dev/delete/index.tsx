@@ -99,6 +99,7 @@ export const DeleteWallet: FunctionComponent = () => {
                 id: "setting.clear.input.password.error.required",
               }),
             })}
+            containerStyle={{ width: "100%" }}
           />
 
           <div>

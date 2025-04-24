@@ -1,11 +1,11 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { Web3AuthNoModal as Web3Auth } from "@web3auth/no-modal";
 import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
-import { CHAIN_NAMESPACES, WALLET_ADAPTERS } from "@web3auth/base";
 import {
-  OPENLOGIN_NETWORK,
-  OpenloginAdapter,
-} from "@web3auth/openlogin-adapter";
+  CHAIN_NAMESPACES,
+  WALLET_ADAPTERS,
+  WEB3AUTH_NETWORK,
+} from "@web3auth/base";
 import style from "./style.module.scss";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
@@ -15,6 +15,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { BackButton } from "..";
 import { useForm } from "react-hook-form";
 import { Input, PasswordInput } from "@components-v2/form";
+import { AuthAdapter } from "@web3auth/auth-adapter";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { AuthApiKey } from "../../../config.ui";
 import { useStore } from "../../../stores";
@@ -43,19 +44,21 @@ export const AuthIntro: FunctionComponent<{
           ticker: "FET",
           tickerName: "Fetch Token",
         };
+        const privateKeyProvider = new CommonPrivateKeyProvider({
+          config: { chainConfig },
+        });
+
         const web3auth = new Web3Auth({
           clientId: AuthApiKey,
           chainConfig,
           web3AuthNetwork: isEnvDevelopment
-            ? OPENLOGIN_NETWORK.TESTNET
-            : OPENLOGIN_NETWORK.CYAN,
+            ? WEB3AUTH_NETWORK.TESTNET
+            : WEB3AUTH_NETWORK.CYAN,
+          privateKeyProvider,
         });
         setWeb3auth(web3auth);
-        const privateKeyProvider = new CommonPrivateKeyProvider({
-          config: { chainConfig },
-        });
-        const openloginAdapter = new OpenloginAdapter({ privateKeyProvider });
-        web3auth.configureAdapter(openloginAdapter);
+        const authAdapter = new AuthAdapter({ privateKeyProvider });
+        web3auth.configureAdapter(authAdapter);
 
         await web3auth.init();
       } catch (error) {
@@ -70,7 +73,7 @@ export const AuthIntro: FunctionComponent<{
     if (!web3auth) {
       return;
     }
-    return await web3auth.connectTo(WALLET_ADAPTERS.OPENLOGIN, {
+    return await web3auth.connectTo(WALLET_ADAPTERS.AUTH, {
       loginProvider: "google",
     });
   };
@@ -226,6 +229,7 @@ export const AuthPage: FunctionComponent<{
                   }
                 },
               })}
+              containerStyle={{ width: "100%" }}
               error={errors.password && errors.password.message}
             />
             <PasswordInput
@@ -241,6 +245,8 @@ export const AuthPage: FunctionComponent<{
                   }
                 },
               })}
+              passwordLabel="Confirm Password"
+              containerStyle={{ width: "100%" }}
               error={errors.confirmPassword && errors.confirmPassword.message}
             />
           </React.Fragment>
