@@ -172,9 +172,10 @@ export const ExportPage: FunctionComponent = observer(() => {
               styleProps={{
                 position: "fixed",
                 bottom: "12px",
-                right: "4%",
                 width: "333px",
                 height: "56px",
+                left: "50%",
+                transform: "translateX(-50%)",
               }}
               text={"Copy to clipboard"}
               onClick={() => copyMnemonic(keyRing)}
