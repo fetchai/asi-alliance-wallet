@@ -256,14 +256,26 @@ const extensionConfig = () => {
         ],
       }),
       new HtmlWebpackPlugin({
-        template: "./src/index.html",
+        template: "./src/popup.html",
         filename: "popup.html",
         chunks: ["popup"],
       }),
       new HtmlWebpackPlugin({
-        template: "./src/index.html",
+        template: "./src/popup.html",
         filename: "sidePanel.html",
         chunks: ["popup"],
+      }),
+      new HtmlWebpackPlugin({
+        template: "./src/popup-loading.html",
+        filename: "popup-loading.html",
+        inject: false,
+        redirectURL: "/popup.html",
+      }),
+      new HtmlWebpackPlugin({
+        template: "./src/popup-loading.html",
+        filename: "sidepanel-loading.html",
+        inject: false,
+        redirectURL: "/sidePanel.html",
       }),
       new HtmlWebpackPlugin({
         template: "./src/index.html",
