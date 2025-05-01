@@ -120,7 +120,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
       }
       memoConfig.setMemo(memo);
       if (
-        data.data.signOptions.preferNoSetFee &&
+        (!data.isInternal || data.data.signOptions.preferNoSetFee) &&
         data.data.signDocWrapper.fees[0]
       ) {
         feeConfig.setManualFee(data.data.signDocWrapper.fees[0]);

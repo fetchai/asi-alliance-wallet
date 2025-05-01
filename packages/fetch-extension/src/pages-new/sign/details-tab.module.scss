@@ -85,3 +85,17 @@
   background: rgba(255, 255, 255, 0.1);
   word-break: break-word;
 }
+
+.feePriceLabel {
+  color: #fff;
+  opacity: 0.6;
+}
+
+.feePrice {
+  font-size: 14px;
+}
+
+.feePriceFiat {
+  font-size: 14px;
+  display: inline-block;
+}
