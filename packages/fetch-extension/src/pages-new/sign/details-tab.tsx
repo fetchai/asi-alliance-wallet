@@ -45,10 +45,15 @@ export const DetailsTab: FunctionComponent<{
     preferNoSetMemo,
     isNeedLedgerEthBlindSigning,
   }) => {
-    const { chainStore, priceStore, accountStore } = useStore();
+    const { chainStore, priceStore, accountStore, signInteractionStore } =
+      useStore();
     const intl = useIntl();
     const language = useLanguage();
-
+    // Check if the fee is set manually from external interaction.
+    const manualFeeExternal = Boolean(
+      !signInteractionStore.waitingData?.isInternal &&
+        signInteractionStore.waitingData?.data?.signDocWrapper?.fees?.[0]
+    );
     const mode = signDocHelper.signDocWrapper
       ? signDocHelper.signDocWrapper.mode
       : "none";
@@ -57,6 +62,7 @@ export const DetailsTab: FunctionComponent<{
         ? signDocHelper.signDocWrapper.aminoSignDoc.msgs
         : signDocHelper.signDocWrapper.protoSignDoc.txMsgs
       : [];
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
 
     const renderedMsgs = (() => {
       if (mode === "amino") {
@@ -119,7 +125,7 @@ export const DetailsTab: FunctionComponent<{
             />
             <div
               style={{
-                marginTop: "24px",
+                marginTop: "18px",
               }}
             />
           </div>
@@ -128,7 +134,7 @@ export const DetailsTab: FunctionComponent<{
             <Label for="memo" className="form-control-label">
               <FormattedMessage id="sign.info.memo" />
             </Label>
-            <div id="memo" style={{ marginBottom: "8px" }}>
+            <div id="memo" style={{ marginBottom: "18px" }}>
               <div
                 className={styleDetailsTab["cards"]}
                 style={{ color: memoConfig.memo ? undefined : "#AAAAAA" }}
@@ -140,7 +146,7 @@ export const DetailsTab: FunctionComponent<{
             </div>
           </div>
         )}
-        {!preferNoSetFee || !feeConfig.isManual ? (
+        {(!preferNoSetFee && !manualFeeExternal) || !feeConfig.isManual ? (
           <FeeButtons
             feeConfig={feeConfig}
             gasConfig={gasConfig}
@@ -151,13 +157,17 @@ export const DetailsTab: FunctionComponent<{
           />
         ) : (
           <React.Fragment>
-            <Label for="fee-price" className="form-control-label">
+            <Label
+              for="fee-price"
+              className={`form-control-label ${styleDetailsTab["feePriceLabel"]}`}
+            >
               <FormattedMessage id="sign.info.fee" />
             </Label>
             <div
               id="fee-price"
               className={styleDetailsTab["cards"]}
               style={{
+                padding: "4px 8px",
                 background: "background: var(--Indigo---Fetch, #5F38FB)",
               }}
             >
@@ -183,16 +193,22 @@ export const DetailsTab: FunctionComponent<{
                       );
                     })();
 
+                  const fee = feeOrZero
+                    .hideIBCMetadata(true)
+                    .trim(true)
+                    .toMetricPrefix(isEvm);
+
                   return (
-                    <div>
-                      {feeOrZero.maxDecimals(6).trim(true).toString()}
+                    <div className={styleDetailsTab["feePrice"]}>
+                      {fee !== "0"
+                        ? fee
+                        : feeOrZero.maxDecimals(6).trim(true).toString()}
                       {priceStore.calculatePrice(
                         feeOrZero,
                         language.fiatCurrency
                       ) ? (
                         <div
-                          className="ml-2"
-                          style={{ display: "inline-block", fontSize: "12px" }}
+                          className={`ml-2 ${styleDetailsTab["feePriceFiat"]}`}
                         >
                           {priceStore
                             .calculatePrice(feeOrZero, language.fiatCurrency)
