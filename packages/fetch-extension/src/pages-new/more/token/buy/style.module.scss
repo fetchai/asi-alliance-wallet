@@ -8,9 +8,29 @@
   label {
     color: white !important;
   }
+  [class^="tab-bar-"] {
+    margin: 0px 0px 10px 0px !important;
+  }
 }
 
-.btnClass {
-  background-color: white;
-  color: black;
+.btnWrapper {
+  width: 100%;
+  position: fixed;
+  bottom: 0;
+  height: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #000d3d;
+}
+
+.inputGroupClass {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  padding-right: 10px !important;
+  align-items: center !important;
+}
+
+.inputMax {
+  margin: 0px !important;
+  background-color: transparent !important;
 }

@@ -1,51 +1,60 @@
-import { ButtonV2 } from "@components-v2/buttons/button";
-import { Input } from "@components-v2/form";
+import { useState } from "react";
+import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { HeaderLayout } from "@layouts-v2/header-layout";
-import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import React from "react";
 import styles from "./style.module.scss";
-import { CurrencyList } from "./currency-list";
-import { Dropdown } from "@components-v2/dropdown";
-import { Card } from "@components-v2/card";
-import { ChainSelect } from "./chain-select";
-import { useStore } from "../../../../stores";
+import { useNavigate } from "react-router";
+import { BuyToken } from "./buy-token";
+import { SellToken } from "./sell-token";
+import { observer } from "mobx-react-lite";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
-export const BuyTokenPage = () => {
-  const { provider } = useParams();
-  const { chainStore, accountStore } = useStore();
-  const currentChain = chainStore.current.chainName;
-  const ethAddress = accountStore.getAccount("1").ethereumHexAddress;
-  const defaultAddress =
-    provider === "kado"
-      ? "0x66E00DE0a2bAb21Db29e882F110E31F58497dAB8"
-      : ethAddress;
-  const defaultCurrency = provider === "kado" ? "INR" : "USD";
-  const [amount, setAmount] = useState("0");
-  const [chain, setChain] = useState(currentChain);
-  const [selectedCurrency, setSelectedCurrency] =
-    useState<any>(defaultCurrency);
+export const BuySellTokenPage = observer(() => {
+  const [selectedTab, setSelectedTab] = useState("Buy");
   const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { data } = useQuery({
+    queryKey: ["currencies"],
+    queryFn: async () => {
+      const { data } = await axios.get(
+        "https://api.moonpay.com/v3/currencies?apiKey=pk_test_123"
+      );
+      return data;
+    },
+    staleTime: Infinity,
+  });
 
-  // get redirect URL sandbox onramp
-  const redirectURL = (() => {
-    const SANDBOX_URL: Record<string, string> = {
-      kado: "https://sandbox--kado.netlify.app/",
-      moonpay: "https://buy-sandbox.moonpay.com/",
-    };
+  const fiatCurrencyList = data?.filter((item: any) => item.type === "fiat");
+  const cryptoCurrencyList = data?.filter(
+    (item: any) => item.type === "crypto"
+  );
 
-    const BASE_URL = SANDBOX_URL[provider as string];
-
-    if (provider === "kado") {
-      const queryParams = `?onPayAmount=${amount}&onPayCurrency=${selectedCurrency}&onRevCurrency=USDC&cryptoList=ETH,AVAX,USDC&onToAddress=${defaultAddress}`;
-      return `${BASE_URL}ramp${queryParams}&network=ETHEREUM&networkList=ETHEREUM,AVALANCHE&product=BUY&productList=BUY&mode=minimal`;
-    } else {
-      const URL = `${BASE_URL}?apiKey=pk_test_123&currencyCode=eth&baseCurrencyCode=${selectedCurrency.toLowerCase()}&baseCurrencyAmount=${amount}&walletAddress=${defaultAddress}`;
-      return URL;
-    }
-  })();
-
-  const isAmountEmpty = amount === "" || amount === "0";
+  const TABS = [
+    {
+      id: "Buy",
+      component: (
+        <BuyToken
+          allowedCurrencyList={fiatCurrencyList}
+          allowedTokenList={cryptoCurrencyList?.filter(
+            (item: any) => !item.isSuspended
+          )}
+        />
+      ),
+    },
+    {
+      id: "Sell",
+      component: (
+        <SellToken
+          allowedCurrencyList={fiatCurrencyList?.filter(
+            (item: any) => item.isSellSupported
+          )}
+          allowedTokenList={cryptoCurrencyList?.filter(
+            (item: any) => item.isSellSupported
+          )}
+        />
+      ),
+    },
+  ];
 
   return (
     <HeaderLayout
@@ -53,61 +62,18 @@ export const BuyTokenPage = () => {
       showTopMenu={true}
       showChainName={false}
       canChangeChainInfo={false}
-      alternativeTitle="Buy Token"
+      alternativeTitle={`${selectedTab} Token`}
       onBackButton={() => navigate(-1)}
       showBottomMenu={false}
     >
       <div className={styles["container"]}>
-        <Input
-          label="Address"
-          className={styles["input"]}
-          value={defaultAddress}
-          readOnly
-        />
-        <ChainSelect chain={chain} setChain={setChain} />
-        <Card
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "16px" }}
-          onClick={() => setIsDropdownOpen(true)}
-          heading="Currency"
-          subheading={selectedCurrency}
-          rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
-        />
-        <Input
-          label="Amount"
-          className={styles["input"]}
-          value={amount}
-          onChange={(e: any) => {
-            const numericValue = e.target.value.replace(/\D/g, "");
-            setAmount(numericValue);
+        <TabsPanel
+          tabs={TABS}
+          onTabChange={(selectedTab: string) => {
+            setSelectedTab(selectedTab);
           }}
         />
-        <ButtonV2
-          text={`Buy Using ${provider}`}
-          styleProps={{
-            backgroundColor: isAmountEmpty ? "transparent" : "white",
-            color: isAmountEmpty ? "white" : "black",
-            marginTop: "75px",
-            border: isAmountEmpty ? "1px solid white" : "1px solid transparent",
-            textTransform: "capitalize",
-          }}
-          onClick={() => window.open(redirectURL, "_blank")}
-          disabled={isAmountEmpty}
-        />
-        <Dropdown
-          closeClicked={() => setIsDropdownOpen(false)}
-          isOpen={isDropdownOpen}
-          setIsOpen={setIsDropdownOpen}
-          title="Select Fiat Currency"
-        >
-          <CurrencyList
-            currency={selectedCurrency.toLowerCase()}
-            onCurrencySelect={(currency: any) => {
-              setSelectedCurrency(currency.toUpperCase());
-              setIsDropdownOpen(false);
-            }}
-          />
-        </Dropdown>
       </div>
     </HeaderLayout>
   );
-};
+});

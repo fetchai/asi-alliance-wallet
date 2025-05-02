@@ -1,15 +1,13 @@
 import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
 import style from "../../style.module.scss";
 import { observer } from "mobx-react-lite";
-import { useStore } from "../../../../stores";
 
 export const CurrencyList: FunctionComponent<{
+  allowedCurrencies: any[];
   currency: string;
   onCurrencySelect: (currency: string) => void;
-}> = observer(({ currency, onCurrencySelect }) => {
-  const [selectedCurrency, setSelectedCurrency] = useState<any>("usd");
-
-  const { priceStore } = useStore();
+}> = observer(({ currency, allowedCurrencies, onCurrencySelect }) => {
+  const [selectedCurrency, setSelectedCurrency] = useState<any>();
 
   const selectedIcon = useMemo(
     () => [<i key="selected" className="fas fa-check" />],
@@ -28,12 +26,10 @@ export const CurrencyList: FunctionComponent<{
   return (
     <div className={style["container"]}>
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        {Object.keys(priceStore.supportedVsCurrencies).map((currency) => {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          const fiatCurrency = priceStore.supportedVsCurrencies[currency]!;
+        {allowedCurrencies.map((fiatCurrency: any) => {
           return (
             <div
-              key={fiatCurrency.currency}
+              key={fiatCurrency.id}
               className={style["currencyItem"]}
               style={{
                 display: "flex",
@@ -47,14 +43,28 @@ export const CurrencyList: FunctionComponent<{
                 alignItems: "center",
                 justifyContent: "space-between",
                 background:
-                  selectedCurrency === fiatCurrency.currency
+                  selectedCurrency === fiatCurrency.code
                     ? "var(--Indigo---Fetch, #5F38FB)"
                     : "rgba(255, 255, 255, 0.1)",
               }}
-              onClick={() => handleClick(fiatCurrency.currency)}
+              onClick={() => handleClick(fiatCurrency.code)}
             >
-              <div className={style["currency"]}>
-                {fiatCurrency.currency.toUpperCase()}
+              <img
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  marginRight: "10px",
+                }}
+                alt={fiatCurrency.name}
+                src={fiatCurrency.icon}
+              />
+              <div
+                style={{
+                  margin: "0 8px",
+                }}
+              >
+                {fiatCurrency.code.toUpperCase()}
               </div>
               <div
                 style={{
@@ -62,10 +72,10 @@ export const CurrencyList: FunctionComponent<{
                   margin: "4px",
                 }}
               >
-                {`${fiatCurrency.name}  (${fiatCurrency.symbol})`}
+                {fiatCurrency.name}
               </div>
               <div style={{ marginLeft: "auto" }}>
-                {selectedCurrency === fiatCurrency.currency
+                {selectedCurrency === fiatCurrency.code
                   ? selectedIcon
                   : undefined}
               </div>

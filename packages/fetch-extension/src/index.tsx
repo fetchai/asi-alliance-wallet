@@ -121,7 +121,7 @@ import { ReadRecipt } from "./pages/setting/chat/readRecipt";
 import { SettingEndpointsPage } from "./pages/setting/endpoints";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
-import { BuyTokenPage } from "./pages-new/more/token/buy";
+import { BuySellTokenPage } from "./pages-new/more/token/buy";
 
 const queryClient = new QueryClient();
 
@@ -324,8 +324,8 @@ ReactDOM.render(
                             element={<AddTokenPage />}
                           />
                           <Route
-                            path="/more/token/buy/:provider"
-                            element={<BuyTokenPage />}
+                            path="/more/token/buy"
+                            element={<BuySellTokenPage />}
                           />
                           <Route
                             path="/more/token/manage"

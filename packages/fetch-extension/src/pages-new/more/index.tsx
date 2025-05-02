@@ -20,6 +20,7 @@ export const MorePage: FunctionComponent = () => {
 
   const { chainStore, analyticsStore, keyRingStore } = useStore();
   const navigate = useNavigate();
+  const currentChain = chainStore.current;
   // const isAxlViewVisible = CHAINS.some((chain) => {
   //   return chain.chainId?.toString() === chainStore.current.chainId;
   // });
@@ -38,6 +39,8 @@ export const MorePage: FunctionComponent = () => {
           });
       });
   }, []);
+
+  console.log({ currentChain });
 
   // const isEvm = chainStore.current.features?.includes("evm") ?? false;
   return (
@@ -88,26 +91,18 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
-        heading={"Buy Crypto"}
-        subheading={"Using Kado"}
-        onClick={() => {
-          navigate("/more/token/buy/kado");
-        }}
-      />
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
-        heading={"Buy Crypto"}
-        subheading={"Using Moonpay"}
-        onClick={() => {
-          navigate("/more/token/buy/moonpay");
-        }}
-      />
+      {currentChain?.raw?.type !== "testnet" && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+          leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+          heading={"Buy/Sell Crypto"}
+          subheading={"Using Moonpay"}
+          onClick={() => {
+            navigate("/more/token/buy");
+          }}
+        />
+      )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
