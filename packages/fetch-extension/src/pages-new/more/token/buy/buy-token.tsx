@@ -9,53 +9,48 @@ import { useStore } from "../../../../stores";
 import { CurrencyList } from "./currency-list";
 import styles from "./style.module.scss";
 import { TokenSelect } from "./token-select";
-// import crypto from "crypto";
+// import { generateSignature } from "./utils";
 import { useNavigate } from "react-router";
+import { MoonpayApiKey, MoonpayOnRampApiURL } from "../../../../config.ui";
+import { ErrorAlert } from "./error-alert";
 
 export const BuyToken: FunctionComponent<{
   allowedCurrencyList?: any[];
   allowedTokenList?: any[];
-}> = observer(({ allowedCurrencyList, allowedTokenList }) => {
-  console.log({ allowedCurrencyList, allowedTokenList });
+  coinListLoading: boolean;
+}> = observer(({ allowedCurrencyList, allowedTokenList, coinListLoading }) => {
   const navigate = useNavigate();
   const { chainStore, accountStore } = useStore();
+  const chainId = chainStore.current.chainId;
   const currentChain = chainStore.current.chainName;
-  const ethAddress = accountStore.getAccount("1").ethereumHexAddress;
-  const defaultAddress = ethAddress;
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const defaultCurrency = allowedCurrencyList?.[0]?.code;
+  const defaultAddress =
+    accountStore.getAccount(chainId)[
+      isEvm ? "ethereumHexAddress" : "bech32Address"
+    ];
   const [amount, setAmount] = useState("0");
   const [token, setToken] = useState(
     chainStore?.current?.currencies?.[0]?.coinDenom
   );
-  const [selectedCurrency, setSelectedCurrency] = useState<any>(
-    allowedCurrencyList?.[0]?.code
-  );
+  const [tokenCode, setTokenCode] = useState("");
+  const [selectedCurrency, setSelectedCurrency] =
+    useState<any>(defaultCurrency);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  // const generateSignature = (url: string, secretKey: string) => {
-  //   const signature = crypto
-  //     .createHmac("sha256", secretKey)
-  //     .update(new URL(url).search) // Use the query string part of the URL
-  //     .digest("base64"); // Convert the result to a base64 string
-  //   return signature; // Return the signature
-  // };
 
   // get redirect URL sandbox onramp
   const redirectURL = (() => {
-    const SANDBOX_URL: Record<string, string> = {
-      kado: "https://sandbox--kado.netlify.app/",
-      moonpay: "https://buy-sandbox.moonpay.com/",
-    };
+    const fiatCurrency = selectedCurrency || defaultCurrency;
+    const BASE_URL = MoonpayOnRampApiURL;
+    const API_KEY = MoonpayApiKey || "pk_test_123";
 
-    const fiatCurrency = selectedCurrency || allowedCurrencyList?.[0]?.code;
-    const BASE_URL = SANDBOX_URL["moonpay"];
-
-    const URL = `${BASE_URL}?apiKey=pk_test_123&currencyCode=eth&baseCurrencyCode=${fiatCurrency}&baseCurrencyAmount=${amount}&walletAddress=${defaultAddress}`;
+    const URL = `${BASE_URL}?apiKey=${API_KEY}&currencyCode=${tokenCode}&baseCurrencyCode=${fiatCurrency}&baseCurrencyAmount=${amount}&walletAddress=${defaultAddress}&showWalletAddressForm=true`;
     // const signature = generateSignature(URL, "sk_test_123");
     return URL;
     // return `${URL}&signature=${encodeURIComponent(signature)}`;
   })();
 
-  const isAmountEmpty = amount === "" || amount === "0";
+  const isAmountEmpty = amount === "" || amount === "0" || !tokenCode;
   return (
     <div style={{ marginBottom: "60px" }}>
       <Input
@@ -70,22 +65,50 @@ export const BuyToken: FunctionComponent<{
         value={defaultAddress}
         readOnly
       />
-      <TokenSelect type="buy" token={token} setToken={setToken} />
+      <TokenSelect
+        allowedTokenList={allowedTokenList}
+        type="buy"
+        token={token}
+        onTokenSelect={(tokenCode: string) => {
+          console.log("tokenCode", { tokenCode });
+          setTokenCode(tokenCode);
+        }}
+        setToken={setToken}
+        setTokenCode={setTokenCode}
+      />
       <Card
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "16px" }}
-        onClick={() => setIsDropdownOpen(true)}
+        onClick={() => {
+          if (tokenCode) {
+            setIsDropdownOpen(true);
+          }
+        }}
         heading="Fiat Currency"
         subheading={
-          selectedCurrency?.toUpperCase() ||
-          allowedCurrencyList?.[0]?.code?.toUpperCase()
+          selectedCurrency?.toUpperCase() || defaultCurrency?.toUpperCase()
         }
         rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
       />
       <Input
-        label={`Amount (in ${selectedCurrency})`}
-        className={styles["input"]}
+        label={`Amount ${
+          selectedCurrency || defaultCurrency
+            ? `(in ${
+                selectedCurrency?.toUpperCase() ||
+                defaultCurrency?.toUpperCase()
+              })`
+            : ""
+        })`}
+        className={`${styles["input"]} ${styles["inputSell"]}`}
         value={amount}
-        placeholder={`Enter amount (in ${selectedCurrency})`}
+        readOnly={!tokenCode}
+        placeholder={`Enter amount ${
+          selectedCurrency || defaultCurrency
+            ? `(in ${
+                selectedCurrency?.toUpperCase() ||
+                defaultCurrency?.toUpperCase()
+              })`
+            : ""
+        })`}
         onChange={(e: any) => {
           e.preventDefault();
           let value = e.target.value;
@@ -101,6 +124,11 @@ export const BuyToken: FunctionComponent<{
           setAmount(value);
         }}
       />
+      {!tokenCode && !coinListLoading ? (
+        <ErrorAlert title="Buy feature is not supported for this token" />
+      ) : (
+        ""
+      )}
       <div className={styles["btnWrapper"]}>
         <ButtonV2
           text="Buy Using Moonpay"

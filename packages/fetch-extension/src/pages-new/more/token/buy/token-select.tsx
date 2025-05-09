@@ -1,30 +1,75 @@
-import React, { FunctionComponent, useState } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../../stores";
 import { Card } from "@components-v2/card";
 import { Dropdown } from "@components-v2/dropdown";
+import { getCurrencyCodeForMoonpay } from "./utils";
 
 interface ChainSelectProps {
   token: string;
+  allowedTokenList: any;
+  setTokenCode: any;
+  onTokenSelect: (tokenCode: any) => void;
   setToken: any;
   type: "sell" | "buy";
 }
 
+interface ITokenList {
+  coinDenom: string;
+  coinMinimalDenom: string;
+  coinDecimals: number;
+  moonpayCode: string | undefined;
+}
+
 export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
-  ({ type, token, setToken }) => {
+  ({
+    type,
+    token,
+    allowedTokenList,
+    setToken,
+    setTokenCode,
+    onTokenSelect,
+  }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const { chainStore } = useStore();
+    const [tokenList, setTokenList] = useState<ITokenList[]>([]);
 
-    const currentChain = chainStore.current.chainName;
-
-    const tokenList = chainStore.chainInfos.find(
-      (chainInfo) => chainInfo.chainName === currentChain
-    )?.currencies;
+    // const currentChain = chainStore.current.chainName;
+    const chainId = chainStore.current.chainId;
 
     const handleChainSelect = async (token: string) => {
       setToken(token);
       setDropdownOpen(false);
     };
+
+    const moonpayTokenCode = (chainId: string, coinDenom: string) => {
+      return chainId === "1" && coinDenom === "FET"
+        ? "fet_eth"
+        : getCurrencyCodeForMoonpay(coinDenom);
+    };
+
+    useEffect(() => {
+      const allowedTokensCode = allowedTokenList?.map((item: any) => item.code);
+      const tokens =
+        chainStore.chainInfos
+          .find((chainInfo) => chainInfo.chainId === chainId)
+          ?.currencies?.filter((item) => {
+            const moonpayCurrencyCode = moonpayTokenCode(
+              chainId,
+              item.coinDenom
+            );
+            return allowedTokensCode?.includes(moonpayCurrencyCode);
+          })
+          ?.map((item) => {
+            const moonpayCurrencyCode = moonpayTokenCode(
+              chainId,
+              item.coinDenom
+            );
+            return { ...item, moonpayCode: moonpayCurrencyCode };
+          }) || [];
+      setTokenCode(tokens?.[0]?.moonpayCode);
+      setTokenList(tokens);
+    }, [chainId, allowedTokenList, type]);
 
     return (
       <div style={{ marginBottom: "20px" }}>
@@ -36,7 +81,11 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
             height: "80px",
             background: "rgba(255,255,255,0.1)",
           }}
-          onClick={() => setDropdownOpen(true)}
+          onClick={() => {
+            if (tokenList.length > 0) {
+              setDropdownOpen(true);
+            }
+          }}
         />
 
         <Dropdown
@@ -59,6 +108,7 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
                   key={index}
                   onClick={() => {
                     handleChainSelect(tokenInfo.coinDenom);
+                    onTokenSelect(tokenInfo?.moonpayCode);
                   }}
                 />
               )

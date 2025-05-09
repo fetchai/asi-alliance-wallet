@@ -8,16 +8,18 @@ import { BuyToken } from "./buy-token";
 import { SellToken } from "./sell-token";
 import { observer } from "mobx-react-lite";
 import { useQuery } from "@tanstack/react-query";
+import { MoonpayApiKey } from "../../../../config.ui";
 import axios from "axios";
 
 export const BuySellTokenPage = observer(() => {
   const [selectedTab, setSelectedTab] = useState("Buy");
   const navigate = useNavigate();
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["currencies"],
     queryFn: async () => {
+      const API_KEY = MoonpayApiKey || "pk_test_123";
       const { data } = await axios.get(
-        "https://api.moonpay.com/v3/currencies?apiKey=pk_test_123"
+        `https://api.moonpay.com/v3/currencies?apiKey=${API_KEY}`
       );
       return data;
     },
@@ -34,6 +36,7 @@ export const BuySellTokenPage = observer(() => {
       id: "Buy",
       component: (
         <BuyToken
+          coinListLoading={isLoading}
           allowedCurrencyList={fiatCurrencyList}
           allowedTokenList={cryptoCurrencyList?.filter(
             (item: any) => !item.isSuspended
@@ -45,6 +48,7 @@ export const BuySellTokenPage = observer(() => {
       id: "Sell",
       component: (
         <SellToken
+          coinListLoading={isLoading}
           allowedCurrencyList={fiatCurrencyList?.filter(
             (item: any) => item.isSellSupported
           )}

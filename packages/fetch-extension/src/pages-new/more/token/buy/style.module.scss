@@ -17,7 +17,7 @@
   width: 100%;
   position: fixed;
   bottom: 0;
-  height: 80px;
+  height: 65px;
   left: 50%;
   transform: translateX(-50%);
   background-color: #000d3d;
@@ -33,4 +33,61 @@
 .inputMax {
   margin: 0px !important;
   background-color: transparent !important;
+}
+
+.inputSell {
+  margin: 0px !important;
+}
+
+.alert {
+  display: flex;
+  padding: 12px;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
+  border-radius: 12px;
+  background: rgba(255, 62, 62, 0.25);
+  border: 1px solid rgba(255, 62, 62, 0.25);
+  color: white;
+  margin-top: 15px;
+  margin-bottom: 60px;
+
+  i {
+    font-size: 24px;
+    margin-right: 8px;
+  }
+
+  img {
+    padding-top: 4px;
+  }
+
+  h1 {
+    font-size: 16px;
+    font-weight: bold;
+    color: #32325d;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 1.57;
+    margin: 0;
+  }
+  .text {
+    color: #fff;
+    font-family: Lexend;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 160%; /* 22.4px */
+  }
+  .lightText {
+    color: #fff;
+    font-family: Lexend;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 160%;
+    opacity: 0.6;
+  }
 }

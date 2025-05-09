@@ -96,8 +96,8 @@ export const MorePage: FunctionComponent = () => {
           leftImageStyle={{ background: "transparent" }}
           style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
           leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
-          heading={"Buy/Sell Crypto"}
-          subheading={"Using Moonpay"}
+          heading="Buy/Sell Tokens"
+          subheading="Using Moonpay"
           onClick={() => {
             navigate("/more/token/buy");
           }}

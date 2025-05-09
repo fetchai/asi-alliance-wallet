@@ -2,41 +2,45 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { Card } from "@components-v2/card";
 import { Dropdown } from "@components-v2/dropdown";
 import { Input } from "@components-v2/form";
-import { CoinPretty, Int, Dec } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { validateDecimalPlaces } from "@utils/format";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useState } from "react";
+import { useNavigate } from "react-router";
+import { MoonpayApiKey, MoonpayOffRampApiURL } from "../../../../config.ui";
 import { useStore } from "../../../../stores";
 import { CurrencyList } from "./currency-list";
+import { ErrorAlert } from "./error-alert";
 import styles from "./style.module.scss";
 import { TokenSelect } from "./token-select";
-import { useNavigate } from "react-router";
-// import crypto from "crypto";
 
 export const SellToken: FunctionComponent<{
   allowedCurrencyList?: any[];
   allowedTokenList?: any[];
-}> = observer(({ allowedCurrencyList, allowedTokenList }) => {
-  console.log({ allowedTokenList });
+  coinListLoading: boolean;
+}> = observer(({ allowedCurrencyList, allowedTokenList, coinListLoading }) => {
   const navigate = useNavigate();
   const { chainStore, accountStore, queriesStore } = useStore();
-  const currentChain = chainStore.current.chainName;
   const chainId = chainStore.current.chainId;
+  const chainName = chainStore.current.chainName;
+  const defaultCurrency = allowedCurrencyList?.[0]?.code;
   const [token, setToken] = useState(
     chainStore?.current.currencies?.[0]?.coinDenom
   );
   const [amountError, setAmountError] = useState("");
   const [amount, setAmount] = useState("0");
   const [maxToggle, setMaxToggle] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState<any>(
-    allowedCurrencyList?.[0]?.code
-  );
+  const [selectedCurrency, setSelectedCurrency] =
+    useState<any>(defaultCurrency);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const ethAddress = accountStore.getAccount("1").ethereumHexAddress;
-  const defaultAddress = ethAddress;
+  const [tokenCode, setTokenCode] = useState("");
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const defaultAddress =
+    accountStore.getAccount(chainId)[
+      isEvm ? "ethereumHexAddress" : "bech32Address"
+    ];
+
   const accountInfo = accountStore.getAccount(chainId);
   const queries = queriesStore.get(chainId);
 
@@ -66,32 +70,19 @@ export const SellToken: FunctionComponent<{
 
   const balanceETH =
     balancesMap.get(coinMinimalDenom) || new CoinPretty(currency, new Int(0));
-
-  // const generateSignature = (url: string, secretKey: string) => {
-  //   const signature = crypto
-  //     .createHmac("sha256", secretKey)
-  //     .update(new URL(url).search) // Use the query string part of the URL
-  //     .digest("base64"); // Convert the result to a base64 string
-  //   return signature; // Return the signature
-  // };
-
   // get redirect URL sandbox onramp
   const redirectURL = (() => {
-    const SANDBOX_URL: Record<string, string> = {
-      kado: "https://sandbox--kado.netlify.app/",
-      moonpay: "https://sell-sandbox.moonpay.com/",
-    };
-
-    const BASE_URL = SANDBOX_URL["moonpay"];
-    const fiatCurrency = selectedCurrency || allowedCurrencyList?.[0]?.code;
-    const URL = `${BASE_URL}?apiKey=pk_test_123&baseCurrencyAmount=${amount}&baseCurrencyCode=eth&quoteCurrencyCode=${fiatCurrency}&refundWalletAddress=${defaultAddress}?externalCustomerId=${"123456"}`;
+    const BASE_URL = MoonpayOffRampApiURL;
+    const API_KEY = MoonpayApiKey || "pk_test_123";
+    const fiatCurrency = selectedCurrency || defaultCurrency;
+    const URL = `${BASE_URL}?apiKey=${API_KEY}&baseCurrencyAmount=${amount}&baseCurrencyCode=${tokenCode}&quoteCurrencyCode=${fiatCurrency}&refundWalletAddress=${defaultAddress}&showWalletAddressForm=true`;
     // const signature = generateSignature(URL, "sk_test_123");
 
     // return `${URL}&signature=${encodeURIComponent(signature)}`;
     return URL;
   })();
 
-  const isAmountEmpty = amount === "" || amount === "0";
+  const isAmountEmpty = amount === "" || amount === "0" || !tokenCode;
 
   const availableBalance = isEvm
     ? balanceETH.shrink(true).maxDecimals(6).hideDenom(true).toDec().toString()
@@ -102,7 +93,7 @@ export const SellToken: FunctionComponent<{
       <Input
         label="Chain"
         className={styles["input"]}
-        value={currentChain}
+        value={chainName}
         readOnly
       />
       <Input
@@ -111,14 +102,26 @@ export const SellToken: FunctionComponent<{
         value={defaultAddress}
         readOnly
       />
-      <TokenSelect type="sell" token={token} setToken={setToken} />
+      <TokenSelect
+        allowedTokenList={allowedTokenList}
+        type="sell"
+        token={token}
+        onTokenSelect={(tokenCode: string) => {
+          setTokenCode(tokenCode);
+        }}
+        setToken={setToken}
+        setTokenCode={setTokenCode}
+      />
       <Card
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "16px" }}
-        onClick={() => setIsDropdownOpen(true)}
+        onClick={() => {
+          if (tokenCode) {
+            setIsDropdownOpen(true);
+          }
+        }}
         heading="Fiat Currency"
         subheading={
-          selectedCurrency?.toUpperCase() ||
-          allowedCurrencyList?.[0]?.code?.toUpperCase()
+          selectedCurrency?.toUpperCase() || defaultCurrency?.toUpperCase()
         }
         rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
       />
@@ -126,6 +129,7 @@ export const SellToken: FunctionComponent<{
         label="Amount to sell"
         className={`${styles["input"]} ${styles["inputMax"]}`}
         value={amount}
+        readOnly={!tokenCode}
         onChange={(e: any) => {
           e.preventDefault();
           setAmountError("");
@@ -149,8 +153,9 @@ export const SellToken: FunctionComponent<{
         append={
           <div
             onClick={() => {
+              const toggleValue = !maxToggle;
               setMaxToggle(!maxToggle);
-              setAmount(maxToggle ? availableBalance : amount);
+              setAmount(toggleValue ? availableBalance : "0");
             }}
           >
             Use Max
@@ -158,6 +163,11 @@ export const SellToken: FunctionComponent<{
         }
         error={amountError}
       />
+      {!tokenCode && !coinListLoading ? (
+        <ErrorAlert title="Sell feature is not supported for this token" />
+      ) : (
+        ""
+      )}
       <div className={styles["btnWrapper"]}>
         <ButtonV2
           text="Sell Using Moonpay"
