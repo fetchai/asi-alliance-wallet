@@ -125,7 +125,7 @@ export const MainPage: FunctionComponent = observer(() => {
           });
         }}
       >
-        <SetKeyRingPage />
+        <SetKeyRingPage onItemSelect={() => setIsOptionsOpen(false)} />
       </Dropdown>
     </HeaderLayout>
   );

@@ -98,7 +98,11 @@ export const CurrencyPge: FunctionComponent = observer(() => {
                 </div>
                 <div
                   style={{
-                    color: "gray",
+                    color:
+                      language.fiatCurrency === fiatCurrency.currency &&
+                      !language.isFiatCurrencyAutomatic
+                        ? "#E5E4E2"
+                        : "gray",
                     margin: "4px",
                   }}
                 >
