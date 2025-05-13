@@ -205,19 +205,6 @@ export const MorePage: FunctionComponent = () => {
           heading={
             <React.Fragment>
               <div>Switch to Side Panel</div>
-              <div
-                style={{
-                  marginLeft: "10px",
-                  background: "blue",
-                  color: "white",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  paddingLeft: "5px",
-                  paddingRight: "5px",
-                }}
-              >
-                Beta
-              </div>
             </React.Fragment>
           }
           subheading={"Open ASI Wallet in a sidebar on your screen"}
@@ -294,14 +281,13 @@ export const MorePage: FunctionComponent = () => {
           }
         />
       )} */}
-      {/* <Card
+      <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "5px" }}
         leftImage={require("@assets/svg/wireframe/wallet-version.svg")}
-        heading={"ASI Alliance Wallet version"}
+        heading="Version"
         onClick={() => navigate("/app-version")}
-      /> */}
-
+      />
       <Card
         leftImageStyle={{
           background: "transparent",
