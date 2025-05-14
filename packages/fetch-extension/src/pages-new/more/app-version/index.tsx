@@ -25,7 +25,7 @@ export const AppVersion = () => {
           {uiConfigStore.platform == "firefox" ? "None" : manifest.version}
         </div>
       </div>
-      {/* <div className={style["hr"]} />
+      <div className={style["hr"]} />
       <div className={style["container"]}>
         <div>Build number</div>
         <div className={style["version"]}>3</div>
@@ -35,7 +35,7 @@ export const AppVersion = () => {
         <div>Code version</div>
         <div className={style["version"]}>None</div>
       </div>
-      <div className={style["hr"]} /> */}
+      <div className={style["hr"]} />
     </HeaderLayout>
   );
 };

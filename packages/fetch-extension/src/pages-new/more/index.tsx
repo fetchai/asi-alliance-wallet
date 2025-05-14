@@ -17,12 +17,20 @@ import {
   useMoonpayCurrency,
   checkAddressIsBuySellWhitelisted,
 } from "@utils/moonpay-currency";
+import * as manifest from "../../manifest.v3.json";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
-  const { chainStore, analyticsStore, keyRingStore, accountStore } = useStore();
+
+  const {
+    chainStore,
+    analyticsStore,
+    keyRingStore,
+    accountStore,
+    uiConfigStore,
+  } = useStore();
   const navigate = useNavigate();
   const currentChain = chainStore.current;
   const chainId = currentChain.chainId;
@@ -285,8 +293,12 @@ export const MorePage: FunctionComponent = () => {
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "5px" }}
         leftImage={require("@assets/svg/wireframe/wallet-version.svg")}
+        rightContent={
+          <div className={style["version"]}>
+            {uiConfigStore.platform == "firefox" ? "None" : manifest.version}
+          </div>
+        }
         heading="Version"
-        onClick={() => navigate("/app-version")}
       />
       <Card
         leftImageStyle={{
