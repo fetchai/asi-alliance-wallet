@@ -12,13 +12,15 @@ import {
 } from "@keplr-wallet/background";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import * as manifest from "../../manifest.v3.json";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
 
-  const { chainStore, analyticsStore, keyRingStore } = useStore();
+  const { chainStore, analyticsStore, keyRingStore, uiConfigStore } =
+    useStore();
   const navigate = useNavigate();
   // const isAxlViewVisible = CHAINS.some((chain) => {
   //   return chain.chainId?.toString() === chainStore.current.chainId;
@@ -235,8 +237,12 @@ export const MorePage: FunctionComponent = () => {
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "5px" }}
         leftImage={require("@assets/svg/wireframe/wallet-version.svg")}
+        rightContent={
+          <div className={style["version"]}>
+            {uiConfigStore.platform == "firefox" ? "None" : manifest.version}
+          </div>
+        }
         heading="Version"
-        onClick={() => navigate("/app-version")}
       />
       <Card
         leftImageStyle={{
