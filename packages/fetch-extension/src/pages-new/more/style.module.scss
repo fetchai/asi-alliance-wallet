@@ -65,3 +65,16 @@
 .version {
   opacity: 0.6;
 }
+
+.currencyItem {
+  display: flex;
+  color: white;
+  padding: 18px;
+  font-size: 13px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
