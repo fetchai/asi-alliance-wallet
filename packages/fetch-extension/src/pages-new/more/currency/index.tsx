@@ -76,15 +76,6 @@ export const CurrencyPge: FunctionComponent = observer(() => {
                 key={fiatCurrency.currency}
                 className={style["currencyItem"]}
                 style={{
-                  display: "flex",
-                  color: "white",
-                  padding: "18px",
-                  fontSize: "13px",
-                  borderRadius: "12px",
-                  backdropFilter: "blur(10px)",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "space-between",
                   background:
                     language.fiatCurrency === fiatCurrency.currency &&
                     !language.isFiatCurrencyAutomatic
