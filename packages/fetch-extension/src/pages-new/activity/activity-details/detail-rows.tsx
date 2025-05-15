@@ -8,6 +8,7 @@ import { DetailRow } from "./detail-row";
 import { useStore } from "../../../stores";
 import { useNotification } from "@components/notification";
 import { useIntl } from "react-intl";
+import { EXPLORER_URL } from "../../../config.ui.var";
 
 export const DetailRows = ({ details }: { details: any }) => {
   const currency: AppCurrency = {
@@ -23,7 +24,7 @@ export const DetailRows = ({ details }: { details: any }) => {
   const intl = useIntl();
   const { chainStore, analyticsStore } = useStore();
   const handleClick = () => {
-    const url = `https://companion.fetch.ai/${chainStore.current.chainId}/transactions/${details.hash}/`;
+    const url = `${EXPLORER_URL}/${chainStore.current.chainId}/transactions/${details.hash}/`;
     window.open(url, "_blank", "noopener,noreferrer");
     analyticsStore.logEvent("view_on_mintscan_click", {
       chainId: chainStore.current.chainId,
@@ -167,7 +168,7 @@ export const DetailRows = ({ details }: { details: any }) => {
               text=""
               onClick={handleClick}
             >
-              View on Companion app
+              View on explorer
             </ButtonV2>
           </div>
         ) : (
@@ -182,7 +183,7 @@ export const DetailRows = ({ details }: { details: any }) => {
             onClick={handleClick}
             text=""
           >
-            View on Companion app
+            View on explorer
           </ButtonV2>
         )}
       </div>

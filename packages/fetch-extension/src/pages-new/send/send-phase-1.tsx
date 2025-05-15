@@ -167,7 +167,10 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
             });
           }}
         >
-          <SetKeyRingPage navigateTo={"/send"} />
+          <SetKeyRingPage
+            navigateTo={"/send"}
+            onItemSelect={() => setIsChangeWalletOpen(false)}
+          />
         </Dropdown>
       </div>
     );

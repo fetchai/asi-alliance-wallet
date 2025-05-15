@@ -12,13 +12,15 @@ import {
 } from "@keplr-wallet/background";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import * as manifest from "../../manifest.v3.json";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
 
-  const { chainStore, analyticsStore, keyRingStore } = useStore();
+  const { chainStore, analyticsStore, keyRingStore, uiConfigStore } =
+    useStore();
   const navigate = useNavigate();
   // const isAxlViewVisible = CHAINS.some((chain) => {
   //   return chain.chainId?.toString() === chainStore.current.chainId;
@@ -155,19 +157,6 @@ export const MorePage: FunctionComponent = () => {
           heading={
             <React.Fragment>
               <div>Switch to Side Panel</div>
-              <div
-                style={{
-                  marginLeft: "10px",
-                  background: "blue",
-                  color: "white",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  paddingLeft: "5px",
-                  paddingRight: "5px",
-                }}
-              >
-                Beta
-              </div>
             </React.Fragment>
           }
           subheading={"Open ASI Wallet in a sidebar on your screen"}
@@ -244,14 +233,17 @@ export const MorePage: FunctionComponent = () => {
           }
         />
       )} */}
-      {/* <Card
+      <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "5px" }}
         leftImage={require("@assets/svg/wireframe/wallet-version.svg")}
-        heading={"ASI Alliance Wallet version"}
-        onClick={() => navigate("/app-version")}
-      /> */}
-
+        rightContent={
+          <div className={style["version"]}>
+            {uiConfigStore.platform == "firefox" ? "None" : manifest.version}
+          </div>
+        }
+        heading="Version"
+      />
       <Card
         leftImageStyle={{
           background: "transparent",
