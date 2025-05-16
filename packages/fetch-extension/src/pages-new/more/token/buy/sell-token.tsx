@@ -5,7 +5,7 @@ import { Input } from "@components-v2/form";
 import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { validateDecimalPlaces } from "@utils/format";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useState } from "react";
+import React, { FunctionComponent, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { MoonpayApiKey, MoonpayOffRampApiURL } from "../../../../config.ui";
 import { useStore } from "../../../../stores";
@@ -13,6 +13,7 @@ import { CurrencyList } from "./currency-list";
 import { ErrorAlert } from "./error-alert";
 import styles from "./style.module.scss";
 import { TokenSelect } from "./token-select";
+// import { signMoonPayUrl } from "./utils";
 
 export const SellToken: FunctionComponent<{
   allowedCurrencyList?: any[];
@@ -34,6 +35,10 @@ export const SellToken: FunctionComponent<{
     useState<any>(defaultCurrency);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [tokenCode, setTokenCode] = useState("");
+  const [moonpaySellAmount, setMoonpaySellAmount] = useState({
+    min: null,
+    max: null,
+  });
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const defaultAddress =
@@ -70,23 +75,51 @@ export const SellToken: FunctionComponent<{
 
   const balanceETH =
     balancesMap.get(coinMinimalDenom) || new CoinPretty(currency, new Int(0));
+
   // get redirect URL sandbox onramp
-  const redirectURL = (() => {
+  const redirectURL = (async () => {
     const BASE_URL = MoonpayOffRampApiURL;
     const API_KEY = MoonpayApiKey || "pk_test_123";
     const fiatCurrency = selectedCurrency || defaultCurrency;
-    const URL = `${BASE_URL}?apiKey=${API_KEY}&baseCurrencyAmount=${amount}&baseCurrencyCode=${tokenCode}&quoteCurrencyCode=${fiatCurrency}&refundWalletAddress=${defaultAddress}&showWalletAddressForm=true`;
-    // const signature = generateSignature(URL, "sk_test_123");
-
-    // return `${URL}&signature=${encodeURIComponent(signature)}`;
+    const params = new URLSearchParams({
+      apiKey: API_KEY,
+      quoteCurrencyCode: fiatCurrency,
+      baseCurrencyCode: tokenCode,
+      baseCurrencyAmount: String(amount),
+      walletAddress: defaultAddress,
+      showWalletAddressForm: "true",
+    });
+    const URL = `${BASE_URL}?${params?.toString()}`;
+    // const signature = await signMoonPayUrl(URL);
     return URL;
+    // return `${URL}&signature=${encodeURIComponent(signature)}`;
   })();
 
-  const isAmountEmpty = amount === "" || amount === "0" || !tokenCode;
+  const isAmountEmpty =
+    amount === "" || amount === "0" || !tokenCode || parseFloat(amount) === 0;
 
   const availableBalance = isEvm
     ? balanceETH.shrink(true).maxDecimals(6).hideDenom(true).toDec().toString()
     : balance.shrink(true).maxDecimals(6).hideDenom(true).toDec().toString();
+
+  const onTokenSelect = (token: any) => {
+    setMoonpaySellAmount({
+      min: token?.minSellAmount ? token?.minSellAmount : null,
+      max: token?.maxSellAmount ? token?.maxSellAmount : null,
+    });
+    setTokenCode(token?.code);
+  };
+
+  useEffect(() => {
+    const { min, max } = moonpaySellAmount;
+    const amountInput = amount || "0";
+    if (min !== null && new Dec(amountInput).lt(new Dec(min))) {
+      setAmountError(`Amount should be >= ${min}`);
+    }
+    if (max !== null && new Dec(amountInput).gt(new Dec(max))) {
+      setAmountError(`Amount should be <= ${max}`);
+    }
+  }, [amount, moonpaySellAmount]);
 
   return (
     <div style={{ marginBottom: "60px" }}>
@@ -106,11 +139,8 @@ export const SellToken: FunctionComponent<{
         allowedTokenList={allowedTokenList}
         type="sell"
         token={token}
-        onTokenSelect={(tokenCode: string) => {
-          setTokenCode(tokenCode);
-        }}
+        onTokenSelect={onTokenSelect}
         setToken={setToken}
-        setTokenCode={setTokenCode}
       />
       <Card
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "16px" }}
@@ -127,6 +157,7 @@ export const SellToken: FunctionComponent<{
       />
       <Input
         label="Amount to sell"
+        formFeedbackClassName={styles["formFeedback"]}
         className={`${styles["input"]} ${styles["inputMax"]}`}
         value={amount}
         readOnly={!tokenCode}
@@ -154,8 +185,15 @@ export const SellToken: FunctionComponent<{
           <div
             onClick={() => {
               const toggleValue = !maxToggle;
+              let amount = toggleValue ? availableBalance : "0";
               setMaxToggle(!maxToggle);
-              setAmount(toggleValue ? availableBalance : "0");
+              if (
+                moonpaySellAmount.max !== null &&
+                new Dec(availableBalance).gt(new Dec(moonpaySellAmount.max))
+              ) {
+                amount = String(moonpaySellAmount.max);
+              }
+              setAmount(amount);
             }}
           >
             Use Max
@@ -178,12 +216,17 @@ export const SellToken: FunctionComponent<{
             transform: "translateX(-50%)",
             bottom: "16px",
             textTransform: "capitalize",
-            backgroundColor: isAmountEmpty ? "transparent" : "white",
-            color: isAmountEmpty ? "white" : "black",
-            border: isAmountEmpty ? "1px solid white" : "1px solid transparent",
+            backgroundColor:
+              isAmountEmpty || amountError !== "" ? "transparent" : "white",
+            color: isAmountEmpty || amountError !== "" ? "white" : "black",
+            border:
+              isAmountEmpty || amountError !== ""
+                ? "1px solid white"
+                : "1px solid transparent",
           }}
-          onClick={() => {
-            window.open(redirectURL, "_blank");
+          onClick={async () => {
+            const URL = await redirectURL;
+            window.open(URL, "_blank");
             navigate("/");
           }}
           disabled={isAmountEmpty || amountError !== ""}

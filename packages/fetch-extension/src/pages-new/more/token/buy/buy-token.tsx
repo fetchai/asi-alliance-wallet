@@ -9,10 +9,11 @@ import { useStore } from "../../../../stores";
 import { CurrencyList } from "./currency-list";
 import styles from "./style.module.scss";
 import { TokenSelect } from "./token-select";
-// import { generateSignature } from "./utils";
 import { useNavigate } from "react-router";
 import { MoonpayApiKey, MoonpayOnRampApiURL } from "../../../../config.ui";
 import { ErrorAlert } from "./error-alert";
+import { Dec } from "@keplr-wallet/unit";
+// import { signMoonPayUrl } from "./utils";
 
 export const BuyToken: FunctionComponent<{
   allowedCurrencyList?: any[];
@@ -34,23 +35,47 @@ export const BuyToken: FunctionComponent<{
     chainStore?.current?.currencies?.[0]?.coinDenom
   );
   const [tokenCode, setTokenCode] = useState("");
+  const [amountError, setAmountError] = useState("");
   const [selectedCurrency, setSelectedCurrency] =
     useState<any>(defaultCurrency);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [moonpayBuyAmount, setMoonpayBuyAmount] = useState({
+    min: null,
+    max: null,
+  });
 
   // get redirect URL sandbox onramp
-  const redirectURL = (() => {
+  const redirectURL = (async () => {
     const fiatCurrency = selectedCurrency || defaultCurrency;
     const BASE_URL = MoonpayOnRampApiURL;
     const API_KEY = MoonpayApiKey || "pk_test_123";
+    const params = new URLSearchParams({
+      apiKey: API_KEY,
+      currencyCode: tokenCode,
+      baseCurrencyCode: fiatCurrency,
+      baseCurrencyAmount: String(amount),
+      walletAddress: defaultAddress,
+      showWalletAddressForm: "true",
+    });
 
-    const URL = `${BASE_URL}?apiKey=${API_KEY}&currencyCode=${tokenCode}&baseCurrencyCode=${fiatCurrency}&baseCurrencyAmount=${amount}&walletAddress=${defaultAddress}&showWalletAddressForm=true`;
-    // const signature = generateSignature(URL, "sk_test_123");
+    const URL = `${BASE_URL}?${params?.toString()}`;
+    // const signature = await signMoonPayUrl(URL);
     return URL;
     // return `${URL}&signature=${encodeURIComponent(signature)}`;
   })();
 
-  const isAmountEmpty = amount === "" || amount === "0" || !tokenCode;
+  const onTokenSelect = (token: any) => {
+    console.log({ token });
+    setMoonpayBuyAmount({
+      min: token?.minBuyAmount ? token?.minBuyAmount : null,
+      max: token?.maxBuyAmount ? token?.maxBuyAmount : null,
+    });
+    setTokenCode(token?.code);
+  };
+
+  const isAmountEmpty =
+    amount === "" || amount === "0" || !tokenCode || parseFloat(amount) === 0;
+
   return (
     <div style={{ marginBottom: "60px" }}>
       <Input
@@ -69,12 +94,8 @@ export const BuyToken: FunctionComponent<{
         allowedTokenList={allowedTokenList}
         type="buy"
         token={token}
-        onTokenSelect={(tokenCode: string) => {
-          console.log("tokenCode", { tokenCode });
-          setTokenCode(tokenCode);
-        }}
+        onTokenSelect={onTokenSelect}
         setToken={setToken}
-        setTokenCode={setTokenCode}
       />
       <Card
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "16px" }}
@@ -90,6 +111,7 @@ export const BuyToken: FunctionComponent<{
         rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
       />
       <Input
+        formGroupClassName={styles["formGroup"]}
         label={`Amount ${
           selectedCurrency || defaultCurrency
             ? `(in ${
@@ -97,7 +119,8 @@ export const BuyToken: FunctionComponent<{
                 defaultCurrency?.toUpperCase()
               })`
             : ""
-        })`}
+        }`}
+        formFeedbackClassName={styles["formFeedback"]}
         className={`${styles["input"]} ${styles["inputSell"]}`}
         value={amount}
         readOnly={!tokenCode}
@@ -108,8 +131,10 @@ export const BuyToken: FunctionComponent<{
                 defaultCurrency?.toUpperCase()
               })`
             : ""
-        })`}
+        }`}
         onChange={(e: any) => {
+          setAmountError("");
+          const { min, max } = moonpayBuyAmount;
           e.preventDefault();
           let value = e.target.value;
           if (value !== "" && !validateDecimalPlaces(value)) {
@@ -121,8 +146,16 @@ export const BuyToken: FunctionComponent<{
             value = value.replace(/^0+(?!\.)/, "");
           }
 
+          const amountInput = value || "0";
           setAmount(value);
+          if (min !== null && new Dec(amountInput).lt(new Dec(min))) {
+            setAmountError(`Amount should be >= ${min}`);
+          }
+          if (max !== null && new Dec(amountInput).gt(new Dec(max))) {
+            setAmountError(`Amount should be <= ${max}`);
+          }
         }}
+        error={amountError}
       />
       {!tokenCode && !coinListLoading ? (
         <ErrorAlert title="Buy feature is not supported for this token" />
@@ -133,21 +166,26 @@ export const BuyToken: FunctionComponent<{
         <ButtonV2
           text="Buy Using Moonpay"
           styleProps={{
-            backgroundColor: isAmountEmpty ? "transparent" : "white",
-            color: isAmountEmpty ? "white" : "black",
+            backgroundColor:
+              isAmountEmpty || amountError !== "" ? "transparent" : "white",
+            color: isAmountEmpty || amountError !== "" ? "white" : "black",
             position: "fixed",
             width: "98%",
             left: "50%",
             transform: "translateX(-50%)",
             bottom: "16px",
-            border: isAmountEmpty ? "1px solid white" : "1px solid transparent",
+            border:
+              isAmountEmpty || amountError !== ""
+                ? "1px solid white"
+                : "1px solid transparent",
             textTransform: "capitalize",
           }}
-          onClick={() => {
-            window.open(redirectURL, "_blank");
+          onClick={async () => {
+            const URL = await redirectURL;
+            window.open(URL, "_blank");
             navigate("/");
           }}
-          disabled={isAmountEmpty}
+          disabled={isAmountEmpty || amountError !== ""}
         />
       </div>
       <Dropdown

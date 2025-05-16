@@ -8,8 +8,7 @@ import { getCurrencyCodeForMoonpay } from "./utils";
 interface ChainSelectProps {
   token: string;
   allowedTokenList: any;
-  setTokenCode: any;
-  onTokenSelect: (tokenCode: any) => void;
+  onTokenSelect: (token: any) => void;
   setToken: any;
   type: "sell" | "buy";
 }
@@ -18,18 +17,11 @@ interface ITokenList {
   coinDenom: string;
   coinMinimalDenom: string;
   coinDecimals: number;
-  moonpayCode: string | undefined;
+  moonpayData: any;
 }
 
 export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
-  ({
-    type,
-    token,
-    allowedTokenList,
-    setToken,
-    setTokenCode,
-    onTokenSelect,
-  }) => {
+  ({ type, token, allowedTokenList, setToken, onTokenSelect }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const { chainStore } = useStore();
     const [tokenList, setTokenList] = useState<ITokenList[]>([]);
@@ -65,9 +57,12 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
               chainId,
               item.coinDenom
             );
-            return { ...item, moonpayCode: moonpayCurrencyCode };
+            const moonpayData = allowedTokenList?.find(
+              (item: any) => item.code === moonpayCurrencyCode
+            );
+            return { ...item, moonpayData };
           }) || [];
-      setTokenCode(tokens?.[0]?.moonpayCode);
+      onTokenSelect(tokens?.[0]?.moonpayData);
       setTokenList(tokens);
     }, [chainId, allowedTokenList, type]);
 
@@ -91,7 +86,7 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
         <Dropdown
           isOpen={dropdownOpen}
           setIsOpen={setDropdownOpen}
-          title={"Select Token"}
+          title="Select Token"
           closeClicked={() => setDropdownOpen(false)}
         >
           {tokenList?.map(
@@ -108,7 +103,7 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
                   key={index}
                   onClick={() => {
                     handleChainSelect(tokenInfo.coinDenom);
-                    onTokenSelect(tokenInfo?.moonpayCode);
+                    onTokenSelect(tokenInfo?.moonpayData);
                   }}
                 />
               )
