@@ -11336,6 +11336,7 @@ __metadata:
     debounce: ^1.2.1
     deepmerge: ^4.2.2
     delay: ^4.4.0
+    dotenv: ^16.5.0
     eciesjs: ^0.3.15
     eslint: ^8.53.0
     fork-ts-checker-webpack-plugin: ^7.2.13
@@ -28007,6 +28008,13 @@ __metadata:
   version: 16.4.5
   resolution: "dotenv@npm:16.4.5"
   checksum: 301a12c3d44fd49888b74eb9ccf9f07a1f5df43f489e7fcb89647a2edcd84c42d6bc349dc8df099cd18f07c35c7b04685c1a4f3e6a6a9e6b30f8d48c15b7f49c
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^16.5.0":
+  version: 16.5.0
+  resolution: "dotenv@npm:16.5.0"
+  checksum: 6543fe87b5ddf2d60dd42df6616eec99148a5fc150cb4530fef5bda655db5204a3afa0e6f25f7cd64b20657ace4d79c0ef974bec32fdb462cad18754191e7a90
   languageName: node
   linkType: hard
 

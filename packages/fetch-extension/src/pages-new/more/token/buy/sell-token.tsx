@@ -13,7 +13,7 @@ import { CurrencyList } from "./currency-list";
 import { ErrorAlert } from "./error-alert";
 import styles from "./style.module.scss";
 import { TokenSelect } from "./token-select";
-// import { signMoonPayUrl } from "./utils";
+import { signMoonPayUrl } from "./utils";
 
 export const SellToken: FunctionComponent<{
   allowedCurrencyList?: any[];
@@ -79,7 +79,7 @@ export const SellToken: FunctionComponent<{
   // get redirect URL sandbox onramp
   const redirectURL = (async () => {
     const BASE_URL = MoonpayOffRampApiURL;
-    const API_KEY = MoonpayApiKey || "pk_test_123";
+    const API_KEY = MoonpayApiKey;
     const fiatCurrency = selectedCurrency || defaultCurrency;
     const params = new URLSearchParams({
       apiKey: API_KEY,
@@ -90,9 +90,8 @@ export const SellToken: FunctionComponent<{
       showWalletAddressForm: "true",
     });
     const URL = `${BASE_URL}?${params?.toString()}`;
-    // const signature = await signMoonPayUrl(URL);
-    return URL;
-    // return `${URL}&signature=${encodeURIComponent(signature)}`;
+    const signedURL = await signMoonPayUrl(URL);
+    return signedURL;
   })();
 
   const isAmountEmpty =
@@ -115,16 +114,19 @@ export const SellToken: FunctionComponent<{
     const amountInput = amount || "0";
     if (min !== null && new Dec(amountInput).lt(new Dec(min))) {
       setAmountError(`Amount should be >= ${min}`);
-    }
-    if (max !== null && new Dec(amountInput).gt(new Dec(max))) {
+    } else if (max !== null && new Dec(amountInput).gt(new Dec(max))) {
       setAmountError(`Amount should be <= ${max}`);
+    } else if (new Dec(amount).gt(new Dec(availableBalance))) {
+      setAmountError("Amount exceeds available balance");
+    } else {
+      setAmountError("");
     }
   }, [amount, moonpaySellAmount]);
 
   return (
     <div style={{ marginBottom: "60px" }}>
       <Input
-        label="Chain"
+        label="Network"
         className={styles["input"]}
         value={chainName}
         readOnly
@@ -174,10 +176,6 @@ export const SellToken: FunctionComponent<{
             value = value.replace(/^0+(?!\.)/, "");
           }
 
-          if (new Dec(value).gt(new Dec(availableBalance))) {
-            setAmountError("Amount exceeds available balance");
-          }
-
           setAmount(value);
         }}
         inputGroupClassName={styles["inputGroupClass"]}
@@ -186,13 +184,13 @@ export const SellToken: FunctionComponent<{
             onClick={() => {
               const toggleValue = !maxToggle;
               let amount = toggleValue ? availableBalance : "0";
-              setMaxToggle(!maxToggle);
               if (
                 moonpaySellAmount.max !== null &&
                 new Dec(availableBalance).gt(new Dec(moonpaySellAmount.max))
               ) {
                 amount = String(moonpaySellAmount.max);
               }
+              setMaxToggle(!maxToggle);
               setAmount(amount);
             }}
           >

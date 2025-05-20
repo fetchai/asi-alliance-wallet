@@ -37,3 +37,9 @@ export const getCurrencyCodeForMoonpay = (coinDenom: string | undefined) => {
       return coinDenom.toLowerCase();
   }
 };
+
+export const moonpayTokenCode = (chainId: string, coinDenom: string) => {
+  return chainId === "1" && coinDenom === "FET"
+    ? "fet_eth"
+    : getCurrencyCodeForMoonpay(coinDenom);
+};

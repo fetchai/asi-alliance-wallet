@@ -13,7 +13,7 @@ import { useNavigate } from "react-router";
 import { MoonpayApiKey, MoonpayOnRampApiURL } from "../../../../config.ui";
 import { ErrorAlert } from "./error-alert";
 import { Dec } from "@keplr-wallet/unit";
-// import { signMoonPayUrl } from "./utils";
+import { signMoonPayUrl } from "./utils";
 
 export const BuyToken: FunctionComponent<{
   allowedCurrencyList?: any[];
@@ -48,7 +48,7 @@ export const BuyToken: FunctionComponent<{
   const redirectURL = (async () => {
     const fiatCurrency = selectedCurrency || defaultCurrency;
     const BASE_URL = MoonpayOnRampApiURL;
-    const API_KEY = MoonpayApiKey || "pk_test_123";
+    const API_KEY = MoonpayApiKey;
     const params = new URLSearchParams({
       apiKey: API_KEY,
       currencyCode: tokenCode,
@@ -59,13 +59,11 @@ export const BuyToken: FunctionComponent<{
     });
 
     const URL = `${BASE_URL}?${params?.toString()}`;
-    // const signature = await signMoonPayUrl(URL);
-    return URL;
-    // return `${URL}&signature=${encodeURIComponent(signature)}`;
+    const signedURL = await signMoonPayUrl(URL);
+    return signedURL;
   })();
 
   const onTokenSelect = (token: any) => {
-    console.log({ token });
     setMoonpayBuyAmount({
       min: token?.minBuyAmount ? token?.minBuyAmount : null,
       max: token?.maxBuyAmount ? token?.maxBuyAmount : null,
@@ -79,7 +77,7 @@ export const BuyToken: FunctionComponent<{
   return (
     <div style={{ marginBottom: "60px" }}>
       <Input
-        label="Chain"
+        label="Network"
         className={styles["input"]}
         value={currentChain}
         readOnly

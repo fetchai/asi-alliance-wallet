@@ -3,7 +3,7 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../../stores";
 import { Card } from "@components-v2/card";
 import { Dropdown } from "@components-v2/dropdown";
-import { getCurrencyCodeForMoonpay } from "./utils";
+import { moonpayTokenCode } from "./utils";
 
 interface ChainSelectProps {
   token: string;
@@ -32,12 +32,6 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
     const handleChainSelect = async (token: string) => {
       setToken(token);
       setDropdownOpen(false);
-    };
-
-    const moonpayTokenCode = (chainId: string, coinDenom: string) => {
-      return chainId === "1" && coinDenom === "FET"
-        ? "fet_eth"
-        : getCurrencyCodeForMoonpay(coinDenom);
     };
 
     useEffect(() => {

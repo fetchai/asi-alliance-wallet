@@ -153,6 +153,7 @@
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.7.4",
     "deepmerge": "^4.2.2",
+    "dotenv": "^16.5.0",
     "fork-ts-checker-webpack-plugin": "^7.2.13",
     "html-webpack-plugin": "^5.5.0",
     "identity-obj-proxy": "^3.0.0",

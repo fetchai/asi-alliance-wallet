@@ -12,15 +12,46 @@ import {
 } from "@keplr-wallet/background";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { moonpayTokenCode } from "./token/buy/utils";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { MoonpayApiKey } from "../../config.ui";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
-
   const { chainStore, analyticsStore, keyRingStore } = useStore();
   const navigate = useNavigate();
   const currentChain = chainStore.current;
+  const chainId = currentChain.chainId;
+
+  const { data } = useQuery({
+    queryKey: ["currencies"],
+    queryFn: async () => {
+      const API_KEY = MoonpayApiKey;
+      const { data } = await axios.get(
+        `https://api.moonpay.com/v3/currencies?apiKey=${API_KEY}`
+      );
+      return data;
+    },
+    staleTime: Infinity,
+  });
+
+  const allowedTokenList = data?.filter(
+    (item: any) =>
+      item?.type === "crypto" && (item?.isSellSupported || !item.isSuspended)
+  );
+
+  const allowedTokensCode = allowedTokenList?.map((item: any) => item.code);
+  const moonpaySupportedTokens =
+    chainStore.chainInfos
+      .find((chainInfo) => chainInfo.chainId === chainId)
+      ?.currencies?.filter((item) => {
+        const moonpayCurrencyCode = moonpayTokenCode(chainId, item.coinDenom);
+        return allowedTokensCode?.includes(moonpayCurrencyCode);
+      }) || [];
+
   // const isAxlViewVisible = CHAINS.some((chain) => {
   //   return chain.chainId?.toString() === chainStore.current.chainId;
   // });
@@ -39,8 +70,6 @@ export const MorePage: FunctionComponent = () => {
           });
       });
   }, []);
-
-  console.log({ currentChain });
 
   // const isEvm = chainStore.current.features?.includes("evm") ?? false;
   return (
@@ -91,17 +120,23 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {currentChain?.raw?.type !== "testnet" && (
+      {currentChain?.raw?.type !== "testnet" &&
+      moonpaySupportedTokens?.length > 0 ? (
         <Card
           leftImageStyle={{ background: "transparent" }}
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-          leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            marginBottom: "6px",
+          }}
+          leftImage={require("@assets/icon/moonpay.png")}
           heading="Buy/Sell Tokens"
           subheading="Using Moonpay"
           onClick={() => {
             navigate("/more/token/buy");
           }}
         />
+      ) : (
+        ""
       )}
       <Card
         leftImageStyle={{ background: "transparent" }}

@@ -488,12 +488,12 @@ export const MoonpayApiKey =
 
 export const MoonpayOnRampApiURL =
   process.env.NODE_ENV === "production"
-    ? "https://buy-sandbox.moonpay.com/"
+    ? "https://buy.moonpay.com/"
     : "https://buy-sandbox.moonpay.com/";
 
 export const MoonpayOffRampApiURL =
   process.env.NODE_ENV === "production"
-    ? "https://sell-sandbox.moonpay.com/"
+    ? "https://sell.moonpay.com/"
     : "https://sell-sandbox.moonpay.com/";
 
 export const ICNSInfo = {

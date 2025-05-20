@@ -17,7 +17,7 @@ export const BuySellTokenPage = observer(() => {
   const { data, isLoading } = useQuery({
     queryKey: ["currencies"],
     queryFn: async () => {
-      const API_KEY = MoonpayApiKey || "pk_test_123";
+      const API_KEY = MoonpayApiKey;
       const { data } = await axios.get(
         `https://api.moonpay.com/v3/currencies?apiKey=${API_KEY}`
       );
