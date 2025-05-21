@@ -9,13 +9,16 @@ import { SellToken } from "./sell-token";
 import { observer } from "mobx-react-lite";
 import { useMoonpayCurrency } from "@utils/moonpay-currency";
 import { useSearchParams } from "react-router-dom";
+import { useStore } from "../../../../stores";
 
 export const BuySellTokenPage = observer(() => {
+  const { chainStore } = useStore();
   const [searchParams] = useSearchParams();
   const [activeTabId, setActiveTabId] = useState("Buy");
   const [selectedTab, setSelectedTab] = useState("Buy");
   const navigate = useNavigate();
   const { data, isLoading } = useMoonpayCurrency();
+  const isNetworkSepolia = chainStore.current.chainId === "11155111";
 
   const fiatCurrencyList = data?.filter((item: any) => item.type === "fiat");
   const cryptoCurrencyList = data?.filter(
@@ -62,6 +65,13 @@ export const BuySellTokenPage = observer(() => {
       setActiveTabId(tabIds[tab]);
     }
   }, [searchParams]);
+
+  //TODO: remove this sepolia check
+  useEffect(() => {
+    if (!isNetworkSepolia) {
+      navigate("/");
+    }
+  }, [isNetworkSepolia]);
 
   return (
     <HeaderLayout

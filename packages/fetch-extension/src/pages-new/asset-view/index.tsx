@@ -215,41 +215,6 @@ export const AssetView = observer(() => {
           </div>
         )}
       </div>
-      {/* TODO: remove this sepolia check */}
-      {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
-        <div className={style["tokenActionContainer"]}>
-          <div
-            className={style["tokenAction"]}
-            onClick={() => navigate("/more/token/moonpay?type=buy")}
-          >
-            <div className={style["actionIcon"]}>
-              <img
-                className={style["img"]}
-                src={require("@assets/svg/wireframe/plus.svg")}
-                alt=""
-              />
-            </div>
-            <p>Buy</p>
-          </div>
-          {parseFloat(totalNumber) !== 0 && (
-            <div
-              className={style["tokenAction"]}
-              onClick={() => navigate("/more/token/moonpay?type=sell")}
-            >
-              <div className={style["actionIcon"]}>
-                <img
-                  className={style["img"]}
-                  src={require("@assets/svg/wireframe/minus.svg")}
-                  alt=""
-                />
-              </div>
-              <p>Sell</p>
-            </div>
-          )}
-        </div>
-      ) : (
-        ""
-      )}
       {tokenInfo?.coinGeckoId && (
         <LineGraphView
           tokenName={tokenInfo?.coinGeckoId}
@@ -491,7 +456,7 @@ export const AssetView = observer(() => {
         </Alert>
       )}
       <div>
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div className={style["btnWrapper"]}>
           <ButtonV2
             styleProps={{
               cursor: "pointer",
@@ -546,6 +511,28 @@ export const AssetView = observer(() => {
             )}
           </ButtonV2>
         </div>
+        {/* TODO: remove this sepolia check */}
+        {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+          <ButtonV2
+            styleProps={{
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              justifyContent: "center",
+            }}
+            text="Buy/Sell"
+            onClick={() => navigate("/more/token/moonpay")}
+          >
+            <img
+              className={style["imgBuy"]}
+              src={require("@assets/svg/wireframe/plus-minus-gradient.svg")}
+              alt=""
+            />
+          </ButtonV2>
+        ) : (
+          ""
+        )}
         {tokenInfo?.coinDenom === "FET" && (
           <ButtonV2
             styleProps={{

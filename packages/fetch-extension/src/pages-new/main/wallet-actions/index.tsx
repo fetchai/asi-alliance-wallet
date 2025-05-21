@@ -67,28 +67,6 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
           isOpen={isOpen}
           setIsOpen={setIsOpen}
         >
-          {/* TODO: remove this sepolia check */}
-          {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
-            <Card
-              leftImageStyle={{
-                background: "transparent",
-                height: "20px",
-                filter: "invert(1)",
-              }}
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                height: "60px",
-                marginBottom: "6px",
-              }}
-              leftImage={require("@assets/icon/plusMinus.png")}
-              heading={"Buy/Sell"}
-              onClick={() => {
-                navigate("/more/token/moonpay");
-              }}
-            />
-          ) : (
-            ""
-          )}
           <Card
             leftImageStyle={{ background: "transparent", height: "16px" }}
             style={{
@@ -133,6 +111,28 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
               });
             }}
           />
+
+          {/* TODO: remove this sepolia check */}
+          {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+            <Card
+              leftImageStyle={{
+                background: "transparent",
+                height: "18px",
+              }}
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                height: "60px",
+                marginBottom: "6px",
+              }}
+              leftImage={require("@assets/svg/wireframe/plus-minus.svg")}
+              heading="Buy/Sell"
+              onClick={() => {
+                navigate("/more/token/moonpay");
+              }}
+            />
+          ) : (
+            ""
+          )}
 
           <Card
             leftImageStyle={{ background: "transparent", height: "22px" }}

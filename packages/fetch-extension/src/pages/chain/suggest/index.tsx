@@ -1,6 +1,5 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button } from "reactstrap";
 
 import style from "./style.module.scss";
 import { EmptyLayout } from "@layouts/empty-layout";
@@ -11,6 +10,7 @@ import { useStore } from "../../../stores";
 import { ToolTip } from "@components/tooltip";
 import classNames from "classnames";
 import { GithubIcon, InformationCircleOutline } from "@components/icon";
+import { ButtonV2 } from "@components-v2/buttons/button";
 
 export const ChainSuggestedPage: FunctionComponent = observer(() => {
   const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
@@ -262,7 +262,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                     className={style["logoImage"]}
                     src={
                       communityChainInfo?.chainInfo?.chainSymbolImageUrl ||
-                      require("@assets/logo-256.svg")
+                      require("@assets/png/Black-white-circle.png")
                     }
                     alt="chain logo"
                   />
@@ -276,8 +276,8 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   <div className={style["imageBackground"]} />
                   <img
                     className={style["logoImage"]}
-                    src={require("../../../public/assets/logo-256.svg")}
-                    alt="keplr logo"
+                    src={require("@assets/png/Black-white-circle.png")}
+                    alt="chain logo"
                   />
                 </div>
               </div>
@@ -346,13 +346,18 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
             </div>
           )}
           <div className={style["buttons"]}>
-            <Button
-              className={style["button"]}
-              color="danger"
-              outline
+            <ButtonV2
+              styleProps={{
+                padding: "10px",
+                height: "40px",
+                fontSize: "0.9rem",
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.4)",
+              }}
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              data-loading={chainSuggestStore.isLoading}
-              onClick={async (e) => {
+              dataLoading={chainSuggestStore.isLoading}
+              onClick={async (e: any) => {
                 e.preventDefault();
 
                 await chainSuggestStore.reject();
@@ -366,15 +371,20 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   navigate("/");
                 }
               }}
-            >
-              <FormattedMessage id="chain.suggested.button.reject" />
-            </Button>
-            <Button
-              className={style["button"]}
-              color="primary"
+              text={<FormattedMessage id="chain.suggested.button.reject" />}
+            />
+            <ButtonV2
+              styleProps={{
+                padding: "10px",
+                height: "40px",
+                fontSize: "0.9rem",
+                background: "white",
+                color: "black",
+                border: "1px solid rgba(255,255,255,0.4)",
+              }}
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              data-loading={chainSuggestStore.isLoading}
-              onClick={async (e) => {
+              dataLoading={chainSuggestStore.isLoading}
+              onClick={async (e: any) => {
                 e.preventDefault();
 
                 const chainInfo = updateFromRepoDisabled
@@ -401,9 +411,8 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   navigate("/");
                 }
               }}
-            >
-              <FormattedMessage id="chain.suggested.button.approve" />
-            </Button>
+              text={<FormattedMessage id="chain.suggested.button.approve" />}
+            />
           </div>
         </div>
       )}

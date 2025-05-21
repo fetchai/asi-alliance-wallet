@@ -1,14 +1,5 @@
-import crypto from "crypto";
-import axios from "axios";
 import { ChainInfoInner } from "@keplr-wallet/stores";
-
-export const generateSignature = (url: string, secretKey: string) => {
-  const signature = crypto
-    .createHmac("sha256", secretKey)
-    .update(new URL(url).search) // Use the query string part of the URL
-    .digest("base64"); // Convert the result to a base64 string
-  return signature; // Return the signature
-};
+import axios from "axios";
 
 export const signMoonPayUrl = async (urlToSign: string): Promise<string> => {
   try {
