@@ -15,9 +15,10 @@ import style from "./style.module.scss";
 
 interface SetKeyRingProps {
   navigateTo?: any;
+  onItemSelect?: () => void;
 }
 export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
-  ({ navigateTo }) => {
+  ({ navigateTo, onItemSelect }) => {
     const intl = useIntl();
     const navigate = useNavigate();
     const {
@@ -157,6 +158,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                         );
                         messageAndGroupListenerUnsubscribe();
                         navigate(navigateTo);
+                        onItemSelect?.();
                       } catch (e: any) {
                         console.log(`Failed to change keyring: ${e.message}`);
                         loadingIndicator.setIsLoading("keyring", false);
