@@ -16,6 +16,7 @@ import { SetKeyRingPage } from "../keyring-dev";
 import { WalletDetailsView } from "./wallet-details";
 import { WalletOptions } from "./wallet-options";
 import { LedgerAppModal } from "./ledger-app-modal";
+import { useMoonpayCurrency } from "@utils/moonpay-currency";
 
 export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
@@ -25,6 +26,9 @@ export const MainPage: FunctionComponent = observer(() => {
   const intl = useIntl();
   const { chainStore, accountStore, keyRingStore, analyticsStore, chatStore } =
     useStore();
+  const isNetworkSepolia = chainStore.current.chainId === "11155111";
+  // prefetch currencies data
+  useMoonpayCurrency(isNetworkSepolia);
 
   const userState = chatStore.userDetailsStore;
   useEffect(() => {

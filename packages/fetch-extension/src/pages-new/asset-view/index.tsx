@@ -22,6 +22,8 @@ import { VestingType } from "@keplr-wallet/stores";
 import { clearDecimals } from "../sign/decimals";
 import { Link } from "react-router-dom";
 import { FormattedMessage } from "react-intl";
+import { useMoonpayCurrency } from "@utils/moonpay-currency";
+import { moonpaySupportedTokensByChainId } from "../more/token/moonpay/utils";
 
 export const AssetView = observer(() => {
   const {
@@ -47,6 +49,19 @@ export const AssetView = observer(() => {
   const current = chainStore.current;
   const queries = queriesStore.get(current.chainId);
   const accountInfo = accountStore.getAccount(current.chainId);
+  const isNetworkSepolia = chainStore.current.chainId === "11155111";
+  const { data } = useMoonpayCurrency(isNetworkSepolia);
+
+  const allowedTokenList = data?.filter(
+    (item: any) =>
+      item?.type === "crypto" && (item?.isSellSupported || !item.isSuspended)
+  );
+
+  const moonpaySupportedTokens = moonpaySupportedTokensByChainId(
+    current.chainId,
+    allowedTokenList,
+    chainStore.chainInfos
+  );
 
   const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
     accountInfo.bech32Address
@@ -200,6 +215,41 @@ export const AssetView = observer(() => {
           </div>
         )}
       </div>
+      {/* TODO: remove this sepolia check */}
+      {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+        <div className={style["tokenActionContainer"]}>
+          <div
+            className={style["tokenAction"]}
+            onClick={() => navigate("/more/token/moonpay?type=buy")}
+          >
+            <div className={style["actionIcon"]}>
+              <img
+                className={style["img"]}
+                src={require("@assets/svg/wireframe/plus.svg")}
+                alt=""
+              />
+            </div>
+            <p>Buy</p>
+          </div>
+          {parseFloat(totalNumber) !== 0 && (
+            <div
+              className={style["tokenAction"]}
+              onClick={() => navigate("/more/token/moonpay?type=sell")}
+            >
+              <div className={style["actionIcon"]}>
+                <img
+                  className={style["img"]}
+                  src={require("@assets/svg/wireframe/minus.svg")}
+                  alt=""
+                />
+              </div>
+              <p>Sell</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        ""
+      )}
       {tokenInfo?.coinGeckoId && (
         <LineGraphView
           tokenName={tokenInfo?.coinGeckoId}

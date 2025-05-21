@@ -45,6 +45,7 @@
 }
 .balances {
   color: white;
+  margin-top: 24px;
 }
 .balance-field {
   display: flex;
@@ -188,5 +189,39 @@
         overflow-wrap: anywhere;
       }
     }
+  }
+}
+
+.tokenActionContainer {
+  display: flex;
+  column-gap: 40px;
+  row-gap: 15px;
+  justify-content: center;
+  margin-top: 10px;
+
+  .tokenAction {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.1s linear all;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .actionIcon {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 100%;
+    padding: 8px 15px 8px 15px;
+  }
+
+  p {
+    color: white;
+    font-size: 14px;
+    font-weight: 400;
+    margin-top: 5px;
   }
 }

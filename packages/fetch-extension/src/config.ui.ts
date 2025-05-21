@@ -486,15 +486,21 @@ export const MoonpayApiKey =
     ? PROD_MOONPAY_API_KEY
     : DEV_MOONPAY_API_KEY;
 
+export const MOONPAY_ONRAMP_PROD_URL = "https://buy.moonpay.com/";
+export const MOONPAY_ONRAMP_SANDBOX_URL = "https://buy-sandbox.moonpay.com/";
+
+export const MOONPAY_OFFRAMP_PROD_URL = "https://sell.moonpay.com/";
+export const MOONPAY_OFFRAMP_SANDBOX_URL = "https://sell-sandbox.moonpay.com/";
+
 export const MoonpayOnRampApiURL =
   process.env.NODE_ENV === "production"
-    ? "https://buy.moonpay.com/"
-    : "https://buy-sandbox.moonpay.com/";
+    ? MOONPAY_ONRAMP_PROD_URL
+    : MOONPAY_ONRAMP_SANDBOX_URL;
 
 export const MoonpayOffRampApiURL =
   process.env.NODE_ENV === "production"
-    ? "https://sell.moonpay.com/"
-    : "https://sell-sandbox.moonpay.com/";
+    ? MOONPAY_OFFRAMP_PROD_URL
+    : MOONPAY_OFFRAMP_SANDBOX_URL;
 
 export const ICNSInfo = {
   chainId: "osmosis-1",

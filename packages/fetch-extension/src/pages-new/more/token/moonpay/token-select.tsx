@@ -3,7 +3,7 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../../stores";
 import { Card } from "@components-v2/card";
 import { Dropdown } from "@components-v2/dropdown";
-import { moonpayTokenCode } from "./utils";
+import { moonpaySupportedTokensByChainId, moonpayTokenCode } from "./utils";
 
 interface ChainSelectProps {
   token: string;
@@ -35,27 +35,18 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
     };
 
     useEffect(() => {
-      const allowedTokensCode = allowedTokenList?.map((item: any) => item.code);
       const tokens =
-        chainStore.chainInfos
-          .find((chainInfo) => chainInfo.chainId === chainId)
-          ?.currencies?.filter((item) => {
-            const moonpayCurrencyCode = moonpayTokenCode(
-              chainId,
-              item.coinDenom
-            );
-            return allowedTokensCode?.includes(moonpayCurrencyCode);
-          })
-          ?.map((item) => {
-            const moonpayCurrencyCode = moonpayTokenCode(
-              chainId,
-              item.coinDenom
-            );
-            const moonpayData = allowedTokenList?.find(
-              (item: any) => item.code === moonpayCurrencyCode
-            );
-            return { ...item, moonpayData };
-          }) || [];
+        moonpaySupportedTokensByChainId(
+          chainId,
+          allowedTokenList,
+          chainStore.chainInfos
+        )?.map((item) => {
+          const moonpayCurrencyCode = moonpayTokenCode(chainId, item.coinDenom);
+          const moonpayData = allowedTokenList?.find(
+            (item: any) => item.code === moonpayCurrencyCode
+          );
+          return { ...item, moonpayData };
+        }) || [];
       onTokenSelect(tokens?.[0]?.moonpayData);
       setTokenList(tokens);
     }, [chainId, allowedTokenList, type]);

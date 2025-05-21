@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import axios from "axios";
+import { ChainInfoInner } from "@keplr-wallet/stores";
 
 export const generateSignature = (url: string, secretKey: string) => {
   const signature = crypto
@@ -11,7 +12,7 @@ export const generateSignature = (url: string, secretKey: string) => {
 
 export const signMoonPayUrl = async (urlToSign: string): Promise<string> => {
   try {
-    const BASE_URL = "https://hub.fetch.ai";
+    const BASE_URL = "https://companion.sandbox-london-b.fetch-ai.com/";
     const response = await axios.get(`${BASE_URL}/api/moonpay-sign-url`, {
       params: { url: urlToSign },
     });
@@ -42,4 +43,20 @@ export const moonpayTokenCode = (chainId: string, coinDenom: string) => {
   return chainId === "1" && coinDenom === "FET"
     ? "fet_eth"
     : getCurrencyCodeForMoonpay(coinDenom);
+};
+
+export const moonpaySupportedTokensByChainId = (
+  chainId: string,
+  allowedTokenList: any,
+  chainInfo: ChainInfoInner[]
+) => {
+  const allowedTokensCode = allowedTokenList?.map((item: any) => item.code);
+  const moonpaySupportedTokens =
+    chainInfo
+      .find((chainInfo) => chainInfo.chainId === chainId)
+      ?.currencies?.filter((item) => {
+        const moonpayCurrencyCode = moonpayTokenCode(chainId, item.coinDenom);
+        return allowedTokensCode?.includes(moonpayCurrencyCode);
+      }) || [];
+  return moonpaySupportedTokens;
 };

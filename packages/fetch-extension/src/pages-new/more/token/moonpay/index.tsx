@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import React from "react";
@@ -7,24 +7,15 @@ import { useNavigate } from "react-router";
 import { BuyToken } from "./buy-token";
 import { SellToken } from "./sell-token";
 import { observer } from "mobx-react-lite";
-import { useQuery } from "@tanstack/react-query";
-import { MoonpayApiKey } from "../../../../config.ui";
-import axios from "axios";
+import { useMoonpayCurrency } from "@utils/moonpay-currency";
+import { useSearchParams } from "react-router-dom";
 
 export const BuySellTokenPage = observer(() => {
+  const [searchParams] = useSearchParams();
+  const [activeTabId, setActiveTabId] = useState("Buy");
   const [selectedTab, setSelectedTab] = useState("Buy");
   const navigate = useNavigate();
-  const { data, isLoading } = useQuery({
-    queryKey: ["currencies"],
-    queryFn: async () => {
-      const API_KEY = MoonpayApiKey;
-      const { data } = await axios.get(
-        `https://api.moonpay.com/v3/currencies?apiKey=${API_KEY}`
-      );
-      return data;
-    },
-    staleTime: Infinity,
-  });
+  const { data, isLoading } = useMoonpayCurrency();
 
   const fiatCurrencyList = data?.filter((item: any) => item.type === "fiat");
   const cryptoCurrencyList = data?.filter(
@@ -60,6 +51,18 @@ export const BuySellTokenPage = observer(() => {
     },
   ];
 
+  useEffect(() => {
+    const tab = searchParams.get("type");
+    const tabIds: any = {
+      buy: "Buy",
+      sell: "Sell",
+    };
+
+    if (tab && tabIds[tab]) {
+      setActiveTabId(tabIds[tab]);
+    }
+  }, [searchParams]);
+
   return (
     <HeaderLayout
       smallTitle={true}
@@ -72,10 +75,9 @@ export const BuySellTokenPage = observer(() => {
     >
       <div className={styles["container"]}>
         <TabsPanel
+          activeTabId={activeTabId}
           tabs={TABS}
-          onTabChange={(selectedTab: string) => {
-            setSelectedTab(selectedTab);
-          }}
+          onTabChange={(tab: string) => setSelectedTab(tab)}
         />
       </div>
     </HeaderLayout>
