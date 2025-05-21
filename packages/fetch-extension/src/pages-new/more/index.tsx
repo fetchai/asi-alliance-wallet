@@ -53,103 +53,19 @@ export const MorePage: FunctionComponent = () => {
       showBottomMenu={true}
     >
       <div className={style["title"]}>More</div>
-      <div className={style["subTitle"]}>Account</div>
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/currency.svg")}
-        heading={"Currency"}
-        onClick={() => {
-          navigate("/more/currency");
-          analyticsStore.logEvent("currency_click", {
-            pageName: "More",
-          });
-        }}
-      />
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
-        heading={"Manage Tokens"}
-        onClick={() => {
-          navigate("/more/token/manage");
-          analyticsStore.logEvent("manage_tokens_click", {
-            pageName: "More",
-          });
-        }}
-      />
-      <Card
-        leftImageStyle={{ background: "transparent", height: "18px" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/at.svg")}
-        heading={"Address Book"}
-        onClick={() => {
-          navigate("/more/address-book");
-          analyticsStore.logEvent("address_book_click", {
-            pageName: "More",
-          });
-        }}
-      />
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/language.svg")}
-        heading={"Language"}
-        onClick={() => {
-          navigate("/more/language");
-          analyticsStore.logEvent("language_click", {
-            pageName: "More",
-          });
-        }}
-      />
-
-      {/* 
-       <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/notification.svg")}
-        heading={"Notifications"}
-        onClick={() => navigate("/more/notifications")}
-      /> */}
-
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/security.svg")}
-        heading={"Security & privacy"}
-        onClick={() => {
-          navigate("/more/security-privacy");
-          analyticsStore.logEvent("security_and_privacy_click", {
-            pageName: "More",
-          });
-        }}
-      />
-
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/chain-list-access.svg")}
-        heading={"Link ASI Mobile Wallet"}
-        onClick={() => {
-          navigate("/more/export-to-mobile");
-          analyticsStore.logEvent("link_asi_mobile_wallet_click", {
-            pageName: "More",
-          });
-        }}
-      />
-
-      <div
-        style={{
-          marginTop: "12px",
-        }}
-        className={style["subTitle"]}
-      >
-        Others
-      </div>
       {sidePanelSupported && (
         <Card
-          leftImageStyle={{ background: "transparent", height: "16px" }}
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/sidepanel.svg")}
+          leftImageStyle={{
+            background: "transparent",
+            width: "30px",
+            height: "25px",
+          }}
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            marginBottom: "6px",
+            padding: "14px 12px",
+          }}
           headingStyle={{
             display: "flex",
             alignItems: "center",
@@ -169,6 +85,18 @@ export const MorePage: FunctionComponent = () => {
           rightContentStyle={{ marginBottom: "15px" }}
         />
       )}
+      <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/security.svg")}
+        heading={"Security & privacy"}
+        onClick={() => {
+          navigate("/more/security-privacy");
+          analyticsStore.logEvent("security_and_privacy_click", {
+            pageName: "More",
+          });
+        }}
+      />
       <Card
         leftImageStyle={{ background: "transparent", height: "16px" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
@@ -199,6 +127,54 @@ export const MorePage: FunctionComponent = () => {
       )}
       <Card
         leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+        heading={"Manage Tokens"}
+        onClick={() => {
+          navigate("/more/token/manage");
+          analyticsStore.logEvent("manage_tokens_click", {
+            pageName: "More",
+          });
+        }}
+      />
+      <Card
+        leftImageStyle={{ background: "transparent", height: "18px" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/at.svg")}
+        heading={"Address Book"}
+        onClick={() => {
+          navigate("/more/address-book");
+          analyticsStore.logEvent("address_book_click", {
+            pageName: "More",
+          });
+        }}
+      />
+      <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/currency.svg")}
+        heading={"Currency"}
+        onClick={() => {
+          navigate("/more/currency");
+          analyticsStore.logEvent("currency_click", {
+            pageName: "More",
+          });
+        }}
+      />
+      <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/language.svg")}
+        heading={"Language"}
+        onClick={() => {
+          navigate("/more/language");
+          analyticsStore.logEvent("language_click", {
+            pageName: "More",
+          });
+        }}
+      />
+      <Card
+        leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
         leftImage={require("@assets/svg/wireframe/guide.svg")}
         heading={"Guide"}
@@ -209,6 +185,27 @@ export const MorePage: FunctionComponent = () => {
           )
         }
       />
+      <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/chain-list-access.svg")}
+        heading={"Link ASI Mobile Wallet"}
+        onClick={() => {
+          navigate("/more/export-to-mobile");
+          analyticsStore.logEvent("link_asi_mobile_wallet_click", {
+            pageName: "More",
+          });
+        }}
+      />
+
+      {/* 
+       <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/notification.svg")}
+        heading={"Notifications"}
+        onClick={() => navigate("/more/notifications")}
+      /> */}
 
       {/* {(chainStore.current.chainId === CHAIN_ID_FETCHHUB ||
         chainStore.current.chainId === CHAIN_ID_DORADO) && (
