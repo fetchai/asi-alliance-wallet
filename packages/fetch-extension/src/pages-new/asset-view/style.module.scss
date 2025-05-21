@@ -192,12 +192,45 @@
   }
 }
 
-.imgBuy {
-  height: 15px;
+.tokenActionContainer {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-bottom: 20px;
+  column-gap: 10px;
 }
 
-.btnWrapper {
+.tokenAction {
   display: flex;
-  gap: 12px;
-  flex-grow: 1;
+  flex-direction: column;
+  row-gap: 10px;
+  justify-content: center;
+  align-items: center;
+  transition: 0.1s all ease-in-out;
+  cursor: pointer;
+
+  .tokenActionLogo {
+    background-color: white;
+    padding: 12px 24px;
+    border-radius: 24px;
+    width: 72px;
+    height: 42px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    img {
+      height: 16px;
+    }
+  }
+
+  .tokenActionTitle {
+    font-size: 16px;
+    font-weight: 400;
+    color: white;
+  }
+
+  &:hover {
+    opacity: 0.9;
+  }
 }

@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
-import style from "../../style.module.scss";
+import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 
 export const CurrencyList: FunctionComponent<{
@@ -32,16 +32,6 @@ export const CurrencyList: FunctionComponent<{
               key={fiatCurrency.id}
               className={style["currencyItem"]}
               style={{
-                display: "flex",
-                color: "white",
-                padding: "18px",
-                fontSize: "13px",
-                borderRadius: "12px",
-                cursor: "pointer",
-                backdropFilter: "blur(10px)",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
                 background:
                   selectedCurrency === fiatCurrency.code
                     ? "var(--Indigo---Fetch, #5F38FB)"
@@ -50,12 +40,7 @@ export const CurrencyList: FunctionComponent<{
               onClick={() => handleClick(fiatCurrency.code)}
             >
               <img
-                style={{
-                  width: "24px",
-                  height: "24px",
-                  borderRadius: "50%",
-                  marginRight: "10px",
-                }}
+                className={style["currencyLogo"]}
                 alt={fiatCurrency.name}
                 src={fiatCurrency.icon}
               />
@@ -68,7 +53,8 @@ export const CurrencyList: FunctionComponent<{
               </div>
               <div
                 style={{
-                  color: "gray",
+                  color:
+                    selectedCurrency === fiatCurrency.code ? "#f3f3f3" : "gray",
                   margin: "4px",
                 }}
               >

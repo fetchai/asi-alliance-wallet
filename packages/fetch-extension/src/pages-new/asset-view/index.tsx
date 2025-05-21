@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import style from "./style.module.scss";
 import { LineGraphView } from "@components-v2/line-graph";
-import { ButtonV2 } from "@components-v2/buttons/button";
 import { getTokenIcon } from "@utils/get-token-icon";
 import { Activity } from "./activity";
 import { observer } from "mobx-react-lite";
@@ -455,94 +454,69 @@ export const AssetView = observer(() => {
           )}
         </Alert>
       )}
-      <div>
-        <div className={style["btnWrapper"]}>
-          <ButtonV2
-            styleProps={{
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              justifyContent: "center",
-            }}
-            onClick={() => {
-              navigate("/receive");
-              analyticsStore.logEvent("receive_click", {
-                pageName: "Token Detail",
-              });
-            }}
-            text={"Receive"}
-          >
-            <img
-              className={style["img"]}
-              src={require("@assets/svg/wireframe/arrow-down-gradient.svg")}
-              alt=""
-            />
-          </ButtonV2>
-          <ButtonV2
-            styleProps={{
-              cursor: isSendDisabled ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              justifyContent: "center",
-              opacity: isSendDisabled ? 0.5 : 1,
-            }}
-            onClick={
-              !isSendDisabled
-                ? () => {
-                    navigate("/send");
-                    analyticsStore.logEvent("send_click", {
-                      pageName: "Token Detail",
-                    });
-                  }
-                : undefined
-            }
-            text={"Send"}
-          >
+      <div className={style["tokenActionContainer"]}>
+        <div
+          className={style["tokenAction"]}
+          onClick={
+            !isSendDisabled
+              ? () => {
+                  navigate("/send");
+                  analyticsStore.logEvent("send_click", {
+                    pageName: "Token Detail",
+                  });
+                }
+              : undefined
+          }
+        >
+          <div className={style["tokenActionLogo"]}>
             {isSendDisabled ? (
               <i className="fas fa-spinner fa-spin ml-2 mr-2" />
             ) : (
               <img
-                className={style["img"]}
                 src={require("@assets/svg/wireframe/arrow-up-gradient.svg")}
                 alt=""
               />
             )}
-          </ButtonV2>
+          </div>
+          <p className={style["tokenActionTitle"]}>Send</p>
+        </div>
+        <div
+          className={style["tokenAction"]}
+          onClick={() => {
+            navigate("/receive");
+            analyticsStore.logEvent("receive_click", {
+              pageName: "Token Detail",
+            });
+          }}
+        >
+          <div className={style["tokenActionLogo"]}>
+            <img
+              src={require("@assets/svg/wireframe/arrow-down-gradient.svg")}
+              alt=""
+            />
+          </div>
+          <p className={style["tokenActionTitle"]}>Receive</p>
         </div>
         {/* TODO: remove this sepolia check */}
         {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
-          <ButtonV2
-            styleProps={{
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              justifyContent: "center",
-            }}
-            text="Buy/Sell"
+          <div
+            className={style["tokenAction"]}
             onClick={() => navigate("/more/token/moonpay")}
           >
-            <img
-              className={style["imgBuy"]}
-              src={require("@assets/svg/wireframe/plus-minus-gradient.svg")}
-              alt=""
-            />
-          </ButtonV2>
+            <div className={style["tokenActionLogo"]}>
+              <img
+                src={require("@assets/svg/wireframe/plus-minus-gradient.svg")}
+                alt=""
+              />
+            </div>
+            <p className={style["tokenActionTitle"]}>Buy/Sell</p>
+          </div>
         ) : (
           ""
         )}
         {tokenInfo?.coinDenom === "FET" && (
-          <ButtonV2
-            styleProps={{
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              justifyContent: "center",
-              marginBottom: "48px",
-            }}
+          <div
+            className={style["tokenAction"]}
             onClick={() => {
               navigate("/validator/validator-list");
               analyticsStore.logEvent("stake_click", {
@@ -551,14 +525,12 @@ export const AssetView = observer(() => {
                 pageName: "Token Detail",
               });
             }}
-            text={"Stake"}
           >
-            <img
-              className={style["img"]}
-              src={require("@assets/svg/wireframe/earn.svg")}
-              alt=""
-            />
-          </ButtonV2>
+            <div className={style["tokenActionLogo"]}>
+              <img src={require("@assets/svg/wireframe/earn.svg")} alt="" />
+            </div>
+            <p className={style["tokenActionTitle"]}>Stake</p>
+          </div>
         )}
       </div>
       <Activity token={tokenInfo?.coinDenom} />
