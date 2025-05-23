@@ -121,6 +121,7 @@ import { ReadRecipt } from "./pages/setting/chat/readRecipt";
 import { SettingEndpointsPage } from "./pages/setting/endpoints";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
+import { BuySellTokenPage } from "./pages-new/more/token/moonpay";
 
 const queryClient = new QueryClient();
 
@@ -321,6 +322,10 @@ ReactDOM.render(
                           <Route
                             path="/more/token/add"
                             element={<AddTokenPage />}
+                          />
+                          <Route
+                            path="/more/token/moonpay"
+                            element={<BuySellTokenPage />}
                           />
                           <Route
                             path="/more/token/manage"

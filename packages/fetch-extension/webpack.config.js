@@ -29,6 +29,8 @@ const envDefaults = {
     process.env["KEPLR_EXT_COINGECKO_GETPRICE"] || "/simple/price",
   DEV_AUTH_CLIENT_ID: process.env["DEV_AUTH_CLIENT_ID"] || "",
   PROD_AUTH_CLIENT_ID: process.env["PROD_AUTH_CLIENT_ID"] || "",
+  DEV_MOONPAY_API_KEY: process.env["DEV_MOONPAY_API_KEY"] || "",
+  PROD_MOONPAY_API_KEY: process.env["PROD_MOONPAY_API_KEY"] || "",
 };
 const commonResolve = () => ({
   extensions: [".ts", ".tsx", ".js", ".jsx", ".css", ".scss", ".svg"],

@@ -1,0 +1,137 @@
+.input {
+  margin-bottom: 20px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.container {
+  label {
+    color: white !important;
+  }
+  [class^="tab-bar-"] {
+    margin: 0px 0px 10px 0px !important;
+  }
+}
+
+.btnWrapper {
+  width: 100%;
+  position: fixed;
+  bottom: 0;
+  height: 65px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #000d3d;
+}
+
+.inputGroupClass {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  padding-right: 10px !important;
+  align-items: center !important;
+}
+
+.inputMax {
+  margin: 0px !important;
+  background-color: transparent !important;
+}
+
+.inputSell {
+  margin: 0px !important;
+}
+
+.formFeedback {
+  position: static !important;
+}
+
+.alert {
+  display: flex;
+  padding: 12px;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
+  border-radius: 12px;
+  background: rgba(255, 62, 62, 0.25);
+  border: 1px solid rgba(255, 62, 62, 0.25);
+  color: white;
+  margin-top: 20px;
+  margin-bottom: 60px;
+
+  i {
+    font-size: 24px;
+    margin-right: 8px;
+  }
+
+  img {
+    padding-top: 4px;
+  }
+
+  h1 {
+    font-size: 16px;
+    font-weight: bold;
+    color: #32325d;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 1.57;
+    margin: 0;
+  }
+  .text {
+    color: #fff;
+    font-family: Lexend;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 160%; /* 22.4px */
+  }
+  .lightText {
+    color: #fff;
+    font-family: Lexend;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 160%;
+    opacity: 0.6;
+  }
+}
+
+.alertContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.currencyListContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.currencyItem {
+  display: flex;
+  color: white;
+  padding: 18px;
+  font-size: 13px;
+  border-radius: 12px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.currencyCode {
+  margin: 0 8px;
+}
+
+.currencySelectedIcon {
+  margin-left: auto;
+}
+
+.currencyLogo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 10px;
+}

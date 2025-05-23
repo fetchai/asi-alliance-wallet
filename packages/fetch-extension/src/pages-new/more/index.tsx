@@ -12,14 +12,31 @@ import {
 } from "@keplr-wallet/background";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { moonpaySupportedTokensByChainId } from "./token/moonpay/utils";
+import { useMoonpayCurrency } from "@utils/moonpay-currency";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
-
   const { chainStore, analyticsStore, keyRingStore } = useStore();
   const navigate = useNavigate();
+  const currentChain = chainStore.current;
+  const chainId = currentChain.chainId;
+  const isNetworkSepolia = chainStore.current.chainId === "11155111";
+  const { data } = useMoonpayCurrency(isNetworkSepolia);
+
+  const allowedTokenList = data?.filter(
+    (item: any) =>
+      item?.type === "crypto" && (item?.isSellSupported || !item.isSuspended)
+  );
+
+  const moonpaySupportedTokens = moonpaySupportedTokensByChainId(
+    chainId,
+    allowedTokenList,
+    chainStore.chainInfos
+  );
+
   // const isAxlViewVisible = CHAINS.some((chain) => {
   //   return chain.chainId?.toString() === chainStore.current.chainId;
   // });
@@ -88,6 +105,26 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
+      {/* TODO: remove this sepolia check */}
+      {currentChain?.raw?.type !== "testnet" &&
+      moonpaySupportedTokens?.length > 0 &&
+      isNetworkSepolia ? (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            marginBottom: "6px",
+          }}
+          leftImage={require("@assets/icon/moonpay.png")}
+          heading="Buy/Sell Tokens"
+          subheading="Using Moonpay"
+          onClick={() => {
+            navigate("/more/token/moonpay");
+          }}
+        />
+      ) : (
+        ""
+      )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}

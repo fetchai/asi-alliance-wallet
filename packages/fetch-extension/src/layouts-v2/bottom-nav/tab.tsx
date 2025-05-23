@@ -35,7 +35,6 @@ export const Tab = ({
   return (
     <div
       id={title}
-      style={{ backgroundColor: "#000D3D" }}
       className={`${style["tab"]} `}
       onClick={() => {
         if (!disabled) {

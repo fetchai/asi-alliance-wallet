@@ -140,3 +140,13 @@
 .negative {
   color: #f9774b;
 }
+
+.btnContainer {
+  display: flex;
+  justify-content: center;
+  column-gap: 8px;
+}
+
+.buy {
+  width: 90px;
+}

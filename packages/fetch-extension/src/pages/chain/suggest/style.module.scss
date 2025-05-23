@@ -1,3 +1,11 @@
+.emptyLayout {
+  background-color: #000d3d;
+  background-image: url("../../../public/assets/svg/wireframe/bg.svg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
 .container {
   display: flex;
   flex-direction: column;
@@ -179,11 +187,6 @@
         .imageBackground {
           width: 80px;
           height: 80px;
-          background: linear-gradient(
-            315deg,
-            #0084da 13.07%,
-            rgba(0, 132, 218, 0.31) 85.23%
-          );
           border-radius: 50%;
           opacity: 0.3;
         }
@@ -221,7 +224,7 @@
       font-weight: 600;
       font-size: 24px;
       line-height: 29px;
-      color: #2c2e53;
+      color: white;
     }
 
     .tag {
@@ -253,12 +256,12 @@
       font-size: 15px;
       line-height: 20px;
       text-align: center;
+      white-space: normal;
+      word-wrap: break-word;
 
       flex: 1;
 
-      /* Platinum/Platinum 300 */
-
-      color: #566172;
+      color: white;
     }
 
     .chainDetailContainer {
@@ -381,6 +384,8 @@
   .buttons {
     justify-self: flex-end;
     display: flex;
+    margin-bottom: 20px;
+    gap: 10px;
   }
 
   .button {

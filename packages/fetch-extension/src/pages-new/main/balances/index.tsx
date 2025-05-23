@@ -11,6 +11,8 @@ import { Skeleton } from "@components-v2/skeleton-loader";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { useQuery } from "@tanstack/react-query";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { useMoonpayCurrency } from "@utils/moonpay-currency";
+import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
 
 interface Props {
   tokenState: any;
@@ -69,6 +71,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     activityStore.getAddress !== accountInfo.bech32Address ||
     activityStore.getChainId !== current.chainId;
 
+  const isNetworkSepolia = chainStore.current.chainId === "11155111";
+  const { data } = useMoonpayCurrency(isNetworkSepolia);
+
   const rewards = useQuery({
     queryKey: ["rewards", accountInfo.bech32Address, current.chainId],
     queryFn: async () => {
@@ -86,6 +91,17 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     refetchOnMount: false,
     staleTime: accountOrChainChanged ? 0 : 3600 * 1000,
   });
+
+  const allowedTokenList = data?.filter(
+    (item: any) =>
+      item?.type === "crypto" && (item?.isSellSupported || !item.isSuspended)
+  );
+
+  const moonpaySupportedTokens = moonpaySupportedTokensByChainId(
+    current.chainId,
+    allowedTokenList,
+    chainStore.chainInfos
+  );
 
   const currency = current.feeCurrencies?.[0];
   const stakableReward = rewards?.data || new CoinPretty(currency, new Int(0));
@@ -199,17 +215,31 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
           )}
         </div>
       )}
-      <button
-        className={style["portfolio"]}
-        onClick={() => {
-          analyticsStore.logEvent("view_portfolio_click", {
-            pageName: "Home",
-          });
-          navigate("/portfolio");
-        }}
-      >
-        View portfolio
-      </button>
+      <div className={style["btnContainer"]}>
+        {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+          <button
+            className={`${style["portfolio"]} ${style["buy"]}`}
+            onClick={() => {
+              navigate("/more/token/moonpay");
+            }}
+          >
+            Buy/Sell
+          </button>
+        ) : (
+          ""
+        )}
+        <button
+          className={style["portfolio"]}
+          onClick={() => {
+            analyticsStore.logEvent("view_portfolio_click", {
+              pageName: "Home",
+            });
+            navigate("/portfolio");
+          }}
+        >
+          View portfolio
+        </button>
+      </div>
     </div>
   );
 });
