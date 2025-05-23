@@ -79,7 +79,7 @@ export const SellToken: FunctionComponent<{
   const balanceETH =
     balancesMap.get(coinMinimalDenom) || new CoinPretty(currency, new Int(0));
 
-  // get redirect URL sandbox onramp
+  // get redirect URL sandbox offramp
   const redirectURL = (async () => {
     // const BASE_URL = MoonpayOffRampApiURL;
     const BASE_URL = MOONPAY_OFFRAMP_SANDBOX_URL;

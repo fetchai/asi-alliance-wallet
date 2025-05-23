@@ -26,7 +26,6 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
     const { chainStore } = useStore();
     const [tokenList, setTokenList] = useState<ITokenList[]>([]);
 
-    // const currentChain = chainStore.current.chainName;
     const chainId = chainStore.current.chainId;
 
     const handleChainSelect = async (token: string) => {

@@ -509,7 +509,7 @@ export const AssetView = observer(() => {
                 alt=""
               />
             </div>
-            <p className={style["tokenActionTitle"]}>Buy/Sell</p>
+            <p className={style["tokenActionTitle"]}>Buy / Sell</p>
           </div>
         ) : (
           ""

@@ -96,6 +96,18 @@
   }
 }
 
+.alertContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.currencyListContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .currencyItem {
   display: flex;
   color: white;
@@ -107,6 +119,14 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+}
+
+.currencyCode {
+  margin: 0 8px;
+}
+
+.currencySelectedIcon {
+  margin-left: auto;
 }
 
 .currencyLogo {

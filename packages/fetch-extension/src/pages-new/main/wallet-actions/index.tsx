@@ -125,7 +125,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
                 marginBottom: "6px",
               }}
               leftImage={require("@assets/svg/wireframe/plus-minus.svg")}
-              heading="Buy/Sell"
+              heading="Buy / Sell"
               onClick={() => {
                 navigate("/more/token/moonpay");
               }}

@@ -25,7 +25,7 @@ export const CurrencyList: FunctionComponent<{
 
   return (
     <div className={style["container"]}>
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <div className={style["currencyListContainer"]}>
         {allowedCurrencies.map((fiatCurrency: any) => {
           return (
             <div
@@ -44,11 +44,7 @@ export const CurrencyList: FunctionComponent<{
                 alt={fiatCurrency.name}
                 src={fiatCurrency.icon}
               />
-              <div
-                style={{
-                  margin: "0 8px",
-                }}
-              >
+              <div className={style["currencyCode"]}>
                 {fiatCurrency.code.toUpperCase()}
               </div>
               <div
@@ -60,7 +56,7 @@ export const CurrencyList: FunctionComponent<{
               >
                 {fiatCurrency.name}
               </div>
-              <div style={{ marginLeft: "auto" }}>
+              <div className={style["currencySelectedIcon"]}>
                 {selectedCurrency === fiatCurrency.code
                   ? selectedIcon
                   : undefined}

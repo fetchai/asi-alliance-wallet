@@ -85,6 +85,13 @@ export const BuyToken: FunctionComponent<{
   const isAmountEmpty =
     amount === "" || amount === "0" || !tokenCode || parseFloat(amount) === 0;
 
+  const currency =
+    selectedCurrency || defaultCurrency
+      ? `(in ${
+          selectedCurrency?.toUpperCase() || defaultCurrency?.toUpperCase()
+        })`
+      : "";
+
   return (
     <div style={{ marginBottom: "60px" }}>
       <Input
@@ -121,26 +128,12 @@ export const BuyToken: FunctionComponent<{
       />
       <Input
         formGroupClassName={styles["formGroup"]}
-        label={`Amount ${
-          selectedCurrency || defaultCurrency
-            ? `(in ${
-                selectedCurrency?.toUpperCase() ||
-                defaultCurrency?.toUpperCase()
-              })`
-            : ""
-        }`}
+        label={`Amount ${currency}`}
         formFeedbackClassName={styles["formFeedback"]}
         className={`${styles["input"]} ${styles["inputSell"]}`}
         value={amount}
         readOnly={!tokenCode}
-        placeholder={`Enter amount ${
-          selectedCurrency || defaultCurrency
-            ? `(in ${
-                selectedCurrency?.toUpperCase() ||
-                defaultCurrency?.toUpperCase()
-              })`
-            : ""
-        }`}
+        placeholder={`Enter amount ${currency}`}
         onChange={(e: any) => {
           setAmountError("");
           const { min, max } = moonpayBuyAmount;
