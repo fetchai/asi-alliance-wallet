@@ -80,7 +80,7 @@ export const SellToken: FunctionComponent<{
     balancesMap.get(coinMinimalDenom) || new CoinPretty(currency, new Int(0));
 
   // get redirect URL sandbox offramp
-  const redirectURL = (async () => {
+  const redirectURL = async () => {
     // const BASE_URL = MoonpayOffRampApiURL;
     const BASE_URL = MOONPAY_OFFRAMP_SANDBOX_URL;
     const API_KEY = MoonpayApiKey;
@@ -96,7 +96,7 @@ export const SellToken: FunctionComponent<{
     const URL = `${BASE_URL}?${params?.toString()}`;
     const signedURL = await signMoonPayUrl(URL);
     return signedURL;
-  })();
+  };
 
   const isAmountEmpty =
     amount === "" || amount === "0" || !tokenCode || parseFloat(amount) === 0;
@@ -227,7 +227,7 @@ export const SellToken: FunctionComponent<{
                 : "1px solid transparent",
           }}
           onClick={async () => {
-            const URL = await redirectURL;
+            const URL = await redirectURL();
             window.open(URL, "_blank");
             navigate("/");
           }}

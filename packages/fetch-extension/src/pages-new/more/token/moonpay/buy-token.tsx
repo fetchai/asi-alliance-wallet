@@ -48,7 +48,7 @@ export const BuyToken: FunctionComponent<{
   });
 
   // get redirect URL sandbox onramp
-  const redirectURL = (async () => {
+  const redirectURL = async () => {
     const fiatCurrency = selectedCurrency || defaultCurrency;
     // const BASE_URL = MoonpayOnRampApiURL;
     const BASE_URL = MOONPAY_ONRAMP_SANDBOX_URL;
@@ -65,7 +65,7 @@ export const BuyToken: FunctionComponent<{
     const URL = `${BASE_URL}?${params?.toString()}`;
     const signedURL = await signMoonPayUrl(URL);
     return signedURL;
-  })();
+  };
 
   useEffect(() => {
     const currencyCode = selectedCurrency || defaultCurrency;
@@ -183,7 +183,7 @@ export const BuyToken: FunctionComponent<{
             textTransform: "capitalize",
           }}
           onClick={async () => {
-            const URL = await redirectURL;
+            const URL = await redirectURL();
             window.open(URL, "_blank");
             navigate("/");
           }}

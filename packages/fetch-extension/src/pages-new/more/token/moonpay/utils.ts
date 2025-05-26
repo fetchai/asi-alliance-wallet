@@ -3,7 +3,7 @@ import axios from "axios";
 
 export const signMoonPayUrl = async (urlToSign: string): Promise<string> => {
   try {
-    const BASE_URL = "https://companion.sandbox-london-b.fetch-ai.com/";
+    const BASE_URL = "https://companion.sandbox-london-b.fetch-ai.com";
     const response = await axios.get(`${BASE_URL}/api/moonpay-sign-url`, {
       params: { url: urlToSign },
     });
