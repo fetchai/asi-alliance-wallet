@@ -27,6 +27,7 @@ export interface InputProps {
 
   formGroupClassName?: string;
   inputGroupClassName?: string;
+  formFeedbackClassName?: string;
 }
 
 // eslint-disable-next-line react/display-name
@@ -38,6 +39,7 @@ export const Input = forwardRef<
     className,
     formGroupClassName,
     inputGroupClassName,
+    formFeedbackClassName,
     type,
     label,
     text,
@@ -91,7 +93,10 @@ export const Input = forwardRef<
         {append}
       </InputGroup>
       {error ? (
-        <FormFeedback style={{ display: "block", marginTop: "3px" }}>
+        <FormFeedback
+          className={formFeedbackClassName}
+          style={{ display: "block", marginTop: "3px" }}
+        >
           {error}
         </FormFeedback>
       ) : text ? (
