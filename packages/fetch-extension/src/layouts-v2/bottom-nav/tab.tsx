@@ -59,7 +59,7 @@ export const Tab = ({
       </div>
       <div
         className={`${style["title"]} ${
-          !isActive ? style["active"] : disabled ? style["disabled"] : null
+          isActive ? style["active"] : disabled ? style["disabled"] : null
         }`}
       >
         {title}

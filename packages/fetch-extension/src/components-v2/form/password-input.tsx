@@ -35,8 +35,9 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           style={{ ...containerStyle }}
         >
           <Input
+            formGroupClassName={stylePasswordInput["formGroup"]}
             style={{
-              width: "285px",
+              minWidth: "285px",
               margin: "none",
               display: "flex",
               ...inputStyle,

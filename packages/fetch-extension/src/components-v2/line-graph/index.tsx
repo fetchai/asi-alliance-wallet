@@ -63,6 +63,8 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
       {tokenState?.diff && (
         <div style={{ marginBottom: "-18px" }}>
           <TabsPanel
+            className={style["graphOption"]}
+            activeClassName={style["activeGraphOption"]}
             tabs={tabs}
             activeTab={activeTab}
             setActiveTab={setActiveTab}

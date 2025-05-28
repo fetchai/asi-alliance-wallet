@@ -19,7 +19,7 @@ export const Header: FunctionComponent<HeaderProps> = ({
 }) => {
   const headerStyle = {
     backdropFilter: "none",
-    background: children ? "rgba(0,13,61,0.3)" : "transparent",
+    background: children ? "white" : "transparent",
   };
 
   return (
