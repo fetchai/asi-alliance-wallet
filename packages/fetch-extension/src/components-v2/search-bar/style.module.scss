@@ -1,11 +1,13 @@
+@import "../../styles//var";
+
 .searchInput {
   background: transparent;
   border: none;
   width: 260px;
-  color: white;
+  color: $font-dark;
   font-weight: 400;
   &::placeholder {
-    color: white;
+    color: $font-dark;
   }
 }
 

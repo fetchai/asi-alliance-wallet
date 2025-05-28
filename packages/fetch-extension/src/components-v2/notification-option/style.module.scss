@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .switch {
   position: relative;
   display: inline-block;
@@ -10,7 +12,7 @@
     height: 0;
 
     &:checked + .slider {
-      background-color: #5f38fb;
+      background-color: $bg-green-dark;
       border: 1px solid transparent;
     }
 
@@ -32,7 +34,8 @@
     -webkit-transition: 0.4s;
     transition: 0.4s;
     border-radius: 34px;
-    border: 1px solid #5f38fb;
+    background: #d0d1d1;
+    border: 1px solid transparent;
 
     &::before {
       position: absolute;
@@ -42,6 +45,8 @@
       left: 3px;
       top: 1px;
       background-color: white;
+      box-shadow: 0px 3px 1px 0px #0000000f;
+      box-shadow: 0px 3px 8px 0px #00000026;
       -webkit-transition: 0.4s;
       transition: 0.4s;
       border-radius: 50%;
