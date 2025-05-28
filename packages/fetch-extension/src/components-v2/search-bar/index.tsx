@@ -44,7 +44,7 @@ export const SearchBar: React.FC<Props> = ({
     <div>
       <Card
         style={{
-          background: "rgba(255,255,255,0.1)",
+          background: "#F6F6F6",
           marginBottom: "24px",
           padding: "12px 18px",
         }}

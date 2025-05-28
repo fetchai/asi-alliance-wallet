@@ -1,5 +1,7 @@
+@import "../../styles/var";
+
 .cardContainer {
-  color: white;
+  color: $font-dark;
   padding: 18px 12px;
   font-size: 14px;
   border-radius: 12px;
@@ -41,11 +43,13 @@
   }
 }
 .heading {
+  color: black;
   word-break: break-all;
   font-weight: 400;
   font-size: 14px;
 }
 .subHeading {
+  color: #737676;
   font-size: 12px;
   opacity: 0.8;
 }

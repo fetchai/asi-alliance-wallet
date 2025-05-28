@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .line-graph {
   height: 118px;
   margin-top: 28px;
@@ -6,6 +8,7 @@
   color: white !important;
   margin-bottom: -9px;
 }
+
 .graph-container {
   // position: absolute;
   width: 100%;
@@ -28,4 +31,13 @@
   font-weight: 400;
   border-radius: 8px;
   background: var(--Indigo-Indigo-800, #270e8d);
+}
+
+.graphOption {
+  color: #737676 !important;
+}
+
+.activeGraphOption {
+  color: $font-dark !important;
+  background-color: $bg-green-light !important;
 }

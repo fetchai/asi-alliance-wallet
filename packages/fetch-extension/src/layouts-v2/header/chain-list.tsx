@@ -89,9 +89,6 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   styleProps={{
                     height: "48px",
                     marginTop: "0px",
-                    background: "transparent",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.4)",
                     fontSize: "14px",
                   }}
                   onClick={(e: any) => {
@@ -273,9 +270,6 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   styleProps={{
                     height: "48px",
                     marginTop: "0px",
-                    background: "transparent",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.4)",
                     fontSize: "14px",
                   }}
                   onClick={(e: any) => {

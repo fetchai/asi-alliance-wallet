@@ -24,6 +24,7 @@
   img {
     object-fit: contain;
   }
+
   .tab-icon {
     width: 60px;
     height: 32px;
@@ -32,16 +33,17 @@
 
     &.active {
       border-radius: 100px;
-      background: rgba(255, 255, 255, 0.2);
+      background: $bg-green-light;
     }
   }
 
   .title {
-    color: #fff;
+    color: #737676 !important;
     font-size: $xs;
     font-weight: 400;
+
     &.active {
-      color: rgba(255, 255, 255, 0.6);
+      color: $font-dark !important;
     }
   }
 }
@@ -60,6 +62,7 @@
   right: 215px;
   top: 5px;
 }
+
 .actions {
   display: flex;
   justify-content: space-around;
@@ -73,11 +76,13 @@
   background: transparent;
   padding: 0px;
 }
+
 .toggle:focus {
   border: 0px;
   background: transparent;
   padding: 0px;
 }
+
 .overlay {
   overflow: hidden;
   opacity: 0.9;

@@ -56,6 +56,7 @@ export const Address: FunctionComponent<
         }
         childrenStyle={{
           opacity: 0.6,
+          color: "#737676",
         }}
       >
         {props.iconClass ? <i className={iconClass} /> : ""}

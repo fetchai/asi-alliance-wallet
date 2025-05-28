@@ -139,30 +139,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
         ),
         fill: false,
         vsCurrency,
-        borderColor: (context: any) => {
-          const chart = context.chart;
-          const { ctx, chartArea } = chart;
-          if (
-            !chartArea ||
-            !isFinite(chartArea.left) ||
-            !isFinite(chartArea.top) ||
-            !isFinite(chartArea.right) ||
-            !isFinite(chartArea.bottom)
-          ) {
-            return null;
-          }
-
-          const gradient = ctx.createLinearGradient(
-            0, // Change this to 0
-            chartArea.top,
-            0, // Change this to 0
-            chartArea.bottom
-          );
-          gradient.addColorStop(0, "#F9774B"); // Start color
-          gradient.addColorStop(1, "#5F38FB"); // End color
-
-          return gradient;
-        },
+        borderColor: "black",
         tension: 0.1,
         pointRadius: 0,
       },

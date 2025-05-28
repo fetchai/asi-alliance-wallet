@@ -50,9 +50,6 @@ $body-color: black;
 html {
   width: 100%;
   height: 100%;
-  /* margin: auto; */
-  background-color: #000d3d;
-  background-image: url(chrome-extension://jofhajheabofcejbilnheiohnachcblf/assets/bg.svg);
   overflow: auto;
   background-repeat: no-repeat;
   background-size: cover;
@@ -119,10 +116,10 @@ body {
   margin-top: 20px;
 }
 .form-control {
-  color: black;
+  color: $font-dark;
 
   &:focus {
-    color: black;
+    color: $font-dark;
   }
 }
 
