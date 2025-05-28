@@ -40,10 +40,10 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const containerStyle: React.CSSProperties = {
     backgroundColor: isActive
-      ? "var(--Indigo---Fetch, #5F38FB)"
+      ? "#E0FEDD"
       : inActiveBackground
       ? inActiveBackground
-      : "rgba(255,255,255,0.1)",
+      : "#F6F6F6",
     cursor: disabled
       ? "not-allowed"
       : onClick || rightContentOnClick
