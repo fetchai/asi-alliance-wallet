@@ -22,7 +22,7 @@
 }
 
 .loadingText {
-  color: white;
+  color: $font-dark;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -30,7 +30,7 @@
   padding: 6px 12px;
   font-weight: 400;
   border-radius: 8px;
-  background: var(--Indigo-Indigo-800, #270e8d);
+  background: $bg-green-base;
 }
 
 .graphOption {
@@ -39,5 +39,5 @@
 
 .activeGraphOption {
   color: $font-dark !important;
-  background-color: $bg-green-light !important;
+  background-color: $bg-grey-dark !important;
 }

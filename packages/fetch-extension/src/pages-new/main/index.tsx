@@ -2,6 +2,7 @@ import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 
 import { HeaderLayout } from "@layouts-v2/header-layout";
 
+import { ButtonV2 } from "@components-v2/buttons/button";
 import { Dropdown } from "@components-v2/dropdown";
 import { useConfirm } from "@components/confirm";
 import { getWalletConfig } from "@graphQL/config-api";
@@ -76,6 +77,8 @@ export const MainPage: FunctionComponent = observer(() => {
     keyRingStore.keyRingType,
   ]);
 
+  console.log({ isOptionsOpen });
+
   return (
     <HeaderLayout
       innerStyle={{
@@ -104,28 +107,49 @@ export const MainPage: FunctionComponent = observer(() => {
         <ChainList setIsSelectNetOpen={setIsSelectNetOpen} />
       </Dropdown>
       <Dropdown
-        setIsOpen={setIsSelectWalletOpen}
         isOpen={isSelectWalletOpen}
-        title={"Manage Wallet"}
-        closeClicked={() => setIsSelectWalletOpen(false)}
-      >
-        <WalletOptions
-          setIsSelectWalletOpen={setIsSelectWalletOpen}
-          setIsOptionsOpen={setIsOptionsOpen}
-        />
-      </Dropdown>
-      <Dropdown
-        isOpen={isOptionsOpen}
-        setIsOpen={setIsOptionsOpen}
+        setIsOpen={setIsSelectWalletOpen}
         title="Change Wallet"
         closeClicked={() => {
-          setIsOptionsOpen(false);
+          setIsSelectWalletOpen(false);
           analyticsStore.logEvent("change_wallet_click", {
             pageName: "Home",
           });
         }}
       >
-        <SetKeyRingPage onItemSelect={() => setIsOptionsOpen(false)} />
+        <SetKeyRingPage
+          onItemSelect={() => setIsOptionsOpen(false)}
+          setIsSelectWalletOpen={setIsSelectWalletOpen}
+          setIsOptionsOpen={setIsOptionsOpen}
+        />
+        <ButtonV2
+          text="Add New Wallet"
+          styleProps={{
+            height: "56px",
+            background: "white",
+            fontSize: "14px",
+            paddingBottom: "14px",
+            paddingTop: "14px",
+          }}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("add_new_wallet_click", {
+              pageName: "Home",
+            });
+            setIsSelectWalletOpen(false);
+            browser.tabs.create({
+              url: "/popup.html#/register",
+            });
+          }}
+        />
+      </Dropdown>
+      <Dropdown
+        setIsOpen={setIsOptionsOpen}
+        isOpen={isOptionsOpen}
+        title={"Manage Wallet"}
+        closeClicked={() => setIsOptionsOpen(false)}
+      >
+        <WalletOptions />
       </Dropdown>
     </HeaderLayout>
   );

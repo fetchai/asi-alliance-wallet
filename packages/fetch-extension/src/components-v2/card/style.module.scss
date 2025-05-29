@@ -43,13 +43,13 @@
   }
 }
 .heading {
-  color: black;
+  color: $font-dark;
   word-break: break-all;
   font-weight: 400;
   font-size: 14px;
 }
 .subHeading {
-  color: #737676;
+  color: $font-secondary;
   font-size: 12px;
   opacity: 0.8;
 }

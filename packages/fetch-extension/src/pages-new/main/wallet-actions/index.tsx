@@ -73,7 +73,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
       <div className={style["actions"]}>
         <Dropdown
           styleProp={{ color: "transparent" }}
-          title={"_"}
+          title={""}
           closeClicked={() => !isOpen}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
@@ -81,7 +81,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
           <Card
             leftImageStyle={{ background: "transparent", height: "16px" }}
             style={{
-              background: "rgba(255,255,255,0.1)",
+              background: "#F6F6F6",
               height: "60px",
               marginBottom: "6px",
               opacity: activityStore.getPendingTxnTypes[TXNTYPE.send]
@@ -108,7 +108,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
           <Card
             leftImageStyle={{ background: "transparent", height: "16px" }}
             style={{
-              background: "rgba(255,255,255,0.1)",
+              background: "#F6F6F6",
               height: "60px",
               marginBottom: "6px",
             }}
@@ -131,7 +131,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
                 height: "18px",
               }}
               style={{
-                background: "rgba(255,255,255,0.1)",
+                background: "#F6F6F6",
                 height: "60px",
                 marginBottom: "6px",
               }}
@@ -148,7 +148,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
           <Card
             leftImageStyle={{ background: "transparent", height: "22px" }}
             style={{
-              background: "rgba(255,255,255,0.1)",
+              background: "#F6F6F6",
               height: "60px",
               marginBottom: "6px",
             }}

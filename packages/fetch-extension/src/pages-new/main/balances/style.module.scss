@@ -2,10 +2,10 @@
 
 .balance-card {
   margin-top: 32px;
-  color: white;
+  color: $font-dark;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  flex-direction: row;
+  justify-content: space-between;
   align-items: center;
   gap: 24px;
   align-self: stretch;
@@ -14,17 +14,23 @@
 .balance-field {
   display: flex;
   flex-direction: column;
+  align-items: baseline;
   gap: 6px;
 }
+
 .priceChangesGreen {
-  color: var(--green-green-500-vibrant-green, #2de376);
+  color: $bg-green-dark;
 
   display: flex;
   gap: 4px;
   justify-content: center;
   align-items: center;
   font-size: 14px;
+  .changeInPer {
+    color: $bg-green-dark;
+  }
 }
+
 .priceChangesOrange {
   color: #f9774b;
   display: flex;
@@ -32,55 +38,56 @@
   justify-content: center;
   align-items: center;
   font-size: 14px;
+  .changeInPer {
+    color: #f9774b;
+  }
 }
+
 .balance {
-  font-size: $xl;
+  font-size: $lg;
   display: flex;
   gap: 8px;
   font-family: Lexend;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
-  justify-content: center;
 }
 
 .denom {
-  color: var(--grey-grey-700, #556578);
+  color: #a1a3a3;
+  // color: var(--grey-grey-700, #556578);
 }
 
 .portfolio {
   padding: 0px;
   cursor: pointer;
-  width: 128px;
+  width: 100px;
   height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid transparent !important;
   backdrop-filter: blur(10px);
   font-size: 14px;
   border-radius: 100px;
-  color: #fff;
-  background: transparent;
+  color: white;
+  background: $bg-dark;
 }
 
 .portfolio:hover {
-  border-color: white;
-  color: white;
-  background: transparent !important;
+  opacity: 0.8;
   box-shadow: none;
-  // padding-top: 1px; can be used with Button
 }
 
 .portfolio:focus {
   color: #fff;
-  background: transparent;
+  opacity: 0.9;
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .inUsd {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  color: #444848;
+  font-size: 16px;
   align-items: center;
   justify-content: center;
   display: flex;
@@ -109,7 +116,7 @@
 }
 
 .day {
-  color: rgba(255, 255, 255, 0.6);
+  color: #a1a3a3;
   font-size: 14px;
 }
 
@@ -122,7 +129,7 @@
 }
 
 .increaseInDollarsGreen {
-  color: var(--green-green-500-vibrant-green, #2de376);
+  color: $bg-green-dark;
 }
 
 .increaseInDollarsOrange {

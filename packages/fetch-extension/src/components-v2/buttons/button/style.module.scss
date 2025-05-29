@@ -10,16 +10,17 @@
   width: 100%;
   font-style: normal;
   font-weight: 400;
+  height: 56px;
   line-height: normal;
-  border: 1px solid #e8e8e8;
+  border: 1px solid $bg-grey-dark;
   background: transparent;
   cursor: pointer;
 }
 .btn:disabled {
   cursor: not-allowed;
   border-radius: 100px;
-  border: 1px solid #e8e8e8;
-  color: var(--Grey-White, #fff);
+  border: 1px solid $bg-grey-dark;
+  color: $font-dark;
   font-family: Lexend;
   font-size: 16px;
   font-style: normal;
