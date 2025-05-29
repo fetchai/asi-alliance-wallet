@@ -33,7 +33,7 @@ export const ExportPage: FunctionComponent = observer(() => {
   const notification = useNotification();
   const { keyRingStore, analyticsStore } = useStore();
 
-  const type = location.state.type ?? "mnemonic";
+  const type = location?.state?.type ?? "mnemonic";
 
   const [loading, setLoading] = useState(false);
   const [keyRing, setKeyRing] = useState("");
