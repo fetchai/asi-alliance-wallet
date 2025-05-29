@@ -16,9 +16,12 @@ import style from "./style.module.scss";
 interface SetKeyRingProps {
   navigateTo?: any;
   onItemSelect?: () => void;
+  setIsOptionsOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsSelectWalletOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }
+
 export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
-  ({ navigateTo, onItemSelect }) => {
+  ({ navigateTo, onItemSelect, setIsOptionsOpen, setIsSelectWalletOpen }) => {
     const intl = useIntl();
     const navigate = useNavigate();
     const {
@@ -127,9 +130,33 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 </React.Fragment>
               }
               rightContent={
-                keyStore.selected
-                  ? require("@assets/svg/wireframe/check.svg")
-                  : ""
+                keyStore.selected ? (
+                  <div style={{ display: "flex", columnGap: "12px" }}>
+                    <img
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                      }}
+                      src={require("@assets/svg/wireframe/check.svg")}
+                      alt=""
+                    />
+                    <img
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => {
+                        setIsSelectWalletOpen?.(false);
+                        setIsOptionsOpen?.(true);
+                      }}
+                      src={require("@assets/svg/edit-icon.svg")}
+                      alt=""
+                    />
+                  </div>
+                ) : (
+                  ""
+                )
               }
               subheading={
                 keyStore.selected
