@@ -1,6 +1,7 @@
 @import "../../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/functions";
 @import "../../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/mixins";
 @import "../../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
+@import "../../../styles/var";
 
 .container {
   display: flex;
@@ -16,7 +17,7 @@ div[class^="innerContainer-sidePanel"] .container {
 }
 
 .mnemonic {
-  font-family: Lexend;
+  font-family: $font-family-base;
   letter-spacing: -0.36px;
   padding: 0px;
   text-align: center;

@@ -1,7 +1,7 @@
 @import "../../../styles/var";
 .btn {
   color: $font-dark;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 16px;
   border-radius: 100px;
   margin-top: 18px;
@@ -21,7 +21,7 @@
   border-radius: 100px;
   border: 1px solid $bg-grey-dark;
   color: $font-dark;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 16px;
   font-style: normal;
   font-weight: 400;

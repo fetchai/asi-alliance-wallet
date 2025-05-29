@@ -1,10 +1,12 @@
+@import "../../../styles/var";
+
 .container {
   padding: 16px;
   margin: 0px -12px;
   width: 333px;
   color: #fff;
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -27,7 +29,7 @@
 }
 
 .activityRow {
-  font-style: Lexend;
+  font-style: $font-family-base;
   color: white;
   font-size: 14px;
   display: flex;
@@ -52,7 +54,7 @@
 }
 .rowTitle {
   font-size: 14px;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 500;
@@ -60,7 +62,7 @@
 }
 .rowSubtitle {
   color: rgba(255, 255, 255, 0.6);
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -70,7 +72,7 @@
   color: var(--green-green-500-vibrant-green, #2de376);
   text-align: center;
   font-size: 14px;
-  font-style: Lexend;
+  font-style: $font-family-base;
   font-weight: 400;
   line-height: normal;
 }
@@ -100,7 +102,7 @@
 .amountWrapper {
   display: flex;
   gap: 4px;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 500;
