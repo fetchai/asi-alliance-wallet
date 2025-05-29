@@ -149,8 +149,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                   style["changeInDollars"] + " " + changeInDollarsClass
                 }
               >
-                {priceStore.getFiatCurrency(fiatCurrency)?.symbolName}{" "}
-                {changeInDollarsValue.toFixed(4)} {totalDenom}
+                {`${
+                  priceStore.getFiatCurrency(fiatCurrency)?.symbolName
+                }${changeInDollarsValue.toFixed(4)} ${totalDenom}`}
               </div>
               <div className={style["changeInPer"]}>
                 ( {tokenState.type === "positive" ? "+" : "-"}
@@ -203,8 +204,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                   style["changeInDollars"] + " " + changeInDollarsClass
                 }
               >
-                {priceStore.getFiatCurrency(fiatCurrency)?.symbolName}{" "}
-                {changeInDollarsValue.toFixed(4)}
+                {`${tokenState.type === "positive" ? "+" : "-"} ${
+                  priceStore.getFiatCurrency(fiatCurrency)?.symbolName
+                } ${changeInDollarsValue.toFixed(4)}`}
               </div>
               <div className={style["changeInPer"]}>
                 ({tokenState.type === "positive" ? "+" : "-"}
@@ -237,7 +239,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             navigate("/portfolio");
           }}
         >
-          View portfolio
+          Portfolio
         </button>
       </div>
     </div>

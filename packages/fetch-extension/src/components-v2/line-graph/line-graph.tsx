@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
 import { chartOptions } from "./chart-options";
 import style from "./style.module.scss";
+import { FiatCurrencies } from "../../config.ui";
 
 interface LineGraphProps {
   duration: number;
@@ -133,7 +134,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     datasets: [
       {
         label: "",
-        backgroundColor: "transparent",
+        backgroundColor: "#A1A3A3",
         data: prices.map((priceData: any) =>
           priceData.price.toFixed(3).toString()
         ),
@@ -142,6 +143,9 @@ export const LineGraph: React.FC<LineGraphProps> = ({
         borderColor: "black",
         tension: 0.1,
         pointRadius: 0,
+        pointHoverBackgroundColor: "#73A271",
+        pointHoverRadius: 6,
+        pointHoverBorderColor: "transparent",
       },
     ],
   };
@@ -166,7 +170,34 @@ export const LineGraph: React.FC<LineGraphProps> = ({
           )}
         </div>
       ) : (
-        <Line data={chartData} options={chartOptions} />
+        <Line
+          data={chartData}
+          options={{
+            ...chartOptions,
+            scales: {
+              xAxes: chartOptions.scales?.xAxes,
+              yAxes: [
+                {
+                  display: true,
+                  gridLines: { display: false },
+                  ticks: {
+                    display: true,
+                    callback: function (value: any, index: any, values: any) {
+                      if (index === 0 || index === values.length - 1) {
+                        const currencySymbol = FiatCurrencies.find(
+                          (item) =>
+                            item.currency === chartData.datasets[0].vsCurrency
+                        )?.symbol;
+                        return `${currencySymbol}${value}`;
+                      }
+                      return "";
+                    },
+                  },
+                },
+              ],
+            },
+          }}
+        />
       )}
     </div>
   );
