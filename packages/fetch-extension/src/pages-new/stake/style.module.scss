@@ -1,13 +1,15 @@
+@import "../../styles/var";
+
 .title {
   color: var(--grey-white, #fff);
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 32px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
 .heading {
-  font-family: Lexend;
+  font-family: $font-family-base;
   margin-bottom: 24px;
 }
 
@@ -40,7 +42,7 @@
 
 .label {
   color: rgba(255, 255, 255, 0.6);
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -48,7 +50,7 @@
 }
 .value {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -68,7 +70,7 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   padding: 32px 0 40px 0;
   gap: 6px;
 }

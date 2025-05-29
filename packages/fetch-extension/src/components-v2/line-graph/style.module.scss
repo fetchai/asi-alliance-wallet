@@ -34,10 +34,12 @@
 }
 
 .graphOption {
-  color: #737676 !important;
+  color: $font-secondary !important;
+  font-size: 12px !important;
 }
 
 .activeGraphOption {
   color: $font-dark !important;
+  font-size: 12px !important;
   background-color: $bg-grey-dark !important;
 }

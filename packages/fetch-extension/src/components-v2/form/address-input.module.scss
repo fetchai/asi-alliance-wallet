@@ -1,6 +1,7 @@
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/functions";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/mixins";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
+@import "../../styles/var";
 
 .fullModal {
   width: 100%;
@@ -74,7 +75,7 @@
 }
 .label {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;

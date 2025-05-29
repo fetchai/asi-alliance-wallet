@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .hr {
   background-color: gray;
   margin: 0;
@@ -40,7 +42,7 @@
 
       .content {
         color: #fff;
-        font-family: Lexend;
+        font-family: $font-family-base;
         font-size: 12px;
         font-style: normal;
         font-weight: 400;

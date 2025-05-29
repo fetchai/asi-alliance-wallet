@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .block {
   font-weight: bold;
   display: flex;
@@ -51,7 +53,7 @@
 .noActivityTitle {
   color: #fff;
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 24px;
   font-style: normal;
   font-weight: 400;
@@ -60,7 +62,7 @@
 .content {
   color: rgba(255, 255, 255, 0.8);
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
