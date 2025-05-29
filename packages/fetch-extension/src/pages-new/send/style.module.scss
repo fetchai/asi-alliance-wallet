@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .formContainer {
   height: 100%;
 }
@@ -73,7 +75,7 @@
 .amountInUsd {
   margin-bottom: 4px;
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -82,7 +84,7 @@
 
 .amount {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 12px;
   font-style: normal;
   font-weight: 400;

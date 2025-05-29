@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .innerContainer {
   flex: 1;
 
@@ -9,7 +11,7 @@
   p {
     color: #fff;
     text-align: center;
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 18px;
     font-style: normal;
     font-weight: 400;

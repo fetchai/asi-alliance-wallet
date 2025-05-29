@@ -139,14 +139,14 @@ html[data-register-page="true"] #app .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: Lexand;
+    font-family: $font-family-base;
   }
   .copyImage {
     cursor: pointer;
     margin-right: 20px;
   }
   .newMnemonic {
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 16px;
     letter-spacing: -0.36px;
     background: linear-gradient(270deg, #f9774b 3.16%, #cf447b 86.63%);
@@ -187,12 +187,12 @@ html[data-register-page="true"] #app .container {
     border: 1px solid var(--Indigo---Fetch, #5f38fb);
   }
   .checkbox {
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 16px;
     color: white;
   }
   .mnemonic {
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 16px;
     letter-spacing: -0.36px;
     border-radius: 12px;
@@ -210,15 +210,15 @@ html[data-register-page="true"] #app .container {
     }
 
     &::placeholder {
-      font-family: "Lexand", sans-serif;
+      font-family: $font-family-base;
 
       body[data-lang="ko"] & {
-        font-family: "Lexand", sans-serif !important;
+        font-family: $font-family-base !important;
       }
     }
   }
   .input {
-    font-family: Lexend;
+    font-family: $font-family-base;
     border-radius: 12px;
     color: white;
     background: rgba(255, 255, 255, 0.1);

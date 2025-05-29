@@ -1,3 +1,5 @@
+@import "../../../../styles/var";
+
 .input {
   margin-bottom: 20px !important;
   background: rgba(255, 255, 255, 0.1) !important;
@@ -79,7 +81,7 @@
   }
   .text {
     color: #fff;
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
@@ -87,7 +89,7 @@
   }
   .lightText {
     color: #fff;
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 12px;
     font-style: normal;
     font-weight: 400;

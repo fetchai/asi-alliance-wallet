@@ -39,8 +39,14 @@ $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
   src: url(../public/assets/font/Lexend-VariableFont_wght.ttf);
 }
 
-$font-family-base: "Lexand", sans-serif;
-$body-color: black;
+@font-face {
+  font-family: HankenGrotesk;
+  font-weight: 500;
+  src: url(../public/assets/font/HankenGrotesk-VariableFont_wght.ttf);
+}
+
+$font-family-base: "HankenGrotesk", sans-serif;
+$body-color: #151a1a;
 @import "../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard-react";
 
 @import url("https://fonts.googleapis.com/css?family=Courier+Prime&display=swap");

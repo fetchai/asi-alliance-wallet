@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .formContainer {
   display: flex;
   flex-direction: column;
@@ -41,7 +43,7 @@
 }
 .text {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 16px;
   font-style: normal;
   font-weight: 400;
@@ -49,7 +51,7 @@
   opacity: 0.6;
 }
 .welcome-text {
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 24px;
   font-style: normal;
   font-weight: 400;

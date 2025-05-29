@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .container {
   display: flex;
   flex-direction: column;
@@ -47,7 +49,7 @@
   }
   .text {
     color: #fff;
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
@@ -55,7 +57,7 @@
   }
   .lightText {
     color: rgba(255, 255, 255, 0.8);
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 12px;
     font-style: normal;
     font-weight: 400;
