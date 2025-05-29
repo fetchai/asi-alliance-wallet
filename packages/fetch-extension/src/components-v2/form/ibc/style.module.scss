@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .chainSelector {
   width: 100%;
   height: 46px;
@@ -46,7 +48,7 @@
 }
 .label {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
