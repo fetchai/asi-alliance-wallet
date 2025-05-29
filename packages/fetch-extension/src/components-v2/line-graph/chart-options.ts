@@ -16,8 +16,9 @@ export const chartOptions: ChartOptions = {
   tooltips: {
     mode: "index",
     intersect: false,
+    titleFontColor: "#A1A3A3",
     backgroundColor: "transparent",
-    bodyFontColor: "rgba(255,255,255,0.6)",
+    bodyFontColor: "#151A1A",
     displayColors: false,
     caretSize: 3,
     callbacks: {
