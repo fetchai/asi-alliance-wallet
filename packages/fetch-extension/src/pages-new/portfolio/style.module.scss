@@ -1,6 +1,8 @@
+@import "../../styles/var";
+
 .title {
   color: var(--grey-white, #fff);
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 32px;
   font-style: normal;
   font-weight: 400;
@@ -18,7 +20,7 @@
   margin-bottom: 35px;
 }
 .heading {
-  font-family: Lexend;
+  font-family: $font-family-base;
   margin-bottom: 24px;
 }
 .doughnut-graph {
@@ -42,7 +44,7 @@
 }
 .label {
   color: rgba(255, 255, 255, 0.6);
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -50,7 +52,7 @@
 }
 .value {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;

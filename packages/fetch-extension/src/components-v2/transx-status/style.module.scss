@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .container {
   display: flex;
   flex-direction: column;
@@ -8,7 +10,7 @@
 .title {
   color: #fff;
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 18px;
   font-style: normal;
   font-weight: 400;
@@ -17,7 +19,7 @@
 .text {
   color: #fff;
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;

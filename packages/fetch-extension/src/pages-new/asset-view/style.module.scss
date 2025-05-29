@@ -24,7 +24,7 @@
 }
 .price-in-usd {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 500;
@@ -40,7 +40,7 @@
 }
 .your-bal {
   color: rgba(255, 255, 255, 0.6);
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 12px;
 }
 .balances {
@@ -55,7 +55,7 @@
   font-size: $xl;
   display: flex;
   gap: 8px;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
@@ -139,7 +139,7 @@
 
   .lightText {
     color: #fff;
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
@@ -161,7 +161,7 @@
     }
   }
   .show-calendar-text {
-    font-family: Lexend;
+    font-family: $font-family-base;
     font-size: 14px;
     font-weight: 400;
     line-height: 17.5px;
