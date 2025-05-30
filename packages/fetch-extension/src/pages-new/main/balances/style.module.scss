@@ -25,7 +25,7 @@
   gap: 4px;
   justify-content: center;
   align-items: center;
-  font-size: 14px;
+  font-size: 16px;
   .changeInPer {
     color: $bg-green-dark;
   }
@@ -37,7 +37,7 @@
   gap: 4px;
   justify-content: center;
   align-items: center;
-  font-size: 14px;
+  font-size: 16px;
   .changeInPer {
     color: #f9774b;
   }
@@ -47,7 +47,7 @@
   font-size: $lg;
   display: flex;
   gap: 8px;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
@@ -86,7 +86,7 @@
 }
 
 .inUsd {
-  color: #444848;
+  color: $font-grey;
   font-size: 16px;
   align-items: center;
   justify-content: center;
