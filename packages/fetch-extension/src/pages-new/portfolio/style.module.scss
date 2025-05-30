@@ -1,7 +1,7 @@
 @import "../../styles/var";
 
 .title {
-  color: var(--grey-white, #fff);
+  color: $font-dark;
   font-family: $font-family-base;
   font-size: 32px;
   font-style: normal;
@@ -9,7 +9,7 @@
   line-height: normal;
 }
 .card {
-  color: #fff;
+  color: $font-dark;
   font-size: 14px;
   font-style: normal;
   font-weight: 500;

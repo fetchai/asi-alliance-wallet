@@ -23,17 +23,20 @@
   background: transparent !important;
   border: none;
   margin-top: -4px;
+  color: $font-dark;
+  font-weight: 400;
+  width: 258px;
 
   &:focus {
     box-shadow: none !important;
     background: transparent !important;
     border: none;
-    color: white !important;
+    color: $font-dark !important;
     font-weight: 400;
   }
 }
 .input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
   opacity: 1 !important;
 }
 .addressBookButton {
@@ -74,12 +77,11 @@
   display: flex;
 }
 .label {
-  color: #fff;
+  color: $font-dark;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: 24px;
-  opacity: 0.6;
   margin-bottom: 8px;
 }

@@ -28,6 +28,7 @@ export const ProgressBar = ({
         display: "flex",
         alignItems: "center",
         position: "relative",
+        backgroundColor: "#f3f3f3",
       }}
     >
       <div
@@ -46,11 +47,17 @@ export const ProgressBar = ({
           justifyContent: "center",
           alignItems: "center",
           paddingLeft: "18px",
+          color: "#151A1A",
         }}
       >
         {title}
         {isShowPercentage && (
-          <span style={{ color: "rgba(255,255,255,0.6)", margin: "0 6px" }}>
+          <span
+            style={{
+              color: "#151A1A",
+              margin: "0 6px",
+            }}
+          >
             {progressWidth}%
           </span>
         )}
@@ -61,7 +68,7 @@ export const ProgressBar = ({
               gap: "6px",
               justifyContent: "center",
               alignItems: "center",
-              border: "1px solid rgba(255, 255, 255, 0.6)",
+              border: "1px solid #737676",
               borderRadius: "4px",
               padding: "4px 8px",
             }}

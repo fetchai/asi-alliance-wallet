@@ -98,7 +98,6 @@ export const MorePage: FunctionComponent = () => {
             height: "25px",
           }}
           style={{
-            background: "rgba(255,255,255,0.1)",
             marginBottom: "6px",
             padding: "14px 12px",
           }}
@@ -123,7 +122,7 @@ export const MorePage: FunctionComponent = () => {
       )}
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/security.svg")}
         heading={"Security & privacy"}
         onClick={() => {
@@ -135,7 +134,7 @@ export const MorePage: FunctionComponent = () => {
       />
       <Card
         leftImageStyle={{ background: "transparent", height: "16px" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+        style={{ marginBottom: "8px" }}
         leftImage={require("@assets/svg/wireframe/ibc-transfer-v2.svg")}
         heading={"IBC Transfer"}
         onClick={(e: any) => {
@@ -153,12 +152,10 @@ export const MorePage: FunctionComponent = () => {
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{
-            background: "rgba(255,255,255,0.1)",
             marginBottom: "6px",
           }}
-          leftImage={require("@assets/icon/moonpay.png")}
-          heading="Buy/Sell Tokens"
-          subheading="Using Moonpay"
+          leftImage={require("@assets/svg/wireframe/plus-minus.svg")}
+          heading="Buy/Sell"
           onClick={() => {
             navigate("/more/token/moonpay");
           }}
@@ -169,7 +166,7 @@ export const MorePage: FunctionComponent = () => {
       {chainStore.current.govUrl && (
         <Card
           leftImageStyle={{ background: "transparent" }}
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+          style={{ marginBottom: "8px" }}
           leftImage={require("@assets/svg/wireframe/proposal.svg")}
           heading={"Proposals"}
           onClick={(e: any) => {
@@ -183,7 +180,7 @@ export const MorePage: FunctionComponent = () => {
       )}
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
         heading={"Manage Tokens"}
         onClick={() => {
@@ -195,7 +192,7 @@ export const MorePage: FunctionComponent = () => {
       />
       <Card
         leftImageStyle={{ background: "transparent", height: "18px" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/at.svg")}
         heading={"Address Book"}
         onClick={() => {
@@ -207,7 +204,7 @@ export const MorePage: FunctionComponent = () => {
       />
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/currency.svg")}
         heading={"Currency"}
         onClick={() => {
@@ -219,7 +216,7 @@ export const MorePage: FunctionComponent = () => {
       />
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/language.svg")}
         heading={"Language"}
         onClick={() => {
@@ -231,7 +228,7 @@ export const MorePage: FunctionComponent = () => {
       />
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+        style={{ marginBottom: "8px" }}
         leftImage={require("@assets/svg/wireframe/guide.svg")}
         heading={"Guide"}
         onClick={() =>
@@ -243,7 +240,7 @@ export const MorePage: FunctionComponent = () => {
       />
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/chain-list-access.svg")}
         heading={"Link ASI Mobile Wallet"}
         onClick={() => {
@@ -288,7 +285,7 @@ export const MorePage: FunctionComponent = () => {
       )} */}
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "5px" }}
+        style={{ marginBottom: "5px" }}
         leftImage={require("@assets/svg/wireframe/wallet-version.svg")}
         rightContent={
           <div className={style["version"]}>
@@ -303,7 +300,7 @@ export const MorePage: FunctionComponent = () => {
           height: "16px",
           width: "24px",
         }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+        style={{ marginBottom: "8px" }}
         leftImage={require("@assets/svg/wireframe/sign-out.svg")}
         heading={"Sign out"}
         onClick={() => {

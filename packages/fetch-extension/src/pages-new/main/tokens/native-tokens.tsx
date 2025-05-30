@@ -98,10 +98,8 @@ export const NativeTokens = observer(() => {
         <Card
           subheadingStyle={{
             fontSize: "14px",
-            color: "rgb(128, 141, 160)",
           }}
           style={{
-            background: "rgba(255,255,255,0.1)",
             marginBottom: "8px",
           }}
           leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
@@ -117,8 +115,8 @@ export const NativeTokens = observer(() => {
         />
       ) : (
         <Card
-          subheadingStyle={{ fontSize: "14px", color: "rgb(128, 141, 160)" }}
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+          subheadingStyle={{ fontSize: "14px" }}
+          style={{ marginBottom: "8px" }}
           leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
           heading={totalDenom}
           subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}

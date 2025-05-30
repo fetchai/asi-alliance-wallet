@@ -25,7 +25,7 @@
 // }
 
 .label {
-  color: white;
+  color: $font-dark;
   opacity: 0.6;
   font-size: 14px;
   margin-bottom: 8px;
@@ -33,7 +33,7 @@
   margin-top: 16px;
 }
 .input {
-  color: white;
+  color: $font-dark;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.1);
   display: flex;
@@ -44,7 +44,7 @@
   height: 43px;
 }
 .input:focus {
-  color: white;
+  color: $font-dark;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.1);
   display: flex;
