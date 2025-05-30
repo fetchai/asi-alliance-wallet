@@ -10,8 +10,9 @@
   // height: 60px;
 }
 .cardContainer:hover {
-  background: rgba(255, 255, 255, 0.1);
+  opacity: 0.9;
 }
+
 .cardTopContainer {
   display: flex;
   align-items: center;

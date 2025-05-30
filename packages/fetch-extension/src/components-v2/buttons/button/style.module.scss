@@ -1,6 +1,19 @@
 @import "../../../styles/var";
+
+.btnLight {
+  color: $font-grey !important;
+  background: transparent !important;
+  border: 1px solid $bg-grey-dark !important;
+}
+
+.btnDark {
+  color: white !important;
+  background: $bg-dark !important;
+  border: 1px solid transparent !important;
+}
+
 .btn {
-  color: $font-dark;
+  color: $font-grey;
   font-family: $font-family-base;
   font-size: 16px;
   border-radius: 100px;

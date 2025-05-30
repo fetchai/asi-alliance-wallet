@@ -191,7 +191,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             {accountInfo.walletStatus === WalletStatus.Loading ||
             keyRingStore.status === 0 ||
             rewards.isFetching ? (
-              <Skeleton height="21px" />
+              <Skeleton height="21px" width="100px" />
             ) : totalPrice ? (
               ` ${totalPrice.toString()} ${fiatCurrency.toUpperCase()}`
             ) : (
