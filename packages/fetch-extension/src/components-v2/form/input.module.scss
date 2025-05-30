@@ -12,10 +12,17 @@
 // }
 
 .input {
-  background: transparent !important;
-  color: $font-dark !important;
-  box-shadow: none !important;
-  border: 1px solid #d0d1d1 !important;
+  background: transparent;
+  color: $font-dark;
+  box-shadow: none;
+  border: 1px solid #d0d1d1;
+
+  &:hover {
+    border: 1px solid $border-sky-focus;
+  }
+  &:focus {
+    border: 1px solid $border-sky-focus;
+  }
 }
 
 .form-floating {

@@ -76,20 +76,11 @@ export const CurrencyPge: FunctionComponent = observer(() => {
                 key={fiatCurrency.currency}
                 className={style["currencyItem"]}
                 style={{
-                  display: "flex",
-                  color: "white",
-                  padding: "18px",
-                  fontSize: "13px",
-                  borderRadius: "12px",
-                  backdropFilter: "blur(10px)",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "space-between",
                   background:
                     language.fiatCurrency === fiatCurrency.currency &&
                     !language.isFiatCurrencyAutomatic
-                      ? "var(--Indigo---Fetch, #5F38FB)"
-                      : "rgba(255, 255, 255, 0.1)",
+                      ? "#E0FEDD"
+                      : "#F6F6F6",
                 }}
                 onClick={() => handleClick(fiatCurrency.currency)}
               >
