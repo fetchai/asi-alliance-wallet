@@ -3,7 +3,7 @@ import { HeaderLayout } from "@layouts-v2/header-layout";
 import { useNavigate, useParams } from "react-router";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Input } from "@components/form";
-import { Form, Label } from "reactstrap";
+import { Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { useStore } from "../../../stores";
 import { observer } from "mobx-react-lite";
@@ -105,26 +105,30 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           }
         })}
       >
-        <Label className={styleName["label"]}>
+        {/* <Label for="walletName" className={styleName["label"]}>
           {intl.formatMessage({
             id: "setting.keyring.change.previous-name",
           })}
-        </Label>
+        </Label> */}
         <Input
+          label={intl.formatMessage({
+            id: "setting.keyring.change.previous-name",
+          })}
           type="text"
+          formGroupClassName={styleName["formGroup"]}
+          floatLabel={true}
           className={styleName["input"]}
           value={keyStore?.meta?.["name"] ?? ""}
           readOnly={true}
           style={{ opacity: 0.6 }}
         />
-
-        <Label className={styleName["label"]}>
-          {intl.formatMessage({
+        <Input
+          label={intl.formatMessage({
             id: "setting.keyring.change.input.name",
           })}
-        </Label>
-        <Input
           type="text"
+          formGroupClassName={styleName["formGroup"]}
+          floatLabel={true}
           className={styleName["input"]}
           error={errors.name && errors.name.message}
           {...register("name", {
@@ -139,7 +143,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
 
         <div style={{ flex: 1 }} />
         <ButtonV2
-          data-loading={loading}
+          dataLoading={loading}
           disabled={loading}
           text={
             loading ? (
@@ -149,6 +153,8 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
             )
           }
           styleProps={{
+            background: "#151A1A",
+            color: "white",
             height: "56px",
           }}
         />
