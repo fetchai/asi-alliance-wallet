@@ -44,7 +44,6 @@ export const MemoInput: FunctionComponent<MemoInputProps> = observer(
           style={{
             opacity: "0.8",
             fontWeight: 400,
-            background: "rgba(255, 255, 255, 0.1)",
             marginBottom: 0,
             borderRadius: "12px",
             height: "48px",
@@ -52,11 +51,6 @@ export const MemoInput: FunctionComponent<MemoInputProps> = observer(
         >
           <Input
             className={style["input"]}
-            style={{
-              fontWeight: 400,
-              background: "rgba(255, 255, 255, 0.1)",
-              padding: "12px 18px",
-            }}
             id={inputId}
             placeholder="Optional"
             type="textarea"

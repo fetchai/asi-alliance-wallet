@@ -1,27 +1,27 @@
 @import "../../styles/var";
 
 .label {
-  color: #fff;
+  color: $font-dark;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: 24px;
-  opacity: 0.6;
   margin-bottom: 8px;
 }
 .input {
   resize: none;
   box-shadow: none !important;
-  border: none !important;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: $font-dark !important;
   height: 48px !important;
   font-weight: 400 !important;
+  border: 1px solid #d0d1d1;
   border-radius: 12px;
+  padding: 12px 18px;
+  background: transparent;
 }
 
 .input:focus {
-  background: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.6) !important;
-  border: 1px solid #7655fc !important;
+  opacity: 0.9;
+  border: 1px solid $border-sky-focus !important;
 }

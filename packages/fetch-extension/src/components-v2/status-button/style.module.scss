@@ -1,0 +1,32 @@
+@import "../../styles/var";
+
+.statusBtn {
+  height: 31px;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  color: $font-dark;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 400;
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.success {
+  background-color: rgba(45, 227, 118, 1);
+}
+
+.pending {
+  background-color: rgba(237, 195, 44, 1);
+}
+
+.active {
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.failed {
+  background-color: rgba(240, 70, 70, 1);
+  color: rgba(255, 255, 255, 1);
+}

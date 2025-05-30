@@ -198,7 +198,8 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
           styleProps={{
             height: "56px",
           }}
-          data-loading={loading}
+          variant="dark"
+          dataLoading={true}
           disabled={loading}
         />
       </Form>
@@ -403,19 +404,10 @@ const QRCodeView: FunctionComponent<{
 
   return (
     <div className={style["container"]}>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "24px",
-          padding: "20px",
-        }}
-      >
+      <div>
         <QRCode
           bgColor="transparent"
-          fgColor="white"
+          fgColor="black"
           size={180}
           value={(() => {
             if (isExpired) {
@@ -431,14 +423,7 @@ const QRCodeView: FunctionComponent<{
             return "";
           })()}
         />
-        <div
-          style={{
-            fontSize: "18px",
-            fontWeight: 400,
-            lineHeight: "28.8px",
-            textAlign: "center",
-          }}
-        >
+        <div className={style["message"]}>
           Scan this QR code on ASI Mobile Wallet to export your accounts.
         </div>
         <Alert className={style["alert"]}>

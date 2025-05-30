@@ -169,6 +169,7 @@ export const ExportPage: FunctionComponent = observer(() => {
                   ))}
             </div>
             <ButtonV2
+              variant="dark"
               styleProps={{
                 position: "fixed",
                 bottom: "12px",

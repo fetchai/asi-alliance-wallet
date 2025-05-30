@@ -22,11 +22,10 @@ div[class^="innerContainer-sidePanel"] .container {
   padding: 0px;
   text-align: center;
   background: transparent;
-  color: white;
+  color: $font-dark;
   font-size: 26px;
   margin: auto;
   padding-bottom: 30px;
-  box-shadow: $input-alternative-box-shadow !important;
   margin-top: 0px;
 
   &.alt-hex {

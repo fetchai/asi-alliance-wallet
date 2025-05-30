@@ -142,11 +142,9 @@ export const DeleteWallet: FunctionComponent = () => {
             )}
 
             <ButtonV2
+              variant="dark"
               styleProps={{
                 height: "56px",
-                background: "#151A1A",
-                color: "white",
-                border: "1px solid transparent",
               }}
               dataLoading={loading}
               text={""}
@@ -201,14 +199,12 @@ export const DeleteWallet: FunctionComponent = () => {
             </ButtonV2>
 
             <ButtonV2
+              variant="dark"
               styleProps={{
                 height: "56px",
-                background: "#151A1A",
-                color: "white",
-                border: "1px solid transparent",
                 marginTop: "0px",
               }}
-              data-loading={loading}
+              dataLoading={loading}
               text={""}
               onClick={handleSubmit(async (data) => {
                 setLoading(true);

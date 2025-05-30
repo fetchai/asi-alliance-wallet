@@ -1,4 +1,3 @@
-import { GlassCard } from "@components-v2/glass-card";
 import React from "react";
 import { ProposalDurationRow } from "./proposal-duration-row";
 import style from "./style.module.scss";
@@ -9,11 +8,7 @@ export const GovtProposalRow = ({ proposal }: { proposal: ProposalType }) => {
     proposal;
 
   return (
-    <GlassCard
-      styleProps={{
-        borderRadius: "12px",
-      }}
-    >
+    <div className={style["govt-proposal"]}>
       <div className={style["govt-proposal-row-container"]}>
         <div className={style["top-div"]}>
           <div
@@ -28,6 +23,6 @@ export const GovtProposalRow = ({ proposal }: { proposal: ProposalType }) => {
           status={status}
         />
       </div>
-    </GlassCard>
+    </div>
   );
 };
