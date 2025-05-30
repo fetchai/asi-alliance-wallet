@@ -10,7 +10,7 @@ export interface Props {
   styleProps?: React.CSSProperties;
   children?: ReactNode;
   btnBgEnabled?: boolean;
-  type?: "light" | "dark";
+  variant?: "light" | "dark";
 }
 
 export const ButtonV2: React.FC<Props> = ({
@@ -22,7 +22,7 @@ export const ButtonV2: React.FC<Props> = ({
   styleProps,
   children,
   btnBgEnabled,
-  type = "light",
+  variant = "light",
 }) => {
   const handleClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     if (onClick) {
@@ -43,7 +43,7 @@ export const ButtonV2: React.FC<Props> = ({
       data-loading={dataLoading ? dataLoading : null}
       className={`${style["btn"]} ${
         btnBgEnabled && disabled ? style["btnBgDisabled"] : ""
-      } ${type === "dark" ? style["btnDark"] : style["btnLight"]}`}
+      } ${variant === "dark" ? style["btnDark"] : style["btnLight"]}`}
       style={{ ...styleProps }}
     >
       {text} <span className={style["gradient"]}>{gradientText}</span>

@@ -143,6 +143,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
 
         <div style={{ flex: 1 }} />
         <ButtonV2
+          variant="dark"
           dataLoading={loading}
           disabled={loading}
           text={
@@ -153,8 +154,6 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
             )
           }
           styleProps={{
-            background: "#151A1A",
-            color: "white",
             height: "56px",
           }}
         />

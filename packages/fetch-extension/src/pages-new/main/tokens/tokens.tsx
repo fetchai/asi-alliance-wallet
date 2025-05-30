@@ -145,10 +145,9 @@ export const Tokens = observer(() => {
                   token.balance.maxDecimals(6).hideDenom(false).toString()
                 )
               }
-              subheadingStyle={{ fontSize: "14px", color: "#808da0" }}
+              subheadingStyle={{ fontSize: "14px" }}
               rightContent={tokenInUsd ? tokenInUsd : ""}
               style={{
-                background: "rgba(255, 255, 255, 0.12)",
                 marginBottom: "6px",
                 padding: "18px",
               }}
