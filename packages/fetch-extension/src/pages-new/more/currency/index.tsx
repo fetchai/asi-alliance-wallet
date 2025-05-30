@@ -79,8 +79,8 @@ export const CurrencyPge: FunctionComponent = observer(() => {
                   background:
                     language.fiatCurrency === fiatCurrency.currency &&
                     !language.isFiatCurrencyAutomatic
-                      ? "var(--Indigo---Fetch, #5F38FB)"
-                      : "rgba(255, 255, 255, 0.1)",
+                      ? "#E0FEDD"
+                      : "#F6F6F6",
                 }}
                 onClick={() => handleClick(fiatCurrency.currency)}
               >

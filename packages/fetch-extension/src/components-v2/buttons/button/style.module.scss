@@ -1,45 +1,46 @@
 @import "../../../styles/var";
 
 .btnLight {
-  color: $font-grey !important;
-  background: transparent !important;
-  border: 1px solid $bg-grey-dark !important;
+  color: $font-grey;
+  background: transparent;
+  border: 1px solid $bg-grey-dark;
 }
 
 .btnDark {
-  color: white !important;
-  background: $bg-dark !important;
-  border: 1px solid transparent !important;
+  color: white;
+  background: $bg-dark;
+  border: 1px solid transparent;
 }
 
 .btn {
-  color: $font-grey;
   font-family: $font-family-base;
   font-size: 16px;
   border-radius: 100px;
   margin-top: 18px;
-  border: none;
   padding: 10px 12px;
   width: 100%;
   font-style: normal;
   font-weight: 400;
   height: 56px;
   line-height: normal;
-  border: 1px solid $bg-grey-dark;
-  background: transparent;
   cursor: pointer;
+  &[data-loading="true"] {
+    color: inherit !important;
+    pointer-events: none !important;
+  }
+  &[data-loading="true"]::after {
+    display: none !important;
+  }
 }
+
 .btn:disabled {
   cursor: not-allowed;
   border-radius: 100px;
-  border: 1px solid $bg-grey-dark;
-  color: $font-dark;
-  font-family: $font-family-base;
   font-size: 16px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
-  opacity: 0.4;
+  opacity: 0.6;
 }
 
 .btnBgDisabled {

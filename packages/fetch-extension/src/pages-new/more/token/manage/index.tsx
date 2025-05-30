@@ -227,6 +227,7 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
               styleProps={{
                 height: "56px",
               }}
+              variant="dark"
               text="Add Token"
               onClick={() => {
                 navigate("/more/token/add");
