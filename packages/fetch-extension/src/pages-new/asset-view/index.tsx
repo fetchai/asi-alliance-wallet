@@ -48,8 +48,7 @@ export const AssetView = observer(() => {
   const current = chainStore.current;
   const queries = queriesStore.get(current.chainId);
   const accountInfo = accountStore.getAccount(current.chainId);
-  const isNetworkSepolia = chainStore.current.chainId === "11155111";
-  const { data } = useMoonpayCurrency(isNetworkSepolia);
+  const { data } = useMoonpayCurrency();
 
   const allowedTokenList = data?.filter(
     (item: any) =>
@@ -497,8 +496,7 @@ export const AssetView = observer(() => {
           </div>
           <p className={style["tokenActionTitle"]}>Receive</p>
         </div>
-        {/* TODO: remove this sepolia check */}
-        {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+        {moonpaySupportedTokens?.length > 0 && !current.beta ? (
           <div
             className={style["tokenAction"]}
             onClick={() => navigate("/more/token/moonpay")}

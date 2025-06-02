@@ -23,8 +23,7 @@ export const MorePage: FunctionComponent = () => {
   const navigate = useNavigate();
   const currentChain = chainStore.current;
   const chainId = currentChain.chainId;
-  const isNetworkSepolia = chainStore.current.chainId === "11155111";
-  const { data } = useMoonpayCurrency(isNetworkSepolia);
+  const { data } = useMoonpayCurrency();
 
   const allowedTokenList = data?.filter(
     (item: any) =>
@@ -105,10 +104,9 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {/* TODO: remove this sepolia check */}
       {currentChain?.raw?.type !== "testnet" &&
       moonpaySupportedTokens?.length > 0 &&
-      isNetworkSepolia ? (
+      !currentChain.beta ? (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{

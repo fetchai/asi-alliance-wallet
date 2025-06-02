@@ -29,8 +29,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     const chainId = chainStore.current.chainId;
     const accountInfo = accountStore.getAccount(chainId);
     const queries = queriesStore.get(chainId);
-    const isNetworkSepolia = chainStore.current.chainId === "11155111";
-    const { data } = useMoonpayCurrency(isNetworkSepolia);
+    const { data } = useMoonpayCurrency();
 
     const allowedTokenList = data?.filter(
       (item: any) =>
@@ -111,9 +110,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
               });
             }}
           />
-
-          {/* TODO: remove this sepolia check */}
-          {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+          {moonpaySupportedTokens?.length > 0 && !chainStore.current.beta ? (
             <Card
               leftImageStyle={{
                 background: "transparent",

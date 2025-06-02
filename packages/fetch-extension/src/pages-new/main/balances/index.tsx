@@ -71,8 +71,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     activityStore.getAddress !== accountInfo.bech32Address ||
     activityStore.getChainId !== current.chainId;
 
-  const isNetworkSepolia = chainStore.current.chainId === "11155111";
-  const { data } = useMoonpayCurrency(isNetworkSepolia);
+  const { data } = useMoonpayCurrency();
 
   const rewards = useQuery({
     queryKey: ["rewards", accountInfo.bech32Address, current.chainId],
@@ -216,7 +215,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
         </div>
       )}
       <div className={style["btnContainer"]}>
-        {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+        {moonpaySupportedTokens?.length > 0 && !current.beta ? (
           <button
             className={`${style["portfolio"]} ${style["buy"]}`}
             onClick={() => {

@@ -10,10 +10,7 @@ import { CurrencyList } from "./currency-list";
 import styles from "./style.module.scss";
 import { TokenSelect } from "./token-select";
 import { useNavigate } from "react-router";
-import {
-  MOONPAY_ONRAMP_SANDBOX_URL,
-  MoonpayApiKey,
-} from "../../../../config.ui";
+import { MoonpayOnRampApiURL, MoonpayApiKey } from "../../../../config.ui";
 import { ErrorAlert } from "./error-alert";
 import { Dec } from "@keplr-wallet/unit";
 import { signMoonPayUrl } from "./utils";
@@ -34,9 +31,7 @@ export const BuyToken: FunctionComponent<{
       isEvm ? "ethereumHexAddress" : "bech32Address"
     ];
   const [amount, setAmount] = useState("0");
-  const [token, setToken] = useState(
-    chainStore?.current?.currencies?.[0]?.coinDenom
-  );
+  const [token, setToken] = useState("");
   const [tokenCode, setTokenCode] = useState("");
   const [amountError, setAmountError] = useState("");
   const [selectedCurrency, setSelectedCurrency] =
@@ -50,8 +45,7 @@ export const BuyToken: FunctionComponent<{
   // get redirect URL sandbox onramp
   const redirectURL = async () => {
     const fiatCurrency = selectedCurrency || defaultCurrency;
-    // const BASE_URL = MoonpayOnRampApiURL;
-    const BASE_URL = MOONPAY_ONRAMP_SANDBOX_URL;
+    const BASE_URL = MoonpayOnRampApiURL;
     const API_KEY = MoonpayApiKey;
     const params = new URLSearchParams({
       apiKey: API_KEY,
@@ -79,7 +73,8 @@ export const BuyToken: FunctionComponent<{
   }, [allowedCurrencyList, selectedCurrency, defaultCurrency]);
 
   const onTokenSelect = (token: any) => {
-    setTokenCode(token?.code);
+    setToken(token?.coinDenom);
+    setTokenCode(token?.moonpayData?.code);
   };
 
   const isAmountEmpty =
@@ -168,19 +163,19 @@ export const BuyToken: FunctionComponent<{
         <ButtonV2
           text="Buy Using Moonpay"
           styleProps={{
-            backgroundColor:
-              isAmountEmpty || amountError !== "" ? "transparent" : "white",
-            color: isAmountEmpty || amountError !== "" ? "white" : "black",
             position: "fixed",
             width: "98%",
             left: "50%",
             transform: "translateX(-50%)",
             bottom: "16px",
+            textTransform: "capitalize",
+            backgroundColor:
+              isAmountEmpty || amountError !== "" ? "transparent" : "white",
+            color: isAmountEmpty || amountError !== "" ? "white" : "black",
             border:
               isAmountEmpty || amountError !== ""
                 ? "1px solid white"
                 : "1px solid transparent",
-            textTransform: "capitalize",
           }}
           onClick={async () => {
             const URL = await redirectURL();
