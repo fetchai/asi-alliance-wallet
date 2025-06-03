@@ -7,7 +7,7 @@
   height: 48px;
   width: 48px;
   border-radius: 150px;
-  background: #000d3d;
+  background: #f3f3f3;
   font-size: 24px;
   display: flex;
   align-items: center;
@@ -15,7 +15,7 @@
 }
 .name {
   margin-top: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-dark;
   font-size: 18px;
   font-style: normal;
   font-weight: 400;
@@ -23,7 +23,7 @@
   margin-bottom: 4px;
 }
 .price-in-usd {
-  color: #fff;
+  color: $font-secondary;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
@@ -35,7 +35,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #fff;
+  color: $font-dark;
   flex-direction: column;
 }
 .your-bal {
@@ -55,6 +55,7 @@
   font-size: $xl;
   display: flex;
   gap: 8px;
+  color: $font-dark;
   font-family: $font-family-base;
   font-style: normal;
   font-weight: 400;
@@ -64,34 +65,34 @@
   margin-bottom: 24px;
 }
 .denom {
-  color: var(--grey-grey-700, #556578);
+  color: #a1a3a3;
 }
 .inUsd {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-grey;
   font-size: 14px;
 }
 
 .priceChangesGreen {
-  color: var(--green-green-500-vibrant-green, #2de376);
+  color: $bg-green-dark;
+
   display: flex;
   gap: 4px;
   justify-content: center;
   align-items: center;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
 }
+
 .priceChangesOrange {
   color: #f9774b;
   display: flex;
   gap: 4px;
   justify-content: center;
   align-items: center;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
 }
 
 .changeInDollars-green {
-  color: var(--green-green-500-vibrant-green, #2de376);
+  color: $bg-green-dark;
 }
 
 .changeInDollars-orange {
@@ -99,7 +100,7 @@
 }
 
 .increaseInDollarsGreen {
-  color: var(--green-green-500-vibrant-green, #2de376);
+  color: $bg-green-dark;
 }
 
 .increaseInDollarsOrange {
@@ -107,7 +108,7 @@
 }
 
 .day {
-  color: rgba(255, 255, 255, 0.6);
+  color: #a1a3a3;
   font-size: 14px;
 }
 

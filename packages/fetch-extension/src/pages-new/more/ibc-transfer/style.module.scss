@@ -34,9 +34,9 @@
   gap: 6px;
   align-self: stretch;
   border-radius: 12px;
-  background: rgba(255, 62, 62, 0.25);
-  border: 1px solid rgba(255, 62, 62, 0.25);
-  color: white;
+  background: $bg-red-base;
+  border: none !important;
+  color: $font-dark;
   margin-top: 24px;
 
   i {
@@ -51,7 +51,7 @@
   h1 {
     font-size: 16px;
     font-weight: bold;
-    color: #32325d;
+    color: $font-dark;
     margin-bottom: 4px;
   }
 
@@ -61,7 +61,7 @@
     margin: 0;
   }
   .text {
-    color: #fff;
+    color: $font-dark;
     font-family: $font-family-base;
     font-size: 14px;
     font-style: normal;
@@ -69,7 +69,7 @@
     line-height: 160%; /* 22.4px */
   }
   .lightText {
-    color: #fff;
+    color: $font-dark;
     font-family: $font-family-base;
     font-size: 12px;
     font-style: normal;
