@@ -74,7 +74,7 @@ export const SellToken: FunctionComponent<{
   const balanceETH =
     balancesMap.get(coinMinimalDenom) || new CoinPretty(currency, new Int(0));
 
-  // get redirect URL sandbox offramp
+  // get redirect URL offramp
   const redirectURL = async () => {
     const BASE_URL = MoonpayOffRampApiURL;
     const API_KEY = MoonpayApiKey;
@@ -196,7 +196,11 @@ export const SellToken: FunctionComponent<{
             Use Max
           </div>
         }
-        error={amountError}
+        error={
+          parseFloat(availableBalance) === 0
+            ? "Insufficient wallet balance."
+            : amountError
+        }
       />
       {!tokenCode && !coinListLoading ? (
         <ErrorAlert title="Sell feature is not supported for this token" />

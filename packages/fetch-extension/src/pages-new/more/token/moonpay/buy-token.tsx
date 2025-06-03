@@ -42,7 +42,7 @@ export const BuyToken: FunctionComponent<{
     max: null,
   });
 
-  // get redirect URL sandbox onramp
+  // get redirect URL onramp
   const redirectURL = async () => {
     const fiatCurrency = selectedCurrency || defaultCurrency;
     const BASE_URL = MoonpayOnRampApiURL;

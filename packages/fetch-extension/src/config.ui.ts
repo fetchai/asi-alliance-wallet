@@ -486,11 +486,11 @@ export const MoonpayApiKey =
     ? PROD_MOONPAY_API_KEY
     : DEV_MOONPAY_API_KEY;
 
-export const MOONPAY_ONRAMP_PROD_URL = "https://buy.moonpay.com/";
-export const MOONPAY_ONRAMP_SANDBOX_URL = "https://buy-sandbox.moonpay.com/";
+export const MOONPAY_ONRAMP_PROD_URL = "https://buy.moonpay.com";
+export const MOONPAY_ONRAMP_SANDBOX_URL = "https://buy-sandbox.moonpay.com";
 
-export const MOONPAY_OFFRAMP_PROD_URL = "https://sell.moonpay.com/";
-export const MOONPAY_OFFRAMP_SANDBOX_URL = "https://sell-sandbox.moonpay.com/";
+export const MOONPAY_OFFRAMP_PROD_URL = "https://sell.moonpay.com";
+export const MOONPAY_OFFRAMP_SANDBOX_URL = "https://sell-sandbox.moonpay.com";
 
 export const MoonpayOnRampApiURL =
   process.env.NODE_ENV === "production"
