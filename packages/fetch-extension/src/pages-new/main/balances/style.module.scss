@@ -72,6 +72,12 @@
   border-radius: 100px;
   color: white;
   background: $bg-dark;
+
+  img {
+    width: 14px;
+    height: 14px;
+    margin-left: 2px;
+  }
 }
 
 .portfolio:hover {
@@ -117,11 +123,11 @@
 
 .day {
   color: #a1a3a3;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .changeInDollars-green {
-  color: var(--green-green-500-vibrant-green, #2de376);
+  color: $bg-green-dark;
 }
 
 .changeInDollars-orange {

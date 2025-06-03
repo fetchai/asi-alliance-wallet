@@ -43,7 +43,7 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
         <Form>
           <h1>Add IBC channel</h1>
           <FormGroup>
-            <Label for="chain-dropdown" className="form-control-label">
+            <Label for="chain-dropdown" className={style["label"]}>
               <FormattedMessage id="component.ibc.channel-registrar.chain-selector.label" />
             </Label>
             <ButtonDropdown

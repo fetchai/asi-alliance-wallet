@@ -84,7 +84,7 @@ export const Input = forwardRef<
   return (
     <FormGroup className={formGroupClassName}>
       {label ? (
-        <Label for={inputId} className="form-control-label">
+        <Label for={inputId} className={styleInput["inputLabel"]}>
           {label}
         </Label>
       ) : null}

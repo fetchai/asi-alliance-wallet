@@ -85,9 +85,11 @@
   font-weight: 500;
   line-height: normal;
 }
+
 .inUSD {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-grey;
 }
+
 .verticalLine {
   position: absolute;
   border: 0.75px solid rgba(255, 255, 255, 0.2);

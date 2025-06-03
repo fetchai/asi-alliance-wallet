@@ -1,7 +1,7 @@
 @import "../../styles/var";
 
 .label {
-  color: $font-dark;
+  color: $font-secondary;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
@@ -9,13 +9,21 @@
   line-height: 24px;
   margin-bottom: 8px;
 }
+
+.inputContainer {
+  font-weight: 400;
+  margin-bottom: 0;
+  border-radius: 12px;
+  height: 48px;
+}
+
 .input {
   resize: none;
   box-shadow: none !important;
   color: $font-dark !important;
   height: 48px !important;
   font-weight: 400 !important;
-  border: 1px solid #d0d1d1;
+  border: 1.5px solid #d0d1d1;
   border-radius: 12px;
   padding: 12px 18px;
   background: transparent;
@@ -23,5 +31,5 @@
 
 .input:focus {
   opacity: 0.9;
-  border: 1px solid $border-sky-focus !important;
+  border: 1.5px solid $border-sky-focus !important;
 }

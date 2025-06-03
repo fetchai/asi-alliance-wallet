@@ -40,15 +40,7 @@ export const MemoInput: FunctionComponent<MemoInputProps> = observer(
     return (
       <React.Fragment>
         <div className={style["label"]}>Memo</div>
-        <div
-          style={{
-            opacity: "0.8",
-            fontWeight: 400,
-            marginBottom: 0,
-            borderRadius: "12px",
-            height: "48px",
-          }}
-        >
+        <div className={style["inputContainer"]}>
           <Input
             className={style["input"]}
             id={inputId}

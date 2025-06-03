@@ -290,6 +290,7 @@ export const IBCTransferPageChannel: FunctionComponent<{
                 </div>
               </Alert>
               <ButtonV2
+                variant="dark"
                 styleProps={{
                   width: "94%",
                   padding: "12px",

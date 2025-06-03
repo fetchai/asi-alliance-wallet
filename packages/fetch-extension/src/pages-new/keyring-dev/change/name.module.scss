@@ -15,7 +15,7 @@
   color: $font-dark !important;
   margin-bottom: 16px;
   box-shadow: none !important;
-  border: 1px solid #d0d1d1 !important;
+  border: 1.5px solid #d0d1d1 !important;
 }
 
 .input:read-only {
@@ -24,7 +24,7 @@
 
 .input:focus {
   color: $font-dark !important;
-  border: 1px solid $border-sky-focus !important;
+  border: 1.5px solid $border-sky-focus !important;
 }
 .label {
   color: $font-dark;

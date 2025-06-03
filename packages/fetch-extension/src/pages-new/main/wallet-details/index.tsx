@@ -431,11 +431,6 @@ export const WalletDetailsView = observer(
         {rewardsBalNumber > 0 && (
           <div
             className={style["rewards-card"]}
-            style={{
-              marginTop: "12px",
-              gap: "2px",
-              cursor: "pointer",
-            }}
             onClick={() => {
               analyticsStore.logEvent("claim_all_staking_reward_click", {
                 pageName: "Home",

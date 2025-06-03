@@ -137,13 +137,16 @@
   border-radius: 12px;
   display: flex;
   align-items: center;
-  color: white;
+  color: $font-dark;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 18px;
   position: relative;
+  margin-top: 12px;
+  gap: 2px;
+  cursor: pointer;
 }
 
 .rewards-card::before {
@@ -202,8 +205,8 @@
 }
 
 .inUsd {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  color: $font-grey;
+  font-size: 16px;
 }
 
 .reward {

@@ -11,17 +11,23 @@
 //   }
 // }
 
+.inputLabel {
+  color: $font-secondary;
+  font-weight: 500;
+  font-size: 14px;
+}
+
 .input {
-  background: transparent;
+  background: white;
   color: $font-dark;
   box-shadow: none;
-  border: 1px solid #d0d1d1;
+  border: 1.5px solid #d0d1d1;
 
   &:hover {
-    border: 1px solid $border-sky-focus;
+    border: 1.5px solid $border-sky-focus;
   }
   &:focus {
-    border: 1px solid $border-sky-focus;
+    border: 1.5px solid $border-sky-focus;
   }
 }
 
