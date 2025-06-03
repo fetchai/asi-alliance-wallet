@@ -111,6 +111,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       ? chainInfo.chainName[0].toUpperCase()
                       : ""
                   }
+                  leftImageStyle={{
+                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                      ? "#dddfdf"
+                      : "transparent",
+                  }}
                   heading={chainInfo.chainName}
                   isActive={chainInfo.chainId === chainStore.current.chainId}
                   rightContent={
@@ -169,6 +174,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 heading={chainInfo.chainName}
                 isActive={chainInfo.chainId === chainStore.current.chainId}
                 rightContent={require("@assets/svg/wireframe/closeImage.svg")}
@@ -292,6 +302,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       ? chainInfo.chainName[0].toUpperCase()
                       : ""
                   }
+                  leftImageStyle={{
+                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                      ? "#dddfdf"
+                      : "transparent",
+                  }}
                   heading={chainInfo.chainName}
                   isActive={chainInfo.chainId === chainStore.current.chainId}
                   rightContent={

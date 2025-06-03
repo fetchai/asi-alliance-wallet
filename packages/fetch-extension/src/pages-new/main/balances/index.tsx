@@ -240,6 +240,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
           }}
         >
           Portfolio
+          <img src={require("@assets/svg/chevron-right.svg")} alt="chevron" />
         </button>
       </div>
     </div>
