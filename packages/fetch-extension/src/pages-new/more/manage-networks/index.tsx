@@ -53,6 +53,11 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
@@ -87,6 +92,11 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
