@@ -519,6 +519,22 @@ export interface FiatOnRampServiceInfo {
   apiKey?: string;
 }
 
+export const BUY_SELL_WHITELISTED_WALLET_ADDRESSES = [
+  "fetch1pmqwfm96llz08df8jnuvyaan2fge9tjl5zs6j8",
+  "fetch12tzfwqmwfde0el0pxqw62ty99x7uf4x8ltmena",
+  "fetch15yy05xnpcjm2hpetxr5rsxt0z7hgl2qxtm9el6",
+  "fetch1f9jjgtaqftn3vcwgg56la7mkr5zmduvpzm7jl5",
+  "fetch10n6jssmvcg0rw0mhxt69kaenw05xq9x4n6q2uv",
+  "fetch14aazuuxuahlq8fdwxa0gsl57hz6qpx5chthz8t",
+  "fetch1pneh5rcwhtfk3zttq3ntuwzejaucmzzdpeqe8z",
+  "0x1E7e88a90cC34DD5F5d3680604ea21ABfd289D3B",
+  "0xfef84804FeB802B2442FdB301F61Dfc31934bFeD",
+  "0xF1709925D4f78e63fA27f9F5b0Dc922b56834925",
+  "0x4cc668edd509877722c6024f71e23F9B9b73829b",
+  "0x4f43FcEe5e06Be34Ca141EfcE2dC91C2EDD7119B",
+  "0x887F0e059e95bf7573E49a9374eEEeE72c89A13c",
+];
+
 export const FiatOnRampServiceInfos: FiatOnRampServiceInfo[] = [
   {
     serviceId: "kado",

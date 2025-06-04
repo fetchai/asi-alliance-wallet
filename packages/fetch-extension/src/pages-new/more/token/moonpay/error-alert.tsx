@@ -9,14 +9,7 @@ export const ErrorAlert: FunctionComponent<{
   return (
     <Alert className={style["alert"]}>
       <img src={require("@assets/svg/wireframe/alert.svg")} alt="" />
-      <div
-        className={style["alertContent"]}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "6px",
-        }}
-      >
+      <div className={style["alertContent"]}>
         <div className={style["text"]}>{title}</div>
         {subtitle && <p className={style["lightText"]}>{subtitle}</p>}
       </div>

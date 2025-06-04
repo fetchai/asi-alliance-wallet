@@ -2,17 +2,17 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { Card } from "@components-v2/card";
 import { Dropdown } from "@components-v2/dropdown";
 import { Input } from "@components-v2/form";
+import { Dec } from "@keplr-wallet/unit";
 import { validateDecimalPlaces } from "@utils/format";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { MoonpayApiKey, MoonpayOnRampApiURL } from "../../../../config.ui";
 import { useStore } from "../../../../stores";
 import { CurrencyList } from "./currency-list";
+import { ErrorAlert } from "./error-alert";
 import styles from "./style.module.scss";
 import { TokenSelect } from "./token-select";
-import { useNavigate } from "react-router";
-import { MoonpayOnRampApiURL, MoonpayApiKey } from "../../../../config.ui";
-import { ErrorAlert } from "./error-alert";
-import { Dec } from "@keplr-wallet/unit";
 import { signMoonPayUrl } from "./utils";
 
 export const BuyToken: FunctionComponent<{
@@ -25,7 +25,6 @@ export const BuyToken: FunctionComponent<{
   const chainId = chainStore.current.chainId;
   const currentChain = chainStore.current.chainName;
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const defaultCurrency = allowedCurrencyList?.[0]?.code;
   const defaultAddress =
     accountStore.getAccount(chainId)[
       isEvm ? "ethereumHexAddress" : "bech32Address"
@@ -34,8 +33,7 @@ export const BuyToken: FunctionComponent<{
   const [token, setToken] = useState("");
   const [tokenCode, setTokenCode] = useState("");
   const [amountError, setAmountError] = useState("");
-  const [selectedCurrency, setSelectedCurrency] =
-    useState<any>(defaultCurrency);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("usd");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [moonpayBuyAmount, setMoonpayBuyAmount] = useState({
     min: null,
@@ -44,13 +42,12 @@ export const BuyToken: FunctionComponent<{
 
   // get redirect URL onramp
   const redirectURL = async () => {
-    const fiatCurrency = selectedCurrency || defaultCurrency;
     const BASE_URL = MoonpayOnRampApiURL;
     const API_KEY = MoonpayApiKey;
     const params = new URLSearchParams({
       apiKey: API_KEY,
       currencyCode: tokenCode,
-      baseCurrencyCode: fiatCurrency,
+      baseCurrencyCode: selectedCurrency,
       baseCurrencyAmount: String(amount),
       walletAddress: defaultAddress,
       showWalletAddressForm: "true",
@@ -62,15 +59,14 @@ export const BuyToken: FunctionComponent<{
   };
 
   useEffect(() => {
-    const currencyCode = selectedCurrency || defaultCurrency;
     const currency = allowedCurrencyList?.find(
-      (item: any) => item.code === currencyCode
+      (item: any) => item.code === selectedCurrency
     );
     setMoonpayBuyAmount({
       min: currency?.minBuyAmount ? currency?.minBuyAmount : null,
       max: currency?.maxBuyAmount ? currency?.maxBuyAmount : null,
     });
-  }, [allowedCurrencyList, selectedCurrency, defaultCurrency]);
+  }, [allowedCurrencyList, selectedCurrency]);
 
   const onTokenSelect = (token: any) => {
     setToken(token?.coinDenom);
@@ -80,12 +76,9 @@ export const BuyToken: FunctionComponent<{
   const isAmountEmpty =
     amount === "" || amount === "0" || !tokenCode || parseFloat(amount) === 0;
 
-  const currency =
-    selectedCurrency || defaultCurrency
-      ? `(in ${
-          selectedCurrency?.toUpperCase() || defaultCurrency?.toUpperCase()
-        })`
-      : "";
+  const currency = selectedCurrency
+    ? `(in ${selectedCurrency?.toUpperCase()})`
+    : "";
 
   return (
     <div style={{ marginBottom: "60px" }}>
@@ -116,9 +109,7 @@ export const BuyToken: FunctionComponent<{
           }
         }}
         heading="Fiat Currency"
-        subheading={
-          selectedCurrency?.toUpperCase() || defaultCurrency?.toUpperCase()
-        }
+        subheading={selectedCurrency?.toUpperCase()}
         rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
       />
       <Input

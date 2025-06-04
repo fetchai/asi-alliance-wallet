@@ -13,16 +13,20 @@ import {
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { moonpaySupportedTokensByChainId } from "./token/moonpay/utils";
-import { useMoonpayCurrency } from "@utils/moonpay-currency";
+import {
+  useMoonpayCurrency,
+  checkAddressIsBuySellWhitelisted,
+} from "@utils/moonpay-currency";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
-  const { chainStore, analyticsStore, keyRingStore } = useStore();
+  const { chainStore, analyticsStore, keyRingStore, accountStore } = useStore();
   const navigate = useNavigate();
   const currentChain = chainStore.current;
   const chainId = currentChain.chainId;
+  const accountInfo = accountStore.getAccount(chainId);
   const { data } = useMoonpayCurrency();
 
   const allowedTokenList = data?.filter(
@@ -56,6 +60,17 @@ export const MorePage: FunctionComponent = () => {
   }, []);
 
   // const isEvm = chainStore.current.features?.includes("evm") ?? false;
+
+  // check if address is whitelisted for Buy/Sell feature
+  const isAddressWhitelisted = accountInfo?.bech32Address
+    ? checkAddressIsBuySellWhitelisted(
+        chainStore.current.chainId === "1" ||
+          chainStore.current.chainId === "injective-1"
+          ? accountInfo.ethereumHexAddress || ""
+          : accountInfo.bech32Address
+      )
+    : false;
+
   return (
     <HeaderLayout
       innerStyle={{
@@ -106,7 +121,8 @@ export const MorePage: FunctionComponent = () => {
       />
       {currentChain?.raw?.type !== "testnet" &&
       moonpaySupportedTokens?.length > 0 &&
-      !currentChain.beta ? (
+      !currentChain.beta &&
+      isAddressWhitelisted ? (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{
