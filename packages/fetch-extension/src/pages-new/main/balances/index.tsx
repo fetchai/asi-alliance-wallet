@@ -130,8 +130,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        chainStore.current.chainId === "1" ||
-          chainStore.current.chainId === "injective-1"
+        current.chainId === "1" || current.chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )

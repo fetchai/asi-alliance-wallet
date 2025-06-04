@@ -64,8 +64,7 @@ export const MorePage: FunctionComponent = () => {
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        chainStore.current.chainId === "1" ||
-          chainStore.current.chainId === "injective-1"
+        chainId === "1" || chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )
