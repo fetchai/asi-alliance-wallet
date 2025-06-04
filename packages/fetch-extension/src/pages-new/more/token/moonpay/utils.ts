@@ -3,7 +3,7 @@ import axios from "axios";
 
 export const signMoonPayUrl = async (urlToSign: string): Promise<string> => {
   try {
-    const BASE_URL = "https://companion.sandbox-london-b.fetch-ai.com";
+    const BASE_URL = "https://hub.fetch.ai";
     const response = await axios.get(`${BASE_URL}/api/moonpay-sign-url`, {
       params: { url: urlToSign },
     });
@@ -31,9 +31,16 @@ export const getCurrencyCodeForMoonpay = (coinDenom: string | undefined) => {
 };
 
 export const moonpayTokenCode = (chainId: string, coinDenom: string) => {
-  return chainId === "1" && coinDenom === "FET"
-    ? "fet_eth"
-    : getCurrencyCodeForMoonpay(coinDenom);
+  if (chainId === "1" && coinDenom === "FET") return "fet_eth";
+  if (chainId === "noble-1" && coinDenom === "USDC") return "usdc_noble";
+  if (
+    coinDenom === "USDC" ||
+    chainId === "sifchain-1" ||
+    chainId === "axelar-dojo-1" ||
+    (chainId === "injective-1" && coinDenom === "USDT")
+  )
+    return undefined;
+  return getCurrencyCodeForMoonpay(coinDenom);
 };
 
 export const moonpaySupportedTokensByChainId = (

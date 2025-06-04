@@ -21,7 +21,10 @@ import { VestingType } from "@keplr-wallet/stores";
 import { clearDecimals } from "../sign/decimals";
 import { Link } from "react-router-dom";
 import { FormattedMessage } from "react-intl";
-import { useMoonpayCurrency } from "@utils/moonpay-currency";
+import {
+  useMoonpayCurrency,
+  checkAddressIsBuySellWhitelisted,
+} from "@utils/moonpay-currency";
 import { moonpaySupportedTokensByChainId } from "../more/token/moonpay/utils";
 
 export const AssetView = observer(() => {
@@ -48,8 +51,7 @@ export const AssetView = observer(() => {
   const current = chainStore.current;
   const queries = queriesStore.get(current.chainId);
   const accountInfo = accountStore.getAccount(current.chainId);
-  const isNetworkSepolia = chainStore.current.chainId === "11155111";
-  const { data } = useMoonpayCurrency(isNetworkSepolia);
+  const { data } = useMoonpayCurrency();
 
   const allowedTokenList = data?.filter(
     (item: any) =>
@@ -176,6 +178,15 @@ export const AssetView = observer(() => {
   };
 
   const isSendDisabled = activityStore.getPendingTxnTypes[TXNTYPE.send];
+
+  // check if address is whitelisted for Buy/Sell feature
+  const isAddressWhitelisted = accountInfo?.bech32Address
+    ? checkAddressIsBuySellWhitelisted(
+        current.chainId === "1" || current.chainId === "injective-1"
+          ? accountInfo.ethereumHexAddress || ""
+          : accountInfo.bech32Address
+      )
+    : false;
 
   return (
     <HeaderLayout showTopMenu={true} onBackButton={() => navigate(-1)}>
@@ -497,8 +508,9 @@ export const AssetView = observer(() => {
           </div>
           <p className={style["tokenActionTitle"]}>Receive</p>
         </div>
-        {/* TODO: remove this sepolia check */}
-        {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+        {moonpaySupportedTokens?.length > 0 &&
+        !current.beta &&
+        isAddressWhitelisted ? (
           <div
             className={style["tokenAction"]}
             onClick={() => navigate("/more/token/moonpay")}

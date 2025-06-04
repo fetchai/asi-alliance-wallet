@@ -5,12 +5,9 @@ import { Input } from "@components-v2/form";
 import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { validateDecimalPlaces } from "@utils/format";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useState, useEffect } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import {
-  MoonpayApiKey,
-  MOONPAY_OFFRAMP_SANDBOX_URL,
-} from "../../../../config.ui";
+import { MoonpayApiKey, MoonpayOffRampApiURL } from "../../../../config.ui";
 import { useStore } from "../../../../stores";
 import { CurrencyList } from "./currency-list";
 import { ErrorAlert } from "./error-alert";
@@ -27,15 +24,11 @@ export const SellToken: FunctionComponent<{
   const { chainStore, accountStore, queriesStore } = useStore();
   const chainId = chainStore.current.chainId;
   const chainName = chainStore.current.chainName;
-  const defaultCurrency = allowedCurrencyList?.[0]?.code;
-  const [token, setToken] = useState(
-    chainStore?.current.currencies?.[0]?.coinDenom
-  );
+  const [token, setToken] = useState("");
   const [amountError, setAmountError] = useState("");
   const [amount, setAmount] = useState("0");
   const [maxToggle, setMaxToggle] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] =
-    useState<any>(defaultCurrency);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("usd");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [tokenCode, setTokenCode] = useState("");
   const [moonpaySellAmount, setMoonpaySellAmount] = useState({
@@ -79,15 +72,13 @@ export const SellToken: FunctionComponent<{
   const balanceETH =
     balancesMap.get(coinMinimalDenom) || new CoinPretty(currency, new Int(0));
 
-  // get redirect URL sandbox offramp
+  // get redirect URL offramp
   const redirectURL = async () => {
-    // const BASE_URL = MoonpayOffRampApiURL;
-    const BASE_URL = MOONPAY_OFFRAMP_SANDBOX_URL;
+    const BASE_URL = MoonpayOffRampApiURL;
     const API_KEY = MoonpayApiKey;
-    const fiatCurrency = selectedCurrency || defaultCurrency;
     const params = new URLSearchParams({
       apiKey: API_KEY,
-      quoteCurrencyCode: fiatCurrency,
+      quoteCurrencyCode: selectedCurrency,
       baseCurrencyCode: tokenCode,
       baseCurrencyAmount: String(amount),
       walletAddress: defaultAddress,
@@ -110,7 +101,8 @@ export const SellToken: FunctionComponent<{
       min: token?.minSellAmount ? token?.minSellAmount : null,
       max: token?.maxSellAmount ? token?.maxSellAmount : null,
     });
-    setTokenCode(token?.code);
+    setToken(token?.coinDenom);
+    setTokenCode(token?.moonpayData?.code);
   };
 
   useEffect(() => {
@@ -120,7 +112,7 @@ export const SellToken: FunctionComponent<{
       setAmountError(`Amount should be >= ${min}`);
     } else if (max !== null && new Dec(amountInput).gt(new Dec(max))) {
       setAmountError(`Amount should be <= ${max}`);
-    } else if (new Dec(amount).gt(new Dec(availableBalance))) {
+    } else if (new Dec(amountInput).gt(new Dec(availableBalance))) {
       setAmountError("Amount exceeds available balance");
     } else {
       setAmountError("");
@@ -156,9 +148,7 @@ export const SellToken: FunctionComponent<{
           }
         }}
         heading="Fiat Currency"
-        subheading={
-          selectedCurrency?.toUpperCase() || defaultCurrency?.toUpperCase()
-        }
+        subheading={selectedCurrency?.toUpperCase()}
         rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
       />
       <Input
@@ -201,7 +191,11 @@ export const SellToken: FunctionComponent<{
             Use Max
           </div>
         }
-        error={amountError}
+        error={
+          parseFloat(availableBalance) === 0
+            ? "Insufficient wallet balance."
+            : amountError
+        }
       />
       {!tokenCode && !coinListLoading ? (
         <ErrorAlert title="Sell feature is not supported for this token" />
