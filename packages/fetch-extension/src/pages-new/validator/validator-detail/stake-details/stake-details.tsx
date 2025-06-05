@@ -149,10 +149,8 @@ export const StakeDetails = observer(
 
           <div className={style["stake-buttons"]}>
             <ButtonV2
+              variant="light"
               styleProps={{
-                border: "1px solid rgba(255,255,255,0.4)",
-                background: "transparent",
-                color: "white",
                 height: "36px",
                 display: "flex",
                 alignItems: "center",
@@ -171,10 +169,8 @@ export const StakeDetails = observer(
             />
 
             <ButtonV2
+              variant="dark"
               styleProps={{
-                background:
-                  "linear-gradient(270deg, #F9774B 10.08%, #cf447b 70.82%",
-                color: "white",
                 height: "36px",
                 display: "flex",
                 alignItems: "center",

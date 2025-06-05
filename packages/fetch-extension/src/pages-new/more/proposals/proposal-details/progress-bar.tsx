@@ -28,7 +28,7 @@ export const ProgressBar = ({
         display: "flex",
         alignItems: "center",
         position: "relative",
-        backgroundColor: "#f3f3f3",
+        backgroundColor: "#f6f6f6",
       }}
     >
       <div

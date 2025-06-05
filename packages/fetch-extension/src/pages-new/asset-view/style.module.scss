@@ -7,7 +7,7 @@
   height: 48px;
   width: 48px;
   border-radius: 150px;
-  background: #f3f3f3;
+  background: $card-bg;
   font-size: 24px;
   display: flex;
   align-items: center;
@@ -39,7 +39,7 @@
   flex-direction: column;
 }
 .your-bal {
-  color: rgba(255, 255, 255, 0.6);
+  color: #a1a3a3;
   font-family: $font-family-base;
   font-size: 12px;
 }
@@ -68,7 +68,7 @@
   color: #a1a3a3;
 }
 .inUsd {
-  color: $font-grey;
+  color: #a1a3a3;
   font-size: 14px;
 }
 
@@ -211,24 +211,26 @@
   cursor: pointer;
 
   .tokenActionLogo {
-    background-color: white;
+    background-color: $bg-dark;
     padding: 12px 24px;
     border-radius: 24px;
     width: 72px;
     height: 42px;
     display: flex;
     justify-content: center;
+    color: $font-dark;
     align-items: center;
 
     img {
       height: 16px;
+      filter: invert(1);
     }
   }
 
   .tokenActionTitle {
     font-size: 16px;
     font-weight: 400;
-    color: white;
+    color: $font-dark;
   }
 
   &:hover {
