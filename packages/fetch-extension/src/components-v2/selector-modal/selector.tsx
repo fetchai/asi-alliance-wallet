@@ -43,14 +43,13 @@ export const SelectorModal = ({
         ...styleProps,
       }}
     >
-      <div className={style["selector-container"]} style={{ color: "white" }}>
+      <div className={style["selector-container"]}>
         {items.map((item) => {
           return (
             <div
               className={style["selector-element"]}
               style={{
-                background:
-                  item.key === selectedKey ? "#5F38FB" : "transparent",
+                background: item.key === selectedKey ? "#E0FEDD" : "#F6F6F6",
               }}
               key={item.key}
               onClick={() => {

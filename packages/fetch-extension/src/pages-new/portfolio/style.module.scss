@@ -15,7 +15,7 @@
   font-weight: 500;
   line-height: normal;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.1);
+  background: $card-bg;
   padding: 16px;
   margin-bottom: 35px;
 }
@@ -43,7 +43,7 @@
   gap: 12px;
 }
 .label {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
@@ -51,7 +51,7 @@
   line-height: normal;
 }
 .value {
-  color: #fff;
+  color: $font-dark;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
@@ -83,6 +83,7 @@
   font-weight: 400;
   text-align: center;
   line-height: 28.8px;
+  color: $bg-dark;
 }
 
 .claim-rewards-dropdown-subtitle {
@@ -90,7 +91,7 @@
   font-weight: 400;
   text-align: center;
   line-height: 28.8px;
-  color: rgba(255, 255, 255, 0.8);
+  color: $font-secondary;
 }
 
 .claim-rewards-reward {
@@ -102,4 +103,24 @@
   align-items: center;
   border-radius: 12px;
   height: 45px;
+
+  .label {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 17.5px;
+    color: $font-dark;
+  }
+
+  .value {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 17.5px;
+    color: $font-secondary;
+  }
+}
+
+.amountInUSD {
+  font-size: 14px;
+  font-weight: 400;
+  color: $font-secondary;
 }

@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .validator-details-container {
   display: flex;
   flex-direction: column;
@@ -25,11 +27,12 @@
 }
 
 .stake-data-title {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-dark;
 }
 
 .stake-data-value {
   font-weight: 500;
+  color: $font-secondary;
 }
 
 .stake-buttons {

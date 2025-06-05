@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .stake-validator-container {
   display: flex;
   padding: 18px;
@@ -6,8 +8,48 @@
   gap: 16px;
   align-self: stretch;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: "white";
+  background: $card-bg;
+  font-family: $font-family-base;
+  cursor: pointer;
+  color: $font-dark;
+
+  .seperator {
+    opacity: 0.2;
+    background: grey;
+    height: 1px;
+    width: 99%;
+    margin: 0 auto;
+  }
+
+  .validator {
+    font-size: 14px;
+    font-weight: 400;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .validator-details-title {
+    color: $font-dark;
+    font-weight: 400;
+  }
+
+  .validator-details-value {
+    color: $font-secondary;
+    font-weight: 400;
+  }
+
+  .validator-avatar {
+    width: 32px;
+    height: 28px;
+    border-radius: 100%;
+    color: $font-dark;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(221, 223, 223, 0.8);
+    margin-top: 6px;
+  }
 
   .validator-info {
     display: flex;
@@ -36,8 +78,27 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+
+        .validator-name {
+          font-size: 16px;
+          font-weight: 500;
+          color: $font-dark;
+        }
+
+        .validator-address {
+          font-size: 12px;
+          font-weight: 400;
+          color: $font-secondary;
+        }
       }
     }
+  }
+
+  .validator-explorer-link {
+    color: $bg-green-dark;
+    font-size: 12px;
+    font-weight: 400;
+    cursor: pointer;
   }
 
   .validator-details {

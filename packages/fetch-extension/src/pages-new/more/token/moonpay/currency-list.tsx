@@ -50,7 +50,7 @@ export const CurrencyList: FunctionComponent<{
               <div
                 style={{
                   color:
-                    selectedCurrency === fiatCurrency.code ? "#f3f3f3" : "gray",
+                    selectedCurrency === fiatCurrency.code ? "#f6f6f6" : "gray",
                   margin: "4px",
                 }}
               >

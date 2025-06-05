@@ -1,3 +1,5 @@
+@import "../../../../styles/var";
+
 .row {
   display: flex;
   flex-direction: column;
@@ -68,7 +70,7 @@
 }
 
 .validator-currency {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
   font-weight: 400;
 }
 
@@ -78,13 +80,13 @@
   justify-content: space-between;
   align-items: start;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
 }
 
 .show-rewards {
   display: flex;
   flex-direction: column;
-  color: white;
+  color: $font-dark;
   gap: 16px;
 }
 
@@ -93,8 +95,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-
-  img {
+  background: #f3f3f3 img {
     height: 32px;
     width: 32px;
     border-radius: 100%;
@@ -110,11 +111,53 @@
 
 .reward-title {
   font-weight: 400;
+  color: $font-dark;
 }
 
 .reward-amount {
   font-size: 14px;
-  color: white;
+  color: $font-secondary;
   opacity: 60%;
   font-weight: 400;
+}
+
+.validator-avatar {
+  width: 32px;
+  height: 28px;
+  border-radius: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(221, 223, 223, 0.8);
+  margin-top: 6px;
+}
+
+.label {
+  color: $font-dark;
+  font-family: $font-family-base;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.total-rewards {
+  font-weight: 400;
+  color: rgba($font-dark, 0.9);
+
+  & > span {
+    color: $font-secondary;
+  }
+}
+
+.right-col {
+  .amount {
+    color: rgba($font-dark, 0.9);
+  }
+}
+
+.rewards-toggle {
+  font-size: 12px;
+  color: $font-secondary;
+  padding-right: 5px;
 }

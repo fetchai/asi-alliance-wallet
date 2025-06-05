@@ -69,26 +69,14 @@ export const ValidatorDetails = observer(
             amount?.maxDecimals(4).trim(true).toString().split(" ")[0]
           ) > 0.00001 && <StakeDetails validatorAddress={validatorAddress} />}
 
-        <div
-          className={style["validator-buttons"]}
-          // style={{
-          //   position: "fixed",
-          //   bottom: "15px",
-          //   margin: "0 auto",
-          //   left: 0,
-          //   right: 0,
-          //   width: "336px",
-          // }}
-        >
+        <div className={style["validator-buttons"]}>
           {amount &&
             parseFloat(
               amount?.maxDecimals(4).trim(true).toString().split(" ")[0]
             ) > 0.00001 && (
               <ButtonV2
+                variant="light"
                 styleProps={{
-                  border: "1px solid rgba(255,255,255,0.4)",
-                  background: "transparent",
-                  color: "white",
                   height: "56px",
                   display: "flex",
                   alignItems: "center",
@@ -113,6 +101,7 @@ export const ValidatorDetails = observer(
             )}
 
           <ButtonV2
+            variant="dark"
             styleProps={{
               height: "56px",
               display: "flex",

@@ -104,18 +104,7 @@ export const MyValidator = observer(() => {
                 {thumbnail ? (
                   <img src={thumbnail} alt={"validator"} />
                 ) : (
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "28px",
-                      borderRadius: "100%",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      background: "rgba(255, 255, 255, 0.1)",
-                      marginTop: "6px",
-                    }}
-                  >
+                  <div className={styles["validator-avatar"]}>
                     {val.description.moniker?.toString()[0].toUpperCase()}
                   </div>
                 )}
@@ -139,7 +128,7 @@ export const MyValidator = observer(() => {
 
                     {amountFiatCurrency && (
                       <div className={styles["right-col"]}>
-                        <span>
+                        <span className={styles["amount"]}>
                           {amountFiatCurrency
                             .shrink(true)
                             .maxDecimals(6)
@@ -159,7 +148,7 @@ export const MyValidator = observer(() => {
                     style={{
                       width: "100%",
                       height: "1px",
-                      background: "rgba(255,255,255,0.2)",
+                      background: "#e8e8e8",
                     }}
                   />
 
@@ -179,7 +168,7 @@ export const MyValidator = observer(() => {
                         fontWeight: 400,
                       }}
                     >
-                      <span style={{ fontWeight: 400, color: "white" }}>
+                      <span>
                         {reward
                           .maxDecimals(2)
                           .trim(true)
