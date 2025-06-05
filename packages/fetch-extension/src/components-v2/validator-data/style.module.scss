@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .validator-data-container {
   display: flex;
   flex-direction: column;
@@ -32,13 +34,13 @@
 
 .address {
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba($font-dark, 0.8);
 }
 
 .validator-description {
   font-weight: 400;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba($font-dark, 0.8);
   line-height: 22.4px;
 }
 
@@ -58,14 +60,26 @@
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid $bg-grey-dark;
 }
 
 .table-row-title {
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-dark;
 }
 
 .table-row-value {
   font-weight: 500;
+  color: $font-secondary;
+}
+
+.validator-avatar {
+  width: 32px;
+  height: 28px;
+  border-radius: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(221, 223, 223, 0.8);
+  margin-top: 6px;
 }

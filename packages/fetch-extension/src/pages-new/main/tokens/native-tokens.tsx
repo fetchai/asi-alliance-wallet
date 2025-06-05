@@ -115,7 +115,7 @@ export const NativeTokens = observer(() => {
         />
       ) : (
         <Card
-          subheadingStyle={{ fontSize: "14px" }}
+          subheadingStyle={{ fontSize: "14px", fontWeight: 400 }}
           style={{ marginBottom: "8px" }}
           leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
           heading={totalDenom}
@@ -131,11 +131,19 @@ export const NativeTokens = observer(() => {
           }}
           rightContent={
             totalPrice && (
-              <div>
+              <div
+                style={{
+                  display: "flex",
+                  columnGap: "3px",
+                  alignItems: "center",
+                }}
+              >
                 {totalPrice.toString()}{" "}
                 <span
                   style={{
-                    color: "rgba(255,255,255,0.4)",
+                    color: "#737676",
+                    fontSize: "12px",
+                    fontWeight: 400,
                   }}
                 >
                   {fiatCurrency.toUpperCase()}

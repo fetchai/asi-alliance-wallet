@@ -165,8 +165,8 @@ export const Dashboard = observer(() => {
     datasets: [
       {
         data: [spendableNumber, stakedBalInUI, rewardsBalInUI, vestingBalInUI],
-        backgroundColor: ["#CFC3FE", "#5F38FB", "#F9774B", "#FAB29B"],
-        hoverBackgroundColor: ["#CFC3FE", "#5F38FB", "#F9774B", "#FAB29B"],
+        backgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
+        hoverBackgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
         borderColor: "transparent",
       },
     ],
@@ -192,8 +192,8 @@ export const Dashboard = observer(() => {
                 src={
                   stakableInFiatCurrency !== undefined &&
                   stakableInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-light-purple-long.svg")
-                    : require("@assets/svg/wireframe/legend-light-purple.svg")
+                    ? require("@assets/svg/wireframe/legend-light-green-long.svg")
+                    : require("@assets/svg/wireframe/legend-light-green.svg")
                 }
                 alt=""
               />
@@ -219,13 +219,7 @@ export const Dashboard = observer(() => {
                 {isLoaded ? (
                   stakableInFiatCurrency !== undefined &&
                   stakableInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {stakableInFiatCurrency}
                     </div>
                   ) : null
@@ -239,8 +233,8 @@ export const Dashboard = observer(() => {
                 src={
                   stakedInFiatCurrency !== undefined &&
                   stakedInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-purple-long.svg")
-                    : require("@assets/svg/wireframe/legend-purple.svg")
+                    ? require("@assets/svg/wireframe/legend-sky-long.svg")
+                    : require("@assets/svg/wireframe/legend-sky.svg")
                 }
                 alt=""
               />
@@ -267,13 +261,7 @@ export const Dashboard = observer(() => {
                 {isLoaded ? (
                   stakedInFiatCurrency !== undefined &&
                   stakedInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {stakedInFiatCurrency}
                     </div>
                   ) : null
@@ -287,8 +275,8 @@ export const Dashboard = observer(() => {
                 src={
                   rewardsInFiatCurrency !== undefined &&
                   rewardsInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-orange-long.svg")
-                    : require("@assets/svg/wireframe/legend-orange.svg")
+                    ? require("@assets/svg/wireframe/legend-dark-green-long.svg")
+                    : require("@assets/svg/wireframe/legend-dark-green.svg")
                 }
                 alt=""
               />
@@ -314,13 +302,7 @@ export const Dashboard = observer(() => {
                 {isLoaded ? (
                   rewardsInFiatCurrency !== undefined &&
                   rewardsInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {rewardsInFiatCurrency}
                     </div>
                   ) : null

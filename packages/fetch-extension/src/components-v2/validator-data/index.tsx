@@ -110,17 +110,7 @@ export const ValidatorData = observer(
             {thumbnail ? (
               <img src={thumbnail} alt={"validator"} />
             ) : (
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "100%",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  background: "rgba(255, 255, 255, 0.1)",
-                }}
-              >
+              <div className={style["validator-avatar"]}>
                 {validator.description.moniker?.toString()[0].toUpperCase()}
               </div>
             )}
