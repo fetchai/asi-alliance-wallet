@@ -1,7 +1,7 @@
 @import "../../styles/var";
 
 .title {
-  color: var(--grey-white, #fff);
+  color: $font-dark;
   font-family: $font-family-base;
   font-size: 32px;
   font-style: normal;
@@ -41,15 +41,16 @@
 }
 
 .label {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
+
 .value {
-  color: #fff;
+  color: $font-dark;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
@@ -69,7 +70,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: $font-dark;
   font-family: $font-family-base;
   padding: 32px 0 40px 0;
   gap: 6px;
@@ -100,6 +101,12 @@
   text-align: center;
   width: 80%;
   font-weight: 400;
-  color: #ffff;
+  color: $font-secondary;
   opacity: 80%;
+}
+
+.amountInUSD {
+  font-size: 14px;
+  font-weight: 400;
+  color: $font-secondary;
 }

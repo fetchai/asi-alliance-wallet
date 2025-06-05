@@ -472,10 +472,7 @@ export const AssetView = observer(() => {
             {isSendDisabled ? (
               <i className="fas fa-spinner fa-spin ml-2 mr-2" />
             ) : (
-              <img
-                src={require("@assets/svg/wireframe/arrow-up-gradient.svg")}
-                alt=""
-              />
+              <img src={require("@assets/svg/wireframe/arrow-up.svg")} alt="" />
             )}
           </div>
           <p className={style["tokenActionTitle"]}>Send</p>
@@ -490,10 +487,7 @@ export const AssetView = observer(() => {
           }}
         >
           <div className={style["tokenActionLogo"]}>
-            <img
-              src={require("@assets/svg/wireframe/arrow-down-gradient.svg")}
-              alt=""
-            />
+            <img src={require("@assets/svg/wireframe/arrow-down.svg")} alt="" />
           </div>
           <p className={style["tokenActionTitle"]}>Receive</p>
         </div>
@@ -505,7 +499,7 @@ export const AssetView = observer(() => {
           >
             <div className={style["tokenActionLogo"]}>
               <img
-                src={require("@assets/svg/wireframe/plus-minus-gradient.svg")}
+                src={require("@assets/svg/wireframe/plus-minus.svg")}
                 alt=""
               />
             </div>
