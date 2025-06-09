@@ -7,7 +7,10 @@ import { Card } from "@components-v2/card";
 import style from "./style.module.scss";
 import { Dropdown } from "@components-v2/dropdown";
 import { TXNTYPE } from "../../../config";
-import { useMoonpayCurrency } from "@utils/moonpay-currency";
+import {
+  useMoonpayCurrency,
+  checkAddressIsBuySellWhitelisted,
+} from "@utils/moonpay-currency";
 import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
 
 interface WalletActionsProps {
@@ -29,8 +32,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     const chainId = chainStore.current.chainId;
     const accountInfo = accountStore.getAccount(chainId);
     const queries = queriesStore.get(chainId);
-    const isNetworkSepolia = chainStore.current.chainId === "11155111";
-    const { data } = useMoonpayCurrency(isNetworkSepolia);
+    const { data } = useMoonpayCurrency();
 
     const allowedTokenList = data?.filter(
       (item: any) =>
@@ -57,6 +59,15 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
       return stakable.balance.toDec().gt(new Dec(0));
     }, [stakable.balance]);
     console.log(isStakableExist);
+
+    // check if address is whitelisted for Buy/Sell feature
+    const isAddressWhitelisted = accountInfo?.bech32Address
+      ? checkAddressIsBuySellWhitelisted(
+          chainId === "1" || chainId === "injective-1"
+            ? accountInfo.ethereumHexAddress || ""
+            : accountInfo.bech32Address
+        )
+      : false;
 
     return (
       <div className={style["actions"]}>
@@ -111,9 +122,9 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
               });
             }}
           />
-
-          {/* TODO: remove this sepolia check */}
-          {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+          {moonpaySupportedTokens?.length > 0 &&
+          !chainStore.current.beta &&
+          isAddressWhitelisted ? (
             <Card
               leftImageStyle={{
                 background: "transparent",

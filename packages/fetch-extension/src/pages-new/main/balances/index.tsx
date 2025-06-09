@@ -11,7 +11,10 @@ import { Skeleton } from "@components-v2/skeleton-loader";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { useQuery } from "@tanstack/react-query";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { useMoonpayCurrency } from "@utils/moonpay-currency";
+import {
+  checkAddressIsBuySellWhitelisted,
+  useMoonpayCurrency,
+} from "@utils/moonpay-currency";
 import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
 
 interface Props {
@@ -71,8 +74,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     activityStore.getAddress !== accountInfo.bech32Address ||
     activityStore.getChainId !== current.chainId;
 
-  const isNetworkSepolia = chainStore.current.chainId === "11155111";
-  const { data } = useMoonpayCurrency(isNetworkSepolia);
+  const { data } = useMoonpayCurrency();
 
   const rewards = useQuery({
     queryKey: ["rewards", accountInfo.bech32Address, current.chainId],
@@ -124,6 +126,15 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     tokenState.type === "positive"
       ? style["increaseInDollarsGreen"]
       : style["increaseInDollarsOrange"];
+
+  // check if address is whitelisted for Buy/Sell feature
+  const isAddressWhitelisted = accountInfo?.bech32Address
+    ? checkAddressIsBuySellWhitelisted(
+        current.chainId === "1" || current.chainId === "injective-1"
+          ? accountInfo.ethereumHexAddress || ""
+          : accountInfo.bech32Address
+      )
+    : false;
 
   return (
     <div className={style["balance-card"]}>
@@ -216,7 +227,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
         </div>
       )}
       <div className={style["btnContainer"]}>
-        {moonpaySupportedTokens?.length > 0 && isNetworkSepolia ? (
+        {moonpaySupportedTokens?.length > 0 &&
+        !current.beta &&
+        isAddressWhitelisted ? (
           <button
             className={`${style["portfolio"]} ${style["buy"]}`}
             onClick={() => {

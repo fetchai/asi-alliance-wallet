@@ -46,7 +46,7 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
           );
           return { ...item, moonpayData };
         }) || [];
-      onTokenSelect(tokens?.[0]?.moonpayData);
+      onTokenSelect(tokens?.[0]);
       setTokenList(tokens);
     }, [chainId, allowedTokenList, type]);
 
@@ -54,7 +54,7 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
       <div style={{ marginBottom: "20px" }}>
         <Card
           heading={`Select Token (to ${type})`}
-          subheading={token}
+          subheading={token || "Not Supported"}
           rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
           style={{
             height: "80px",
@@ -87,7 +87,7 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
                   key={index}
                   onClick={() => {
                     handleChainSelect(tokenInfo.coinDenom);
-                    onTokenSelect(tokenInfo?.moonpayData);
+                    onTokenSelect(tokenInfo);
                   }}
                 />
               )
