@@ -91,6 +91,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     },
     refetchInterval: 3600 * 1000,
     refetchOnMount: false,
+    enabled: !current?.features?.includes("evm"),
     staleTime: accountOrChainChanged ? 0 : 3600 * 1000,
   });
 

@@ -311,25 +311,49 @@ export class ChainUpdaterService {
   }
 
   protected async checkChainIdFromRPC(rpc: string): Promise<string> {
-    const statusResponse = await simpleFetch<
-      | {
-          result: {
+    const isInfura = rpc.includes("infura.io");
+    if (isInfura) {
+      const response = await fetch(rpc, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "eth_chainId",
+          params: [],
+          id: 1,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.result) {
+        throw new Error("Invalid response from Infura RPC");
+      }
+
+      return parseInt(data.result, 16).toString(); // Convert hex to decimal string
+    } else {
+      const statusResponse = await simpleFetch<
+        | {
+            result: {
+              node_info: {
+                network: string;
+              };
+            };
+          }
+        | {
             node_info: {
               network: string;
             };
-          };
-        }
-      | {
-          node_info: {
-            network: string;
-          };
-        }
-    >(rpc + "/status");
+          }
+      >(rpc + "/status");
 
-    if ("result" in statusResponse.data) {
-      return statusResponse.data.result.node_info.network;
+      if ("result" in statusResponse.data) {
+        return statusResponse.data.result.node_info.network;
+      }
+
+      return statusResponse.data.node_info.network;
     }
-
-    return statusResponse.data.node_info.network;
   }
 }
