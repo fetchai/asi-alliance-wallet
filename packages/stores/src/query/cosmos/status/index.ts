@@ -55,6 +55,12 @@ export class ObservableQueryRPCStatus extends ObservableChainQueryRPC<
     super(kvStore, chainId, chainGetter, "/status");
   }
 
+  protected override canFetch(): boolean {
+    // avoid fetching the endpoint for evm networks
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    return !chainInfo?.features?.includes("evm");
+  }
+
   get network(): string | undefined {
     if (!this.response) {
       return undefined;

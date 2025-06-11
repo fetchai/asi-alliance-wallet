@@ -131,28 +131,31 @@ export const WalletDetailsView = observer(
       /*  this is required because accountInit sets the nodes on reload, 
           so we wait for accountInit to set the proposal nodes and then we 
           store the proposal votes from api in activity store */
-      const timeout = setTimeout(async () => {
-        const nodes = activityStore.sortedNodesProposals;
-        if (nodes.length === 0) {
-          const nodes = await fetchProposalNodes(
-            "",
-            current.chainId,
-            accountInfo.bech32Address
-          );
-          if (nodes.length) {
-            nodes.forEach((node: any) => activityStore.addProposalNode(node));
+      if (!isEvm) {
+        const timeout = setTimeout(async () => {
+          const nodes = activityStore.sortedNodesProposals;
+          if (nodes.length === 0) {
+            const nodes = await fetchProposalNodes(
+              "",
+              current.chainId,
+              accountInfo.bech32Address
+            );
+            if (nodes.length) {
+              nodes.forEach((node: any) => activityStore.addProposalNode(node));
+            }
           }
-        }
-      }, 100);
+        }, 100);
 
-      return () => {
-        clearTimeout(timeout);
-      };
+        return () => {
+          clearTimeout(timeout);
+        };
+      }
     }, [
       accountInfo.bech32Address,
       current.chainId,
       accountOrChainChanged,
       activityStore,
+      isEvm,
     ]);
 
     useEffect(() => {
@@ -160,7 +163,7 @@ export const WalletDetailsView = observer(
         activityStore.setAddress(accountInfo.bech32Address);
         activityStore.setChainId(current.chainId);
       }
-      if (accountInfo.bech32Address !== "") {
+      if (accountInfo.bech32Address !== "" && !isEvm) {
         activityStore.accountInit();
       }
     }, [
@@ -168,6 +171,7 @@ export const WalletDetailsView = observer(
       current.chainId,
       accountOrChainChanged,
       activityStore,
+      isEvm,
     ]);
 
     useEffect(() => {

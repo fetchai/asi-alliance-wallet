@@ -157,6 +157,11 @@ export async function checkChainFeatures(
   const newFeatures: string[] = [];
   const features = chainInfo.features?.slice() ?? [];
 
+  // avoid checking for evm networks
+  if (features.includes("evm")) {
+    return newFeatures;
+  }
+
   for (const method of RecognizableChainFeaturesMethod) {
     if (features.includes(method.feature)) {
       continue;

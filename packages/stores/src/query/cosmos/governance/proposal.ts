@@ -25,7 +25,12 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
   }
 
   protected override canFetch(): boolean {
-    return this.proposalStatus === ProposalStatus.VOTING_PERIOD;
+    // avoid fetching the endpoint for evm networks
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    return (
+      this.proposalStatus === ProposalStatus.VOTING_PERIOD &&
+      !chainInfo?.features?.includes("evm")
+    );
   }
 
   get raw(): DeepReadonly<Proposal> {
