@@ -1,13 +1,12 @@
 import { NameAddress } from "@chatTypes";
-import { formatAddress } from "./format";
-import { GroupEvent } from "./group-events";
 import {
   CHAIN_ID_DORADO,
-  CHAIN_ID_ERIDANUS,
   CHAIN_ID_FETCHHUB,
   CHAIN_ID_LOCAL_TEST_NETWORK,
   CHAIN_ID_REMOTE_TEST_NETWORK,
 } from "../config.ui.var";
+import { formatAddress } from "./format";
+import { GroupEvent } from "./group-events";
 
 // translate the contact address into the address book name if it exists
 export function getUserName(
@@ -63,7 +62,6 @@ export function isFeatureAvailable(chainId: string): boolean {
   return [
     CHAIN_ID_FETCHHUB,
     CHAIN_ID_DORADO,
-    CHAIN_ID_ERIDANUS,
     CHAIN_ID_LOCAL_TEST_NETWORK,
     CHAIN_ID_REMOTE_TEST_NETWORK,
   ].includes(chainId);

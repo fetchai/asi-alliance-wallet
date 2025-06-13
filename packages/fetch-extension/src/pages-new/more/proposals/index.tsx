@@ -12,11 +12,7 @@ import { getFilteredProposals } from "@utils/filters";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
 import { ProposalType } from "src/@types/proposal-type";
-import {
-  CHAIN_ID_DORADO,
-  CHAIN_ID_ERIDANUS,
-  CHAIN_ID_FETCHHUB,
-} from "../../../config.ui.var";
+import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
 import { ErrorActivity } from "../../activity/error-activity";
 import { NoActivity } from "../../activity/no-activity";
 import { UnsupportedNetwork } from "../../activity/unsupported-network";
@@ -317,7 +313,6 @@ const isChainIdSupported = (chainId: string) => {
   return (
     chainId === CHAIN_ID_FETCHHUB ||
     chainId === CHAIN_ID_DORADO ||
-    chainId === CHAIN_ID_ERIDANUS ||
     chainId === "test" ||
     chainId === "test-local"
   );

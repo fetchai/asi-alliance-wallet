@@ -2917,7 +2917,7 @@ const EmbedChainInfos: ChainInfo[] = [
     rest: "https://rest-dorado.fetch.ai",
     chainId: "dorado-1",
     chainName: "Dorado",
-    hideInUI: true,
+    hideInUI: false,
     stakeCurrency: {
       coinDenom: "TESTFET",
       coinMinimalDenom: "atestfet",
@@ -2960,53 +2960,54 @@ const EmbedChainInfos: ChainInfo[] = [
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
   },
-  {
-    rpc: "https://rpc-eridanus-1.fetch.ai",
-    rest: "https://rest-eridanus-1.fetch.ai",
-    chainId: "eridanus-1",
-    chainName: "Eridanus Testnet",
-    stakeCurrency: {
-      coinDenom: "TESTASI",
-      coinMinimalDenom: "atestasi",
-      coinDecimals: 18,
-      coinGeckoId: "fetch-ai",
-    },
-    type: "testnet",
-    bip44: {
-      coinType: 118,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("asi"),
-    currencies: [
-      {
-        coinDenom: "TESTASI",
-        coinMinimalDenom: "atestasi",
-        coinDecimals: 18,
-        coinGeckoId: "fetch-ai",
-      },
-      {
-        coinDenom: "MOBX",
-        coinMinimalDenom: "nanomobx",
-        coinDecimals: 9,
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "TESTASI",
-        coinMinimalDenom: "atestasi",
-        coinDecimals: 18,
-        coinGeckoId: "fetch-ai",
-        gasPriceStep: {
-          low: 0,
-          average: 5000000000,
-          high: 6250000000,
-        },
-      },
-    ],
-    features: ["cosmwasm"],
-    chainSymbolImageUrl: require("./public/assets/png/Black-white-circle.png"),
-    walletUrlForStaking: "https://explore-eridanus-1.fetch.ai/validators",
-    govUrl: "https://explore-eridanus-1.fetch.ai/proposals/",
-  },
+  // {
+  //   rpc: "https://rpc-eridanus-1.fetch.ai",
+  //   rest: "https://rest-eridanus-1.fetch.ai",
+  //   chainId: "eridanus-1",
+  //   chainName: "Eridanus Testnet",
+  //   hideInUI: true,
+  //   stakeCurrency: {
+  //     coinDenom: "TESTASI",
+  //     coinMinimalDenom: "atestasi",
+  //     coinDecimals: 18,
+  //     coinGeckoId: "fetch-ai",
+  //   },
+  //   type: "testnet",
+  //   bip44: {
+  //     coinType: 118,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("asi"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "TESTASI",
+  //       coinMinimalDenom: "atestasi",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //     },
+  //     {
+  //       coinDenom: "MOBX",
+  //       coinMinimalDenom: "nanomobx",
+  //       coinDecimals: 9,
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "TESTASI",
+  //       coinMinimalDenom: "atestasi",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //       gasPriceStep: {
+  //         low: 0,
+  //         average: 5000000000,
+  //         high: 6250000000,
+  //       },
+  //     },
+  //   ],
+  //   features: ["cosmwasm"],
+  //   chainSymbolImageUrl: require("./public/assets/png/Black-white-circle.png"),
+  //   walletUrlForStaking: "https://explore-eridanus-1.fetch.ai/validators",
+  //   govUrl: "https://explore-eridanus-1.fetch.ai/proposals/",
+  // },
 ];
 
 // The origins that are able to pass any permission that external webpages can have.
