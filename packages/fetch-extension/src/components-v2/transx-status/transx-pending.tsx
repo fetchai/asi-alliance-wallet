@@ -14,10 +14,8 @@ export const TransxPending = () => {
         Transaction has been broadcasted to blockchain and pending confirmation
       </div>
       <ButtonV2
+        variant="dark"
         styleProps={{
-          color: "white",
-          background: "transparent",
-          border: "1px solid rgba(255,255,255,0.6)",
           height: "56px",
         }}
         onClick={() => navigate("/")}

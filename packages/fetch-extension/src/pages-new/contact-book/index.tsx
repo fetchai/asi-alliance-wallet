@@ -226,27 +226,23 @@ export const ContactBookPage: FunctionComponent<{
               />
             )}
           />
-          <div>
+          <div className={style["noAddressMessage"]}>
             {addressBookConfig.addressBookDatas.length === 0 && (
-              <div
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 400,
-                  opacity: 0.8,
-                  textAlign: "center",
-                  color: "white",
-                }}
-              >
-                You haven’t saved any addresses yet
-              </div>
+              <React.Fragment>
+                <img
+                  src={require("@assets/svg/wireframe/no-address.svg")}
+                  alt=""
+                />
+                <div className={style["message"]}>
+                  You haven’t saved any addresses yet
+                </div>
+              </React.Fragment>
             )}
           </div>
           <ButtonV2
+            variant="dark"
             styleProps={{
               height: "56px",
-              background: "transparent",
-              border: "1px solid rgba(255,255,255,0.4)",
-              color: "white",
               marginTop: "24px",
             }}
             text={"Add an address"}

@@ -146,7 +146,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
         <FormGroup className={styleCoinInput["input-size"]}>
           <div className={styleCoinInput["input-container"]}>
             <div className={styleCoinInput["amount-label"]}>
-              <div>Amount</div>
+              <div>ENTER AMOUNT</div>
             </div>
             <div className={styleCoinInput["input-wrapper"]}>
               <input
@@ -248,7 +248,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                   onPress ? onPress() : amountConfig.toggleIsMax();
                 }}
               >
-                Use max available
+                Use max
               </button>
             ) : null}
           </div>
@@ -331,12 +331,11 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
 
   return (
     <React.Fragment>
-      <Label style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
-        Asset
-      </Label>
+      <Label className={styleCoinInput["label"]}>Asset</Label>
       <Card
         style={{
-          backgroundColor: "rgba(255,255,255,0.1)",
+          border: "1px solid #E8E8E8",
+          background: "#FFF",
           padding: "12px 18px",
           marginBottom: "0px",
         }}
@@ -351,7 +350,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
         subheading={
           <div
             style={{
-              color: "rgba(255,255,255,0.6)",
+              color: "#737676",
               fontSize: "12px",
             }}
           >
