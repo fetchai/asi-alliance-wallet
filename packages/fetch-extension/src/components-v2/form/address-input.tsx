@@ -183,7 +183,7 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
         <div className={styleAddressInput["label"]}>{label}</div>
         <Card
           style={{
-            padding: "12px 18px",
+            padding: "12px 10px",
             background: "transparent",
             border: "1px solid #d0d1d1",
           }}
