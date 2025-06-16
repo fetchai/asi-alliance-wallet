@@ -22,8 +22,7 @@ export const GasAutoContainer: FunctionComponent<{
         >
           <div
             style={{
-              color: "rgba(255,255,255,0.6)",
-              fontFamily: "Lexend",
+              color: "#737676",
               fontSize: "14px",
               fontWeight: 400,
             }}
@@ -32,8 +31,8 @@ export const GasAutoContainer: FunctionComponent<{
           </div>
           <Card
             style={{
-              background: "rgba(255,255,255,0.1)",
-              color: "rgba(255,255,255,0.6)",
+              background: "#ffffff",
+              border: "1px solid #E8E8E8",
               padding: "12px 18px",
               height: "48px",
             }}
@@ -75,8 +74,7 @@ export const GasAutoContainer: FunctionComponent<{
         >
           <div
             style={{
-              color: "rgba(255,255,255,0.6)",
-              fontFamily: "Lexend",
+              color: "#737676",
               fontSize: "14px",
               fontWeight: 400,
             }}
@@ -85,8 +83,8 @@ export const GasAutoContainer: FunctionComponent<{
           </div>
           <Card
             style={{
-              background: "rgba(255,255,255,0.1)",
-              color: "rgba(255,255,255,0.6)",
+              background: "#ffffff",
+              border: "1px solid #E8E8E8",
               padding: "12px 18px",
               height: "48px",
             }}
@@ -112,8 +110,7 @@ export const GasAutoContainer: FunctionComponent<{
       >
         <div
           style={{
-            color: "rgba(255,255,255,0.6)",
-            fontFamily: "Lexend",
+            color: "#737676",
             fontSize: "14px",
             fontWeight: 400,
           }}
@@ -122,10 +119,10 @@ export const GasAutoContainer: FunctionComponent<{
         </div>
         <Card
           style={{
-            background: "rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.6)",
-            height: "48px",
+            background: "#ffffff",
+            border: "1px solid #E8E8E8",
             padding: "12px 18px",
+            height: "48px",
           }}
           heading={
             <Input
