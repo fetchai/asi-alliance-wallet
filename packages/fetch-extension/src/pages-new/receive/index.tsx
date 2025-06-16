@@ -72,7 +72,6 @@ export const Receive: FunctionComponent = () => {
         </div>
         <Card
           style={{
-            background: "rgba(255, 255, 255, 0.10)",
             marginBottom: "24px",
           }}
           headingStyle={{
@@ -83,9 +82,12 @@ export const Receive: FunctionComponent = () => {
           rightContentOnClick={() => copyAddress(accountInfo.bech32Address)}
         />
         <div className={StyleQrCode["depositWarning"]}>
-          Deposits must be using the {chainStore.current.chainName} Network. Do
-          not send token from other networks to this address or they may be
-          lost.
+          <img src={require("@assets/svg/info-mark.svg")} alt="" />
+          <div>
+            Deposits must be using the {chainStore.current.chainName} Network.
+            Do not send token from other networks to this address or they may be
+            lost.
+          </div>
         </div>
       </div>
     </HeaderLayout>

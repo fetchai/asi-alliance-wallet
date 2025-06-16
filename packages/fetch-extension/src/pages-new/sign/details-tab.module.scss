@@ -16,6 +16,7 @@
   flex: 1;
   max-height: 155px;
   overflow-y: scroll;
+  color: $font-secondary;
 
   hr {
     margin: 8px 0;
@@ -29,7 +30,7 @@
     gap: 144px;
     align-self: stretch;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
+    background: $card-bg;
     .contentContainer {
       display: flex;
       flex: 1;
@@ -41,7 +42,7 @@
       }
 
       .content {
-        color: #fff;
+        color: $font-secondary;
         font-family: $font-family-base;
         font-size: 12px;
         font-style: normal;
@@ -84,7 +85,8 @@
   gap: 144px;
   align-self: stretch;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  color: $font-secondary;
+  background: $card-bg;
   word-break: break-word;
 }
 
