@@ -107,13 +107,7 @@ export const DetailsTab: FunctionComponent<{
       <div className={styleDetailsTab["container"]}>
         <Label
           for="signing-messages"
-          className="form-control-label"
-          style={{
-            display: "flex",
-            fontWeight: 400,
-            fontSize: "14px",
-            color: "#737676",
-          }}
+          className={styleDetailsTab["signMessageLabel"]}
         >
           {msgs.length} <FormattedMessage id="sign.list.messages.label" />
         </Label>
@@ -136,14 +130,14 @@ export const DetailsTab: FunctionComponent<{
           </div>
         ) : (
           <div>
-            <Label
-              for="memo"
-              className="form-control-label"
-              style={{ color: "#737676", fontWeight: 400 }}
-            >
+            <Label for="memo" className={styleDetailsTab["label"]}>
               <FormattedMessage id="sign.info.memo" />
             </Label>
-            <div id="memo" style={{ marginBottom: "18px" }}>
+            <div
+              id="memo"
+              style={{ marginBottom: "18px" }}
+              className={styleDetailsTab["memoInput"]}
+            >
               <div
                 className={styleDetailsTab["cards"]}
                 style={{ color: memoConfig.memo ? undefined : "inherit" }}
@@ -166,10 +160,7 @@ export const DetailsTab: FunctionComponent<{
           />
         ) : (
           <React.Fragment>
-            <Label
-              for="fee-price"
-              className={`form-control-label ${styleDetailsTab["feePriceLabel"]}`}
-            >
+            <Label for="fee-price" className={styleDetailsTab["label"]}>
               <FormattedMessage id="sign.info.fee" />
             </Label>
             <div

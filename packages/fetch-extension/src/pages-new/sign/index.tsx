@@ -332,6 +332,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                 {keyRingStore.keyRingType === "ledger" &&
                 approveButtonClicked ? (
                   <ButtonV2
+                    variant="dark"
                     styleProps={{
                       position: "fixed",
                       bottom: "12px",
@@ -349,6 +350,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                   />
                 ) : (
                   <ButtonV2
+                    variant="dark"
                     styleProps={{
                       position: "fixed",
                       bottom: "12px",
