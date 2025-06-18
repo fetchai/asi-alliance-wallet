@@ -10,6 +10,22 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+
+  .label {
+    color: $font-secondary;
+    font-weight: 400;
+    font-size: 14px;
+  }
+
+  .signMessageLabel {
+    @extend .label;
+    color: $font-secondary;
+  }
+
+  .memoInput {
+    @extend .label;
+    margin-bottom: 8px;
+  }
 }
 
 .msgContainer {
@@ -37,6 +53,7 @@
       flex-direction: column;
 
       .contentTitle {
+        color: $font-secondary;
         font-size: 16px;
         font-weight: 400;
       }
@@ -48,7 +65,6 @@
         font-style: normal;
         font-weight: 400;
         line-height: 24px;
-        opacity: 0.6;
       }
     }
   }
@@ -56,14 +72,14 @@
 
 .ethLedgerBlindSigningWarning {
   padding: 20px 0;
-  background: #f7f9fc;
+  background: $card-bg;
   border-radius: 6px;
 
   .title {
     font-weight: 600;
     font-size: 14px;
     line-height: 20px;
-    color: #323c4a;
+    color: $font-dark;
     margin-bottom: 10px;
     margin-left: 28px;
   }
@@ -71,7 +87,7 @@
   .list {
     font-size: 14px;
     line-height: 20px;
-    color: #566172;
+    color: $font-secondary;
     padding-inline-start: 36px;
     margin-bottom: 0;
   }
@@ -88,11 +104,6 @@
   color: $font-secondary;
   background: $card-bg;
   word-break: break-word;
-}
-
-.feePriceLabel {
-  color: #fff;
-  opacity: 0.6;
 }
 
 .feePrice {
