@@ -58,7 +58,6 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
           rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
           style={{
             height: "80px",
-            background: "rgba(255,255,255,0.1)",
           }}
           onClick={() => {
             if (tokenList.length > 0) {
@@ -79,9 +78,7 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
                 <Card
                   style={{
                     background:
-                      tokenInfo.coinDenom === token
-                        ? "var(--Indigo---Fetch, #5F38FB)"
-                        : "rgba(255, 255, 255, 0.1)",
+                      tokenInfo.coinDenom === token ? "#E0FEDD" : "#F6F6F6",
                   }}
                   heading={tokenInfo.coinDenom}
                   key={index}

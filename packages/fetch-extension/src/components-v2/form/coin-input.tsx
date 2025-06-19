@@ -141,6 +141,9 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
       }
     }, [inputInFiatCurrency, isToggleClicked]);
 
+    const currency =
+      priceStore.supportedVsCurrencies[fiatCurrency]?.currency?.toUpperCase();
+
     return (
       <React.Fragment>
         <FormGroup className={styleCoinInput["input-size"]}>
@@ -215,7 +218,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
               {isToggleClicked ||
               amountConfig.sendCurrency["coinGeckoId"] == undefined
                 ? `${amountConfig.amount} ${amountConfig.sendCurrency.coinDenom}`
-                : inputInFiatCurrency}
+                : `${inputInFiatCurrency} ${currency}`}
             </div>
             {errorText != null ? (
               <div className={styleCoinInput["errorText"]}>{errorText}</div>
