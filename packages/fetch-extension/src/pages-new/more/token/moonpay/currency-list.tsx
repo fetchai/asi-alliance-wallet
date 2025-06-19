@@ -34,8 +34,8 @@ export const CurrencyList: FunctionComponent<{
               style={{
                 background:
                   selectedCurrency === fiatCurrency.code
-                    ? "var(--Indigo---Fetch, #5F38FB)"
-                    : "rgba(255, 255, 255, 0.1)",
+                    ? "#E0FEDD"
+                    : "#F6F6F6",
               }}
               onClick={() => handleClick(fiatCurrency.code)}
             >
@@ -50,7 +50,7 @@ export const CurrencyList: FunctionComponent<{
               <div
                 style={{
                   color:
-                    selectedCurrency === fiatCurrency.code ? "#f6f6f6" : "gray",
+                    selectedCurrency === fiatCurrency.code ? "#737676" : "gray",
                   margin: "4px",
                 }}
               >

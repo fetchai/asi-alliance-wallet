@@ -104,7 +104,9 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
           style={{
             paddingLeft: "18px",
           }}
-          leftImageStyle={{ background: "transparent" }}
+          leftImageStyle={{
+            background: "transparent",
+          }}
           heading={intl.formatMessage({
             id: "setting.autolock",
           })}
