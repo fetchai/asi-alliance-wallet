@@ -21,7 +21,7 @@
   /* padding-bottom: 16px; */
   /* margin-bottom: 16px; */
   margin-top: 56px;
-  color: white;
+  color: $font-dark;
 }
 
 .tabContainer {
@@ -51,7 +51,7 @@
   margin: 0 auto;
 }
 .noActivityTitle {
-  color: #fff;
+  color: $font-dark;
   text-align: center;
   font-family: $font-family-base;
   font-size: 24px;
@@ -60,7 +60,7 @@
   line-height: 34px;
 }
 .content {
-  color: rgba(255, 255, 255, 0.8);
+  color: $font-secondary;
   text-align: center;
   font-family: $font-family-base;
   font-size: 14px;
@@ -78,7 +78,7 @@
   gap: 8px;
   flex: 1 0 0;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $border-grey;
   backdrop-filter: blur(10px);
   margin-bottom: 24px;
 }

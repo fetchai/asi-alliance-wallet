@@ -274,6 +274,7 @@ export const AddEvmChain: FunctionComponent = () => {
     >
       <Form onSubmit={handleSubmit} className={style["container"]}>
         <Input
+          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="RPC URL"
           type="text"
@@ -282,19 +283,9 @@ export const AddEvmChain: FunctionComponent = () => {
           onChange={handleChange}
           required
         />
-        {info && (
-          <p
-            style={{
-              color: "rgba(255, 255, 255, 0.6)",
-              fontSize: "12px",
-              marginTop: "4px",
-              marginBottom: "0px",
-            }}
-          >
-            {info}
-          </p>
-        )}
+        {info && <p className={style["infoMessage"]}>{info}</p>}
         <Input
+          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Chain id"
           type="text"
@@ -304,6 +295,7 @@ export const AddEvmChain: FunctionComponent = () => {
           required
         />
         <Input
+          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Network Name"
           type="text"
@@ -313,6 +305,7 @@ export const AddEvmChain: FunctionComponent = () => {
           required
         />
         <Input
+          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Symbol"
           type="text"
@@ -322,6 +315,7 @@ export const AddEvmChain: FunctionComponent = () => {
           required
         />
         <Input
+          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Decimal"
           type="number"
@@ -331,6 +325,7 @@ export const AddEvmChain: FunctionComponent = () => {
           required
         />
         <Input
+          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Explorer Url"
           type="text"
@@ -339,19 +334,17 @@ export const AddEvmChain: FunctionComponent = () => {
           onChange={handleChange}
         />
         <ButtonV2
+          variant="dark"
           styleProps={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "transparent",
-            border: "1px solid rgba(255,255,255,0.4)",
-            color: "white",
             height: "48px",
             fontSize: "14px",
             fontWeight: 400,
           }}
           disabled={!isValid}
-          text={"Add Chain"}
+          text="Add Chain"
         />
       </Form>
     </HeaderLayout>

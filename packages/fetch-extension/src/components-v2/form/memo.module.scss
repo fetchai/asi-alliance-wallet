@@ -7,7 +7,6 @@
   font-style: normal;
   font-weight: 400;
   line-height: 24px;
-  margin-bottom: 8px;
 }
 
 .inputContainer {
@@ -23,7 +22,7 @@
   color: $font-dark !important;
   height: 48px !important;
   font-weight: 400 !important;
-  border: 1.5px solid #d0d1d1;
+  border: 1.5px solid $border-grey;
   border-radius: 12px;
   padding: 12px 18px;
   background: transparent;
