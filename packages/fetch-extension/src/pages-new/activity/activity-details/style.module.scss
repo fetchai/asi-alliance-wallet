@@ -9,7 +9,7 @@
   font-style: normal;
   font-weight: 400;
   //   line-height: 34px;
-  color: #fff;
+  color: $font-dark;
   text-align: center;
   font-family: $font-family-base;
 
@@ -17,6 +17,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    color: $font-dark;
     justify-content: center;
     align-items: center;
   }
@@ -33,11 +34,13 @@
 
 .verb {
   font-size: 24px;
+  color: $font-dark;
 }
+
 .time {
   font-size: 16px;
-  opacity: 0.8;
   font-weight: 400;
+  color: $font-secondary;
 }
 
 .card {
@@ -45,13 +48,13 @@
   display: flex;
   flex-direction: column;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: $card-bg;
 }
 .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: white;
+  color: $font-dark;
   font-size: 14px;
   font-family: $font-family-base;
   margin: 5px;
@@ -70,7 +73,7 @@
 .hr {
   border: none;
   height: 0.5px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba($font-secondary, 0.2);
 }
 .buttons {
   display: flex;

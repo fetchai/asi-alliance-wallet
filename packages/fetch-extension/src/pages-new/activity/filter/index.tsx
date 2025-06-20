@@ -94,7 +94,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
             <Card
               leftImage={option.icon}
               leftImageStyle={{
-                backgroundColor: "transparent",
                 height: "18px",
                 width: "18px",
                 borderRadius: 0,
@@ -104,11 +103,11 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 selectedFilter.includes(option.value)
                   ? {
                       width: "100%",
-                      background: "var(--Indigo---Fetch, #5F38FB)",
+                      background: "#E0FEDD",
                     }
                   : {
                       width: "100%",
-                      background: "rgba(255,255,255,0.1)",
+                      background: "#f6f6f6",
                       cursor: "pointer",
                     }
               }
@@ -135,6 +134,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
         ))}
       </div>
       <ButtonV2
+        variant="dark"
         styleProps={{
           minHeight: "56px",
         }}

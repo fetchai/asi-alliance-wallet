@@ -51,7 +51,6 @@ export const SettingConnectionsPage: FunctionComponent = observer(() => {
         {basicAccessInfo.origins.map((origin) => {
           return (
             <Card
-              style={{ background: "rgba(255,255,255,0.1)" }}
               heading={formatString(origin)}
               key={origin}
               onClick={async (e: { preventDefault: () => void }) => {
