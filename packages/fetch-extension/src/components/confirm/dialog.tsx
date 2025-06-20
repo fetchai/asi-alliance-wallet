@@ -40,9 +40,6 @@ export const ConfirmDialog: FunctionComponent<{
               padding: "10px",
               height: "40px",
               fontSize: "0.9rem",
-              background: "transparent",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.4)",
             }}
             onClick={(e: any) => {
               if (onReject) {
@@ -53,14 +50,12 @@ export const ConfirmDialog: FunctionComponent<{
           />
         )}
         <ButtonV2
+          variant="dark"
           text={yes ? yes : <FormattedMessage id="confirm.yes" />}
           styleProps={{
             padding: "10px",
             height: "40px",
             fontSize: "0.9rem",
-            background: "white",
-            color: "black",
-            border: "1px solid rgba(255,255,255,0.4)",
           }}
           onClick={useCallback(
             (e: any) => {

@@ -1,19 +1,16 @@
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/functions";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/mixins";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
+@import "../../styles/var";
 
 .modal {
   padding: 15px 12px 15px;
-  background-color: #000d3d;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  background-image: url("../../public/assets/svg/wireframe/bg.svg");
+  background-color: white;
+  color: $font-dark;
 }
 
 .modalBackdrop {
-  background: rgba(39, 14, 141, 0.8);
+  background: #151a1a99;
   backdrop-filter: blur(3px);
   opacity: 1 !important;
 }
@@ -45,7 +42,7 @@
     h1 {
       text-align: center;
       font-size: 1.15rem;
-      color: white;
+      color: $font-dark;
       font-weight: bold;
       margin: 0;
     }
@@ -54,7 +51,7 @@
       margin-bottom: 0;
       text-align: center;
       font-size: 0.9rem;
-      color: white;
+      color: $font-secondary;
       font-weight: normal;
       line-height: 1.4;
     }

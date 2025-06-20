@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .container {
   .title {
     display: flex;
@@ -7,8 +9,8 @@
   .dropdown {
     min-width: 160px;
     height: 46px;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: white;
+    color: $font-dark;
 
     button {
       min-width: 160px;

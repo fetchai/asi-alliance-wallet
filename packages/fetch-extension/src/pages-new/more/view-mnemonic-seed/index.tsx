@@ -215,6 +215,7 @@ export const ExportPage: FunctionComponent = observer(() => {
                 })}
               />
               <ButtonV2
+                variant="dark"
                 text={
                   loading ? (
                     <i className="fas fa-spinner fa-spin ml-2" />

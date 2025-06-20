@@ -205,13 +205,11 @@ export const ProposalDetail = observer(() => {
 
           <ButtonV2
             text={voteText}
+            variant={voted !== "Unspecified" ? "dark" : "light"}
             styleProps={{
               width: "100%",
               padding: "12px",
               height: "56px",
-              background: voted !== "Unspecified" ? "transparent" : "",
-              color: voted !== "Unspecified" ? "white" : "",
-              border: "1px solid rgba(255,255,255,0.4)",
             }}
             disabled={!voteEnabled || !accountInfo.isReadyToSendTx}
             onClick={() => {

@@ -181,7 +181,7 @@ export const NativeTab = observer(() => {
           {shouldDisplayDate && (
             <div
               className={styles["rowSubtitle"]}
-              style={{ marginTop: "12px" }}
+              style={{ margin: "12px 0px" }}
             >
               {currentDate}
             </div>

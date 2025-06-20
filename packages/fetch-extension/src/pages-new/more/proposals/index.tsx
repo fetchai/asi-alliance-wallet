@@ -287,10 +287,8 @@ const GovtProposalFilterDropdown = ({
         <ButtonV2
           text=""
           disabled={selectedFilter === appliedFilter}
+          variant="dark"
           styleProps={{
-            border: "1px solid rgba(255,255,255,0.4)",
-            background: selectedFilter === appliedFilter ? "transparent" : "",
-            color: selectedFilter === appliedFilter ? "white" : "",
             height: "56px",
             display: "flex",
             alignItems: "center",

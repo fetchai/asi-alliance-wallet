@@ -83,6 +83,7 @@ export const AddAddress: FunctionComponent<{
             {intl.formatMessage({ id: "setting.address-book.name" })}
           </Label>
           <Input
+            formGroupClassName={style["formGroupInput"]}
             className={style["input"]}
             type="text"
             placeholder="Enter nickname"

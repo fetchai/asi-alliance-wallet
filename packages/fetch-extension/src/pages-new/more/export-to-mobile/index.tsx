@@ -94,8 +94,8 @@ export const ExportToMobilePage: FunctionComponent = () => {
         }}
         isOpen={isDropdownOpen}
         setIsOpen={setIsDropdownOpen}
-        title=""
-        showCloseIcon={false}
+        title="Enter your password to view your QR code"
+        showCloseIcon={true}
       >
         <EnterPasswordToExportKeyRingView
           onSetExportKeyRingDatas={setExportKeyRingDatas}
@@ -134,16 +134,6 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
 
   return (
     <div className={style["container"]}>
-      <div
-        style={{
-          fontSize: "18px",
-          fontWeight: 400,
-          textAlign: "center",
-          padding: "0 22px",
-        }}
-      >
-        Enter your password to view your QR code
-      </div>
       <Form
         onSubmit={handleSubmit(async (data) => {
           setLoading(true);

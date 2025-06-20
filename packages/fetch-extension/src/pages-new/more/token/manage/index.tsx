@@ -195,7 +195,6 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
               <Card
                 key={cosmwasmToken.contractAddress}
                 style={{
-                  background: "rgba(255,255,255,0.1)",
                   width: "92%",
                 }}
                 heading={cosmwasmToken.coinDenom}
@@ -213,15 +212,7 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
             );
           })
         ) : (
-          <div
-            style={{
-              width: "90%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              flexDirection: "column",
-            }}
-          >
+          <div className={style["noTokenWrapper"]}>
             <NoToken />
             <ButtonV2
               styleProps={{

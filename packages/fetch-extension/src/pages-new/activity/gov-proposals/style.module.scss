@@ -1,7 +1,9 @@
+@import "../../../styles/var";
+
 .rowSubtitle {
   font-size: 14px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
   display: flex;
   column-gap: 4px;
   align-items: center;
@@ -12,6 +14,7 @@
   padding: 16px;
   margin: 0px -12px;
   width: 333px;
+  color: $font-dark;
 }
 
 .title {
@@ -20,6 +23,7 @@
   font-weight: 500;
   font-size: 20px;
   padding-bottom: 16px;
+  color: $font-dark;
 }
 
 .activityCol {
@@ -42,12 +46,12 @@
 .hr {
   border: none;
   height: 0.5px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba($font-secondary, 0.2);
 }
 
 .activityRow {
   font-style: Lexend;
-  color: white;
+  color: $font-dark;
   font-size: 14px;
   display: flex;
   align-items: flex-start;

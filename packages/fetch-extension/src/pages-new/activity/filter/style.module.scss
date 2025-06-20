@@ -1,9 +1,11 @@
+@import "../../../styles/var";
+
 .dropdown-container {
   position: relative;
 }
 
 .dropdown {
-  color: white !important;
+  color: $font-dark !important;
   font-size: 12px;
   position: absolute;
   top: -196px;
@@ -11,12 +13,12 @@
   height: 32px;
   padding: 6px 12px;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $border-grey;
   backdrop-filter: blur(10px);
   width: 22%;
 }
 .dropdown:hover {
-  border: 1px solid white;
+  opacity: 0.9;
 }
 
 .dropdownHeading {
@@ -27,12 +29,13 @@
   display: flex;
   height: 32px;
   padding: 6px 12px;
+  color: $font-dark;
   justify-content: center;
   align-items: center;
   gap: 8px;
   flex: 1 0 0;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $border-grey;
   backdrop-filter: blur(10px);
   margin-bottom: 24px;
 }

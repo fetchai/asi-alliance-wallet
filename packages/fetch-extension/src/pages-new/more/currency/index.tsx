@@ -49,7 +49,7 @@ export const CurrencyPge: FunctionComponent = observer(() => {
           style={
             language.isFiatCurrencyAutomatic
               ? {
-                  background: "var(--Indigo---Fetch, #5F38FB)",
+                  background: "#E0FEDD",
                   marginBottom: "5px",
                 }
               : { marginBottom: "5px" }
