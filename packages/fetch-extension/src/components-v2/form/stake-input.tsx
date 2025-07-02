@@ -17,9 +17,10 @@ import { useLanguage } from "../../languages";
 
 export const StakeInput: FunctionComponent<{
   label: string;
+  availableBalance?: string;
   isToggleClicked?: boolean;
   amountConfig: IAmountConfig;
-}> = observer(({ label, amountConfig, isToggleClicked }) => {
+}> = observer(({ label, amountConfig, availableBalance, isToggleClicked }) => {
   const { priceStore } = useStore();
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
@@ -98,9 +99,9 @@ export const StakeInput: FunctionComponent<{
         rightIcon={
           <div
             style={{
-              fontSize: "14px",
+              fontSize: "16px",
               fontWeight: 400,
-              color: "rgba(255,255,255,0.6)",
+              color: "#737676",
             }}
           >
             {isToggleClicked
@@ -131,6 +132,21 @@ export const StakeInput: FunctionComponent<{
               : amountConfig.setAmount(value);
           }
         }}
+        bottomContent={
+          <div
+            style={{
+              fontSize: "12px",
+              fontWeight: 400,
+              color: "#737676",
+              padding: "0px 10px",
+              marginBottom: "4px",
+            }}
+          >
+            {`${intl.formatMessage({
+              id: "unstake.available",
+            })} ${availableBalance}`}
+          </div>
+        }
       />
 
       {error && (

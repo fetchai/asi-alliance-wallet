@@ -116,7 +116,10 @@ export const MyValidator = observer(() => {
                         {val.description.moniker?.trim()}
                       </div>
                       <div>
-                        <span className={styles["validator-currency"]}>
+                        <span
+                          className={styles["validator-currency"]}
+                          style={{ color: "#737676" }}
+                        >
                           {amount
                             .maxDecimals(4)
                             .trim(true)
@@ -135,7 +138,10 @@ export const MyValidator = observer(() => {
                             .trim(true)
                             .toString()}
                         </span>
-                        <span className={styles["validator-currency"]}>
+                        <span
+                          className={styles["validator-currency"]}
+                          style={{ color: "#737676" }}
+                        >
                           {" "}
                           {fiatCurrency.toUpperCase()}
                         </span>
@@ -168,14 +174,20 @@ export const MyValidator = observer(() => {
                         fontWeight: 400,
                       }}
                     >
-                      <span>
+                      <span className={styles["validator-reward"]}>
                         {reward
                           .maxDecimals(2)
                           .trim(true)
                           .shrink(true)
                           .toString()}
                       </span>
-                      <span style={{ marginLeft: "5px", fontSize: "12px" }}>
+                      <span
+                        style={{
+                          marginLeft: "5px",
+                          fontSize: "12px",
+                          color: "#737676",
+                        }}
+                      >
                         Earned
                       </span>
                     </div>

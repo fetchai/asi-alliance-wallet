@@ -70,7 +70,7 @@
 }
 
 .validator-currency {
-  color: $font-secondary;
+  color: $font-dark;
   font-weight: 400;
 }
 
@@ -95,7 +95,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: #f3f3f3 img {
+  background: #f3f3f3;
+  img {
     height: 32px;
     width: 32px;
     border-radius: 100%;
@@ -133,7 +134,7 @@
 }
 
 .label {
-  color: $font-dark;
+  color: $font-secondary;
   font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
@@ -154,10 +155,13 @@
   .amount {
     color: rgba($font-dark, 0.9);
   }
+  .validator-reward {
+    color: $link-green;
+  }
 }
 
 .rewards-toggle {
   font-size: 12px;
-  color: $font-secondary;
+  color: $link-green;
   padding-right: 5px;
 }
