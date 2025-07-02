@@ -82,6 +82,23 @@ html {
 }
 
 body {
+  --neutral: #{$neutral};
+  --link-green: #{$link-green};
+  --card-bg: #{$card-bg};
+  --bg-dark: #{$bg-dark};
+  --font-dark: #{$font-dark};
+  --font-secondary: #{$font-secondary};
+  --font-grey: #{$font-grey};
+  --bg-index: #{$bg-index};
+  --bg-green-lightest: #{$bg-green-lightest};
+  --bg-green-light: #{$bg-green-light};
+  --bg-green-base: #{$bg-green-base};
+  --bg-green-dark: #{$bg-green-dark};
+  --bg-red-base: #{$bg-red-base};
+  --bg-grey: #{$bg-grey};
+  --bg-grey-dark: #{$bg-grey-dark};
+  --border-grey: #{$border-grey};
+  --border-sky-focus: #{$border-sky-focus};
   width: 100%;
   height: 100%;
   min-height: 600px;

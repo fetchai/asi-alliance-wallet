@@ -170,10 +170,8 @@ export const ImportLedgerPage: FunctionComponent<{
           >
             <Label
               for="name"
+              className={style["label"]}
               style={{
-                color: "rgba(255,255,255,0.6)",
-                fontWeight: 400,
-                fontSize: "14px",
                 marginBottom: "8px",
               }}
             >
@@ -246,6 +244,7 @@ export const ImportLedgerPage: FunctionComponent<{
               <AdvancedBIP44Option bip44Option={bip44Option} />
             </div>
             <ButtonV2
+              variant="dark"
               data-loading={registerConfig.isLoading}
               text={
                 registerConfig.isLoading ? (

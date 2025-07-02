@@ -106,7 +106,6 @@ export const AuthIntro: FunctionComponent<{
         <Card
           leftImageStyle={{ height: "32px", width: "32px" }}
           style={{
-            backgroundColor: "rgba(255,255,255,0.1)",
             height: "78px",
             fontSize: "14px",
             marginBottom: "10px",
@@ -192,14 +191,7 @@ export const AuthPage: FunctionComponent<{
           );
         })}
       >
-        <Label
-          for="name"
-          style={{
-            color: "rgba(255,255,255,0.6)",
-            fontWeight: 550,
-            fontSize: "15px",
-          }}
-        >
+        <Label for="name" className={style["label"]}>
           {intl.formatMessage({ id: "register.name" })}
         </Label>
         <Input
