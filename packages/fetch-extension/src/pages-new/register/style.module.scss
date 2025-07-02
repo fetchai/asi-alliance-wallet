@@ -12,9 +12,7 @@ html[data-register-page="true"] {
   width: 100vw;
   display: flex;
   justify-content: center;
-  background: #000d3d;
-  background-image: url("../../public/assets/svg/wireframe/bg-register.svg");
-  background-size: cover;
+  background-color: white;
 }
 
 html[data-register-page="true"] body {
@@ -73,7 +71,7 @@ html[data-register-page="true"] #app .container {
 
       .icon {
         // height: 100px;
-        width: 215px;
+        width: 80px;
         // position: absolute;
         // top: 5px;
         // right: 45%;
@@ -133,7 +131,7 @@ html[data-register-page="true"] #app .container {
   }
   .newMnemonicContainer {
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
+    background: $card-bg;
     margin-top: 24px;
     margin-bottom: 24px;
     display: flex;
@@ -149,64 +147,68 @@ html[data-register-page="true"] #app .container {
     font-family: $font-family-base;
     font-size: 16px;
     letter-spacing: -0.36px;
-    background: linear-gradient(270deg, #f9774b 3.16%, #cf447b 86.63%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: $font-dark;
     padding: 20px 30px;
   }
   .addressInput {
     height: 53px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
+    color: $font-dark;
+    border: 1px solid $border-grey;
+    background: white;
     border-radius: 10px;
     width: 333px !important;
   }
   .addressInput:hover {
-    border: 1px solid var(--Indigo-Indigo-400, #7655fc);
+    border: 1px solid $border-sky-focus;
   }
 
-  .advanced {
-    color: var(--Grey-White, #fff);
-    width: 114px;
+  .advancedSection {
     display: flex;
-    height: 32px;
-    padding: 6px 18px;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
-    border-radius: 100px;
-    background: rgba(255, 255, 255, 0.2);
+    color: $font-secondary;
+    margin-bottom: 20px;
+  }
+
+  .bip44PathSection {
+    display: flex;
+    align-items: baseline;
+    color: $font-dark;
+    width: 410px;
+
+    & .pathSeperator {
+      margin: 5px;
+      color: $font-dark;
+    }
+  }
+
+  .label {
+    color: $font-secondary;
+    font-size: 14px;
     font-weight: 400;
-    font-size: 12px;
-    width: 152px;
   }
-  .advanced:hover {
-    color: var(--Grey-White, #fff);
-    border: 1px solid var(--Indigo---Fetch, #5f38fb);
-  }
+
   .checkbox {
     font-family: $font-family-base;
     font-size: 16px;
-    color: white;
+    color: $font-secondary;
   }
   .mnemonic {
     font-family: $font-family-base;
     font-size: 16px;
     letter-spacing: -0.36px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
+    background: white;
     padding: 20px 30px;
     text-align: center;
-    color: white;
+    color: $font-dark;
 
     &:read-only {
-      background: rgba(255, 255, 255, 0.1);
+      background: white;
     }
 
     &[readonly] {
-      background: rgba(255, 255, 255, 0.1);
+      background: white;
     }
 
     &::placeholder {
@@ -220,13 +222,13 @@ html[data-register-page="true"] #app .container {
   .input {
     font-family: $font-family-base;
     border-radius: 12px;
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
+    color: $font-dark;
+    background: white;
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: white;
     }
     &:focus {
-      background: rgba(255, 255, 255, 0.1);
+      background: white;
     }
   }
 
@@ -236,7 +238,7 @@ html[data-register-page="true"] #app .container {
     font-size: 14px;
     font-weight: 300;
     text-align: center;
-    color: #9092b6;
+    color: $font-secondary;
   }
 
   hr {
@@ -262,51 +264,50 @@ html[data-register-page="true"] #app .container {
 .button {
   height: 48px;
   display: flex;
+  border-radius: 8px;
   padding: 12px 18px;
   align-items: center;
   gap: 24px;
   flex: 1 0 0;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: white;
   width: 124px;
-  color: white;
+  color: $font-dark;
   justify-content: center;
   margin-bottom: 8px;
-  border: transparent;
+  border: 1px solid $border-grey;
+  box-shadow: none !important;
+  font-weight: 400;
 }
-.button:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid var(--Indigo-Indigo-400, #7655fc);
-}
+.button:hover,
 .button:focus {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  border: 1px solid $border-sky-focus !important;
 }
+
 .btn2 {
   width: 91.5px;
   height: 32px;
-  background: transparent;
-  color: white;
-  border: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: white;
+  color: $font-dark;
+  border: 1px solid $border-grey;
   border-radius: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 4px;
+  font-weight: 400;
+  box-shadow: none !important;
 }
 .btn2:hover {
-  color: white;
-  background: transparent !important;
-  border: 1px solid white;
+  opacity: 0.8;
+  background: white;
+  border: 1px solid $border-grey;
 }
+
 .btn2:disabled {
-  color: white;
+  color: $neutral;
   cursor: not-allowed;
-  opacity: 0.2;
-  background: transparent !important;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: $bg-grey-dark !important;
+  border: 1px solid transparent;
 }
 
 .introIcon {
@@ -347,7 +348,7 @@ html[data-register-page="true"] #app .container {
   }
 }
 .titleText {
-  color: rgba(255, 255, 255, 0.9);
+  color: $font-secondary;
   font-weight: 400;
   font-size: 18px;
   margin-bottom: 27px;
@@ -356,23 +357,24 @@ html[data-register-page="true"] #app .container {
 .card {
   display: flex;
   padding: 18px;
-  background: rgba(255, 255, 255, 0.1);
+  background: $card-bg;
   cursor: pointer;
   border-radius: 12px;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  color: $font-dark;
   max-width: 390px;
 }
 .cardTitle {
   font-weight: 500;
   font-size: 16px;
   margin-bottom: 6px;
+  color: $font-dark;
 }
 .cardText {
   width: 252px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  color: $font-secondary;
   font-weight: 400;
 }
 
@@ -397,32 +399,41 @@ html[data-register-page="true"] #app .container {
   flex-direction: column;
   width: 390px;
   margin-left: 22%;
+
+  h1 {
+    color: $font-dark;
+    font-weight: 500;
+  }
 }
 
 .mainpageTitle {
   font-size: 32px;
   font-weight: 400;
-  color: white;
+  color: $font-dark;
   width: 390px;
 }
 .backButton {
   display: flex;
   text-align: left;
-  padding: 0px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid $border-grey;
+  width: min-content;
 }
 .pageTitle {
   font-size: 32px;
-  color: #fff;
+  color: $font-dark;
   margin-top: 10px;
   margin-bottom: 10px;
   font-weight: 400;
 }
 .newMnemonicText {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.8);
+  color: $font-secondary;
   margin-bottom: 10px;
   font-weight: 400;
 }
+
 .ledgerContainer {
   display: flex;
   flex-direction: column;
@@ -431,4 +442,14 @@ html[data-register-page="true"] #app .container {
   width: 390px;
   height: 100%;
   position: relative;
+
+  & .invalid-feedback {
+    margin-top: 0px !important;
+  }
+}
+
+.welcomeText {
+  font-size: 36px;
+  color: $font-dark;
+  font-weight: 400;
 }

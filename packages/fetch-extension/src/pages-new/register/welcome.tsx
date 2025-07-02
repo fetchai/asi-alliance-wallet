@@ -26,6 +26,7 @@ export const WelcomePage: FunctionComponent = () => {
         />
       </div>
       <ButtonV2
+        variant="dark"
         styleProps={{
           height: "56px",
         }}
