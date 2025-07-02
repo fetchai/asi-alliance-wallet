@@ -142,7 +142,7 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
             <span className={style["sort-by"]}>{sort}</span>
           </div>
           <div>
-            <img src={require("../../public/assets/svg/wireframe/sort.svg")} />
+            <img src={require("@assets/svg/wireframe/chevron-down.svg")} />
           </div>
         </div>
       </div>

@@ -34,13 +34,13 @@
 
 .address {
   font-weight: 400;
-  color: rgba($font-dark, 0.8);
+  color: $font-secondary;
 }
 
 .validator-description {
   font-weight: 400;
   font-size: 14px;
-  color: rgba($font-dark, 0.8);
+  color: $font-dark;
   line-height: 22.4px;
 }
 
@@ -65,12 +65,12 @@
 
 .table-row-title {
   font-weight: 400;
-  color: $font-dark;
+  color: $font-secondary;
 }
 
 .table-row-value {
   font-weight: 500;
-  color: $font-secondary;
+  color: $font-dark;
 }
 
 .validator-avatar {

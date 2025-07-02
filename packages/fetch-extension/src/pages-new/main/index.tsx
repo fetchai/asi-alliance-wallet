@@ -77,8 +77,6 @@ export const MainPage: FunctionComponent = observer(() => {
     keyRingStore.keyRingType,
   ]);
 
-  console.log({ isOptionsOpen });
-
   return (
     <HeaderLayout
       innerStyle={{

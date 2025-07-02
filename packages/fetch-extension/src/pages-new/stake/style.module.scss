@@ -83,10 +83,9 @@
   align-items: center;
   justify-content: center;
 
-  img {
+  & img {
     height: 106px;
     width: 106px;
-    margin-bottom: -38px;
   }
 }
 
@@ -94,6 +93,7 @@
   font-size: 24px;
   font-weight: 400;
   line-height: 34px;
+  color: $font-dark;
 }
 
 .subtitle-text {
