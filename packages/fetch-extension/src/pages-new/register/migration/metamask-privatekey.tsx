@@ -50,7 +50,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
   return (
     <div className={style["migrateContainer"]}>
       <BackButton onClick={onBack} />
-      <h1 style={{ color: "rgba(255,255,255)" }}>
+      <h1>
         <FormattedMessage id="register.eth-migrate.metamask-private-key.title" />
       </h1>
       <Form
@@ -206,6 +206,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
           </React.Fragment>
         )}
         <ButtonV2
+          variant="dark"
           styleProps={{ marginBottom: "20px" }}
           text={
             registerConfig.isLoading ? (

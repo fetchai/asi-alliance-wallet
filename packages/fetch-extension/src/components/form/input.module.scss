@@ -17,27 +17,33 @@
   border: 1px solid $border-grey !important;
 }
 
+.label {
+  color: $font-secondary !important;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
 .form-floating {
   position: relative;
 
-  input {
+  & input {
     height: 3.5rem;
     padding: 1.25rem 0.75rem 0.25rem;
     font-size: 1rem;
   }
 
-  label {
+  & label {
     position: absolute;
     top: 1rem;
     left: 0.75rem;
     font-size: 1rem;
-    color: #6c757d;
+    color: $font-secondary;
     transition: 0.2s ease;
     pointer-events: none;
   }
 
-  input:focus + label,
-  input:not(:placeholder-shown) + label {
+  & input:focus + label,
+  & input:not(:placeholder-shown) + label {
     top: 0.3rem;
     left: 0.75rem;
     font-size: 0.75rem;
