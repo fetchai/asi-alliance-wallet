@@ -206,7 +206,7 @@ export const MyStakes = observer(
     return (
       <div className={style["row"]}>
         <ButtonV2
-          variant="dark"
+          variant="light"
           text="Stake more"
           onClick={() => {
             analyticsStore.logEvent("stake_click", {
@@ -220,6 +220,7 @@ export const MyStakes = observer(
             height: "44px",
             marginTop: "32px",
             marginBottom: "32px",
+            backgroundColor: "#B1FCAB",
           }}
         />
 
@@ -248,13 +249,14 @@ export const MyStakes = observer(
                 queryReward.pendingRewardValidatorAddresses.length === 0
               ) && (
                 <ButtonV2
-                  variant="dark"
+                  variant="light"
                   styleProps={{
                     width: "91px",
                     padding: "2px 15px",
                     height: "36px",
                     marginTop: "0",
                     fontSize: "14px",
+                    backgroundColor: "#B1FCAB",
                   }}
                   disabled={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
@@ -528,6 +530,7 @@ const DelegateReward: FunctionComponent = observer(() => {
                 height: "36px",
                 marginTop: "0",
                 fontSize: "14px",
+                backgroundColor: "#B1FCAB",
               }}
               disabled={
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]

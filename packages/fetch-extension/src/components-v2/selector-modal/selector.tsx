@@ -15,6 +15,7 @@ export const SelectorModal = ({
   items: {
     label: string;
     key: string;
+    icon?: string;
   }[];
   selectedKey: string | undefined;
   setSelectedKey: (key: string | undefined) => void;
@@ -59,13 +60,16 @@ export const SelectorModal = ({
                 }
               }}
             >
-              <div
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 400,
-                }}
-              >
-                {item.label.trim()}
+              <div style={{ display: "flex", gap: "12px" }}>
+                {item?.icon && <img src={item.icon} />}
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 400,
+                  }}
+                >
+                  {item.label.trim()}
+                </div>
               </div>
               {renderBall(item.key === selectedKey)}
             </div>

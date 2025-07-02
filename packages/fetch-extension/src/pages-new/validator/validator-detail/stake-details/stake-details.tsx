@@ -1,5 +1,5 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { GlassCardGradient } from "@components-v2/glass-card/glass-card-gradient";
+import { GlassCard } from "@components-v2/glass-card/index";
 import { useNotification } from "@components/notification";
 import { observer } from "mobx-react-lite";
 import React, { useState } from "react";
@@ -108,7 +108,7 @@ export const StakeDetails = observer(
     };
 
     return (
-      <GlassCardGradient>
+      <GlassCard styleProps={{ backgroundColor: "#E3FEE1" }}>
         <div className={style["stake-data-container"]}>
           <div className={style["stake-details-container"]}>
             <div className={style["stake-data-row"]}>
@@ -156,6 +156,7 @@ export const StakeDetails = observer(
                 alignItems: "center",
                 justifyContent: "center",
                 marginTop: "0px",
+                backgroundColor: "transparent",
               }}
               text="Unstake"
               onClick={() => {
@@ -169,13 +170,14 @@ export const StakeDetails = observer(
             />
 
             <ButtonV2
-              variant="dark"
+              variant="light"
               styleProps={{
                 height: "36px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginTop: "0px",
+                backgroundColor: "#B1FCAB",
               }}
               disabled={
                 !rewards ||
@@ -210,7 +212,7 @@ export const StakeDetails = observer(
             </ButtonV2>
           </div>
         </div>
-      </GlassCardGradient>
+      </GlassCard>
     );
   }
 );

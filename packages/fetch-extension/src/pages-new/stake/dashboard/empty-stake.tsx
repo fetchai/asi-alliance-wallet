@@ -19,6 +19,7 @@ export const EmptyStake = () => {
       </div>
 
       <ButtonV2
+        variant="dark"
         styleProps={{
           width: "90%",
           height: "56px",
