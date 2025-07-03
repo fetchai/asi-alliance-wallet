@@ -213,8 +213,8 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
         <Card
           style={{
             padding: "12px 10px",
-            background: "transparent",
-            border: "1px solid #d0d1d1",
+            background: "white",
+            border: "1px solid var(--border-grey)",
           }}
           heading={""}
           subheading={

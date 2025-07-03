@@ -179,7 +179,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             {accountInfo.walletStatus === WalletStatus.Loading ||
             keyRingStore.status === 0 ||
             rewards.isFetching ? (
-              <Skeleton height="37.5px" />
+              <Skeleton height="37.5px" width="100px" />
             ) : (
               <React.Fragment>
                 {Number(totalNumber).toLocaleString("en-US")}{" "}

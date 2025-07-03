@@ -118,7 +118,7 @@ export const ActivityDetails = observer(() => {
               leftImageStyle={{
                 height: "32px",
                 width: "32px",
-                background: "none",
+                background: "white",
                 padding: 0,
               }}
               heading={"Smart Contract"}
@@ -142,7 +142,7 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "none",
+                  background: "white",
                   padding: 0,
                 }}
                 heading={details.signerAddress ? "From" : "deligator address"}
@@ -171,7 +171,7 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "none",
+                  background: "white",
                   padding: 0,
                 }}
                 heading={
