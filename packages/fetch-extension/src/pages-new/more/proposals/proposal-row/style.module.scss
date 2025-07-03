@@ -51,11 +51,12 @@
       font-weight: 400;
 
       .proposal-duration-title {
-        color: $font-grey;
+        color: $font-secondary;
       }
 
       .proposal-duration-date {
-        color: $font-secondary;
+        color: $font-dark;
+        font-size: 14px;
       }
     }
   }

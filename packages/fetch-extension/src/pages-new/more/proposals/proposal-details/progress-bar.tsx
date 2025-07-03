@@ -54,7 +54,7 @@ export const ProgressBar = ({
         {isShowPercentage && (
           <span
             style={{
-              color: "#151A1A",
+              color: "var(--font-secondary)",
               margin: "0 6px",
             }}
           >
@@ -66,9 +66,10 @@ export const ProgressBar = ({
             style={{
               display: "flex",
               gap: "6px",
+              background: "var(--bg-dark)",
+              color: "white",
               justifyContent: "center",
               alignItems: "center",
-              border: "1px solid #737676",
               borderRadius: "4px",
               padding: "4px 8px",
             }}
@@ -80,7 +81,7 @@ export const ProgressBar = ({
                 fontWeight: 500,
               }}
             >
-              You voted
+              YOUR VOTE
             </div>
           </span>
         )}

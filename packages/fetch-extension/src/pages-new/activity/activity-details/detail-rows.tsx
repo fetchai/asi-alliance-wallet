@@ -120,7 +120,6 @@ export const DetailRows = ({ details }: { details: any }) => {
         {details.verb == "Staked" || details.verb == "Sent" ? (
           <div className={style["buttons"]} style={{ width: "100%" }}>
             <ButtonV2
-              variant="dark"
               styleProps={{
                 display: "flex",
                 alignItems: "center",
@@ -157,7 +156,6 @@ export const DetailRows = ({ details }: { details: any }) => {
               )}
             </ButtonV2>{" "}
             <ButtonV2
-              variant="dark"
               styleProps={{
                 height: "48px",
                 marginTop: 0,
@@ -170,7 +168,6 @@ export const DetailRows = ({ details }: { details: any }) => {
           </div>
         ) : (
           <ButtonV2
-            variant="dark"
             styleProps={{
               height: "48px",
               marginTop: 0,
