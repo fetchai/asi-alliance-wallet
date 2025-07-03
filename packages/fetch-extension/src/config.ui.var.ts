@@ -26,6 +26,7 @@ export const ADDITIONAL_INTL_MESSAGES: IntlMessages = {};
 // export const AUTH_SERVER = "http://localhost:5500";
 
 export const AUTH_SERVER = "https://accounts.fetch.ai/v1";
+export const EXPLORER_URL = "https://hub.fetch.ai";
 
 export const FNS_TEST_ADDRESS = "fetch1s84mudgmjfjmkef7ludqnwy0fchh3mf4p4rmll";
 

@@ -17,12 +17,20 @@ import {
   useMoonpayCurrency,
   checkAddressIsBuySellWhitelisted,
 } from "@utils/moonpay-currency";
+import * as manifest from "../../manifest.v3.json";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
-  const { chainStore, analyticsStore, keyRingStore, accountStore } = useStore();
+
+  const {
+    chainStore,
+    analyticsStore,
+    keyRingStore,
+    accountStore,
+    uiConfigStore,
+  } = useStore();
   const navigate = useNavigate();
   const currentChain = chainStore.current;
   const chainId = currentChain.chainId;
@@ -81,19 +89,98 @@ export const MorePage: FunctionComponent = () => {
       showBottomMenu={true}
     >
       <div className={style["title"]}>More</div>
-      <div className={style["subTitle"]}>Account</div>
+      {sidePanelSupported && (
+        <Card
+          leftImage={require("@assets/svg/wireframe/sidepanel.svg")}
+          leftImageStyle={{
+            background: "transparent",
+            width: "30px",
+            height: "25px",
+          }}
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            marginBottom: "6px",
+            padding: "14px 12px",
+          }}
+          headingStyle={{
+            display: "flex",
+            alignItems: "center",
+          }}
+          heading={
+            <React.Fragment>
+              <div>Switch to Side Panel</div>
+            </React.Fragment>
+          }
+          subheading={"Open ASI Wallet in a sidebar on your screen"}
+          rightContent={
+            <SidePanelToggle
+              sidePanelEnabled={sidePanelEnabled}
+              setSidePanelEnabled={setSidePanelEnabled}
+            />
+          }
+          rightContentStyle={{ marginBottom: "15px" }}
+        />
+      )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/currency.svg")}
-        heading={"Currency"}
+        leftImage={require("@assets/svg/wireframe/security.svg")}
+        heading={"Security & privacy"}
         onClick={() => {
-          navigate("/more/currency");
-          analyticsStore.logEvent("currency_click", {
+          navigate("/more/security-privacy");
+          analyticsStore.logEvent("security_and_privacy_click", {
             pageName: "More",
           });
         }}
       />
+      <Card
+        leftImageStyle={{ background: "transparent", height: "16px" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+        leftImage={require("@assets/svg/wireframe/ibc-transfer-v2.svg")}
+        heading={"IBC Transfer"}
+        onClick={(e: any) => {
+          e.preventDefault();
+          analyticsStore.logEvent("ibc_transfer_click", {
+            pageName: "More",
+          });
+          navigate("/ibc-transfer");
+        }}
+      />
+      {currentChain?.raw?.type !== "testnet" &&
+      moonpaySupportedTokens?.length > 0 &&
+      !currentChain.beta &&
+      isAddressWhitelisted ? (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            marginBottom: "6px",
+          }}
+          leftImage={require("@assets/icon/moonpay.png")}
+          heading="Buy/Sell Tokens"
+          subheading="Using Moonpay"
+          onClick={() => {
+            navigate("/more/token/moonpay");
+          }}
+        />
+      ) : (
+        ""
+      )}
+      {chainStore.current.govUrl && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/proposal.svg")}
+          heading={"Proposals"}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("proposal_view_click", {
+              pageName: "More",
+            });
+            navigate("/proposal");
+          }}
+        />
+      )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
@@ -118,26 +205,18 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {currentChain?.raw?.type !== "testnet" &&
-      moonpaySupportedTokens?.length > 0 &&
-      !currentChain.beta &&
-      isAddressWhitelisted ? (
-        <Card
-          leftImageStyle={{ background: "transparent" }}
-          style={{
-            background: "rgba(255,255,255,0.1)",
-            marginBottom: "6px",
-          }}
-          leftImage={require("@assets/icon/moonpay.png")}
-          heading="Buy/Sell Tokens"
-          subheading="Using Moonpay"
-          onClick={() => {
-            navigate("/more/token/moonpay");
-          }}
-        />
-      ) : (
-        ""
-      )}
+      <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/currency.svg")}
+        heading={"Currency"}
+        onClick={() => {
+          navigate("/more/currency");
+          analyticsStore.logEvent("currency_click", {
+            pageName: "More",
+          });
+        }}
+      />
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
@@ -150,29 +229,18 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-
-      {/* 
-       <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/notification.svg")}
-        heading={"Notifications"}
-        onClick={() => navigate("/more/notifications")}
-      /> */}
-
       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/security.svg")}
-        heading={"Security & privacy"}
-        onClick={() => {
-          navigate("/more/security-privacy");
-          analyticsStore.logEvent("security_and_privacy_click", {
-            pageName: "More",
-          });
-        }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
+        leftImage={require("@assets/svg/wireframe/guide.svg")}
+        heading={"Guide"}
+        onClick={() =>
+          window.open(
+            "https://network.fetch.ai/docs/guides/asi-wallet/web-wallet/get-started",
+            "_blank"
+          )
+        }
       />
-
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
@@ -186,90 +254,14 @@ export const MorePage: FunctionComponent = () => {
         }}
       />
 
-      <div
-        style={{
-          marginTop: "12px",
-        }}
-        className={style["subTitle"]}
-      >
-        Others
-      </div>
-      {sidePanelSupported && (
-        <Card
-          leftImageStyle={{ background: "transparent", height: "16px" }}
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
-          headingStyle={{
-            display: "flex",
-            alignItems: "center",
-          }}
-          heading={
-            <React.Fragment>
-              <div>Switch to Side Panel</div>
-              <div
-                style={{
-                  marginLeft: "10px",
-                  background: "blue",
-                  color: "white",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  paddingLeft: "5px",
-                  paddingRight: "5px",
-                }}
-              >
-                Beta
-              </div>
-            </React.Fragment>
-          }
-          subheading={"Open ASI Wallet in a sidebar on your screen"}
-          rightContent={
-            <SidePanelToggle
-              sidePanelEnabled={sidePanelEnabled}
-              setSidePanelEnabled={setSidePanelEnabled}
-            />
-          }
-          rightContentStyle={{ marginBottom: "15px" }}
-        />
-      )}
-      <Card
-        leftImageStyle={{ background: "transparent", height: "16px" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
-        leftImage={require("@assets/svg/wireframe/ibc-transfer-v2.svg")}
-        heading={"IBC Transfer"}
-        onClick={(e: any) => {
-          e.preventDefault();
-          analyticsStore.logEvent("ibc_transfer_click", {
-            pageName: "More",
-          });
-          navigate("/ibc-transfer");
-        }}
-      />
-      {chainStore.current.govUrl && (
-        <Card
-          leftImageStyle={{ background: "transparent" }}
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
-          leftImage={require("@assets/svg/wireframe/proposal.svg")}
-          heading={"Proposals"}
-          onClick={(e: any) => {
-            e.preventDefault();
-            analyticsStore.logEvent("proposal_view_click", {
-              pageName: "More",
-            });
-            navigate("/proposal");
-          }}
-        />
-      )}
-      <Card
+      {/* 
+       <Card
         leftImageStyle={{ background: "transparent" }}
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
-        leftImage={require("@assets/svg/wireframe/guide.svg")}
-        heading={"Guide"}
-        onClick={() =>
-          window.open(
-            "https://network.fetch.ai/docs/guides/asi-wallet/web-wallet/get-started",
-            "_blank"
-          )
-        }
-      />
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/notification.svg")}
+        heading={"Notifications"}
+        onClick={() => navigate("/more/notifications")}
+      /> */}
 
       {/* {(chainStore.current.chainId === CHAIN_ID_FETCHHUB ||
         chainStore.current.chainId === CHAIN_ID_DORADO) && (
@@ -294,14 +286,17 @@ export const MorePage: FunctionComponent = () => {
           }
         />
       )} */}
-      {/* <Card
+      <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ background: "rgba(255,255,255,0.1)", marginBottom: "5px" }}
         leftImage={require("@assets/svg/wireframe/wallet-version.svg")}
-        heading={"ASI Alliance Wallet version"}
-        onClick={() => navigate("/app-version")}
-      /> */}
-
+        rightContent={
+          <div className={style["version"]}>
+            {uiConfigStore.platform == "firefox" ? "None" : manifest.version}
+          </div>
+        }
+        heading="Version"
+      />
       <Card
         leftImageStyle={{
           background: "transparent",

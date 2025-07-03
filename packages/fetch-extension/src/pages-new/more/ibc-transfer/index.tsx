@@ -416,7 +416,10 @@ export const IBCTransferPageAmount: FunctionComponent<{
           title="Select Wallet"
           closeClicked={() => setIsChangeWalletOpen(false)}
         >
-          <SetKeyRingPage navigateTo={"/send"} />
+          <SetKeyRingPage
+            navigateTo={"/send"}
+            onItemSelect={() => setIsChangeWalletOpen(false)}
+          />
         </Dropdown>
       </form>
     );

@@ -67,7 +67,6 @@ import { BridgeHistoryView } from "./pages-new/bridge/bridge-history";
 import { ChangeNamePageV2 } from "./pages-new/keyring-dev/change";
 import { DeleteWallet } from "./pages-new/keyring-dev/delete";
 import { MorePage } from "./pages-new/more";
-import { AppVersion } from "./pages-new/more/app-version";
 import { ExportToMobilePage } from "./pages-new/more/export-to-mobile";
 import { MoreLanguagePage } from "./pages-new/more/language";
 import { ManageNetworks } from "./pages-new/more/manage-networks";
@@ -265,7 +264,6 @@ ReactDOM.render(
                             path="/keystone/sign"
                             element={<KeystoneSignPage />}
                           />
-                          <Route path="/app-version" element={<AppVersion />} />
                           <Route path="/more" element={<MorePage />} />
                           <Route
                             path="/more/language"
