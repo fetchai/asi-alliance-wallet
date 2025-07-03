@@ -15,7 +15,7 @@
       float: right;
 
       letter-spacing: 0.14px;
-      color: #9092b6;
+      color: $font-dark;
     }
   }
 
@@ -63,13 +63,13 @@
   align-items: center;
   align-self: stretch;
   border-radius: 12px;
-  background: $card-bg;
+  background: white;
   border: none;
   color: $font-secondary;
   width: 100%;
   font-size: 14px;
   font-weight: 400;
-  border: 1.5px solid transparent;
+  border: 1.5px solid $border-grey;
 
   & + div[class^="overlay-"] {
     height: calc(100vh - 62px);

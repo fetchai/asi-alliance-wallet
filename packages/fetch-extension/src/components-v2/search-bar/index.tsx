@@ -13,10 +13,12 @@ interface Props {
   filterFunction: any;
   midElement?: React.ReactNode;
   disabled?: boolean;
+  placeholder?: string;
 }
 
 export const SearchBar: React.FC<Props> = ({
   searchTerm,
+  placeholder,
   valuesArray,
   renderResult,
   onSearchTermChange,
@@ -53,7 +55,7 @@ export const SearchBar: React.FC<Props> = ({
             className={style["searchInput"]}
             type="text"
             id="searchInput"
-            placeholder="Search"
+            placeholder={placeholder || "Search"}
             value={searchTerm}
             disabled={disabled}
             onChange={(e) => onSearchTermChange(e.target.value)}

@@ -146,6 +146,7 @@ export const VoteDropdown = ({ proposal }: VoteDropdownProps) => {
       </div>
 
       <ButtonV2
+        variant="dark"
         text="Submit"
         styleProps={{
           padding: "12px",

@@ -333,9 +333,8 @@ export const MyStakes = observer(
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             <div
               style={{
-                color: "#fff",
-                opacity: "60%",
-                fontSize: "14px",
+                color: "var(--font-dark)",
+                fontSize: "16px",
                 fontWeight: 400,
               }}
             >

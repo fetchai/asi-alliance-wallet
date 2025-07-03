@@ -52,7 +52,7 @@ export const NewMnemonicIntro: FunctionComponent<{
       {" "}
       <div className="flex flex-col">
         <div className={style["welcomeText"]}>Welcome to your</div>
-        <div className={style["welcomeText"]}>ASI Alliance Wallet</div>
+        <div className={style["welcomeText"]}>ASI Wallet</div>
       </div>
       <div className={style["titleText"]}>Choose how you want to proceed</div>
       <div
