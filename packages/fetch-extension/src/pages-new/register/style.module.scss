@@ -127,7 +127,7 @@ html[data-register-page="true"] #app .container {
     letter-spacing: -1.07px;
     margin-bottom: 24px;
 
-    color: #525f7f;
+    color: $font-dark;
   }
   .newMnemonicContainer {
     border-radius: 12px;
@@ -336,7 +336,7 @@ html[data-register-page="true"] #app .container {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(10, 14, 27, 0.5);
+  background: white;
   .content {
     width: 420px;
     box-sizing: border-box;
@@ -364,7 +364,13 @@ html[data-register-page="true"] #app .container {
   gap: 14px;
   color: $font-dark;
   max-width: 390px;
+
+  & img {
+    background: white;
+    border-radius: 50px;
+  }
 }
+
 .cardTitle {
   font-weight: 500;
   font-size: 16px;
