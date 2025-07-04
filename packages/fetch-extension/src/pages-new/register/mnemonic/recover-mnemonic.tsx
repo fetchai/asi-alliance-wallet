@@ -179,6 +179,7 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
             leftImageStyle={{
               width: "32px",
               height: "32px",
+              background: "white",
             }}
             style={{
               height: "78px",
