@@ -231,6 +231,9 @@ export const AssetView = observer(() => {
           setTokenState={setAssetValues}
           tokenState={assetValues}
           setTokenCurrentPrice={setTokenCurrentPrice}
+          vsCurrencySymbol={
+            priceStore.supportedVsCurrencies[fiatCurrency]?.symbol || ""
+          }
         />
       )}
       <div className={style["balances"]}>

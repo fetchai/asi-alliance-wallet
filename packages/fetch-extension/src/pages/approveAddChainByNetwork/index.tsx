@@ -1,16 +1,16 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button } from "reactstrap";
 
-import style from "./style.module.scss";
-import { EmptyLayout } from "@layouts/empty-layout";
-import { FormattedMessage } from "react-intl";
-import { useInteractionInfo } from "@keplr-wallet/hooks";
-import { observer } from "mobx-react-lite";
-import { ToolTip } from "@components/tooltip";
-import classNames from "classnames";
+import { ButtonV2 } from "@components-v2/buttons/button";
 import { GithubIcon, InformationCircleOutline } from "@components/icon";
+import { ToolTip } from "@components/tooltip";
+import { useInteractionInfo } from "@keplr-wallet/hooks";
+import { EmptyLayout } from "@layouts/empty-layout";
+import classNames from "classnames";
+import { observer } from "mobx-react-lite";
+import { FormattedMessage } from "react-intl";
 import { useStore } from "../../stores";
+import style from "./style.module.scss";
 
 export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
   const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
@@ -260,11 +260,8 @@ export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
                   <div className={style["imageBackground"]} />
                   <img
                     className={style["logoImage"]}
-                    src={
-                      communityChainInfo?.chainInfo?.chainSymbolImageUrl ||
-                      require("@assets/logo-256.svg")
-                    }
-                    alt="chain logo"
+                    src={require("@assets/png/White-black-circle.png")}
+                    alt="keplr logo"
                   />
                 </div>
                 <div className={style["dots"]}>
@@ -276,7 +273,7 @@ export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
                   <div className={style["imageBackground"]} />
                   <img
                     className={style["logoImage"]}
-                    src={require("../../public/assets/logo-256.svg")}
+                    src={require("@assets/png/White-black-circle.png")}
                     alt="keplr logo"
                   />
                 </div>
@@ -311,7 +308,7 @@ export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
                   >
                     <div className={style["item"]}>
                       <FormattedMessage id="chain.suggested.community-driven" />
-                      <GithubIcon />
+                      <GithubIcon fill="white" />
                     </div>
                   </a>
                 </div>
@@ -346,13 +343,11 @@ export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
             </div>
           )}
           <div className={style["buttons"]}>
-            <Button
-              className={style["button"]}
-              color="danger"
-              outline
+            <ButtonV2
+              text=""
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              data-loading={chainSuggestStore.isLoading}
-              onClick={async (e) => {
+              dataLoading={chainSuggestStore.isLoading}
+              onClick={async (e: any) => {
                 e.preventDefault();
 
                 await chainSuggestStore.reject();
@@ -368,13 +363,12 @@ export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
               }}
             >
               <FormattedMessage id="chain.suggested.button.reject" />
-            </Button>
-            <Button
-              className={style["button"]}
-              color="primary"
+            </ButtonV2>
+            <ButtonV2
+              text=""
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              data-loading={chainSuggestStore.isLoading}
-              onClick={async (e) => {
+              dataLoading={chainSuggestStore.isLoading}
+              onClick={async (e: any) => {
                 e.preventDefault();
 
                 const chainInfo = updateFromRepoDisabled
@@ -402,7 +396,7 @@ export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
               }}
             >
               <FormattedMessage id="chain.suggested.button.approve" />
-            </Button>
+            </ButtonV2>
           </div>
         </div>
       )}
