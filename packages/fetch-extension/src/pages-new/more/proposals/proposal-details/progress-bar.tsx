@@ -28,7 +28,7 @@ export const ProgressBar = ({
         display: "flex",
         alignItems: "center",
         position: "relative",
-        backgroundColor: "#f6f6f6",
+        backgroundColor: "var(--card-bg)",
       }}
     >
       <div
@@ -47,7 +47,7 @@ export const ProgressBar = ({
           justifyContent: "center",
           alignItems: "center",
           paddingLeft: "18px",
-          color: "#151A1A",
+          color: "var(--font-dark)",
         }}
       >
         {title}

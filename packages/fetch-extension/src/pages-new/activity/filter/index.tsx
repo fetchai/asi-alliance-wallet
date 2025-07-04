@@ -103,11 +103,11 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 selectedFilter.includes(option.value)
                   ? {
                       width: "100%",
-                      background: "#E0FEDD",
+                      background: "var(--bg-green-light)",
                     }
                   : {
                       width: "100%",
-                      background: "#f6f6f6",
+                      background: "var(--card-bg)",
                       cursor: "pointer",
                     }
               }

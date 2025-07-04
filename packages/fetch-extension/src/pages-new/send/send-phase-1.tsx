@@ -107,8 +107,8 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
         <Card
           style={{
             background: "white",
-            border: "1px solid #E8E8E8",
-            color: "#151A1A",
+            border: "1px solid var(--bg-grey-dark)",
+            color: "var(--font-dark)",
             fontSize: "14px",
             padding: "12px 18px",
           }}

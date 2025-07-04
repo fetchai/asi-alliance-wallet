@@ -17,7 +17,7 @@ export const disabledContainerStyle = {
 };
 
 export const inputStyle = {
-  color: "#151A1A",
+  color: "var(--font-dark)",
   borderRadius: "12px",
   boxShadow: "none",
   background: "transparent",
@@ -27,7 +27,7 @@ export const inputStyle = {
 };
 
 export const disabledStyle = {
-  color: "#151A1A",
+  color: "var(--font-dark)",
   opacity: "0.9",
   boxShadow: "none",
   borderRadius: "12px",

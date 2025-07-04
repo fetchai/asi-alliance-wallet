@@ -25,9 +25,7 @@ export const chartOptions: ChartOptions = {
       label: (tooltipItem: any, data: any) => {
         const label = data.datasets[tooltipItem.datasetIndex].label || "";
         const value = tooltipItem.yLabel || "";
-        return ` ${label} ${value} ${data.datasets[
-          tooltipItem.datasetIndex
-        ].vsCurrency.toUpperCase()}`;
+        return ` ${label} ${value}`;
       },
     },
   },

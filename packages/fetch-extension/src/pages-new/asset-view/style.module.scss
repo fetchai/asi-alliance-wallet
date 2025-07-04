@@ -39,7 +39,7 @@
   flex-direction: column;
 }
 .your-bal {
-  color: #a1a3a3;
+  color: $neutral;
   font-family: $font-family-base;
   font-size: 12px;
 }
@@ -65,10 +65,10 @@
   margin-bottom: 24px;
 }
 .denom {
-  color: #a1a3a3;
+  color: $neutral;
 }
 .inUsd {
-  color: #a1a3a3;
+  color: $neutral;
   font-size: 14px;
 }
 
@@ -108,7 +108,7 @@
 }
 
 .day {
-  color: #a1a3a3;
+  color: $neutral;
   font-size: 14px;
 }
 

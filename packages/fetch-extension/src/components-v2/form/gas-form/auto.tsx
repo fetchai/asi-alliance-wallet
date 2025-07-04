@@ -22,7 +22,7 @@ export const GasAutoContainer: FunctionComponent<{
         >
           <div
             style={{
-              color: "#737676",
+              color: "var(--font-secondary)",
               fontSize: "14px",
               fontWeight: 400,
             }}
@@ -32,7 +32,7 @@ export const GasAutoContainer: FunctionComponent<{
           <Card
             style={{
               background: "#ffffff",
-              border: "1px solid #E8E8E8",
+              border: "1px solid var(--bg-grey-dark)",
               padding: "12px 18px",
               height: "48px",
             }}
@@ -74,7 +74,7 @@ export const GasAutoContainer: FunctionComponent<{
         >
           <div
             style={{
-              color: "#737676",
+              color: "var(--font-secondary)",
               fontSize: "14px",
               fontWeight: 400,
             }}
@@ -84,7 +84,7 @@ export const GasAutoContainer: FunctionComponent<{
           <Card
             style={{
               background: "#ffffff",
-              border: "1px solid #E8E8E8",
+              border: "1px solid var(--bg-grey-dark)",
               padding: "12px 18px",
               height: "48px",
             }}
@@ -110,7 +110,7 @@ export const GasAutoContainer: FunctionComponent<{
       >
         <div
           style={{
-            color: "#737676",
+            color: "var(--font-secondary)",
             fontSize: "14px",
             fontWeight: 400,
           }}
@@ -120,7 +120,7 @@ export const GasAutoContainer: FunctionComponent<{
         <Card
           style={{
             background: "#ffffff",
-            border: "1px solid #E8E8E8",
+            border: "1px solid var(--bg-grey-dark)",
             padding: "12px 18px",
             height: "48px",
           }}
