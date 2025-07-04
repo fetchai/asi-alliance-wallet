@@ -96,8 +96,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: #f3f3f3;
-  img {
+  & img {
     height: 32px;
     width: 32px;
     border-radius: 100%;

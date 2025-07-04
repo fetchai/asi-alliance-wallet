@@ -1,14 +1,15 @@
 @import "../../../styles/var";
 
 .balance-card {
-  margin-top: 32px;
+  margin-top: 20px;
   color: $font-dark;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  gap: 24px;
   align-self: stretch;
+  flex-wrap: wrap;
+  row-gap: 10px;
 }
 
 .balance-field {
