@@ -17,6 +17,7 @@ import { SetKeyRingPage } from "../keyring-dev";
 import { LedgerAppModal } from "./ledger-app-modal";
 import { WalletDetailsView } from "./wallet-details";
 import { WalletOptions } from "./wallet-options";
+import { useLanguage } from "../../languages";
 
 export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
@@ -24,8 +25,16 @@ export const MainPage: FunctionComponent = observer(() => {
   const [isOptionsOpen, setIsOptionsOpen] = useState<boolean>(false);
   const [tokenState, setTokenState] = useState({});
   const intl = useIntl();
-  const { chainStore, accountStore, keyRingStore, analyticsStore, chatStore } =
-    useStore();
+  const language = useLanguage();
+  const fiatCurrency = language.fiatCurrency;
+  const {
+    chainStore,
+    accountStore,
+    keyRingStore,
+    analyticsStore,
+    chatStore,
+    priceStore,
+  } = useStore();
 
   const userState = chatStore.userDetailsStore;
   useEffect(() => {
@@ -56,6 +65,12 @@ export const MainPage: FunctionComponent = observer(() => {
   }, [chainStore, confirm, chainStore.isInitializing, currentChainId, intl]);
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+
+  const currentCoinGeckoId = chainStore.current.feeCurrencies?.[0]?.coinGeckoId;
+
+  const priceInVsCurrency = currentCoinGeckoId
+    ? priceStore.getPrice(currentCoinGeckoId, fiatCurrency)
+    : undefined;
 
   /// Fetching wallet config info
   useEffect(() => {
@@ -92,7 +107,12 @@ export const MainPage: FunctionComponent = observer(() => {
       <LineGraphView
         setTokenState={setTokenState}
         tokenName={chainStore.current.feeCurrencies[0].coinGeckoId}
+        tokenDenom={chainStore.current.feeCurrencies[0].coinDenom}
         tokenState={tokenState}
+        priceInVsCurrency={priceInVsCurrency}
+        vsCurrencySymbol={
+          priceStore.supportedVsCurrencies[fiatCurrency]?.symbol || ""
+        }
       />
 
       <Dropdown
@@ -116,7 +136,7 @@ export const MainPage: FunctionComponent = observer(() => {
         }}
       >
         <SetKeyRingPage
-          onItemSelect={() => setIsOptionsOpen(false)}
+          onItemSelect={() => setIsSelectWalletOpen(false)}
           setIsSelectWalletOpen={setIsSelectWalletOpen}
           setIsOptionsOpen={setIsOptionsOpen}
         />

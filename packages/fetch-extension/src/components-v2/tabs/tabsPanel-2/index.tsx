@@ -68,9 +68,11 @@ export const TabsPanel: React.FC<TabsProps> = ({
                 tab.id === selectedTab ? style["selected"] : ""
               }`}
               style={{
-                color: `${tab.id === selectedTab ? "#f0f0f0" : "#737676"}`,
+                color: `${
+                  tab.id === selectedTab ? "#f0f0f0" : "var(--font-secondary)"
+                }`,
                 background: `${
-                  tab.id === selectedTab ? "#151A1A" : "transparent"
+                  tab.id === selectedTab ? "var(--bg-dark)" : "transparent"
                 }`,
                 border: `${
                   tab.id === selectedTab ||

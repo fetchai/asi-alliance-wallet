@@ -78,7 +78,9 @@ export const TokenSelect: FunctionComponent<ChainSelectProps> = observer(
                 <Card
                   style={{
                     background:
-                      tokenInfo.coinDenom === token ? "#E0FEDD" : "#F6F6F6",
+                      tokenInfo.coinDenom === token
+                        ? "var(--bg-green-light)"
+                        : "var(--card-bg)",
                   }}
                   heading={tokenInfo.coinDenom}
                   key={index}

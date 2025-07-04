@@ -38,7 +38,7 @@ export const InputField = ({
     <div className={style["row-outer"]} onClick={onClick}>
       <div
         style={{
-          color: "#737676",
+          color: "var(--font-secondary)",
           ...labelStyle,
         }}
         className={style[`label`]}

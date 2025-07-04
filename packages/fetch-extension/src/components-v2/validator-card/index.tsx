@@ -12,7 +12,7 @@ const ValidatorData = ({ label, value }: { label: string; value: any }) => {
     <div className={style["validator-data"]}>
       <div
         style={{
-          color: "#737676",
+          color: "var(--font-secondary)",
           fontWeight: 400,
         }}
       >
@@ -78,7 +78,7 @@ export const ValidatorCardV2 = observer(
           marginBottom: "6px",
           paddingTop: "18px",
           paddingBottom: "18px",
-          background: selected ? "#E0FEDD" : "",
+          background: selected ? "var(--bg-green-light)" : "",
         }}
         onClick={onClick}
       >
@@ -94,16 +94,7 @@ export const ValidatorCardV2 = observer(
               {thumbnail ? (
                 <img src={thumbnail} alt={"validator"} />
               ) : (
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "100%",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
+                <div className={style["validator-avatar"]}>
                   {validator.description.moniker?.toString()[0].toUpperCase()}
                 </div>
               )}

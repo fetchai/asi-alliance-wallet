@@ -13,6 +13,7 @@ interface LineGraphProps {
   loading: boolean;
   setLoading: any;
   vsCurrency: string;
+  vsCurrencySymbol: string;
   setTokenCurrentPrice?: any;
 }
 
@@ -28,6 +29,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
   loading,
   setLoading,
   vsCurrency,
+  vsCurrencySymbol,
   setTokenCurrentPrice,
 }) => {
   const [prices, setPrices] = useState<PriceData[]>([]);
@@ -133,7 +135,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     }),
     datasets: [
       {
-        label: "",
+        label: vsCurrencySymbol,
         backgroundColor: "#A1A3A3",
         data: prices.map((priceData: any) =>
           priceData.price.toFixed(3).toString()

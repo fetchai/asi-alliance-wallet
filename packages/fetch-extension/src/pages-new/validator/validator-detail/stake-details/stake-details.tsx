@@ -108,7 +108,7 @@ export const StakeDetails = observer(
     };
 
     return (
-      <GlassCard styleProps={{ backgroundColor: "#E3FEE1" }}>
+      <GlassCard styleProps={{ backgroundColor: "var(--bg-green-lightest)" }}>
         <div className={style["stake-data-container"]}>
           <div className={style["stake-details-container"]}>
             <div className={style["stake-data-row"]}>

@@ -101,7 +101,7 @@ export const StakeInput: FunctionComponent<{
             style={{
               fontSize: "16px",
               fontWeight: 400,
-              color: "#737676",
+              color: "var(--font-secondary)",
             }}
           >
             {isToggleClicked
@@ -137,7 +137,7 @@ export const StakeInput: FunctionComponent<{
             style={{
               fontSize: "12px",
               fontWeight: 400,
-              color: "#737676",
+              color: "var(--font-secondary)",
               padding: "0px 10px",
               marginBottom: "4px",
             }}

@@ -9,6 +9,9 @@ interface LineGraphViewProps {
   setTokenState: any;
   tokenState: any;
   setTokenCurrentPrice?: any;
+  tokenDenom?: string;
+  priceInVsCurrency?: number;
+  vsCurrencySymbol: string;
 }
 
 const tabs = [
@@ -38,7 +41,10 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
   tokenName,
   setTokenState,
   tokenState,
+  tokenDenom,
   setTokenCurrentPrice,
+  priceInVsCurrency,
+  vsCurrencySymbol,
 }) => {
   const [activeTab, setActiveTab] = useState<any>(tabs[0]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -51,12 +57,26 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
       {!loading && !tokenState?.diff && (
         <div className={style["errorText"]}>Line Graph unavailable</div>
       )}
+      {tokenDenom && priceInVsCurrency ? (
+        <div className={style["vsCurrencyTokenPrice"]}>
+          <div>
+            {tokenDenom}/{fiatCurrency?.toUpperCase()}
+          </div>
+          <div className={style["vsCurrencyPrice"]}>
+            {vsCurrencySymbol}
+            {priceInVsCurrency}
+          </div>
+        </div>
+      ) : (
+        ""
+      )}
       <LineGraph
         duration={activeTab.duration}
         tokenName={tokenName}
         setTokenState={setTokenState}
         loading={loading}
         setLoading={setLoading}
+        vsCurrencySymbol={vsCurrencySymbol}
         vsCurrency={fiatCurrency}
         setTokenCurrentPrice={setTokenCurrentPrice}
       />

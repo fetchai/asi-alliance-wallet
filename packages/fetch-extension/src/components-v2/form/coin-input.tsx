@@ -337,7 +337,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
       <Label className={styleCoinInput["label"]}>Asset</Label>
       <Card
         style={{
-          border: "1px solid #E8E8E8",
+          border: "1px solid var(--bg-grey-dark)",
           background: "#FFF",
           padding: "12px 18px",
           marginBottom: "0px",
@@ -353,7 +353,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
         subheading={
           <div
             style={{
-              color: "#737676",
+              color: "var(--font-secondary)",
               fontSize: "12px",
             }}
           >

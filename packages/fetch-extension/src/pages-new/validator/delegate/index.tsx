@@ -206,7 +206,7 @@ export const Delegate: FunctionComponent = observer(() => {
       onBackButton={() => navigate(-1)}
     >
       {validator && (
-        <div style={{ color: "#151A1A", paddingBottom: "48px" }}>
+        <div style={{ color: "var(--font-dark)", paddingBottom: "48px" }}>
           <ValidatorCardV2 validator={validator} />
 
           <FormGroup

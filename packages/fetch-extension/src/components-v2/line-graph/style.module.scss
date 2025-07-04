@@ -5,7 +5,7 @@
   margin-top: 28px;
   display: flex;
   justify-content: center;
-  color: white !important;
+  color: $font-secondary !important;
   margin-bottom: -9px;
 }
 
@@ -42,4 +42,17 @@
   color: $font-dark !important;
   font-size: 12px !important;
   background-color: $bg-grey-dark !important;
+}
+
+.vsCurrencyTokenPrice {
+  margin-top: 16px;
+  display: flex;
+  column-gap: 5px;
+  color: $font-dark;
+  font-size: 12px;
+  justify-content: center;
+
+  & .vsCurrencyPrice {
+    color: $neutral;
+  }
 }

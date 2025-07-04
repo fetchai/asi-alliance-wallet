@@ -90,14 +90,34 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
     // If inflation is 0 or not fetched properly, there is no need to sort by APY.
     if (apr.toDec().gt(new Dec(0))) {
       return [
-        { label: "APR", key: "APR" },
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "APR",
+          key: "APR",
+          icon: require("@assets/svg/wireframe/percentage.svg"),
+        },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     } else {
       return [
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     }
   }, [apr]);
