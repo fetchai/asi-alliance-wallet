@@ -1,10 +1,12 @@
+@import "../../styles/var";
+
 .rightIcon {
   height: 10px;
 }
 
 .rightIconContainer {
   margin-left: 6px;
-  border: 1px solid #a1a3a3;
+  border: 1px solid $neutral;
   border-radius: 6px;
   padding: 0px 5px 1px;
 }

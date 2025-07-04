@@ -96,6 +96,7 @@ export const MorePage: FunctionComponent = () => {
             background: "transparent",
             width: "30px",
             height: "25px",
+            marginRight: "10px",
           }}
           style={{
             marginBottom: "6px",
@@ -105,11 +106,7 @@ export const MorePage: FunctionComponent = () => {
             display: "flex",
             alignItems: "center",
           }}
-          heading={
-            <React.Fragment>
-              <div>Switch to Side Panel</div>
-            </React.Fragment>
-          }
+          heading={<div>Switch to Side Panel</div>}
           subheading={"Open ASI Wallet in a sidebar on your screen"}
           rightContent={
             <SidePanelToggle
@@ -150,12 +147,13 @@ export const MorePage: FunctionComponent = () => {
       !currentChain.beta &&
       isAddressWhitelisted ? (
         <Card
-          leftImageStyle={{ background: "transparent" }}
-          style={{
-            marginBottom: "6px",
+          leftImageStyle={{
+            background: "transparent",
+            width: "24px",
+            height: "16px",
           }}
           leftImage={require("@assets/svg/wireframe/plus-minus.svg")}
-          heading="Buy/Sell"
+          heading="Buy / Sell"
           onClick={() => {
             navigate("/more/token/moonpay");
           }}

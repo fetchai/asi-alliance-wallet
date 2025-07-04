@@ -118,7 +118,7 @@ export const MyValidator = observer(() => {
                       <div>
                         <span
                           className={styles["validator-currency"]}
-                          style={{ color: "#737676" }}
+                          style={{ color: "var(--font-secondary)" }}
                         >
                           {amount
                             .maxDecimals(4)
@@ -140,7 +140,7 @@ export const MyValidator = observer(() => {
                         </span>
                         <span
                           className={styles["validator-currency"]}
-                          style={{ color: "#737676" }}
+                          style={{ color: "var(--font-secondary)" }}
                         >
                           {" "}
                           {fiatCurrency.toUpperCase()}
@@ -154,7 +154,7 @@ export const MyValidator = observer(() => {
                     style={{
                       width: "100%",
                       height: "1px",
-                      background: "#e8e8e8",
+                      background: "var(--bg-grey-dark)",
                     }}
                   />
 
@@ -185,7 +185,7 @@ export const MyValidator = observer(() => {
                         style={{
                           marginLeft: "5px",
                           fontSize: "12px",
-                          color: "#737676",
+                          color: "var(--font-secondary)",
                         }}
                       >
                         Earned

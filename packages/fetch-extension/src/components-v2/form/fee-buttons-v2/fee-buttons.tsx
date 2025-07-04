@@ -297,7 +297,7 @@ export const FeeButtonsInner: FunctionComponent<
                 background: "transparent",
                 borderRadius: "12px",
                 padding: "2px 12px",
-                border: "1px solid #e8e8e8",
+                border: "1px solid var(--bg-grey-dark)",
               }}
             >
               <img

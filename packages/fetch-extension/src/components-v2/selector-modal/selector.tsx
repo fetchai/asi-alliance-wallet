@@ -50,7 +50,10 @@ export const SelectorModal = ({
             <div
               className={style["selector-element"]}
               style={{
-                background: item.key === selectedKey ? "#E0FEDD" : "#F6F6F6",
+                background:
+                  item.key === selectedKey
+                    ? "var(--bg-green-light)"
+                    : "var(--card-bg)",
               }}
               key={item.key}
               onClick={() => {

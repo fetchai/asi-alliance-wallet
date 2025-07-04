@@ -141,7 +141,7 @@ export const NativeTokens = observer(() => {
                 {totalPrice.toString()}{" "}
                 <span
                   style={{
-                    color: "#737676",
+                    color: "var(--font-secondary)",
                     fontSize: "12px",
                     fontWeight: 400,
                   }}
