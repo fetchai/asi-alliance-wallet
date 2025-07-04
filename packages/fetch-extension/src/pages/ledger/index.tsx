@@ -162,16 +162,8 @@ export const LedgerSetupView: FunctionComponent<{
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "start",
-        height: "95%",
-      }}
-    >
-      <div className={style["ledgerContainer"]}>
+    <div className={style["ledgerWrapper"]}>
+      <div className={style["ledgerInnerContainer"]}>
         <BackButton
           onClick={async () => {
             ledgerInitStore.abortAll();
@@ -264,19 +256,13 @@ export const LedgerSetupView: FunctionComponent<{
           <label
             className={`custom-control-label ${style["ledgerCheckboxLabel"]}`}
             htmlFor="use-webhid"
-            style={{ color: "white", paddingTop: "6px" }}
+            style={{ paddingTop: "6px" }}
           >
             <FormattedMessage id="ledger.option.webhid.checkbox" />
           </label>
         </div>
         {showWebHIDWarning ? (
-          <div
-            style={{
-              fontSize: "14px",
-              marginBottom: "20px",
-              color: "white",
-            }}
-          >
+          <div className={style["webIdWarning"]}>
             <FormattedMessage
               id="ledger.option.webhid.warning"
               values={{
@@ -315,6 +301,7 @@ export const LedgerSetupView: FunctionComponent<{
         ) : null}
         <div className={style["buttons"]}>
           <ButtonV2
+            variant="dark"
             styleProps={{
               padding: "12px",
               height: "56px",

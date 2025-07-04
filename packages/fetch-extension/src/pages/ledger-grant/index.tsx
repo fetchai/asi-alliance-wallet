@@ -106,21 +106,13 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
         <div className={classnames(style["logoInnerContainer"])}>
           <img
             className={style["icon"]}
-            src={require("@assets/png/ASI-Logo-Icon-white.png")}
+            src={require("@assets/png/ASI-Logo-Icon-black.png")}
             alt="logo"
           />
         </div>
       </div>
-      <div
-        style={{
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "start",
-          height: "95%",
-        }}
-      >
-        <div className={style["ledgerContainer"]}>
+      <div className={style["ledgerWrapper"]}>
+        <div className={style["ledgerInnerContainer"]}>
           <div className={style["pageTitle"]}>
             Allow Browser to Connect to Ledger
           </div>
@@ -137,8 +129,6 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
                   <button
                     className={style["buttonText"]}
                     style={{
-                      marginTop: "24px",
-                      color: "#F0224B",
                       opacity: isLoading.loading ? 0.5 : 1,
                       cursor: isLoading.loading ? "progress" : "pointer",
                     }}
@@ -149,14 +139,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
                     }}
                   >
                     {"Failed! Try Again"}
-                    <div
-                      style={{
-                        marginLeft: "4px",
-                        display: "flex",
-                        alignItems: "center",
-                        height: "1px",
-                      }}
-                    >
+                    <div className={style["failureIconContainer"]}>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
@@ -177,13 +160,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
                 );
               case "success":
                 return (
-                  <div
-                    style={{
-                      fontSize: "16px",
-                      color: "#22AC71",
-                      cursor: "auto",
-                    }}
-                  >
+                  <div className={style["successMessage"]}>
                     Success! You can close this web page.
                   </div>
                 );
@@ -207,13 +184,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
                       </label>
                     </div>
                     {showWebHIDWarning ? (
-                      <div
-                        style={{
-                          fontSize: "14px",
-                          marginBottom: "20px",
-                          color: "white",
-                        }}
-                      >
+                      <div className={style["webIdWarning"]}>
                         <FormattedMessage
                           id="ledger.option.webhid.warning"
                           values={{

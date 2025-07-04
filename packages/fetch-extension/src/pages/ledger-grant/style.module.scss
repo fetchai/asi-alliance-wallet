@@ -1,11 +1,9 @@
+@import "../../styles/var";
+
 .container {
   width: 100%;
   height: 100%;
   display: flex;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  background-image: url("../../public/assets/svg/wireframe/bg-register.svg");
   flex-direction: column;
   padding: 0;
 }
@@ -76,11 +74,42 @@
   letter-spacing: -0.005em;
 
   cursor: pointer;
-
-  color: #314fdf;
+  margin-top: 24px;
+  color: #f0224b;
 }
 
-.ledgerContainer {
+.failureIconContainer {
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  height: 1px;
+}
+
+.successMessage {
+  font-size: 16px;
+  color: $link-green;
+  cursor: auto;
+}
+
+.webIdWarning {
+  font-size: 14px;
+  margin-bottom: 20px;
+  color: $font-secondary;
+
+  & a {
+    color: $link-green;
+  }
+}
+
+.ledgerWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  height: 95%;
+}
+
+.ledgerInnerContainer {
   width: 390px;
 }
 
@@ -99,7 +128,7 @@
   margin: 0 auto;
   height: 720px;
   border-radius: 25px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: $card-bg;
   display: flex;
   flex-direction: column;
 
@@ -113,7 +142,7 @@
 
 .pageTitle {
   font-size: 32px;
-  color: #fff;
+  color: $font-dark;
   margin-top: 10px;
   margin-bottom: 10px;
   font-weight: 400;
@@ -124,7 +153,7 @@
   margin-top: 12px;
   margin-bottom: 12px;
   font-size: 16px;
-  color: white;
+  color: $font-secondary;
 }
 
 .instruction {
@@ -132,15 +161,12 @@
   padding: 20px;
   border-radius: 20px;
 
-  color: white;
+  color: $font-dark;
 
   display: flex;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: $card-bg;
   .icon {
-    img {
-      filter: invert(1);
-    }
     min-width: 50px;
     display: flex;
     justify-content: center;
@@ -150,13 +176,14 @@
   .inner {
     h1 {
       font-size: 20px;
-      font-weight: bold;
-      color: white;
+      font-weight: 500;
+      color: $font-dark;
       margin-bottom: 8px;
     }
 
     p {
       font-size: 16px;
+      color: $font-secondary;
       line-height: 1.5;
       letter-spacing: -0.3px;
       margin-bottom: 10px;
@@ -167,48 +194,51 @@
 .ledgerCheckbox {
   margin-top: 12px;
   margin-bottom: 24px;
+  background: white;
+  border: 1.5px solid $border-grey;
 
   &:checked {
-    accent-color: #010d3e !important;
+    accent-color: $bg-green-base !important;
     background: transparent !important;
-    opacity: 1;
-    border-color: white !important;
+    opacity: 1 !important;
+    border-color: transparent !important;
   }
 
   &:not(:disabled):active {
     ~ .ledgerCheckboxLabel {
       &::before {
         background-color: transparent !important;
-        border-color: white !important;
+        border-color: transparent !important;
       }
     }
   }
 
   &:checked ~ .ledgerCheckboxLabel::before {
-    border-color: white !important;
+    border-color: transparent !important;
     background-color: transparent !important;
   }
 
   &:focus:not(:checked) ~ .ledgerCheckboxLabel {
     &::before {
-      border-color: white !important;
+      border-color: $border-grey !important;
     }
   }
 }
 
 .ledgerCheckboxLabel {
-  color: white;
+  color: $font-secondary;
+  padding-top: 1px;
   margin-top: 12px;
   margin-bottom: 24px;
 
   &::before {
     border-radius: 0.25rem !important;
-    border: 1px solid white;
+    border: 1px solid $border-grey;
     background: transparent !important;
   }
 
   &::after {
-    border: 1px solid white;
+    border: 1px solid transparent;
     border-radius: 0.25rem !important;
   }
 }

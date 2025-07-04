@@ -10,7 +10,7 @@
 }
 
 .modalBackdrop {
-  background: #151a1a99;
+  background: rgba($bg-dark, 0.6);
   backdrop-filter: blur(3px);
   opacity: 1 !important;
 }
