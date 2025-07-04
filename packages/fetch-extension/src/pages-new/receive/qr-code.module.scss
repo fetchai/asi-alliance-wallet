@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .depositModal {
   display: flex;
   flex-direction: column;
@@ -7,7 +9,7 @@
 }
 
 .depositTitle {
-  color: #fff;
+  color: $font-dark;
   text-align: center;
   font-size: 24px;
   font-style: normal;
@@ -18,22 +20,25 @@
   opacity: 0.8;
   font-size: 14px;
   font-weight: 400;
-  color: white;
+  color: $font-grey;
 }
 .depositWarning {
+  img {
+    width: 16px;
+    height: 16px;
+    margin-top: 4px;
+  }
+  display: flex;
   margin: 24px 0px;
   //   margin-bottom: 5px;
-  color: #fff;
+  color: $font-dark;
   font-size: 14px;
   border-radius: 12px;
-  background: rgba(255, 62, 62, 0.25);
-  box-shadow: 0px -10px 30px 0px rgba(255, 62, 62, 0.1) inset,
-    0px 1px 2px 0px rgba(255, 62, 62, 0.25) inset,
-    0px -1px 2px 0px rgba(255, 62, 62, 0.25) inset;
+  background: $bg-red-base;
   backdrop-filter: blur(15px);
   display: flex;
   padding: 12px;
-  align-items: center;
-  gap: 24px;
+  align-items: flex-start;
+  gap: 16px;
   font-weight: 400;
 }

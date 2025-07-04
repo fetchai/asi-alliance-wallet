@@ -262,7 +262,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                     className={style["logoImage"]}
                     src={
                       communityChainInfo?.chainInfo?.chainSymbolImageUrl ||
-                      require("@assets/png/Black-white-circle.png")
+                      require("@assets/png/White-black-circle.png")
                     }
                     alt="chain logo"
                   />
@@ -276,7 +276,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   <div className={style["imageBackground"]} />
                   <img
                     className={style["logoImage"]}
-                    src={require("@assets/png/Black-white-circle.png")}
+                    src={require("@assets/png/White-black-circle.png")}
                     alt="chain logo"
                   />
                 </div>
@@ -311,7 +311,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   >
                     <div className={style["item"]}>
                       <FormattedMessage id="chain.suggested.community-driven" />
-                      <GithubIcon />
+                      <GithubIcon fill="white" />
                     </div>
                   </a>
                 </div>
@@ -351,9 +351,6 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                 padding: "10px",
                 height: "40px",
                 fontSize: "0.9rem",
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.4)",
               }}
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
               dataLoading={chainSuggestStore.isLoading}
@@ -374,13 +371,11 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
               text={<FormattedMessage id="chain.suggested.button.reject" />}
             />
             <ButtonV2
+              variant="dark"
               styleProps={{
                 padding: "10px",
                 height: "40px",
                 fontSize: "0.9rem",
-                background: "white",
-                color: "black",
-                border: "1px solid rgba(255,255,255,0.4)",
               }}
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
               dataLoading={chainSuggestStore.isLoading}

@@ -78,7 +78,6 @@ export const AddressRow: React.FC<AddressRowProps> = ({
       onClick={handleAddressClick}
       style={{
         cursor: selectHandler ? undefined : "auto",
-        background: "rgba(255,255,255,0.1)",
       }}
     />
   );

@@ -36,8 +36,9 @@ export const Address: FunctionComponent<
         trigger="hover"
         options={{ placement: "top-end" }}
         tooltipStyle={{
-          background: "#5F38FB",
+          background: "var(--bg-green-light)",
           width: "324px",
+          color: "var(--font-dark)",
         }}
         tooltip={
           <div
@@ -56,6 +57,7 @@ export const Address: FunctionComponent<
         }
         childrenStyle={{
           opacity: 0.6,
+          color: "var(--font-secondary)",
         }}
       >
         {props.iconClass ? <i className={iconClass} /> : ""}

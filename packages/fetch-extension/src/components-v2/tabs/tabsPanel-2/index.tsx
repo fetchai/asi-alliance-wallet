@@ -68,9 +68,11 @@ export const TabsPanel: React.FC<TabsProps> = ({
                 tab.id === selectedTab ? style["selected"] : ""
               }`}
               style={{
-                color: `${tab.id === selectedTab ? "#000D3D" : "#FFF"}`,
+                color: `${
+                  tab.id === selectedTab ? "#f0f0f0" : "var(--font-secondary)"
+                }`,
                 background: `${
-                  tab.id === selectedTab ? "white" : "transparent"
+                  tab.id === selectedTab ? "var(--bg-dark)" : "transparent"
                 }`,
                 border: `${
                   tab.id === selectedTab ||
@@ -82,6 +84,7 @@ export const TabsPanel: React.FC<TabsProps> = ({
                 borderRadius: `${tab.id === selectedTab ? "10px" : "0px"}`,
               }}
               key={tab.id}
+              type="button"
               onClick={() => handleTabClick(tab.id)}
               disabled={tab.disabled || false}
             >

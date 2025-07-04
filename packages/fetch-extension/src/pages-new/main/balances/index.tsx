@@ -161,8 +161,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                   style["changeInDollars"] + " " + changeInDollarsClass
                 }
               >
-                {priceStore.getFiatCurrency(fiatCurrency)?.symbolName}{" "}
-                {changeInDollarsValue.toFixed(4)} {totalDenom}
+                {`${
+                  priceStore.getFiatCurrency(fiatCurrency)?.symbolName
+                }${changeInDollarsValue.toFixed(4)} ${totalDenom}`}
               </div>
               <div className={style["changeInPer"]}>
                 ( {tokenState.type === "positive" ? "+" : "-"}
@@ -178,7 +179,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             {accountInfo.walletStatus === WalletStatus.Loading ||
             keyRingStore.status === 0 ||
             rewards.isFetching ? (
-              <Skeleton height="37.5px" />
+              <Skeleton height="37.5px" width="100px" />
             ) : (
               <React.Fragment>
                 {Number(totalNumber).toLocaleString("en-US")}{" "}
@@ -190,7 +191,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             {accountInfo.walletStatus === WalletStatus.Loading ||
             keyRingStore.status === 0 ||
             rewards.isFetching ? (
-              <Skeleton height="21px" />
+              <Skeleton height="21px" width="100px" />
             ) : totalPrice ? (
               ` ${totalPrice.toString()} ${fiatCurrency.toUpperCase()}`
             ) : (
@@ -215,8 +216,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                   style["changeInDollars"] + " " + changeInDollarsClass
                 }
               >
-                {priceStore.getFiatCurrency(fiatCurrency)?.symbolName}{" "}
-                {changeInDollarsValue.toFixed(4)}
+                {`${tokenState.type === "positive" ? "+" : "-"} ${
+                  priceStore.getFiatCurrency(fiatCurrency)?.symbolName
+                } ${changeInDollarsValue.toFixed(4)}`}
               </div>
               <div className={style["changeInPer"]}>
                 ({tokenState.type === "positive" ? "+" : "-"}
@@ -251,7 +253,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             navigate("/portfolio");
           }}
         >
-          View portfolio
+          Portfolio
+          <img src={require("@assets/svg/chevron-right.svg")} alt="chevron" />
         </button>
       </div>
     </div>

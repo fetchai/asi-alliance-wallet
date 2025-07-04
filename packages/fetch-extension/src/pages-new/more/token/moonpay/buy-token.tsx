@@ -102,7 +102,7 @@ export const BuyToken: FunctionComponent<{
         setToken={setToken}
       />
       <Card
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "16px" }}
+        style={{ marginBottom: "16px" }}
         onClick={() => {
           if (tokenCode) {
             setIsDropdownOpen(true);
@@ -152,6 +152,7 @@ export const BuyToken: FunctionComponent<{
       )}
       <div className={styles["btnWrapper"]}>
         <ButtonV2
+          variant="dark"
           text="Buy Using Moonpay"
           styleProps={{
             position: "fixed",
@@ -160,13 +161,6 @@ export const BuyToken: FunctionComponent<{
             transform: "translateX(-50%)",
             bottom: "16px",
             textTransform: "capitalize",
-            backgroundColor:
-              isAmountEmpty || amountError !== "" ? "transparent" : "white",
-            color: isAmountEmpty || amountError !== "" ? "white" : "black",
-            border:
-              isAmountEmpty || amountError !== ""
-                ? "1px solid white"
-                : "1px solid transparent",
           }}
           onClick={async () => {
             const URL = await redirectURL();

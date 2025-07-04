@@ -39,14 +39,18 @@ export const Dropdown: React.FC<DropdownProps> = ({
         <div className={style["header"]}>
           {title}
           {showCloseIcon && (
-            <img
-              className={style["closeIcon"]}
+            <div
+              className={style["closeIconContainer"]}
               onClick={() => {
                 closeClicked();
                 setIsOpen(false);
               }}
-              src={require("@assets/svg/wireframe/xmark.svg")}
-            />
+            >
+              <img
+                className={style["closeIcon"]}
+                src={require("@assets/svg/wireframe/xmark.svg")}
+              />
+            </div>
           )}
         </div>
         {children}

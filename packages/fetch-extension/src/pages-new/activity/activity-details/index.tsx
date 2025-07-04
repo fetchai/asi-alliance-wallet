@@ -112,14 +112,13 @@ export const ActivityDetails = observer(() => {
             <Card
               leftImage={require("@assets/svg/wireframe/contract-interaction.svg")}
               style={{
-                background: "transparent",
                 width: "100%",
                 height: "69px",
               }}
               leftImageStyle={{
                 height: "32px",
                 width: "32px",
-                background: "none",
+                background: "white",
                 padding: 0,
               }}
               heading={"Smart Contract"}
@@ -143,14 +142,12 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "none",
+                  background: "white",
                   padding: 0,
                 }}
-                style={{ background: "transparent" }}
                 heading={details.signerAddress ? "From" : "deligator address"}
                 headingStyle={{
                   fontSize: "14px",
-                  color: "rgba(255,255,255,0.6)",
                   fontWeight: 400,
                 }}
                 subheading={formatAddress(
@@ -174,10 +171,9 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "none",
+                  background: "white",
                   padding: 0,
                 }}
-                style={{ background: "transparent" }}
                 heading={
                   details.toAddress
                     ? "To"
@@ -187,7 +183,6 @@ export const ActivityDetails = observer(() => {
                 }
                 headingStyle={{
                   fontSize: "14px",
-                  color: "rgba(255,255,255,0.6)",
                   fontWeight: 400,
                 }}
                 subheading={toAddress(details)}

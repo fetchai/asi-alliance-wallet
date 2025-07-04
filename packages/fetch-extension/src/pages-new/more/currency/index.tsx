@@ -49,7 +49,7 @@ export const CurrencyPge: FunctionComponent = observer(() => {
           style={
             language.isFiatCurrencyAutomatic
               ? {
-                  background: "var(--Indigo---Fetch, #5F38FB)",
+                  background: "var(--bg-green-light)",
                   marginBottom: "5px",
                 }
               : { marginBottom: "5px" }
@@ -79,8 +79,8 @@ export const CurrencyPge: FunctionComponent = observer(() => {
                   background:
                     language.fiatCurrency === fiatCurrency.currency &&
                     !language.isFiatCurrencyAutomatic
-                      ? "var(--Indigo---Fetch, #5F38FB)"
-                      : "rgba(255, 255, 255, 0.1)",
+                      ? "var(--bg-green-light)"
+                      : "var(--card-bg)",
                 }}
                 onClick={() => handleClick(fiatCurrency.currency)}
               >
@@ -92,7 +92,7 @@ export const CurrencyPge: FunctionComponent = observer(() => {
                     color:
                       language.fiatCurrency === fiatCurrency.currency &&
                       !language.isFiatCurrencyAutomatic
-                        ? "#E5E4E2"
+                        ? "var(--font-secondary)"
                         : "gray",
                     margin: "4px",
                   }}
