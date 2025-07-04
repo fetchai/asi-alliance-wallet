@@ -63,7 +63,7 @@ export const AccessPage: FunctionComponent = observer(() => {
     >
       <div className={style["container"]}>
         <img
-          src={require("@assets/png/ASI-Logo-Icon-white.png")}
+          src={require("@assets/png/ASI-Logo-Icon-black.png")}
           alt="logo"
           style={{ width: "180px", height: "40px", margin: "0 auto" }}
         />
@@ -104,9 +104,6 @@ export const AccessPage: FunctionComponent = observer(() => {
               padding: "10px",
               height: "40px",
               fontSize: "0.9rem",
-              background: "transparent",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.4)",
             }}
             onClick={async (e: any) => {
               e.preventDefault();
@@ -129,13 +126,11 @@ export const AccessPage: FunctionComponent = observer(() => {
             text={<FormattedMessage id="access.button.reject" />}
           />
           <ButtonV2
+            variant="dark"
             styleProps={{
               padding: "10px",
               height: "40px",
               fontSize: "0.9rem",
-              background: "white",
-              color: "black",
-              border: "1px solid rgba(255,255,255,0.4)",
             }}
             onClick={async (e: any) => {
               e.preventDefault();

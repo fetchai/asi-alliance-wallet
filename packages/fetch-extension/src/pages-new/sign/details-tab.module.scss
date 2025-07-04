@@ -6,16 +6,17 @@
   height: 1px;
 }
 
+.label {
+  color: $font-secondary;
+  font-weight: 400;
+  font-size: 14px;
+}
+
 .container {
   flex: 1;
   display: flex;
   flex-direction: column;
-
-  .label {
-    color: $font-secondary;
-    font-weight: 400;
-    font-size: 14px;
-  }
+  color: $font-dark;
 
   .signMessageLabel {
     @extend .label;
@@ -53,7 +54,7 @@
       flex-direction: column;
 
       .contentTitle {
-        color: $font-secondary;
+        color: $font-dark;
         font-size: 16px;
         font-weight: 400;
       }
@@ -101,7 +102,7 @@
   gap: 144px;
   align-self: stretch;
   border-radius: 12px;
-  color: $font-secondary;
+  color: $font-dark;
   background: $card-bg;
   word-break: break-word;
 }
@@ -113,4 +114,21 @@
 .feePriceFiat {
   font-size: 14px;
   display: inline-block;
+}
+
+.signValueContainer {
+  margin-bottom: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.signValue {
+  flex: 1;
+  padding: 20px;
+  border: 1px solid $border-grey;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: $font-dark;
 }

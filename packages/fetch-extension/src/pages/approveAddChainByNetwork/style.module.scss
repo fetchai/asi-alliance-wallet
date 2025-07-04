@@ -1,8 +1,13 @@
+@import "../../styles/var";
+
 .container {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   height: 100%;
+  color: $font-dark;
+  font-family: $font-family-base;
+  background: white;
 
   .content {
     position: relative;
@@ -179,11 +184,6 @@
         .imageBackground {
           width: 80px;
           height: 80px;
-          background: linear-gradient(
-            315deg,
-            #0084da 13.07%,
-            rgba(0, 132, 218, 0.31) 85.23%
-          );
           border-radius: 50%;
           opacity: 0.3;
         }
@@ -210,7 +210,7 @@
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #afd7f3;
+          background: #cbd3df;
         }
       }
     }
@@ -218,10 +218,10 @@
     .header {
       margin-top: 18px;
       text-align: center;
-      font-weight: 600;
+      font-weight: 500;
       font-size: 24px;
       line-height: 29px;
-      color: #2c2e53;
+      color: $font-dark;
     }
 
     .tag {
@@ -238,12 +238,12 @@
         padding: 4px 12px;
         border-radius: 40px;
 
-        background: #eff3fa;
+        background: $bg-dark;
 
         font-weight: 500;
         font-size: 12px;
         line-height: 18px;
-        color: #566172;
+        color: white;
       }
     }
 
@@ -256,9 +256,7 @@
 
       flex: 1;
 
-      /* Platinum/Platinum 300 */
-
-      color: #566172;
+      color: $font-secondary;
     }
 
     .chainDetailContainer {
@@ -285,7 +283,7 @@
       padding: 0;
       width: fit-content;
       margin: auto;
-      color: #525f7f;
+      color: $font-secondary;
 
       li:before {
         content: "- ";
@@ -381,6 +379,8 @@
   .buttons {
     justify-self: flex-end;
     display: flex;
+    margin-bottom: 10px;
+    gap: 10px;
   }
 
   .button {

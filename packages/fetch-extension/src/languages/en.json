@@ -287,8 +287,8 @@
   "access.button.approve": "Approve",
   "access.button.reject": "Reject",
 
-  "permissions.grant.get-chain-infos.description.title": "<b>{host}</b> is requesting to connect to your Keplr.",
-  "permissions.grant.get-chain-infos.description.list1": "Get the list of all chains on your Keplr Wallet",
+  "permissions.grant.get-chain-infos.description.title": "<b>{host}</b> is requesting to connect to your ASI Alliance Wallet.",
+  "permissions.grant.get-chain-infos.description.list1": "Get the list of all chains on your ASI Alliance Wallet",
 
   "access.viewing-key.title": "Requesting Viewing Key",
   "access.viewing-key.paragraph": "<b>{host}</b> is requesting to get your token's viewing key on <b>{contractAddress}</b>.",
