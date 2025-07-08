@@ -1,9 +1,11 @@
+@import "../../../../styles/var";
+
 .dropdown-container {
   position: relative;
 }
 
 .dropdown {
-  color: white !important;
+  color: $font-dark !important;
   font-size: 12px;
   position: absolute;
   top: -52px;
@@ -11,31 +13,21 @@
   height: 32px;
   padding: 6px 12px;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $border-grey;
   backdrop-filter: blur(10px);
-  width: 22%;
+  width: 80px;
 }
+
 .dropdown:hover {
-  border: 1px solid white;
+  opacity: 0.9;
 }
 
 .dropdownHeading {
   display: flex;
   justify-content: space-between;
+  column-gap: 4px;
 }
-.selectAll {
-  display: flex;
-  height: 32px;
-  padding: 6px 12px;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  flex: 1 0 0;
-  border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  margin-bottom: 24px;
-}
+
 .hidden {
   position: absolute;
   overflow: hidden;
