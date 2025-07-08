@@ -65,6 +65,10 @@ module.exports = (() => {
         http: path.resolve(__dirname, "../../node_modules/http-browserify"),
         https: path.resolve(__dirname, "../../node_modules/https-browserify"),
         os: path.resolve(__dirname, "../../node_modules/os-browserify"),
+
+        // assert: require.resolve("empty-module"), // assert can be polyfilled here if needed
+        // url: require.resolve("empty-module"), // url can be polyfilled here if needed
+        // zlib: require.resolve("empty-module"), // browserify-zlib can be polyfilled here if needed
       },
     },
     transformer: {
