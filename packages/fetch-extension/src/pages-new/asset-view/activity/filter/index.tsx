@@ -28,12 +28,12 @@ export const FilterActivities: React.FC<{
       >
         <div className={styles["dropdownToggle"]} ref={dropdownRef}>
           <div className={styles["dropdownHeading"]}>
-            Filter
             <img
               src={require("@assets/svg/wireframe/filter.svg")}
               alt="filter"
               className={styles["arrowIcon"]}
             />
+            Filter
           </div>
         </div>
       </div>
@@ -69,23 +69,12 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
     <Dropdown
       isOpen={isOpen}
       setIsOpen={setIsOpen}
-      title={"Filter"}
+      title={"Filters"}
       closeClicked={() => {
         setIsOpen(false);
       }}
       styleProp={{ position: "block" }}
     >
-      <div className={styles["select"]}>
-        {!isSelectAll ? (
-          <div className={styles["selectAll"]} onClick={handleSelectClicks}>
-            Select all
-          </div>
-        ) : (
-          <div className={styles["selectAll"]} onClick={handleDeselectClicks}>
-            Unselect all
-          </div>
-        )}
-      </div>
       <div className={styles["dropdownMenu"]}>
         {options.map((option: any) => (
           <label key={option.value} className={styles["dropdownItem"]}>
@@ -101,12 +90,12 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
               style={
                 selectedFilter.includes(option.value)
                   ? {
-                      width: "333px",
-                      background: "var(--Indigo---Fetch, #5F38FB)",
+                      width: "100%",
+                      background: "var(--bg-green-light)",
                     }
                   : {
-                      width: "333px",
-                      background: "rgba(255,255,255,0.1)",
+                      width: "100%",
+                      background: "var(--card-bg)",
                       cursor: "pointer",
                     }
               }
@@ -132,14 +121,29 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
           </label>
         ))}
       </div>
-      <ButtonV2
-        styleProps={{
-          minHeight: "56px",
-        }}
-        disabled={isSaveChangesButtonDisabled}
-        onClick={handleSaveChanges}
-        text="Save Changes"
-      />
+      <div>
+        <ButtonV2
+          styleProps={{
+            minHeight: "56px",
+          }}
+          onClick={!isSelectAll ? handleSelectClicks : handleDeselectClicks}
+          text={!isSelectAll ? "Select all" : "Unselect all"}
+        />
+        <ButtonV2
+          variant="dark"
+          styleProps={{
+            minHeight: "56px",
+            background: isSaveChangesButtonDisabled
+              ? "var(--bg-grey-dark)"
+              : "var(--bg-dark)",
+            color: isSaveChangesButtonDisabled ? "var(--neutral)" : "white",
+            opacity: 1,
+          }}
+          disabled={isSaveChangesButtonDisabled}
+          onClick={handleSaveChanges}
+          text="Apply Filters"
+        />
+      </div>
     </Dropdown>
   );
 };
