@@ -95,7 +95,12 @@ export const ActivityDetails = observer(() => {
               {details.status === "Success" ||
               details.status === "Pending" ||
               details.status === "Failed" ? (
-                <StatusButton title={details.status} status={details.status} />
+                <StatusButton
+                  title={
+                    details.status === "Success" ? "Confirmed" : details.status
+                  }
+                  status={details.status}
+                />
               ) : (
                 <div>Error</div>
               )}

@@ -13,6 +13,7 @@
 .container {
   padding: 16px;
   margin: 0px -12px;
+  font-family: $font-family-base;
   width: 333px;
   color: $font-dark;
 }
@@ -59,6 +60,7 @@
   justify-content: space-between;
   padding: 16px 0;
 }
+
 .middle {
   // margin-left: 15px;
   align-items: baseline;

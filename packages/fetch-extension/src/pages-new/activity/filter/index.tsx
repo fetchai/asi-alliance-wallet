@@ -24,12 +24,12 @@ export const FilterActivities: React.FC<{
       >
         <div className={styles["dropdownToggle"]} ref={dropdownRef}>
           <div className={styles["dropdownHeading"]}>
-            Filter
             <img
               src={require("@assets/svg/wireframe/filter.svg")}
               alt="filter"
               className={styles["arrowIcon"]}
             />
+            Filter
           </div>
         </div>
       </div>
@@ -67,7 +67,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
     <Dropdown
       isOpen={isOpen}
       setIsOpen={setIsOpen}
-      title={"Filter"}
+      title={"Filters"}
       closeClicked={
         closeClicked
           ? closeClicked
@@ -77,17 +77,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
       }
       styleProp={{ position: "block" }}
     >
-      <div className={styles["select"]}>
-        {!isSelectAll ? (
-          <div className={styles["selectAll"]} onClick={handleSelectClicks}>
-            Select all
-          </div>
-        ) : (
-          <div className={styles["selectAll"]} onClick={handleDeselectClicks}>
-            Unselect all
-          </div>
-        )}
-      </div>
       <div className={styles["dropdownMenu"]}>
         {options.map((option: any) => (
           <label key={option.value} className={styles["dropdownItem"]}>
@@ -133,15 +122,29 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
           </label>
         ))}
       </div>
-      <ButtonV2
-        variant="dark"
-        styleProps={{
-          minHeight: "56px",
-        }}
-        disabled={isSaveChangesButtonDisabled}
-        onClick={handleSaveChanges}
-        text="Save Changes"
-      />
+      <div>
+        <ButtonV2
+          styleProps={{
+            minHeight: "56px",
+          }}
+          onClick={!isSelectAll ? handleSelectClicks : handleDeselectClicks}
+          text={!isSelectAll ? "Select all" : "Unselect all"}
+        />
+        <ButtonV2
+          variant="dark"
+          styleProps={{
+            minHeight: "56px",
+            background: isSaveChangesButtonDisabled
+              ? "var(--bg-grey-dark)"
+              : "var(--bg-dark)",
+            color: isSaveChangesButtonDisabled ? "var(--neutral)" : "white",
+            opacity: 1,
+          }}
+          disabled={isSaveChangesButtonDisabled}
+          onClick={handleSaveChanges}
+          text="Apply Filters"
+        />
+      </div>
     </Dropdown>
   );
 };
