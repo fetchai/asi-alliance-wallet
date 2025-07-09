@@ -88,7 +88,10 @@ export const ActivityDetails = observer(() => {
         }}
       >
         <div className={style["topBar"]}>
-          <img src={require("@assets/png/Black-white-circle.png")} alt="verb" />
+          <img
+            src={require("@assets/svg/wireframe/asi-black-circle.svg")}
+            alt="verb"
+          />
           <div className={style["topBar-details"]}>
             <div className={style["verb"]}>{details.verb}</div>
             <div className={style["status"]}>
