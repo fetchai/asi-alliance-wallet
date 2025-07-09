@@ -166,7 +166,7 @@ export const DetailsTab: FunctionComponent<{
             <div
               id="fee-price"
               style={{
-                padding: "4px 8px",
+                padding: "10px 8px",
               }}
               className={styleDetailsTab["cards"]}
             >

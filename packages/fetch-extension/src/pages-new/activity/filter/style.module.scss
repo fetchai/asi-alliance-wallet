@@ -15,7 +15,7 @@
   border-radius: 100px;
   border: 1px solid $border-grey;
   backdrop-filter: blur(10px);
-  width: 80px;
+  width: 89px;
 }
 .dropdown:hover {
   opacity: 0.9;
@@ -23,7 +23,7 @@
 
 .dropdownHeading {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-evenly;
   column-gap: 4px;
 }
 
