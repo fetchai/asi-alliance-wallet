@@ -242,7 +242,7 @@ export const WalletDetailsView = observer(
             style={
               accountInfo.walletStatus === WalletStatus.Rejected
                 ? { display: "flex", gap: "10px", alignItems: "center" }
-                : { display: "flex", columnGap: "10px" }
+                : { display: "flex", columnGap: "10px", width: "80%" }
             }
           >
             <div className={style["wallet-address"]}>
@@ -265,7 +265,7 @@ export const WalletDetailsView = observer(
                 }
               })()}
             </div>
-            <div>
+            <div style={{ width: "60%" }}>
               <div className={style["walletRejected"]}>
                 {accountInfo.walletStatus === WalletStatus.Rejected && (
                   <ToolTip
