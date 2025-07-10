@@ -499,11 +499,11 @@ export const Stats = observer(
           title=""
           closeClicked={() => setIsClaimRewardsOpen(false)}
           showTopNav={false}
-          showCloseIcon={false}
+          showCloseIcon={true}
         >
           <div className={style["claim-rewards-dropdown-container"]}>
             <img
-              src={require("@assets/svg/wireframe/ic_claimrewards.png")}
+              src={require("@assets/svg/wireframe/ic_claimrewards.svg")}
               alt=""
             />
             <div className={style["claim-rewards-dropdown-text-container"]}>
@@ -528,9 +528,11 @@ export const Stats = observer(
 
             <ButtonV2
               onClick={handleClaimRewards}
-              variant="dark"
               styleProps={{
                 height: "56px",
+                background: "var(--bg-green-base)",
+                color: "var(--font-dark)",
+                borderColor: "transparent",
               }}
               text="Claim my rewards"
               disabled={

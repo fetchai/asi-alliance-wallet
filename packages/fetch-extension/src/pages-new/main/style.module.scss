@@ -130,6 +130,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 100;
 }
 
 .rewards-card {
@@ -153,6 +155,10 @@
 .wallet-address {
   font-weight: 400;
   color: $font-dark;
+  max-width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tab {

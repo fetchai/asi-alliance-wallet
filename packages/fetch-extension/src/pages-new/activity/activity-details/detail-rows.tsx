@@ -140,7 +140,6 @@ export const DetailRows = ({ details }: { details: any }) => {
                   <img
                     src={require("@assets/svg/wireframe/stake.svg")}
                     alt=""
-                    style={{ filter: "invert(1)" }}
                   />
                   Stake again
                 </React.Fragment>
