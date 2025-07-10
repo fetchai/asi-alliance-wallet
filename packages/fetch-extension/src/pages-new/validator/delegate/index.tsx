@@ -263,7 +263,6 @@ export const Delegate: FunctionComponent = observer(() => {
                 if (activityStore.getPendingTxnTypes[TXNTYPE.delegate]) return;
                 stakeClicked();
               }}
-              btnBgEnabled={true}
             >
               {intl.formatMessage({
                 id: "unstake.confirm",

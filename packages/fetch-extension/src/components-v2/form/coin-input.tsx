@@ -15,6 +15,7 @@ import {
 import { AppCurrency } from "@keplr-wallet/types";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import {
+  hasValidDecimals,
   parseDollarAmount,
   parseExponential,
   validateDecimalPlaces,
@@ -184,7 +185,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                   }
 
                   if (
-                    Number(value) < 10 ** 9 ||
+                    (Number(value) < 10 ** 9 && hasValidDecimals(value)) ||
                     value === "0" ||
                     value === ""
                   ) {

@@ -40,11 +40,18 @@
   font-style: normal;
   font-weight: 400;
   line-height: normal;
-  opacity: 0.6;
 }
 
 .btnBgDisabled {
   opacity: 0.6 !important;
+}
+
+.btnLight:disabled {
+  background: rgba(white, 0.8);
+}
+
+.btnDark:disabled {
+  background: rgba($bg-dark, 0.8);
 }
 
 .gradient {
