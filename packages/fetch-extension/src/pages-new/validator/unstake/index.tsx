@@ -289,7 +289,6 @@ export const Unstake = observer(() => {
               if (activityStore.getPendingTxnTypes[TXNTYPE.undelegate]) return;
               unstakeClicked();
             }}
-            btnBgEnabled={true}
           >
             {intl.formatMessage({
               id: "unstake.confirm",
