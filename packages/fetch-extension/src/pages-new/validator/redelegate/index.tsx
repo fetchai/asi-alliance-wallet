@@ -369,7 +369,6 @@ export const Redelegate = observer(() => {
                   return;
                 redelegateClicked();
               }}
-              btnBgEnabled={true}
             >
               {intl.formatMessage({
                 id: "unstake.confirm",

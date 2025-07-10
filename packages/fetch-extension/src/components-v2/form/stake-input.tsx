@@ -11,7 +11,11 @@ import {
 import { useStore } from "../../stores";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import { InputField } from "@components-v2/input-field";
-import { parseDollarAmount, validateDecimalPlaces } from "@utils/format";
+import {
+  parseDollarAmount,
+  validateDecimalPlaces,
+  hasValidDecimals,
+} from "@utils/format";
 import { useIntl } from "react-intl";
 import { useLanguage } from "../../languages";
 
@@ -116,7 +120,11 @@ export const StakeInput: FunctionComponent<{
             return;
           }
 
-          if (validateDecimalNumber(value) && Number(value) < 10 ** 18) {
+          if (
+            validateDecimalNumber(value) &&
+            Number(value) < 10 ** 18 &&
+            hasValidDecimals(value)
+          ) {
             if (value !== "0") {
               // Remove leading zeros
               for (let i = 0; i < value.length; i++) {
