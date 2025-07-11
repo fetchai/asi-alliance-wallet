@@ -45,6 +45,13 @@ export const PasswordInput = forwardRef<
             setIsOnCapsLock(false);
           }
         }}
+        onChange={(e) => {
+          const cleanedValue = e.target.value.replace(/\s/g, ""); // removes all spaces
+          e.target.value = cleanedValue;
+          if (props.onChange) {
+            props.onChange(e);
+          }
+        }}
       />
       {otherRef.current && (
         <Tooltip

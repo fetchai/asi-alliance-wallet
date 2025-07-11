@@ -60,6 +60,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           style={containerStyle}
         >
           <Input
+            {...rest}
             formGroupClassName={stylePasswordInput["formGroup"]}
             className={classnames(
               stylePasswordInput["input"],
@@ -77,7 +78,13 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             ref={handleRef}
             onKeyUp={(e) => setIsOnCapsLock(e.getModifierState("CapsLock"))}
             onKeyDown={(e) => setIsOnCapsLock(e.getModifierState("CapsLock"))}
-            {...rest}
+            onChange={(e) => {
+              const cleanedValue = e.target.value.replace(/\s/g, ""); // removes all spaces
+              e.target.value = cleanedValue;
+              if (rest.onChange) {
+                rest.onChange(e);
+              }
+            }}
           />
 
           <img
