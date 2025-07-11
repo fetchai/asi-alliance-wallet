@@ -41116,11 +41116,8 @@ __metadata:
     "@types/sha.js": ^2.4.0
     "@types/text-encoding": ^0
     "@walletconnect/client": ^1.6.4
-    "@web3auth/base": ^9.7.0
-    "@web3auth/base-provider": ^9.7.0
     "@web3auth/ethereum-provider": ^8.0.0
     "@web3auth/react-native-sdk": ^8.1.0
-    "@web3auth/solana-provider": ^9.7.0
     aes-js: ^3.1.2
     appcenter: ^4.4.5
     appcenter-analytics: ^4.4.5
@@ -41177,6 +41174,7 @@ __metadata:
     react-native-crypto-polyfill: "file:./crypto-polyfill"
     react-native-device-info: ^10.8.0
     react-native-dotenv: ^3.4.11
+    react-native-encrypted-storage: ^4.0.3
     react-native-fast-image: ^8.6.3
     react-native-fs: ^2.20.0
     react-native-gesture-handler: ^2.12.0
@@ -46491,6 +46489,16 @@ __metadata:
   peerDependencies:
     "@babel/runtime": ^7.20.6
   checksum: 3ebac2c2ed79dd7e4920fd3fc2da9187413b7190231618e4858b46c47833677838b96d531afe7bd5c4b0a60454dba40cb8708722210df5d522e30aefbf41da05
+  languageName: node
+  linkType: hard
+
+"react-native-encrypted-storage@npm:^4.0.3":
+  version: 4.0.3
+  resolution: "react-native-encrypted-storage@npm:4.0.3"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 9d2999c58559f1e4f66d1baf2c3edeff96cf42027900850d94c6bbea24ac9715047ce69bf6e8a73b68aff4508cf35dd88ac494ad5905933286ef3b75cd123e30
   languageName: node
   linkType: hard
 
