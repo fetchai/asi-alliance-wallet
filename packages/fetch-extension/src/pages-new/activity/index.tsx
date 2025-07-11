@@ -21,7 +21,7 @@ export const ActivityPage: FunctionComponent = observer(() => {
       component: <NativeTab />,
     },
     {
-      id: "Gov Proposals",
+      id: "Proposals",
       component: <GovProposalsTab latestBlock={latestBlock} />,
     },
   ];
@@ -33,7 +33,7 @@ export const ActivityPage: FunctionComponent = observer(() => {
     // url /activity?tab=Transactions will open transactions tab
     const tab = searchParams.get("tab");
     const tabIds = {
-      Proposals: "Gov Proposals",
+      Proposals: "Proposals",
       Transactions: "Transactions",
     };
     const eventName =

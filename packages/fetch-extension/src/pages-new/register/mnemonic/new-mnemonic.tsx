@@ -32,6 +32,7 @@ import { AuthIntro, AuthPage } from "../auth";
 import { Card } from "@components-v2/card";
 import keyIcon from "@assets/svg/wireframe/key-icon.png";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
+import { PasswordValidationChecklist } from "../password-checklist";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -51,27 +52,8 @@ export const NewMnemonicIntro: FunctionComponent<{
     <React.Fragment>
       {" "}
       <div className="flex flex-col">
-        <div
-          style={{
-            fontSize: "36px",
-            color: "white",
-            fontWeight: 400,
-          }}
-        >
-          Welcome to your
-        </div>
-        <div
-          style={{
-            fontSize: "36px",
-            color: "transparent",
-            fontWeight: 400,
-            background:
-              "linear-gradient(270deg, #F9774B 5.16%, #CF447B 86.63%)",
-            backgroundClip: "text",
-          }}
-        >
-          ASI Alliance Wallet
-        </div>
+        <div className={style["welcomeText"]}>Welcome to your</div>
+        <div className={style["welcomeText"]}>ASI Wallet</div>
       </div>
       <div className={style["titleText"]}>Choose how you want to proceed</div>
       <div
@@ -162,7 +144,6 @@ export const NewMnemonicPage: FunctionComponent<{
             leftImageStyle={{ height: "32px", width: "32px" }}
             style={{
               display: "flex",
-              backgroundColor: "rgba(255,255,255,0.1)",
               height: "78px",
               fontSize: "14px",
             }}
@@ -227,6 +208,11 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       ];
       const [checkBox1Checked, setCheckBox1Checked] = useState(false);
       const [checkBox2Checked, setCheckBox2Checked] = useState(false);
+      const [password, setPassword] = useState("");
+      const [passwordChecklistError, setPasswordChecklistError] = useState(
+        // initially sets the password error as true for create mode
+        registerConfig.mode === "create" ? true : false
+      );
       const { analyticsStore } = useStore();
       const [activeTab, setActiveTab] = useState(tabs[0].id);
 
@@ -263,22 +249,12 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   registerConfig.clear();
                 }}
               />
-              <div
-                style={{
-                  marginTop: "24px",
-                }}
-              >
-                <div style={{ color: "white", fontSize: "32px" }}>
+              <div className={style2["recoveryPhraseSection"]}>
+                <div className={style2["recoveryTitle"]}>
                   Save your recovery
                 </div>
-                <div style={{ color: "white", fontSize: "32px" }}> phrase</div>
-                <div
-                  style={{
-                    color: "rgba(255,255,255,0.8)",
-                    fontSize: "16px",
-                    marginTop: "12px",
-                  }}
-                >
+                <div className={style2["recoveryTitle"]}>phrase</div>
+                <div className={style2["subtitle"]}>
                   These words below will let you recover your wallet if you lose
                   your device. We recommend writing down your recovery phrase
                   and storing it in a secure offline location, and never share
@@ -327,6 +303,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
               </label>
               <AdvancedBIP44Option bip44Option={bip44Option} />
               <ButtonV2
+                variant="dark"
                 styleProps={{ marginBottom: "20px", height: "56px" }}
                 disabled={!checkBox1Checked || !checkBox2Checked}
                 onClick={() => {
@@ -343,15 +320,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
               </ButtonV2>
             </div>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                width: "333px",
-                marginLeft: "7%",
-              }}
-            >
+            <div className={style["newWalletContainer"]}>
               <BackButton
                 onClick={() => {
                   setContinueClicked(false);
@@ -371,14 +340,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   newMnemonicConfig.setMode("verify");
                 })}
               >
-                <Label
-                  for="name"
-                  style={{
-                    color: "rgba(255,255,255,0.6)",
-                    fontWeight: 400,
-                    fontSize: "15px",
-                  }}
-                >
+                <Label for="name" className={style2["label"]}>
                   {intl.formatMessage({ id: "register.name" })}
                 </Label>
                 <Input
@@ -419,6 +381,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                           }
                         },
                       })}
+                      onChange={(e: any) => setPassword(e.target.value)}
                       error={errors.password && errors.password.message}
                     />
                     <PasswordInput
@@ -441,10 +404,21 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                         errors.confirmPassword && errors.confirmPassword.message
                       }
                     />
+                    <div className="mt-4 space-y-1 text-sm">
+                      <PasswordValidationChecklist
+                        password={password}
+                        onStatusChange={(status) =>
+                          setPasswordChecklistError(!status)
+                        }
+                      />
+                    </div>
                   </div>
                 ) : null}
                 <ButtonV2
-                  disabled={!!errors.password?.message}
+                  variant="dark"
+                  disabled={
+                    !!errors.password?.message || passwordChecklistError
+                  }
                   text={""}
                   styleProps={{ marginBottom: "20px", height: "56px" }}
                 >
@@ -586,6 +560,20 @@ export const VerifyMnemonicModePage: FunctionComponent<{
             </div>
           ))}
         </div>
+        <ButtonV2
+          styleProps={{
+            width: "fit-content",
+            padding: "10px 20px",
+            height: "auto",
+            fontSize: "14px",
+          }}
+          text="Clear All"
+          variant="dark"
+          onClick={() => {
+            setSuggestedWords(Array(12).fill(" "));
+            setDisabledButtons([]);
+          }}
+        />
         <hr />
         <div>
           <div className={style["buttons"]}>
@@ -603,6 +591,12 @@ export const VerifyMnemonicModePage: FunctionComponent<{
         </div>
         <ButtonV2
           text=""
+          variant={
+            registerConfig.isLoading ||
+            suggestedWords.join(" ") !== wordsSlice.join(" ")
+              ? "light"
+              : "dark"
+          }
           disabled={
             registerConfig.isLoading ||
             suggestedWords.join(" ") !== wordsSlice.join(" ")
@@ -612,11 +606,6 @@ export const VerifyMnemonicModePage: FunctionComponent<{
             marginBottom: "20px",
             height: "56px",
             borderRadius: "100px",
-            background:
-              registerConfig.isLoading ||
-              suggestedWords.join(" ") !== wordsSlice.join(" ")
-                ? "transparent"
-                : "white",
           }}
           onClick={async (e: any) => {
             e.preventDefault();

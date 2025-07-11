@@ -69,9 +69,6 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
             styleProps={{
               padding: "12px",
               height: "50px",
-              background: "transparent",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.4)",
             }}
             dataLoading={isLoading}
             onClick={(e: any) => {
@@ -86,6 +83,7 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
             }}
           />
           <ButtonV2
+            variant="dark"
             text="Connect"
             styleProps={{
               padding: "12px",

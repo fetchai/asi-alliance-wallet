@@ -88,14 +88,22 @@ export const ActivityDetails = observer(() => {
         }}
       >
         <div className={style["topBar"]}>
-          <img src={require("@assets/png/Black-white-circle.png")} alt="verb" />
+          <img
+            src={require("@assets/svg/wireframe/asi-black-circle.svg")}
+            alt="verb"
+          />
           <div className={style["topBar-details"]}>
             <div className={style["verb"]}>{details.verb}</div>
             <div className={style["status"]}>
               {details.status === "Success" ||
               details.status === "Pending" ||
               details.status === "Failed" ? (
-                <StatusButton title={details.status} status={details.status} />
+                <StatusButton
+                  title={
+                    details.status === "Success" ? "Confirmed" : details.status
+                  }
+                  status={details.status}
+                />
               ) : (
                 <div>Error</div>
               )}
@@ -112,14 +120,13 @@ export const ActivityDetails = observer(() => {
             <Card
               leftImage={require("@assets/svg/wireframe/contract-interaction.svg")}
               style={{
-                background: "transparent",
                 width: "100%",
                 height: "69px",
               }}
               leftImageStyle={{
                 height: "32px",
                 width: "32px",
-                background: "none",
+                background: "white",
                 padding: 0,
               }}
               heading={"Smart Contract"}
@@ -143,14 +150,12 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "none",
+                  background: "white",
                   padding: 0,
                 }}
-                style={{ background: "transparent" }}
                 heading={details.signerAddress ? "From" : "deligator address"}
                 headingStyle={{
                   fontSize: "14px",
-                  color: "rgba(255,255,255,0.6)",
                   fontWeight: 400,
                 }}
                 subheading={formatAddress(
@@ -174,10 +179,9 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "none",
+                  background: "white",
                   padding: 0,
                 }}
-                style={{ background: "transparent" }}
                 heading={
                   details.toAddress
                     ? "To"
@@ -187,7 +191,6 @@ export const ActivityDetails = observer(() => {
                 }
                 headingStyle={{
                   fontSize: "14px",
-                  color: "rgba(255,255,255,0.6)",
                   fontWeight: 400,
                 }}
                 subheading={toAddress(details)}

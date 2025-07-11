@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .formContainer {
   display: flex;
   flex-direction: column;
@@ -11,14 +13,11 @@
 }
 .layout {
   height: 100%;
-  background-color: #030e3b;
+  background-color: white;
   background-size: cover;
   margin: 0 auto;
-  box-shadow: 3.172px 3.172px 15.859px 0px rgba(255, 255, 255, 0.1) inset;
-  background-image: url("../../public/assets/svg/wireframe/bg-returning-user.svg");
-  background-repeat: no-repeat;
-  background-size: cover;
 }
+
 .banner {
   margin-top: 15px;
   width: 336px;
@@ -40,8 +39,8 @@
   flex-direction: column;
 }
 .text {
-  color: #fff;
-  font-family: Lexend;
+  color: $font-secondary;
+  font-family: $font-family-base;
   font-size: 16px;
   font-style: normal;
   font-weight: 400;
@@ -49,7 +48,7 @@
   opacity: 0.6;
 }
 .welcome-text {
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 24px;
   font-style: normal;
   font-weight: 400;
@@ -57,14 +56,11 @@
   letter-spacing: -0.48px;
 
   font-size: 24px;
-  background: white;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: $font-dark;
 }
 
 .sign-in {
-  color: var(--Fetch-Navy, #0b1742);
+  color: white !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,7 +68,19 @@
   gap: 5px;
   z-index: 1111;
   position: relative;
+  background-color: $bg-dark;
   overflow: hidden;
+  font-family: $font-family-base;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 5px;
+  box-shadow: none !important;
+  transform: translateY(0px) !important;
+}
+
+.sign-in:hover {
+  opacity: 0.9;
+  background-color: $bg-dark;
 }
 
 .racing-button {

@@ -1,10 +1,12 @@
+@import "../../../../styles/var";
+
 .container {
   padding: 16px;
   margin: 0px -12px;
   width: 333px;
-  color: #fff;
+  color: $font-dark;
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -27,21 +29,25 @@
 }
 
 .activityRow {
-  font-style: Lexend;
-  color: white;
+  font-family: $font-family-base;
+  background-color: $card-bg;
+  color: $font-dark;
   font-size: 14px;
   display: flex;
   align-items: center;
   cursor: pointer;
   justify-content: space-between;
   height: 83px;
+  padding: 0px 5px;
+  border-radius: 10px;
+  margin: 5px 0px;
 }
 .heading {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   margin-bottom: 12px;
-  color: white;
+  color: $font-dark;
   font-size: 18px;
 }
 .middleSection {
@@ -52,15 +58,15 @@
 }
 .rowTitle {
   font-size: 14px;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 500;
   line-height: normal;
 }
 .rowSubtitle {
-  color: rgba(255, 255, 255, 0.6);
-  font-family: Lexend;
+  color: $font-secondary;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -70,7 +76,7 @@
   color: var(--green-green-500-vibrant-green, #2de376);
   text-align: center;
   font-size: 14px;
-  font-style: Lexend;
+  font-style: $font-family-base;
   font-weight: 400;
   line-height: normal;
 }
@@ -95,24 +101,27 @@
 .hr {
   border: none;
   height: 0.5px;
-  background-color: rgba(255, 255, 255, 0.2);
+  margin: 8px 0px;
+  background-color: rgba($border-grey, 0.2);
 }
 .amountWrapper {
   display: flex;
   gap: 4px;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 500;
   line-height: normal;
 }
 .amountNumber {
-  color: white;
+  color: $font-dark;
 }
 
 .amountAlphabetic {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
 }
+
 .img {
   width: 40px;
+  margin-left: 10px;
 }

@@ -11,15 +11,20 @@ import {
 import { useStore } from "../../stores";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import { InputField } from "@components-v2/input-field";
-import { parseDollarAmount, validateDecimalPlaces } from "@utils/format";
+import {
+  parseDollarAmount,
+  validateDecimalPlaces,
+  hasValidDecimals,
+} from "@utils/format";
 import { useIntl } from "react-intl";
 import { useLanguage } from "../../languages";
 
 export const StakeInput: FunctionComponent<{
   label: string;
+  availableBalance?: string;
   isToggleClicked?: boolean;
   amountConfig: IAmountConfig;
-}> = observer(({ label, amountConfig, isToggleClicked }) => {
+}> = observer(({ label, amountConfig, availableBalance, isToggleClicked }) => {
   const { priceStore } = useStore();
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
@@ -98,9 +103,9 @@ export const StakeInput: FunctionComponent<{
         rightIcon={
           <div
             style={{
-              fontSize: "14px",
+              fontSize: "16px",
               fontWeight: 400,
-              color: "rgba(255,255,255,0.6)",
+              color: "var(--font-secondary)",
             }}
           >
             {isToggleClicked
@@ -115,7 +120,11 @@ export const StakeInput: FunctionComponent<{
             return;
           }
 
-          if (validateDecimalNumber(value) && Number(value) < 10 ** 18) {
+          if (
+            validateDecimalNumber(value) &&
+            Number(value) < 10 ** 18 &&
+            hasValidDecimals(value)
+          ) {
             if (value !== "0") {
               // Remove leading zeros
               for (let i = 0; i < value.length; i++) {
@@ -131,6 +140,21 @@ export const StakeInput: FunctionComponent<{
               : amountConfig.setAmount(value);
           }
         }}
+        bottomContent={
+          <div
+            style={{
+              fontSize: "12px",
+              fontWeight: 400,
+              color: "var(--font-secondary)",
+              padding: "0px 10px",
+              marginBottom: "4px",
+            }}
+          >
+            {`${intl.formatMessage({
+              id: "unstake.available",
+            })} ${availableBalance}`}
+          </div>
+        }
       />
 
       {error && (
