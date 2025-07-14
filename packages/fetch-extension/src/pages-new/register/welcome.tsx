@@ -27,7 +27,7 @@ export const WelcomePage: FunctionComponent = () => {
           })}
         </div>
         <div className={styleWelcome["description"]}>
-          Your ASI Wallet journey now begins.
+          Your ASI Alliance Wallet journey now begins.
         </div>
       </div>
       <ButtonV2

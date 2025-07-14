@@ -32,6 +32,7 @@ import { AuthIntro, AuthPage } from "../auth";
 import { Card } from "@components-v2/card";
 import keyIcon from "@assets/svg/wireframe/key-icon.png";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
+import { PasswordValidationChecklist } from "../password-checklist";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -52,7 +53,7 @@ export const NewMnemonicIntro: FunctionComponent<{
       {" "}
       <div className="flex flex-col">
         <div className={style["welcomeText"]}>Welcome to your</div>
-        <div className={style["welcomeText"]}>ASI Wallet</div>
+        <div className={style["welcomeText"]}>ASI Alliance Wallet</div>
       </div>
       <div className={style["titleText"]}>Choose how you want to proceed</div>
       <div
@@ -207,6 +208,11 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       ];
       const [checkBox1Checked, setCheckBox1Checked] = useState(false);
       const [checkBox2Checked, setCheckBox2Checked] = useState(false);
+      const [password, setPassword] = useState("");
+      const [passwordChecklistError, setPasswordChecklistError] = useState(
+        // initially sets the password error as true for create mode
+        registerConfig.mode === "create" ? true : false
+      );
       const { analyticsStore } = useStore();
       const [activeTab, setActiveTab] = useState(tabs[0].id);
 
@@ -375,6 +381,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                           }
                         },
                       })}
+                      onChange={(e: any) => setPassword(e.target.value)}
                       error={errors.password && errors.password.message}
                     />
                     <PasswordInput
@@ -397,11 +404,21 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                         errors.confirmPassword && errors.confirmPassword.message
                       }
                     />
+                    <div className="mt-4 space-y-1 text-sm">
+                      <PasswordValidationChecklist
+                        password={password}
+                        onStatusChange={(status) =>
+                          setPasswordChecklistError(!status)
+                        }
+                      />
+                    </div>
                   </div>
                 ) : null}
                 <ButtonV2
                   variant="dark"
-                  disabled={!!errors.password?.message}
+                  disabled={
+                    !!errors.password?.message || passwordChecklistError
+                  }
                   text={""}
                   styleProps={{ marginBottom: "20px", height: "56px" }}
                 >
