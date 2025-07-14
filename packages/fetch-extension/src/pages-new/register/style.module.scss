@@ -251,6 +251,7 @@ html[data-register-page="true"] #app .container {
 .formContainer {
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .buttons {
@@ -364,11 +365,6 @@ html[data-register-page="true"] #app .container {
   gap: 14px;
   color: $font-dark;
   max-width: 390px;
-
-  & img {
-    background: white;
-    border-radius: 50px;
-  }
 }
 
 .cardTitle {
@@ -449,6 +445,10 @@ html[data-register-page="true"] #app .container {
   height: 100%;
   position: relative;
 
+  .ledgerFormGroup {
+    margin-bottom: 0px;
+  }
+
   & .invalid-feedback {
     margin-top: 0px !important;
   }
@@ -458,4 +458,33 @@ html[data-register-page="true"] #app .container {
   font-size: 36px;
   color: $font-dark;
   font-weight: 400;
+}
+
+.passwordValidationChecklist {
+  display: flex;
+  row-gap: 5px;
+  flex-direction: column;
+
+  .passwordValidationItem {
+    display: flex;
+    column-gap: 10px;
+    align-items: center;
+
+    & img {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .passwordCheclistValid {
+    font-weight: 500;
+    font-size: 14px;
+    color: $font-dark;
+  }
+
+  .passwordCheclistInvalid {
+    font-weight: 500;
+    font-size: 14px;
+    color: $bg-red-40;
+  }
 }

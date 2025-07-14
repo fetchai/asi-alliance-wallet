@@ -21,6 +21,7 @@ import { Card } from "@components-v2/card";
 import { ImportLedgerPage } from "../ledger";
 import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
+import { PasswordValidationChecklist } from "../password-checklist";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -212,6 +213,11 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const intl = useIntl();
 
   const bip44Option = useBIP44Option();
+  const [password, setPassword] = useState("");
+  const [passwordChecklistError, setPasswordChecklistError] = useState(
+    // initially sets the password error as true for create mode
+    registerConfig.mode === "create" ? true : false
+  );
 
   const { analyticsStore } = useStore();
 
@@ -620,6 +626,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                           }
                         },
                       })}
+                      onChange={(e: any) => setPassword(e.target.value)}
                       error={errors.password && errors.password.message}
                     />
                     <PasswordInput
@@ -644,6 +651,14 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         errors.confirmPassword && errors.confirmPassword.message
                       }
                     />
+                    <div className="mt-4 space-y-1 text-sm">
+                      <PasswordValidationChecklist
+                        password={password}
+                        onStatusChange={(status) =>
+                          setPasswordChecklistError(!status)
+                        }
+                      />
+                    </div>
                   </React.Fragment>
                 ) : null}
                 <div
@@ -666,7 +681,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     height: "56px",
                   }}
                   data-loading={registerConfig.isLoading}
-                  disabled={registerConfig.isLoading}
+                  disabled={registerConfig.isLoading || passwordChecklistError}
                   onClick={() => {
                     analyticsStore.logEvent("register_next_click", {
                       pageName: "Register",
