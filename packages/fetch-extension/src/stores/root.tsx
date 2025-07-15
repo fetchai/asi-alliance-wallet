@@ -47,6 +47,8 @@ import {
   ActivityStore,
   TokenGraphStore,
 } from "@keplr-wallet/stores";
+
+import { CardanoAccount } from "@keplr-wallet/stores/build/account/cardano";
 import {
   KeplrETCQueries,
   GravityBridgeCurrencyRegsitrar,
@@ -104,7 +106,7 @@ export class RootStore {
     ]
   >;
   public readonly accountStore: AccountStore<
-    [CosmosAccount, CosmwasmAccount, SecretAccount, EthereumAccount]
+    [CosmosAccount, CosmwasmAccount, SecretAccount, EthereumAccount, CardanoAccount]
   >;
   public readonly priceStore: CoinGeckoPriceStore;
   public readonly tokensStore: TokensStore<ChainInfoWithCoreTypes>;
@@ -264,7 +266,7 @@ export class RootStore {
       () => {
         return {
           suggestChain: false,
-          autoInit: true,
+          autoInit: false, // Changed to false to prevent premature initialization
           getKeplr: getKeplrFromWindow,
         };
       },
@@ -388,20 +390,32 @@ export class RootStore {
       }),
       EthereumAccount.use({
         queriesStore: this.queriesStore,
-      })
+      }),
+      CardanoAccount.use()
     );
 
     if (!window.location.href.includes("#/unlock")) {
-      // Start init for registered chains so that users can see account address more quickly.
-      for (const chainInfo of this.chainStore.chainInfos) {
-        const account = this.accountStore.getAccount(chainInfo.chainId);
-        // Because {autoInit: true} is given as the default option above,
-        // initialization for the account starts at this time just by using getAccount().
-        // However, run safe check on current status and init if status is not inited.
-        if (account.walletStatus === WalletStatus.NotInit) {
-          account.init();
+      // Wait for KeyRing to be fully initialized before initializing accounts
+      // This prevents "No keys available" errors during startup
+      const initAccountsWhenReady = () => {
+        if (this.keyRingStore.status !== undefined && this.keyRingStore.status !== 0) { // 0 = NOTLOADED
+          // Start init for registered chains so that users can see account address more quickly.
+          for (const chainInfo of this.chainStore.chainInfos) {
+            const account = this.accountStore.getAccount(chainInfo.chainId);
+            // Because {autoInit: true} is given as the default option above,
+            // initialization for the account starts at this time just by using getAccount().
+            // However, run safe check on current status and init if status is not inited.
+            if (account.walletStatus === WalletStatus.NotInit) {
+              account.init();
+            }
+          }
+        } else {
+          // If KeyRing is not ready yet, wait a bit and try again
+          setTimeout(initAccountsWhenReady, 100);
         }
-      }
+      };
+      
+      initAccountsWhenReady();
     } else {
       // When the unlock request sent from external webpage,
       // it will open the extension popup below the uri "/unlock".

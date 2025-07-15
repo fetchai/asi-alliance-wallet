@@ -3,3 +3,4 @@ export * from "./messages";
 export * from "./types";
 export * from "./keyring";
 export * from "./eip712";
+export * from "./crypto";

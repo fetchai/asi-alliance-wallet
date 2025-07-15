@@ -155,7 +155,23 @@ export class AccountSetBase {
         await this.suggestChain(keplr, chainInfo);
       }
     }
-    await keplr.enable(chainId);
+    
+    // Check if KeyRing is ready before calling enable
+    // This prevents "No keys available" errors during initialization
+    try {
+      await keplr.enable(chainId);
+    } catch (e) {
+      // If enable fails due to no keys, don't throw - just return
+      // The getKey call below will handle the error appropriately
+      if (e.message && (
+        e.message.includes("No keys available") || 
+        e.message.includes("key doesn't exist") ||
+        e.message.includes("Please create a wallet first")
+      )) {
+        return; // Don't throw, let getKey handle it
+      }
+      throw e; // Re-throw other errors
+    }
   }
 
   protected async suggestChain(
@@ -168,7 +184,7 @@ export class AccountSetBase {
   private readonly handleInit = () => this.init();
 
   @flow
-  public *init() {
+  public *init(): Generator<any, void, any> {
     // If wallet status is not exist, there is no need to try to init because it always fails.
     if (this.walletStatus === WalletStatus.NotExist) {
       return;
@@ -226,14 +242,26 @@ export class AccountSetBase {
       this._walletStatus = WalletStatus.Loaded;
     } catch (e) {
       console.log(e);
-      // Caught error loading key
-      // Reset properties, and set status to Rejected
+      
+      if (e.message && (
+        e.message.includes("No keys available") || 
+        e.message.includes("key doesn't exist") ||
+        e.message.includes("Please create a wallet first")
+      )) {
+        this._bech32Address = "";
+        this._isNanoLedger = false;
+        this._isKeystone = false;
+        this._name = "";
+        this._pubKey = new Uint8Array(0);
+        this._walletStatus = WalletStatus.NotExist;
+        this._rejectionReason = undefined;
+        return;
+      }
       this._bech32Address = "";
       this._isNanoLedger = false;
       this._isKeystone = false;
       this._name = "";
       this._pubKey = new Uint8Array(0);
-
       this._walletStatus = WalletStatus.Rejected;
       this._rejectionReason = e;
     }

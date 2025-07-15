@@ -5,7 +5,8 @@
     "outDir": "build",
     "declaration": true,
     "rootDir": "src",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "composite": true
   },
   "include": [
     "src/**/*"

@@ -23,7 +23,9 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
 
   const { keyRingStore } = useStore();
 
-  const waitingNameData = keyRingStore.waitingNameData?.data;
+  const keyStore = useMemo(() => {
+    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
+  }, [keyRingStore.multiKeyStoreInfo, index]);
 
   const {
     register,
@@ -37,17 +39,14 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
     },
   });
 
+  // Default value equals current name
   useEffect(() => {
-    if (waitingNameData?.defaultName) {
-      setValue("name", waitingNameData.defaultName);
+    if (keyStore?.meta?.["name"]) {
+      setValue("name", keyStore.meta["name"]);
     }
-  }, [waitingNameData, setValue]);
+  }, [keyStore, setValue]);
 
   const [loading, setLoading] = useState(false);
-
-  const keyStore = useMemo(() => {
-    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
-  }, [keyRingStore.multiKeyStoreInfo, index]);
 
   const isKeyStoreReady = keyRingStore.status === KeyRingStatus.UNLOCKED;
 
@@ -80,13 +79,6 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
         onSubmit={handleSubmit(async (data) => {
           setLoading(true);
           try {
-            // Close the popup by external change name message
-            if (waitingNameData != null) {
-              await keyRingStore.approveChangeName(data.name);
-              window.close();
-              return;
-            }
-
             // Make sure that name is changed
             await keyRingStore.updateNameKeyRing(
               parseInt(index),
@@ -134,7 +126,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           })}
           maxLength={20}
           autoFocus
-          readOnly={waitingNameData !== undefined && !waitingNameData?.editable}
+          readOnly={false}
         />
 
         <div style={{ flex: 1 }} />

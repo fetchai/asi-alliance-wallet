@@ -1,0 +1,1 @@
+declare module '@emurgo/cardano-serialization-lib-browser'; 

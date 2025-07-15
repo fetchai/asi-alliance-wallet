@@ -1,0 +1,25 @@
+{
+  "name": "@keplr-wallet/cardano",
+  "version": "0.12.12",
+  "description": "Cardano integration for Keplr Wallet",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@emurgo/cardano-serialization-lib-browser": "^15.0.0",
+    "@keplr-wallet/background": "*",
+    "@keplr-wallet/common": "*",
+    "bip39": "^3.1.0",
+    "buffer": "^6.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.5"
+  }
+}

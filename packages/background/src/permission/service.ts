@@ -9,7 +9,7 @@ import {
 } from "./types";
 import { KVStore } from "@keplr-wallet/common";
 import { ChainsService } from "../chains";
-import { KeyRingService } from "../keyring";
+import { KeyRingService, KeyRingStatus } from "../keyring";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 
 export class PermissionService {
@@ -71,8 +71,11 @@ export class PermissionService {
     chainIds: string | string[],
     origin: string
   ) {
-    // Try to unlock the key ring before checking or granting the basic permission.
-    await this.keyRingService.enable(env);
+    const status = await this.keyRingService.checkReadiness(env);
+    
+    if (status === KeyRingStatus.EMPTY) {
+      return;
+    }
 
     if (typeof chainIds === "string") {
       chainIds = [chainIds];
@@ -97,7 +100,11 @@ export class PermissionService {
     // If chain ids are specified, only the permissions granted to each chain id are deleted (In this case, permissions such as getChainInfosWithoutEndpoints() are not deleted).
     // Else, remove all permissions granted to origin (In this case, permissions that are not assigned to each chain, such as getChainInfosWithoutEndpoints(), are also deleted).
 
-    await this.keyRingService.enable(env);
+    const status = await this.keyRingService.checkReadiness(env);
+    
+    if (status === KeyRingStatus.EMPTY) {
+      return;
+    }
 
     if (typeof chainIds === "string") {
       chainIds = [chainIds];
@@ -122,8 +129,11 @@ export class PermissionService {
   ) {
     // TODO: Merge with `checkOrGrantBasicAccessPermission` method
 
-    // Try to unlock the key ring before checking or granting the basic permission.
-    await this.keyRingService.enable(env);
+    const status = await this.keyRingService.checkReadiness(env);
+    
+    if (status === KeyRingStatus.EMPTY) {
+      return;
+    }
 
     const ungrantedChainIds: string[] = [];
     for (const chainId of chainIds) {
@@ -147,8 +157,11 @@ export class PermissionService {
     type: string,
     origin: string
   ) {
-    // Try to unlock the key ring before checking or granting the basic permission.
-    await this.keyRingService.enable(env);
+    const status = await this.keyRingService.checkReadiness(env);
+    
+    if (status === KeyRingStatus.EMPTY) {
+      return;
+    }
 
     if (!this.hasGlobalPermission(type, origin)) {
       await this.grantGlobalPermission(env, url, type, [origin]);

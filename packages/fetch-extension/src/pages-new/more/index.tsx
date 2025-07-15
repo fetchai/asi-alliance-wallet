@@ -253,6 +253,18 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
+      <Card
+        leftImageStyle={{ background: "transparent" }}
+        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "6px" }}
+        leftImage={require("@assets/svg/wireframe/wallet.svg")}
+        heading={"Cardano Wallet"}
+        onClick={() => {
+          navigate("/cardano-wallet");
+          analyticsStore.logEvent("cardano_wallet_menu_click", {
+            pageName: "More",
+          });
+        }}
+      />
 
       {/* 
        <Card

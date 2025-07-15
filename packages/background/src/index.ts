@@ -19,7 +19,7 @@ import * as AddressBook from "./address-book/internal";
 import * as SidePanel from "./side-panel/internal";
 import { KVStore } from "@keplr-wallet/common";
 import { ChainInfo } from "@keplr-wallet/types";
-import { CommonCrypto } from "./keyring";
+import { CommonCrypto } from "./keyring/types";
 import { Notification } from "./tx";
 import { LedgerOptions } from "./ledger/options";
 

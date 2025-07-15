@@ -1,9 +1,10 @@
 import {
-  Key,
   KeyRing,
   KeyRingStatus,
   MultiKeyStoreInfoWithSelected,
 } from "./keyring";
+import { Key, KeyStore } from "./types";
+import { CardanoService } from "../cardano/service";
 
 import {
   Bech32Address,
@@ -45,12 +46,12 @@ import {
   TxBody,
 } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import Long from "long";
-import { KeyCurve, KeyCurves } from "@keplr-wallet/crypto";
+import { SupportedCurve } from "./types";
 import { Buffer } from "buffer/";
 import { trimAminoSignDoc } from "./amino-sign-doc";
 import { KeystoneService } from "../keystone";
 import { RequestICNSAdr36SignaturesMsg, SwitchAccountMsg } from "./messages";
-import { PubKeySecp256k1 } from "@keplr-wallet/crypto";
+import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
 
@@ -61,12 +62,15 @@ export class KeyRingService {
   protected interactionService!: InteractionService;
   public chainsService!: ChainsService;
   public permissionService!: PermissionService;
+  private cardanoService: CardanoService = new CardanoService();
 
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly embedChainInfos: ChainInfo[],
     protected readonly crypto: CommonCrypto
   ) {}
+
+  // syncCardanoService method removed - synchronization happens in unlock()
 
   init(
     interactionService: InteractionService,
@@ -80,13 +84,16 @@ export class KeyRingService {
     this.chainsService = chainsService;
     this.permissionService = permissionService;
 
+    // Provide chainGetter (chainsService) as the last argument expected by the
+    // updated KeyRing constructor signature.
     this.keyRing = new KeyRing(
       this.embedChainInfos,
       this.kvStore,
       ledgerService,
       keystoneService,
       interactionService,
-      this.crypto
+      this.crypto,
+      this.chainsService
     );
 
     this.chainsService.addChainRemovedHandler(this.onChainRemoved);
@@ -101,11 +108,39 @@ export class KeyRingService {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
+    console.log("KeyRingService.restore() - Starting restore");
+    console.log("KeyRing status before restore:", this.keyRing.status);
+    
     await this.keyRing.restore();
+    
+    console.log("KeyRing status after restore:", this.keyRing.status);
+    console.log("KeyRing isLocked():", this.keyRing.isLocked());
+    console.log("Cardano meta present:", this.keyRing.getKeyStoreMeta("cardano"));
+    
+    // Do NOT initialize CardanoService in restore() - only data loading
+    // CardanoService will be initialized in unlock() after successful unlock
+    
+    console.log("KeyRingService.restore() - Final status:", this.keyRing.status);
     return {
       status: this.keyRing.status,
       multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo(),
     };
+  }
+
+  async checkReadiness(env: Env): Promise<KeyRingStatus> {
+    if (this.keyRing.status === KeyRingStatus.EMPTY) {
+      return KeyRingStatus.EMPTY;
+    }
+
+    if (this.keyRing.status === KeyRingStatus.NOTLOADED) {
+      await this.keyRing.restore();
+    }
+
+    if (this.keyRing.status === KeyRingStatus.LOCKED) {
+      await this.interactionService.waitApprove(env, "/unlock", "unlock", {});
+    }
+
+    return this.keyRing.status;
   }
 
   async enable(env: Env): Promise<KeyRingStatus> {
@@ -183,14 +218,20 @@ export class KeyRingService {
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     // TODO: Check mnemonic checksum.
-    return await this.keyRing.createMnemonicKey(
+    const cardanoMeta = await this.cardanoService.createMetaFromMnemonic(
+      mnemonic,
+      password
+    ).catch(() => ({}));
+
+    const keyStoreInfo = await this.keyRing.createMnemonicKey(
       kdf,
       mnemonic,
       password,
-      meta,
+      { ...meta, ...cardanoMeta },
       bip44HDPath,
-      KeyCurves.secp256k1
+      "secp256k1"
     );
+    return keyStoreInfo;
   }
 
   async createPrivateKey(
@@ -257,18 +298,87 @@ export class KeyRingService {
   }
 
   async unlock(password: string): Promise<KeyRingStatus> {
+    console.log("KeyRingService.unlock() - Starting unlock process");
+    console.log("KeyRing status before unlock:", this.keyRing.status);
+    
     await this.keyRing.unlock(password);
+    
+    console.log("KeyRing status after unlock:", this.keyRing.status);
+    console.log("KeyRing isLocked():", this.keyRing.isLocked());
 
+    // Initialize CardanoService ONLY after successful unlock
+    if (this.keyRing.status === KeyRingStatus.UNLOCKED && 
+        this.keyRing.getKeyStoreMeta("cardano") === "true") {
+      const ks = this.keyRing.getCurrentKeyStore();
+      if (ks) {
+        try {
+          console.log("Initializing CardanoService with keyStore:", ks);
+          await this.cardanoService.restoreFromKeyStore(
+            ks as KeyStore,
+            password,
+            this.crypto
+          );
+          console.log("CardanoService initialized successfully");
+        } catch (error) {
+          console.error("Failed to initialize CardanoService:", error);
+          // Don't throw error - wallet should unlock even without Cardano
+        }
+      } else {
+        console.warn("No current keyStore found for Cardano initialization");
+      }
+    } else {
+      console.log("Skipping CardanoService initialization - conditions not met");
+      console.log("  - KeyRing status:", this.keyRing.status);
+      console.log("  - Cardano meta:", this.keyRing.getKeyStoreMeta("cardano"));
+    }
+
+    console.log("KeyRingService.unlock() - Final status:", this.keyRing.status);
     return this.keyRing.status;
   }
 
   async getKey(chainId: string): Promise<Key> {
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+
+    if (chainInfo.features?.includes("cardano")) {
+      try {
+        // Check that CardanoService is initialized
+        if (!this.cardanoService) {
+          throw new Error("CardanoService not available");
+        }
+        
+        return await this.cardanoService.getKey();
+      } catch (error) {
+        console.error("Cardano getKey error:", error);
+        
+        // Try to initialize CardanoService on the fly
+        if (this.keyRing.getKeyStoreMeta("cardano") === "true") {
+          const ks = this.keyRing.getCurrentKeyStore();
+          if (ks) {
+            try {
+              console.log("Attempting to initialize CardanoService on-demand");
+              const currentPassword = this.keyRing.currentPassword;
+              if (!currentPassword) {
+                throw new Error("No password available for Cardano initialization");
+              }
+              await this.cardanoService.restoreFromKeyStore(
+                ks as KeyStore,
+                currentPassword,
+                this.crypto
+              );
+              return await this.cardanoService.getKey();
+            } catch (initError) {
+              console.error("Failed to initialize CardanoService on-demand:", initError);
+            }
+          }
+        }
+        
+        throw new Error("Failed to get Cardano key. Please check if wallet is properly initialized.");
+      }
+    }
+
     const ethereumKeyFeatures =
       await this.chainsService.getChainEthereumKeyFeatures(chainId);
-    const isEvm =
-      (await this.chainsService.getChainInfo(chainId)).features?.includes(
-        "evm"
-      ) ?? false;
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
 
     if (ethereumKeyFeatures.address || ethereumKeyFeatures.signing) {
       // Check the comment on the method itself.
@@ -887,7 +997,7 @@ Salt: ${salt}`;
     mnemonic: string,
     meta: Record<string, string>,
     bip44HDPath: BIP44HDPath,
-    curve: KeyCurve = KeyCurves.secp256k1
+    curve: SupportedCurve = KeyCurves.secp256k1
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
@@ -898,7 +1008,7 @@ Salt: ${salt}`;
     kdf: "scrypt" | "sha256" | "pbkdf2",
     privateKey: Uint8Array,
     meta: Record<string, string>,
-    curve: KeyCurve = KeyCurves.secp256k1
+    curve: SupportedCurve = KeyCurves.secp256k1
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {

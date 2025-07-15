@@ -308,6 +308,10 @@ export class Ledger {
   }
 
   static createPath(coinType: number, fields: BIP44HDPath) {
+    // Cardano uses purpose 1852' and coin type 1815'
+    if (coinType === 1815) {
+      return [1852, 1815, fields.account, fields.change, fields.addressIndex];
+    }
     return [44, coinType, fields.account, fields.change, fields.addressIndex];
   }
 

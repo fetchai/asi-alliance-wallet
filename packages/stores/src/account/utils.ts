@@ -2,7 +2,7 @@ import { EthermintChainIdHelper } from "@keplr-wallet/cosmos";
 import { ProtoMsgsOrWithAminoMsgs } from "./types";
 import { ProposalNode } from "./cosmos";
 import { Node } from "./cosmos";
-import { ActivityStore } from "src/activity";
+import { ActivityStore } from "../activity";
 
 export function txEventsWithPreOnFulfill(
   onTxEvents:
