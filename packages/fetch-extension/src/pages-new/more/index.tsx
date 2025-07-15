@@ -18,6 +18,7 @@ import {
   checkAddressIsBuySellWhitelisted,
 } from "@utils/moonpay-currency";
 import * as manifest from "../../manifest.v3.json";
+import { useConfirm } from "@components/confirm";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
@@ -36,6 +37,7 @@ export const MorePage: FunctionComponent = () => {
   const chainId = currentChain.chainId;
   const accountInfo = accountStore.getAccount(chainId);
   const { data } = useMoonpayCurrency();
+  const confirm = useConfirm();
 
   const allowedTokenList = data?.filter(
     (item: any) =>
@@ -301,10 +303,18 @@ export const MorePage: FunctionComponent = () => {
         style={{ marginBottom: "8px" }}
         leftImage={require("@assets/svg/wireframe/sign-out.svg")}
         heading={"Sign out"}
-        onClick={() => {
-          keyRingStore.lock();
-          analyticsStore.logEvent("sign_out_click");
-          navigate("/");
+        onClick={async () => {
+          const res = await confirm.confirm({
+            title: "Sign out",
+            paragraph: "Are you sure you want to sign out?",
+          });
+          if (res) {
+            setTimeout(() => {
+              keyRingStore.lock();
+              analyticsStore.logEvent("sign_out_click");
+              navigate("/");
+            }, 500); // 500 ms delay
+          }
         }}
       />
       <div
