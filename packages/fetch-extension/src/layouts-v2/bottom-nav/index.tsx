@@ -1,19 +1,20 @@
 import activityIcon from "@assets/svg/wireframe/clock.svg";
 import activitygreyIcon from "@assets/svg/wireframe/new-clock.svg";
 
-import homeTabIcon from "@assets/svg/wireframe/wallet-new.svg";
-import moreTabIcon from "@assets/svg/wireframe/new-more.svg";
 import selectedHomeTabIcon from "@assets/svg/wireframe/new-home.svg";
+import moreTabIcon from "@assets/svg/wireframe/new-more.svg";
 import selectedMoreTabIcon from "@assets/svg/wireframe/selected-more.svg";
 import selectedStakeTabIcon from "@assets/svg/wireframe/selected-stake.svg";
 import stakeTabIcon from "@assets/svg/wireframe/stake-bottom-icon-new.svg";
+import homeTabIcon from "@assets/svg/wireframe/wallet-new.svg";
+import { separateNumericAndDenom } from "@utils/format";
 import React, { useEffect, useState } from "react";
 
+import { isFeatureAvailable } from "@utils/index";
 import { WalletActions } from "../../pages-new/main/wallet-actions";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { Tab } from "./tab";
-import { isFeatureAvailable } from "@utils/index";
 
 const bottomNav = [
   {
@@ -60,8 +61,18 @@ export const BottomNav = () => {
 
 const HomeTab = () => <Tab {...bottomNav[0]} />;
 const StakeTab = () => {
-  const { chainStore } = useStore();
+  const { chainStore, queriesStore, accountStore } = useStore();
   const current = chainStore.current;
+  const queries = queriesStore.get(current.chainId);
+  const accountInfo = accountStore.getAccount(current.chainId);
+
+  const rewards = queries.cosmos.queryRewards.getQueryBech32Address(
+    accountInfo.bech32Address
+  );
+
+  const stakableReward = rewards.stakableReward;
+  const rewardsBal = stakableReward.toString();
+  const { numericPart: rewardsBalNumber } = separateNumericAndDenom(rewardsBal);
 
   const [stakingTooltip, setStakingTooltip] = useState("");
   const [stakingDisabled, setStakingDisabled] = useState(false);
@@ -83,6 +94,7 @@ const StakeTab = () => {
         activeIcon={selectedStakeTabIcon}
         path={"/stake"}
         disabled={stakingDisabled}
+        showDot={rewardsBalNumber > 0 && true}
         tooltip={stakingTooltip}
       />
     </React.Fragment>

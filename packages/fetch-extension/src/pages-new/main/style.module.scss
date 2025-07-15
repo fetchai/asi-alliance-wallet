@@ -115,8 +115,8 @@
 }
 
 .wallet-detail-card {
-  font-size: 14px;
-  padding: 12px 8px 12px 18px;
+  font-size: 16px;
+  padding: 12px 8px;
   gap: 12px;
   align-self: stretch;
   color: $font-secondary;
@@ -134,28 +134,10 @@
   z-index: 100;
 }
 
-.rewards-card {
-  font-size: 14px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  color: $font-dark;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 18px;
-  position: relative;
-  margin-top: 12px;
-  gap: 2px;
-  cursor: pointer;
-  background-color: $bg-green-base;
-}
-
 .wallet-address {
   font-weight: 400;
   color: $font-dark;
-  max-width: 40%;
+  max-width: 90%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -246,4 +228,18 @@
   gap: 10px;
   color: orangered;
   font-size: 14px;
+}
+
+.wallet-address-text {
+  font-size: 16px;
+  font-weight: bold;
+  opacity: 1 !important;
+  color: $font-secondary;
+}
+
+.wallet-address-text-eth {
+  font-size: 16px;
+  font-weight: bold;
+  opacity: 0.6 !important;
+  color: $font-secondary;
 }
