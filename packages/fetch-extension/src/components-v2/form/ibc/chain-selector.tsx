@@ -49,7 +49,7 @@ export const DestinationChainSelector: FunctionComponent<{
             chainStore.getChain(ibcChannelConfig.channel.counterpartyChainId)
               .chainName
           ) : (
-            <div style={{ color: "rgba(255,255,255,0.6)" }}>
+            <div>
               <FormattedMessage id="component.ibc.channel-registrar.chain-selector.placeholder" />
             </div>
           )}
@@ -67,7 +67,6 @@ export const DestinationChainSelector: FunctionComponent<{
           leftImageStyle={{ backgroundColor: "transparent" }}
           style={{
             height: "69px",
-            background: "rgba(255,255,255,0.1)",
             padding: "18px",
             width: "100%",
           }}
@@ -94,7 +93,6 @@ export const DestinationChainSelector: FunctionComponent<{
           if (chainInfo) {
             return (
               <Card
-                style={{ background: "rgba(255,255,255,0.1)" }}
                 heading={chainInfo.chainName}
                 key={chainInfo.chainId}
                 onClick={(e: any) => {

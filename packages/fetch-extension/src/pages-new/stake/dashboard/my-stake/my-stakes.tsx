@@ -206,6 +206,7 @@ export const MyStakes = observer(
     return (
       <div className={style["row"]}>
         <ButtonV2
+          variant="light"
           text="Stake more"
           onClick={() => {
             analyticsStore.logEvent("stake_click", {
@@ -219,6 +220,7 @@ export const MyStakes = observer(
             height: "44px",
             marginTop: "32px",
             marginBottom: "32px",
+            backgroundColor: "#B1FCAB",
           }}
         />
 
@@ -227,17 +229,8 @@ export const MyStakes = observer(
           <div className={style["reward-row"]}>
             <div className={style["reward-col"]}>
               <div className={style["left-col"]}>
-                <span
-                  className={style["label"]}
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 400,
-                    color: "rgba(255,255,255,0.6)",
-                  }}
-                >
-                  Staking rewards
-                </span>
-                <span style={{ fontWeight: 400 }}>
+                <span className={style["label"]}>Staking rewards</span>
+                <span className={style["total-rewards"]}>
                   {pendingStakableRewardUSD
                     ? pendingStakableRewardUSD
                         .shrink(true)
@@ -245,9 +238,7 @@ export const MyStakes = observer(
                         .trim(true)
                         .toString()
                     : totalNumber}{" "}
-                  <span style={{ color: "#556578" }}>
-                    {fiatCurrency.toUpperCase()}
-                  </span>
+                  <span>{fiatCurrency.toUpperCase()}</span>
                 </span>
               </div>
 
@@ -258,16 +249,14 @@ export const MyStakes = observer(
                 queryReward.pendingRewardValidatorAddresses.length === 0
               ) && (
                 <ButtonV2
+                  variant="light"
                   styleProps={{
                     width: "91px",
                     padding: "2px 15px",
                     height: "36px",
                     marginTop: "0",
                     fontSize: "14px",
-
-                    background:
-                      "linear-gradient(270deg, #F9774B 10.08%, #cf447b 70.82%",
-                    color: "white",
+                    backgroundColor: "#B1FCAB",
                   }}
                   disabled={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
@@ -310,13 +299,7 @@ export const MyStakes = observer(
                   cursor: "pointer",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: "#BFAFFD",
-                    paddingRight: "5px",
-                  }}
-                >
+                <span className={style["rewards-toggle"]}>
                   {showReward ? "Hide" : "View"} rewards
                 </span>
                 {showReward ? (
@@ -350,9 +333,8 @@ export const MyStakes = observer(
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             <div
               style={{
-                color: "#fff",
-                opacity: "60%",
-                fontSize: "14px",
+                color: "var(--font-dark)",
+                fontSize: "16px",
                 fontWeight: 400,
               }}
             >
@@ -526,17 +508,7 @@ const DelegateReward: FunctionComponent = observer(() => {
             {thumbnail ? (
               <img src={thumbnail} alt={"validator"} />
             ) : (
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "100%",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  background: "rgba(255, 255, 255, 0.1)",
-                }}
-              >
+              <div className={style["validator-avatar"]}>
                 {val.description.moniker?.toString()[0].toUpperCase()}
               </div>
             )}
@@ -550,16 +522,14 @@ const DelegateReward: FunctionComponent = observer(() => {
               </div>
             </div>
             <ButtonV2
+              variant="light"
               styleProps={{
                 width: "71px",
                 padding: "2px 15px",
                 height: "36px",
                 marginTop: "0",
                 fontSize: "14px",
-                fontWeight: 400,
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.4)",
+                backgroundColor: "#B1FCAB",
               }}
               disabled={
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]

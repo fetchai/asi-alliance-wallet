@@ -14,7 +14,7 @@ export const TransxStatus = ({ status }: { status: string }) => {
         setIsOpen={setIsOpen}
         isOpen={isOpen}
         closeClicked={() => setIsOpen(false)}
-        showCloseIcon={false}
+        showCloseIcon={true}
         showTopNav={true}
       >
         {status === "pending" && <TransxPending />}

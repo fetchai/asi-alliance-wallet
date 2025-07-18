@@ -290,6 +290,7 @@ export const IBCTransferPageChannel: FunctionComponent<{
                 </div>
               </Alert>
               <ButtonV2
+                variant="dark"
                 styleProps={{
                   width: "94%",
                   padding: "12px",
@@ -364,14 +365,11 @@ export const IBCTransferPageAmount: FunctionComponent<{
           </Label>
           <Card
             style={{
-              background: "rgba(255, 255, 255, 0.10)",
-              color: "rgba(255, 255, 255, 0.6)",
               fontSize: "14px",
               padding: "12px 18px",
             }}
             headingStyle={{
               fontSize: "14px",
-              color: "white",
               fontWeight: "400",
               opacity: "1",
             }}
@@ -389,6 +387,7 @@ export const IBCTransferPageAmount: FunctionComponent<{
             gasSimulator={gasSimulator}
           />
           <ButtonV2
+            variant="dark"
             disabled={!isValid || loading}
             data-loading={accountInfo.txTypeInProgress === TXNTYPE.ibcTransfer}
             text={

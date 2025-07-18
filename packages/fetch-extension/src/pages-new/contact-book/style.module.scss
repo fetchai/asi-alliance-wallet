@@ -41,13 +41,13 @@
 }
 
 .label {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
   font-size: 14px;
   margin-bottom: 0px;
 }
 .input {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: transparent;
+  color: $font-secondary;
   border-radius: 12px;
   margin-bottom: 0px;
   &::placeholder {
@@ -55,6 +55,36 @@
   }
 }
 .input:focus {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  color: rgba($font-dark, 0.8);
+}
+
+.noAddressMessage {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 25px;
+
+  .message {
+    font-size: 24px;
+    font-weight: 400;
+    text-align: center;
+    color: $font-dark;
+  }
+
+  img {
+    width: 90px;
+    height: 90px;
+  }
+}
+
+.rightIcon {
+  height: 10px;
+}
+
+.rightIconContainer {
+  margin-left: 6px;
+  border: 1px solid $neutral;
+  border-radius: 6px;
+  padding: 0px 5px 1px;
 }

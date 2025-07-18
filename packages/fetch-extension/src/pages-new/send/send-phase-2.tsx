@@ -209,7 +209,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             </div>
           </div>
           <button onClick={() => setIsNext(false)} className={style["edit"]}>
-            Edit
+            <img src={require("@assets/svg/edit-icon.svg")} alt="" />
           </button>
         </div>
         <AddressInput
@@ -231,24 +231,26 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           }}
         />
 
-        <FeeButtons
-          feeConfig={sendConfigs.feeConfig}
-          gasConfig={sendConfigs.gasConfig}
-          priceStore={priceStore}
-          label={intl.formatMessage({ id: "send.input.fee" })}
-          feeSelectLabels={{
-            low: intl.formatMessage({ id: "fee-buttons.select.low" }),
-            average: intl.formatMessage({
-              id: "fee-buttons.select.average",
-            }),
-            high: intl.formatMessage({ id: "fee-buttons.select.high" }),
-          }}
-          gasLabel={intl.formatMessage({ id: "send.input.gas" })}
-          gasSimulator={gasSimulator}
-        />
+        <div className={style["transactionFeeContainer"]}>
+          <FeeButtons
+            feeConfig={sendConfigs.feeConfig}
+            gasConfig={sendConfigs.gasConfig}
+            priceStore={priceStore}
+            label={intl.formatMessage({ id: "send.input.fee" })}
+            feeSelectLabels={{
+              low: intl.formatMessage({ id: "fee-buttons.select.low" }),
+              average: intl.formatMessage({
+                id: "fee-buttons.select.average",
+              }),
+              high: intl.formatMessage({ id: "fee-buttons.select.high" }),
+            }}
+            gasLabel={intl.formatMessage({ id: "send.input.gas" })}
+            gasSimulator={gasSimulator}
+          />
+        </div>
         <ButtonV2
+          variant="dark"
           text="Review transaction"
-          gradientText=""
           styleProps={{
             width: "94%",
             padding: "12px",

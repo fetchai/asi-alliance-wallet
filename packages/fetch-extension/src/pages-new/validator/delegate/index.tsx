@@ -206,7 +206,7 @@ export const Delegate: FunctionComponent = observer(() => {
       onBackButton={() => navigate(-1)}
     >
       {validator && (
-        <div style={{ color: "white", paddingBottom: "48px" }}>
+        <div style={{ color: "var(--font-dark)", paddingBottom: "48px" }}>
           <ValidatorCardV2 validator={validator} />
 
           <FormGroup
@@ -219,21 +219,9 @@ export const Delegate: FunctionComponent = observer(() => {
             <StakeInput
               label="Amount"
               amountConfig={sendConfigs.amountConfig}
+              availableBalance={availableBalance}
               isToggleClicked={isToggleClicked}
             />
-
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: 400,
-                color: "rgba(255,255,255,0.6)",
-                marginTop: "8px",
-              }}
-            >
-              {`${intl.formatMessage({
-                id: "unstake.available",
-              })} ${availableBalance}`}
-            </div>
 
             <UseMaxButton
               amountConfig={sendConfigs.amountConfig}
@@ -255,6 +243,7 @@ export const Delegate: FunctionComponent = observer(() => {
             </Alert>
             <ButtonV2
               text=""
+              variant="dark"
               styleProps={{
                 width: "94%",
                 padding: "12px",
@@ -274,7 +263,6 @@ export const Delegate: FunctionComponent = observer(() => {
                 if (activityStore.getPendingTxnTypes[TXNTYPE.delegate]) return;
                 stakeClicked();
               }}
-              btnBgEnabled={true}
             >
               {intl.formatMessage({
                 id: "unstake.confirm",

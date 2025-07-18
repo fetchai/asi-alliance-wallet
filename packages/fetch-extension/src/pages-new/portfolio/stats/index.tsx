@@ -179,8 +179,8 @@ export const Stats = observer(
               ? parseFloat(vestingBalance().toString())
               : 0,
           ],
-          backgroundColor: ["#CFC3FE", "#5F38FB", "#F9774B", "#FAB29B"],
-          hoverBackgroundColor: ["#CFC3FE", "#5F38FB", "#F9774B", "#FAB29B"],
+          backgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
+          hoverBackgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
           borderColor: "transparent",
         },
       ],
@@ -314,8 +314,8 @@ export const Stats = observer(
                 src={
                   stakableInFiatCurrency !== undefined &&
                   stakableInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-light-purple-long.svg")
-                    : require("@assets/svg/wireframe/legend-light-purple.svg")
+                    ? require("@assets/svg/wireframe/legend-light-green-long.svg")
+                    : require("@assets/svg/wireframe/legend-light-green.svg")
                 }
                 alt=""
               />
@@ -341,13 +341,7 @@ export const Stats = observer(
                 {isLoaded ? (
                   stakableInFiatCurrency !== undefined &&
                   stakableInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {stakableInFiatCurrency}
                     </div>
                   ) : null
@@ -361,8 +355,8 @@ export const Stats = observer(
                 src={
                   stakedInFiatCurrency !== undefined &&
                   stakedInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-purple-long.svg")
-                    : require("@assets/svg/wireframe/legend-purple.svg")
+                    ? require("@assets/svg/wireframe/legend-sky-long.svg")
+                    : require("@assets/svg/wireframe/legend-sky.svg")
                 }
                 alt=""
               />
@@ -389,13 +383,7 @@ export const Stats = observer(
                 {isLoaded ? (
                   stakedInFiatCurrency !== undefined &&
                   stakedInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {stakedInFiatCurrency}
                     </div>
                   ) : null
@@ -409,8 +397,8 @@ export const Stats = observer(
                 src={
                   rewardsInFiatCurrency !== undefined &&
                   rewardsInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-orange-long.svg")
-                    : require("@assets/svg/wireframe/legend-orange.svg")
+                    ? require("@assets/svg/wireframe/legend-dark-green-long.svg")
+                    : require("@assets/svg/wireframe/legend-dark-green.svg")
                 }
                 alt=""
               />
@@ -436,13 +424,7 @@ export const Stats = observer(
                 {isLoaded ? (
                   rewardsInFiatCurrency !== undefined &&
                   rewardsInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {rewardsInFiatCurrency}
                     </div>
                   ) : null
@@ -496,9 +478,8 @@ export const Stats = observer(
               pageName: "Portfolio",
             });
           }}
+          variant="dark"
           styleProps={{
-            background: "linear-gradient(269deg, #F9774B 0%, #CF447B 99.29%)",
-            color: "white",
             marginTop: "24px",
           }}
           text="Claim rewards"
@@ -518,11 +499,11 @@ export const Stats = observer(
           title=""
           closeClicked={() => setIsClaimRewardsOpen(false)}
           showTopNav={false}
-          showCloseIcon={false}
+          showCloseIcon={true}
         >
           <div className={style["claim-rewards-dropdown-container"]}>
             <img
-              src={require("@assets/svg/wireframe/ic_claimrewards.png")}
+              src={require("@assets/svg/wireframe/ic_claimrewards.svg")}
               alt=""
             />
             <div className={style["claim-rewards-dropdown-text-container"]}>
@@ -536,17 +517,8 @@ export const Stats = observer(
             </div>
 
             <div className={style["claim-rewards-reward"]}>
-              <div
-                style={{
-                  color: "rgba(255,255,255,0.6)",
-                  fontSize: "14px",
-                  fontWeight: 400,
-                  lineHeight: "17.5px",
-                }}
-              >
-                You’ve earned
-              </div>
-              <div style={{ fontWeight: 500, lineHeight: "17.5px" }}>
+              <div className={style["label"]}>You’ve earned</div>
+              <div className={style["value"]}>
                 {Number(parseFloat(rewardsBalNumber).toFixed(2)).toLocaleString(
                   "en-US"
                 )}{" "}
@@ -557,10 +529,10 @@ export const Stats = observer(
             <ButtonV2
               onClick={handleClaimRewards}
               styleProps={{
-                background:
-                  "linear-gradient(269deg, #F9774B 0%, #CF447B 99.29%)",
-                color: "white",
                 height: "56px",
+                background: "var(--bg-green-base)",
+                color: "var(--font-dark)",
+                borderColor: "transparent",
               }}
               text="Claim my rewards"
               disabled={

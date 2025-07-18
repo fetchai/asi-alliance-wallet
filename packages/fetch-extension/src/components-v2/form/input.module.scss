@@ -1,11 +1,60 @@
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/functions";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/mixins";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
+@import "../../styles/var";
+
+// .input {
+//   box-shadow: $input-alternative-box-shadow !important;
+
+//   &:focus {
+//     box-shadow: $input-focus-alternative-box-shadow !important;
+//   }
+// }
+
+.inputLabel {
+  color: $font-secondary;
+  font-weight: 500;
+  font-size: 14px;
+}
 
 .input {
-  box-shadow: $input-alternative-box-shadow !important;
+  background: white;
+  color: $font-dark;
+  box-shadow: none;
+  border: 1.5px solid $border-grey;
 
+  &:hover {
+    border: 1.5px solid $border-sky-focus;
+  }
   &:focus {
-    box-shadow: $input-focus-alternative-box-shadow !important;
+    border: 1.5px solid $border-sky-focus;
+  }
+}
+
+.form-floating {
+  position: relative;
+
+  input {
+    height: 3.5rem;
+    padding: 1.25rem 0.75rem 0.25rem;
+    font-size: 1rem;
+  }
+
+  label {
+    position: absolute;
+    top: 1rem;
+    left: 0.75rem;
+    font-size: 1rem;
+    color: #6c757d;
+    transition: 0.2s ease;
+    pointer-events: none;
+  }
+
+  input:focus + label,
+  input:not(:placeholder-shown) + label {
+    top: 0.3rem;
+    left: 0.75rem;
+    font-size: 0.75rem;
+    opacity: 1;
   }
 }

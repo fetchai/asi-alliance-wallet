@@ -1,11 +1,11 @@
+@import "../../../styles/var";
+
 .title {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 24px;
   line-height: 28px;
-
   letter-spacing: 0.3px;
-  color: white;
-
+  color: $font-dark;
   margin-bottom: 16px;
 }
 
@@ -13,23 +13,17 @@
   font-weight: 400;
   font-size: 15px;
   line-height: 20px;
-
-  color: white;
-
+  color: $font-secondary;
   margin-bottom: 28px;
 }
 
-.ledgerModalBackdrop {
-  background: rgba(39, 14, 141, 0.8);
-  backdrop-filter: blur(3px);
-  opacity: 1 !important;
+.ledgerModalBody {
+  background-color: white;
+  color: $font-dark;
 }
 
-.ledgerModalBody {
-  background-color: #000d3d;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  background-image: url("../../../public/assets/svg/wireframe/bg.svg");
+.ledgerModalBackdrop {
+  background: rgba($bg-dark, 0.6);
+  backdrop-filter: blur(3px);
+  opacity: 1 !important;
 }
