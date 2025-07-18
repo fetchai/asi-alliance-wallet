@@ -596,21 +596,45 @@ export const RecoverMnemonicPage: FunctionComponent<{
                 </div>
               ) : null}
               <div className={styleRecoverMnemonic["formInnerContainer"]}>
-                <Label for="name" className={style["label"]}>
-                  {intl.formatMessage({ id: "register.name" })}
-                </Label>
-                <Input
-                  className={styleRecoverMnemonic["addressInput"]}
-                  style={{ width: "333px" }}
-                  type="text"
-                  {...register("name", {
-                    required: intl.formatMessage({
-                      id: "register.name.error.required",
-                    }),
-                  })}
-                  error={errors.name && errors.name.message}
-                  maxLength={20}
-                />
+                {seedType !== SeedType.PRIVATE_KEY && (
+                  <ButtonV2
+                    type="button"
+                    styleProps={{
+                      width: "fit-content",
+                      padding: "10px 20px",
+                      height: "auto",
+                      fontSize: "14px",
+                      marginBottom: "10px",
+                      marginTop: "0px",
+                    }}
+                    text="Clear All"
+                    variant="dark"
+                    onClick={() => {
+                      if (seedType === SeedType.WORDS12) {
+                        setSeedWords(new Array<string>(12).fill(""));
+                      } else if (seedType == SeedType.WORDS24) {
+                        setSeedWords(new Array<string>(24).fill(""));
+                      }
+                    }}
+                  />
+                )}
+                <div>
+                  <Label for="name" className={style["label"]}>
+                    {intl.formatMessage({ id: "register.name" })}
+                  </Label>
+                  <Input
+                    className={styleRecoverMnemonic["addressInput"]}
+                    style={{ width: "333px" }}
+                    type="text"
+                    {...register("name", {
+                      required: intl.formatMessage({
+                        id: "register.name.error.required",
+                      }),
+                    })}
+                    error={errors.name && errors.name.message}
+                    maxLength={20}
+                  />
+                </div>
                 {registerConfig.mode === "create" ? (
                   <React.Fragment>
                     <PasswordInput

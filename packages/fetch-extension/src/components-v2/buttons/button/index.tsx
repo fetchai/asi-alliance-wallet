@@ -11,9 +11,11 @@ export interface Props {
   children?: ReactNode;
   btnBgEnabled?: boolean;
   variant?: "light" | "dark";
+  type?: "button" | "submit" | "reset";
 }
 
 export const ButtonV2: React.FC<Props> = ({
+  type,
   onClick,
   dataLoading,
   gradientText,
@@ -38,6 +40,7 @@ export const ButtonV2: React.FC<Props> = ({
 
   return (
     <button
+      type={type || undefined}
       disabled={disabled}
       onClick={handleClick}
       data-loading={dataLoading ? dataLoading : null}
