@@ -3,13 +3,7 @@
  */
 
 import "./shim";
-
-import "text-encoding";
-
 import "react-native-gesture-handler";
-
-import "react-native-url-polyfill/auto";
-
 import { AppRegistry, LogBox } from "react-native";
 
 import "./init";
@@ -23,25 +17,16 @@ import * as Sentry from "@sentry/react-native";
 const App = require("./src/app").App;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const appName = require("./app.json").name;
-export const routingInstrumentation =
-  new Sentry.ReactNavigationInstrumentation();
+
+export const navigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: true,
+});
 
 Sentry.init({
   dsn: process.env["SENTRY_DSN"] || "",
-  integrations: [
-    new Sentry.ReactNativeTracing({
-      routingInstrumentation,
-    }),
-  ],
-  // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
-  // We recommend adjusting this value in production.
-  tracesSampleRate: 1.0,
-  _experiments: {
-    // profilesSampleRate is relative to tracesSampleRate.
-    // Here, we'll capture profiles for 100% of transactions.
-    profilesSampleRate: 1.0,
-  },
+  integrations: [navigationIntegration],
 });
+
 // eslint-disable-next-line import/no-default-export
 export default Sentry.wrap(App);
 

@@ -17,9 +17,6 @@ import java.util.List;
 import expo.modules.ApplicationLifecycleDispatcher;
 import expo.modules.ReactNativeHostWrapper;
 
-import com.microsoft.codepush.react.CodePush;
-//import com.bugsnag.android.Bugsnag;
-
 public class MainApplication extends Application implements ReactApplication {
 
   private final ReactNativeHost mReactNativeHost = new ReactNativeHostWrapper(
@@ -55,7 +52,6 @@ public class MainApplication extends Application implements ReactApplication {
     super.onCreate();
    // Bugsnag.start(this);
     SoLoader.init(this, /* native exopackage */ false);
-    initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
     ApplicationLifecycleDispatcher.onApplicationCreate(this);
   }
 
@@ -64,35 +60,4 @@ public class MainApplication extends Application implements ReactApplication {
     super.onConfigurationChanged(newConfig);
     ApplicationLifecycleDispatcher.onConfigurationChanged(this, newConfig);
   }
-
-   /**
-    * Loads Flipper in React Native templates. Call this in the onCreate method with something like
-    * initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
-    *
-    * @param context
-    * @param reactInstanceManager
-    */
-  private static void initializeFlipper(
-       Context context, ReactInstanceManager reactInstanceManager) {
-     if (BuildConfig.DEBUG) {
-       try {
-         /*
-          We use reflection here to pick up the class that initializes Flipper,
-         since Flipper library is not available in release mode
-         */
-         Class<?> aClass = Class.forName("com.awesomeapp.ReactNativeFlipper");
-         aClass
-             .getMethod("initializeFlipper", Context.class, ReactInstanceManager.class)
-             .invoke(null, context, reactInstanceManager);
-       } catch (ClassNotFoundException e) {
-         e.printStackTrace();
-       } catch (NoSuchMethodException e) {
-         e.printStackTrace();
-       } catch (IllegalAccessException e) {
-         e.printStackTrace();
-       } catch (InvocationTargetException e) {
-         e.printStackTrace();
-       }
-     }
-   }
 }

@@ -9,8 +9,6 @@
 
 #import <React/RCTLinkingManager.h>
 
-#import <CodePush/CodePush.h>
-
 #import <AppCenterReactNative.h>
 #import <AppCenterReactNativeAnalytics.h>
 
