@@ -71,7 +71,6 @@ export const AddressInputCard: FunctionComponent<{
     const [isOpenModal, setIsOpenModal] = useState(false);
     const { chainStore, analyticsStore, accountStore } = useStore();
 
-    const [permission, requestPermission] = Camera.useCameraPermissions();
     const [openCameraModel, setIsOpenCameraModel] = useState(false);
     const [modelStatus, setModelStatus] = useState(ModelStatus.First);
     const [isFocused, setIsFocused] = useState(false);
@@ -240,7 +239,8 @@ export const AddressInputCard: FunctionComponent<{
                   borderRadius={0}
                   backgroundBlur={false}
                   disable={buttonDisable}
-                  onPress={() => {
+                  onPress={async () => {
+                    const permission = await Camera.getCameraPermissionsAsync();
                     if (permission?.status == PermissionStatus.UNDETERMINED) {
                       setIsOpenCameraModel(true);
                     } else {
@@ -334,9 +334,8 @@ export const AddressInputCard: FunctionComponent<{
           isOpen={openCameraModel}
           close={() => setIsOpenCameraModel(false)}
           onPress={async () => {
-            const permissionStatus = await requestPermission();
+            const permissionStatus = await Camera.requestCameraPermissionsAsync();
             if (
-              !permission?.granted &&
               permissionStatus.status === PermissionStatus.DENIED
             ) {
               if (permissionStatus.canAskAgain) {

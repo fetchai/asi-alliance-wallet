@@ -60,7 +60,6 @@ export const AccountSection: FunctionComponent<{
   const style = useStyle();
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [changeWalletModal, setChangeWalletModal] = useState(false);
-  const [permission, requestPermission] = Camera.useCameraPermissions();
   const [openCameraModel, setIsOpenCameraModel] = useState(false);
   const [modelStatus, setModelStatus] = useState(ModelStatus.First);
   const [currentTxnType, setCurrentTxnType] = useState<string>("");
@@ -292,7 +291,8 @@ export const AccountSection: FunctionComponent<{
             borderRadius={32}
             icon={<QRCodeIcon size={15} />}
             backgroundBlur={false}
-            onPress={() => {
+            onPress={async () => {
+              const permission = await Camera.getCameraPermissionsAsync();
               if (permission?.status == PermissionStatus.UNDETERMINED) {
                 setIsOpenCameraModel(true);
               } else {
@@ -548,9 +548,8 @@ export const AccountSection: FunctionComponent<{
         isOpen={openCameraModel}
         close={() => setIsOpenCameraModel(false)}
         onPress={async () => {
-          const permissionStatus = await requestPermission();
+          const permissionStatus = await Camera.requestCameraPermissionsAsync();
           if (
-            !permission?.granted &&
             permissionStatus.status === PermissionStatus.DENIED
           ) {
             if (permissionStatus.canAskAgain) {

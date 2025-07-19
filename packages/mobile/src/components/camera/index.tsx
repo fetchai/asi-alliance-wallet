@@ -1,5 +1,5 @@
 import React, { FunctionComponent } from "react";
-import { Camera, CameraProps } from "expo-camera";
+import { CameraNativeProps } from "expo-camera";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useStyle } from "styles/index";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
@@ -9,8 +9,9 @@ import { LoadingSpinner } from "components/spinner";
 import { IconButton } from "components/new/button/icon";
 import { XmarkIcon } from "components/new/icon/xmark";
 import { ScannerFrame } from "./scanner-frame";
+import ExpoCamera from "expo-camera/build/ExpoCamera";
 
-interface CameraProp extends CameraProps {
+interface CameraProp extends CameraNativeProps {
   containerBottom?: React.ReactElement;
   isLoading?: boolean;
   scannerBottomText: string;
@@ -29,7 +30,7 @@ export const FullScreenCameraView: FunctionComponent<CameraProp> = (props) => {
   return (
     <React.Fragment>
       {isFocused ? (
-        <Camera
+        <ExpoCamera
           style={StyleSheet.flatten([style.flatten(["absolute-fill"])])}
           {...rest}
         />
