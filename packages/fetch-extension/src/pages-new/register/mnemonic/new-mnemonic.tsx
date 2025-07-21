@@ -187,6 +187,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
     }) => {
       const intl = useIntl();
       const notification = useNotification();
+      const { keyRingStore } = useStore();
       const {
         register,
         handleSubmit,
@@ -215,6 +216,8 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       );
       const { analyticsStore } = useStore();
       const [activeTab, setActiveTab] = useState(tabs[0].id);
+      const [accountNameValidationError, setAccountNameValidationError] =
+        useState(false);
 
       useEffect(() => {
         const handleTabChange = (activeTab: string) => {
@@ -239,6 +242,19 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
           },
         });
       }, []);
+
+      const validateWalletName = (value: string) => {
+        const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
+          (item) => item?.meta?.["name"]
+        );
+        let nameAlreadyExists = false;
+
+        // if create mode then wallet list is empty
+        if (registerConfig.mode !== "create") {
+          nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+        }
+        return !nameAlreadyExists;
+      };
 
       return (
         <div>
@@ -354,18 +370,20 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   onChange={(event) => {
                     const trimmedValue = event.target.value.trimStart();
                     setValue(event.target.name as keyof FormData, trimmedValue);
+                    setAccountNameValidationError(
+                      !validateWalletName(trimmedValue)
+                    );
                   }}
-                  // error={errors.name && errors.name.message}
+                  error={
+                    accountNameValidationError
+                      ? "Account name already exists, please try different name"
+                      : errors.name && errors.name.message
+                  }
                   maxLength={20}
                   style={{
                     width: "333px !important",
                   }}
                 />
-                {errors.name && errors.name.message && (
-                  <div className={style2["addressErrorText"]}>
-                    address is required
-                  </div>
-                )}
                 {registerConfig.mode === "create" ? (
                   <div style={{ marginTop: "-20px" }}>
                     <PasswordInput
@@ -417,7 +435,9 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                 <ButtonV2
                   variant="dark"
                   disabled={
-                    !!errors.password?.message || passwordChecklistError
+                    !!errors.password?.message ||
+                    passwordChecklistError ||
+                    accountNameValidationError
                   }
                   text={""}
                   styleProps={{ marginBottom: "20px", height: "56px" }}

@@ -214,17 +214,20 @@ export const RecoverMnemonicPage: FunctionComponent<{
 
   const bip44Option = useBIP44Option();
   const [password, setPassword] = useState("");
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
   const [passwordChecklistError, setPasswordChecklistError] = useState(
     // initially sets the password error as true for create mode
     registerConfig.mode === "create" ? true : false
   );
 
-  const { analyticsStore } = useStore();
+  const { analyticsStore, keyRingStore } = useStore();
 
   const {
     register,
     handleSubmit,
     getValues,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -385,6 +388,19 @@ export const RecoverMnemonicPage: FunctionComponent<{
 
     handleTabChange(activeTab);
   }, [activeTab]);
+
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
+      (item) => item?.meta?.["name"]
+    );
+    let nameAlreadyExists = false;
+
+    // if create mode then wallet list is empty
+    if (registerConfig.mode !== "create") {
+      nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+    }
+    return !nameAlreadyExists;
+  };
 
   return (
     <React.Fragment>
@@ -631,8 +647,19 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         id: "register.name.error.required",
                       }),
                     })}
-                    error={errors.name && errors.name.message}
+                    error={
+                      accountNameValidationError
+                        ? "Account name already exists, please try different name"
+                        : errors.name && errors.name.message
+                    }
                     maxLength={20}
+                    onChange={(e) => {
+                      const trimmedValue = e.target.value.trimStart();
+                      setValue(e.target.name as keyof FormData, trimmedValue);
+                      setAccountNameValidationError(
+                        !validateWalletName(trimmedValue)
+                      );
+                    }}
                   />
                 </div>
                 {registerConfig.mode === "create" ? (
@@ -705,7 +732,11 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     height: "56px",
                   }}
                   data-loading={registerConfig.isLoading}
-                  disabled={registerConfig.isLoading || passwordChecklistError}
+                  disabled={
+                    registerConfig.isLoading ||
+                    passwordChecklistError ||
+                    accountNameValidationError
+                  }
                   onClick={() => {
                     analyticsStore.logEvent("register_next_click", {
                       pageName: "Register",

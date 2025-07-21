@@ -44,6 +44,8 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   }, [waitingNameData, setValue]);
 
   const [loading, setLoading] = useState(false);
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
 
   const keyStore = useMemo(() => {
     return keyRingStore.multiKeyStoreInfo[parseInt(index)];
@@ -56,6 +58,14 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
       throw new Error("Invalid keyring index, check the url");
     }
   }, [index]);
+
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
+      (item) => item?.meta?.["name"]
+    );
+    const nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+    return !nameAlreadyExists;
+  };
 
   if (isKeyStoreReady && keyStore == null) {
     return null;
@@ -130,12 +140,21 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           formGroupClassName={styleName["formGroup"]}
           floatLabel={true}
           className={styleName["input"]}
-          error={errors.name && errors.name.message}
+          error={
+            accountNameValidationError
+              ? "Account name already exists, please try different name"
+              : errors.name && errors.name.message
+          }
           {...register("name", {
             required: intl.formatMessage({
               id: "setting.keyring.change.input.name.error.required",
             }),
           })}
+          onChange={(e) => {
+            const trimmedValue = e.target.value.trimStart();
+            setValue(e.target.name as keyof FormData, trimmedValue);
+            setAccountNameValidationError(!validateWalletName(trimmedValue));
+          }}
           maxLength={20}
           autoFocus
           readOnly={waitingNameData !== undefined && !waitingNameData?.editable}
@@ -145,7 +164,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
         <ButtonV2
           variant="dark"
           dataLoading={loading}
-          disabled={loading}
+          disabled={loading || accountNameValidationError}
           text={
             loading ? (
               <i className="fas fa-spinner fa-spin ml-2" />
