@@ -22,6 +22,7 @@ import {
 import { VectorCharacter } from "components/vector-character";
 import { KeplrETCQueriesImpl } from "@keplr-wallet/stores-etc";
 import { IconButton } from "components/new/button/icon";
+import { numberLocalFormat } from "utils/format/format";
 
 interface DeepReadonlyObject {
   queryBalances: ObservableQueryBalances;
@@ -232,14 +233,14 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {Number(
+                        {numberLocalFormat(
                           amount
                             .maxDecimals(4)
                             .trim(true)
                             .shrink(true)
                             .toString()
                             .split(" ")[0]
-                        ).toLocaleString("en-US")}{" "}
+                        )}{" "}
                         {
                           amount
                             .maxDecimals(4)
@@ -316,14 +317,14 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {Number(
+                        {numberLocalFormat(
                           reward
                             .maxDecimals(6)
                             .trim(true)
                             .shrink(true)
                             .toString()
                             .split(" ")[0]
-                        ).toLocaleString("en-US")}{" "}
+                        )}{" "}
                         {
                           reward
                             .maxDecimals(6)

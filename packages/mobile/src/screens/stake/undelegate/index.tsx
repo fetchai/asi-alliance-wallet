@@ -26,6 +26,7 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { txnTypeKey } from "components/new/txn-status.tsx";
+import { numberLocalFormat } from "utils/format/format";
 
 export const UndelegateScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -240,14 +241,14 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
             ]) as ViewStyle
           }
         >
-          {`${Number(
+          {`${numberLocalFormat(
             staked
               .trim(true)
               .shrink(true)
               .maxDecimals(6)
               .toString()
               .split(" ")[0]
-          ).toLocaleString("en-US")} ${
+          )} ${
             staked
               .trim(true)
               .shrink(true)
@@ -280,9 +281,9 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${Number(availableBalance.split(" ")[0]).toLocaleString(
-        "en-US"
-      )} ${availableBalance.split(" ")[1]}`}</Text>
+      >{`Available: ${numberLocalFormat(availableBalance.split(" ")[0])} ${
+        availableBalance.split(" ")[1]
+      }`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}
