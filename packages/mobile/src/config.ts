@@ -2607,6 +2607,9 @@ export const CommunityChainInfoRepo = {
   branchName: "main",
 };
 
+export const EXPLORER_URL = "https://hub.fetch.ai";
+export const DOCS_URL = "https://network.fetch.ai/docs/guides/asi-wallet/mobile-wallet";
+
 export const CHAIN_ID_DORADO = "dorado-1";
 export const CHAIN_ID_FETCHHUB = "fetchhub-4";
 export const CHAIN_ID_ERIDANUS = "eridanus-1";

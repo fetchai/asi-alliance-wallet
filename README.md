@@ -16,7 +16,7 @@ You can find the latest versions of the official managed releases on these links
     - [iOS App](https://apps.apple.com/in/app/asi-alliance-wallet/id1641087356)
     - [Android App](https://play.google.com/store/apps/details?id=com.fetchai.wallet)
    
-For help using ASI Alliance Wallet, Visit our [Doc](https://fetch.ai/docs/guides/fetch-network/fetch-wallet/web-wallet/get-started).
+For help using ASI Alliance Wallet, Visit our [Doc](https://network.fetch.ai/docs/guides/asi-wallet/web-wallet/get-started).
 
 ## Building browser extension locally
 

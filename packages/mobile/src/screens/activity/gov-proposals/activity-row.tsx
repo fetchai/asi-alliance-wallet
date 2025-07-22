@@ -9,6 +9,7 @@ import {
 import { BlurButton } from "components/new/button/blur-button";
 import { useStore } from "stores/index";
 import { formatToTruncated } from "utils/format/format";
+import {EXPLORER_URL} from "../../../config";
 
 const getHash = (proposal: any) => {
   if (proposal && proposal.id) {
@@ -64,7 +65,7 @@ export const GovActivityRow: FunctionComponent<{
         navigation.navigate("Others", {
           screen: "WebView",
           params: {
-            url: `https://companion.fetch.ai/${chainStore.current.chainId}/transactions/${id}`,
+            url: `${EXPLORER_URL}/${chainStore.current.chainId}/transactions/${id}`,
           },
         });
       }}
