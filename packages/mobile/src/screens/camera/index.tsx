@@ -87,7 +87,6 @@ export const CameraScreen: FunctionComponent = () => {
   return (
     <PageWithView disableSafeArea={true} backgroundMode={null}>
       <FullScreenCameraView
-        facing={'back'}
         scannerBottomText={
           route.params.recipientConfig
             ? "Send assets by scanning a QR code"
@@ -95,10 +94,9 @@ export const CameraScreen: FunctionComponent = () => {
         }
         barcodeScannerSettings={{barcodeTypes: ["qr"]}}
         isLoading={isLoading}
-        onBarcodeScanned={async ({ nativeEvent }) => {
+        onBarcodeScanned={async ({ data }) => {
           if (!isLoading && !isCompleted) {
             setIsLoading(true);
-const data = nativeEvent.data;
             try {
               if (data.startsWith("wc:")) {
                 await walletConnectStore.initClient(data);
