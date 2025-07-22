@@ -10477,10 +10477,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sentry/babel-plugin-component-annotate@npm:3.5.0":
-  version: 3.5.0
-  resolution: "@sentry/babel-plugin-component-annotate@npm:3.5.0"
-  checksum: c5dd3c572e4ca83db859bf3d8ba976393361631f30eb977bc00a572d9981ccaae84f42cce5bf85bc425544245ad22923a66fe96bc2355d339e12ea3aa72d3b82
+"@sentry/babel-plugin-component-annotate@npm:3.2.2":
+  version: 3.2.2
+  resolution: "@sentry/babel-plugin-component-annotate@npm:3.2.2"
+  checksum: 76e5ad6ff2d9184c3eec43c608f0c3c3ef8f9b9f51ebf9cfefe1e35f8c235fb46a6890932408098cb28687fed780a28c870d648e0e30e12b73e0fa03a295648e
   languageName: node
   linkType: hard
 
@@ -10497,74 +10497,66 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sentry/cli-darwin@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-darwin@npm:2.47.0"
+"@sentry/cli-darwin@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli-darwin@npm:2.42.4"
   conditions: os=darwin
   languageName: node
   linkType: hard
 
-"@sentry/cli-linux-arm64@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-linux-arm64@npm:2.47.0"
-  conditions: (os=linux | os=freebsd | os=android) & cpu=arm64
+"@sentry/cli-linux-arm64@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli-linux-arm64@npm:2.42.4"
+  conditions: (os=linux | os=freebsd) & cpu=arm64
   languageName: node
   linkType: hard
 
-"@sentry/cli-linux-arm@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-linux-arm@npm:2.47.0"
-  conditions: (os=linux | os=freebsd | os=android) & cpu=arm
+"@sentry/cli-linux-arm@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli-linux-arm@npm:2.42.4"
+  conditions: (os=linux | os=freebsd) & cpu=arm
   languageName: node
   linkType: hard
 
-"@sentry/cli-linux-i686@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-linux-i686@npm:2.47.0"
-  conditions: (os=linux | os=freebsd | os=android) & (cpu=x86 | cpu=ia32)
+"@sentry/cli-linux-i686@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli-linux-i686@npm:2.42.4"
+  conditions: (os=linux | os=freebsd) & (cpu=x86 | cpu=ia32)
   languageName: node
   linkType: hard
 
-"@sentry/cli-linux-x64@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-linux-x64@npm:2.47.0"
-  conditions: (os=linux | os=freebsd | os=android) & cpu=x64
+"@sentry/cli-linux-x64@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli-linux-x64@npm:2.42.4"
+  conditions: (os=linux | os=freebsd) & cpu=x64
   languageName: node
   linkType: hard
 
-"@sentry/cli-win32-arm64@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-win32-arm64@npm:2.47.0"
-  conditions: os=win32 & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@sentry/cli-win32-i686@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-win32-i686@npm:2.47.0"
+"@sentry/cli-win32-i686@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli-win32-i686@npm:2.42.4"
   conditions: os=win32 & (cpu=x86 | cpu=ia32)
   languageName: node
   linkType: hard
 
-"@sentry/cli-win32-x64@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli-win32-x64@npm:2.47.0"
+"@sentry/cli-win32-x64@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli-win32-x64@npm:2.42.4"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@sentry/cli@npm:2.47.0":
-  version: 2.47.0
-  resolution: "@sentry/cli@npm:2.47.0"
+"@sentry/cli@npm:2.42.4":
+  version: 2.42.4
+  resolution: "@sentry/cli@npm:2.42.4"
   dependencies:
-    "@sentry/cli-darwin": 2.47.0
-    "@sentry/cli-linux-arm": 2.47.0
-    "@sentry/cli-linux-arm64": 2.47.0
-    "@sentry/cli-linux-i686": 2.47.0
-    "@sentry/cli-linux-x64": 2.47.0
-    "@sentry/cli-win32-arm64": 2.47.0
-    "@sentry/cli-win32-i686": 2.47.0
-    "@sentry/cli-win32-x64": 2.47.0
+    "@sentry/cli-darwin": 2.42.4
+    "@sentry/cli-linux-arm": 2.42.4
+    "@sentry/cli-linux-arm64": 2.42.4
+    "@sentry/cli-linux-i686": 2.42.4
+    "@sentry/cli-linux-x64": 2.42.4
+    "@sentry/cli-win32-i686": 2.42.4
+    "@sentry/cli-win32-x64": 2.42.4
     https-proxy-agent: ^5.0.0
     node-fetch: ^2.6.7
     progress: ^2.0.3
@@ -10581,15 +10573,13 @@ __metadata:
       optional: true
     "@sentry/cli-linux-x64":
       optional: true
-    "@sentry/cli-win32-arm64":
-      optional: true
     "@sentry/cli-win32-i686":
       optional: true
     "@sentry/cli-win32-x64":
       optional: true
   bin:
     sentry-cli: bin/sentry-cli
-  checksum: 239a38975ae876812854c0a614677b0a25422909d662a7695483448bdd58137de406910dce545dda98c03477f236f7d97fdf0e464a2a41d501354287a354a7f3
+  checksum: 0571931c18a81f4680bb27d9e9f1adc057217188bcd19e8ae706f31d92050d79e527e8ee5b8c0189e48c19796f251321380871c81d3d8c37652d28d43e50fc97
   languageName: node
   linkType: hard
 
@@ -10600,13 +10590,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sentry/react-native@npm:^6.17.0":
-  version: 6.17.0
-  resolution: "@sentry/react-native@npm:6.17.0"
+"@sentry/react-native@npm:6.10.0":
+  version: 6.10.0
+  resolution: "@sentry/react-native@npm:6.10.0"
   dependencies:
-    "@sentry/babel-plugin-component-annotate": 3.5.0
+    "@sentry/babel-plugin-component-annotate": 3.2.2
     "@sentry/browser": 8.54.0
-    "@sentry/cli": 2.47.0
+    "@sentry/cli": 2.42.4
     "@sentry/core": 8.54.0
     "@sentry/react": 8.54.0
     "@sentry/types": 8.54.0
@@ -10620,7 +10610,7 @@ __metadata:
       optional: true
   bin:
     sentry-expo-upload-sourcemaps: scripts/expo-upload-sourcemaps.js
-  checksum: ceb97bfba1768aef4735996fd7fd79b974918a1adc8a061d7dee6ca648fb1cfb6683275859b600eefe78c9fd801c650acb112d38a56ebedfa4401fad73d8776d
+  checksum: 623185eec59028f6606997f7c449b19c6961e6884a08b36d8ebb83aa2cdca04e9ffe253ff3c88ed3a2d8c94ecc2cbbf5d7c8312bf15986da2baee2196cccc746
   languageName: node
   linkType: hard
 
@@ -25166,7 +25156,6 @@ __metadata:
     "@1stg/remark-preset": ^2.0.0
     "@axelar-network/axelarjs-sdk": ^0.13.6
     "@azoyalabs/fns-client": 0.0.3
-    "@babel/plugin-proposal-private-methods": ^7.18.6
     "@babel/preset-typescript": ^7.22.5
     "@cosmjs/cosmwasm-stargate": ^0.31.0
     "@octokit/core": ^3.5.1
@@ -34467,6 +34456,7 @@ __metadata:
     "@babel/core": ^7.20.0
     "@babel/plugin-proposal-class-properties": ^7.18.6
     "@babel/plugin-proposal-decorators": ^7.22.7
+    "@babel/plugin-proposal-private-methods": ^7.18.6
     "@babel/plugin-transform-flow-strip-types": ^7.22.5
     "@babel/preset-env": ^7.20.0
     "@babel/runtime": ^7.20.0
@@ -34511,7 +34501,7 @@ __metadata:
     "@react-navigation/elements": ^1.3.21
     "@react-navigation/native": ^6.0.13
     "@react-navigation/stack": ^6.3.17
-    "@sentry/react-native": ^6.17.0
+    "@sentry/react-native": 6.10.0
     "@toruslabs/fetch-node-details": ^15.0.0
     "@toruslabs/react-native-web-browser": ^1.1.0
     "@toruslabs/torus.js": =8.0.1

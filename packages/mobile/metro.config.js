@@ -29,8 +29,6 @@ const config = {
   watcher: {
     // Explicitly define watcher to override any unstable/default options from Sentry/Metro.
     // This resolves the 'unstable_autoSaveCache' warning by using stable alternatives.
-    // Enables Watchman for better performance in monorepos.
-    useWatchman: true,
     healthCheck: {
       enabled: true,
       interval: 5000, // Similar to debounceMs – checks watcher health every 5s.
