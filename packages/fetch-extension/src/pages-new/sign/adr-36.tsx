@@ -104,39 +104,24 @@ export const ADR36SignDocDetailsTab: FunctionComponent<{
         <div>
           <Label
             for="sign-value"
-            className="form-control-label"
+            className={styleDetailsTab["label"]}
             style={{ marginTop: "8px" }}
           >
             Message
           </Label>
           <div
             id="sign-value"
-            style={{
-              marginBottom: "8px",
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-            }}
+            className={styleDetailsTab["signValueContainer"]}
           >
-            <pre
-              style={{
-                flex: 1,
-                padding: "20px",
-                border: "1px solid #9092B6",
-                borderRadius: "8px",
-                whiteSpace: "pre-wrap",
-                wordWrap: "break-word",
-                color: "white",
-              }}
-            >
-              {signValue}
-            </pre>
+            <pre className={styleDetailsTab["signValue"]}>{signValue}</pre>
           </div>
-          <Label for="chain-name" className="form-control-label">
+          <Label for="chain-name" className={styleDetailsTab["label"]}>
             Requested Network
           </Label>
           <div id="chain-name">
-            <div>{chainStore.current.chainName}</div>
+            <div style={{ color: "var(--font-dark" }}>
+              {chainStore.current.chainName}
+            </div>
           </div>
         </div>
       )}

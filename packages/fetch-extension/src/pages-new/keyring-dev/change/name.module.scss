@@ -1,26 +1,34 @@
+@import "../../../styles/var";
+
 .container {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
+
+.formGroup {
+  margin-bottom: 0.5rem !important;
+}
+
 .input {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
+  background: transparent !important;
+  color: $font-dark !important;
   margin-bottom: 16px;
+  box-shadow: none !important;
+  border: 1.5px solid $border-grey !important;
 }
 
 .input:read-only {
-  border: 0px !important;
+  background: $bg-grey !important;
 }
 
 .input:focus {
-  background: rgba(255, 255, 255, 0.2);
-  color: white !important;
-  border: 1px solid #7655fc;
+  color: $font-dark !important;
+  border: 1.5px solid $border-sky-focus !important;
 }
 .label {
-  color: rgba(255, 255, 255, 0.6);
-  font-family: Lexend;
+  color: $font-dark;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;

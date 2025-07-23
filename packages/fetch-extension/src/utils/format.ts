@@ -228,3 +228,10 @@ export const validateDecimalPlaces = (value: string, maxDigits = 20) => {
   const decimalRegex = new RegExp(`^\\d+(\\.\\d{0,${maxDigits}})?$`);
   return decimalRegex.test(value);
 };
+
+export const hasValidDecimals = (value: string) => {
+  if (value == null || value === "") return false;
+  const str = value.toString();
+  const parts = str.split(".");
+  return parts.length < 2 || parts[1].length <= 18;
+};

@@ -1,19 +1,41 @@
+@import "../../styles/var";
+
 .row-outer {
   display: flex;
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
+  color: $font-dark;
+  font-family: $font-family-base;
 }
 
 .label {
   font-size: 14px;
   font-weight: 400;
   line-height: 24px;
+  color: $font-secondary;
 }
 
 .input {
   display: flex;
+  flex-direction: column;
+  border: 1px solid $border-grey;
+  font-weight: 400;
+  color: $font-dark;
+  border-radius: 12px;
+}
+
+.inputContainer {
+  display: flex;
   justify-content: space-between;
   align-items: center;
   font-weight: 400;
+  color: $font-dark;
+  box-shadow: none;
+  background: white;
+  border-radius: 12px;
+
+  & input {
+    font-size: 16px;
+  }
 }

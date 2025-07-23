@@ -118,6 +118,7 @@ export const AutoLockPage: FunctionComponent = () => {
             error={errors.duration && errors.duration.message}
           />
           <ButtonV2
+            variant="dark"
             styleProps={{
               width: "94%",
               padding: "12px",
@@ -128,7 +129,7 @@ export const AutoLockPage: FunctionComponent = () => {
               left: "0px",
               right: "0px",
             }}
-            data-loading={isLoading}
+            dataLoading={isLoading}
             text={""}
           >
             <FormattedMessage id="setting.endpoints.button.confirm" />

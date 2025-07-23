@@ -1,6 +1,7 @@
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/functions";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/mixins";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
+@import "../../styles/var";
 
 .input-size {
   display: flex;
@@ -48,6 +49,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 172px;
+  justify-content: center;
 }
 
 .input-wrapper {
@@ -59,17 +62,24 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+
+  & > span {
+    color: $neutral;
+    font-size: 32px;
+  }
 }
 .input-error {
   color: var(--Red-Red-400, #f36b6b);
 }
 .input::placeholder {
-  color: white !important;
+  color: rgba($font-dark, 0.7) !important;
 }
 .input:focus {
-  color: white !important;
+  color: $font-dark !important;
 }
-input {
+.input {
+  color: $font-dark;
+  font-size: 32px;
   -moz-appearance: textfield;
 }
 input::-webkit-outer-spin-button,
@@ -78,14 +88,14 @@ input::-webkit-inner-spin-button {
   margin: 0;
 }
 .amount-label {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  color: rgba($font-dark, 0.8);
   display: flex;
   gap: 10px;
 }
 .amount-usd {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-dark;
 }
 .tokenSelector {
   width: 100%;
@@ -136,15 +146,15 @@ input::-webkit-inner-spin-button {
 
 .widgetButton,
 .widgetButton:hover {
-  background: transparent !important;
+  background: white !important;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $bg-grey-dark;
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 16px;
   margin: 0px;
-  gap: 8px;
-  color: white;
+  gap: 4px;
+  color: $font-grey;
   padding: 6px 24px;
   font-weight: 400;
   height: 48px;
@@ -155,8 +165,8 @@ input::-webkit-inner-spin-button {
 }
 .widgetButton:disabled {
   cursor: not-allowed;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: rgba($font-grey, 0.8);
+  border: 1px solid $bg-grey-dark;
 }
 .balance {
   float: right;
@@ -229,4 +239,10 @@ input::-webkit-inner-spin-button {
   font-size: 13px;
   color: white !important;
   text-align: right !important;
+}
+
+.label {
+  font-size: 14px;
+  color: $neutral;
+  margin-top: 16px;
 }

@@ -19,12 +19,13 @@ export const EmptyStake = () => {
       </div>
 
       <ButtonV2
+        variant="dark"
         styleProps={{
-          width: "90%",
-          height: "56px",
+          width: "100px",
+          height: "50px",
           fontSize: "16px",
         }}
-        text="Start staking"
+        text="Stake"
         onClick={() => {
           analyticsStore.logEvent("stake_click", {
             chainId: chainStore.current.chainId,

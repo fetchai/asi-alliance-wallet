@@ -53,6 +53,11 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
@@ -87,6 +92,11 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
@@ -105,9 +115,6 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.4)",
-                color: "white",
                 height: "48px",
                 fontSize: "14px",
                 fontWeight: 400,

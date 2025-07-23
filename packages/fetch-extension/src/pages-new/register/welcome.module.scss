@@ -1,3 +1,5 @@
+@import "../../styles/var";
+
 .pinWalletArrow {
   position: absolute;
   right: 18%;
@@ -17,4 +19,19 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  flex-direction: column;
+  height: 70vh;
+}
+
+.title {
+  color: $font-dark;
+  font-size: 32px;
+  font-weight: 500;
+  margin: 5px 0px;
+}
+
+.description {
+  color: $font-secondary;
+  font-size: 16px;
+  font-weight: 500;
 }

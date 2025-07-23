@@ -1,11 +1,11 @@
+import { ButtonV2 } from "@components-v2/buttons/button";
+import { useInteractionInfo } from "@keplr-wallet/hooks";
+import { EmptyLayout } from "@layouts/empty-layout";
+import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { EmptyLayout } from "@layouts/empty-layout";
-import style from "./style.module.scss";
-import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
-import { Button } from "reactstrap";
-import { useInteractionInfo } from "@keplr-wallet/hooks";
+import style from "./style.module.scss";
 
 export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
   observer(() => {
@@ -34,9 +34,9 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
       <EmptyLayout style={{ height: "100%", paddingTop: "80px" }}>
         <div className={style["container"]}>
           <img
-            src={require("../../../public/assets/logo-256.svg")}
+            src={require("@assets/png/ASI-Logo-Icon-black.png")}
             alt="logo"
-            style={{ width: "92px", height: "92px", margin: "0 auto" }}
+            style={{ width: "180px", height: "40px", margin: "0 auto" }}
           />
           <h1 className={style["header"]}>
             <FormattedMessage id="access.title" />
@@ -61,11 +61,9 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
           </ul>
           <div style={{ flex: 1 }} />
           <div className={style["buttons"]}>
-            <Button
-              className={style["button"]}
-              color="danger"
-              outline
-              onClick={async (e) => {
+            <ButtonV2
+              text=""
+              onClick={async (e: any) => {
                 e.preventDefault();
 
                 if (waitingPermissions.length > 0) {
@@ -86,14 +84,14 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
                   }
                 }
               }}
-              data-loading={generalPermissionStore.isLoading}
+              dataLoading={generalPermissionStore.isLoading}
             >
               <FormattedMessage id="access.button.reject" />
-            </Button>
-            <Button
-              className={style["button"]}
-              color="primary"
-              onClick={async (e) => {
+            </ButtonV2>
+            <ButtonV2
+              text=""
+              variant="dark"
+              onClick={async (e: any) => {
                 e.preventDefault();
 
                 if (waitingPermissions.length > 0) {
@@ -115,10 +113,10 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
                 }
               }}
               disabled={waitingPermissions.length === 0}
-              data-loading={generalPermissionStore.isLoading}
+              dataLoading={generalPermissionStore.isLoading}
             >
               <FormattedMessage id="access.button.approve" />
-            </Button>
+            </ButtonV2>
           </div>
         </div>
       </EmptyLayout>

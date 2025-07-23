@@ -1,3 +1,5 @@
+@import "../../../../../styles/var";
+
 .button {
   padding: 8px;
   color: #fff;
@@ -17,7 +19,7 @@
 .heading {
   width: 328px;
   height: 38px;
-  font-family: "Nunito Sans";
+  font-family: $font-family-base;
   font-style: normal;
   font-weight: 400;
   font-size: 16px;
