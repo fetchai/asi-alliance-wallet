@@ -6,7 +6,6 @@ module.exports = {
     "plugin:prettier/recommended",
     "prettier",
     "plugin:import/typescript",
-    "plugin:storybook/recommended",
   ],
   plugins: ["react-hooks", "unicorn", "import", "unused-imports"],
   parserOptions: {
