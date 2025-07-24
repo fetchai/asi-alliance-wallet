@@ -1082,8 +1082,6 @@ PODS:
     - Yoga
   - react-native-encrypted-storage (4.0.3):
     - React-Core
-  - react-native-get-random-values (1.11.0):
-    - React-Core
   - react-native-linear-gradient-text (1.2.12):
     - DoubleConversion
     - glog
@@ -1509,7 +1507,7 @@ PODS:
     - Yoga
   - RNScrypt (1.2.1):
     - React
-  - RNSentry (6.17.0):
+  - RNSentry (6.18.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1530,7 +1528,7 @@ PODS:
     - React-utils
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - Sentry/HybridSDK (= 8.53.1)
+    - Sentry/HybridSDK (= 8.53.2)
     - Yoga
   - RNSVG (15.2.0):
     - React-Core
@@ -1540,7 +1538,7 @@ PODS:
   - SDWebImageWebPCoder (0.8.5):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.10)
-  - Sentry/HybridSDK (8.53.1)
+  - Sentry/HybridSDK (8.53.2)
   - SocketRocket (0.7.0)
   - Yoga (0.0.0)
   - ZXingObjC/Core (3.6.9)
@@ -1609,7 +1607,6 @@ DEPENDENCIES:
   - react-native-ble-plx (from `../node_modules/react-native-ble-plx`)
   - "react-native-blur (from `../node_modules/@react-native-community/blur`)"
   - react-native-encrypted-storage (from `../node_modules/react-native-encrypted-storage`)
-  - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-linear-gradient-text (from `../node_modules/react-native-linear-gradient-text`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -1785,8 +1782,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/blur"
   react-native-encrypted-storage:
     :path: "../node_modules/react-native-encrypted-storage"
-  react-native-get-random-values:
-    :path: "../node_modules/react-native-get-random-values"
   react-native-linear-gradient-text:
     :path: "../node_modules/react-native-linear-gradient-text"
   react-native-netinfo:
@@ -1939,7 +1934,6 @@ SPEC CHECKSUMS:
   react-native-ble-plx: 2dd8780ee8d34c60399aaa897249ed1860ebef10
   react-native-blur: 207ec2bf853b9a3b7751e3a29f7f497e69010b44
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
-  react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-linear-gradient-text: ad6b634b4f55fe20c2e9e7eabd010e84ef541168
   react-native-netinfo: 26560022f28c06d8ef00a9ff1e03beefbbb60c2d
   react-native-safe-area-context: df9763c5de6fa38883028e243a0b60123acb8858
@@ -1980,15 +1974,15 @@ SPEC CHECKSUMS:
   RNReanimated: 608f4e674643d5fe9c91d2575db2cf306807c67c
   RNScreens: a2d8a2555b4653d7a19706eb172f855657ac30d7
   RNScrypt: 3e8612600c93aaa3bfa7849b6d1a4ab61613e2af
-  RNSentry: 0e1b174126289a42fd20a3c3cd12bd861a031a4a
+  RNSentry: 2c14fede2a7a52cea7419f85cf8cf042bc695339
   RNSVG: 0e7deccab0678200815104223aadd5ca734dd41d
   SDWebImage: a7f831e1a65eb5e285e3fb046a23fcfbf08e696d
   SDWebImageWebPCoder: 908b83b6adda48effe7667cd2b7f78c897e5111d
-  Sentry: 1e4e974d45f09d153af4b30b42acfb1c79e957d3
+  Sentry: 59993bffde4a1ac297ba6d268dc4bbce068d7c1b
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
   Yoga: ae3c32c514802d30f687a04a6a35b348506d411f
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 941eadc9fc46b6455f42cb4175625e070ed5b5ac
+PODFILE CHECKSUM: 7d565d409a48171990beafa60dada98c50318725
 
 COCOAPODS: 1.16.2

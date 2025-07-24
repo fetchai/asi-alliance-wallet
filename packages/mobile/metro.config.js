@@ -1,24 +1,17 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const { getSentryExpoConfig, withSentryConfig } = require('@sentry/react-native/metro');
 const exclusionList = require("metro-config/src/defaults/exclusionList");
 const getWorkspaces = require("get-yarn-workspaces");
 const path = require("path");
 
 const defaultConfig = getDefaultConfig(__dirname);
-const {
-  resolver: { sourceExts, assetExts },
-} = getSentryExpoConfig(__dirname);
 
 const workspaces = getWorkspaces(__dirname);
 
-// Optimized watchFolders: Include root node_modules and only relevant workspaces.
-// Filter out unnecessary ones to improve watcher performance (e.g., exclude test folders or non-RN workspaces if applicable).
-// Adjust the filter as needed based on your monorepo structure.
+// Add additional Yarn workspace package roots to the module map
+// https://bit.ly/2LHHTP0
 const watchFolders = [
   path.resolve(__dirname, "../..", "node_modules"),
   ...workspaces.filter((workspaceDir) => {
-    // Example: Only watch workspaces related to the RN app (customize this regex/filter).
-    // This focuses more on the RN folder while keeping monorepo imports working.
     return !(workspaceDir === __dirname);
   }),
 ];
@@ -39,8 +32,8 @@ const config = {
   },
   resolver: {
     // For react-native-svg-transformer
-    assetExts: assetExts.filter((ext) => ext !== "svg"),
-    sourceExts: [...sourceExts, 'svg'],
+    assetExts: defaultConfig.resolver.assetExts.filter((ext) => ext !== "svg"),
+    sourceExts: [...defaultConfig.resolver.sourceExts, 'svg'],
     // To prevent multiple React instances, block the one in this package and use root's.
     blockList: exclusionList([/packages\/mobile\/node_modules\/react\/.*/]),
     extraNodeModules: {
@@ -58,13 +51,7 @@ const config = {
   },
   transformer: {
     babelTransformerPath: require.resolve("react-native-svg-transformer"),
-    getTransformOptions: async () => ({
-      transform: {
-        experimentalImportSupport: false,
-        inlineRequires: true,
-      },
-    }),
   },
 };
 
-module.exports = withSentryConfig(mergeConfig(defaultConfig, config));
+module.exports = mergeConfig(defaultConfig, config);

@@ -50,7 +50,6 @@ public class MainApplication extends Application implements ReactApplication {
   @Override
   public void onCreate() {
     super.onCreate();
-   // Bugsnag.start(this);
     SoLoader.init(this, /* native exopackage */ false);
     ApplicationLifecycleDispatcher.onApplicationCreate(this);
   }
@@ -60,4 +59,5 @@ public class MainApplication extends Application implements ReactApplication {
     super.onConfigurationChanged(newConfig);
     ApplicationLifecycleDispatcher.onConfigurationChanged(this, newConfig);
   }
+
 }

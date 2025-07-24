@@ -1,5 +1,7 @@
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { ChainInfo } from "@keplr-wallet/types";
+// @ts-ignore
+import { PROD_AMPLITUDE_API_KEY, DEV_AMPLITUDE_API_KEY, PROD_AUTH_CLIENT_ID, DEV_AUTH_CLIENT_ID } from "@env";
 
 export const EthereumEndpoint =
   "https://mainnet.infura.io/v3/eeb00e81cdb2410098d5a270eff9b341";
@@ -2587,10 +2589,6 @@ export const EmbedChainInfos: ChainInfo[] = [
   // },
 ];
 
-const PROD_AMPLITUDE_API_KEY = process.env["PROD_AMPLITUDE_API_KEY"] || "";
-const DEV_AMPLITUDE_API_KEY = process.env["DEV_AMPLITUDE_API_KEY"] || "";
-const PROD_AUTH_CLIENT_ID = process.env["PROD_AUTH_CLIENT_ID"] || "";
-const DEV_AUTH_CLIENT_ID = process.env["DEV_AUTH_CLIENT_ID"] || "";
 export const AmplitudeApiKey =
   process.env["NODE_ENV"] === "production"
     ? PROD_AMPLITUDE_API_KEY

@@ -54,10 +54,12 @@ const privateKeyProvider = new CommonPrivateKeyProvider({
   },
 });
 
+const network = isEnvDevelopment ? WEB3AUTH_NETWORK.TESTNET : WEB3AUTH_NETWORK.CYAN;
+
 const web3auth = new Web3Auth(WebBrowser, SecureStore, {
   clientId: AuthApiKey,
   redirectUrl: resolvedRedirectUrl,
-  network: isEnvDevelopment ? WEB3AUTH_NETWORK.TESTNET : WEB3AUTH_NETWORK.CYAN,
+  network,
   privateKeyProvider,
 });
 

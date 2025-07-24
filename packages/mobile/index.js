@@ -8,6 +8,7 @@ import { AppRegistry, LogBox } from "react-native";
 
 import "./init";
 import * as Sentry from "@sentry/react-native";
+import { SENTRY_DSN } from "@env";
 
 // The use of "require" is intentional.
 // In case of "import" statement, it is located before execution of the next line,
@@ -23,7 +24,7 @@ export const navigationIntegration = Sentry.reactNavigationIntegration({
 });
 
 Sentry.init({
-  dsn: process.env["SENTRY_DSN"] || "",
+  dsn: SENTRY_DSN,
   // Adds more context data to events (IP address, cookies, user, etc.)
   // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
   sendDefaultPii: true,
