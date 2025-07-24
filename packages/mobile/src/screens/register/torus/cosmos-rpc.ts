@@ -6,7 +6,6 @@ import {
 } from "@cosmjs/proto-signing";
 
 const rpc = "https://rpc.sentry-02.theta-testnet.polypore.xyz";
-// eslint-disable-next-line import/no-default-export
 export default class CosmosRpc {
   private provider: SafeEventEmitterProvider;
 

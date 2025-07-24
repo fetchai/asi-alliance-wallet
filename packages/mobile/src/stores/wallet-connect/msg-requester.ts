@@ -39,7 +39,6 @@ export class WCMessageRequester implements MessageRequester {
     // Rather than handling the wallet connect with different logic, just set the URL as virtually formed URL with session id.
     const url = WCMessageRequester.getVirtualSessionURL(this.sessionId);
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     msg["origin"] = url;
 

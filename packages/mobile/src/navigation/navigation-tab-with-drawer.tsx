@@ -296,7 +296,7 @@ export const MainTabNavigation: FunctionComponent = () => {
                 alignItems: "center",
               }}
             >
-              {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+              {}
               {/* @ts-ignore */}
               <BorderlessButton
                 {...props}

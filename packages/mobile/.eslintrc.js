@@ -1,5 +1,29 @@
-const config = require("../../.eslintrc");
-
 module.exports = {
-  ...config,
+  root: true,
+  parser: "@typescript-eslint/parser",
+  extends: "@react-native",
+  ignorePatterns: ["scripts/BleTransport.js"],
+  rules: {
+    "react-native/no-inline-styles": "off",
+    "dot-notation": "off",
+    "no-dupe-class-members": "off",
+    "@typescript-eslint/no-shadow": "off",
+
+    "react-hooks/exhaustive-deps": "off",
+    "react-hooks/rules-of-hooks": "off",
+    "react/react-in-jsx-scope": "off",
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "react/prop-types": "off",
+    "@typescript-eslint/no-require-imports": "off",
+    "react-native/no-color-literals": "off",
+    "@typescript-eslint/ban-ts-comment": "warn",
+    "react/no-children-prop": "warn",
+    "react-native/sort-styles": "off",
+    "react-native/split-platform-components": "warn",
+    "@typescript-eslint/no-empty-object-type": "warn",
+    "no-useless-escape": "warn",
+    "no-async-promise-executor": "warn",
+    "require-yield": "warn",
+  },
 };
