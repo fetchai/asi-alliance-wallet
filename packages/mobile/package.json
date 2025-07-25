@@ -143,7 +143,7 @@
     "react-native-svg-charts": "^5.4.0",
     "react-native-toast-message": "^2.1.6",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-webview": "^13.2.3",
+    "react-native-webview": "^13.9.3",
     "setimmediate": "^1.0.5",
     "sha.js": "^2.4.11",
     "stream-browserify": "^3.0.0",
