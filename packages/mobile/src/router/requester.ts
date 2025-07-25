@@ -31,7 +31,7 @@ export class RNMessageRequesterBase implements MessageRequester {
     const sender = this.getSender();
 
     // Set message's origin.
-
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     msg["origin"] = sender.origin;
 

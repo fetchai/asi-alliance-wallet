@@ -161,7 +161,6 @@
     "@babel/plugin-transform-flow-strip-types": "^7.22.5",
     "@babel/runtime": "^7.20.0",
     "@react-native/babel-preset": "^0.80.1",
-    "@react-native/eslint-config": "^0.80.1",
     "@react-native/metro-config": "^0.80.1",
     "@types/aes-js": "^3.1.0",
     "@types/babel__core": "^7",

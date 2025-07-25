@@ -136,8 +136,8 @@ export const QuickTabOptionModel: FunctionComponent<{
         <RectButton
           onPress={() => {
             return;
-            // close();
-            // onPress(QuickTabOptions.bridge);
+            close();
+            onPress(QuickTabOptions.bridge);
           }}
           style={
             style.flatten([

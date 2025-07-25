@@ -45,7 +45,7 @@ export const CardModal: FunctionComponent<{
       animationOutTiming={500}
       backdropColor={style.get("color-indigo-backdrop").color}
     >
-      <GestureHandlerRootView style={{ flex: 1, justifyContent: "flex-end" }}>
+      <GestureHandlerRootView style={{flex:1, justifyContent: "flex-end"}}>
         <View
           style={[
             StyleSheet.flatten([

@@ -17,7 +17,7 @@ import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { BlurButton } from "components/new/button/blur-button";
-import { EXPLORER_URL } from "../../../config";
+import {EXPLORER_URL} from "../../../config";
 
 interface ItemData {
   title: string;

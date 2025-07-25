@@ -15,7 +15,7 @@ import {
   registerExportedKeyRingDatas,
 } from "utils/import-from-extension";
 import { AsyncKVStore } from "../../../common";
-import { BarcodeScanningResult } from "expo-camera/src/Camera.types";
+import {BarcodeScanningResult} from "expo-camera/src/Camera.types";
 
 export * from "./intro";
 export * from "./set-password";
@@ -129,10 +129,8 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
 
   return (
     <FullScreenCameraView
-      barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-      onBarcodeScanned={(scanningResult: BarcodeScanningResult) =>
-        onBarcodeScanned(scanningResult)
-      }
+      barcodeScannerSettings={{barcodeTypes: ["qr"]}}
+      onBarcodeScanned={(scanningResult: BarcodeScanningResult)=> onBarcodeScanned(scanningResult)}
       scannerBottomText={
         "Connect to ASI Alliance Wallet\nbrowser extension by scanning a QR code"
       }

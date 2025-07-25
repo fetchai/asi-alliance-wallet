@@ -1,4 +1,4 @@
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const exclusionList = require("metro-config/src/defaults/exclusionList");
 const getWorkspaces = require("get-yarn-workspaces");
 const path = require("path");
@@ -33,25 +33,19 @@ const config = {
   resolver: {
     // For react-native-svg-transformer
     assetExts: defaultConfig.resolver.assetExts.filter((ext) => ext !== "svg"),
-    sourceExts: [...defaultConfig.resolver.sourceExts, "svg"],
+    sourceExts: [...defaultConfig.resolver.sourceExts, 'svg'],
     // To prevent multiple React instances, block the one in this package and use root's.
     blockList: exclusionList([/packages\/mobile\/node_modules\/react\/.*/]),
     extraNodeModules: {
-      crypto: path.resolve(
-        __dirname,
-        "./node_modules/expo-standard-web-crypto"
-      ),
-      "node:crypto": path.resolve(
-        __dirname,
-        "./node_modules/expo-standard-web-crypto"
-      ),
-      buffer: path.resolve(__dirname, "./node_modules/buffer"),
-      stream: path.resolve(__dirname, "./node_modules/stream-browserify"),
-      string_decoder: path.resolve(__dirname, "./node_modules/string_decoder"),
-      path: path.resolve(__dirname, "./node_modules/path-browserify"),
-      http: path.resolve(__dirname, "./node_modules/http-browserify"),
-      https: path.resolve(__dirname, "./node_modules/https-browserify"),
-      os: path.resolve(__dirname, "./node_modules/os-browserify"),
+      crypto: path.resolve(__dirname, './node_modules/expo-standard-web-crypto'),
+      'node:crypto': path.resolve(__dirname, './node_modules/expo-standard-web-crypto'),
+      buffer: path.resolve(__dirname, './node_modules/buffer'),
+      stream: path.resolve(__dirname, './node_modules/stream-browserify'),
+      string_decoder: path.resolve(__dirname, './node_modules/string_decoder'),
+      path: path.resolve(__dirname, './node_modules/path-browserify'),
+      http: path.resolve(__dirname, './node_modules/http-browserify'),
+      https: path.resolve(__dirname, './node_modules/https-browserify'),
+      os: path.resolve(__dirname, './node_modules/os-browserify'),
       zlib: require.resolve("empty-module"),
     },
   },

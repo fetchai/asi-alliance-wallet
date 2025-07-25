@@ -82,9 +82,8 @@ export const StakeCard: FunctionComponent = () => {
       accountInfo.bech32Address
     );
 
-  const { numericPart: spendableNumber } = separateNumericAndDenom(
-    spendableBalances.balances.toString()
-  );
+  const { numericPart: spendableNumber, denomPart: _spendableDenom } =
+    separateNumericAndDenom(spendableBalances.balances.toString());
 
   function getVestingBalance(balance: number) {
     return clearDecimals((balance / 10 ** 18).toFixed(20).toString());

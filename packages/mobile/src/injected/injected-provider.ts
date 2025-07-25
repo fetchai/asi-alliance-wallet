@@ -24,6 +24,7 @@ export class RNInjectedKeplr extends InjectedKeplr {
         removeMessageListener: (fn: (e: any) => void) =>
           window.removeEventListener("message", fn),
         postMessage: (message) => {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           window.ReactNativeWebView.postMessage(JSON.stringify(message));
         },

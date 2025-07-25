@@ -14,6 +14,7 @@ import { isPrivateKey, validatePrivateKey } from "utils/format/format";
 import { BipButtons } from "screens/register/bip-button";
 import { useStore } from "stores/index";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
 
 enum SeedType {

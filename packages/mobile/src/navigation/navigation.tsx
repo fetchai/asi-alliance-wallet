@@ -28,7 +28,7 @@ import { MainTabNavigationWithDrawer } from "navigation/navigation-tab-with-draw
 import { ViewStyle } from "react-native";
 import { StakeNavigation } from "./stake-navigation";
 import { MoreNavigation } from "./more-navigation";
-import { navigationIntegration } from "../../index";
+import {navigationIntegration} from "../../index";
 
 export const Stack = createStackNavigator();
 
@@ -106,7 +106,7 @@ export const AppNavigation: FunctionComponent = observer(() => {
           <NavigationContainer
             ref={navigation}
             onReady={() => {
-              navigationIntegration.registerNavigationContainer(navigation);
+                navigationIntegration.registerNavigationContainer(navigation);
             }}
           >
             <Stack.Navigator

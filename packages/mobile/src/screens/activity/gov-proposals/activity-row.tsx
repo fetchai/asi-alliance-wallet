@@ -9,7 +9,7 @@ import {
 import { BlurButton } from "components/new/button/blur-button";
 import { useStore } from "stores/index";
 import { formatToTruncated } from "utils/format/format";
-import { EXPLORER_URL } from "../../../config";
+import {EXPLORER_URL} from "../../../config";
 
 const getHash = (proposal: any) => {
   if (proposal && proposal.id) {
