@@ -26,6 +26,7 @@ import { CheckIcon } from "components/new/icon/check";
 import { LedgerErrorView } from "./ledger-error-view";
 import { LedgerNanoBLESelector } from "./ledger-selector";
 import Toast from "react-native-toast-message";
+import { DOCS_URL } from "../../config";
 
 enum BLEPermissionGrantStatus {
   NotInit = "notInit",
@@ -387,12 +388,10 @@ export const LedgerGranterModal: FunctionComponent<{
               textStyle={style.flatten(["color-white", "body3"]) as ViewStyle}
               onPress={() =>
                 Linking.canOpenURL(
-                  "https://fetch.ai/docs/guides/fetch-network/asi-wallet/mobile-wallet/get-started#connect-ledger"
+                  `${DOCS_URL}/get-started#connect-ledger`
                 ).then((supported) => {
                   if (supported) {
-                    Linking.openURL(
-                      "https://fetch.ai/docs/guides/fetch-network/asi-wallet/mobile-wallet/get-started#connect-ledger"
-                    );
+                    Linking.openURL(`${DOCS_URL}/get-started#connect-ledger`);
                   } else {
                     Toast.show({
                       type: "error",

@@ -36,13 +36,13 @@ export const LedgerTransectionGuideModel: FunctionComponent<{
     setTimeout(function () {
       setNavigateImg({
         status: ImgStatus.Second,
-        img: require(`assets/image/ledger/confirm-ledger-2.png`),
+        img: require("assets/image/ledger/confirm-ledger-2.png"),
       });
     }, 6000);
     setTimeout(function () {
       setNavigateImg({
         status: ImgStatus.Third,
-        img: require(`assets/image/ledger/confirm-ledger-3.png`),
+        img: require("assets/image/ledger/confirm-ledger-3.png"),
       });
     }, 12000);
   }, [isOpen]);

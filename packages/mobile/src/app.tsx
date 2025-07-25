@@ -4,7 +4,6 @@ import { StyleProvider } from "./styles";
 import { IntlProvider } from "react-intl";
 import { Platform, StatusBar, View } from "react-native";
 
-import codePush from "react-native-code-push";
 import { InteractionModalsProvider } from "providers/interaction-modals-provider";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LoadingScreenProvider } from "providers/loading-screen";
@@ -164,14 +163,10 @@ const AppBody: FunctionComponent = () => {
   );
 };
 
-const CodePushAppBody: FunctionComponent = __DEV__
-  ? AppBody
-  : codePush(AppBody);
-
 export const App: FunctionComponent = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <CodePushAppBody />
+      <AppBody />
     </GestureHandlerRootView>
   );
 };
