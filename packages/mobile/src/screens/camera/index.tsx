@@ -92,7 +92,7 @@ export const CameraScreen: FunctionComponent = () => {
             ? "Send assets by scanning a QR code"
             : "Send assets or connect to ASI Alliance Wallet\nbrowser extension by scanning a QR code"
         }
-        barcodeScannerSettings={{barcodeTypes: ["qr"]}}
+        barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         isLoading={isLoading}
         onBarcodeScanned={async ({ data }) => {
           if (!isLoading && !isCompleted) {

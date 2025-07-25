@@ -334,10 +334,9 @@ export const AddressInputCard: FunctionComponent<{
           isOpen={openCameraModel}
           close={() => setIsOpenCameraModel(false)}
           onPress={async () => {
-            const permissionStatus = await Camera.requestCameraPermissionsAsync();
-            if (
-              permissionStatus.status === PermissionStatus.DENIED
-            ) {
+            const permissionStatus =
+              await Camera.requestCameraPermissionsAsync();
+            if (permissionStatus.status === PermissionStatus.DENIED) {
               if (permissionStatus.canAskAgain) {
                 setIsOpenCameraModel(false);
               } else {

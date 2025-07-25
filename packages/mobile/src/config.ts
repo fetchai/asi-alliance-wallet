@@ -1,7 +1,11 @@
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { ChainInfo } from "@keplr-wallet/types";
-// @ts-ignore
-import { PROD_AMPLITUDE_API_KEY, DEV_AMPLITUDE_API_KEY, PROD_AUTH_CLIENT_ID, DEV_AUTH_CLIENT_ID } from "@env";
+import {
+  PROD_AMPLITUDE_API_KEY,
+  DEV_AMPLITUDE_API_KEY,
+  PROD_AUTH_CLIENT_ID,
+  DEV_AUTH_CLIENT_ID,
+} from "@env";
 
 export const EthereumEndpoint =
   "https://mainnet.infura.io/v3/eeb00e81cdb2410098d5a270eff9b341";
@@ -2606,7 +2610,8 @@ export const CommunityChainInfoRepo = {
 };
 
 export const EXPLORER_URL = "https://hub.fetch.ai";
-export const DOCS_URL = "https://network.fetch.ai/docs/guides/asi-wallet/mobile-wallet";
+export const DOCS_URL =
+  "https://network.fetch.ai/docs/guides/asi-wallet/mobile-wallet";
 
 export const CHAIN_ID_DORADO = "dorado-1";
 export const CHAIN_ID_FETCHHUB = "fetchhub-4";

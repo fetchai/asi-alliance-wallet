@@ -8,9 +8,7 @@ import { Controller, useForm } from "react-hook-form";
 import { PageWithScrollView } from "components/page";
 import { Text, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
-import Web3Auth, {
-  LOGIN_PROVIDER,
-} from "@web3auth/react-native-sdk";
+import Web3Auth, { LOGIN_PROVIDER } from "@web3auth/react-native-sdk";
 import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
 import Constants, { AppOwnership } from "expo-constants";
@@ -27,15 +25,15 @@ import { PasswordValidateView } from "components/new/password-validate/password-
 import { XmarkIcon } from "components/new/icon/xmark";
 import { CheckIcon } from "components/new/icon/check"; // for using ethers.js
 import DeviceInfo from "react-native-device-info";
-import {CHAIN_NAMESPACES, WEB3AUTH_NETWORK} from "@web3auth/base";
-import {CommonPrivateKeyProvider} from "@web3auth/base-provider";
+import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
+import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
 import CosmosRpc from "./cosmos-rpc";
 
 const isEnvDevelopment = process.env["NODE_ENV"] !== "production";
 const scheme = "fetchwallet";
 const resolvedRedirectUrl =
   Constants.appOwnership === AppOwnership.Expo
-      ? Linking.createURL("web3auth", {})
+    ? Linking.createURL("web3auth", {})
     : Linking.createURL("web3auth", { scheme });
 
 const chainConfig = {
@@ -54,7 +52,9 @@ const privateKeyProvider = new CommonPrivateKeyProvider({
   },
 });
 
-const network = isEnvDevelopment ? WEB3AUTH_NETWORK.TESTNET : WEB3AUTH_NETWORK.CYAN;
+const network = isEnvDevelopment
+  ? WEB3AUTH_NETWORK.TESTNET
+  : WEB3AUTH_NETWORK.CYAN;
 
 const web3auth = new Web3Auth(WebBrowser, SecureStore, {
   clientId: AuthApiKey,

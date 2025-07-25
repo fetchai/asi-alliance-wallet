@@ -26,7 +26,7 @@ import { CheckIcon } from "components/new/icon/check";
 import { LedgerErrorView } from "./ledger-error-view";
 import { LedgerNanoBLESelector } from "./ledger-selector";
 import Toast from "react-native-toast-message";
-import {DOCS_URL} from "../../config";
+import { DOCS_URL } from "../../config";
 
 enum BLEPermissionGrantStatus {
   NotInit = "notInit",
@@ -391,9 +391,7 @@ export const LedgerGranterModal: FunctionComponent<{
                   `${DOCS_URL}/get-started#connect-ledger`
                 ).then((supported) => {
                   if (supported) {
-                    Linking.openURL(
-                      `${DOCS_URL}/get-started#connect-ledger`
-                    );
+                    Linking.openURL(`${DOCS_URL}/get-started#connect-ledger`);
                   } else {
                     Toast.show({
                       type: "error",

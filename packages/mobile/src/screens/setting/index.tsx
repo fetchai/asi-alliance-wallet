@@ -24,7 +24,7 @@ import { ConfirmCardModel } from "components/new/confirm-modal";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { GuideIcon } from "components/new/icon/guide-icon";
-import {DOCS_URL} from "../../config";
+import { DOCS_URL } from "../../config";
 
 export const SettingScreen: FunctionComponent = observer(() => {
   const {

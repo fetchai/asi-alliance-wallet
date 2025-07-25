@@ -148,9 +148,7 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
         close={() => setIsOpenCameraModel(false)}
         onPress={async () => {
           const permissionStatus = await Camera.requestCameraPermissionsAsync();
-          if (
-            permissionStatus.status === PermissionStatus.DENIED
-          ) {
+          if (permissionStatus.status === PermissionStatus.DENIED) {
             if (permissionStatus.canAskAgain) {
               setIsOpenCameraModel(false);
             } else {
