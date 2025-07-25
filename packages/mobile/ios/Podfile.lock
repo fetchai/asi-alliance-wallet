@@ -1,8 +1,8 @@
 PODS:
-  - Amplitude (8.18.0):
+  - Amplitude (8.16.3):
     - AnalyticsConnector (~> 1.0.0)
-  - amplitude-react-native (2.17.3):
-    - Amplitude (= 8.18.0)
+  - amplitude-react-native (2.17.2):
+    - Amplitude (= 8.16.3)
     - React-Core
   - AnalyticsConnector (1.0.3)
   - appcenter-analytics (4.4.5):
@@ -1059,30 +1059,11 @@ PODS:
   - react-native-ble-plx (2.0.3):
     - MultiplatformBleAdapter (= 0.1.9)
     - React-Core
-  - react-native-blur (4.4.1):
-    - DoubleConversion
-    - glog
-    - hermes-engine
-    - RCT-Folly (= 2024.01.01.00)
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Codegen
+  - react-native-blur (4.3.2):
     - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-rendererdebug
-    - React-utils
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - Yoga
   - react-native-encrypted-storage (4.0.3):
     - React-Core
-  - react-native-linear-gradient-text (1.2.12):
+  - react-native-linear-gradient-text (1.2.8):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1103,7 +1084,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-netinfo (9.5.0):
+  - react-native-netinfo (9.4.1):
     - React-Core
   - react-native-safe-area-context (4.10.5):
     - React-Core
@@ -1361,31 +1342,12 @@ PODS:
     - React-utils (= 0.74.2)
   - RNCAsyncStorage (1.23.1):
     - React-Core
-  - RNCCheckbox (0.5.20):
+  - RNCCheckbox (0.5.17):
     - BEMCheckBox (~> 1.4)
     - React-Core
-  - RNCMaskedView (0.3.2):
-    - DoubleConversion
-    - glog
-    - hermes-engine
-    - RCT-Folly (= 2024.01.01.00)
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Codegen
+  - RNCMaskedView (0.3.1):
     - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-rendererdebug
-    - React-utils
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - Yoga
-  - RNDeviceInfo (10.14.0):
+  - RNDeviceInfo (10.8.0):
     - React-Core
   - RNFastImage (8.6.3):
     - React-Core
@@ -1414,9 +1376,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNKeychain (8.2.0):
+  - RNKeychain (8.1.1):
     - React-Core
-  - RNLocalize (3.5.1):
+  - RNLocalize (3.0.2):
     - React-Core
   - RNReanimated (3.15.0):
     - DoubleConversion
@@ -1870,8 +1832,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  Amplitude: 184def4f87aa26f94a93a7faa334e06b1cae704d
-  amplitude-react-native: 6b7a1d30627233fe6f03741109831561d0a5f69c
+  Amplitude: 10f20d4436fdcd38ddd5be1da7033fcc21f4143e
+  amplitude-react-native: 31547517af995bb7e18052580ce3bad6907bd39e
   AnalyticsConnector: a53214d38ae22734c6266106c0492b37832633a9
   AppCenter: 3fd04aa1b166e16fdb03ec81dabe488aece83fbd
   appcenter-analytics: 3c06d292afa81fdbf4f48790007e189d01e77d3b
@@ -1932,10 +1894,10 @@ SPEC CHECKSUMS:
   React-logger: 70e002e04cc56ff5c12157537405d1644c050703
   React-Mapbuffer: 8d1f0fc6e7280a8ed6da70ece5f283ac5c8032cb
   react-native-ble-plx: 2dd8780ee8d34c60399aaa897249ed1860ebef10
-  react-native-blur: 207ec2bf853b9a3b7751e3a29f7f497e69010b44
+  react-native-blur: c91c10c67be1f096415e63925640baa59e2132d2
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
-  react-native-linear-gradient-text: ad6b634b4f55fe20c2e9e7eabd010e84ef541168
-  react-native-netinfo: 26560022f28c06d8ef00a9ff1e03beefbbb60c2d
+  react-native-linear-gradient-text: 98c42bd5d26b16cd4705d3f476c8d0d3da5dc1a2
+  react-native-netinfo: 58a62fc2fc7245875718b99ac9914c307e1523ca
   react-native-safe-area-context: df9763c5de6fa38883028e243a0b60123acb8858
   react-native-web-browser: bc106e2b98f1fc95d12aa5c5c36180481efbbf23
   react-native-webview: 3fbd0ebc6fee8e1f5c0fc1a1dae5252468e59969
@@ -1963,14 +1925,14 @@ SPEC CHECKSUMS:
   React-utils: 08bb648cea0f37a0aa5df0c4f9ef50e5484ee0eb
   ReactCommon: 4968ff446d467c4def1945125e59f82e3e986af3
   RNCAsyncStorage: aa75595c1aefa18f868452091fa0c411a516ce11
-  RNCCheckbox: 33b44487ca8008394ce658cc32b26eab04f426ef
-  RNCMaskedView: af7c1703f39cdef08a99275bfcadf324aa403403
-  RNDeviceInfo: 98bb51ba1519cd3f19f14e7236b5bb1c312c780f
+  RNCCheckbox: 450ce156f3e29e25efa0315c96cfbabe5a39ded1
+  RNCMaskedView: de80352547bd4f0d607bf6bab363d826822bd126
+  RNDeviceInfo: 55dd986d234bf6d56469fb70a5a3ae972fc59330
   RNFastImage: 462a183c4b0b6b26fdfd639e1ed6ba37536c3b87
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
   RNGestureHandler: 326e35460fb6c8c64a435d5d739bea90d7ed4e49
-  RNKeychain: bbe2f6d5cc008920324acb49ef86ccc03d3b38e4
-  RNLocalize: 60ebbb668e46d3b9f276aaf2db8ae5353b84e514
+  RNKeychain: 3a8b12f0fdd0b967811a48d9e83d582fc2e483eb
+  RNLocalize: 01b15a24a8f1856eeaeeb77f4179ccd88c117a73
   RNReanimated: 608f4e674643d5fe9c91d2575db2cf306807c67c
   RNScreens: a2d8a2555b4653d7a19706eb172f855657ac30d7
   RNScrypt: 3e8612600c93aaa3bfa7849b6d1a4ab61613e2af
