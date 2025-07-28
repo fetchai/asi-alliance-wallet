@@ -182,7 +182,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       if (e.message.includes("Unmatched mac")) {
         Toast.show({
           type: "error",
-          text1: e.message,
+          text1: "Biometric verification failed.",
+          text2:
+            "Your biometric data has changed. Please log in with your password and update your biometric settings.",
         });
       } else if (!e.message.includes("code: 13")) {
         Toast.show({

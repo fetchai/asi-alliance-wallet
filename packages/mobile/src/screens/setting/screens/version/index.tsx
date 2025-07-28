@@ -1,7 +1,6 @@
-import React, { FunctionComponent, useEffect, useRef, useState } from "react";
+import React, { FunctionComponent, useRef, useState } from "react";
 import { PageWithScrollView } from "components/page";
 import DeviceInfo from "react-native-device-info";
-import codePush from "react-native-code-push";
 import { codeBundleId } from "../../../../../bugsnag.env";
 import { TouchableWithoutFeedback } from "react-native-gesture-handler";
 import { Right, SettingItem } from "screens/setting/components";
@@ -12,21 +11,6 @@ export const FetchVersionScreen: FunctionComponent = () => {
   const style = useStyle();
   const [appVersion] = useState(() => DeviceInfo.getVersion());
   const [buildNumber] = useState(() => DeviceInfo.getBuildNumber());
-  // "undefined" means that it is on fetching,
-  // empty string "" means that there is no data.
-  const [currentCodeVersion, setCurrentCodeVersion] = useState<
-    string | undefined
-  >(undefined);
-
-  useEffect(() => {
-    codePush.getUpdateMetadata(codePush.UpdateState.RUNNING).then((update) => {
-      if (update) {
-        setCurrentCodeVersion(update.label);
-      } else {
-        setCurrentCodeVersion("");
-      }
-    });
-  }, []);
 
   const parseVersion = (version: string | undefined) => {
     if (version === undefined) {
@@ -80,14 +64,6 @@ export const FetchVersionScreen: FunctionComponent = () => {
         backgroundBlur={false}
         bottomBorder={true}
         right={<Right paragraph={parseVersion(buildNumber)} />}
-        style={style.flatten(["padding-0"]) as ViewStyle}
-        containerStyle={style.flatten(["padding-x-20"]) as ViewStyle}
-      />
-      <SettingItem
-        label="Code version"
-        backgroundBlur={false}
-        bottomBorder={true}
-        right={<Right paragraph={parseVersion(currentCodeVersion)} />}
         style={style.flatten(["padding-0"]) as ViewStyle}
         containerStyle={style.flatten(["padding-x-20"]) as ViewStyle}
       />

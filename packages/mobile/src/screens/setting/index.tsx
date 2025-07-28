@@ -24,6 +24,7 @@ import { ConfirmCardModel } from "components/new/confirm-modal";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { GuideIcon } from "components/new/icon/guide-icon";
+import { DOCS_URL } from "../../config";
 
 export const SettingScreen: FunctionComponent = observer(() => {
   const {
@@ -175,7 +176,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
           navigation.navigate("Others", {
             screen: "WebView",
             params: {
-              url: "https://fetch.ai/docs/guides/fetch-network/fetch-wallet/mobile-wallet/get-started",
+              url: `${DOCS_URL}/get-started`,
             },
           });
         }}
