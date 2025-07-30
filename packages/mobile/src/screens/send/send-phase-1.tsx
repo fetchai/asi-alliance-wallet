@@ -100,15 +100,16 @@ export const SendPhase1: FunctionComponent<{
 
   const sendConfigError = sendConfigs.amountConfig.error;
   const txStateIsValid = sendConfigError == null;
-  const Usd = inputInUsd
+  const usd = inputInUsd
     ? `(${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
-
-  const availableBalance = `${balance
+  const availableBalance = balance
     .shrink(true)
     .maxDecimals(6)
-    .toString()}${Usd}`;
-
+    .toString()
+    .split(" ");
+  const balanceValue = availableBalance[0];
+  const balanceDenom = availableBalance[1];
   return (
     <React.Fragment>
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
@@ -127,8 +128,8 @@ export const SendPhase1: FunctionComponent<{
           mainHeading="Asset"
           heading={sendConfigs.amountConfig.sendCurrency.coinDenom}
           subHeading={`Available: ${numberLocalFormat(
-            availableBalance.split(" ")[0]
-          )} ${availableBalance.split(" ")[1]}`}
+            balanceValue
+          )} ${balanceDenom} ${usd}`}
           trailingIcon={<ChevronDownIcon size={12} />}
           onPress={() => {
             setOpenAssetModel(true);
