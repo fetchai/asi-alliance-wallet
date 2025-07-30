@@ -63,7 +63,20 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
   }, []);
 
   useEffect(() => {
-    setSeedType(selectedSeed);
+    setSelectedSeed(selectedSeed);
+    switch (selectedSeed) {
+      case SeedType.WORDS12:
+        setSeedWords(new Array<string>(12).fill(""));
+        break;
+
+      case SeedType.WORDS24:
+        setSeedWords(new Array<string>(24).fill(""));
+        break;
+
+      case SeedType.PRIVATE_KEY:
+        setSeedWords(new Array<string>(1).fill(""));
+        break;
+    }
   }, [selectedSeed]);
 
   const setSeedType = (seedType: SeedType) => {
