@@ -48,6 +48,16 @@ export const BIP44AdvancedButton: FunctionComponent<{
   const isChangeZeroOrOne =
     change.isValid && (change.number === 0 || change.number === 1);
 
+  const [accountInput, setAccountInput] = useState<string>(
+    bip44Option.account.toString()
+  );
+  const [changeInput, setChangeInput] = useState<string>(
+    bip44Option.change.toString()
+  );
+  const [indexInput, setIndexInput] = useState<string>(
+    bip44Option.index.toString()
+  );
+
   return (
     <React.Fragment>
       {selected ? (
@@ -83,7 +93,7 @@ export const BIP44AdvancedButton: FunctionComponent<{
               }
             >{`m/44’/${bip44Option.coinType ?? "···"}’/`}</Text>
             <InputCardView
-              value={bip44Option.account.toString()}
+              value={accountInput}
               containerStyle={style.flatten(["min-width-72"]) as ViewStyle}
               keyboardType="number-pad"
               onChangeText={(value: string) => {
@@ -102,9 +112,11 @@ export const BIP44AdvancedButton: FunctionComponent<{
                   // Should be integer and positive.
                   if (Number.isInteger(parsed) && parsed >= 0) {
                     bip44Option.setAccount(parsed);
+                    setAccountInput(parsed.toString());
                   }
                 } else {
                   bip44Option.setAccount(0);
+                  setAccountInput("0");
                 }
               }}
             />
@@ -114,7 +126,7 @@ export const BIP44AdvancedButton: FunctionComponent<{
               ’/
             </Text>
             <InputCardView
-              value={bip44Option.change.toString()}
+              value={changeInput}
               containerStyle={style.flatten(["min-width-72"]) as ViewStyle}
               keyboardType="number-pad"
               onChangeText={(value: string) => {
@@ -136,9 +148,11 @@ export const BIP44AdvancedButton: FunctionComponent<{
                     (parsed === 0 || parsed === 1)
                   ) {
                     bip44Option.setChange(parsed);
+                    setChangeInput(parsed.toString());
                   }
                 } else {
                   bip44Option.setChange(0);
+                  setChangeInput("0");
                 }
               }}
             />
@@ -148,7 +162,7 @@ export const BIP44AdvancedButton: FunctionComponent<{
               /
             </Text>
             <InputCardView
-              value={bip44Option.index.toString()}
+              value={indexInput}
               containerStyle={style.flatten(["min-width-72"]) as ViewStyle}
               keyboardType="number-pad"
               onChangeText={(value: string) => {
@@ -167,9 +181,11 @@ export const BIP44AdvancedButton: FunctionComponent<{
                   // Should be integer and positive.
                   if (Number.isInteger(parsed) && parsed >= 0) {
                     bip44Option.setIndex(parsed);
+                    setIndexInput(parsed.toString());
                   }
                 } else {
                   bip44Option.setIndex(0);
+                  setIndexInput("0");
                 }
               }}
             />
