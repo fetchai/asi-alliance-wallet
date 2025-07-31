@@ -37,7 +37,7 @@ export const Address: FunctionComponent<
         options={{ placement: "bottom-end" }}
         tooltipStyle={{
           background: "var(--bg-green-light)",
-          width: "350px",
+          width: "330px",
           color: "var(--font-dark)",
         }}
         tooltip={

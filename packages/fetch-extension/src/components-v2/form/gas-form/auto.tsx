@@ -14,7 +14,7 @@ export const GasAutoContainer: FunctionComponent<{
       <div className={styleAuto["gasAdjustmentContainer"]}>
         <div
           style={{
-            color: "white",
+            color: "var(--font-dark)",
             display: "flex",
             flexDirection: "column",
             gap: "8px",
@@ -31,7 +31,6 @@ export const GasAutoContainer: FunctionComponent<{
           </div>
           <Card
             style={{
-              background: "#ffffff",
               border: "1px solid var(--bg-grey-dark)",
               padding: "12px 18px",
               height: "48px",
@@ -66,7 +65,7 @@ export const GasAutoContainer: FunctionComponent<{
 
         <div
           style={{
-            color: "white",
+            color: "var(--font-dark)",
             display: "flex",
             flexDirection: "column",
             gap: "8px",
@@ -83,7 +82,6 @@ export const GasAutoContainer: FunctionComponent<{
           </div>
           <Card
             style={{
-              background: "#ffffff",
               border: "1px solid var(--bg-grey-dark)",
               padding: "12px 18px",
               height: "48px",
@@ -119,7 +117,6 @@ export const GasAutoContainer: FunctionComponent<{
         </div>
         <Card
           style={{
-            background: "#ffffff",
             border: "1px solid var(--bg-grey-dark)",
             padding: "12px 18px",
             height: "48px",

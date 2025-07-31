@@ -639,7 +639,7 @@ export const FeeButtonsInner: FunctionComponent<
               showFeeCurrencySelectorUnderSetGas ? (
               <React.Fragment>
                 <Card
-                  style={{ background: "rgba(255, 255, 255, 0.10)" }}
+                  style={{ backgroundColor: "transparent" }}
                   heading={<FeeCurrencySelector feeConfig={feeConfig} />}
                 >
                   <GasInput label={gasLabel} gasConfig={gasConfig} />
@@ -647,7 +647,7 @@ export const FeeButtonsInner: FunctionComponent<
               </React.Fragment>
             ) : (
               <Card
-                style={{ background: "rgba(255, 255, 255, 0.10)" }}
+                style={{ backgroundColor: "transparent" }}
                 heading={<GasInput label={gasLabel} gasConfig={gasConfig} />}
               />
             )
