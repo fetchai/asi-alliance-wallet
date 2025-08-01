@@ -1,9 +1,11 @@
+@import "../../styles/var";
+
 .searchContainer {
   margin: 6px 0px 0px 0px;
   font-size: 14px;
   display: flex;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: $card-bg;
   border-radius: 8px;
 
   .searchBox {
@@ -24,9 +26,9 @@
       background: transparent;
       border: none;
       outline: none;
-      color: white;
+      color: $font-dark;
       &::placeholder {
-        color: rgba(255, 255, 255, 0.6);
+        color: $font-secondary;
         font-weight: 400;
       }
       flex-grow: 1;
@@ -44,17 +46,26 @@
   gap: 8px;
   align-self: stretch;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $bg-grey-dark;
   backdrop-filter: blur(10px);
-  color: rgba(255, 255, 255, 0.4);
+  color: $font-secondary;
   font-size: 14px;
   font-weight: 400;
+
+  .sort-by {
+    color: $font-secondary;
+    margin-left: 8px;
+  }
+
+  & > div {
+    color: $font-dark;
+  }
 }
 
 .loader {
   display: inline-block;
   margin: 0 16px;
-  color: white;
+  color: $font-secondary;
 }
 
 .loader {

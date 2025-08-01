@@ -184,8 +184,8 @@ const StateRenderer: FunctionComponent = observer(() => {
     return (
       <div style={{ height: "100%" }}>
         <Banner
-          icon={require("@assets/logo-256.svg")}
-          logo={require("@assets/brand-text.png")}
+          icon={require("@assets/png/ASI-Logo-Icon-black.png")}
+          logo={""}
         />
       </div>
     );
@@ -194,13 +194,11 @@ const StateRenderer: FunctionComponent = observer(() => {
       <div
         style={{
           height: "100%",
-          backgroundColor: "#030e3b",
-          backgroundSize: "cover",
-          backgroundImage: `url(${require("@assets/svg/wireframe/bg-onboarding.svg")})`,
+          backgroundColor: "white",
         }}
       >
         <Banner
-          icon={require("@assets/png/ASI-Logo-Icon-white.png")}
+          icon={require("@assets/png/ASI-Logo-Icon-black.png")}
           logo={""}
         />
       </div>

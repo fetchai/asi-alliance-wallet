@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .gov-proposals-container {
   display: flex;
   flex-direction: column;
@@ -9,7 +11,7 @@
   font-size: 14px;
   display: flex;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: $card-bg;
   border-radius: 8px;
 
   .searchBox {
@@ -30,9 +32,9 @@
       background: transparent;
       border: none;
       outline: none;
-      color: white;
+      color: $font-dark;
       &::placeholder {
-        color: rgba(255, 255, 255, 1);
+        color: $font-secondary;
         font-weight: 400;
       }
       flex-grow: 1;
@@ -48,17 +50,17 @@
 }
 
 .filter {
-  color: white !important;
+  color: $font-dark !important;
   font-size: 12px;
   height: 32px;
   padding: 6px 12px;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $border-grey;
   backdrop-filter: blur(10px);
   cursor: pointer;
 }
 .filter:hover {
-  border: 1px solid white;
+  opacity: 0.9;
 }
 
 .filter-heading {

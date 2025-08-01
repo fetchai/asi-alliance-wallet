@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .container {
   display: flex;
   flex-direction: column;
@@ -16,7 +18,7 @@
 .input:hover,
 .input:focus {
   background: transparent;
-  color: white !important;
+  color: $font-dark !important;
   border: none !important;
   box-shadow: none !important;
   padding-left: 0px;

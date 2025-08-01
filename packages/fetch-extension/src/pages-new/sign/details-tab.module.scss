@@ -1,19 +1,39 @@
+@import "../../styles/var";
+
 .hr {
   background-color: gray;
   margin: 0;
   height: 1px;
 }
 
+.label {
+  color: $font-secondary;
+  font-weight: 400;
+  font-size: 14px;
+}
+
 .container {
   flex: 1;
   display: flex;
   flex-direction: column;
+  color: $font-dark;
+
+  .signMessageLabel {
+    @extend .label;
+    color: $font-secondary;
+  }
+
+  .memoInput {
+    @extend .label;
+    margin-bottom: 8px;
+  }
 }
 
 .msgContainer {
   flex: 1;
   max-height: 155px;
   overflow-y: scroll;
+  color: $font-secondary;
 
   hr {
     margin: 8px 0;
@@ -27,25 +47,25 @@
     gap: 144px;
     align-self: stretch;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
+    background: $card-bg;
     .contentContainer {
       display: flex;
       flex: 1;
       flex-direction: column;
 
       .contentTitle {
+        color: $font-dark;
         font-size: 16px;
         font-weight: 400;
       }
 
       .content {
-        color: #fff;
-        font-family: Lexend;
+        color: $font-secondary;
+        font-family: $font-family-base;
         font-size: 12px;
         font-style: normal;
         font-weight: 400;
         line-height: 24px;
-        opacity: 0.6;
       }
     }
   }
@@ -53,14 +73,14 @@
 
 .ethLedgerBlindSigningWarning {
   padding: 20px 0;
-  background: #f7f9fc;
+  background: $card-bg;
   border-radius: 6px;
 
   .title {
     font-weight: 600;
     font-size: 14px;
     line-height: 20px;
-    color: #323c4a;
+    color: $font-dark;
     margin-bottom: 10px;
     margin-left: 28px;
   }
@@ -68,7 +88,7 @@
   .list {
     font-size: 14px;
     line-height: 20px;
-    color: #566172;
+    color: $font-secondary;
     padding-inline-start: 36px;
     margin-bottom: 0;
   }
@@ -82,20 +102,34 @@
   gap: 144px;
   align-self: stretch;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  color: $font-dark;
+  background: $card-bg;
   word-break: break-word;
-}
-
-.feePriceLabel {
-  color: #fff;
-  opacity: 0.6;
 }
 
 .feePrice {
   font-size: 14px;
+  color: $font-secondary;
 }
 
 .feePriceFiat {
   font-size: 14px;
   display: inline-block;
+}
+
+.signValueContainer {
+  margin-bottom: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.signValue {
+  flex: 1;
+  padding: 20px;
+  border: 1px solid $border-grey;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: $font-dark;
 }

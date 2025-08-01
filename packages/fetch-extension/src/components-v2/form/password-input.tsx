@@ -3,6 +3,7 @@ import { Input, InputProps } from "./input";
 import stylePasswordInput from "./password-input.module.scss";
 import { Tooltip } from "reactstrap";
 import { FormattedMessage } from "react-intl";
+import classnames from "classnames";
 
 interface PasswordInputProps
   extends Omit<
@@ -10,65 +11,82 @@ interface PasswordInputProps
     "type" | "onKeyUp" | "onKeyDown"
   > {
   passwordLabel?: string;
-  containerStyle?: any;
-  labelStyle?: any;
-  inputStyle?: any;
+  containerStyle?: React.CSSProperties;
+  labelStyle?: React.CSSProperties;
+  inputStyle?: React.CSSProperties;
+  floatLabel?: boolean;
 }
 
 // eslint-disable-next-line react/display-name
 export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
   (props, ref) => {
-    const { passwordLabel, labelStyle, inputStyle, containerStyle, ...rest } =
-      props;
-    const otherRef = useRef<HTMLInputElement | null>(null);
+    const {
+      passwordLabel = "Password",
+      labelStyle,
+      inputStyle,
+      containerStyle,
+      floatLabel,
+      ...rest
+    } = props;
 
+    const internalRef = useRef<HTMLInputElement | null>(null);
     const [isOnCapsLock, setIsOnCapsLock] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
+    const handleRef = (node: HTMLInputElement | null) => {
+      internalRef.current = node;
+      if (ref) {
+        if ("current" in ref) {
+          ref.current = node;
+        } else {
+          ref(node);
+        }
+      }
+    };
+
     return (
       <React.Fragment>
-        <div className={stylePasswordInput["text"]} style={{ ...labelStyle }}>
-          {passwordLabel || "Password"}
-        </div>
+        {!floatLabel && (
+          <div className={stylePasswordInput["text"]} style={labelStyle}>
+            {passwordLabel}
+          </div>
+        )}
+
         <div
-          className={stylePasswordInput["password-input-container"]}
-          style={{ ...containerStyle }}
+          className={classnames(
+            stylePasswordInput["password-input-container"],
+            floatLabel && stylePasswordInput["floating-group"]
+          )}
+          style={containerStyle}
         >
           <Input
+            {...rest}
+            formGroupClassName={stylePasswordInput["formGroup"]}
+            className={classnames(
+              stylePasswordInput["input"],
+              floatLabel && stylePasswordInput["input"]
+            )}
             style={{
-              width: "285px",
-              margin: "none",
+              minWidth: "285px",
               display: "flex",
               ...inputStyle,
             }}
-            className={stylePasswordInput["input"]}
-            {...rest}
+            label={floatLabel ? passwordLabel : undefined}
+            placeholder={floatLabel ? " " : rest.placeholder}
+            floatLabel={floatLabel}
             type={isPasswordVisible ? "text" : "password"}
-            ref={(argRef) => {
-              otherRef.current = argRef;
-              if (ref) {
-                if ("current" in ref) {
-                  ref.current = argRef;
-                } else {
-                  ref(argRef);
-                }
-              }
-            }}
-            onKeyUp={(e) => {
-              if (e.getModifierState("CapsLock")) {
-                setIsOnCapsLock(true);
-              } else {
-                setIsOnCapsLock(false);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.getModifierState("CapsLock")) {
-                setIsOnCapsLock(true);
-              } else {
-                setIsOnCapsLock(false);
+            ref={handleRef}
+            onKeyUp={(e) => setIsOnCapsLock(e.getModifierState("CapsLock"))}
+            onKeyDown={(e) => setIsOnCapsLock(e.getModifierState("CapsLock"))}
+            onChange={(e) => {
+              const cleanedValue = e.target.value.replace(/\s/g, ""); // removes all spaces
+              e.target.value = cleanedValue;
+              if (rest.onChange) {
+                rest.onChange(e);
               }
             }}
           />
+
           <img
             className={stylePasswordInput["eye"]}
             src={
@@ -76,19 +94,22 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
                 ? require("@assets/svg/wireframe/eye-2.svg")
                 : require("@assets/svg/wireframe/eye.svg")
             }
-            alt=""
-            onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+            alt="Toggle visibility"
+            onClick={() => setIsPasswordVisible((prev) => !prev)}
           />
         </div>
-        {otherRef.current && (
+        {internalRef.current && (
           <Tooltip
             arrowClassName={stylePasswordInput["capslockTooltipArrow"]}
             placement="top-start"
             isOpen={isOnCapsLock}
-            target={otherRef.current}
+            target={internalRef.current}
             fade
           >
-            <FormattedMessage id="lock.alert.capslock" />
+            <FormattedMessage
+              id="lock.alert.capslock"
+              defaultMessage="Caps Lock is on"
+            />
           </Tooltip>
         )}
       </React.Fragment>

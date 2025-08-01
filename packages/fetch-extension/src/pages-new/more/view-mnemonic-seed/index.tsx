@@ -33,7 +33,7 @@ export const ExportPage: FunctionComponent = observer(() => {
   const notification = useNotification();
   const { keyRingStore, analyticsStore } = useStore();
 
-  const type = location.state.type ?? "mnemonic";
+  const type = location?.state?.type ?? "mnemonic";
 
   const [loading, setLoading] = useState(false);
   const [keyRing, setKeyRing] = useState("");
@@ -169,6 +169,7 @@ export const ExportPage: FunctionComponent = observer(() => {
                   ))}
             </div>
             <ButtonV2
+              variant="dark"
               styleProps={{
                 position: "fixed",
                 bottom: "12px",
@@ -214,6 +215,7 @@ export const ExportPage: FunctionComponent = observer(() => {
                 })}
               />
               <ButtonV2
+                variant="dark"
                 text={
                   loading ? (
                     <i className="fas fa-spinner fa-spin ml-2" />

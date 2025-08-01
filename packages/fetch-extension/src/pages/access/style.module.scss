@@ -1,33 +1,33 @@
+@import "../../styles/var";
+
 .emptyLayout {
-  background-color: #000d3d;
-  background-image: url("../../public/assets/svg/wireframe/bg.svg");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
+  background-color: white;
 }
 
 .container {
   display: flex;
   flex-direction: column;
+  font-family: $font-family-base;
   height: 100%;
 
   .header {
     margin-top: 20px;
     text-align: center;
-    color: white;
+    font-weight: 500;
+    color: $font-dark;
   }
 
   .paragraph {
     text-align: center;
     padding: 0 24px;
     overflow-y: auto;
-    color: white;
+    color: $font-secondary;
   }
 
   .permission {
     margin-top: 30px;
     font-size: 14px;
-    color: white;
+    color: $font-secondary;
     text-align: center;
   }
 
@@ -37,7 +37,7 @@
     padding: 0;
     width: fit-content;
     margin: auto;
-    color: white;
+    color: $font-secondary;
 
     li:before {
       content: "- ";
@@ -46,7 +46,7 @@
 
   .buttons {
     display: flex;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     gap: 10px;
   }
 

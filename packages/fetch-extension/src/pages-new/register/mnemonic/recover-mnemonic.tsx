@@ -21,6 +21,7 @@ import { Card } from "@components-v2/card";
 import { ImportLedgerPage } from "../ledger";
 import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
+import { PasswordValidationChecklist } from "../password-checklist";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -127,7 +128,6 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
               height: "32px",
             }}
             style={{
-              backgroundColor: "rgba(255,255,255,0.1)",
               display: "flex",
               height: "78px",
               fontSize: "14px",
@@ -152,7 +152,6 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
                 height: "32px",
               }}
               style={{
-                backgroundColor: "rgba(255,255,255,0.1)",
                 display: "flex",
                 height: "78px",
                 fontSize: "14px",
@@ -181,9 +180,9 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
             leftImageStyle={{
               width: "32px",
               height: "32px",
+              background: "white",
             }}
             style={{
-              backgroundColor: "rgba(255,255,255,0.1)",
               height: "78px",
               display: "flex",
               fontSize: "14px",
@@ -214,13 +213,21 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const intl = useIntl();
 
   const bip44Option = useBIP44Option();
+  const [password, setPassword] = useState("");
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
+  const [passwordChecklistError, setPasswordChecklistError] = useState(
+    // initially sets the password error as true for create mode
+    registerConfig.mode === "create" ? true : false
+  );
 
-  const { analyticsStore } = useStore();
+  const { analyticsStore, keyRingStore } = useStore();
 
   const {
     register,
     handleSubmit,
     getValues,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -382,6 +389,19 @@ export const RecoverMnemonicPage: FunctionComponent<{
     handleTabChange(activeTab);
   }, [activeTab]);
 
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
+      (item) => item?.meta?.["name"]
+    );
+    let nameAlreadyExists = false;
+
+    // if create mode then wallet list is empty
+    if (registerConfig.mode !== "create") {
+      nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+    }
+    return !nameAlreadyExists;
+  };
+
   return (
     <React.Fragment>
       {selectedCard === "main" && (
@@ -495,16 +515,10 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         style={
                           seedType === SeedType.PRIVATE_KEY
                             ? {
-                                color: "white",
-                                background: "rgba(255,255,255,0.1)",
                                 width: "335px",
                                 height: "53px",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
                               }
-                            : {
-                                color: "white",
-                                background: "rgba(255,255,255,0.1)",
-                              }
+                            : {}
                         }
                         type={
                           shownMnemonicIndex === index ? "text" : "password"
@@ -598,28 +612,56 @@ export const RecoverMnemonicPage: FunctionComponent<{
                 </div>
               ) : null}
               <div className={styleRecoverMnemonic["formInnerContainer"]}>
-                <Label
-                  for="name"
-                  style={{
-                    color: "rgba(255,255,255,0.6)",
-                    fontWeight: 400,
-                    fontSize: "15px",
-                  }}
-                >
-                  {intl.formatMessage({ id: "register.name" })}
-                </Label>
-                <Input
-                  className={styleRecoverMnemonic["addressInput"]}
-                  style={{ width: "333px" }}
-                  type="text"
-                  {...register("name", {
-                    required: intl.formatMessage({
-                      id: "register.name.error.required",
-                    }),
-                  })}
-                  error={errors.name && errors.name.message}
-                  maxLength={20}
-                />
+                {seedType !== SeedType.PRIVATE_KEY && (
+                  <ButtonV2
+                    type="button"
+                    styleProps={{
+                      width: "fit-content",
+                      padding: "10px 20px",
+                      height: "auto",
+                      fontSize: "14px",
+                      marginBottom: "10px",
+                      marginTop: "0px",
+                    }}
+                    text="Clear All"
+                    variant="dark"
+                    onClick={() => {
+                      if (seedType === SeedType.WORDS12) {
+                        setSeedWords(new Array<string>(12).fill(""));
+                      } else if (seedType == SeedType.WORDS24) {
+                        setSeedWords(new Array<string>(24).fill(""));
+                      }
+                    }}
+                  />
+                )}
+                <div>
+                  <Label for="name" className={style["label"]}>
+                    {intl.formatMessage({ id: "register.name" })}
+                  </Label>
+                  <Input
+                    className={styleRecoverMnemonic["addressInput"]}
+                    style={{ width: "333px" }}
+                    type="text"
+                    {...register("name", {
+                      required: intl.formatMessage({
+                        id: "register.name.error.required",
+                      }),
+                    })}
+                    error={
+                      accountNameValidationError
+                        ? "Account name already exists, please try different name"
+                        : errors.name && errors.name.message
+                    }
+                    maxLength={20}
+                    onChange={(e) => {
+                      const trimmedValue = e.target.value.trimStart();
+                      setValue(e.target.name as keyof FormData, trimmedValue);
+                      setAccountNameValidationError(
+                        !validateWalletName(trimmedValue)
+                      );
+                    }}
+                  />
+                </div>
                 {registerConfig.mode === "create" ? (
                   <React.Fragment>
                     <PasswordInput
@@ -635,6 +677,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                           }
                         },
                       })}
+                      onChange={(e: any) => setPassword(e.target.value)}
                       error={errors.password && errors.password.message}
                     />
                     <PasswordInput
@@ -659,6 +702,14 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         errors.confirmPassword && errors.confirmPassword.message
                       }
                     />
+                    <div className="mt-4 space-y-1 text-sm">
+                      <PasswordValidationChecklist
+                        password={password}
+                        onStatusChange={(status) =>
+                          setPasswordChecklistError(!status)
+                        }
+                      />
+                    </div>
                   </React.Fragment>
                 ) : null}
                 <div
@@ -668,6 +719,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                 />
                 <AdvancedBIP44Option bip44Option={bip44Option} />
                 <ButtonV2
+                  variant="dark"
                   text={
                     registerConfig.isLoading ? (
                       <i className="fas fa-spinner fa-spin ml-2" />
@@ -680,7 +732,11 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     height: "56px",
                   }}
                   data-loading={registerConfig.isLoading}
-                  disabled={registerConfig.isLoading}
+                  disabled={
+                    registerConfig.isLoading ||
+                    passwordChecklistError ||
+                    accountNameValidationError
+                  }
                   onClick={() => {
                     analyticsStore.logEvent("register_next_click", {
                       pageName: "Register",
@@ -715,7 +771,7 @@ const IconClosedEye: FunctionComponent<{
   width?: number;
   height?: number;
   color?: string;
-}> = ({ width = 28, height = 29, color = "#C6C6CD" }) => {
+}> = ({ width = 28, height = 29, color = "#101418" }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -740,19 +796,18 @@ const IconOpenEye: FunctionComponent<{
   width?: number;
   height?: number;
   color?: string;
-}> = ({ width = 28, height = 29, color = "#C6C6CD" }) => {
+}> = ({ width = 28, height = 29, color = "#101418" }) => {
   return (
     <svg
-      xmlns="http://www.w3.org/2000/svg"
       width={width}
       height={height}
-      fill="none"
-      viewBox="0 0 28 29"
+      viewBox="0 0 16 13"
+      fill={color}
+      xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill={color} d="M14 18.302a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" />
       <path
+        d="M8 1.9375C6.19531 1.9375 4.74609 2.75781 3.625 3.79688C2.55859 4.78125 1.84766 5.92969 1.46484 6.75C1.84766 7.57031 2.55859 8.74609 3.625 9.73047C4.74609 10.7695 6.19531 11.5625 8 11.5625C9.77734 11.5625 11.2266 10.7695 12.3477 9.73047C13.4141 8.74609 14.1523 7.57031 14.5078 6.75C14.1523 5.92969 13.4141 4.78125 12.375 3.79688C11.2266 2.75781 9.77734 1.9375 8 1.9375ZM2.72266 2.83984C4.00781 1.63672 5.78516 0.625 8 0.625C10.1875 0.625 11.9648 1.63672 13.25 2.83984C14.5352 4.04297 15.3828 5.4375 15.793 6.42188C15.875 6.64062 15.875 6.88672 15.793 7.10547C15.3828 8.0625 14.5352 9.48438 13.25 10.6875C11.9648 11.8906 10.1875 12.875 8 12.875C5.78516 12.875 4.00781 11.8906 2.72266 10.6875C1.4375 9.48438 0.589844 8.0625 0.179688 7.10547C0.0976562 6.88672 0.0976562 6.64062 0.179688 6.42188C0.589844 5.4375 1.4375 4.01562 2.72266 2.83984ZM8 8.9375C9.20312 8.9375 10.1875 7.98047 10.1875 6.75C10.1875 5.54688 9.20312 4.5625 8 4.5625C7.97266 4.5625 7.94531 4.5625 7.94531 4.5625C7.97266 4.72656 8 4.86328 8 5C8 5.98438 7.20703 6.75 6.25 6.75C6.08594 6.75 5.94922 6.75 5.8125 6.69531C5.8125 6.72266 5.8125 6.75 5.8125 6.75C5.8125 7.98047 6.76953 8.9375 8 8.9375ZM8 3.25C9.23047 3.25 10.3789 3.93359 11.0078 5C11.6367 6.09375 11.6367 7.43359 11.0078 8.5C10.3789 9.59375 9.23047 10.25 8 10.25C6.74219 10.25 5.59375 9.59375 4.96484 8.5C4.33594 7.43359 4.33594 6.09375 4.96484 5C5.59375 3.93359 6.74219 3.25 8 3.25Z"
         fill={color}
-        d="M26.843 13.85c-1.447-2.238-3.325-4.139-5.429-5.498-2.328-1.505-4.898-2.3-7.433-2.3-2.325 0-4.611.664-6.796 1.975-2.227 1.336-4.245 3.287-5.998 5.8a1.746 1.746 0 00-.035 1.944c1.445 2.26 3.303 4.164 5.375 5.504 2.332 1.511 4.843 2.277 7.454 2.277 2.555 0 5.13-.79 7.449-2.282 2.103-1.354 3.977-3.262 5.418-5.519a1.76 1.76 0 00-.005-1.9zM14 20.052a5.25 5.25 0 110-10.5 5.25 5.25 0 010 10.5z"
       />
     </svg>
   );

@@ -1,8 +1,10 @@
+@import "../../styles/var";
+
 .input,
 .input:hover,
 .input:focus {
   background: transparent;
-  color: white;
+  color: $font-dark;
   border: none !important;
   box-shadow: none !important;
   padding-left: 0px;

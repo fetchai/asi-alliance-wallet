@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, useState } from "react";
 import { BackButton } from "../index";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Input, TextArea } from "@components/form";
@@ -9,6 +9,8 @@ import { Buffer } from "buffer";
 import { parseEthPrivateKey } from "@fetchai/eth-migration";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { PasswordInput } from "@components-v2/form";
+import { PasswordValidationChecklist } from "../password-checklist";
 
 interface FormData {
   name: string;
@@ -31,6 +33,11 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
   onBack: () => void;
 }> = ({ registerConfig, onBack }) => {
   const intl = useIntl();
+  const [password, setPassword] = useState("");
+  const [passwordChecklistError, setPasswordChecklistError] = useState(
+    // initially sets the password error as true for create mode
+    registerConfig.mode === "create" ? true : false
+  );
 
   const {
     register,
@@ -50,7 +57,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
   return (
     <div className={style["migrateContainer"]}>
       <BackButton onClick={onBack} />
-      <h1 style={{ color: "rgba(255,255,255)" }}>
+      <h1>
         <FormattedMessage id="register.eth-migrate.metamask-private-key.title" />
       </h1>
       <Form
@@ -163,12 +170,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
         />
         {registerConfig.mode === "create" && (
           <React.Fragment>
-            <Input
-              className={style["input"]}
-              label={intl.formatMessage({
-                id: "register.create.input.password",
-              })}
-              type="password"
+            <PasswordInput
               {...register("password", {
                 required: intl.formatMessage({
                   id: "register.create.input.password.error.required",
@@ -182,13 +184,13 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                 },
               })}
               error={errors.password && errors.password.message}
+              labelStyle={{
+                marginTop: "0px",
+              }}
+              onChange={(e: any) => setPassword(e.target.value)}
             />
-            <Input
-              className={style["input"]}
-              label={intl.formatMessage({
-                id: "register.create.input.confirm-password",
-              })}
-              type="password"
+            <PasswordInput
+              passwordLabel="Confirm Password"
               {...register("confirmPassword", {
                 required: intl.formatMessage({
                   id: "register.create.input.confirm-password.error.required",
@@ -201,11 +203,21 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                   }
                 },
               })}
+              labelStyle={{
+                marginTop: "0px",
+              }}
               error={errors.confirmPassword && errors.confirmPassword.message}
             />
+            <div className="mt-4 space-y-1 text-sm">
+              <PasswordValidationChecklist
+                password={password}
+                onStatusChange={(status) => setPasswordChecklistError(!status)}
+              />
+            </div>
           </React.Fragment>
         )}
         <ButtonV2
+          variant="dark"
           styleProps={{ marginBottom: "20px" }}
           text={
             registerConfig.isLoading ? (
@@ -214,7 +226,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
               <FormattedMessage id="register.create.button.next" />
             )
           }
-          disabled={registerConfig.isLoading}
+          disabled={registerConfig.isLoading || passwordChecklistError}
         />
       </Form>
     </div>

@@ -1,34 +1,57 @@
 @import "../../../styles/var";
+
+.btnLight {
+  color: $font-grey;
+  background: white;
+  border: 1px solid $bg-grey-dark;
+}
+
+.btnDark {
+  color: white;
+  background: $bg-dark;
+  border: 1px solid transparent;
+}
+
 .btn {
-  color: var(--Indigo-Indigo-900---Fetch-navy, #000d3d);
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 16px;
   border-radius: 100px;
   margin-top: 18px;
-  border: none;
   padding: 10px 12px;
   width: 100%;
   font-style: normal;
   font-weight: 400;
+  height: 56px;
   line-height: normal;
   cursor: pointer;
+  &[data-loading="true"] {
+    color: inherit !important;
+    pointer-events: none !important;
+  }
+  &[data-loading="true"]::after {
+    display: none !important;
+  }
 }
+
 .btn:disabled {
   cursor: not-allowed;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--Grey-White, #fff);
-  font-family: Lexend;
   font-size: 16px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
-  opacity: 0.4;
 }
 
 .btnBgDisabled {
-  background-color: #1a2753;
-  opacity: 1 !important;
+  opacity: 0.6 !important;
+}
+
+.btnLight:disabled {
+  background: rgba(white, 0.8);
+}
+
+.btnDark:disabled {
+  background: rgba($bg-dark, 0.8);
 }
 
 .gradient {

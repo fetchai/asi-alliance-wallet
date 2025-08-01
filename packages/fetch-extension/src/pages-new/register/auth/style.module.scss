@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .card {
   margin: 0.5rem;
   padding: 0.7rem;
@@ -32,7 +34,7 @@
   font-weight: 600;
   cursor: pointer;
   background-color: #0364ff;
-  color: #fff;
+  color: $font-dark;
 
   &:hover {
     transition: 200ms;
@@ -55,21 +57,27 @@
   position: absolute;
   bottom: 2px;
   right: 12px;
-  color: white;
+  color: $font-secondary;
   &:hover {
     color: white;
     background-color: transparent;
   }
 }
 
+.label {
+  color: $font-secondary;
+  font-weight: 500;
+  font-size: 15px;
+}
+
 .addressInput {
   height: 53px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid $border-grey;
+  color: $font-dark;
+  background: white;
   border-radius: 10px;
   width: 333px !important;
 }
 .addressInput:hover {
-  border: 1px solid var(--Indigo-Indigo-400, #7655fc);
+  border: 1px solid $border-sky-focus;
 }

@@ -37,6 +37,7 @@ export const IBCChannelRegistrar: FunctionComponent<{
           for="chain-dropdown"
           style={{
             fontWeight: 400,
+            color: "var(--font-secondary)",
           }}
           className="form-control-label"
         >
@@ -103,6 +104,7 @@ export const IBCChannelRegistrar: FunctionComponent<{
         error={error}
       />
       <ButtonV2
+        variant="dark"
         text={
           isLoading ? (
             <Spinner size="sm">Adding</Spinner>

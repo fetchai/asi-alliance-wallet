@@ -70,6 +70,10 @@ export const DeleteWallet: FunctionComponent = () => {
     <HeaderLayout
       showTopMenu={true}
       canChangeChainInfo={false}
+      smallTitle={true}
+      alternativeTitle={intl.formatMessage({
+        id: "setting.clear.confirm.title",
+      })}
       showBottomMenu={false}
       showChainName={false}
       onBackButton={useCallback(() => {
@@ -94,6 +98,8 @@ export const DeleteWallet: FunctionComponent = () => {
               marginTop: "0px",
             }}
             error={errors.password && errors.password.message}
+            passwordLabel="Enter Password"
+            floatLabel={true}
             {...register("password", {
               required: intl.formatMessage({
                 id: "setting.clear.input.password.error.required",
@@ -106,8 +112,15 @@ export const DeleteWallet: FunctionComponent = () => {
             {keyStore.type === "mnemonic" && (
               <Alert className={style["alert"]}>
                 <div>
-                  <div className={style["text"]}>
-                    <FormattedMessage id="setting.clear.alert" />
+                  <div className={style["textContainer"]}>
+                    <img
+                      className={style["warningIcon"]}
+                      src={require("@assets/svg/wireframe/warning.svg")}
+                      alt=""
+                    />
+                    <div className={style["text"]}>
+                      <FormattedMessage id="setting.clear.alert" />
+                    </div>
                   </div>
                 </div>
               </Alert>
@@ -116,14 +129,11 @@ export const DeleteWallet: FunctionComponent = () => {
               <ButtonV2
                 styleProps={{
                   height: "56px",
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.4)",
-                  color: "white",
                   marginTop: "0px",
                   fontSize: "16px",
                   fontWeight: 400,
                 }}
-                data-loading={loading}
+                dataLoading={loading}
                 text={""}
                 onClick={onBackUpMnemonicButtonClick}
               >
@@ -132,10 +142,11 @@ export const DeleteWallet: FunctionComponent = () => {
             )}
 
             <ButtonV2
+              variant="dark"
               styleProps={{
                 height: "56px",
               }}
-              data-loading={loading}
+              dataLoading={loading}
               text={""}
               onClick={() => {
                 setIsConfirmationOpen(true);
@@ -152,12 +163,12 @@ export const DeleteWallet: FunctionComponent = () => {
 
       {/* Confirmation Dropdown */}
       <Dropdown
-        styleProp={{ height: "220px", maxHeight: "220px" }}
+        styleProp={{ height: "250px", maxHeight: "250px" }}
         setIsOpen={setIsConfirmationOpen}
         isOpen={isConfirmationOpen}
         title=""
         closeClicked={() => setIsConfirmationOpen(true)}
-        showCloseIcon={false}
+        showCloseIcon={true}
       >
         <div className={style["confimation-container"]}>
           <div className={style["confimation-text-container"]}>
@@ -173,9 +184,6 @@ export const DeleteWallet: FunctionComponent = () => {
             <ButtonV2
               styleProps={{
                 height: "56px",
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.4)",
                 marginTop: "0px",
               }}
               data-loading={loading}
@@ -191,14 +199,12 @@ export const DeleteWallet: FunctionComponent = () => {
             </ButtonV2>
 
             <ButtonV2
+              variant="dark"
               styleProps={{
                 height: "56px",
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.4)",
                 marginTop: "0px",
               }}
-              data-loading={loading}
+              dataLoading={loading}
               text={""}
               onClick={handleSubmit(async (data) => {
                 setLoading(true);

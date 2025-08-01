@@ -231,22 +231,12 @@ export const Unstake = observer(() => {
       >
         <div className={style["unstake-container"]}>
           <div className={style["current-stake"]}>
-            <div
-              style={{
-                color: "rgba(255,255,255,0.6)",
-                fontSize: "14px",
-                fontWeight: 400,
-                lineHeight: "17.5px",
-              }}
-            >
+            <div className={style["current-stake-label"]}>
               {intl.formatMessage({
                 id: "unstake.current-staked",
               })}
             </div>
-            <div
-              className={style["value"]}
-              style={{ fontWeight: 500, lineHeight: "17.5px" }}
-            >
+            <div className={style["current-stake-value"]}>
               {stakedAmount.maxDecimals(4).trim(true).toString()}
             </div>
           </div>
@@ -256,20 +246,8 @@ export const Unstake = observer(() => {
               label="Amount"
               amountConfig={sendConfigs.amountConfig}
               isToggleClicked={isToggleClicked}
+              availableBalance={availableBalance}
             />
-
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: 400,
-                color: "rgba(255,255,255,0.6)",
-                marginTop: "8px",
-              }}
-            >
-              {`${intl.formatMessage({
-                id: "unstake.available",
-              })} ${availableBalance}`}
-            </div>
 
             <UseMaxButton
               amountConfig={sendConfigs.amountConfig}
@@ -290,6 +268,7 @@ export const Unstake = observer(() => {
             </div>
           </Alert>
           <ButtonV2
+            variant="dark"
             text=""
             styleProps={{
               width: "94%",
@@ -310,7 +289,6 @@ export const Unstake = observer(() => {
               if (activityStore.getPendingTxnTypes[TXNTYPE.undelegate]) return;
               unstakeClicked();
             }}
-            btnBgEnabled={true}
           >
             {intl.formatMessage({
               id: "unstake.confirm",

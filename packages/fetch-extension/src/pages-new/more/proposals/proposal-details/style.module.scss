@@ -1,8 +1,10 @@
+@import "../../../../styles/var";
+
 .gov-proposal-details-container {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  color: #fff;
+  color: $font-dark;
   margin: 0 -12px;
   padding: 0 16px 0 16px;
 
@@ -21,7 +23,7 @@
       font-size: 16px;
       font-weight: 400;
       line-height: 25.6px;
-      color: rgba(255, 255, 255, 0.8);
+      color: $font-secondary;
     }
   }
 
@@ -34,7 +36,7 @@
       font-size: 12px;
       font-weight: 400;
       line-height: 15px;
-      color: rgba(255, 255, 255, 0.6);
+      color: $font-secondary;
     }
   }
 }
@@ -55,5 +57,5 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: white;
+  color: $font-secondary;
 }

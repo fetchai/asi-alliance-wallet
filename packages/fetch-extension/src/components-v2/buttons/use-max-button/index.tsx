@@ -61,9 +61,6 @@ export const UseMaxButton = ({
           padding: "2px 15px",
           height: "44px",
           marginTop: "0",
-          background: "transparent",
-          color: "white",
-          border: "1px solid rgba(255,255,255,0.4)",
           fontSize: "14px",
         }}
         disabled={
@@ -82,9 +79,6 @@ export const UseMaxButton = ({
           padding: "2px 15px",
           height: "44px",
           marginTop: "0",
-          background: "transparent",
-          color: "white",
-          border: "1px solid rgba(255,255,255,0.4)",
           fontSize: "14px",
         }}
         onClick={(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {

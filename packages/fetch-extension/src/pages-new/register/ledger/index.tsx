@@ -13,6 +13,7 @@ import { ledgerUSBVendorId } from "@ledgerhq/devices";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { LedgerSetupView } from "../../../pages/ledger";
 import { useNotification } from "@components/notification";
+import { PasswordValidationChecklist } from "../password-checklist";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -49,6 +50,11 @@ export const ImportLedgerPage: FunctionComponent<{
   const notification = useNotification();
   const bip44Option = useBIP44Option(118);
   const [isShowLedgerSetup, setShowLedgerSetup] = useState<boolean>(false);
+  const [password, setPassword] = useState("");
+  const [passwordChecklistError, setPasswordChecklistError] = useState(
+    // initially sets the password error as true for create mode
+    registerConfig.mode === "create" ? true : false
+  );
   const { analyticsStore, ledgerInitStore } = useStore();
 
   const {
@@ -170,16 +176,15 @@ export const ImportLedgerPage: FunctionComponent<{
           >
             <Label
               for="name"
+              className={style["label"]}
               style={{
-                color: "rgba(255,255,255,0.6)",
-                fontWeight: 400,
-                fontSize: "14px",
                 marginBottom: "8px",
               }}
             >
               {intl.formatMessage({ id: "register.name" })}
             </Label>
             <Input
+              formGroupClassName={style["ledgerFormGroup"]}
               className={style["addressInput"]}
               type="text"
               {...register("name", {
@@ -209,12 +214,13 @@ export const ImportLedgerPage: FunctionComponent<{
                       }
                     },
                   })}
+                  onChange={(e: any) => setPassword(e.target.value)}
                   error={errors.password && errors.password.message}
                   labelStyle={{
                     marginTop: "0px",
                   }}
                   inputStyle={{
-                    marginBottom: "16px",
+                    marginBottom: "5px",
                   }}
                 />
                 <PasswordInput
@@ -237,15 +243,24 @@ export const ImportLedgerPage: FunctionComponent<{
                     marginTop: "0px",
                   }}
                   inputStyle={{
-                    marginBottom: "24px",
+                    marginBottom: "5px",
                   }}
                 />
+                <div className="mt-4 space-y-1 text-sm">
+                  <PasswordValidationChecklist
+                    password={password}
+                    onStatusChange={(status) =>
+                      setPasswordChecklistError(!status)
+                    }
+                  />
+                </div>
               </React.Fragment>
             ) : null}
-            <div style={{ width: "339px", marginTop: "0px" }}>
+            <div style={{ width: "100%", marginTop: "0px" }}>
               <AdvancedBIP44Option bip44Option={bip44Option} />
             </div>
             <ButtonV2
+              variant="dark"
               data-loading={registerConfig.isLoading}
               text={
                 registerConfig.isLoading ? (
@@ -261,7 +276,7 @@ export const ImportLedgerPage: FunctionComponent<{
                   pageName: "Register",
                 });
               }}
-              disabled={registerConfig.isLoading}
+              disabled={registerConfig.isLoading || passwordChecklistError}
               styleProps={{
                 height: "56px",
                 position: "absolute",

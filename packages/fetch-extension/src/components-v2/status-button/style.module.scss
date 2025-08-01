@@ -1,0 +1,36 @@
+@import "../../styles/var";
+
+.statusBtn {
+  height: 25px;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  color: $font-dark;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 400;
+  background-color: rgba(255, 255, 255, 1);
+  text-transform: uppercase;
+}
+
+.success {
+  background-color: $bg-green-base;
+  color: $font-dark;
+}
+
+.pending {
+  background: $bg-grey-dark;
+  color: $font-dark;
+}
+
+.active {
+  background-color: $bg-dark;
+  color: white;
+}
+
+.failed {
+  background-color: #fee1e1;
+  color: $bg-red-40;
+}

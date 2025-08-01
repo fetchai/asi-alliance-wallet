@@ -83,8 +83,10 @@ export const AddAddress: FunctionComponent<{
             {intl.formatMessage({ id: "setting.address-book.name" })}
           </Label>
           <Input
+            formGroupClassName={style["formGroupInput"]}
             className={style["input"]}
             type="text"
+            placeholder="Enter nickname"
             autoComplete="off"
             value={name}
             onChange={(e) => {
@@ -103,6 +105,7 @@ export const AddAddress: FunctionComponent<{
           />
           <div style={{ flex: 1 }} />
           <ButtonV2
+            variant="dark"
             disabled={
               !name ||
               name.trim() === "" ||

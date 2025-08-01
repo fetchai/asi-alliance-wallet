@@ -1,12 +1,12 @@
 import React, { FunctionComponent } from "react";
-
 import styleWelcome from "./welcome.module.scss";
-// import { Button } from "reactstrap";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useStore } from "../../stores";
+import { useIntl } from "react-intl";
 
 export const WelcomePage: FunctionComponent = () => {
   const { analyticsStore } = useStore();
+  const intl = useIntl();
   return (
     <div style={{ marginLeft: "-27px" }}>
       <img
@@ -20,12 +20,18 @@ export const WelcomePage: FunctionComponent = () => {
         alt=""
       />
       <div className={styleWelcome["content"]}>
-        <img
-          src={require("@assets/svg/wireframe/welcome-content.svg")}
-          alt=""
-        />
+        <img src={require("@assets/svg/wireframe/rocket.svg")} alt="" />
+        <div className={styleWelcome["title"]}>
+          {intl.formatMessage({
+            id: "register.welcome.title",
+          })}
+        </div>
+        <div className={styleWelcome["description"]}>
+          Your ASI Alliance Wallet journey now begins.
+        </div>
       </div>
       <ButtonV2
+        variant="dark"
         styleProps={{
           height: "56px",
         }}

@@ -104,7 +104,7 @@ export const SelectValidatorList = observer(
             </div>
             <div>
               <img
-                src={require("../../../public/assets/svg/wireframe/sort.svg")}
+                src={require("../../../public/assets/svg/wireframe/chevron-down.svg")}
               />
             </div>
           </div>

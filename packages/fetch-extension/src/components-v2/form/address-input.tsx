@@ -2,30 +2,32 @@ import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
 import { Button, FormText } from "reactstrap";
 import { ContactBookPage } from "../../pages-new/contact-book";
 
-import styleAddressInput from "./address-input.module.scss";
+import { Dropdown } from "@components-v2/dropdown";
 import {
-  InvalidBech32Error,
   EmptyAddressError,
-  IRecipientConfig,
-  IMemoConfig,
   ICNSFailedToFetchError,
   ICNSIsFetchingError,
   IIBCChannelConfig,
+  IMemoConfig,
+  InvalidBech32Error,
   InvalidHexError,
+  IRecipientConfig,
   IRecipientConfigWithICNS,
 } from "@keplr-wallet/hooks";
+import { validateAgentAddress } from "@utils/validate-agent";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
-import { validateAgentAddress } from "@utils/validate-agent";
 import {
   CHAIN_ID_DORADO,
   CHAIN_ID_ERIDANUS,
   CHAIN_ID_FETCHHUB,
 } from "../../config.ui.var";
 import { getBeneficiaryAddress } from "../../name-service/fns-apis";
-import { Card } from "../card";
-import { Dropdown } from "@components-v2/dropdown";
 import { useStore } from "../../stores";
+import { Card } from "../card";
+import styleAddressInput from "./address-input.module.scss";
+import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
+import { YourWallets } from "../../pages-new/contact-book/your-wallets";
 
 export interface AddressInputProps {
   recipientConfig: IRecipientConfig | IRecipientConfigWithICNS;
@@ -122,6 +124,11 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
         }
       },
     };
+
+    const selectWalletFromList = (recipient: string) => {
+      recipientConfig.setRawRecipient(recipient);
+    };
+
     const [isFNSFecthing, setIsFNSFecthing] = useState(false);
     const getFETOwner = async (
       chainId: string,
@@ -178,19 +185,40 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
       return value;
     };
 
+    const tabs = [
+      {
+        id: "Your wallets",
+        component: (
+          <YourWallets
+            onBackButton={() => setIsAddressBookOpen(false)}
+            selectWalletFromList={selectWalletFromList}
+          />
+        ),
+      },
+      {
+        id: "Other addresses",
+        component: (
+          <ContactBookPage
+            onBackButton={() => setIsAddressBookOpen(false)}
+            selectHandler={selectAddressFromAddressBook}
+            ibcChannelConfig={ibcChannelConfig}
+          />
+        ),
+      },
+    ];
+
     return (
       <React.Fragment>
         <div className={styleAddressInput["label"]}>{label}</div>
         <Card
           style={{
-            background: "rgba(255, 255, 255, 0.1)",
-            color: "rgba(255, 255, 255, 0.6)",
-            padding: "12px 18px",
+            padding: "12px 10px",
+            background: "white",
+            border: "1px solid var(--border-grey)",
           }}
           heading={""}
           subheading={
             <input
-              style={{ color: "white", fontWeight: 400, width: "258px" }}
               placeholder="Wallet Address"
               id={inputId}
               className={styleAddressInput["input"]}
@@ -283,11 +311,7 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
             });
           }}
         >
-          <ContactBookPage
-            onBackButton={() => setIsAddressBookOpen(false)}
-            selectHandler={selectAddressFromAddressBook}
-            ibcChannelConfig={ibcChannelConfig}
-          />
+          <TabsPanel tabs={tabs} />
         </Dropdown>
       </React.Fragment>
     );

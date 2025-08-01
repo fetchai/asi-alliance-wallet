@@ -27,6 +27,7 @@ import { useStore } from "../../../stores";
 import { GasContainer } from "../gas-form";
 import { GasInput } from "../gas-input";
 import { FeeCurrencySelector } from "./fee-currency-selector";
+import feeButtonStyles from "./fee-buttons.module.scss";
 
 export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
@@ -264,13 +265,7 @@ export const FeeButtonsInner: FunctionComponent<
             alignItems: "center",
           }}
         >
-          <div
-            style={{
-              fontSize: "14px",
-              fontWeight: 400,
-              color: "rgba(255,255,255,0.66)",
-            }}
-          >
+          <div className={feeButtonStyles["transactionFeeLabel"]}>
             Transaction fee:
           </div>
 
@@ -281,13 +276,7 @@ export const FeeButtonsInner: FunctionComponent<
               alignItems: "center",
             }}
           >
-            <div
-              style={{
-                fontSize: "14px",
-                fontWeight: 400,
-                color: "white",
-              }}
-            >
+            <div className={feeButtonStyles["transactionFeeValue"]}>
               {feeButtonState.isGasInputOpen
                 ? gasConfig.gasRaw
                 : feeConfig.feeType === "low"
@@ -303,20 +292,26 @@ export const FeeButtonsInner: FunctionComponent<
                     .toMetricPrefix(isEvm)}
             </div>
 
-            <img
-              onClick={() => {
-                setIsFeeDropdownOpen((prev) => !prev);
-              }}
+            <button
               style={{
-                height: "32px",
-                width: "32px",
-                border: "1px solid rgba(255,255,255,0.4)",
-                borderRadius: "100%",
-                padding: "8px",
+                background: "transparent",
+                borderRadius: "12px",
+                padding: "2px 12px",
+                border: "1px solid var(--bg-grey-dark)",
               }}
-              src={require("@assets/svg/wireframe/setting.svg")}
-              alt="settings"
-            />
+            >
+              <img
+                onClick={() => {
+                  setIsFeeDropdownOpen((prev) => !prev);
+                }}
+                style={{
+                  height: "12px",
+                  width: "12px",
+                }}
+                src={require("@assets/svg/wireframe/setting.svg")}
+                alt="settings"
+              />
+            </button>
           </div>
         </div>
         <Dropdown
@@ -589,12 +584,7 @@ export const FeeButtonsInner: FunctionComponent<
                 marginTop: "12px",
               }}
             >
-              <div
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 400,
-                }}
-              >
+              <div className={feeButtonStyles["advancedSettingsLabel"]}>
                 Advanced settings
               </div>
 
@@ -649,7 +639,7 @@ export const FeeButtonsInner: FunctionComponent<
               showFeeCurrencySelectorUnderSetGas ? (
               <React.Fragment>
                 <Card
-                  style={{ background: "rgba(255, 255, 255, 0.10)" }}
+                  style={{ backgroundColor: "transparent" }}
                   heading={<FeeCurrencySelector feeConfig={feeConfig} />}
                 >
                   <GasInput label={gasLabel} gasConfig={gasConfig} />
@@ -657,13 +647,14 @@ export const FeeButtonsInner: FunctionComponent<
               </React.Fragment>
             ) : (
               <Card
-                style={{ background: "rgba(255, 255, 255, 0.10)" }}
+                style={{ backgroundColor: "transparent" }}
                 heading={<GasInput label={gasLabel} gasConfig={gasConfig} />}
               />
             )
           ) : null}
 
           <ButtonV2
+            variant="dark"
             text="Save changes"
             styleProps={{
               width: "94%",

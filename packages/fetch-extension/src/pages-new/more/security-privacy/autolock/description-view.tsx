@@ -12,7 +12,7 @@ export const DescriptionView: FunctionComponent = observer(() => {
     <div className={styleDescriptionView["innerContainer"]}>
       <img
         className={styleDescriptionView["imgLock"]}
-        src={require("@assets/png/ic_autolock.png")}
+        src={require("@assets/svg/wireframe/auto-lock-timer.svg")}
         alt="lock"
       />
       <div className={styleDescriptionView["heading"]}>Auto-lock timer</div>

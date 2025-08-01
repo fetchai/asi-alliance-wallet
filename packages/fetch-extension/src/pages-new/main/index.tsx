@@ -2,6 +2,7 @@ import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 
 import { HeaderLayout } from "@layouts-v2/header-layout";
 
+import { ButtonV2 } from "@components-v2/buttons/button";
 import { Dropdown } from "@components-v2/dropdown";
 import { useConfirm } from "@components/confirm";
 import { getWalletConfig } from "@graphQL/config-api";
@@ -16,6 +17,7 @@ import { SetKeyRingPage } from "../keyring-dev";
 import { LedgerAppModal } from "./ledger-app-modal";
 import { WalletDetailsView } from "./wallet-details";
 import { WalletOptions } from "./wallet-options";
+import { useLanguage } from "../../languages";
 
 export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
@@ -23,8 +25,16 @@ export const MainPage: FunctionComponent = observer(() => {
   const [isOptionsOpen, setIsOptionsOpen] = useState<boolean>(false);
   const [tokenState, setTokenState] = useState({});
   const intl = useIntl();
-  const { chainStore, accountStore, keyRingStore, analyticsStore, chatStore } =
-    useStore();
+  const language = useLanguage();
+  const fiatCurrency = language.fiatCurrency;
+  const {
+    chainStore,
+    accountStore,
+    keyRingStore,
+    analyticsStore,
+    chatStore,
+    priceStore,
+  } = useStore();
 
   const userState = chatStore.userDetailsStore;
   useEffect(() => {
@@ -55,6 +65,12 @@ export const MainPage: FunctionComponent = observer(() => {
   }, [chainStore, confirm, chainStore.isInitializing, currentChainId, intl]);
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+
+  const currentCoinGeckoId = chainStore.current.feeCurrencies?.[0]?.coinGeckoId;
+
+  const priceInVsCurrency = currentCoinGeckoId
+    ? priceStore.getPrice(currentCoinGeckoId, fiatCurrency)
+    : undefined;
 
   /// Fetching wallet config info
   useEffect(() => {
@@ -91,7 +107,12 @@ export const MainPage: FunctionComponent = observer(() => {
       <LineGraphView
         setTokenState={setTokenState}
         tokenName={chainStore.current.feeCurrencies[0].coinGeckoId}
+        tokenDenom={chainStore.current.feeCurrencies[0].coinDenom}
         tokenState={tokenState}
+        priceInVsCurrency={priceInVsCurrency}
+        vsCurrencySymbol={
+          priceStore.supportedVsCurrencies[fiatCurrency]?.symbol || ""
+        }
       />
 
       <Dropdown
@@ -104,28 +125,49 @@ export const MainPage: FunctionComponent = observer(() => {
         <ChainList setIsSelectNetOpen={setIsSelectNetOpen} />
       </Dropdown>
       <Dropdown
-        setIsOpen={setIsSelectWalletOpen}
         isOpen={isSelectWalletOpen}
-        title={"Manage Wallet"}
-        closeClicked={() => setIsSelectWalletOpen(false)}
-      >
-        <WalletOptions
-          setIsSelectWalletOpen={setIsSelectWalletOpen}
-          setIsOptionsOpen={setIsOptionsOpen}
-        />
-      </Dropdown>
-      <Dropdown
-        isOpen={isOptionsOpen}
-        setIsOpen={setIsOptionsOpen}
+        setIsOpen={setIsSelectWalletOpen}
         title="Change Wallet"
         closeClicked={() => {
-          setIsOptionsOpen(false);
+          setIsSelectWalletOpen(false);
           analyticsStore.logEvent("change_wallet_click", {
             pageName: "Home",
           });
         }}
       >
-        <SetKeyRingPage onItemSelect={() => setIsOptionsOpen(false)} />
+        <SetKeyRingPage
+          onItemSelect={() => setIsSelectWalletOpen(false)}
+          setIsSelectWalletOpen={setIsSelectWalletOpen}
+          setIsOptionsOpen={setIsOptionsOpen}
+        />
+        <ButtonV2
+          text="Add New Wallet"
+          styleProps={{
+            height: "56px",
+            background: "white",
+            fontSize: "14px",
+            paddingBottom: "14px",
+            paddingTop: "14px",
+          }}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("add_new_wallet_click", {
+              pageName: "Home",
+            });
+            setIsSelectWalletOpen(false);
+            browser.tabs.create({
+              url: "/popup.html#/register",
+            });
+          }}
+        />
+      </Dropdown>
+      <Dropdown
+        setIsOpen={setIsOptionsOpen}
+        isOpen={isOptionsOpen}
+        title={"Manage Wallet"}
+        closeClicked={() => setIsOptionsOpen(false)}
+      >
+        <WalletOptions />
       </Dropdown>
     </HeaderLayout>
   );

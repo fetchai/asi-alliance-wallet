@@ -141,7 +141,7 @@ export const SellToken: FunctionComponent<{
         setToken={setToken}
       />
       <Card
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "16px" }}
+        style={{ marginBottom: "16px" }}
         onClick={() => {
           if (tokenCode) {
             setIsDropdownOpen(true);
@@ -172,24 +172,29 @@ export const SellToken: FunctionComponent<{
 
           setAmount(value);
         }}
-        inputGroupClassName={styles["inputGroupClass"]}
+        inputGroupClassName={styles["inputGroupClassSell"]}
         append={
-          <div
-            onClick={() => {
-              const toggleValue = !maxToggle;
-              let amount = toggleValue ? availableBalance : "0";
-              if (
-                moonpaySellAmount.max !== null &&
-                new Dec(availableBalance).gt(new Dec(moonpaySellAmount.max))
-              ) {
-                amount = String(moonpaySellAmount.max);
-              }
-              setMaxToggle(!maxToggle);
-              setAmount(amount);
-            }}
-          >
-            Use Max
-          </div>
+          tokenCode ? (
+            <div
+              className={styles["useMaxLabel"]}
+              onClick={() => {
+                const toggleValue = !maxToggle;
+                let amount = toggleValue ? availableBalance : "0";
+                if (
+                  moonpaySellAmount.max !== null &&
+                  new Dec(availableBalance).gt(new Dec(moonpaySellAmount.max))
+                ) {
+                  amount = String(moonpaySellAmount.max);
+                }
+                setMaxToggle(!maxToggle);
+                setAmount(amount);
+              }}
+            >
+              Use Max
+            </div>
+          ) : (
+            <React.Fragment />
+          )
         }
         error={
           parseFloat(availableBalance) === 0
@@ -204,6 +209,7 @@ export const SellToken: FunctionComponent<{
       )}
       <div className={styles["btnWrapper"]}>
         <ButtonV2
+          variant="dark"
           text="Sell Using Moonpay"
           styleProps={{
             position: "fixed",
@@ -212,13 +218,6 @@ export const SellToken: FunctionComponent<{
             transform: "translateX(-50%)",
             bottom: "16px",
             textTransform: "capitalize",
-            backgroundColor:
-              isAmountEmpty || amountError !== "" ? "transparent" : "white",
-            color: isAmountEmpty || amountError !== "" ? "white" : "black",
-            border:
-              isAmountEmpty || amountError !== ""
-                ? "1px solid white"
-                : "1px solid transparent",
           }}
           onClick={async () => {
             const URL = await redirectURL();

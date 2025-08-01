@@ -12,6 +12,7 @@ import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { removeComma } from "@utils/format";
+import style from "./style.module.scss";
 
 interface SendPhase1Props {
   sendConfigs: any;
@@ -102,25 +103,17 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           })()}
         />
         <TokenSelectorDropdown amountConfig={sendConfigs.amountConfig} />
-        <Label
-          style={{
-            fontSize: "14px",
-            color: "rgba(255,255,255,0.6)",
-            marginTop: "16px",
-          }}
-        >
-          Send from
-        </Label>
+        <Label className={style["label"]}>Send from</Label>
         <Card
           style={{
-            background: "rgba(255, 255, 255, 0.10)",
-            color: "rgba(255, 255, 255, 0.6)",
+            background: "white",
+            border: "1px solid var(--bg-grey-dark)",
+            color: "var(--font-dark)",
             fontSize: "14px",
             padding: "12px 18px",
           }}
           headingStyle={{
             fontSize: "14px",
-            color: "white",
             fontWeight: "400",
             opacity: "1",
           }}
@@ -134,6 +127,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           }}
         />
         <ButtonV2
+          variant="dark"
           disabled={
             sendConfigs.amountConfig.amount === "" ||
             sendConfigs.amountConfig.error

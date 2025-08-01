@@ -145,12 +145,12 @@ export const Proposals = observer(() => {
           >
             <div className={style["filter-toggle"]}>
               <div className={style["filter-heading"]}>
-                Filter
                 <img
                   src={require("@assets/svg/wireframe/filter.svg")}
                   alt="filter"
                   className={style["arrow-icon"]}
                 />
+                Filters
               </div>
             </div>
           </div>
@@ -201,6 +201,7 @@ const GovtProposal = ({
   return (
     <SearchBar
       valuesArray={proposals}
+      placeholder="Search by title or Proposal ID"
       filterFunction={getFilteredProposals}
       searchTerm={searchTerm}
       onSearchTermChange={onSearchTermChange}
@@ -287,10 +288,8 @@ const GovtProposalFilterDropdown = ({
         <ButtonV2
           text=""
           disabled={selectedFilter === appliedFilter}
+          variant="dark"
           styleProps={{
-            border: "1px solid rgba(255,255,255,0.4)",
-            background: selectedFilter === appliedFilter ? "transparent" : "",
-            color: selectedFilter === appliedFilter ? "white" : "",
             height: "56px",
             display: "flex",
             alignItems: "center",

@@ -372,7 +372,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
         {isSecret20 ? (
           <div className="custom-control custom-checkbox mb-2">
             <input
-              className="custom-control-input"
+              className={`${"custom-control-input"} ${style["checkbox"]}`}
               id="viewing-key-checkbox"
               type="checkbox"
               checked={isOpenSecret20ViewingKey}
@@ -381,7 +381,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
               }}
             />
             <label
-              className="custom-control-label"
+              className={`${"custom-control-label"} ${style["checkboxLabel"]}`}
               htmlFor="viewing-key-checkbox"
               style={{ color: "#666666", paddingTop: "1px" }}
             >
@@ -390,13 +390,14 @@ export const AddTokenPage: FunctionComponent = observer(() => {
           </div>
         ) : null}
         <ButtonV2
+          variant="dark"
           text=""
           disabled={
             isError !== undefined ||
             tokenInfo == null ||
             !accountInfo.isReadyToSendTx
           }
-          data-loading={
+          dataLoading={
             accountInfo.txTypeInProgress === TXNTYPE.createSecret20ViewingKey
           }
           styleProps={{
