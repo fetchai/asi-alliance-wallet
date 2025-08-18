@@ -118,4 +118,96 @@ export class CardanoWalletManager {
     const finalizedTx = await this.wallet.finalizeTx({ tx: txInit });
     return await this.wallet.submitTx(finalizedTx);
   }
+
+
+  
+  /**
+   * Creates TxBuilder for building transactions
+   * Direct access to BaseWallet method
+   */
+  createTxBuilder() {
+    return this.wallet.createTxBuilder();
+  }
+
+  /**
+   * Initializes transaction with given parameters
+   * Direct access to BaseWallet method
+   */
+  async initializeTx(txProps: any) {
+    return await this.wallet.initializeTx(txProps);
+  }
+
+  /**
+   * Finalizes and signs transaction
+   * Direct access to BaseWallet method
+   */
+  async finalizeTx(params: { tx: any }) {
+    return await this.wallet.finalizeTx(params);
+  }
+
+  /**
+   * Submits signed transaction to network
+   * Direct access to BaseWallet method
+   */
+  async submitTx(signedTx: any) {
+    return await this.wallet.submitTx(signedTx);
+  }
+
+  /**
+   * Gets current blockchain tip
+   * Needed for setting validity interval
+   */
+  get tip$() {
+    return this.wallet.tip$;
+  }
+
+  /**
+   * Gets wallet UTXO
+   */
+  get utxo() {
+    return this.wallet.utxo;
+  }
+
+  /**
+   * Gets wallet addresses
+   */
+  get addresses$() {
+    return this.wallet.addresses$;
+  }
+
+  /**
+   * Gets base wallet for access to ObservableWallet API
+   * Needed for integration with functions from Lace wallet/lib
+   */
+  getWallet() {
+    return this.wallet;
+  }
+
+  /**
+   * High-level function for sending ADA
+   * Delegates execution to modular function from wallet/lib
+   */
+  async sendAda(params: {
+    to: string;
+    amount: string; // in lovelaces (1 ADA = 1,000,000 lovelaces)
+    memo?: string;
+  }): Promise<string> {
+    const { Cardano } = await import('@cardano-sdk/core');
+    const address = Cardano.Address.fromBech32(params.to);
+    const value = { coins: BigInt(params.amount) };
+    const output = { address, value } as any; // Temporarily using any for compatibility
+    
+    const auxiliaryData = params.memo ? { blob: { 674: params.memo } } as any : undefined; // Temporarily using any
+    
+    const { buildTx, signAndSubmit } = await import('./api/extension/wallet');
+    const tx = await buildTx({
+      output,
+      auxiliaryData,
+      walletManager: this,
+    });
+    
+    return await signAndSubmit({ tx, walletManager: this });
+  }
+
+
 } 

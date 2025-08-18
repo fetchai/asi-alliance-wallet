@@ -1,16 +1,20 @@
 import { KeyRingService } from "./service";
 import { KeyRingStatus } from "./keyring";
 import { MemoryKVStore } from "@keplr-wallet/common";
+import { CardanoService } from "../cardano/service";
 
 describe("KeyRingService", () => {
   let service: KeyRingService;
   let mockEnv: any;
+  let mockCardanoService: CardanoService;
 
   beforeEach(() => {
+    mockCardanoService = {} as CardanoService;
     service = new KeyRingService(
       new MemoryKVStore("test"),
       [],
-      {} as any
+      {} as any,
+      mockCardanoService
     );
     
     // Mock keyRing property

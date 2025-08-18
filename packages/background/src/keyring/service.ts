@@ -62,13 +62,16 @@ export class KeyRingService {
   protected interactionService!: InteractionService;
   public chainsService!: ChainsService;
   public permissionService!: PermissionService;
-  private cardanoService: CardanoService = new CardanoService();
+  private cardanoService: CardanoService;
 
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly embedChainInfos: ChainInfo[],
-    protected readonly crypto: CommonCrypto
-  ) {}
+    protected readonly crypto: CommonCrypto,
+    cardanoService: CardanoService
+  ) {
+    this.cardanoService = cardanoService;
+  }
 
   // syncCardanoService method removed - synchronization happens in unlock()
 

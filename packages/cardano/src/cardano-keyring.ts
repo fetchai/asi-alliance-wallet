@@ -1,10 +1,29 @@
-import { KeyStore, Key } from "@keplr-wallet/background/src/keyring/types";
 import { CardanoWalletManager } from './wallet-manager';
 import { makeObservable, observable } from "mobx";
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
 export const CARDANO_COIN_TYPE = 1815;
+
+// Local minimal copies of types to avoid circular dependency on background package
+// These are structurally compatible with background's types and used only for typing within this package
+export interface KeyStore {
+  version?: string;
+  type?: string;
+  key?: string;
+  meta: Record<string, string>;
+  curve?: any; // Add curve field for compatibility with background
+  crypto?: any; // Add crypto field for compatibility with background
+  // Other fields are intentionally omitted as they are not used directly here
+}
+
+export interface Key {
+  algo: string;
+  pubKey: Uint8Array;
+  address: Uint8Array;
+  isKeystone: boolean;
+  isNanoLedger: boolean;
+}
 
 export class CardanoKeyRing {
   @observable
@@ -125,19 +144,7 @@ export class CardanoKeyRing {
     }
   }
 
-  public async getBalance(): Promise<string> {
-    if (!this.walletManager) {
-      console.warn("Cardano wallet manager not initialized - balance unavailable");
-      return '0';
-    }
-    try {
-      const balance = await this.walletManager.getBalance();
-      return (balance as any)?.coins?.toString() || '0';
-    } catch (error) {
-      console.warn("Failed to get Cardano balance:", error);
-      return '0';
-    }
-  }
+
 
   public async getAddresses(): Promise<string[]> {
     if (!this.walletManager) {
@@ -155,5 +162,47 @@ export class CardanoKeyRing {
       const addrObj = await this.keyAgent!.deriveAddress({ index: 0, type: 0 }, 0);
       return [addrObj.address];
     }
+  }
+
+
+
+  /**
+   * Gets CardanoWalletManager for transaction operations
+   */
+  getWalletManager(): CardanoWalletManager | undefined {
+    return this.walletManager;
+  }
+
+  /**
+   * Checks readiness for transaction operations
+   */
+  isTransactionReady(): boolean {
+    return !!(this.keyAgent && this.walletManager);
+  }
+
+  /**
+   * Send ADA transaction
+   */
+  async sendAda(params: {
+    to: string;
+    amount: string; // in lovelaces
+    memo?: string;
+  }): Promise<string> {
+    if (!this.walletManager) {
+      throw new Error("CardanoWalletManager not initialized");
+    }
+    
+    return await this.walletManager.sendAda(params);
+  }
+
+  /**
+   * Get wallet balance
+   */
+  async getBalance(): Promise<any> {
+    if (!this.walletManager) {
+      throw new Error("CardanoWalletManager not initialized");
+    }
+    
+    return await this.walletManager.getBalance();
   }
 } 
