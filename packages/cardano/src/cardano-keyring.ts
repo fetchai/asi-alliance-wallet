@@ -113,7 +113,11 @@ export class CardanoKeyRing {
     
     const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
     
-    const blockfrostApiKey = process.env['BLOCKFROST_API_KEY'];
+    // lace-style: support multiple API key environment variables
+    const blockfrostApiKey = network === 'mainnet' 
+      ? (process.env['BLOCKFROST_PROJECT_ID_MAINNET'] || process.env['BLOCKFROST_API_KEY'])
+      : (process.env['BLOCKFROST_PROJECT_ID_PREVIEW'] || process.env['BLOCKFROST_PROJECT_ID_PREPROD'] || process.env['BLOCKFROST_API_KEY']);
+    
     if (blockfrostApiKey && blockfrostApiKey !== "<API_KEY>") {
       try {
         this.walletManager = await CardanoWalletManager.create({
@@ -123,10 +127,10 @@ export class CardanoKeyRing {
         });
       } catch (error) {
         console.warn("Failed to create CardanoWalletManager:", error);
-
+        // lace-style: graceful fallback - continue without wallet manager
       }
     } else {
-      console.warn("BLOCKFROST_API_KEY not set - Cardano balance and advanced features will be unavailable");
+      console.warn("Blockfrost API key not found - Cardano balance and advanced features will be unavailable");
     }
   }
 
@@ -158,33 +162,48 @@ export class CardanoKeyRing {
 
 
   private async updateNetworkIfNeeded(chainId: string): Promise<void> {
-    const network = getCardanoNetworkFromChainId(chainId);
-    const targetChainId = await getCardanoChainIdFromNetwork(network);
-    
-    if (this.keyAgent && this.keyAgent.chainId && 
-        this.keyAgent.chainId.networkMagic === targetChainId.networkMagic) {
-      return;
-    }
-    
-    console.log(`Updating Cardano keyAgent from network ${this.keyAgent?.chainId?.networkMagic} to ${targetChainId.networkMagic}`);
-    
+    try {
+      const network = getCardanoNetworkFromChainId(chainId);
+      const targetChainId = await getCardanoChainIdFromNetwork(network);
+      
+      // lace-style: avoid unnecessary updates
+      if (this.keyAgent && this.keyAgent.chainId && 
+          this.keyAgent.chainId.networkMagic === targetChainId.networkMagic) {
+        return;
+      }
+      
+      console.log(`Updating Cardano keyAgent from network ${this.keyAgent?.chainId?.networkMagic} to ${targetChainId.networkMagic}`);
+      
+      // lace-style: safer network switching with error handling
+      const serializedData = this.keyAgent?.serializableData;
+      if (!serializedData) {
+        console.warn("No serialized data available for network switch");
+        return;
+      }
 
-    const serializedData = this.keyAgent.serializableData;
-    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
-    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
-    
-    const bip32Ed25519 = await SodiumBip32Ed25519.create();
-    this.keyAgent = new InMemoryKeyAgent(
-      {
-        ...serializedData,
-        chainId: targetChainId,
-        getPassphrase: async () => Buffer.from('', 'utf8'),
-      },
-      { bip32Ed25519, logger: console }
-    );
-    
-    if (this.walletManager) {
-      this.walletManager = undefined;
+      const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
+      const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
+      
+      const bip32Ed25519 = await SodiumBip32Ed25519.create();
+      this.keyAgent = new InMemoryKeyAgent(
+        {
+          ...serializedData,
+          chainId: targetChainId,
+          getPassphrase: async () => Buffer.from('', 'utf8'),
+        },
+        { bip32Ed25519, logger: console }
+      );
+      
+      // lace-style: properly dispose wallet manager before clearing
+      if (this.walletManager) {
+        if (this.walletManager.dispose) {
+          this.walletManager.dispose();
+        }
+        this.walletManager = undefined;
+      }
+    } catch (error) {
+      console.error("Failed to update network:", error);
+      // lace-style: graceful fallback - don't break the keyring
     }
   }
 

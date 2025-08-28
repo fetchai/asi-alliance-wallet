@@ -11,6 +11,12 @@ import { Notification } from "../tx/types";
 export class CardanoService {
   private keyRing?: CardanoKeyRing;
   private notification?: Notification;
+  private balancePollingInterval?: NodeJS.Timeout;
+  private readonly balancePollingIntervalMs = process.env['CARDANO_BALANCE_POLLING_INTERVAL_SEC'] 
+    ? Number(process.env['CARDANO_BALANCE_POLLING_INTERVAL_SEC']) * 1000
+    : 30 * 1000; // lace-style: 30 seconds default
+  private cachedBalance: any = null;
+  private lastBalanceCheck = 0;
 
   constructor(notification?: Notification) {
     this.notification = notification;
@@ -33,6 +39,9 @@ export class CardanoService {
       // Cast store to CardanoKeyStore for compatibility
       await this.keyRing.restore(store as CardanoKeyStore, password, decryptFn, chainId);
       console.log("CardanoKeyRing restored successfully");
+      
+      // lace-style: start balance polling after successful restoration
+      this.startBalancePolling();
     } catch (error) {
       console.error("Failed to restore CardanoKeyRing:", error);
       throw error;
@@ -60,9 +69,7 @@ export class CardanoService {
     return this.keyRing.getKey(chainId);
   }
 
-  clearCaches() {
-    this.keyRing = undefined;
-  }
+
 
   /**
    * Sends ADA transaction
@@ -112,7 +119,7 @@ export class CardanoService {
 
   /**
    * Gets Cardano wallet balance
-   * Delegates call to CardanoKeyRing
+   * lace-style: with caching and error handling
    */
   async getBalance(): Promise<any> {
     if (!this.keyRing) {
@@ -120,10 +127,28 @@ export class CardanoService {
     }
 
     if (!this.keyRing.isTransactionReady()) {
+      // lace-style: return cached balance if available, graceful fallback
+      if (this.cachedBalance) {
+        console.warn("Wallet manager not ready, returning cached balance");
+        return this.cachedBalance;
+      }
       throw new Error("CardanoService not ready for transactions. Wallet manager not initialized.");
     }
 
-    return await this.keyRing.getBalance();
+    try {
+      const balance = await this.keyRing.getBalance();
+      // lace-style: cache successful balance fetch
+      this.cachedBalance = balance;
+      this.lastBalanceCheck = Date.now();
+      return balance;
+    } catch (error) {
+      console.warn("Failed to fetch fresh balance:", error);
+      // lace-style: return cached balance if available
+      if (this.cachedBalance) {
+        return this.cachedBalance;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -132,6 +157,20 @@ export class CardanoService {
    */
   isReady(): boolean {
     return !!(this.keyRing && this.keyRing.isTransactionReady());
+  }
+
+  /**
+   * lace-style: Get cached balance without making new request
+   */
+  getCachedBalance(): any | null {
+    return this.cachedBalance;
+  }
+
+  /**
+   * lace-style: Get balance age in milliseconds
+   */
+  getBalanceAge(): number {
+    return this.lastBalanceCheck ? Date.now() - this.lastBalanceCheck : Infinity;
   }
 
   /**
@@ -205,5 +244,109 @@ export class CardanoService {
       title: "Cardano transaction failed",
       message,
     });
+  }
+
+  /**
+   * Clear internal state and caches
+   */
+  private clearCaches(): void {
+    // lace-style: clear cached balance on keyring reset
+    this.cachedBalance = null;
+    this.lastBalanceCheck = 0;
+    this.stopBalancePolling();
+    // Clear keyring (original logic)
+    this.keyRing = undefined;
+  }
+
+  /**
+   * lace-style: Start automatic balance polling
+   */
+  private startBalancePolling(): void {
+    if (this.balancePollingInterval) {
+      this.stopBalancePolling();
+    }
+
+    console.log(`Starting Cardano balance polling every ${this.balancePollingIntervalMs / 1000}s`);
+    
+    this.balancePollingInterval = setInterval(async () => {
+      try {
+        if (this.keyRing && this.keyRing.isTransactionReady()) {
+          await this.pollBalance();
+        }
+      } catch (error) {
+        console.warn("Balance polling error:", error);
+      }
+    }, this.balancePollingIntervalMs);
+
+    // lace-style: immediate first poll
+    this.pollBalance().catch(error => 
+      console.warn("Initial balance poll failed:", error)
+    );
+  }
+
+  /**
+   * lace-style: Stop automatic balance polling
+   */
+  private stopBalancePolling(): void {
+    if (this.balancePollingInterval) {
+      clearInterval(this.balancePollingInterval);
+      this.balancePollingInterval = undefined;
+      console.log("Stopped Cardano balance polling");
+    }
+  }
+
+  /**
+   * lace-style: Internal method for polling balance
+   */
+  private async pollBalance(): Promise<void> {
+    try {
+      if (!this.keyRing || !this.keyRing.isTransactionReady()) {
+        return;
+      }
+
+      const balance = await this.keyRing.getBalance();
+      
+      // Check if balance has changed (simple comparison)
+      const hasChanged = !this.cachedBalance || 
+        JSON.stringify(this.cachedBalance) !== JSON.stringify(balance);
+      
+      if (hasChanged) {
+        console.log("Cardano balance updated:", balance);
+        this.cachedBalance = balance;
+        this.lastBalanceCheck = Date.now();
+        
+        // lace-style: could emit events here for UI updates
+        // this.notifyBalanceChange(balance);
+      }
+    } catch (error) {
+      console.warn("Failed to poll balance:", error);
+    }
+  }
+
+  /**
+   * lace-style: Force manual balance refresh
+   */
+  async refreshBalance(): Promise<any> {
+    await this.pollBalance();
+    return this.cachedBalance;
+  }
+
+  /**
+   * lace-style: Enable/disable balance polling
+   */
+  setBalancePolling(enabled: boolean): void {
+    if (enabled) {
+      this.startBalancePolling();
+    } else {
+      this.stopBalancePolling();
+    }
+  }
+
+  /**
+   * lace-style: Cleanup resources
+   */
+  destroy(): void {
+    this.stopBalancePolling();
+    this.clearCaches();
   }
 } 

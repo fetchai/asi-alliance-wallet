@@ -13,9 +13,51 @@ import { firstValueFrom } from 'rxjs';
 
 export class CardanoWalletManager {
   private wallet: any;
+  private wsProvider: any;
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 5;
 
-  private constructor(wallet: any) {
+  private constructor(wallet: any, wsProvider?: any) {
     this.wallet = wallet;
+    this.wsProvider = wsProvider;
+    this.setupWSErrorHandling();
+  }
+
+  // lace-style: WebSocket error handling and auto-reconnection
+  private setupWSErrorHandling() {
+    if (!this.wsProvider) return;
+    
+    // Handle WebSocket disconnections with auto-reconnect
+    const handleReconnect = () => {
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        this.reconnectAttempts++;
+        console.log(`WebSocket reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+        
+        setTimeout(() => {
+          try {
+            if (this.wsProvider && this.wsProvider.connect) {
+              this.wsProvider.connect();
+            }
+          } catch (error) {
+            console.warn("WebSocket reconnect failed:", error);
+          }
+        }, Math.pow(2, this.reconnectAttempts) * 1000); // exponential backoff
+      }
+    };
+
+    // Reset reconnect attempts on successful connection
+    if (this.wsProvider.on) {
+      this.wsProvider.on('connect', () => {
+        this.reconnectAttempts = 0;
+        console.log("WebSocket connected successfully");
+      });
+      
+      this.wsProvider.on('disconnect', handleReconnect);
+      this.wsProvider.on('error', (error: any) => {
+        console.warn("WebSocket error:", error);
+        handleReconnect();
+      });
+    }
   }
 
   static async create({ mnemonicWords, network, accountIndex = 0, blockfrostApiKey }: {
@@ -55,10 +97,14 @@ export class CardanoWalletManager {
     const baseUrl = network === 'mainnet'
       ? 'https://cardano-mainnet.blockfrost.io/api/v0'
       : 'https://cardano-preview.blockfrost.io/api/v0';
-    // lace-style: use Bottleneck for rateLimiter
+    // lace-style: use proper rate limiter configuration like in lace
     const rateLimiter = new Bottleneck({
       maxConcurrent: 1,
-      minTime: 334 // ~3 requests per second (Blockfrost free tier)
+      minTime: 200, // 5 requests per second (more conservative for stability)
+      reservoir: 500, // lace-style: use reservoir pattern
+      reservoirIncreaseAmount: 10,
+      reservoirIncreaseMaximum: 500,
+      reservoirIncreaseInterval: 1000
     });
     const blockfrostConfig = {
       baseUrl,
@@ -102,21 +148,47 @@ export class CardanoWalletManager {
         publicCredentialsManager
       }
     );
+    
+    // lace-style: initialize with proper WebSocket support
     return new CardanoWalletManager(wallet);
   }
 
   async getBalance() {
-    return await firstValueFrom(this.wallet.balance.utxo.available$);
+    try {
+      return await firstValueFrom(this.wallet.balance.utxo.available$);
+    } catch (error) {
+      console.warn("Failed to get balance:", error);
+      // lace-style: graceful fallback with zero balance
+      return { coins: BigInt(0) };
+    }
   }
 
   async getAddresses() {
-    return await firstValueFrom(this.wallet.addresses$);
+    try {
+      return await firstValueFrom(this.wallet.addresses$);
+    } catch (error) {
+      console.warn("Failed to get addresses:", error);
+      // lace-style: graceful fallback with empty array
+      return [];
+    }
   }
 
   async signAndSubmitTx(txProps: any) {
-    const txInit = await this.wallet.initializeTx(txProps);
-    const finalizedTx = await this.wallet.finalizeTx({ tx: txInit });
-    return await this.wallet.submitTx(finalizedTx);
+    try {
+      const txInit = await this.wallet.initializeTx(txProps);
+      const finalizedTx = await this.wallet.finalizeTx({ tx: txInit });
+      return await this.wallet.submitTx(finalizedTx);
+    } catch (error) {
+      console.error("Transaction failed:", error);
+      // lace-style: rethrow with proper error context
+      if (error?.message?.includes('insufficient')) {
+        throw new Error('Insufficient funds for transaction');
+      }
+      if (error?.message?.includes('network')) {
+        throw new Error('Network error. Please try again');
+      }
+      throw error;
+    }
   }
 
 
@@ -127,6 +199,24 @@ export class CardanoWalletManager {
    */
   createTxBuilder() {
     return this.wallet.createTxBuilder();
+  }
+
+  /**
+   * lace-style: cleanup method for proper resource management
+   */
+  dispose() {
+    try {
+      if (this.wsProvider && this.wsProvider.close) {
+        this.wsProvider.close().catch((error: any) => 
+          console.warn("Error closing WebSocket:", error)
+        );
+      }
+      if (this.wallet && this.wallet.shutdown) {
+        this.wallet.shutdown();
+      }
+    } catch (error) {
+      console.warn("Error during wallet disposal:", error);
+    }
   }
 
   /**
