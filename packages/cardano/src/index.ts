@@ -11,3 +11,4 @@ export { CardanoAccount } from './cardano-account';
 export * from './background-api';
 
 export * from './utils/lovelacesToAdaString';
+export * from './utils/network';

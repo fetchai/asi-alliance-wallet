@@ -19,7 +19,7 @@ export class CardanoService {
   /**
    * Restore internal CardanoKeyRing from saved keystore of Background wallet.
    */
-  async restoreFromKeyStore(store: KeyStore, password: string, crypto?: any): Promise<void> {
+  async restoreFromKeyStore(store: KeyStore, password: string, crypto?: any, chainId?: string): Promise<void> {
     this.clearCaches();
     this.keyRing = new CardanoKeyRing();
     
@@ -31,7 +31,7 @@ export class CardanoService {
       
       console.log("Restoring CardanoKeyRing from keyStore:", store);
       // Cast store to CardanoKeyStore for compatibility
-      await this.keyRing.restore(store as CardanoKeyStore, password, decryptFn);
+      await this.keyRing.restore(store as CardanoKeyStore, password, decryptFn, chainId);
       console.log("CardanoKeyRing restored successfully");
     } catch (error) {
       console.error("Failed to restore CardanoKeyRing:", error);
@@ -46,17 +46,18 @@ export class CardanoService {
   async createMetaFromMnemonic(
     mnemonic: string,
     password: string,
+    chainId?: string,
   ): Promise<Record<string, string>> {
     const helper = new CardanoKeyRing();
-    return helper.getMetaFromMnemonic(mnemonic, password);
+    return helper.getMetaFromMnemonic(mnemonic, password, chainId);
   }
 
   /** Get Cardano public key/address for UI and signing */
-  async getKey(): Promise<Key> {
+  async getKey(chainId?: string): Promise<Key> {
     if (!this.keyRing) {
       throw new Error("CardanoService not initialised. Call restoreFromKeyStore() first.");
     }
-    return this.keyRing.getKey();
+    return this.keyRing.getKey(chainId);
   }
 
   clearCaches() {

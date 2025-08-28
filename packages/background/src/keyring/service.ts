@@ -221,9 +221,20 @@ export class KeyRingService {
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     // TODO: Check mnemonic checksum.
+
+    let currentChainId: string | undefined;
+    try {
+      const { ExtensionKVStore } = await import("@keplr-wallet/common");
+      const kvStore = new ExtensionKVStore("store_chain_config");
+      currentChainId = await kvStore.get<string>("extension_last_view_chain_id");
+    } catch (error) {
+      console.warn("Failed to get current chainId for Cardano meta:", error);
+    }
+    
     const cardanoMeta = await this.cardanoService.createMetaFromMnemonic(
       mnemonic,
-      password
+      password,
+      currentChainId
     ).catch(() => ({}));
 
     const keyStoreInfo = await this.keyRing.createMnemonicKey(
@@ -316,10 +327,22 @@ export class KeyRingService {
       if (ks) {
         try {
           console.log("Initializing CardanoService with keyStore:", ks);
+          
+
+          let currentChainId: string | undefined;
+          try {
+            const { ExtensionKVStore } = await import("@keplr-wallet/common");
+            const kvStore = new ExtensionKVStore("store_chain_config");
+            currentChainId = await kvStore.get<string>("extension_last_view_chain_id");
+          } catch (error) {
+            console.warn("Failed to get current chainId:", error);
+          }
+          
           await this.cardanoService.restoreFromKeyStore(
             ks as KeyStore,
             password,
-            this.crypto
+            this.crypto,
+            currentChainId
           );
           console.log("CardanoService initialized successfully");
         } catch (error) {
@@ -349,7 +372,7 @@ export class KeyRingService {
           throw new Error("CardanoService not available");
         }
         
-        return await this.cardanoService.getKey();
+        return await this.cardanoService.getKey(chainId);
       } catch (error) {
         console.error("Cardano getKey error:", error);
         
@@ -366,9 +389,10 @@ export class KeyRingService {
               await this.cardanoService.restoreFromKeyStore(
                 ks as KeyStore,
                 currentPassword,
-                this.crypto
+                this.crypto,
+                chainId
               );
-              return await this.cardanoService.getKey();
+              return await this.cardanoService.getKey(chainId);
             } catch (initError) {
               console.error("Failed to initialize CardanoService on-demand:", initError);
             }

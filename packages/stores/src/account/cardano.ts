@@ -41,10 +41,21 @@ export const CardanoAccountMixin = {
       let cardanoWalletManager;
       if (options) {
         const { CardanoWalletManager } = await import("@keplr-wallet/cardano");
+        
+
+        let network: 'mainnet' | 'testnet' = 'mainnet';
+        if (options.network) {
+          network = options.network;
+        } else {
+
+          const { getCardanoNetworkFromChainId } = await import("@keplr-wallet/cardano");
+          network = getCardanoNetworkFromChainId(_chainId);
+        }
+        
         cardanoWalletManager = await CardanoWalletManager.create({
           mnemonicWords: options.mnemonicWords,
           accountIndex: options.accountIndex,
-          network: options.network || 'mainnet',
+          network,
           blockfrostApiKey: options.blockfrostApiKey || '<API_KEY>'
         });
       }

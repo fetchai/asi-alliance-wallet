@@ -1,5 +1,6 @@
 import { CardanoWalletManager } from './wallet-manager';
 import { makeObservable, observable } from "mobx";
+import { getCardanoNetworkFromChainId, getCardanoChainIdFromNetwork } from './utils/network';
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
@@ -39,7 +40,8 @@ export class CardanoKeyRing {
 
   public async getMetaFromMnemonic(
     mnemonic: string,
-    password: string
+    password: string,
+    chainId?: string
   ): Promise<Record<string, string>> {
     const mnemonicWords = mnemonic.trim().split(/\s+/);
     if (mnemonicWords.length !== 24) {
@@ -49,7 +51,9 @@ export class CardanoKeyRing {
 
     const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
     const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
-    const { Cardano } = await import('@cardano-sdk/core');
+    
+    const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
+    const cardanoChainId = await getCardanoChainIdFromNetwork(network);
 
     const bip32Ed25519 = await SodiumBip32Ed25519.create();
 
@@ -58,7 +62,7 @@ export class CardanoKeyRing {
         mnemonicWords,
         accountIndex: 0,
         purpose: CARDANO_PURPOSE,
-        chainId: Cardano.ChainIds.Mainnet,
+        chainId: cardanoChainId,
         getPassphrase: async () => Buffer.from(password, "utf8"),
       },
       { bip32Ed25519, logger: console }
@@ -76,7 +80,8 @@ export class CardanoKeyRing {
   public async restore(
     keyStore: KeyStore, 
     password: string, 
-    decryptFn?: (keyStore: KeyStore, password: string) => Promise<Uint8Array>
+    decryptFn?: (keyStore: KeyStore, password: string) => Promise<Uint8Array>,
+    chainId?: string
   ): Promise<void> {
     const serialized = keyStore.meta["cardanoSerializedAgent"];
     if (!serialized) {
@@ -106,27 +111,34 @@ export class CardanoKeyRing {
       decryptedMnemonic = keyStore.key;
     }
     
+    const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
+    
     const blockfrostApiKey = process.env['BLOCKFROST_API_KEY'];
     if (blockfrostApiKey && blockfrostApiKey !== "<API_KEY>") {
       try {
         this.walletManager = await CardanoWalletManager.create({
           mnemonicWords: decryptedMnemonic.split(" "),
-          network: 'mainnet',
+          network,
           blockfrostApiKey
         });
       } catch (error) {
         console.warn("Failed to create CardanoWalletManager:", error);
-        // Don't throw error - basic functionality (address) still works
+
       }
     } else {
       console.warn("BLOCKFROST_API_KEY not set - Cardano balance and advanced features will be unavailable");
     }
   }
 
-  public async getKey(): Promise<Key> {
+  public async getKey(chainId?: string): Promise<Key> {
     if (!this.keyAgent) {
       console.error("Cardano key agent not initialized");
       throw new Error("Cardano key agent not initialized. Please unlock wallet first.");
+    }
+    
+
+    if (chainId) {
+      await this.updateNetworkIfNeeded(chainId);
     }
     
     try {
@@ -141,6 +153,38 @@ export class CardanoKeyRing {
     } catch (error) {
       console.error("Failed to derive Cardano address:", error);
       throw new Error("Failed to generate Cardano address");
+    }
+  }
+
+
+  private async updateNetworkIfNeeded(chainId: string): Promise<void> {
+    const network = getCardanoNetworkFromChainId(chainId);
+    const targetChainId = await getCardanoChainIdFromNetwork(network);
+    
+    if (this.keyAgent && this.keyAgent.chainId && 
+        this.keyAgent.chainId.networkMagic === targetChainId.networkMagic) {
+      return;
+    }
+    
+    console.log(`Updating Cardano keyAgent from network ${this.keyAgent?.chainId?.networkMagic} to ${targetChainId.networkMagic}`);
+    
+
+    const serializedData = this.keyAgent.serializableData;
+    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
+    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
+    
+    const bip32Ed25519 = await SodiumBip32Ed25519.create();
+    this.keyAgent = new InMemoryKeyAgent(
+      {
+        ...serializedData,
+        chainId: targetChainId,
+        getPassphrase: async () => Buffer.from('', 'utf8'),
+      },
+      { bip32Ed25519, logger: console }
+    );
+    
+    if (this.walletManager) {
+      this.walletManager = undefined;
     }
   }
 
