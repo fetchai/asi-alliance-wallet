@@ -1,5 +1,4 @@
-import { KeyStore, Key } from "../keyring/types";
-import { CardanoKeyRing, KeyStore as CardanoKeyStore } from "@keplr-wallet/cardano";
+import { CardanoKeyRing, KeyStore, Key } from "@keplr-wallet/cardano";
 import { Crypto } from "../keyring/crypto";
 import { Notification } from "../tx/types";
 
@@ -31,13 +30,13 @@ export class CardanoService {
     
     try {
       // Create decryption function with proper type casting
-      const decryptFn = crypto ? 
-        (keyStore: CardanoKeyStore, pwd: string) => Crypto.decrypt(crypto, keyStore as any, pwd) : 
+      const decryptFn = crypto ?
+        (keyStore: KeyStore, pwd: string) => Crypto.decrypt(crypto, keyStore as any, pwd) :
         undefined;
       
       console.log("Restoring CardanoKeyRing from keyStore:", store);
-      // Cast store to CardanoKeyStore for compatibility
-      await this.keyRing.restore(store as CardanoKeyStore, password, decryptFn, chainId);
+      // Cast store to KeyStore for compatibility
+      await this.keyRing.restore(store as KeyStore, password, decryptFn, chainId);
       console.log("CardanoKeyRing restored successfully");
       
       // lace-style: start balance polling after successful restoration

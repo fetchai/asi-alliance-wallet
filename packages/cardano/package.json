@@ -2,11 +2,11 @@
   "name": "@keplr-wallet/cardano",
   "version": "0.12.12",
   "description": "Cardano integration for Keplr Wallet",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
+  "main": "build/index.js",
+  "module": "build/index.esm.js",
+  "types": "build/index.d.ts",
   "files": [
-    "dist"
+    "build"
   ],
   "scripts": {
     "build": "tsc --build",
@@ -25,14 +25,17 @@
     "@cardano-sdk/wallet": "0.53.7",
     "@cardano-sdk/web-extension": "0.39.17",
     "@keplr-wallet/common": "*",
+    "@keplr-wallet/crypto": "*",
     "@ledgerhq/devices": "^8.4.4",
     "@stablelib/chacha20poly1305": "1.0.1",
     "@trezor/transport": "^1.1.18",
     "bignumber.js": "^9.1.2",
     "bip39": "^3.1.0",
+    "bottleneck": "^2.19.5",
     "buffer": "^6.0.3",
     "crc": "^4.3.2",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@cardano-sdk/util-dev": "0.25.21",

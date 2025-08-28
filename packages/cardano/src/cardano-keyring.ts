@@ -1,21 +1,22 @@
 import { CardanoWalletManager } from './wallet-manager';
 import { makeObservable, observable } from "mobx";
+import { KeyCurve } from "@keplr-wallet/crypto";
 import { getCardanoNetworkFromChainId, getCardanoChainIdFromNetwork } from './utils/network';
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
 export const CARDANO_COIN_TYPE = 1815;
 
-// Local minimal copies of types to avoid circular dependency on background package
-// These are structurally compatible with background's types and used only for typing within this package
+ // Local types to avoid circular dependency with background package
 export interface KeyStore {
-  version?: string;
-  type?: string;
+  version: "1.2";
+  type: "mnemonic" | "privateKey" | "ledger" | "keystone";
   key?: string;
   meta: Record<string, string>;
-  curve?: any; // Add curve field for compatibility with background
-  crypto?: any; // Add crypto field for compatibility with background
-  // Other fields are intentionally omitted as they are not used directly here
+  bip44HDPath?: BIP44HDPath;
+  curve: SupportedCurve;
+  coinTypeForChain?: CoinTypeForChain;
+  crypto: any;
 }
 
 export interface Key {
@@ -25,6 +26,19 @@ export interface Key {
   isKeystone: boolean;
   isNanoLedger: boolean;
 }
+
+export type CoinTypeForChain = {
+  [identifier: string]: number | undefined;
+};
+
+export type BIP44HDPath = {
+  account: number;
+  change: number;
+  addressIndex: number;
+};
+
+// Re-export KeyCurve for compatibility
+export type SupportedCurve = KeyCurve;
 
 export class CardanoKeyRing {
   @observable

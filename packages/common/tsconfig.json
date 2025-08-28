@@ -6,7 +6,7 @@
     "declaration": true,
     "rootDir": "src",
     "skipLibCheck": true,
-    "composite": true
+    "composite": false
   },
   "include": [
     "src/**/*"

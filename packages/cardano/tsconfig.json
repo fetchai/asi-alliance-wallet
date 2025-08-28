@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./build",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "skipLibCheck": true,
-    "composite": true,
+    "composite": false,
     "baseUrl": ".",
     "rootDir": "src"
   },
@@ -14,7 +14,7 @@
     "src/**/*.ts"
   ],
   "exclude": [
-    "dist",
+    "build",
     "node_modules"
   ]
 } 
