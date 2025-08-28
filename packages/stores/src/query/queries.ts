@@ -18,8 +18,10 @@ export const createQueriesSetBase = (
   chainId: string,
   chainGetter: ChainGetter
 ): QueriesSetBase => {
+  const queryBalances = new ObservableQueryBalances(kvStore, chainId, chainGetter);
+  
   return {
-    queryBalances: new ObservableQueryBalances(kvStore, chainId, chainGetter),
+    queryBalances,
   };
 };
 

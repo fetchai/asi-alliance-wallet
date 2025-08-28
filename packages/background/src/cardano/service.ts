@@ -41,7 +41,6 @@ export class CardanoService {
         ? (keyStore: KeyStore, pwd: string) =>
             Crypto.decrypt(crypto, keyStore as any, pwd)
         : undefined;
-
       console.log("Restoring CardanoKeyRing from keyStore:", store);
       // Cast store to KeyStore for compatibility
       await this.keyRing.restore(

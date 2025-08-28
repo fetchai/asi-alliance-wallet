@@ -20,6 +20,8 @@ import {
   CosmwasmAccount,
   CosmwasmQueries,
   EvmQueries,
+  CardanoQueries,
+  NameServiceQueries,
   OsmosisQueries,
   DeferInitialQueryController,
   getKeplrFromWindow,
@@ -38,9 +40,7 @@ import {
   TokensStore,
   WalletStatus,
   ICNSInteractionStore,
-  ICNSQueries,
   GeneralPermissionStore,
-  FNSQueries,
   EthereumAccount,
   ChatStore,
   ProposalStore,
@@ -100,9 +100,9 @@ export class RootStore {
       SecretQueries,
       OsmosisQueries,
       KeplrETCQueries,
-      ICNSQueries,
-      FNSQueries,
-      EvmQueries
+      NameServiceQueries,
+      EvmQueries,
+      CardanoQueries
     ]
   >;
   public readonly accountStore: AccountStore<
@@ -240,9 +240,9 @@ export class RootStore {
       KeplrETCQueries.use({
         ethereumURL: EthereumEndpoint,
       }),
-      ICNSQueries.use(),
-      FNSQueries.use(),
-      EvmQueries.use()
+      NameServiceQueries.use(),
+      EvmQueries.use(),
+      CardanoQueries.use()
     );
 
     this.activityStore = new ActivityStore(
