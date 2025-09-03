@@ -39,11 +39,12 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const confirm = useConfirm();
 
     const mainChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => !chainInfo.raw.beta && !chainInfo.raw.features?.includes("evm")
+      (chainInfo) =>
+        !chainInfo.raw.beta && !chainInfo.raw.features?.includes("evm")
     );
 
-    const evmChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => chainInfo.raw.features?.includes("evm")
+    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+      chainInfo.raw.features?.includes("evm")
     );
 
     const betaChainList = chainStore.chainInfosInUI.filter(
@@ -61,8 +62,8 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;
     const evmList = chainStore.showTestnet ? evmChainList : evmMainList;
 
-    const cardanoChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => chainInfo.features?.includes("cardano")
+    const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+      chainInfo.features?.includes("cardano")
     );
 
     const tabs = [
@@ -117,7 +118,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       : ""
                   }
                   heading={chainInfo.raw.chainName}
-                  isActive={chainInfo.raw.chainId === chainStore.current.chainId}
+                  isActive={
+                    chainInfo.raw.chainId === chainStore.current.chainId
+                  }
                   leftImageStyle={{
                     backgroundColor: !chainInfo.raw.chainSymbolImageUrl
                       ? "#dddfdf"
@@ -235,7 +238,8 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 subheading={
                   showAddress
                     ? formatAddress(
-                        accountStore.getAccount(chainInfo.raw.chainId).bech32Address
+                        accountStore.getAccount(chainInfo.raw.chainId)
+                          .bech32Address
                       )
                     : null
                 }
@@ -309,7 +313,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       : ""
                   }
                   heading={chainInfo.raw.chainName}
-                  isActive={chainInfo.raw.chainId === chainStore.current.chainId}
+                  isActive={
+                    chainInfo.raw.chainId === chainStore.current.chainId
+                  }
                   leftImageStyle={{
                     backgroundColor: !chainInfo.raw.chainSymbolImageUrl
                       ? "#dddfdf"
@@ -349,7 +355,8 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   subheading={
                     showAddress
                       ? formatAddress(
-                          accountStore.getAccount(chainInfo.raw.chainId).bech32Address
+                          accountStore.getAccount(chainInfo.raw.chainId)
+                            .bech32Address
                         )
                       : null
                   }
@@ -374,9 +381,6 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   styleProps={{
                     height: "48px",
                     marginTop: "0px",
-                    background: "transparent",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.4)",
                     fontSize: "14px",
                   }}
                   onClick={(e: any) => {
@@ -400,7 +404,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       : ""
                   }
                   heading={chainInfo.raw.chainName}
-                  isActive={chainInfo.raw.chainId === chainStore.current.chainId}
+                  isActive={
+                    chainInfo.raw.chainId === chainStore.current.chainId
+                  }
                   rightContent={
                     clickedChain === chainInfo.raw.chainId
                       ? require("@assets/svg/wireframe/check.svg")

@@ -10,9 +10,11 @@ import { Notification } from "../tx/types";
 export class CardanoService {
   private keyRing?: CardanoKeyRing;
   private notification?: Notification;
-  private balancePollingInterval?: NodeJS.Timeout;
-  private readonly balancePollingIntervalMs = process.env['CARDANO_BALANCE_POLLING_INTERVAL_SEC'] 
-    ? Number(process.env['CARDANO_BALANCE_POLLING_INTERVAL_SEC']) * 1000
+  private balancePollingInterval?: ReturnType<typeof setTimeout> | null = null;
+  private readonly balancePollingIntervalMs = process.env[
+    "CARDANO_BALANCE_POLLING_INTERVAL_SEC"
+  ]
+    ? Number(process.env["CARDANO_BALANCE_POLLING_INTERVAL_SEC"]) * 1000
     : 30 * 1000; // lace-style: 30 seconds default
   private cachedBalance: any = null;
   private lastBalanceCheck = 0;
@@ -24,21 +26,32 @@ export class CardanoService {
   /**
    * Restore internal CardanoKeyRing from saved keystore of Background wallet.
    */
-  async restoreFromKeyStore(store: KeyStore, password: string, crypto?: any, chainId?: string): Promise<void> {
+  async restoreFromKeyStore(
+    store: KeyStore,
+    password: string,
+    crypto?: any,
+    chainId?: string
+  ): Promise<void> {
     this.clearCaches();
     this.keyRing = new CardanoKeyRing();
-    
+
     try {
       // Create decryption function with proper type casting
-      const decryptFn = crypto ?
-        (keyStore: KeyStore, pwd: string) => Crypto.decrypt(crypto, keyStore as any, pwd) :
-        undefined;
-      
+      const decryptFn = crypto
+        ? (keyStore: KeyStore, pwd: string) =>
+            Crypto.decrypt(crypto, keyStore as any, pwd)
+        : undefined;
+
       console.log("Restoring CardanoKeyRing from keyStore:", store);
       // Cast store to KeyStore for compatibility
-      await this.keyRing.restore(store as KeyStore, password, decryptFn, chainId);
+      await this.keyRing.restore(
+        store as KeyStore,
+        password,
+        decryptFn,
+        chainId
+      );
       console.log("CardanoKeyRing restored successfully");
-      
+
       // lace-style: start balance polling after successful restoration
       this.startBalancePolling();
     } catch (error) {
@@ -54,7 +67,7 @@ export class CardanoService {
   async createMetaFromMnemonic(
     mnemonic: string,
     password: string,
-    chainId?: string,
+    chainId?: string
   ): Promise<Record<string, string>> {
     const helper = new CardanoKeyRing();
     return helper.getMetaFromMnemonic(mnemonic, password, chainId);
@@ -63,12 +76,12 @@ export class CardanoService {
   /** Get Cardano public key/address for UI and signing */
   async getKey(chainId?: string): Promise<Key> {
     if (!this.keyRing) {
-      throw new Error("CardanoService not initialised. Call restoreFromKeyStore() first.");
+      throw new Error(
+        "CardanoService not initialised. Call restoreFromKeyStore() first."
+      );
     }
     return this.keyRing.getKey(chainId);
   }
-
-
 
   /**
    * Sends ADA transaction
@@ -80,11 +93,15 @@ export class CardanoService {
     memo?: string;
   }): Promise<string> {
     if (!this.keyRing) {
-      throw new Error("CardanoService not initialised. Call restoreFromKeyStore() first.");
+      throw new Error(
+        "CardanoService not initialised. Call restoreFromKeyStore() first."
+      );
     }
-    
+
     if (!this.keyRing.isTransactionReady()) {
-      throw new Error("CardanoService not ready for transactions. Wallet manager not initialized.");
+      throw new Error(
+        "CardanoService not ready for transactions. Wallet manager not initialized."
+      );
     }
 
     // Notification about transaction start (like in BackgroundTxService)
@@ -98,7 +115,7 @@ export class CardanoService {
 
     try {
       const txId = await this.keyRing.sendAda(params);
-      
+
       // Success notification (pattern from Lace and Keplr)
       if (this.notification) {
         this.notification.create({
@@ -122,7 +139,9 @@ export class CardanoService {
    */
   async getBalance(): Promise<any> {
     if (!this.keyRing) {
-      throw new Error("CardanoService not initialised. Call restoreFromKeyStore() first.");
+      throw new Error(
+        "CardanoService not initialised. Call restoreFromKeyStore() first."
+      );
     }
 
     if (!this.keyRing.isTransactionReady()) {
@@ -131,7 +150,9 @@ export class CardanoService {
         console.warn("Wallet manager not ready, returning cached balance");
         return this.cachedBalance;
       }
-      throw new Error("CardanoService not ready for transactions. Wallet manager not initialized.");
+      throw new Error(
+        "CardanoService not ready for transactions. Wallet manager not initialized."
+      );
     }
 
     try {
@@ -169,7 +190,9 @@ export class CardanoService {
    * lace-style: Get balance age in milliseconds
    */
   getBalanceAge(): number {
-    return this.lastBalanceCheck ? Date.now() - this.lastBalanceCheck : Infinity;
+    return this.lastBalanceCheck
+      ? Date.now() - this.lastBalanceCheck
+      : Infinity;
   }
 
   /**
@@ -178,7 +201,9 @@ export class CardanoService {
    */
   getWalletManager() {
     if (!this.keyRing) {
-      throw new Error("CardanoService not initialised. Call restoreFromKeyStore() first.");
+      throw new Error(
+        "CardanoService not initialised. Call restoreFromKeyStore() first."
+      );
     }
 
     return this.keyRing.getWalletManager();
@@ -196,16 +221,16 @@ export class CardanoService {
     // Handle specific Cardano errors
     if (error?.code) {
       switch (error.code) {
-        case 'InvalidRequest':
+        case "InvalidRequest":
           message = "Invalid transaction request";
           break;
-        case 'TxFailure':
+        case "TxFailure":
           message = "Transaction failed to submit";
           break;
-        case 'InsufficientFunds':
+        case "InsufficientFunds":
           message = "Insufficient funds for transaction";
           break;
-        case 'NetworkError':
+        case "NetworkError":
           message = "Network error. Please try again";
           break;
         default:
@@ -214,7 +239,7 @@ export class CardanoService {
     }
 
     // Handle errors from Cardano SDK
-    if (error?.details && typeof error.details === 'string') {
+    if (error?.details && typeof error.details === "string") {
       try {
         const details = JSON.parse(error.details);
         if (details.message) {
@@ -227,13 +252,15 @@ export class CardanoService {
     }
 
     // Handle address validation errors
-    if (message.includes('Invalid Cardano address')) {
+    if (message.includes("Invalid Cardano address")) {
       message = "Invalid recipient address";
     }
 
     // Handle insufficient funds errors
-    if (message.toLowerCase().includes('insufficient') || 
-        message.toLowerCase().includes('not enough')) {
+    if (
+      message.toLowerCase().includes("insufficient") ||
+      message.toLowerCase().includes("not enough")
+    ) {
       message = "Insufficient funds to complete transaction";
     }
 
@@ -265,8 +292,12 @@ export class CardanoService {
       this.stopBalancePolling();
     }
 
-    console.log(`Starting Cardano balance polling every ${this.balancePollingIntervalMs / 1000}s`);
-    
+    console.log(
+      `Starting Cardano balance polling every ${
+        this.balancePollingIntervalMs / 1000
+      }s`
+    );
+
     this.balancePollingInterval = setInterval(async () => {
       try {
         if (this.keyRing && this.keyRing.isTransactionReady()) {
@@ -278,7 +309,7 @@ export class CardanoService {
     }, this.balancePollingIntervalMs);
 
     // lace-style: immediate first poll
-    this.pollBalance().catch(error => 
+    this.pollBalance().catch((error) =>
       console.warn("Initial balance poll failed:", error)
     );
   }
@@ -304,16 +335,17 @@ export class CardanoService {
       }
 
       const balance = await this.keyRing.getBalance();
-      
+
       // Check if balance has changed (simple comparison)
-      const hasChanged = !this.cachedBalance || 
+      const hasChanged =
+        !this.cachedBalance ||
         JSON.stringify(this.cachedBalance) !== JSON.stringify(balance);
-      
+
       if (hasChanged) {
         console.log("Cardano balance updated:", balance);
         this.cachedBalance = balance;
         this.lastBalanceCheck = Date.now();
-        
+
         // lace-style: could emit events here for UI updates
         // this.notifyBalanceChange(balance);
       }
@@ -348,4 +380,4 @@ export class CardanoService {
     this.stopBalancePolling();
     this.clearCaches();
   }
-} 
+}
