@@ -11,12 +11,31 @@ $layout-margin: 12px;
 
 $main-card-padding: 16px;
 
+$font-family-base: "HankenGrotesk", sans-serif;
+
 // Wallet Colours
+$neutral: #a1a3a3;
+$link-green: #689a65;
+$card-bg: #f6f6f6;
+$bg-dark: #151a1a;
+$font-dark: #151a1a;
+$font-secondary: #737676;
+$font-grey: #444848;
 $bg-index: #73879e;
+$bg-green-lightest: #e3fee1;
+$bg-green-light: #e0fedd;
+$bg-green-base: #b1fcab;
+$bg-green-dark: #73a271;
+$bg-red-base: #fca6a6;
+$bg-grey: #f6f6f6;
+$bg-grey-dark: #e8e8e8;
+$border-grey: #d0d1d1;
+$border-sky-focus: #2da6cf;
 $bg-primary: #000d3d;
 $bg-primary-50: #000d3d80;
 $bg-primary-40: #000d3d66;
 $bg-primary-90: #000d3de6;
+$bg-red-40: #b24d4d;
 $primary: #000d3d;
 $gradient: var(
   --gradients-warm-gradient,

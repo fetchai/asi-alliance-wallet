@@ -25,8 +25,22 @@ export const ConfirmDialog: FunctionComponent<{
   onConfirm,
   onReject,
 }) => {
+  const onClose = (e: any) => {
+    if (onReject) {
+      onReject();
+    }
+    e.preventDefault();
+  };
+
   return (
     <div className={style["dialog"]}>
+      <div className={style["closeIconContainer"]}>
+        <img
+          src={require("@assets/svg/wireframe/xmark.svg")}
+          alt=""
+          onClick={onClose}
+        />
+      </div>
       <div className={style["bodyContainer"]}>
         {imgElement ? imgElement : null}
         {title ? <h1>{title}</h1> : null}
@@ -40,27 +54,17 @@ export const ConfirmDialog: FunctionComponent<{
               padding: "10px",
               height: "40px",
               fontSize: "0.9rem",
-              background: "transparent",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.4)",
             }}
-            onClick={(e: any) => {
-              if (onReject) {
-                onReject();
-              }
-              e.preventDefault();
-            }}
+            onClick={onClose}
           />
         )}
         <ButtonV2
+          variant="dark"
           text={yes ? yes : <FormattedMessage id="confirm.yes" />}
           styleProps={{
             padding: "10px",
             height: "40px",
             fontSize: "0.9rem",
-            background: "white",
-            color: "black",
-            border: "1px solid rgba(255,255,255,0.4)",
           }}
           onClick={useCallback(
             (e: any) => {

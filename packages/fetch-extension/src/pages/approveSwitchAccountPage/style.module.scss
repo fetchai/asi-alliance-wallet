@@ -1,16 +1,16 @@
+@import "../../styles/var";
+
 .emptyLayout {
-  background-color: #000d3d;
-  background-image: url("../../public/assets/svg/wireframe/bg.svg");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
+  background-color: white;
 }
 
 .container {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  font-family: $font-family-base;
   height: 100%;
+  color: $font-dark;
 
   .content {
     position: relative;
@@ -213,7 +213,7 @@
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #afd7f3;
+          background: #cbd3df;
         }
       }
     }
@@ -221,11 +221,11 @@
     .header {
       margin-top: 18px;
       text-align: center;
-      font-weight: 600;
-      font-size: 22px;
+      font-weight: 500;
+      font-size: 24px;
       line-height: 29px;
-      color: white;
-      word-wrap: break-word;
+      color: $font-dark;
+      word-break: break-word;
     }
 
     .tag {
@@ -242,12 +242,12 @@
         padding: 4px 12px;
         border-radius: 40px;
 
-        background: #eff3fa;
+        background: $bg-dark;
 
         font-weight: 500;
         font-size: 12px;
         line-height: 18px;
-        color: #566172;
+        color: white;
       }
     }
 
@@ -260,8 +260,8 @@
 
       flex: 1;
 
-      color: white;
-      word-wrap: break-word;
+      color: $font-secondary;
+      word-break: break-word;
     }
 
     .chainDetailContainer {
@@ -288,7 +288,7 @@
       padding: 0;
       width: fit-content;
       margin: auto;
-      color: #525f7f;
+      color: $font-secondary;
 
       li:before {
         content: "- ";
@@ -384,7 +384,7 @@
   .buttons {
     justify-self: flex-end;
     display: flex;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     gap: 10px;
   }
 

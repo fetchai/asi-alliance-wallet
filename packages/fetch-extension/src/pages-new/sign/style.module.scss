@@ -59,6 +59,9 @@
   font-family: monospace;
   white-space: pre-wrap;
   word-break: break-word;
-  color: white;
+  color: $font-dark;
+  background: $card-bg;
+  border-radius: 10px;
+  padding: 10px;
   word-wrap: break-word;
 }

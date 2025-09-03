@@ -51,6 +51,7 @@ function Introduction({
           style={{
             fontSize: "16px",
             margin: "24px 0 12px",
+            color: "var(--font-secondary)",
           }}
         >
           Keystone is a top-notch hardware wallet for optimal security,
@@ -67,6 +68,7 @@ function Introduction({
             rel="noreferrer"
             style={{
               textDecoration: "underline",
+              color: "var(--link-green)",
             }}
           >
             Learn more

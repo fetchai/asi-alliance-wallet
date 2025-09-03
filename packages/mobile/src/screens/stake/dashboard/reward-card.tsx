@@ -5,7 +5,10 @@ import { useStyle } from "styles/index";
 import { GradientButton } from "components/new/button/gradient-button";
 import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { separateNumericAndDenom } from "utils/format/format";
+import {
+  numberLocalFormat,
+  separateNumericAndDenom,
+} from "utils/format/format";
 import { Dec } from "@keplr-wallet/unit";
 import Toast from "react-native-toast-message";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
@@ -370,9 +373,9 @@ export const MyRewardCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${Number(
+        earnedAmount={`${numberLocalFormat(
           pendingStakableReward.shrink(true).trim(true).toString().split(" ")[0]
-        ).toLocaleString("en-US")} ${
+        )} ${
           pendingStakableReward.shrink(true).trim(true).toString().split(" ")[1]
         }`}
         onPress={handleAllClaim}
@@ -608,14 +611,14 @@ const DelegateReward: FunctionComponent<{
                     style.flatten(["body3", "color-white@60%"]) as ViewStyle
                   }
                 >
-                  {`${Number(
+                  {`${numberLocalFormat(
                     rewards
                       .maxDecimals(8)
                       .trim(true)
                       .shrink(true)
                       .toString()
                       .split(" ")[0]
-                  ).toLocaleString("en-US")} ${
+                  )} ${
                     rewards
                       .maxDecimals(8)
                       .trim(true)
@@ -689,9 +692,9 @@ const DelegateReward: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${Number(claimData.reward.split(" ")[0]).toLocaleString(
-          "en-US"
-        )} ${claimData.reward.split(" ")[1]}`}
+        earnedAmount={`${numberLocalFormat(claimData.reward.split(" ")[0])} ${
+          claimData.reward.split(" ")[1]
+        }`}
         onPress={() => handleClaim(claimData.validatorAddress)}
         buttonLoading={isSendingTx == claimData.validatorAddress}
       />

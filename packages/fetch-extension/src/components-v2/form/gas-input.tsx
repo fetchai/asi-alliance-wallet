@@ -23,7 +23,7 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
       <React.Fragment>
         <div
           style={{
-            color: "rgba(255,255,255,0.6)",
+            color: "var(--font-secondary)",
             fontSize: "14px",
             fontWeight: 400,
             marginBottom: "8px",
@@ -32,7 +32,7 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
           {label}
         </div>
         <Card
-          style={{ background: "rgba(255,255,255,0.1)", height: "48px" }}
+          style={{ height: "48px", display: "flex", alignItems: "center" }}
           heading={
             <Input
               id={inputId}

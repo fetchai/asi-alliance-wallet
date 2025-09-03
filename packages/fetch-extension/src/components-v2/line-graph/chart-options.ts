@@ -16,17 +16,16 @@ export const chartOptions: ChartOptions = {
   tooltips: {
     mode: "index",
     intersect: false,
+    titleFontColor: "#A1A3A3",
     backgroundColor: "transparent",
-    bodyFontColor: "rgba(255,255,255,0.6)",
+    bodyFontColor: "#151A1A",
     displayColors: false,
     caretSize: 3,
     callbacks: {
       label: (tooltipItem: any, data: any) => {
         const label = data.datasets[tooltipItem.datasetIndex].label || "";
         const value = tooltipItem.yLabel || "";
-        return ` ${label} ${value} ${data.datasets[
-          tooltipItem.datasetIndex
-        ].vsCurrency.toUpperCase()}`;
+        return ` ${label} ${value}`;
       },
     },
   },

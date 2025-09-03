@@ -19,7 +19,7 @@ import { AssetCardModel } from "components/new/asset-card-model/asset-card-model
 import { ChangeWalletCardModel } from "components/new/wallet-card/change-wallet";
 import { useLoadingScreen } from "providers/loading-screen";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { removeComma } from "utils/format/format";
+import { numberLocalFormat, removeComma } from "utils/format/format";
 
 interface SendConfigs {
   amountConfig: AmountConfig;
@@ -126,9 +126,9 @@ export const SendPhase1: FunctionComponent<{
           }
           mainHeading="Asset"
           heading={sendConfigs.amountConfig.sendCurrency.coinDenom}
-          subHeading={`Available: ${Number(
+          subHeading={`Available: ${numberLocalFormat(
             availableBalance.split(" ")[0]
-          ).toLocaleString("en-US")} ${availableBalance.split(" ")[1]}`}
+          )} ${availableBalance.split(" ")[1]}`}
           trailingIcon={<ChevronDownIcon size={12} />}
           onPress={() => {
             setOpenAssetModel(true);

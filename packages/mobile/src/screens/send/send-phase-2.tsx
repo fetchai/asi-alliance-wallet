@@ -32,6 +32,7 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import { GearIcon } from "components/new/icon/gear-icon";
 import { IconButton } from "components/new/button/icon";
 import { clearDecimals } from "modals/sign/messages";
+import { numberLocalFormat } from "utils/format/format";
 
 interface SendConfigs {
   amountConfig: AmountConfig;
@@ -254,9 +255,9 @@ export const SendPhase2: FunctionComponent<{
               style.flatten(["color-white@60%", "text-caption2"]) as ViewStyle
             }
           >
-            {`${Number(getAmountLabel().split(" ")[0]).toLocaleString(
-              "en-US"
-            )} ${getAmountLabel().split(" ")[1]}`}
+            {`${numberLocalFormat(getAmountLabel().split(" ")[0])} ${
+              getAmountLabel().split(" ")[1]
+            }`}
           </Text>
         </View>
         <BlurButton

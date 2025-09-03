@@ -10,6 +10,7 @@
   color: white;
   font-size: $xs;
   position: relative;
+
   img {
     height: 12px;
     width: 12px;
@@ -32,7 +33,7 @@
 
 .chain-select {
   margin-top: 3px;
-  color: white;
+  color: $font-dark;
   display: flex;
   height: 32px;
   padding: 6px 12px;
@@ -40,12 +41,13 @@
   align-items: center;
   gap: 5px;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $bg-grey-dark;
   backdrop-filter: blur(10px);
   background: transparent;
   font-size: 14px;
   font-weight: 400;
 }
+
 .view-details {
   cursor: pointer;
   height: 27px;
@@ -62,25 +64,29 @@
   width: 95px;
   font-size: 12px;
 }
+
 .chain-select:hover,
-.change-net,
 .change-net:hover {
   cursor: pointer;
-  border-color: white;
-  color: white;
-  background: transparent !important;
-  box-shadow: none;
+  opacity: 0.9;
+  border: 1px solid $bg-grey-dark !important;
+  box-shadow: none !important;
 }
+
 .change-net {
-  width: 32px !important;
-  height: 32px !important;
-  padding: 0px;
+  height: 24px !important;
+  background-color: transparent !important;
+  padding: 0px 12px !important;
   border: 0px;
   border-radius: 100px;
+  border: 1px solid $bg-grey-dark;
   display: flex;
   align-items: center;
-  justify-content: end;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
 }
+
 .chat-button {
   display: flex;
   width: 48px;
@@ -110,20 +116,22 @@
 
 .wallet-detail-card {
   font-size: 14px;
-  padding: 12px 18px;
+  padding: 12px 8px 12px 18px;
   gap: 12px;
   align-self: stretch;
-  color: #fff;
+  color: $font-secondary;
 
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid $bg-grey-dark;
+  background: transparent;
   box-shadow: 10px 10px 50px 0px rgba(255, 255, 255, 0.1) inset;
   backdrop-filter: blur(25px);
 
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 100;
 }
 
 .rewards-card {
@@ -131,37 +139,28 @@
   border-radius: 12px;
   display: flex;
   align-items: center;
-  color: white;
+  color: $font-dark;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 18px;
   position: relative;
-}
-
-.rewards-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: 12px;
-  padding: 1px;
-  background: linear-gradient(
-    to right,
-    rgba(249, 119, 75, 1),
-    rgba(207, 68, 123, 1)
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  margin-top: 12px;
+  gap: 2px;
+  cursor: pointer;
+  background-color: $bg-green-base;
 }
 
 .wallet-address {
   font-weight: 400;
+  color: $font-dark;
+  max-width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .tab {
   font-weight: 400;
   padding: 6px 12px;
@@ -192,14 +191,17 @@
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.2);
 }
+
 .inUsd {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  color: $font-grey;
+  font-size: 16px;
 }
+
 .reward {
   font-size: $xl;
   cursor: pointer;
 }
+
 .actions {
   color: #fff;
   font-size: $xs;
@@ -208,6 +210,7 @@
   align-items: center;
   justify-content: space-around;
 }
+
 .action {
   display: flex;
   flex-direction: column;
@@ -219,6 +222,7 @@
   color: white;
   padding: 0px;
 }
+
 .action:disabled {
   opacity: 0.5;
   cursor: not-allowed;

@@ -90,14 +90,34 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
     // If inflation is 0 or not fetched properly, there is no need to sort by APY.
     if (apr.toDec().gt(new Dec(0))) {
       return [
-        { label: "APR", key: "APR" },
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "APR",
+          key: "APR",
+          icon: require("@assets/svg/wireframe/percentage.svg"),
+        },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     } else {
       return [
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     }
   }, [apr]);
@@ -139,12 +159,10 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
         >
           <div>
             Sort by
-            <span style={{ color: "rgba(255,255,255,1)", marginLeft: "8px" }}>
-              {sort}
-            </span>
+            <span className={style["sort-by"]}>{sort}</span>
           </div>
           <div>
-            <img src={require("../../public/assets/svg/wireframe/sort.svg")} />
+            <img src={require("@assets/svg/wireframe/chevron-down.svg")} />
           </div>
         </div>
       </div>

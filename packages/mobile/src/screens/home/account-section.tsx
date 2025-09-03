@@ -19,7 +19,11 @@ import {
 import { ChangeWalletCardModel } from "components/new/wallet-card/change-wallet";
 import { useLoadingScreen } from "providers/loading-screen";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
-import { separateNumericAndDenom, titleCase } from "utils/format/format";
+import {
+  numberLocalFormat,
+  separateNumericAndDenom,
+  titleCase,
+} from "utils/format/format";
 import { BlurButton } from "components/new/button/blur-button";
 import { ThreeDotIcon } from "components/new/icon/three-dot";
 import { useSmartNavigation } from "navigation/smart-navigation";
@@ -56,7 +60,6 @@ export const AccountSection: FunctionComponent<{
   const style = useStyle();
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [changeWalletModal, setChangeWalletModal] = useState(false);
-  const [permission, requestPermission] = Camera.useCameraPermissions();
   const [openCameraModel, setIsOpenCameraModel] = useState(false);
   const [modelStatus, setModelStatus] = useState(ModelStatus.First);
   const [currentTxnType, setCurrentTxnType] = useState<string>("");
@@ -288,7 +291,8 @@ export const AccountSection: FunctionComponent<{
             borderRadius={32}
             icon={<QRCodeIcon size={15} />}
             backgroundBlur={false}
-            onPress={() => {
+            onPress={async () => {
+              const permission = await Camera.getCameraPermissionsAsync();
               if (permission?.status == PermissionStatus.UNDETERMINED) {
                 setIsOpenCameraModel(true);
               } else {
@@ -328,6 +332,7 @@ export const AccountSection: FunctionComponent<{
                 "padding-x-12",
                 "padding-y-6",
                 "justify-center",
+                "display-none",
               ]) as ViewStyle
             }
           />
@@ -543,11 +548,8 @@ export const AccountSection: FunctionComponent<{
         isOpen={openCameraModel}
         close={() => setIsOpenCameraModel(false)}
         onPress={async () => {
-          const permissionStatus = await requestPermission();
-          if (
-            !permission?.granted &&
-            permissionStatus.status === PermissionStatus.DENIED
-          ) {
+          const permissionStatus = await Camera.requestCameraPermissionsAsync();
+          if (permissionStatus.status === PermissionStatus.DENIED) {
             if (permissionStatus.canAskAgain) {
               setIsOpenCameraModel(false);
             } else {
@@ -578,11 +580,9 @@ export const AccountSection: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${Number(
+        earnedAmount={`${numberLocalFormat(
           stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        ).toLocaleString("en-US")} ${
-          stakableReward.trim(true).shrink(true).toString().split(" ")[1]
-        }`}
+        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
         onPress={onSubmit}
         buttonLoading={loadingClaimButton}
       />

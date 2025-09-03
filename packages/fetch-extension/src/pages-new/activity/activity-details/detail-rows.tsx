@@ -121,9 +121,6 @@ export const DetailRows = ({ details }: { details: any }) => {
           <div className={style["buttons"]} style={{ width: "100%" }}>
             <ButtonV2
               styleProps={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.6",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -159,9 +156,6 @@ export const DetailRows = ({ details }: { details: any }) => {
             </ButtonV2>{" "}
             <ButtonV2
               styleProps={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.6",
                 height: "48px",
                 marginTop: 0,
               }}
@@ -174,9 +168,6 @@ export const DetailRows = ({ details }: { details: any }) => {
         ) : (
           <ButtonV2
             styleProps={{
-              background: "transparent",
-              color: "white",
-              border: "1px solid rgba(255, 255, 255, 0.6",
               height: "48px",
               marginTop: 0,
             }}

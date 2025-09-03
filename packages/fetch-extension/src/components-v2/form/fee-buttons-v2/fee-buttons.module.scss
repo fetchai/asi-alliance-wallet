@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 $border-radius: 6px;
 
 .buttons {
@@ -102,7 +104,7 @@ $border-radius: 6px;
 }
 .label {
   color: #fff;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -159,4 +161,22 @@ $border-radius: 6px;
       border-radius: 50%;
     }
   }
+}
+
+.transactionFeeLabel {
+  font-size: 14px;
+  font-weight: 400;
+  color: $font-grey;
+}
+
+.transactionFeeValue {
+  font-size: 14px;
+  font-weight: 400;
+  color: $font-dark;
+}
+
+.advancedSettingsLabel {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba($font-dark, 0.66);
 }

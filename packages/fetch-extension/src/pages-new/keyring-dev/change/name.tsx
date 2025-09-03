@@ -3,7 +3,7 @@ import { HeaderLayout } from "@layouts-v2/header-layout";
 import { useNavigate, useParams } from "react-router";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Input } from "@components/form";
-import { Form, Label } from "reactstrap";
+import { Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { useStore } from "../../../stores";
 import { observer } from "mobx-react-lite";
@@ -47,6 +47,8 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   }, [keyStore, setValue]);
 
   const [loading, setLoading] = useState(false);
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
 
   const isKeyStoreReady = keyRingStore.status === KeyRingStatus.UNLOCKED;
 
@@ -55,6 +57,14 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
       throw new Error("Invalid keyring index, check the url");
     }
   }, [index]);
+
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
+      (item) => item?.meta?.["name"]
+    );
+    const nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+    return !nameAlreadyExists;
+  };
 
   if (isKeyStoreReady && keyStore == null) {
     return null;
@@ -97,33 +107,46 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           }
         })}
       >
-        <Label className={styleName["label"]}>
+        {/* <Label for="walletName" className={styleName["label"]}>
           {intl.formatMessage({
             id: "setting.keyring.change.previous-name",
           })}
-        </Label>
+        </Label> */}
         <Input
+          label={intl.formatMessage({
+            id: "setting.keyring.change.previous-name",
+          })}
           type="text"
+          formGroupClassName={styleName["formGroup"]}
+          floatLabel={true}
           className={styleName["input"]}
           value={keyStore?.meta?.["name"] ?? ""}
           readOnly={true}
           style={{ opacity: 0.6 }}
         />
-
-        <Label className={styleName["label"]}>
-          {intl.formatMessage({
+        <Input
+          label={intl.formatMessage({
             id: "setting.keyring.change.input.name",
           })}
-        </Label>
-        <Input
           type="text"
+          formGroupClassName={styleName["formGroup"]}
+          floatLabel={true}
           className={styleName["input"]}
-          error={errors.name && errors.name.message}
+          error={
+            accountNameValidationError
+              ? "Account name already exists, please try different name"
+              : errors.name && errors.name.message
+          }
           {...register("name", {
             required: intl.formatMessage({
               id: "setting.keyring.change.input.name.error.required",
             }),
           })}
+          onChange={(e) => {
+            const trimmedValue = e.target.value.trimStart();
+            setValue(e.target.name as keyof FormData, trimmedValue);
+            setAccountNameValidationError(!validateWalletName(trimmedValue));
+          }}
           maxLength={20}
           autoFocus
           readOnly={false}
@@ -131,8 +154,9 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
 
         <div style={{ flex: 1 }} />
         <ButtonV2
-          data-loading={loading}
-          disabled={loading}
+          variant="dark"
+          dataLoading={loading}
+          disabled={loading || accountNameValidationError}
           text={
             loading ? (
               <i className="fas fa-spinner fa-spin ml-2" />

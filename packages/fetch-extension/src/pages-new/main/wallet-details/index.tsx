@@ -242,7 +242,7 @@ export const WalletDetailsView = observer(
             style={
               accountInfo.walletStatus === WalletStatus.Rejected
                 ? { display: "flex", gap: "10px", alignItems: "center" }
-                : {}
+                : { display: "flex", columnGap: "10px", width: "80%" }
             }
           >
             <div className={style["wallet-address"]}>
@@ -265,7 +265,7 @@ export const WalletDetailsView = observer(
                 }
               })()}
             </div>
-            <div>
+            <div style={{ width: "60%" }}>
               <div className={style["walletRejected"]}>
                 {accountInfo.walletStatus === WalletStatus.Rejected && (
                   <ToolTip
@@ -318,7 +318,7 @@ export const WalletDetailsView = observer(
                       </Address>
                       <img
                         style={{ cursor: "pointer" }}
-                        src={require("@assets/svg/wireframe/copy.svg")}
+                        src={require("@assets/svg/wireframe/copyGrey.svg")}
                         alt=""
                       />
                     </div>
@@ -371,15 +371,18 @@ export const WalletDetailsView = observer(
           <Button
             onClick={() => {
               setIsSelectWalletOpen(true);
-              analyticsStore.logEvent("account_icon_click", {
+              analyticsStore.logEvent("change_wallet_click", {
                 pageName: "Home",
               });
+              // analyticsStore.logEvent("account_icon_click", {
+              //   pageName: "Home",
+              // });
             }}
             className={style["change-net"]}
           >
             <img
               style={{ width: "14px", height: "16px" }}
-              src={require("@assets/svg/wireframe/changeNet.svg")}
+              src={require("@assets/svg/wireframe/chevron-down.svg")}
               alt=""
             />
           </Button>
@@ -428,11 +431,6 @@ export const WalletDetailsView = observer(
         {rewardsBalNumber > 0 && (
           <div
             className={style["rewards-card"]}
-            style={{
-              marginTop: "12px",
-              gap: "2px",
-              cursor: "pointer",
-            }}
             onClick={() => {
               analyticsStore.logEvent("claim_all_staking_reward_click", {
                 pageName: "Home",

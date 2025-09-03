@@ -181,7 +181,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     <div className={style["imageBackground"]} />
                     <img
                       className={style["logoImage"]}
-                      src={require("@assets/png/Black-white-circle.png")}
+                      src={require("@assets/png/White-black-circle.png")}
                       alt="chain logo"
                     />
                   </div>
@@ -194,7 +194,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     <div className={style["imageBackground"]} />
                     <img
                       className={style["logoImage"]}
-                      src={require("@assets/png/Black-white-circle.png")}
+                      src={require("@assets/png/White-black-circle.png")}
                       alt="keplr logo"
                     />
                   </div>
@@ -239,9 +239,6 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                   padding: "10px",
                   height: "40px",
                   fontSize: "0.9rem",
-                  background: "transparent",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.4)",
                 }}
                 disabled={!accountSwitchStore.waitingSuggestedAccount}
                 dataLoading={accountSwitchStore.isLoading}
@@ -262,13 +259,11 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                 text={<FormattedMessage id="chain.suggested.button.reject" />}
               />
               <ButtonV2
+                variant="dark"
                 styleProps={{
                   padding: "10px",
                   height: "40px",
                   fontSize: "0.9rem",
-                  background: "white",
-                  color: "black",
-                  border: "1px solid rgba(255,255,255,0.4)",
                 }}
                 disabled={
                   !accountSwitchStore.waitingSuggestedAccount ||

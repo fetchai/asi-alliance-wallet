@@ -162,7 +162,7 @@ export const ProposalDetail = observer(() => {
             </Link>
 
             <div className={style["turnout"]}>
-              <div className={style["label"]}>Turnout</div>
+              <div className={style["label"]}>TURNOUT</div>
               <ProgressBar
                 progressWidth={
                   parseInt(proposal?.turnout.toString() || "0") ?? 0
@@ -172,7 +172,7 @@ export const ProposalDetail = observer(() => {
                   .trim(true)
                   .maxDecimals(2)
                   .toString()}%`}
-                bgColor="rgba(249, 119, 75, 1)"
+                bgColor="var(--bg-green-lightest)"
                 isShowPercentage={false}
               />
             </div>
@@ -189,7 +189,7 @@ export const ProposalDetail = observer(() => {
                   height="54px"
                   borderRadius="12px"
                   title={item.title}
-                  bgColor={item.color}
+                  bgColor="var(--bg-green-base)"
                   isShowPercentage={true}
                   isYourVote={voted === item.isVote}
                 />
@@ -205,13 +205,11 @@ export const ProposalDetail = observer(() => {
 
           <ButtonV2
             text={voteText}
+            variant={voted !== "Unspecified" ? "dark" : "light"}
             styleProps={{
               width: "100%",
               padding: "12px",
               height: "56px",
-              background: voted !== "Unspecified" ? "transparent" : "",
-              color: voted !== "Unspecified" ? "white" : "",
-              border: "1px solid rgba(255,255,255,0.4)",
             }}
             disabled={!voteEnabled || !accountInfo.isReadyToSendTx}
             onClick={() => {

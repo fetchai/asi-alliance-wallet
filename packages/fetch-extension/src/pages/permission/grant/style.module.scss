@@ -1,23 +1,29 @@
+@import "../../../styles/var";
+
 .container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  font-family: $font-family-base;
 
   .header {
     margin-top: 20px;
     text-align: center;
+    font-weight: 500;
+    color: $font-dark;
   }
 
   .paragraph {
     text-align: center;
     padding: 0 24px;
     overflow-y: auto;
+    color: $font-secondary;
   }
 
   .permission {
     margin-top: 30px;
     font-size: 14px;
-    color: #525f7f;
+    color: $font-secondary;
     text-align: center;
   }
 
@@ -27,7 +33,7 @@
     padding: 0;
     width: fit-content;
     margin: auto;
-    color: #525f7f;
+    color: $font-secondary;
 
     li:before {
       content: "- ";

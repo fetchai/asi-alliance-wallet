@@ -1,5 +1,11 @@
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { ChainInfo } from "@keplr-wallet/types";
+import {
+  PROD_AMPLITUDE_API_KEY,
+  DEV_AMPLITUDE_API_KEY,
+  PROD_AUTH_CLIENT_ID,
+  DEV_AUTH_CLIENT_ID,
+} from "@env";
 
 export const EthereumEndpoint =
   "https://mainnet.infura.io/v3/eeb00e81cdb2410098d5a270eff9b341";
@@ -2541,56 +2547,52 @@ export const EmbedChainInfos: ChainInfo[] = [
     walletUrlForStaking: "https://explore-eridanus-1.fetch.ai/validators",
     govUrl: "https://explore-eridanus-1.fetch.ai/proposals/",
   },
-  {
-    rpc: "http://34.34.58.246:26657",
-    rest: "http://34.34.58.246:1317",
-    chainId: "test",
-    chainName: "Local Test Network",
-    hideInUI: true,
-    isTestnet: true,
-    stakeCurrency: {
-      coinDenom: "TESTSTAKE",
-      coinMinimalDenom: "stake",
-      coinDecimals: 18,
-    },
-    bip44: {
-      coinType: 118,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("fetch"),
-    currencies: [
-      {
-        coinDenom: "TESTSTAKE",
-        coinMinimalDenom: "stake",
-        coinDecimals: 18,
-      },
-      {
-        coinDenom: "MOBX",
-        coinMinimalDenom: "nanomobx",
-        coinDecimals: 9,
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "TESTSTAKE",
-        coinMinimalDenom: "stake",
-        coinDecimals: 18,
-        gasPriceStep: {
-          low: 0,
-          average: 5000000000,
-          high: 6250000000,
-        },
-      },
-    ],
-    features: ["cosmwasm"],
-    walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
-    govUrl: "https://explore-dorado.fetch.ai/proposals/",
-  },
+  // {
+  //   rpc: "http://34.34.58.246:26657",
+  //   rest: "http://34.34.58.246:1317",
+  //   chainId: "test",
+  //   chainName: "Local Test Network",
+  //   hideInUI: true,
+  //   isTestnet: true,
+  //   stakeCurrency: {
+  //     coinDenom: "TESTSTAKE",
+  //     coinMinimalDenom: "stake",
+  //     coinDecimals: 18,
+  //   },
+  //   bip44: {
+  //     coinType: 118,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("fetch"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "TESTSTAKE",
+  //       coinMinimalDenom: "stake",
+  //       coinDecimals: 18,
+  //     },
+  //     {
+  //       coinDenom: "MOBX",
+  //       coinMinimalDenom: "nanomobx",
+  //       coinDecimals: 9,
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "TESTSTAKE",
+  //       coinMinimalDenom: "stake",
+  //       coinDecimals: 18,
+  //       gasPriceStep: {
+  //         low: 0,
+  //         average: 5000000000,
+  //         high: 6250000000,
+  //       },
+  //     },
+  //   ],
+  //   features: ["cosmwasm"],
+  //   walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
+  //   govUrl: "https://explore-dorado.fetch.ai/proposals/",
+  // },
 ];
 
-const PROD_AMPLITUDE_API_KEY = process.env["PROD_AMPLITUDE_API_KEY"] || "";
-const DEV_AMPLITUDE_API_KEY = process.env["DEV_AMPLITUDE_API_KEY"] || "";
-const PROD_AUTH_CLIENT_ID = process.env["PROD_AUTH_CLIENT_ID"] || "";
-const DEV_AUTH_CLIENT_ID = process.env["DEV_AUTH_CLIENT_ID"] || "";
 export const AmplitudeApiKey =
   process.env["NODE_ENV"] === "production"
     ? PROD_AMPLITUDE_API_KEY
@@ -2606,6 +2608,10 @@ export const CommunityChainInfoRepo = {
   repoName: "keplr-chain-registry",
   branchName: "main",
 };
+
+export const EXPLORER_URL = "https://hub.fetch.ai";
+export const DOCS_URL =
+  "https://network.fetch.ai/docs/guides/asi-wallet/mobile-wallet";
 
 export const CHAIN_ID_DORADO = "dorado-1";
 export const CHAIN_ID_FETCHHUB = "fetchhub-4";

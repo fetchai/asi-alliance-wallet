@@ -17,11 +17,11 @@
   align-items: center;
   gap: 5px;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid $border-grey;
   backdrop-filter: blur(10px);
   margin: 17px;
   background: transparent;
-  color: white;
+  color: $font-dark;
 }
 .edit {
   display: flex;
@@ -39,20 +39,28 @@
   margin: 0 auto;
 }
 .noTokenTitle {
-  color: #fff;
+  color: $font-dark;
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 24px;
   font-style: normal;
   font-weight: 400;
   line-height: 34px;
 }
 .content {
-  color: rgba(255, 255, 255, 0.8);
+  color: $font-dark;
   text-align: center;
-  font-family: Lexend;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: 160%;
+}
+
+.noTokenWrapper {
+  width: 90%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
 }

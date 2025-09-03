@@ -1,13 +1,15 @@
+@import "../../styles/var";
+
 .title {
-  color: var(--grey-white, #fff);
-  font-family: Lexend;
+  color: $font-dark;
+  font-family: $font-family-base;
   font-size: 32px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
 .heading {
-  font-family: Lexend;
+  font-family: $font-family-base;
   margin-bottom: 24px;
 }
 
@@ -39,16 +41,17 @@
 }
 
 .label {
-  color: rgba(255, 255, 255, 0.6);
-  font-family: Lexend;
+  color: $font-secondary;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
+
 .value {
-  color: #fff;
-  font-family: Lexend;
+  color: $font-dark;
+  font-family: $font-family-base;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -67,8 +70,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-family: Lexend;
+  color: $font-dark;
+  font-family: $font-family-base;
   padding: 32px 0 40px 0;
   gap: 6px;
 }
@@ -80,10 +83,9 @@
   align-items: center;
   justify-content: center;
 
-  img {
+  & img {
     height: 106px;
     width: 106px;
-    margin-bottom: -38px;
   }
 }
 
@@ -91,6 +93,7 @@
   font-size: 24px;
   font-weight: 400;
   line-height: 34px;
+  color: $font-dark;
 }
 
 .subtitle-text {
@@ -98,6 +101,12 @@
   text-align: center;
   width: 80%;
   font-weight: 400;
-  color: #ffff;
+  color: $font-secondary;
   opacity: 80%;
+}
+
+.amountInUSD {
+  font-size: 14px;
+  font-weight: 400;
+  color: $font-secondary;
 }

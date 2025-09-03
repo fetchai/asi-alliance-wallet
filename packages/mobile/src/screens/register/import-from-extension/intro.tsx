@@ -42,7 +42,6 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
   const { analyticsStore } = useStore();
   const smartNavigation = useSmartNavigation();
   const style = useStyle();
-  const [permission, requestPermission] = Camera.useCameraPermissions();
   const [openCameraModel, setIsOpenCameraModel] = useState(false);
   const [modelStatus, setModelStatus] = useState(ModelStatus.First);
 
@@ -105,7 +104,8 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
           text="Continue"
           size="large"
           containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
-          onPress={() => {
+          onPress={async () => {
+            const permission = await Camera.getCameraPermissionsAsync();
             if (permission?.status == PermissionStatus.UNDETERMINED) {
               setIsOpenCameraModel(true);
             } else {
@@ -147,11 +147,8 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
         isOpen={openCameraModel}
         close={() => setIsOpenCameraModel(false)}
         onPress={async () => {
-          const permissionStatus = await requestPermission();
-          if (
-            !permission?.granted &&
-            permissionStatus.status === PermissionStatus.DENIED
-          ) {
+          const permissionStatus = await Camera.requestCameraPermissionsAsync();
+          if (permissionStatus.status === PermissionStatus.DENIED) {
             if (permissionStatus.canAskAgain) {
               setIsOpenCameraModel(false);
             } else {

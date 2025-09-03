@@ -17,6 +17,7 @@ import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { BlurButton } from "components/new/button/blur-button";
+import { EXPLORER_URL } from "../../../config";
 
 interface ItemData {
   title: string;
@@ -38,7 +39,7 @@ export const DetailRows = ({ details }: { details: any }) => {
   const style = useStyle();
   const { chainStore, analyticsStore } = useStore();
   const fees = JSON.parse(details.fees);
-  const url = `https://companion.fetch.ai/${chainStore.current.chainId}/transactions/${details.hash}/`;
+  const url = `${EXPLORER_URL}/${chainStore.current.chainId}/transactions/${details.hash}/`;
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const currency: AppCurrency = {
@@ -249,7 +250,7 @@ export const DetailRows = ({ details }: { details: any }) => {
         )}
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
           <BlurButton
-            text="View on Companion app"
+            text="View on explorer"
             backgroundBlur={false}
             borderRadius={64}
             containerStyle={

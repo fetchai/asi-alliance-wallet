@@ -209,6 +209,7 @@ export const AddressBookPage: FunctionComponent<{
                 styleProps={{
                   height: "56px",
                 }}
+                variant="dark"
                 text="Add an address"
                 onClick={(e: any) => {
                   e.preventDefault();

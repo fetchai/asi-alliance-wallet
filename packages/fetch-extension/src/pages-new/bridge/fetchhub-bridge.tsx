@@ -184,7 +184,7 @@ export const FetchhubBridge: FunctionComponent<{
       }}
     >
       <Card
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "18px" }}
+        style={{ marginBottom: "18px" }}
         heading={`Native to ERC20 Limit: ${limit} FET`}
       />
       <div className={style["formInnerContainer"]}>
@@ -224,9 +224,7 @@ export const FetchhubBridge: FunctionComponent<{
         {fee && (
           <Card
             style={{
-              background: "rgba(255, 255, 255, 0.1)",
               marginTop: "18px",
-              color: "rgba(255,255,255,0.8)",
             }}
             heading={"Bridging fee"}
             subheading={
@@ -250,6 +248,7 @@ export const FetchhubBridge: FunctionComponent<{
         />
 
         <ButtonV2
+          variant="dark"
           styleProps={{
             width: "94%",
             padding: "12px",

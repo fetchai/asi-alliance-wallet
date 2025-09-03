@@ -24,8 +24,6 @@ import {
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
-import { CameraType } from "expo-camera/src/Camera.types";
-import { BarCodeScanner } from "expo-barcode-scanner";
 import { CHAIN_ID_DORADO } from "../../config";
 import Toast from "react-native-toast-message";
 import {
@@ -89,20 +87,16 @@ export const CameraScreen: FunctionComponent = () => {
   return (
     <PageWithView disableSafeArea={true} backgroundMode={null}>
       <FullScreenCameraView
-        type={CameraType.back}
         scannerBottomText={
           route.params.recipientConfig
             ? "Send assets by scanning a QR code"
             : "Send assets or connect to ASI Alliance Wallet\nbrowser extension by scanning a QR code"
         }
-        barCodeScannerSettings={{
-          barCodeTypes: [BarCodeScanner.Constants.BarCodeType.qr],
-        }}
+        barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         isLoading={isLoading}
-        onBarCodeScanned={async ({ data }) => {
+        onBarcodeScanned={async ({ data }) => {
           if (!isLoading && !isCompleted) {
             setIsLoading(true);
-
             try {
               if (data.startsWith("wc:")) {
                 await walletConnectStore.initClient(data);

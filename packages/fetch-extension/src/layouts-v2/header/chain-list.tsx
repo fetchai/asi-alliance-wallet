@@ -94,9 +94,6 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   styleProps={{
                     height: "48px",
                     marginTop: "0px",
-                    background: "transparent",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.4)",
                     fontSize: "14px",
                   }}
                   onClick={(e: any) => {
@@ -121,6 +118,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   }
                   heading={chainInfo.raw.chainName}
                   isActive={chainInfo.raw.chainId === chainStore.current.chainId}
+                  leftImageStyle={{
+                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                      ? "#dddfdf"
+                      : "transparent",
+                  }}
                   rightContent={
                     clickedChain === chainInfo.raw.chainId
                       ? require("@assets/svg/wireframe/check.svg")
@@ -179,6 +181,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 }
                 heading={chainInfo.raw.chainName}
                 isActive={chainInfo.raw.chainId === chainStore.current.chainId}
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 rightContent={require("@assets/svg/wireframe/closeImage.svg")}
                 rightContentStyle={{ height: "24px", width: "24px" }}
                 rightContentOnClick={async (e: any) => {
@@ -279,9 +286,6 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   styleProps={{
                     height: "48px",
                     marginTop: "0px",
-                    background: "transparent",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.4)",
                     fontSize: "14px",
                   }}
                   onClick={(e: any) => {
@@ -306,6 +310,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   }
                   heading={chainInfo.raw.chainName}
                   isActive={chainInfo.raw.chainId === chainStore.current.chainId}
+                  leftImageStyle={{
+                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                      ? "#dddfdf"
+                      : "transparent",
+                  }}
                   rightContent={
                     clickedChain === chainInfo.raw.chainId
                       ? require("@assets/svg/wireframe/check.svg")
