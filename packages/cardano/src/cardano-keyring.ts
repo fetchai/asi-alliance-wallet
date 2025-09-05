@@ -2,6 +2,7 @@ import { CardanoWalletManager } from './wallet-manager';
 import { makeObservable, observable } from "mobx";
 import { KeyCurve } from "@keplr-wallet/crypto";
 import { getCardanoNetworkFromChainId, getCardanoChainIdFromNetwork } from './utils/network';
+import { getNetworkConfig, logApiKeyStatus } from './adapters/env-adapter';
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
@@ -127,24 +128,26 @@ export class CardanoKeyRing {
     
     const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
     
-    // lace-style: support multiple API key environment variables
-    const blockfrostApiKey = network === 'mainnet' 
-      ? (process.env['BLOCKFROST_PROJECT_ID_MAINNET'] || process.env['BLOCKFROST_API_KEY'])
-      : (process.env['BLOCKFROST_PROJECT_ID_PREVIEW'] || process.env['BLOCKFROST_PROJECT_ID_PREPROD'] || process.env['BLOCKFROST_API_KEY']);
+    // lace-style: use env adapter for better API key management
+    logApiKeyStatus(network);
+    const networkConfig = getNetworkConfig(network);
     
-    if (blockfrostApiKey && blockfrostApiKey !== "<API_KEY>") {
+    if (networkConfig?.projectId) {
       try {
         this.walletManager = await CardanoWalletManager.create({
           mnemonicWords: decryptedMnemonic.split(" "),
           network,
-          blockfrostApiKey
+          blockfrostApiKey: networkConfig.projectId
         });
+        console.log("CardanoWalletManager created successfully");
       } catch (error) {
         console.warn("Failed to create CardanoWalletManager:", error);
         // lace-style: graceful fallback - continue without wallet manager
+        // This allows basic key operations to work even without API access
       }
     } else {
       console.warn("Blockfrost API key not found - Cardano balance and advanced features will be unavailable");
+      // lace-style: continue with limited functionality
     }
   }
 
@@ -259,6 +262,7 @@ export class CardanoKeyRing {
 
   /**
    * Send ADA transaction
+   * lace-style: graceful error handling
    */
   async sendAda(params: {
     to: string;
@@ -266,20 +270,44 @@ export class CardanoKeyRing {
     memo?: string;
   }): Promise<string> {
     if (!this.walletManager) {
-      throw new Error("CardanoWalletManager not initialized");
+      throw new Error("CardanoWalletManager not initialized - transaction features unavailable without API key");
     }
     
-    return await this.walletManager.sendAda(params);
+    try {
+      return await this.walletManager.sendAda(params);
+    } catch (error) {
+      console.error("Failed to send ADA transaction:", error);
+      // lace-style: re-throw with more context
+      throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
+    }
   }
 
   /**
    * Get wallet balance
+   * lace-style: graceful fallback when wallet manager is not available
    */
   async getBalance(): Promise<any> {
     if (!this.walletManager) {
-      throw new Error("CardanoWalletManager not initialized");
+      console.warn("CardanoWalletManager not initialized - returning empty balance");
+      // lace-style: return empty balance instead of throwing error
+      return {
+        ada: 0,
+        assets: new Map(),
+        lastUpdated: Date.now()
+      };
     }
     
-    return await this.walletManager.getBalance();
+    try {
+      return await this.walletManager.getBalance();
+    } catch (error) {
+      console.warn("Failed to fetch balance from wallet manager:", error);
+      // lace-style: graceful fallback - return empty balance
+      return {
+        ada: 0,
+        assets: new Map(),
+        lastUpdated: Date.now(),
+        error: error.message
+      };
+    }
   }
 } 
