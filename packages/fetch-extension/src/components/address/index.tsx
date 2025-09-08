@@ -4,7 +4,7 @@ import { ToolTip } from "../tooltip";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 
 export interface AddressProps {
-  children: string;
+  children: React.ReactNode;
   tooltipFontSize?: string;
   tooltipAddress?: string;
   iconClass?: string;
@@ -24,7 +24,12 @@ export const Address: FunctionComponent<
   AddressProps & (Bech32AddressProps | RawAddressProps)
 > = (props) => {
   const { tooltipFontSize, children } = props;
-  const tooltipAddress = props.tooltipAddress ? props.tooltipAddress : children;
+  const tooltipAddress =
+    (props.tooltipAddress
+      ? props.tooltipAddress
+      : typeof children === "string"
+      ? children
+      : props.tooltipAddress) || "";
 
   if ("maxCharacters" in props) {
     const { lineBreakBeforePrefix } = props;
@@ -61,7 +66,9 @@ export const Address: FunctionComponent<
         }}
       >
         {props.iconClass ? <i className={iconClass} /> : ""}
-        {Bech32Address.shortenAddress(children, props.maxCharacters)}
+        {typeof children === "string"
+          ? Bech32Address.shortenAddress(children, props.maxCharacters)
+          : children}
       </ToolTip>
     );
   }

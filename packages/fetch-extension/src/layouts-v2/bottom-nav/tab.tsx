@@ -12,6 +12,8 @@ interface TabProps {
   path: string;
   disabled: boolean;
   tooltip?: string;
+  showDot?: boolean;
+  dotColor?: string;
 }
 
 export const Tab = ({
@@ -21,6 +23,8 @@ export const Tab = ({
   disabled,
   tooltip,
   activeIcon,
+  showDot,
+  dotColor,
 }: TabProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,6 +53,7 @@ export const Tab = ({
         className={`${style["tab-icon"]} ${
           isActive ? style["active"] : disabled ? style["disabled"] : null
         }`}
+        style={{ position: "relative" }}
       >
         <img
           draggable={false}
@@ -56,6 +61,16 @@ export const Tab = ({
           alt="tab"
           width={17}
         />
+        {showDot && !isActive ? (
+          <span
+            className={style["flashing-dot"]}
+            style={{
+              backgroundColor: dotColor || "var(--bg-green-base)",
+            }}
+          />
+        ) : (
+          ""
+        )}
       </div>
       <div
         className={`${style["title"]} ${

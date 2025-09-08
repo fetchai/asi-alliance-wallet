@@ -1,21 +1,24 @@
+import { Skeleton } from "@components-v2/skeleton-loader";
 import { Address } from "@components/address";
 import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
 import { WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
-import { formatAddress, separateNumericAndDenom } from "@utils/format";
+import { WalletConfig } from "@keplr-wallet/stores/build/chat/user-details";
+import {
+  formatAddress,
+  formatAddressWithCustom,
+  splitBech32,
+} from "@utils/format";
+import { observer } from "mobx-react-lite";
 import React, { useCallback, useEffect, useState } from "react";
 import { useIntl } from "react-intl";
-import { useNavigate } from "react-router";
 import { Button } from "reactstrap";
 import { useStore } from "../../../stores";
+import { fetchProposalNodes } from "../../activity/utils";
 import { Balances } from "../balances";
 import style from "../style.module.scss";
-import { WalletConfig } from "@keplr-wallet/stores/build/chat/user-details";
-import { observer } from "mobx-react-lite";
 import { txType } from "./constants";
-import { Skeleton } from "@components-v2/skeleton-loader";
-import { fetchProposalNodes } from "../../activity/utils";
 
 export const WalletDetailsView = observer(
   ({
@@ -80,7 +83,6 @@ export const WalletDetailsView = observer(
       keyRingStore.keyRingType,
       current.chainId,
     ]);
-    const navigate = useNavigate();
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
     const icnsPrimaryName = (() => {
@@ -181,18 +183,6 @@ export const WalletDetailsView = observer(
       }
     }, [activityStore.getPendingTxn]);
 
-    const queries = queriesStore.get(current.chainId);
-
-    const rewards = queries.cosmos.queryRewards.getQueryBech32Address(
-      accountInfo.bech32Address
-    );
-
-    const stakableReward = rewards.stakableReward;
-    const rewardsBal = stakableReward.toString();
-
-    const { numericPart: rewardsBalNumber } =
-      separateNumericAndDenom(rewardsBal);
-
     return (
       <div>
         <div
@@ -200,7 +190,7 @@ export const WalletDetailsView = observer(
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "24px",
+            marginBottom: "16px",
             fontWeight: 400,
           }}
         >
@@ -242,7 +232,12 @@ export const WalletDetailsView = observer(
             style={
               accountInfo.walletStatus === WalletStatus.Rejected
                 ? { display: "flex", gap: "10px", alignItems: "center" }
-                : { display: "flex", columnGap: "10px", width: "80%" }
+                : {
+                    display: "flex",
+                    columnGap: "10px",
+                    flexDirection: "column",
+                    width: "80%",
+                  }
             }
           >
             <div className={style["wallet-address"]}>
@@ -265,7 +260,7 @@ export const WalletDetailsView = observer(
                 }
               })()}
             </div>
-            <div style={{ width: "60%" }}>
+            <div style={{ width: "85%" }}>
               <div className={style["walletRejected"]}>
                 {accountInfo.walletStatus === WalletStatus.Rejected && (
                   <ToolTip
@@ -313,8 +308,22 @@ export const WalletDetailsView = observer(
                       }}
                       onClick={() => copyAddress(accountInfo.bech32Address)}
                     >
-                      <Address maxCharacters={16} lineBreakBeforePrefix={false}>
-                        {accountInfo.bech32Address}
+                      <Address
+                        maxCharacters={16}
+                        tooltipFontSize="12px"
+                        lineBreakBeforePrefix={false}
+                        tooltipAddress={accountInfo.bech32Address}
+                      >
+                        <span style={{ display: "flex" }}>
+                          {splitBech32(accountInfo.bech32Address).prefix}
+                          <span className={style["wallet-address-text"]}>
+                            {formatAddressWithCustom(
+                              splitBech32(accountInfo.bech32Address).rest,
+                              3,
+                              6
+                            )}
+                          </span>
+                        </span>
                       </Address>
                       <img
                         style={{ cursor: "pointer" }}
@@ -343,17 +352,22 @@ export const WalletDetailsView = observer(
                     >
                       <Address
                         isRaw={true}
+                        tooltipFontSize="12px"
                         tooltipAddress={accountInfo.ethereumHexAddress}
                       >
-                        {accountInfo.walletStatus === WalletStatus.Loaded &&
-                        accountInfo.ethereumHexAddress
-                          ? accountInfo.ethereumHexAddress.length === 42
-                            ? `${accountInfo.ethereumHexAddress.slice(
-                                0,
-                                6
-                              )}...${accountInfo.ethereumHexAddress.slice(-6)}`
-                            : accountInfo.ethereumHexAddress
-                          : "..."}
+                        <span className={style["wallet-address-text-eth"]}>
+                          {accountInfo.walletStatus === WalletStatus.Loaded &&
+                          accountInfo.ethereumHexAddress
+                            ? accountInfo.ethereumHexAddress.length === 42
+                              ? `${accountInfo.ethereumHexAddress.slice(
+                                  0,
+                                  6
+                                )}...${accountInfo.ethereumHexAddress.slice(
+                                  -6
+                                )}`
+                              : accountInfo.ethereumHexAddress
+                            : "..."}
+                        </span>
                       </Address>
                     </div>
                     <img
@@ -427,32 +441,6 @@ export const WalletDetailsView = observer(
             </div>
           </div>
         )}
-
-        {rewardsBalNumber > 0 && (
-          <div
-            className={style["rewards-card"]}
-            onClick={() => {
-              analyticsStore.logEvent("claim_all_staking_reward_click", {
-                pageName: "Home",
-              });
-              navigate("/stake");
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                gap: "12px",
-                alignItems: "center",
-              }}
-            >
-              <img src={require("@assets/svg/wireframe/stake.svg")} />
-              <div>You’ve claimable staking rewards </div>
-            </div>
-
-            <i key="next" className="fas fa-chevron-right" />
-          </div>
-        )}
-
         <Balances tokenState={tokenState} />
       </div>
     );
