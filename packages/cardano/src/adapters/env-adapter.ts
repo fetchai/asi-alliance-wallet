@@ -3,9 +3,15 @@
  * Provides graceful fallback and better error handling for missing API keys
  */
 
+import { CARDANO_SERVICES_URLS } from '../config/config';
+
 export interface BlockfrostConfig {
   baseUrl: string;
   projectId: string;
+}
+
+export interface CardanoServicesConfig {
+  baseUrl: string;
 }
 
 export interface NetworkConfigs {
@@ -13,6 +19,13 @@ export interface NetworkConfigs {
   preview: BlockfrostConfig;
   preprod: BlockfrostConfig;
   sanchonet: BlockfrostConfig;
+}
+
+export interface CardanoServicesConfigs {
+  mainnet: CardanoServicesConfig;
+  preview: CardanoServicesConfig;
+  preprod: CardanoServicesConfig;
+  sanchonet: CardanoServicesConfig;
 }
 
 /**
@@ -36,6 +49,27 @@ export function getBlockfrostConfigs(): NetworkConfigs {
     sanchonet: {
       baseUrl: process.env['BLOCKFROST_URL_SANCHONET'] || 'https://cardano-sanchonet.blockfrost.io/api/v0',
       projectId: process.env['BLOCKFROST_PROJECT_ID_SANCHONET'] || process.env['BLOCKFROST_API_KEY'] || ''
+    }
+  };
+}
+
+/**
+ * Get Cardano Services configuration for different networks
+ * Follows Lace pattern - uses IOG's Cardano Services API
+ */
+export function getCardanoServicesConfigs(): CardanoServicesConfigs {
+  return {
+    mainnet: {
+      baseUrl: process.env['CARDANO_SERVICES_URL_MAINNET'] || CARDANO_SERVICES_URLS.mainnet
+    },
+    preview: {
+      baseUrl: process.env['CARDANO_SERVICES_URL_PREVIEW'] || CARDANO_SERVICES_URLS.preview
+    },
+    preprod: {
+      baseUrl: process.env['CARDANO_SERVICES_URL_PREPROD'] || CARDANO_SERVICES_URLS.preprod
+    },
+    sanchonet: {
+      baseUrl: process.env['CARDANO_SERVICES_URL_SANCHONET'] || CARDANO_SERVICES_URLS.sanchonet
     }
   };
 }
@@ -85,6 +119,21 @@ export function getNetworkConfig(network: 'mainnet' | 'testnet'): BlockfrostConf
       return configs.sanchonet;
     }
     return null;
+  }
+}
+
+/**
+ * Get Cardano Services configuration for mainnet/testnet
+ * lace-style: testnet maps to preview/preprod/sanchonet
+ */
+export function getCardanoServicesConfig(network: 'mainnet' | 'testnet'): CardanoServicesConfig | null {
+  const configs = getCardanoServicesConfigs();
+  
+  if (network === 'mainnet') {
+    return configs.mainnet;
+  } else {
+    // lace-style: testnet maps to preview/preprod/sanchonet with fallback
+    return configs.preview || configs.preprod || configs.sanchonet;
   }
 }
 

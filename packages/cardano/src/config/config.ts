@@ -5,6 +5,14 @@ export const NODE = {
   preprod: 'https://cardano-preprod.blockfrost.io/api/v0',
 };
 
+// Cardano Services URLs (IOG servers)
+export const CARDANO_SERVICES_URLS = {
+  mainnet: 'https://cardano-mainnet.iog.io',
+  preview: 'https://cardano-preview.iog.io',
+  preprod: 'https://cardano-preprod.iog.io',
+  sanchonet: 'https://cardano-sanchonet.iog.io',
+};
+
 export const POPUP = {
   main: 'mainPopup',
   internal: 'internalPopup',
