@@ -288,11 +288,16 @@ export class CardanoKeyRing {
   async getBalance(): Promise<any> {
     if (!this.walletManager) {
       console.warn("CardanoWalletManager not initialized - returning empty balance");
-      // lace-style: return empty balance instead of throwing error
+      // lace-style: return empty balance with proper structure
       return {
-        ada: 0,
-        assets: new Map(),
-        lastUpdated: Date.now()
+        utxo: {
+          available: { coins: BigInt(0) },
+          total: { coins: BigInt(0) },
+          unspendable: { coins: BigInt(0) }
+        },
+        rewards: BigInt(0),
+        deposits: BigInt(0),
+        assetInfo: new Map()
       };
     }
     
@@ -300,12 +305,16 @@ export class CardanoKeyRing {
       return await this.walletManager.getBalance();
     } catch (error) {
       console.warn("Failed to fetch balance from wallet manager:", error);
-      // lace-style: graceful fallback - return empty balance
+      // lace-style: graceful fallback - return empty balance with proper structure
       return {
-        ada: 0,
-        assets: new Map(),
-        lastUpdated: Date.now(),
-        error: error.message
+        utxo: {
+          available: { coins: BigInt(0) },
+          total: { coins: BigInt(0) },
+          unspendable: { coins: BigInt(0) }
+        },
+        rewards: BigInt(0),
+        deposits: BigInt(0),
+        assetInfo: new Map()
       };
     }
   }

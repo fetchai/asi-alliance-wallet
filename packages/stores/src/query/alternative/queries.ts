@@ -2,11 +2,11 @@ import { QueriesSetBase } from "../queries";
 import { KVStore } from "@keplr-wallet/common";
 import { ChainGetter } from "../../common";
 import { EvmQueriesImpl } from "../evm/queries";
-import { CardanoQueriesImpl } from "../cardano/queries";
+import { CardanoQueries } from "../cardano/queries";
 
 export interface AlternativeQueries {
   evm: EvmQueriesImpl;
-  cardano: CardanoQueriesImpl;
+  cardano: CardanoQueries;
 }
 
 export const AlternativeQueries = {
@@ -24,7 +24,7 @@ export const AlternativeQueries = {
     ) => {
       return {
         evm: new EvmQueriesImpl(queriesSetBase, kvStore, chainId, chainGetter),
-        cardano: new CardanoQueriesImpl(queriesSetBase, kvStore, chainId, chainGetter),
+        cardano: CardanoQueries.use()(queriesSetBase, kvStore, chainId, chainGetter),
       };
     };
   },

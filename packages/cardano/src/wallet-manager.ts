@@ -157,11 +157,39 @@ export class CardanoWalletManager {
 
   async getBalance() {
     try {
-      return await firstValueFrom(this.wallet.balance.utxo.available$);
+      // lace-style: Get comprehensive balance data following lace patterns
+      const [available, total, unspendable, rewards, deposits, assetInfo] = await Promise.all([
+        firstValueFrom(this.wallet.balance.utxo.available$),
+        firstValueFrom(this.wallet.balance.utxo.total$),
+        firstValueFrom(this.wallet.balance.utxo.unspendable$),
+        firstValueFrom(this.wallet.balance.rewardAccounts.rewards$),
+        firstValueFrom(this.wallet.balance.rewardAccounts.deposit$),
+        firstValueFrom(this.wallet.assetInfo$).catch(() => new Map()) // lace-style: graceful fallback for asset info
+      ]);
+
+      return {
+        utxo: {
+          available,
+          total,
+          unspendable
+        },
+        rewards: rewards || BigInt(0),
+        deposits: deposits || BigInt(0),
+        assetInfo: assetInfo || new Map() // lace-style: include native tokens info
+      };
     } catch (error) {
       console.warn("Failed to get balance:", error);
       // lace-style: graceful fallback with zero balance
-      return { coins: BigInt(0) };
+      return {
+        utxo: {
+          available: { coins: BigInt(0) },
+          total: { coins: BigInt(0) },
+          unspendable: { coins: BigInt(0) }
+        },
+        rewards: BigInt(0),
+        deposits: BigInt(0),
+        assetInfo: new Map()
+      };
     }
   }
 

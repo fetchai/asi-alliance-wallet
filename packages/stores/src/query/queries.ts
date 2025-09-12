@@ -2,6 +2,7 @@ import { makeObservable, observable, runInAction } from "mobx";
 import { KVStore } from "@keplr-wallet/common";
 import { DeepReadonly, UnionToIntersection } from "utility-types";
 import { ObservableQueryBalances } from "./balances";
+import { ObservableQueryCardanoBalanceRegistry } from "./cardano/balance-registry";
 import {
   ChainGetter,
   IObject,
@@ -19,6 +20,12 @@ export const createQueriesSetBase = (
   chainGetter: ChainGetter
 ): QueriesSetBase => {
   const queryBalances = new ObservableQueryBalances(kvStore, chainId, chainGetter);
+  
+  // lace-style: Register Cardano balance registry for all networks
+  // This follows the memory from previous integration work
+  queryBalances.addBalanceRegistry(
+    new ObservableQueryCardanoBalanceRegistry(kvStore)
+  );
   
   return {
     queryBalances,
@@ -76,7 +83,7 @@ export class QueriesStore<Injects extends Array<IObject>> {
         const merged = mergeStores.apply(
           null,
           [queriesSetBase, [this.kvStore, chainId, this.chainGetter], ...this.queriesCreators] as any
-        );
+        ) as QueriesSetBase & UnionToIntersection<Injects[number]>;
 
         this.queriesMap.set(chainId, merged);
       });

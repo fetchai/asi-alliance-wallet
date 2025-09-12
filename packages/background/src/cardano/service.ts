@@ -148,9 +148,17 @@ export class CardanoService {
         console.warn("Wallet manager not ready, returning cached balance");
         return this.balanceAdapter.currentBalance;
       }
-      throw new Error(
-        "CardanoService not ready for transactions. Wallet manager not initialized."
-      );
+      // lace-style: return empty balance structure instead of throwing error
+      return {
+        utxo: {
+          available: { coins: BigInt(0) },
+          total: { coins: BigInt(0) },
+          unspendable: { coins: BigInt(0) }
+        },
+        rewards: BigInt(0),
+        deposits: BigInt(0),
+        assetInfo: new Map()
+      };
     }
 
     try {
@@ -162,11 +170,20 @@ export class CardanoService {
       return balance;
     } catch (error) {
       console.warn("Failed to fetch fresh balance:", error);
-      // lace-style: return cached balance if available
+      // lace-style: return cached balance if available, otherwise empty structure
       if (this.balanceAdapter?.currentBalance) {
         return this.balanceAdapter.currentBalance;
       }
-      throw error;
+      return {
+        utxo: {
+          available: { coins: BigInt(0) },
+          total: { coins: BigInt(0) },
+          unspendable: { coins: BigInt(0) }
+        },
+        rewards: BigInt(0),
+        deposits: BigInt(0),
+        assetInfo: new Map()
+      };
     }
   }
 

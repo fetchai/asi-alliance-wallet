@@ -3182,7 +3182,7 @@ const EmbedChainInfos: ChainInfo[] = [
     rest: "https://cardano-mainnet.blockfrost.io/api/v0",
     restConfig: {
       headers: {
-        'project_id': process.env.BLOCKFROST_PROJECT_ID_MAINNET || process.env.BLOCKFROST_API_KEY || ''
+        'project_id': process.env['BLOCKFROST_PROJECT_ID_MAINNET'] || process.env['BLOCKFROST_API_KEY'] || ''
       }
     },
     chainId: "cardano-mainnet",
@@ -3237,7 +3237,7 @@ const EmbedChainInfos: ChainInfo[] = [
     rest: "https://cardano-preview.blockfrost.io/api/v0",
     restConfig: {
       headers: {
-        'project_id': process.env.BLOCKFROST_PROJECT_ID_PREVIEW || process.env.BLOCKFROST_API_KEY || ''
+        'project_id': process.env['BLOCKFROST_PROJECT_ID_PREVIEW'] || process.env['BLOCKFROST_API_KEY'] || ''
       }
     },
     chainId: "cardano-preview",

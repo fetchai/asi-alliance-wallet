@@ -1,123 +1,76 @@
-import { ObservableChainQuery } from "../chain-query";
-import { ObservableQueryBalanceInner, BalanceRegistry } from "../balances";
-import { KVStore, DenomHelper } from "@keplr-wallet/common";
-import { ChainGetter } from "../../common";
-import { computed, makeObservable } from "mobx";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { KVStore } from "@keplr-wallet/common";
+import { AppCurrency } from "@keplr-wallet/types";
+import { CoinPretty } from "@keplr-wallet/unit";
+import { runInAction, observable } from "mobx";
 
-// lace-style: Define balance data structure
-interface CardanoBalance {
-  coins: bigint;
-  assets?: Map<string, bigint>;
-}
-
-interface CardanoBalanceResponse {
-  utxo: {
-    total: CardanoBalance;
-    available: CardanoBalance;
-    unspendable: CardanoBalance;
-  };
-  rewards: bigint;
-  deposits: bigint;
-}
-
-export class ObservableQueryCardanoBalance extends ObservableChainQuery<CardanoBalanceResponse> {
-  public readonly bech32Address: string;
+export class ObservableQueryCardanoBalance {
+  @observable.shallow protected _balances: CoinPretty[] = [];
+  @observable protected _isLoading: boolean = false;
+  @observable protected _error: Error | null = null;
 
   constructor(
-    kvStore: KVStore,
-    chainId: string,
-    chainGetter: ChainGetter,
-    bech32Address: string
+    _kvStore: KVStore, // Not used yet, may be needed for caching
+    public laceWallet: any, // Temporary any, will be replaced with lace types
+    private currency: AppCurrency
   ) {
-    super(kvStore, chainId, chainGetter, `/cardano/balance/${bech32Address}`);
-    this.bech32Address = bech32Address;
-    makeObservable(this);
+    this.setupLaceObservables();
   }
 
-  protected override canFetch(): boolean {
-    // Cardano balance should be fetched through CardanoWalletManager, not REST API
-    // This query is just a placeholder - actual balance comes from CardanoWalletManager
-    return false;
-  }
-}
+  private setupLaceObservables() {
+    if (!this.laceWallet) return;
 
-export class ObservableQueryCardanoBalanceNative extends ObservableQueryBalanceInner {
-  constructor(
-    kvStore: KVStore,
-    chainId: string,
-    chainGetter: ChainGetter,
-    denomHelper: DenomHelper,
-    protected readonly cardanoBalances: ObservableQueryCardanoBalance
-  ) {
-    super(kvStore, chainId, chainGetter, "", denomHelper);
-    makeObservable(this);
+    // Temporary stub until lace is configured
+    runInAction(() => {
+      this._isLoading = false;
+      this._error = null;
+      this._balances = [
+        new CoinPretty(this.currency, 0),
+        new CoinPretty(this.currency, 0),
+        new CoinPretty(this.currency, 0),
+        new CoinPretty(this.currency, 0),
+        new CoinPretty(this.currency, 0)
+      ];
+    });
   }
 
-  protected override canFetch(): boolean {
-    return this.cardanoBalances.bech32Address.length > 0;
+  get balances(): CoinPretty[] {
+    return this._balances;
   }
 
-  @computed
-  get balance(): CoinPretty {
-    // For now, return zero balance until CardanoWalletManager integration is complete
-    // In Lace, balance comes from CardanoWalletManager.getBalance() via reactive streams
-    // This should be integrated with the CardanoWalletManager in the background service
-    
-    // TODO: Integrate with CardanoWalletManager.getBalance() from background service
-    // The balance should come from wallet.balance.utxo.available$ observable
-    
-    return new CoinPretty(this.currency, new Int(0));
-  }
-}
-
-export class ObservableQueryCardanoBalanceRegistry implements BalanceRegistry {
-  protected cardanoBalances: Map<string, ObservableQueryCardanoBalance> = new Map();
-
-  constructor(protected readonly kvStore: KVStore) {}
-
-  getBalanceInner(
-    chainId: string,
-    chainGetter: ChainGetter,
-    bech32Address: string,
-    minimalDenom: string
-  ): ObservableQueryBalanceInner | undefined {
-    const denomHelper = new DenomHelper(minimalDenom);
-    const chainInfo = chainGetter.getChain(chainId);
-    
-    // Only handle Cardano networks with native denominations
-    if (denomHelper.type !== "native" || !this.isCardanoNetwork(chainInfo)) {
-      return undefined;
-    }
-
-    const key = `${chainId}/${bech32Address}`;
-
-    if (!this.cardanoBalances.has(key)) {
-      this.cardanoBalances.set(
-        key,
-        new ObservableQueryCardanoBalance(
-          this.kvStore,
-          chainId,
-          chainGetter,
-          bech32Address
-        )
-      );
-    }
-
-    return new ObservableQueryCardanoBalanceNative(
-      this.kvStore,
-      chainId,
-      chainGetter,
-      denomHelper,
-      this.cardanoBalances.get(key)!
-    );
+  get isLoading(): boolean {
+    return this._isLoading;
   }
 
-  private isCardanoNetwork(chainInfo: any): boolean {
-    return (
-      chainInfo?.features?.includes("cardano") ||
-      chainInfo?.chainId?.includes("cardano") ||
-      chainInfo?.bech32Config?.bech32PrefixAccAddr === "addr"
-    );
+  get error(): Error | null {
+    return this._error;
+  }
+
+  getBalance(currency: AppCurrency): CoinPretty | undefined {
+    return this._balances.find(b => b.currency.coinMinimalDenom === currency.coinMinimalDenom);
+  }
+
+  getAvailableBalance(): CoinPretty {
+    return this._balances[0] || new CoinPretty(this.currency, 0);
+  }
+
+  getTotalBalance(): CoinPretty {
+    return this._balances[1] || new CoinPretty(this.currency, 0);
+  }
+
+  getUnspendableBalance(): CoinPretty {
+    return this._balances[2] || new CoinPretty(this.currency, 0);
+  }
+
+  getRewardsBalance(): CoinPretty {
+    return this._balances[3] || new CoinPretty(this.currency, 0);
+  }
+
+  getDepositBalance(): CoinPretty {
+    return this._balances[4] || new CoinPretty(this.currency, 0);
+  }
+
+  updateLaceWallet(laceWallet: any) {
+    this.laceWallet = laceWallet;
+    this.setupLaceObservables();
   }
 }

@@ -12,3 +12,6 @@ export * from "./evm";
 export * from "./cardano";
 export * from "./alternative";
 export * from "./nameservice";
+
+// Re-export CardanoQueries for compatibility
+export { CardanoQueries } from "./cardano";
