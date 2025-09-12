@@ -136,8 +136,7 @@ export class CardanoKeyRing {
       try {
         this.walletManager = await CardanoWalletManager.create({
           mnemonicWords: decryptedMnemonic.split(" "),
-          network,
-          blockfrostApiKey: networkConfig.projectId
+          network
         });
         console.log("CardanoWalletManager created successfully");
       } catch (error) {

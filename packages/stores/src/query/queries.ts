@@ -73,10 +73,9 @@ export class QueriesStore<Injects extends Array<IObject>> {
         this.chainGetter
       );
       runInAction(() => {
-        const merged = mergeStores(
-          queriesSetBase,
-          [this.kvStore, chainId, this.chainGetter],
-          ...this.queriesCreators
+        const merged = mergeStores.apply(
+          null,
+          [queriesSetBase, [this.kvStore, chainId, this.chainGetter], ...this.queriesCreators] as any
         );
 
         this.queriesMap.set(chainId, merged);

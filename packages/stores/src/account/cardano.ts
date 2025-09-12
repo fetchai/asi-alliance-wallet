@@ -55,8 +55,7 @@ export const CardanoAccountMixin = {
         cardanoWalletManager = await CardanoWalletManager.create({
           mnemonicWords: options.mnemonicWords,
           accountIndex: options.accountIndex,
-          network,
-          blockfrostApiKey: options.blockfrostApiKey || '<API_KEY>'
+          network
         });
       }
       return { cardanoWalletManager };

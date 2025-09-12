@@ -3180,6 +3180,11 @@ const EmbedChainInfos: ChainInfo[] = [
   {
     rpc: "https://cardano-mainnet.blockfrost.io/api/v0", // Usually Cardano uses different RPCs, but for example
     rest: "https://cardano-mainnet.blockfrost.io/api/v0",
+    restConfig: {
+      headers: {
+        'project_id': process.env.BLOCKFROST_PROJECT_ID_MAINNET || process.env.BLOCKFROST_API_KEY || ''
+      }
+    },
     chainId: "cardano-mainnet",
     chainName: "Cardano Mainnet",
     stakeCurrency: {
@@ -3230,6 +3235,11 @@ const EmbedChainInfos: ChainInfo[] = [
   {
     rpc: "https://cardano-preview.blockfrost.io/api/v0",
     rest: "https://cardano-preview.blockfrost.io/api/v0",
+    restConfig: {
+      headers: {
+        'project_id': process.env.BLOCKFROST_PROJECT_ID_PREVIEW || process.env.BLOCKFROST_API_KEY || ''
+      }
+    },
     chainId: "cardano-preview",
     chainName: "Cardano Testnet (Preview)",
     stakeCurrency: {

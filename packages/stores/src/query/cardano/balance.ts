@@ -36,7 +36,8 @@ export class ObservableQueryCardanoBalance extends ObservableChainQuery<CardanoB
   }
 
   protected override canFetch(): boolean {
-    // For now, return false to prevent actual fetching until CardanoWalletManager is implemented
+    // Cardano balance should be fetched through CardanoWalletManager, not REST API
+    // This query is just a placeholder - actual balance comes from CardanoWalletManager
     return false;
   }
 }
@@ -59,26 +60,13 @@ export class ObservableQueryCardanoBalanceNative extends ObservableQueryBalanceI
 
   @computed
   get balance(): CoinPretty {
-    const denom = this.denomHelper.denom;
+    // For now, return zero balance until CardanoWalletManager integration is complete
+    // In Lace, balance comes from CardanoWalletManager.getBalance() via reactive streams
+    // This should be integrated with the CardanoWalletManager in the background service
     
-    if (!this.cardanoBalances.response?.data) {
-      return new CoinPretty(this.currency, new Int(0));
-    }
-
-    // Handle ADA (lovelace) - include rewards like lace does
-    if (denom === "lovelace") {
-      const { utxo, rewards } = this.cardanoBalances.response.data;
-      const totalAda = utxo.total.coins + rewards;
-      return new CoinPretty(this.currency, new Int(totalAda.toString()));
-    }
-
-    // Handle Cardano native tokens
-    const assets = this.cardanoBalances.response.data.utxo.total.assets;
-    if (assets?.has(denom)) {
-      const tokenBalance = assets.get(denom)!;
-      return new CoinPretty(this.currency, new Int(tokenBalance.toString()));
-    }
-
+    // TODO: Integrate with CardanoWalletManager.getBalance() from background service
+    // The balance should come from wallet.balance.utxo.available$ observable
+    
     return new CoinPretty(this.currency, new Int(0));
   }
 }

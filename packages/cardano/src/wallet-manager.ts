@@ -10,6 +10,7 @@ import {
 } from '@cardano-sdk/cardano-services-client';
 import Bottleneck from 'bottleneck';
 import { firstValueFrom } from 'rxjs';
+import { getNetworkConfig } from './adapters/env-adapter';
 
 export class CardanoWalletManager {
   private wallet: any;
@@ -60,11 +61,10 @@ export class CardanoWalletManager {
     }
   }
 
-  static async create({ mnemonicWords, network, accountIndex = 0, blockfrostApiKey }: {
+  static async create({ mnemonicWords, network, accountIndex = 0 }: {
     mnemonicWords: string[];
     network: 'mainnet' | 'testnet';
     accountIndex?: number;
-    blockfrostApiKey: string;
   }): Promise<CardanoWalletManager> {
     const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
     const { InMemoryKeyAgent, util, Bip32Account } = await import('@cardano-sdk/key-management');
@@ -93,10 +93,12 @@ export class CardanoWalletManager {
       addressDiscovery
     };
 
-    // lace-style: always use two arguments for BlockfrostClient
-    const baseUrl = network === 'mainnet'
-      ? 'https://cardano-mainnet.blockfrost.io/api/v0'
-      : 'https://cardano-preview.blockfrost.io/api/v0';
+    // lace-style: use configuration instead of hardcoded URLs
+    const networkConfig = getNetworkConfig(network);
+    if (!networkConfig) {
+      throw new Error(`No Blockfrost configuration found for network: ${network}`);
+    }
+    const baseUrl = networkConfig.baseUrl;
     // lace-style: use proper rate limiter configuration like in lace
     const rateLimiter = new Bottleneck({
       maxConcurrent: 1,
@@ -108,7 +110,7 @@ export class CardanoWalletManager {
     });
     const blockfrostConfig = {
       baseUrl,
-      projectId: blockfrostApiKey
+      projectId: networkConfig.projectId
     };
     const blockfrostClient = new BlockfrostClient(blockfrostConfig, { rateLimiter });
     const assetProvider = new BlockfrostAssetProvider(blockfrostClient, console);
