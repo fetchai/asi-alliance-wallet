@@ -1,47 +1,31 @@
-import { KVStore } from "@keplr-wallet/common";
-import { AppCurrency } from "@keplr-wallet/types";
+import { DenomHelper, KVStore } from "@keplr-wallet/common";
 import { ChainGetter } from "../../common";
-import { ObservableQueryCardanoBalance } from "./balance";
+import { ObservableQueryCardanoBalanceInner } from "./balance";
 import { ObservableQueryBalanceInner } from "../balances";
 
 export class ObservableQueryCardanoBalanceRegistry {
-  protected _balances: Map<string, ObservableQueryCardanoBalance> = new Map();
-
-  constructor(protected readonly kvStore: KVStore) {}
-
-  getBalance(
-    laceWallet: any, // Temporary any, will be replaced with lace types
-    currency: AppCurrency
-  ): ObservableQueryCardanoBalance {
-    const key = `${currency.coinMinimalDenom}-${laceWallet.wallet.id}`;
-    
-    if (!this._balances.has(key)) {
-      this._balances.set(
-        key,
-        new ObservableQueryCardanoBalance(this.kvStore, laceWallet, currency)
-      );
-    }
-
-    const balance = this._balances.get(key)!;
-    
-    if (balance && laceWallet !== balance.laceWallet) {
-      balance.updateLaceWallet(laceWallet);
-    }
-
-    return balance;
-  }
-
-  clearCache() {
-    this._balances.clear();
-  }
+  constructor(protected readonly kvStore: KVStore, public laceWallet?: any) {}
 
   getBalanceInner(
-    _chainId: string,
-    _chainGetter: ChainGetter,
-    _bech32Address: string,
-    _minimalDenom: string
+    chainId: string,
+    chainGetter: ChainGetter,
+    bech32Address: string,
+    minimalDenom: string
   ): ObservableQueryBalanceInner | undefined {
-    // For now, return undefined as Cardano balance integration is not complete
-    return undefined;
+    const denomHelper = new DenomHelper(minimalDenom);
+    const isCardano = chainGetter.getChain(chainId).features?.includes("cardano") ?? false;
+
+    if (!(isCardano && denomHelper.type === "native")) {
+      return undefined;
+    }
+
+    return new ObservableQueryCardanoBalanceInner(
+      this.kvStore,
+      chainId,
+      chainGetter,
+      denomHelper,
+      bech32Address,
+      this.laceWallet
+    );
   }
 }

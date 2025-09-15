@@ -15,23 +15,22 @@ export interface CardanoQueries {
 
 export class CardanoQueriesImpl {
   public readonly cardanoBalanceRegistry: ObservableQueryCardanoBalanceRegistry;
-  private laceWallet?: any; // Temporary any, will be replaced with lace types
 
   constructor(
-    _queriesSetBase: QueriesSetBase,
+    queriesSetBase: QueriesSetBase,
     kvStore: KVStore,
     _chainId: string,
     _chainGetter: ChainGetter
   ) {
     this.cardanoBalanceRegistry = new ObservableQueryCardanoBalanceRegistry(kvStore);
+    
+    queriesSetBase.queryBalances.addBalanceRegistry(
+      this.cardanoBalanceRegistry
+    );
   }
 
   setLaceWallet(laceWallet: any) {
-    this.laceWallet = laceWallet;
-  }
-
-  getBalance(currency: any): any {
-    return this.cardanoBalanceRegistry.getBalance(this.laceWallet, currency);
+    this.cardanoBalanceRegistry.laceWallet = laceWallet;
   }
 }
 

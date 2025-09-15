@@ -1,76 +1,180 @@
-import { KVStore } from "@keplr-wallet/common";
-import { AppCurrency } from "@keplr-wallet/types";
-import { CoinPretty } from "@keplr-wallet/unit";
-import { runInAction, observable } from "mobx";
+import { computed, makeObservable, override } from "mobx";
+import { DenomHelper, KVStore } from "@keplr-wallet/common";
+import { ChainGetter, ObservableQuery } from "../../common";
+import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { ObservableQueryBalanceInner } from "../balances";
+import Axios from "axios";
 
-export class ObservableQueryCardanoBalance {
-  @observable.shallow protected _balances: CoinPretty[] = [];
-  @observable protected _isLoading: boolean = false;
-  @observable protected _error: Error | null = null;
+// Copy lace useBalances pattern: inMemoryWallet.balance observables
+export class ObservableQueryCardanoBalance extends ObservableQuery<any> {
+  constructor(
+    kvStore: KVStore,
+    chainId: string,
+    chainGetter: ChainGetter,
+    protected readonly bech32Address: string,
+    protected readonly laceWallet: any
+  ) {
+    super(
+      kvStore,
+      Axios.create({
+        baseURL: chainGetter.getChain(chainId).rpc,
+      }),
+      "",
+      {}
+    );
+    makeObservable(this);
+  }
+
+  protected override canFetch(): boolean {
+    return this.bech32Address !== "";
+  }
+
+  @override
+  override *fetch(): Generator<any, void, any> {
+    if (!this.laceWallet) {
+       // Fallback to direct Koios API call (free service)
+      try {
+        // Koios API v1 format: /address_utxos
+        const response = yield this._instance.post('/address_utxos', {
+          _addresses: [this.bech32Address]
+        });
+        const utxos = response.data || [];
+        
+        // Calculate total balance from UTXOs
+        let totalBalance = BigInt(0);
+        for (const utxo of utxos) {
+          if (utxo.value) {
+            totalBalance += BigInt(utxo.value);
+          }
+        }
+        
+        this.setResponse({
+          data: {
+            utxo: {
+              total: { coins: totalBalance },
+              available: { coins: totalBalance },
+              unspendable: { coins: BigInt(0) }
+            },
+            rewards: BigInt(0),
+            deposits: BigInt(0)
+          },
+          status: 200,
+          staled: false,
+          timestamp: Date.now()
+        });
+      } catch (error) {
+        console.error("Failed to fetch Cardano balance:", error);
+        this.setResponse({
+          data: {
+            utxo: {
+              total: { coins: BigInt(0) },
+              available: { coins: BigInt(0) },
+              unspendable: { coins: BigInt(0) }
+            },
+            rewards: BigInt(0),
+            deposits: BigInt(0)
+          },
+          status: 200,
+          staled: false,
+          timestamp: Date.now()
+        });
+      }
+      return;
+    }
+
+    // Copy lace useBalances logic
+    const total = this.laceWallet.balance?.utxo?.total$?.value;
+    const available = this.laceWallet.balance?.utxo?.available$?.value;
+    const availableDeposits = this.laceWallet.balance?.rewardAccounts?.deposit$?.value;
+    const availableRewards = this.laceWallet.balance?.rewardAccounts?.rewards$?.value;
+
+    if (total && available) {
+      // Copy lace walletBalanceTransformer logic
+      const totalWithRewards = BigInt((total.coins || BigInt(0)) + (availableRewards || BigInt(0)));
+      const availableWithRewards = BigInt((available.coins || BigInt(0)) + (availableRewards || BigInt(0)));
+
+      this.setResponse({
+        data: {
+          utxo: {
+            total: { coins: totalWithRewards },
+            available: { coins: availableWithRewards },
+            unspendable: { coins: BigInt(0) }
+          },
+          rewards: availableRewards || BigInt(0),
+          deposits: availableDeposits || BigInt(0)
+        },
+        status: 200,
+        staled: false,
+        timestamp: Date.now()
+      });
+    }
+  }
+}
+
+export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceInner {
+  protected readonly queryCardanoBalance: ObservableQueryCardanoBalance;
 
   constructor(
-    _kvStore: KVStore, // Not used yet, may be needed for caching
-    public laceWallet: any, // Temporary any, will be replaced with lace types
-    private currency: AppCurrency
+    kvStore: KVStore,
+    chainId: string,
+    chainGetter: ChainGetter,
+    denomHelper: DenomHelper,
+    protected readonly bech32Address: string,
+    laceWallet: any
   ) {
-    this.setupLaceObservables();
+    super(kvStore, chainId, chainGetter, "", denomHelper);
+    makeObservable(this);
+
+    this.queryCardanoBalance = new ObservableQueryCardanoBalance(
+      kvStore,
+      chainId,
+      chainGetter,
+      bech32Address,
+      laceWallet
+    );
   }
 
-  private setupLaceObservables() {
-    if (!this.laceWallet) return;
-
-    // Temporary stub until lace is configured
-    runInAction(() => {
-      this._isLoading = false;
-      this._error = null;
-      this._balances = [
-        new CoinPretty(this.currency, 0),
-        new CoinPretty(this.currency, 0),
-        new CoinPretty(this.currency, 0),
-        new CoinPretty(this.currency, 0),
-        new CoinPretty(this.currency, 0)
-      ];
-    });
+  protected override canFetch(): boolean {
+    return false;
   }
 
-  get balances(): CoinPretty[] {
-    return this._balances;
+  override get isFetching(): boolean {
+    return this.queryCardanoBalance.isFetching;
   }
 
-  get isLoading(): boolean {
-    return this._isLoading;
+  override get error() {
+    return this.queryCardanoBalance.error;
   }
 
-  get error(): Error | null {
-    return this._error;
+  override get response() {
+    return this.queryCardanoBalance.response;
   }
 
-  getBalance(currency: AppCurrency): CoinPretty | undefined {
-    return this._balances.find(b => b.currency.coinMinimalDenom === currency.coinMinimalDenom);
+  @override
+  override *fetch() {
+    yield* this.queryCardanoBalance.fetch();
   }
 
-  getAvailableBalance(): CoinPretty {
-    return this._balances[0] || new CoinPretty(this.currency, 0);
-  }
+  @computed
+  get balance(): CoinPretty {
+    const denom = this.denomHelper.denom;
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const currency = chainInfo.currencies.find(
+      (cur) => cur.coinMinimalDenom === denom
+    );
 
-  getTotalBalance(): CoinPretty {
-    return this._balances[1] || new CoinPretty(this.currency, 0);
-  }
+    if (!currency) {
+      throw new Error(`Unknown currency: ${denom}`);
+    }
 
-  getUnspendableBalance(): CoinPretty {
-    return this._balances[2] || new CoinPretty(this.currency, 0);
-  }
+    if (!this.queryCardanoBalance.response?.data) {
+      return new CoinPretty(currency, new Int(0)).ready(false);
+    }
 
-  getRewardsBalance(): CoinPretty {
-    return this._balances[3] || new CoinPretty(this.currency, 0);
-  }
-
-  getDepositBalance(): CoinPretty {
-    return this._balances[4] || new CoinPretty(this.currency, 0);
-  }
-
-  updateLaceWallet(laceWallet: any) {
-    this.laceWallet = laceWallet;
-    this.setupLaceObservables();
+    // Copy lace walletBalanceTransformer: lovelaces to ADA
+    const balanceData = this.queryCardanoBalance.response.data;
+    const availableCoins = balanceData?.utxo?.available?.coins || BigInt(0);
+    
+    return new CoinPretty(currency, new Int(availableCoins.toString())).ready(true);
   }
 }
