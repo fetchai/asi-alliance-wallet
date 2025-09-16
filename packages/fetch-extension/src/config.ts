@@ -3226,7 +3226,7 @@ const EmbedChainInfos: ChainInfo[] = [
     features: ["cardano"],
     chainSymbolImageUrl: "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
   },
-  // Cardano Testnet (Sepolia/Preview)
+  // Cardano Testnet (Preprod)
   {
     rpc: "https://preprod.koios.rest/api/v1",
     rest: "https://preprod.koios.rest/api/v1",

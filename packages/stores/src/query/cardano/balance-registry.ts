@@ -4,7 +4,7 @@ import { ObservableQueryCardanoBalanceInner } from "./balance";
 import { ObservableQueryBalanceInner } from "../balances";
 
 export class ObservableQueryCardanoBalanceRegistry {
-  constructor(protected readonly kvStore: KVStore, public laceWallet?: any) {}
+  constructor(protected readonly kvStore: KVStore) {}
 
   getBalanceInner(
     chainId: string,
@@ -24,8 +24,7 @@ export class ObservableQueryCardanoBalanceRegistry {
       chainId,
       chainGetter,
       denomHelper,
-      bech32Address,
-      this.laceWallet
+      bech32Address
     );
   }
 }

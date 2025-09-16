@@ -3,23 +3,30 @@ import { DenomHelper, KVStore } from "@keplr-wallet/common";
 import { ChainGetter, ObservableQuery } from "../../common";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { ObservableQueryBalanceInner } from "../balances";
-import Axios from "axios";
+import axios from "axios";
 
-// Copy lace useBalances pattern: inMemoryWallet.balance observables
-export class ObservableQueryCardanoBalance extends ObservableQuery<any> {
+interface CardanoAddressInfo {
+  address: string;
+  balance: string;
+  stake_address?: string;
+}
+
+export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddressInfo[]> {
   constructor(
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly bech32Address: string,
-    protected readonly laceWallet: any
+    protected readonly bech32Address: string
   ) {
     super(
       kvStore,
-      Axios.create({
-        baseURL: chainGetter.getChain(chainId).rpc,
+      axios.create({
+        baseURL: chainGetter.getChain(chainId).rest,
+        headers: {
+          "Content-Type": "application/json",
+        },
       }),
-      "",
+      "/address_info?select=address,balance,stake_address",
       {}
     );
     makeObservable(this);
@@ -31,133 +38,79 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<any> {
 
   @override
   override *fetch(): Generator<any, void, any> {
-    if (!this.laceWallet) {
-       // Fallback to direct Koios API call (free service)
-      try {
-        // Koios API v1 format: /address_utxos
-        const response = yield this._instance.post('/address_utxos', {
-          _addresses: [this.bech32Address]
-        });
-        const utxos = response.data || [];
-        
-        // Calculate total balance from UTXOs
-        let totalBalance = BigInt(0);
-        for (const utxo of utxos) {
-          if (utxo.value) {
-            totalBalance += BigInt(utxo.value);
-          }
-        }
-        
-        this.setResponse({
-          data: {
-            utxo: {
-              total: { coins: totalBalance },
-              available: { coins: totalBalance },
-              unspendable: { coins: BigInt(0) }
-            },
-            rewards: BigInt(0),
-            deposits: BigInt(0)
-          },
-          status: 200,
-          staled: false,
-          timestamp: Date.now()
-        });
-      } catch (error) {
-        console.error("Failed to fetch Cardano balance:", error);
-        this.setResponse({
-          data: {
-            utxo: {
-              total: { coins: BigInt(0) },
-              available: { coins: BigInt(0) },
-              unspendable: { coins: BigInt(0) }
-            },
-            rewards: BigInt(0),
-            deposits: BigInt(0)
-          },
-          status: 200,
-          staled: false,
-          timestamp: Date.now()
-        });
-      }
-      return;
-    }
+    const response = yield this._instance.post('/address_info?select=address,balance,stake_address', {
+      _addresses: [this.bech32Address]
+    });
+    
+    this.setResponse({
+      data: response.data,
+      status: 200,
+      staled: false,
+      timestamp: Date.now()
+    });
+  }
 
-    // Copy lace useBalances logic
-    const total = this.laceWallet.balance?.utxo?.total$?.value;
-    const available = this.laceWallet.balance?.utxo?.available$?.value;
-    const availableDeposits = this.laceWallet.balance?.rewardAccounts?.deposit$?.value;
-    const availableRewards = this.laceWallet.balance?.rewardAccounts?.rewards$?.value;
+  get balance(): string {
+    if (!this.response?.data?.[0]) return "0";
+    return this.response.data[0].balance || "0";
+  }
 
-    if (total && available) {
-      // Copy lace walletBalanceTransformer logic
-      const totalWithRewards = BigInt((total.coins || BigInt(0)) + (availableRewards || BigInt(0)));
-      const availableWithRewards = BigInt((available.coins || BigInt(0)) + (availableRewards || BigInt(0)));
+  get balanceInAda(): number {
+    return Number(this.balance) / 1_000_000;
+  }
 
-      this.setResponse({
-        data: {
-          utxo: {
-            total: { coins: totalWithRewards },
-            available: { coins: availableWithRewards },
-            unspendable: { coins: BigInt(0) }
-          },
-          rewards: availableRewards || BigInt(0),
-          deposits: availableDeposits || BigInt(0)
-        },
-        status: 200,
-        staled: false,
-        timestamp: Date.now()
-      });
-    }
+  get stakeAddress(): string | undefined {
+    return this.response?.data?.[0]?.stake_address;
   }
 }
 
 export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceInner {
-  protected readonly queryCardanoBalance: ObservableQueryCardanoBalance;
+  protected readonly queryBalance: ObservableQueryCardanoBalance;
 
   constructor(
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     denomHelper: DenomHelper,
-    protected readonly bech32Address: string,
-    laceWallet: any
+    protected readonly address: string
   ) {
     super(kvStore, chainId, chainGetter, "", denomHelper);
+
     makeObservable(this);
 
-    this.queryCardanoBalance = new ObservableQueryCardanoBalance(
+    this.queryBalance = new ObservableQueryCardanoBalance(
       kvStore,
       chainId,
       chainGetter,
-      bech32Address,
-      laceWallet
+      address
     );
   }
 
   protected override canFetch(): boolean {
-    return false;
+    return false; // fetching is delegated
   }
 
   override get isFetching(): boolean {
-    return this.queryCardanoBalance.isFetching;
+    return this.queryBalance.isFetching;
   }
 
   override get error() {
-    return this.queryCardanoBalance.error;
+    return this.queryBalance.error;
   }
 
   override get response() {
-    return this.queryCardanoBalance.response;
+    return this.queryBalance.response;
   }
 
   @override
   override *fetch() {
-    yield* this.queryCardanoBalance.fetch();
+    yield this.queryBalance.fetch();
   }
 
   @computed
   get balance(): CoinPretty {
     const denom = this.denomHelper.denom;
+
     const chainInfo = this.chainGetter.getChain(this.chainId);
     const currency = chainInfo.currencies.find(
       (cur) => cur.coinMinimalDenom === denom
@@ -167,14 +120,36 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
       throw new Error(`Unknown currency: ${denom}`);
     }
 
-    if (!this.queryCardanoBalance.response?.data) {
+    if (!this.queryBalance.response?.data) {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
 
-    // Copy lace walletBalanceTransformer: lovelaces to ADA
-    const balanceData = this.queryCardanoBalance.response.data;
-    const availableCoins = balanceData?.utxo?.available?.coins || BigInt(0);
-    
-    return new CoinPretty(currency, new Int(availableCoins.toString())).ready(true);
+    return new CoinPretty(currency, new Int(this.queryBalance.balance));
+  }
+}
+
+export class ObservableQueryCardanoBalanceRegistry {
+  constructor(protected readonly kvStore: KVStore) {}
+
+  getBalanceInner(
+    chainId: string,
+    chainGetter: ChainGetter,
+    bech32Address: string,
+    minimalDenom: string
+  ): ObservableQueryBalanceInner | undefined {
+    const denomHelper = new DenomHelper(minimalDenom);
+    const isCardano = chainGetter.getChain(chainId).features?.includes("cardano") ?? false;
+
+    if (!(isCardano && denomHelper.type === "native")) {
+      return undefined;
+    }
+
+    return new ObservableQueryCardanoBalanceInner(
+      this.kvStore,
+      chainId,
+      chainGetter,
+      denomHelper,
+      bech32Address
+    );
   }
 }

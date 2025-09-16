@@ -5,12 +5,6 @@ import { ObservableQueryCardanoBalanceRegistry } from "./balance-registry";
 
 export interface CardanoQueries {
   cardano: CardanoQueriesImpl;
-  use(): (
-    queriesSetBase: QueriesSetBase,
-    kvStore: KVStore,
-    chainId: string,
-    chainGetter: ChainGetter
-  ) => CardanoQueries;
 }
 
 export class CardanoQueriesImpl {
@@ -29,12 +23,11 @@ export class CardanoQueriesImpl {
     );
   }
 
-  setLaceWallet(laceWallet: any) {
-    this.cardanoBalanceRegistry.laceWallet = laceWallet;
+   setLaceWallet(_laceWallet: any) {
+    // Reserved for future lace wallet integration
   }
 }
 
-// Create use function for compatibility with CosmosQueries, EvmQueries pattern
 export const CardanoQueries = {
   use(): (
     queriesSetBase: QueriesSetBase,
@@ -50,7 +43,6 @@ export const CardanoQueries = {
     ) => {
       return {
         cardano: new CardanoQueriesImpl(queriesSetBase, kvStore, chainId, chainGetter),
-        use: () => CardanoQueries.use(),
       };
     };
   },

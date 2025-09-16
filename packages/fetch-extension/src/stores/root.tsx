@@ -102,7 +102,7 @@ export class RootStore {
       KeplrETCQueries,
       NameServiceQueries,
       EvmQueries,
-      typeof CardanoQueries
+      CardanoQueries
     ]
   >;
   public readonly accountStore: AccountStore<
