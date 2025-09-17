@@ -76,7 +76,13 @@ export class BIP44Option {
 
 // CONTRACT: Use with `observer`
 export const useBIP44Option = (coinType?: number) => {
-  const [bip44Option] = useState(() => new BIP44Option(coinType));
+  const { keyRingStore } = useStore();
+  const [bip44Option] = useState(() => {
+    const option = new BIP44Option(coinType);
+    // Automatically assign unique accountIndex for each new account
+    option.setAccount(keyRingStore.multiKeyStoreInfo.length);
+    return option;
+  });
 
   return bip44Option;
 };

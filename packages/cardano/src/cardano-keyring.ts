@@ -98,23 +98,10 @@ export class CardanoKeyRing {
     decryptFn?: (keyStore: KeyStore, password: string) => Promise<Uint8Array>,
     chainId?: string
   ): Promise<void> {
-    const serialized = keyStore.meta["cardanoSerializedAgent"];
-    if (!serialized) {
-      throw new Error("Cardano agent not found in keyStore meta");
-    }
-
-    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
-    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
-
-    const bip32Ed25519 = await SodiumBip32Ed25519.create();
-    this.keyAgent = new InMemoryKeyAgent(
-      {
-        ...JSON.parse(serialized),
-        getPassphrase: async () => Buffer.from(password, 'utf8'),
-      },
-      { bip32Ed25519, logger: console }
-    );
+    // Recreate keyAgent with correct accountIndex from keyStore
+    const accountIndex = keyStore.bip44HDPath?.account ?? 0;
     
+    // Get mnemonic from keyStore
     let decryptedMnemonic: string;
     if (decryptFn) {
       const decrypted = await decryptFn(keyStore, password);
@@ -126,7 +113,29 @@ export class CardanoKeyRing {
       decryptedMnemonic = keyStore.key;
     }
     
+    const mnemonicWords = decryptedMnemonic.trim().split(/\s+/);
+    
+    if (mnemonicWords.length !== 24) {
+      throw new Error("Cardano requires 24-word mnemonic");
+    }
+
+    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
+    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
+    
     const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
+    const cardanoChainId = await getCardanoChainIdFromNetwork(network);
+
+    const bip32Ed25519 = await SodiumBip32Ed25519.create();
+    this.keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
+      {
+        mnemonicWords,
+        accountIndex,
+        purpose: CARDANO_PURPOSE,
+        chainId: cardanoChainId,
+        getPassphrase: async () => Buffer.from(password, 'utf8'),
+      },
+      { bip32Ed25519, logger: console }
+    );
     
     // lace-style: use env adapter for better API key management
     logApiKeyStatus(network);
@@ -135,8 +144,9 @@ export class CardanoKeyRing {
     if (networkConfig?.projectId) {
       try {
         this.walletManager = await CardanoWalletManager.create({
-          mnemonicWords: decryptedMnemonic.split(" "),
-          network
+          mnemonicWords,
+          network,
+          accountIndex
         });
         console.log("CardanoWalletManager created successfully");
       } catch (error) {
