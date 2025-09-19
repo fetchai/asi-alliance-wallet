@@ -1,5 +1,6 @@
 import { ChainStore } from "./chain";
 import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
+import { KeyRingStatus } from "@keplr-wallet/background";
 import {
   AmplitudeApiKey,
   CoinGeckoAPIEndPoint,
@@ -398,7 +399,9 @@ export class RootStore {
       // Wait for KeyRing to be fully initialized before initializing accounts
       // This prevents "No keys available" errors during startup
       const initAccountsWhenReady = () => {
-        if (this.keyRingStore.status !== undefined && this.keyRingStore.status !== 0) { // 0 = NOTLOADED
+        // Only initialize when KeyRing is fully UNLOCKED, not just "not NOTLOADED"
+        // This prevents race conditions with Cardano initialization
+        if (this.keyRingStore.status === KeyRingStatus.UNLOCKED) {
           // Start init for registered chains so that users can see account address more quickly.
           for (const chainInfo of this.chainStore.chainInfos) {
             const account = this.accountStore.getAccount(chainInfo.chainId);

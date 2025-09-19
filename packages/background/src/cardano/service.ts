@@ -32,28 +32,30 @@ export class CardanoService {
     chainId?: string
   ): Promise<void> {
     this.clearCaches();
-    this.keyRing = new CardanoKeyRing();
+    
+    // Only create new CardanoKeyRing if not already initialized
+    if (!this.keyRing) {
+      this.keyRing = new CardanoKeyRing();
+    }
 
     try {
-      // Create decryption function with proper type casting
       const decryptFn = crypto
         ? (keyStore: KeyStore, pwd: string) =>
             Crypto.decrypt(crypto, keyStore as any, pwd)
         : undefined;
-      console.log("Restoring CardanoKeyRing from keyStore:", store);
-      // Cast store to KeyStore for compatibility
+      
       await this.keyRing.restore(
         store as KeyStore,
         password,
         decryptFn,
         chainId
       );
-      console.log("CardanoKeyRing restored successfully");
 
-      // lace-style: initialize reactive balance adapter
+      // Wait for keyAgent to be fully initialized with exponential backoff
+      await this.waitForKeyAgentReady();
+
       this.initializeBalanceAdapter();
     } catch (error) {
-      console.error("Failed to restore CardanoKeyRing:", error);
       throw error;
     }
   }
@@ -69,6 +71,11 @@ export class CardanoService {
   ): Promise<Record<string, string>> {
     const helper = new CardanoKeyRing();
     return helper.getMetaFromMnemonic(mnemonic, password, chainId);
+  }
+
+  /** Check if CardanoService is properly initialized */
+  isInitialized(): boolean {
+    return this.keyRing !== undefined;
   }
 
   /** Get Cardano public key/address for UI and signing */
@@ -143,12 +150,9 @@ export class CardanoService {
     }
 
     if (!this.keyRing.isTransactionReady()) {
-      // lace-style: return cached balance if available, graceful fallback
       if (this.balanceAdapter?.currentBalance) {
-        console.warn("Wallet manager not ready, returning cached balance");
         return this.balanceAdapter.currentBalance;
       }
-      // lace-style: return empty balance structure instead of throwing error
       return {
         utxo: {
           available: { coins: BigInt(0) },
@@ -163,14 +167,12 @@ export class CardanoService {
 
     try {
       const balance = await this.keyRing.getBalance();
-      // lace-style: update balance adapter with fresh data
       if (this.balanceAdapter) {
         (this.balanceAdapter as any).balanceSubject.next({ ...balance, lastUpdated: Date.now() });
       }
       return balance;
     } catch (error) {
       console.warn("Failed to fetch fresh balance:", error);
-      // lace-style: return cached balance if available, otherwise empty structure
       if (this.balanceAdapter?.currentBalance) {
         return this.balanceAdapter.currentBalance;
       }
@@ -189,7 +191,6 @@ export class CardanoService {
 
   /**
    * Get balance as reactive observable stream
-   * Follows Lace pattern for reactive balance updates
    */
   get balance$() {
     if (!this.balanceAdapter) {
@@ -214,14 +215,14 @@ export class CardanoService {
   }
 
   /**
-   * lace-style: Get cached balance without making new request
+   * Get cached balance without making new request
    */
   getCachedBalance(): any | null {
     return this.balanceAdapter?.currentBalance || null;
   }
 
   /**
-   * lace-style: Get balance age in milliseconds
+   * Get balance age in milliseconds
    */
   getBalanceAge(): number {
     return this.balanceAdapter?.balanceAge || Infinity;
@@ -229,7 +230,6 @@ export class CardanoService {
 
   /**
    * Initialize reactive balance adapter
-   * Follows Lace pattern for reactive balance management
    */
   private initializeBalanceAdapter(): void {
     if (this.balanceAdapter) {
@@ -323,20 +323,47 @@ export class CardanoService {
   }
 
   /**
+   * Wait for keyAgent to be ready with exponential backoff
+   */
+  private async waitForKeyAgentReady(): Promise<void> {
+    if (!this.keyRing) {
+      throw new Error("CardanoKeyRing not initialized");
+    }
+    
+    const config = {
+      maxAttempts: 100,        // 1 second maximum
+      initialDelay: 5,         // Start with 5ms
+      maxDelay: 50,            // Maximum 50ms between attempts
+      backoffMultiplier: 1.2   // Increase delay by 20%
+    };
+    
+    let attempts = 0;
+    let delay = config.initialDelay;
+    
+    while (!this.keyRing.isKeyAgentReady() && attempts < config.maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      attempts++;
+      delay = Math.min(delay * config.backoffMultiplier, config.maxDelay);
+    }
+    
+    if (!this.keyRing.isKeyAgentReady()) {
+      throw new Error(`CardanoKeyRing keyAgent failed to initialize after ${attempts} attempts`);
+    }
+  }
+
+  /**
    * Clear internal state and caches
    */
   private clearCaches(): void {
-    // lace-style: destroy balance adapter
     if (this.balanceAdapter) {
       this.balanceAdapter.destroy();
       this.balanceAdapter = undefined;
     }
-    // Clear keyring (original logic)
-    this.keyRing = undefined;
+    // Don't clear keyRing to prevent race conditions
   }
 
   /**
-   * lace-style: Force manual balance refresh
+   * Force manual balance refresh
    */
   async refreshBalance(): Promise<any> {
     if (!this.balanceAdapter) {
@@ -346,7 +373,7 @@ export class CardanoService {
   }
 
   /**
-   * lace-style: Enable/disable balance polling
+   * Enable/disable balance polling
    */
   setBalancePolling(enabled: boolean): void {
     if (!this.balanceAdapter) return;
@@ -359,7 +386,7 @@ export class CardanoService {
   }
 
   /**
-   * lace-style: Cleanup resources
+   * Cleanup resources
    */
   destroy(): void {
     if (this.balanceAdapter) {

@@ -175,10 +175,9 @@ export class KeyRingStore {
   }
 
   get keyRing(): any {
-    if ((this.chainGetter as any).hasFeature("cardano")) {
-      return this._cardanoKeyRing;
-    }
-    return this;
+    // Return CardanoKeyRing for Cardano-specific operations, otherwise return this KeyRingStore
+    // Note: The actual chain detection is handled at usage level
+    return this._cardanoKeyRing || this;
   }
 
   get cardanoKeyRing(): CardanoKeyRing | undefined {
@@ -396,8 +395,7 @@ export class KeyRingStore {
     };
     this._status = result.status;
 
-    if (this._status === KeyRingStatus.UNLOCKED && 
-        this._multiKeyStoreInfo.find(ks => ks.meta?.['cardano'] === "true")) {
+    if (this._status === KeyRingStatus.UNLOCKED) {
       this._cardanoKeyRing = new CardanoKeyRing();
     }
 
@@ -425,8 +423,7 @@ export class KeyRingStore {
     this._status = result.status;
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
     
-    if (this._status === KeyRingStatus.UNLOCKED && 
-        this._multiKeyStoreInfo.find(ks => ks.meta?.['cardano'] === "true")) {
+    if (this._status === KeyRingStatus.UNLOCKED) {
       this._cardanoKeyRing = new CardanoKeyRing();
     }
     

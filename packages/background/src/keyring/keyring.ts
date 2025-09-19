@@ -152,10 +152,6 @@ export class KeyRing {
       this.keystonePublicKey == null
     );
     
-    // Add logs only when called from unlock for diagnostics
-    if (new Error().stack?.includes("unlock")) {
-      console.log("KeyRing.isLocked() called from unlock - result:", locked);
-    }
     
     return locked;
   }
@@ -174,10 +170,8 @@ export class KeyRing {
   }
 
   private set mnemonicMasterSeed(masterSeed: Uint8Array | undefined) {
-    console.log("KeyRing.mnemonicMasterSeed setter called with:", masterSeed ? "Uint8Array" : "undefined");
     this.clearCaches();
     this._mnemonicMasterSeed = masterSeed;
-    console.log("KeyRing.mnemonicMasterSeed setter - _mnemonicMasterSeed after set:", this._mnemonicMasterSeed ? "SET" : "NULL");
   }
 
   private get keystonePublicKey(): KeystoneKeyringData | undefined {
@@ -490,10 +484,6 @@ export class KeyRing {
   }
 
   public async unlock(password: string) {
-    console.log("KeyRing.unlock() - Starting unlock");
-    console.log("KeyRing type:", this.type);
-    console.log("KeyRing status before:", this.status);
-    
     if (!this.keyStore || this.type === "none") {
       throw new Error("Key ring not initialized");
     }
@@ -505,10 +495,6 @@ export class KeyRing {
       ).toString();
       this.mnemonicMasterSeed =
         Mnemonic.generateMasterSeedFromMnemonic(mnemonic);
-      console.log("KeyRing.unlock() - Mnemonic decrypted, mnemonicMasterSeed set");
-      
-      // For Cardano wallets, additional logic is handled in CardanoService
-      // but KeyRing should be unlocked in any case
     } else if (this.type === "privateKey") {
       // If password is invalid, error will be thrown.
       this.privateKey = Buffer.from(
@@ -517,7 +503,6 @@ export class KeyRing {
         ).toString(),
         "hex"
       );
-      console.log("KeyRing.unlock() - Private key decrypted");
     } else if (this.type === "ledger") {
       // Attempt to decode the ciphertext as a JSON public key map. If that fails,
       // try decoding as a single public key hex.
@@ -542,7 +527,6 @@ export class KeyRing {
       }
 
       this.ledgerPublicKeyCache = pubKeys;
-      console.log("KeyRing.unlock() - Ledger public keys cached");
     } else if (this.type === "keystone") {
       const cipherText = await Crypto.decrypt(
         this.crypto,
@@ -551,7 +535,6 @@ export class KeyRing {
       );
       try {
         this.keystonePublicKey = JSON.parse(Buffer.from(cipherText).toString());
-        console.log("KeyRing.unlock() - Keystone public key cached");
       } catch (e: any) {
         throw new Error("Unexpected content of Keystone public keys");
       }
@@ -560,20 +543,6 @@ export class KeyRing {
     }
 
     this.password = password;
-    console.log("KeyRing.unlock() - Password set");
-    console.log("KeyRing.unlock() - Status after unlock:", this.status);
-    console.log("KeyRing.unlock() - isLocked():", this.isLocked());
-    console.log("KeyRing.unlock() - mnemonicMasterSeed:", this.mnemonicMasterSeed ? "SET" : "NULL");
-    console.log("KeyRing.unlock() - privateKey:", this.privateKey ? "SET" : "NULL");
-    console.log("KeyRing.unlock() - ledgerPublicKeyCache:", this.ledgerPublicKeyCache ? "SET" : "NULL");
-    console.log("KeyRing.unlock() - keystonePublicKey:", this.keystonePublicKey ? "SET" : "NULL");
-    
-    // Additional diagnostics
-    console.log("KeyRing.unlock() - isLocked() breakdown:");
-    console.log("  - privateKey == null:", this.privateKey == null);
-    console.log("  - mnemonicMasterSeed == null:", this.mnemonicMasterSeed == null);
-    console.log("  - ledgerPublicKeyCache == null:", this.ledgerPublicKeyCache == null);
-    console.log("  - keystonePublicKey == null:", this.keystonePublicKey == null);
     
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
   }
@@ -584,17 +553,11 @@ export class KeyRing {
   }
 
   public async restore() {
-    console.log("KeyRing.restore() - Starting restore");
-    console.log("KeyRing loaded before:", this.loaded);
-    
     const keyStore = await this.kvStore.get<KeyStore>(KeyStoreKey);
     if (!keyStore) {
       this.keyStore = null;
-      console.log("KeyRing.restore() - No keyStore found");
     } else {
       this.keyStore = keyStore;
-      console.log("KeyRing.restore() - KeyStore restored:", keyStore.type);
-      console.log("KeyRing.restore() - KeyStore meta:", keyStore.meta);
     }
     
     const multiKeyStore = await this.kvStore.get<KeyStore[]>(KeyMultiStoreKey);
@@ -605,15 +568,12 @@ export class KeyRing {
       if (keyStore) {
         keyStore.meta = await this.assignKeyStoreIdMeta({});
         this.multiKeyStore = [keyStore];
-        console.log("KeyRing.restore() - Created multiKeyStore from keyStore");
       } else {
         this.multiKeyStore = [];
-        console.log("KeyRing.restore() - No keyStore, empty multiKeyStore");
       }
       await this.save();
     } else {
       this.multiKeyStore = multiKeyStore;
-      console.log("KeyRing.restore() - MultiKeyStore restored, count:", multiKeyStore.length);
     }
 
     let hasLegacyKeyStore = false;
@@ -628,7 +588,6 @@ export class KeyRing {
       if (this.keyStore.version === "1" || this.keyStore.version === "1.1") {
         hasLegacyKeyStore = true;
         this.updateLegacyKeyStore(this.keyStore);
-        console.log("KeyRing.restore() - Updated legacy keyStore");
       }
     }
     for (const keyStore of this.multiKeyStore) {
@@ -637,19 +596,31 @@ export class KeyRing {
       if (keyStore.version === "1" || keyStore.version === "1.1") {
         hasLegacyKeyStore = true;
         this.updateLegacyKeyStore(keyStore);
-        console.log("KeyRing.restore() - Updated legacy multiKeyStore item");
       }
     }
     if (hasLegacyKeyStore) {
       await this.save();
     }
 
+    // Fix incorrect account index for existing wallets
+    let hasFixedAccountIndex = false;
+    for (let i = 0; i < this.multiKeyStore.length; i++) {
+      const keyStore = this.multiKeyStore[i];
+      
+      if (keyStore.bip44HDPath && keyStore.bip44HDPath.account > 0) {
+        if (keyStore.bip44HDPath.account === i) {
+          keyStore.bip44HDPath.account = 0;
+          hasFixedAccountIndex = true;
+        }
+      }
+    }
+    if (hasFixedAccountIndex) {
+      await this.save();
+    }
+
     // Cardano-specific handling moved to CardanoService
 
     this.loaded = true;
-    console.log("KeyRing.restore() - Set loaded = true");
-    console.log("KeyRing.restore() - Final status:", this.status);
-    console.log("KeyRing.restore() - isLocked():", this.isLocked());
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
   }
 

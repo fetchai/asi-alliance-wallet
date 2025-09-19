@@ -113,6 +113,8 @@ export class KeyRingService {
   }> {
     await this.keyRing.restore();
     
+    // CardanoService initialized on-demand in getKey()
+    
     return {
       status: this.keyRing.status,
       multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo(),
@@ -328,17 +330,8 @@ export class KeyRingService {
     const chainInfo = await this.chainsService.getChainInfo(chainId);
 
     if (chainInfo.features?.includes("cardano")) {
-      try {
-        // Check that CardanoService is initialized
-        if (!this.cardanoService) {
-          throw new Error("CardanoService not available");
-        }
-        
-        return await this.cardanoService.getKey(chainId);
-      } catch (error) {
-        console.error("Cardano getKey error:", error);
-        throw new Error("Failed to get Cardano key. Please check if wallet is properly initialized.");
-      }
+      await this.ensureCardanoServiceReady();
+      return await this.cardanoService.getKey(chainId);
     }
 
     const ethereumKeyFeatures =
@@ -356,6 +349,40 @@ export class KeyRingService {
       chainId,
       await this.chainsService.getChainCoinType(chainId),
       ethereumKeyFeatures.address
+    );
+  }
+
+  private cardanoServiceInitPromise: Promise<void> | null = null;
+
+  private async ensureCardanoServiceReady(): Promise<void> {
+    if (!this.cardanoService.isInitialized()) {
+      if (this.cardanoServiceInitPromise) {
+        return this.cardanoServiceInitPromise;
+      }
+
+      const ks = this.keyRing.getCurrentKeyStore();
+      
+      if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
+        this.cardanoServiceInitPromise = this.initializeCardanoService(ks);
+        try {
+          await this.cardanoServiceInitPromise;
+        } catch (error) {
+          this.cardanoServiceInitPromise = null;
+          throw error;
+        } finally {
+          this.cardanoServiceInitPromise = null;
+        }
+      } else {
+        throw new Error("KeyRing not ready for Cardano initialization");
+      }
+    }
+  }
+
+  private async initializeCardanoService(ks: any): Promise<void> {
+    await this.cardanoService.restoreFromKeyStore(
+      ks,
+      this.keyRing.currentPassword,
+      this.crypto
     );
   }
 
@@ -1013,23 +1040,23 @@ Salt: ${salt}`;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     try {
-    const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
+      const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
 
-    // Initialize CardanoService for all wallets (multi-network support)
-    const ks = this.keyRing.getCurrentKeyStore();
-    if (ks) {
-      try {
-        await this.cardanoService.restoreFromKeyStore(
-          ks,
-          this.keyRing.currentPassword,
-          this.crypto
-        );
-      } catch (error) {
-        console.error("Failed to reinitialize CardanoService:", error);
-      }
-    }
+      const ks = this.keyRing.getCurrentKeyStore();
       
-    return result;
+      if (ks) {
+        try {
+          await this.cardanoService.restoreFromKeyStore(
+            ks,
+            this.keyRing.currentPassword,
+            this.crypto
+          );
+        } catch (error) {
+          console.error("Failed to reinitialize CardanoService:", error);
+        }
+      }
+        
+      return result;
     } finally {
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,

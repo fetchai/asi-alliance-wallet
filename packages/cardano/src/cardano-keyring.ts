@@ -98,7 +98,6 @@ export class CardanoKeyRing {
     decryptFn?: (keyStore: KeyStore, password: string) => Promise<Uint8Array>,
     chainId?: string
   ): Promise<void> {
-    // Recreate keyAgent with correct accountIndex from keyStore
     const accountIndex = keyStore.bip44HDPath?.account ?? 0;
     
     // Get mnemonic from keyStore
@@ -137,7 +136,6 @@ export class CardanoKeyRing {
       { bip32Ed25519, logger: console }
     );
     
-    // lace-style: use env adapter for better API key management
     logApiKeyStatus(network);
     const networkConfig = getNetworkConfig(network);
     
@@ -148,24 +146,18 @@ export class CardanoKeyRing {
           network,
           accountIndex
         });
-        console.log("CardanoWalletManager created successfully");
       } catch (error) {
         console.warn("Failed to create CardanoWalletManager:", error);
-        // lace-style: graceful fallback - continue without wallet manager
-        // This allows basic key operations to work even without API access
       }
     } else {
       console.warn("Blockfrost API key not found - Cardano balance and advanced features will be unavailable");
-      // lace-style: continue with limited functionality
     }
   }
 
   public async getKey(chainId?: string): Promise<Key> {
     if (!this.keyAgent) {
-      console.error("Cardano key agent not initialized");
       throw new Error("Cardano key agent not initialized. Please unlock wallet first.");
     }
-    
 
     if (chainId) {
       await this.updateNetworkIfNeeded(chainId);
@@ -192,15 +184,10 @@ export class CardanoKeyRing {
       const network = getCardanoNetworkFromChainId(chainId);
       const targetChainId = await getCardanoChainIdFromNetwork(network);
       
-      // lace-style: avoid unnecessary updates
       if (this.keyAgent && this.keyAgent.chainId && 
           this.keyAgent.chainId.networkMagic === targetChainId.networkMagic) {
         return;
       }
-      
-      console.log(`Updating Cardano keyAgent from network ${this.keyAgent?.chainId?.networkMagic} to ${targetChainId.networkMagic}`);
-      
-      // lace-style: safer network switching with error handling
       const serializedData = this.keyAgent?.serializableData;
       if (!serializedData) {
         console.warn("No serialized data available for network switch");
@@ -220,7 +207,6 @@ export class CardanoKeyRing {
         { bip32Ed25519, logger: console }
       );
       
-      // lace-style: properly dispose wallet manager before clearing
       if (this.walletManager) {
         if (this.walletManager.dispose) {
           this.walletManager.dispose();
@@ -229,7 +215,6 @@ export class CardanoKeyRing {
       }
     } catch (error) {
       console.error("Failed to update network:", error);
-      // lace-style: graceful fallback - don't break the keyring
     }
   }
 
@@ -270,8 +255,14 @@ export class CardanoKeyRing {
   }
 
   /**
+   * Checks if keyAgent is initialized
+   */
+  isKeyAgentReady(): boolean {
+    return !!this.keyAgent;
+  }
+
+  /**
    * Send ADA transaction
-   * lace-style: graceful error handling
    */
   async sendAda(params: {
     to: string;
@@ -293,12 +284,9 @@ export class CardanoKeyRing {
 
   /**
    * Get wallet balance
-   * lace-style: graceful fallback when wallet manager is not available
    */
   async getBalance(): Promise<any> {
     if (!this.walletManager) {
-      console.warn("CardanoWalletManager not initialized - returning empty balance");
-      // lace-style: return empty balance with proper structure
       return {
         utxo: {
           available: { coins: BigInt(0) },
@@ -315,7 +303,6 @@ export class CardanoKeyRing {
       return await this.walletManager.getBalance();
     } catch (error) {
       console.warn("Failed to fetch balance from wallet manager:", error);
-      // lace-style: graceful fallback - return empty balance with proper structure
       return {
         utxo: {
           available: { coins: BigInt(0) },
