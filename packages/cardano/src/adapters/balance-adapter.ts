@@ -7,14 +7,18 @@ import { catchError, retry } from 'rxjs/operators';
  * Based on Lace's useObservable pattern and balance stream management
  */
 export class BalanceAdapter {
-  private balanceSubject = new BehaviorSubject<any>(null);
+  private balanceSubject: BehaviorSubject<any>;
   private isPolling = false;
   private pollingInterval?: ReturnType<typeof setInterval>;
 
   constructor(
     private getBalanceFn: () => Promise<any>,
-    private pollingIntervalMs: number = 30000
-  ) {}
+    private pollingIntervalMs: number = 30000,
+    initialBalance?: any
+  ) {
+    // Initialize with provided balance or null
+    this.balanceSubject = new BehaviorSubject<any>(initialBalance || null);
+  }
 
   /**
    * Get balance as observable stream
@@ -28,6 +32,13 @@ export class BalanceAdapter {
    * Get current balance value
    */
   get currentBalance(): any {
+    return this.balanceSubject.value;
+  }
+
+  /**
+   * Get current balance value for caching before destruction
+   */
+  getCachedBalance(): any {
     return this.balanceSubject.value;
   }
 
@@ -84,10 +95,21 @@ export class BalanceAdapter {
         .catch(error => {
           console.warn('Failed to fetch balance:', error);
           // Graceful fallback - emit cached balance if available
-          if (this.balanceSubject.value) {
-            subscriber.next(this.balanceSubject.value);
+          const cachedBalance = this.balanceSubject.value;
+          if (cachedBalance && cachedBalance !== null) {
+            subscriber.next(cachedBalance);
           } else {
-            subscriber.error(error);
+            // If no cached balance, emit zero balance instead of error
+            subscriber.next({
+              utxo: {
+                available: { coins: BigInt(0) },
+                total: { coins: BigInt(0) },
+                unspendable: { coins: BigInt(0) }
+              },
+              rewards: BigInt(0),
+              deposits: BigInt(0),
+              assetInfo: new Map()
+            });
           }
           subscriber.complete();
         });
@@ -95,8 +117,21 @@ export class BalanceAdapter {
       retry(2), // Retry up to 2 times on failure
       catchError(error => {
         console.warn('Balance refresh failed after retries:', error);
-        // Return cached balance or empty balance
-        return of(this.balanceSubject.value || { ada: 0, assets: new Map() });
+        // Return cached balance or zero balance structure
+        const cachedBalance = this.balanceSubject.value;
+        if (cachedBalance && cachedBalance !== null) {
+          return of(cachedBalance);
+        }
+        return of({
+          utxo: {
+            available: { coins: BigInt(0) },
+            total: { coins: BigInt(0) },
+            unspendable: { coins: BigInt(0) }
+          },
+          rewards: BigInt(0),
+          deposits: BigInt(0),
+          assetInfo: new Map()
+        });
       })
     );
   }

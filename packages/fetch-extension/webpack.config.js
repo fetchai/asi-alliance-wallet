@@ -34,6 +34,16 @@ const envDefaults = {
   PROD_AUTH_CLIENT_ID: process.env["PROD_AUTH_CLIENT_ID"] || "",
   DEV_MOONPAY_API_KEY: process.env["DEV_MOONPAY_API_KEY"] || "",
   PROD_MOONPAY_API_KEY: process.env["PROD_MOONPAY_API_KEY"] || "",
+  // Cardano Blockfrost API Keys
+  BLOCKFROST_API_KEY: process.env["BLOCKFROST_API_KEY"] || "",
+  BLOCKFROST_PROJECT_ID_MAINNET: process.env["BLOCKFROST_PROJECT_ID_MAINNET"] || "",
+  BLOCKFROST_PROJECT_ID_PREVIEW: process.env["BLOCKFROST_PROJECT_ID_PREVIEW"] || "",
+  BLOCKFROST_PROJECT_ID_PREPROD: process.env["BLOCKFROST_PROJECT_ID_PREPROD"] || "",
+  BLOCKFROST_PROJECT_ID_SANCHONET: process.env["BLOCKFROST_PROJECT_ID_SANCHONET"] || "",
+  BLOCKFROST_URL_MAINNET: process.env["BLOCKFROST_URL_MAINNET"] || "https://cardano-mainnet.blockfrost.io/api/v0",
+  BLOCKFROST_URL_PREVIEW: process.env["BLOCKFROST_URL_PREVIEW"] || "https://cardano-preview.blockfrost.io/api/v0",
+  BLOCKFROST_URL_PREPROD: process.env["BLOCKFROST_URL_PREPROD"] || "https://cardano-preprod.blockfrost.io/api/v0",
+  BLOCKFROST_URL_SANCHONET: process.env["BLOCKFROST_URL_SANCHONET"] || "https://cardano-sanchonet.blockfrost.io/api/v0",
 };
 const commonResolve = () => ({
   extensions: [".ts", ".tsx", ".js", ".jsx", ".css", ".scss", ".svg"],

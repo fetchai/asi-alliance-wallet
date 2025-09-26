@@ -31,7 +31,7 @@ export class CardanoService {
     crypto?: any,
     chainId?: string
   ): Promise<void> {
-    this.clearCaches();
+    const cachedBalance = this.clearCaches();
     
     // Only create new CardanoKeyRing if not already initialized
     if (!this.keyRing) {
@@ -54,7 +54,7 @@ export class CardanoService {
       // Wait for keyAgent to be fully initialized with exponential backoff
       await this.waitForKeyAgentReady();
 
-      this.initializeBalanceAdapter();
+      this.initializeBalanceAdapter(cachedBalance);
     } catch (error) {
       throw error;
     }
@@ -230,16 +230,29 @@ export class CardanoService {
 
   /**
    * Initialize reactive balance adapter
+   * @param initialBalance - Optional initial balance to prevent UI flickering
    */
-  private initializeBalanceAdapter(): void {
+  private initializeBalanceAdapter(initialBalance?: any): void {
     if (this.balanceAdapter) {
+      // Preserve current balance before destruction
+      const currentBalance = this.balanceAdapter.currentBalance;
       this.balanceAdapter.destroy();
+      
+      // Use current balance as initial if no initialBalance provided
+      const balanceToUse = initialBalance || currentBalance;
+      
+      this.balanceAdapter = new BalanceAdapter(
+        () => this.getBalance(),
+        this.balancePollingIntervalMs,
+        balanceToUse
+      );
+    } else {
+      this.balanceAdapter = new BalanceAdapter(
+        () => this.getBalance(),
+        this.balancePollingIntervalMs,
+        initialBalance
+      );
     }
-
-    this.balanceAdapter = new BalanceAdapter(
-      () => this.getBalance(),
-      this.balancePollingIntervalMs
-    );
 
     // Start reactive polling
     this.balanceAdapter.startPolling();
@@ -353,13 +366,20 @@ export class CardanoService {
 
   /**
    * Clear internal state and caches
+   * Preserves current balance to prevent UI flickering
    */
-  private clearCaches(): void {
+  private clearCaches(): any {
+    let cachedBalance: any = null;
+    
     if (this.balanceAdapter) {
+      // Preserve current balance before destruction
+      cachedBalance = this.balanceAdapter.currentBalance;
       this.balanceAdapter.destroy();
       this.balanceAdapter = undefined;
     }
+    
     // Don't clear keyRing to prevent race conditions
+    return cachedBalance;
   }
 
   /**

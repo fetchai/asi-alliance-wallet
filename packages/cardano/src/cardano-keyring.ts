@@ -146,11 +146,17 @@ export class CardanoKeyRing {
           network,
           accountIndex
         });
+        console.log(`CardanoWalletManager created successfully for ${network} network`);
       } catch (error) {
         console.warn("Failed to create CardanoWalletManager:", error);
+        // Continue without wallet manager - basic functionality will still work
+        this.walletManager = undefined;
       }
     } else {
-      console.warn("Blockfrost API key not found - Cardano balance and advanced features will be unavailable");
+      console.warn(`Blockfrost API key not found for ${network} network - Cardano balance and advanced features will be unavailable`);
+      console.warn("To enable Cardano features, set BLOCKFROST_API_KEY environment variable");
+      // Continue without wallet manager - basic functionality will still work
+      this.walletManager = undefined;
     }
   }
 

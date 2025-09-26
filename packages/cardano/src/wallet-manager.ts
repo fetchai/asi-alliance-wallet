@@ -17,11 +17,15 @@ export class CardanoWalletManager {
   private wsProvider: any;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
+  private isKoiosOnlyMode: boolean = false;
 
   private constructor(wallet: any, wsProvider?: any) {
     this.wallet = wallet;
     this.wsProvider = wsProvider;
-    this.setupWSErrorHandling();
+    this.isKoiosOnlyMode = wallet === null;
+    if (!this.isKoiosOnlyMode) {
+      this.setupWSErrorHandling();
+    }
   }
 
   // lace-style: WebSocket error handling and auto-reconnection
@@ -96,7 +100,8 @@ export class CardanoWalletManager {
     // lace-style: use configuration instead of hardcoded URLs
     const networkConfig = getNetworkConfig(network);
     if (!networkConfig) {
-      throw new Error(`No Blockfrost configuration found for network: ${network}`);
+      console.warn(`No Blockfrost configuration found for network: ${network} - using Koios-only mode`);
+      return new CardanoWalletManager(null);
     }
     const baseUrl = networkConfig.baseUrl;
     // lace-style: use proper rate limiter configuration like in lace
@@ -157,6 +162,20 @@ export class CardanoWalletManager {
 
   async getBalance() {
     try {
+      // Koios-only mode: return zero balance structure
+      if (this.isKoiosOnlyMode) {
+        return {
+          utxo: {
+            available: { coins: BigInt(0) },
+            total: { coins: BigInt(0) },
+            unspendable: { coins: BigInt(0) }
+          },
+          rewards: BigInt(0),
+          deposits: BigInt(0),
+          assetInfo: new Map()
+        };
+      }
+
       // lace-style: Get comprehensive balance data following lace patterns
       const [available, total, unspendable, rewards, deposits, assetInfo] = await Promise.all([
         firstValueFrom(this.wallet.balance.utxo.available$),
@@ -195,6 +214,11 @@ export class CardanoWalletManager {
 
   async getAddresses() {
     try {
+      // Koios-only mode: return empty array
+      if (this.isKoiosOnlyMode) {
+        return [];
+      }
+      
       return await firstValueFrom(this.wallet.addresses$);
     } catch (error) {
       console.warn("Failed to get addresses:", error);

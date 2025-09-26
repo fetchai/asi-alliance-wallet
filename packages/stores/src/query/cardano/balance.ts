@@ -38,16 +38,38 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddres
 
   @override
   override *fetch(): Generator<any, void, any> {
-    const response = yield this._instance.post('/address_info?select=address,balance,stake_address', {
-      _addresses: [this.bech32Address]
-    });
-    
-    this.setResponse({
-      data: response.data,
-      status: 200,
-      staled: false,
-      timestamp: Date.now()
-    });
+    try {
+      const response = yield this._instance.post('/address_info?select=address,balance,stake_address', {
+        _addresses: [this.bech32Address]
+      });
+      
+      // Validate response data
+      if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
+        this.setResponse({
+          data: response.data,
+          status: 200,
+          staled: false,
+          timestamp: Date.now()
+        });
+      } else {
+        // Handle empty or invalid response gracefully
+        this.setResponse({
+          data: [],
+          status: 200,
+          staled: false,
+          timestamp: Date.now()
+        });
+      }
+    } catch (error) {
+      console.warn('Cardano balance fetch failed:', error);
+      // Set empty response to prevent UI errors
+      this.setResponse({
+        data: [],
+        status: 500,
+        staled: false,
+        timestamp: Date.now()
+      });
+    }
   }
 
   get balance(): string {
@@ -120,11 +142,26 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
       throw new Error(`Unknown currency: ${denom}`);
     }
 
-    if (!this.queryBalance.response?.data) {
+    // Graceful fallback: Check for valid balance data
+    if (!this.queryBalance.response?.data || !this.queryBalance.response.data[0]) {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
 
-    return new CoinPretty(currency, new Int(this.queryBalance.balance));
+    const balanceData = this.queryBalance.response.data[0];
+    const balanceValue = balanceData.balance;
+
+    // Additional validation: ensure balance is a valid number
+    if (!balanceValue || balanceValue === "0" || balanceValue === "") {
+      return new CoinPretty(currency, new Int(0)).ready(false);
+    }
+
+    // Parse balance and validate it's a positive number
+    const parsedBalance = parseInt(balanceValue, 10);
+    if (isNaN(parsedBalance) || parsedBalance < 0) {
+      return new CoinPretty(currency, new Int(0)).ready(false);
+    }
+
+    return new CoinPretty(currency, new Int(parsedBalance));
   }
 }
 
