@@ -5,6 +5,7 @@ import { ValidatorCardV2 } from "@components-v2/validator-card";
 import { Dec } from "@keplr-wallet/unit";
 import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
+import { NoResults } from "@components-v2/no-results";
 
 type Sort = "APR" | "Voting Power" | "Name";
 
@@ -98,9 +99,7 @@ export const SelectValidatorList = observer(
           >
             <div>
               Sort by
-              <span style={{ color: "rgba(255,255,255,1)", marginLeft: "8px" }}>
-                {sort}
-              </span>
+              <span className={style["sort-by"]}>{sort}</span>
             </div>
             <div>
               <img
@@ -128,9 +127,7 @@ export const SelectValidatorList = observer(
             </React.Fragment>
           ))
         ) : (
-          <div style={{ textAlign: "center", color: "white" }}>
-            No Validators Found
-          </div>
+          <NoResults message="No Validators found" />
         )}
       </React.Fragment>
     );

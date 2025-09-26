@@ -18,6 +18,7 @@ import { NoActivity } from "../../activity/no-activity";
 import { UnsupportedNetwork } from "../../activity/unsupported-network";
 import { GovtProposalRow } from "./proposal-row";
 import style from "./style.module.scss";
+import { NoResults } from "@components-v2/no-results";
 
 export const proposalOptions = {
   ProposalActive: "PROPOSAL_STATUS_VOTING_PERIOD",
@@ -210,6 +211,7 @@ const GovtProposal = ({
         flexDirection: "column",
         gap: "16px",
       }}
+      emptyContent={<NoResults message="No Proposals Found" />}
       renderResult={(proposal: ProposalType, index) => (
         <div
           style={{

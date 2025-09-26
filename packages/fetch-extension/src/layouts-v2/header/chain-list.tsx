@@ -14,6 +14,7 @@ import { useStore } from "../../stores";
 import style from "./chain-list.module.scss";
 import { getFilteredChainValues } from "@utils/filters";
 import { NotificationOption } from "@components-v2/notification-option";
+import { NoResults } from "@components-v2/no-results";
 interface ChainListProps {
   showAddress?: boolean;
   setIsSelectNetOpen?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -84,6 +85,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
               valuesArray={cosmosList}
               itemsStyleProp={{ height: "100%" }}
               filterFunction={getFilteredChainValues}
+              emptyContent={<NoResults styles={{ height: "200px" }} />}
               midElement={
                 <ButtonV2
                   styleProps={{
@@ -275,6 +277,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
               onSearchTermChange={setEvmSearchTerm}
               valuesArray={evmList}
               filterFunction={getFilteredChainValues}
+              emptyContent={<NoResults styles={{ height: "200px" }} />}
               midElement={
                 <ButtonV2
                   styleProps={{
