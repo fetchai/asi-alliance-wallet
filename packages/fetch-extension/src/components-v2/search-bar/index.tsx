@@ -12,6 +12,7 @@ interface Props {
   itemsStyleProp?: any;
   filterFunction: any;
   midElement?: React.ReactNode;
+  emptyContent?: React.ReactNode;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -22,6 +23,7 @@ export const SearchBar: React.FC<Props> = ({
   valuesArray,
   renderResult,
   onSearchTermChange,
+  emptyContent,
   itemsStyleProp,
   filterFunction,
   midElement,
@@ -80,19 +82,12 @@ export const SearchBar: React.FC<Props> = ({
           ))}
         </div>
       ) : (
-        searchTerm.length > 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              color: "white",
-              fontSize: "14px",
-              fontWeight: 400,
-              opacity: 1,
-            }}
-          >
-            No results found!
-          </div>
-        )
+        searchTerm.length > 0 &&
+        (emptyContent ? (
+          emptyContent
+        ) : (
+          <div className={style["noResults"]}>No results found!</div>
+        ))
       )}
     </div>
   );

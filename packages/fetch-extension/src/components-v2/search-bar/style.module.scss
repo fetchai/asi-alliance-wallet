@@ -14,3 +14,11 @@
 .searchInput:disabled {
   cursor: not-allowed;
 }
+
+.noResults {
+  text-align: center;
+  color: $font-secondary;
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 1;
+}

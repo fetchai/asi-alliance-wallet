@@ -1,3 +1,4 @@
+import { Dropdown } from "@components-v2/dropdown";
 import { SelectorModal } from "@components-v2/selector-modal/selector";
 import { Staking } from "@keplr-wallet/stores";
 import { Dec } from "@keplr-wallet/unit";
@@ -8,7 +9,6 @@ import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { ValidatorsList } from "./validators";
-import { Dropdown } from "@components-v2/dropdown";
 
 type Sort = "APR" | "Voting Power" | "Name";
 
@@ -132,65 +132,65 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
       showBottomMenu={false}
       alternativeTitle={"Stake"}
     >
-      <div className={style["searchContainer"]}>
-        <div className={style["searchBox"]}>
-          <input
-            placeholder="Search by validator name or address"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <img src={require("@assets/svg/wireframe/search.svg")} alt="" />
+      <div className={style["validatorListContainer"]}>
+        <div className={style["searchContainer"]}>
+          <div className={style["searchBox"]}>
+            <input
+              placeholder="Search by validator name or address"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <img src={require("@assets/svg/wireframe/search.svg")} alt="" />
+          </div>
         </div>
-      </div>
 
-      <div
-        style={{
-          position: "relative",
-        }}
-      >
         <div
-          className={style["sort-selector"]}
-          onClick={() => {
-            setIsSortModalOpen((prev) => !prev);
-            analyticsStore.logEvent("stake_validator_click", {
-              pageName: "Stake",
-            });
+          style={{
+            position: "relative",
           }}
         >
-          <div>
-            Sort by
-            <span className={style["sort-by"]}>{sort}</span>
-          </div>
-          <div>
-            <img src={require("@assets/svg/wireframe/chevron-down.svg")} />
+          <div
+            className={style["sort-selector"]}
+            onClick={() => {
+              setIsSortModalOpen((prev) => !prev);
+              analyticsStore.logEvent("stake_validator_click", {
+                pageName: "Stake",
+              });
+            }}
+          >
+            <div>
+              Sort by
+              <span className={style["sort-by"]}>{sort}</span>
+            </div>
+            <div>
+              <img src={require("@assets/svg/wireframe/chevron-down.svg")} />
+            </div>
           </div>
         </div>
-      </div>
-
-      {<ValidatorsList filteredValidators={data} />}
-
-      <Dropdown
-        closeClicked={() => {
-          setIsSortModalOpen(false);
-        }}
-        title="Sort By"
-        isOpen={isSortModalOpen}
-        setIsOpen={setIsSortModalOpen}
-        styleProp={{
-          maxHeight: "600px",
-        }}
-      >
-        <SelectorModal
-          close={() => {
+        <ValidatorsList filteredValidators={data} />
+        <Dropdown
+          closeClicked={() => {
             setIsSortModalOpen(false);
           }}
+          title="Sort By"
           isOpen={isSortModalOpen}
-          items={items}
-          selectedKey={sort}
-          setSelectedKey={(key) => setSort(key as Sort)}
-          modalPersistent={false}
-        />
-      </Dropdown>
+          setIsOpen={setIsSortModalOpen}
+          styleProp={{
+            maxHeight: "600px",
+          }}
+        >
+          <SelectorModal
+            close={() => {
+              setIsSortModalOpen(false);
+            }}
+            isOpen={isSortModalOpen}
+            items={items}
+            selectedKey={sort}
+            setSelectedKey={(key) => setSort(key as Sort)}
+            modalPersistent={false}
+          />
+        </Dropdown>
+      </div>
     </HeaderLayout>
   );
 });
