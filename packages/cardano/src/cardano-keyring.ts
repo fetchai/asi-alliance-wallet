@@ -2,7 +2,7 @@ import { CardanoWalletManager } from './wallet-manager';
 import { makeObservable, observable } from "mobx";
 import { KeyCurve } from "@keplr-wallet/crypto";
 import { getCardanoNetworkFromChainId, getCardanoChainIdFromNetwork } from './utils/network';
-import { getNetworkConfig, logApiKeyStatus } from './adapters/env-adapter';
+import { logApiKeyStatus } from './adapters/env-adapter';
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
@@ -137,26 +137,24 @@ export class CardanoKeyRing {
     );
     
     logApiKeyStatus(network);
-    const networkConfig = getNetworkConfig(network);
     
-    if (networkConfig?.projectId) {
-      try {
-        this.walletManager = await CardanoWalletManager.create({
-          mnemonicWords,
-          network,
-          accountIndex
-        });
-        console.log(`CardanoWalletManager created successfully for ${network} network`);
-      } catch (error) {
-        console.warn("Failed to create CardanoWalletManager:", error);
-        // Continue without wallet manager - basic functionality will still work
-        this.walletManager = undefined;
+    // Always try to create walletManager, even without Blockfrost
+    try {
+      this.walletManager = await CardanoWalletManager.create({
+        mnemonicWords,
+        network,
+        accountIndex
+      });
+      
+      // Extract keyAgent from walletManager for direct access
+      if (this.walletManager) {
+        this.keyAgent = this.walletManager.getKeyAgent();
       }
-    } else {
-      console.warn(`Blockfrost API key not found for ${network} network - Cardano balance and advanced features will be unavailable`);
-      console.warn("To enable Cardano features, set BLOCKFROST_API_KEY environment variable");
+    } catch (error) {
+      console.warn("Failed to create CardanoWalletManager:", error);
       // Continue without wallet manager - basic functionality will still work
       this.walletManager = undefined;
+      this.keyAgent = undefined;
     }
   }
 
@@ -171,6 +169,7 @@ export class CardanoKeyRing {
     
     try {
       const addrObj = await this.keyAgent.deriveAddress({ index: 0, type: 0 }, 0);
+      
       return {
         algo: "ed25519",
         pubKey: Buffer.from(addrObj.rewardAccount, "utf8"),
@@ -257,7 +256,7 @@ export class CardanoKeyRing {
    * Checks readiness for transaction operations
    */
   isTransactionReady(): boolean {
-    return !!(this.keyAgent && this.walletManager);
+    return !!this.keyAgent;
   }
 
   /**
@@ -304,7 +303,7 @@ export class CardanoKeyRing {
         assetInfo: new Map()
       };
     }
-    
+
     try {
       return await this.walletManager.getBalance();
     } catch (error) {

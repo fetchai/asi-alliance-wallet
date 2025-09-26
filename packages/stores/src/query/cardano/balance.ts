@@ -33,7 +33,11 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddres
   }
 
   protected override canFetch(): boolean {
-    return this.bech32Address !== "";
+    // Prevent fetching with invalid addresses
+    return !!(this.bech32Address && 
+              this.bech32Address !== "" && 
+              this.bech32Address !== "undefined" &&
+              this.bech32Address.length >= 10);
   }
 
   @override
@@ -43,7 +47,6 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddres
         _addresses: [this.bech32Address]
       });
       
-      // Validate response data
       if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
         this.setResponse({
           data: response.data,
@@ -52,7 +55,6 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddres
           timestamp: Date.now()
         });
       } else {
-        // Handle empty or invalid response gracefully
         this.setResponse({
           data: [],
           status: 200,
@@ -62,7 +64,6 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddres
       }
     } catch (error) {
       console.warn('Cardano balance fetch failed:', error);
-      // Set empty response to prevent UI errors
       this.setResponse({
         data: [],
         status: 500,
@@ -135,7 +136,7 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
 
     const chainInfo = this.chainGetter.getChain(this.chainId);
     const currency = chainInfo.currencies.find(
-      (cur) => cur.coinMinimalDenom === denom
+      (cur: any) => cur.coinMinimalDenom === denom
     );
 
     if (!currency) {

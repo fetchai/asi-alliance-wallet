@@ -309,9 +309,9 @@ export class KeyRingService {
   async unlock(password: string): Promise<KeyRingStatus> {
     await this.keyRing.unlock(password);
 
-    // Initialize CardanoService for all wallets (multi-network support)
+    // Initialize CardanoService only if not already initialized
     const ks = this.keyRing.getCurrentKeyStore();
-    if (ks) {
+    if (ks && !this.cardanoService.isReady()) {
       try {
         await this.cardanoService.restoreFromKeyStore(
           ks,
@@ -1042,19 +1042,9 @@ Salt: ${salt}`;
     try {
       const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
 
-      const ks = this.keyRing.getCurrentKeyStore();
-      
-      if (ks) {
-        try {
-          await this.cardanoService.restoreFromKeyStore(
-            ks,
-            this.keyRing.currentPassword,
-            this.crypto
-          );
-        } catch (error) {
-          console.error("Failed to reinitialize CardanoService:", error);
-        }
-      }
+      // Don't reinitialize CardanoService on wallet switch
+      // UI handles balance through ObservableQueryCardanoBalance
+      // This prevents race conditions and balance flickering
         
       return result;
     } finally {

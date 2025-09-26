@@ -1,7 +1,6 @@
 import { CardanoKeyRing, KeyStore, Key } from "@keplr-wallet/cardano";
 import { Crypto } from "../keyring/crypto";
 import { Notification } from "../tx/types";
-import { BalanceAdapter } from "@keplr-wallet/cardano";
 
 /**
  * Thin wrapper around @keplr-wallet/cardano that makes Cardano logic look like
@@ -11,12 +10,6 @@ import { BalanceAdapter } from "@keplr-wallet/cardano";
 export class CardanoService {
   private keyRing?: CardanoKeyRing;
   private notification?: Notification;
-  private balanceAdapter?: BalanceAdapter;
-  private readonly balancePollingIntervalMs = process.env[
-    "CARDANO_BALANCE_POLLING_INTERVAL_SEC"
-  ]
-    ? Number(process.env["CARDANO_BALANCE_POLLING_INTERVAL_SEC"]) * 1000
-    : 30 * 1000; // lace-style: 30 seconds default
 
   constructor(notification?: Notification) {
     this.notification = notification;
@@ -31,33 +24,25 @@ export class CardanoService {
     crypto?: any,
     chainId?: string
   ): Promise<void> {
-    const cachedBalance = this.clearCaches();
-    
     // Only create new CardanoKeyRing if not already initialized
     if (!this.keyRing) {
       this.keyRing = new CardanoKeyRing();
     }
 
-    try {
-      const decryptFn = crypto
-        ? (keyStore: KeyStore, pwd: string) =>
-            Crypto.decrypt(crypto, keyStore as any, pwd)
-        : undefined;
-      
-      await this.keyRing.restore(
-        store as KeyStore,
-        password,
-        decryptFn,
-        chainId
-      );
+    const decryptFn = crypto
+      ? (keyStore: KeyStore, pwd: string) =>
+          Crypto.decrypt(crypto, keyStore as any, pwd)
+      : undefined;
+    
+    await this.keyRing.restore(
+      store as KeyStore,
+      password,
+      decryptFn,
+      chainId
+    );
 
-      // Wait for keyAgent to be fully initialized with exponential backoff
-      await this.waitForKeyAgentReady();
-
-      this.initializeBalanceAdapter(cachedBalance);
-    } catch (error) {
-      throw error;
-    }
+    // Wait for keyAgent to be fully initialized with exponential backoff
+    await this.waitForKeyAgentReady();
   }
 
   /**
@@ -140,7 +125,6 @@ export class CardanoService {
 
   /**
    * Gets Cardano wallet balance
-   * lace-style: with caching and error handling
    */
   async getBalance(): Promise<any> {
     if (!this.keyRing) {
@@ -149,61 +133,7 @@ export class CardanoService {
       );
     }
 
-    if (!this.keyRing.isTransactionReady()) {
-      if (this.balanceAdapter?.currentBalance) {
-        return this.balanceAdapter.currentBalance;
-      }
-      return {
-        utxo: {
-          available: { coins: BigInt(0) },
-          total: { coins: BigInt(0) },
-          unspendable: { coins: BigInt(0) }
-        },
-        rewards: BigInt(0),
-        deposits: BigInt(0),
-        assetInfo: new Map()
-      };
-    }
-
-    try {
-      const balance = await this.keyRing.getBalance();
-      if (this.balanceAdapter) {
-        (this.balanceAdapter as any).balanceSubject.next({ ...balance, lastUpdated: Date.now() });
-      }
-      return balance;
-    } catch (error) {
-      console.warn("Failed to fetch fresh balance:", error);
-      if (this.balanceAdapter?.currentBalance) {
-        return this.balanceAdapter.currentBalance;
-      }
-      return {
-        utxo: {
-          available: { coins: BigInt(0) },
-          total: { coins: BigInt(0) },
-          unspendable: { coins: BigInt(0) }
-        },
-        rewards: BigInt(0),
-        deposits: BigInt(0),
-        assetInfo: new Map()
-      };
-    }
-  }
-
-  /**
-   * Get balance as reactive observable stream
-   */
-  get balance$() {
-    if (!this.balanceAdapter) {
-      throw new Error("Balance adapter not initialized. Call restoreFromKeyStore() first.");
-    }
-    return this.balanceAdapter.balance$;
-  }
-
-  /**
-   * Get current balance value
-   */
-  get currentBalance() {
-    return this.balanceAdapter?.currentBalance || null;
+    return this.keyRing.getBalance();
   }
 
   /**
@@ -212,50 +142,6 @@ export class CardanoService {
    */
   isReady(): boolean {
     return !!(this.keyRing && this.keyRing.isTransactionReady());
-  }
-
-  /**
-   * Get cached balance without making new request
-   */
-  getCachedBalance(): any | null {
-    return this.balanceAdapter?.currentBalance || null;
-  }
-
-  /**
-   * Get balance age in milliseconds
-   */
-  getBalanceAge(): number {
-    return this.balanceAdapter?.balanceAge || Infinity;
-  }
-
-  /**
-   * Initialize reactive balance adapter
-   * @param initialBalance - Optional initial balance to prevent UI flickering
-   */
-  private initializeBalanceAdapter(initialBalance?: any): void {
-    if (this.balanceAdapter) {
-      // Preserve current balance before destruction
-      const currentBalance = this.balanceAdapter.currentBalance;
-      this.balanceAdapter.destroy();
-      
-      // Use current balance as initial if no initialBalance provided
-      const balanceToUse = initialBalance || currentBalance;
-      
-      this.balanceAdapter = new BalanceAdapter(
-        () => this.getBalance(),
-        this.balancePollingIntervalMs,
-        balanceToUse
-      );
-    } else {
-      this.balanceAdapter = new BalanceAdapter(
-        () => this.getBalance(),
-        this.balancePollingIntervalMs,
-        initialBalance
-      );
-    }
-
-    // Start reactive polling
-    this.balanceAdapter.startPolling();
   }
 
   /**
@@ -362,56 +248,5 @@ export class CardanoService {
     if (!this.keyRing.isKeyAgentReady()) {
       throw new Error(`CardanoKeyRing keyAgent failed to initialize after ${attempts} attempts`);
     }
-  }
-
-  /**
-   * Clear internal state and caches
-   * Preserves current balance to prevent UI flickering
-   */
-  private clearCaches(): any {
-    let cachedBalance: any = null;
-    
-    if (this.balanceAdapter) {
-      // Preserve current balance before destruction
-      cachedBalance = this.balanceAdapter.currentBalance;
-      this.balanceAdapter.destroy();
-      this.balanceAdapter = undefined;
-    }
-    
-    // Don't clear keyRing to prevent race conditions
-    return cachedBalance;
-  }
-
-  /**
-   * Force manual balance refresh
-   */
-  async refreshBalance(): Promise<any> {
-    if (!this.balanceAdapter) {
-      throw new Error("Balance adapter not initialized");
-    }
-    return await this.balanceAdapter.forceRefresh();
-  }
-
-  /**
-   * Enable/disable balance polling
-   */
-  setBalancePolling(enabled: boolean): void {
-    if (!this.balanceAdapter) return;
-    
-    if (enabled) {
-      this.balanceAdapter.startPolling();
-    } else {
-      this.balanceAdapter.stopPolling();
-    }
-  }
-
-  /**
-   * Cleanup resources
-   */
-  destroy(): void {
-    if (this.balanceAdapter) {
-      this.balanceAdapter.destroy();
-    }
-    this.clearCaches();
   }
 }
