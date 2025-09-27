@@ -60,7 +60,6 @@ export class CardanoKeyRing {
   ): Promise<Record<string, string>> {
     const mnemonicWords = mnemonic.trim().split(/\s+/);
     if (mnemonicWords.length !== 24) {
-      // Lace/Cardano SDK works only with 24 words
       return {};
     }
 
@@ -282,7 +281,6 @@ export class CardanoKeyRing {
       return await this.walletManager.sendAda(params);
     } catch (error) {
       console.error("Failed to send ADA transaction:", error);
-      // lace-style: re-throw with more context
       throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
     }
   }

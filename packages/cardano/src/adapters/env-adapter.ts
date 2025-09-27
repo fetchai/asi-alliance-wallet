@@ -132,7 +132,6 @@ export function getCardanoServicesConfig(network: 'mainnet' | 'testnet'): Cardan
   if (network === 'mainnet') {
     return configs.mainnet;
   } else {
-    // lace-style: testnet maps to preview/preprod/sanchonet with fallback
     return configs.preview || configs.preprod || configs.sanchonet;
   }
 }
@@ -144,7 +143,7 @@ export function logApiKeyStatus(network: 'mainnet' | 'testnet'): void {
   const config = getNetworkConfig(network);
   
   if (config && isValidApiKey(config.projectId)) {
-    console.log(`Blockfrost API key found for ${network} network`);
+    // Blockfrost API key found
   } else {
     console.warn(`Blockfrost API key not found for ${network} network - limited functionality`);
   }

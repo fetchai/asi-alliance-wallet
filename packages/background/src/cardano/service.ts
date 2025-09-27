@@ -24,7 +24,6 @@ export class CardanoService {
     crypto?: any,
     chainId?: string
   ): Promise<void> {
-    // Only create new CardanoKeyRing if not already initialized
     if (!this.keyRing) {
       this.keyRing = new CardanoKeyRing();
     }
@@ -41,7 +40,6 @@ export class CardanoService {
       chainId
     );
 
-    // Wait for keyAgent to be fully initialized with exponential backoff
     await this.waitForKeyAgentReady();
   }
 
@@ -75,7 +73,6 @@ export class CardanoService {
 
   /**
    * Sends ADA transaction
-   * Uses high-level sendAda function from wallet/lib with Keplr-style notifications
    */
   async sendAda(params: {
     to: string;
@@ -94,7 +91,6 @@ export class CardanoService {
       );
     }
 
-    // Notification about transaction start (like in BackgroundTxService)
     if (this.notification) {
       this.notification.create({
         iconRelativeUrl: "assets/logo-256.png",
@@ -106,7 +102,6 @@ export class CardanoService {
     try {
       const txId = await this.keyRing.sendAda(params);
 
-      // Success notification (pattern from Lace and Keplr)
       if (this.notification) {
         this.notification.create({
           iconRelativeUrl: "assets/logo-256.png",
@@ -117,7 +112,6 @@ export class CardanoService {
 
       return txId;
     } catch (error) {
-      // Cardano error handling
       this.processCardanoTxError(error);
       throw error;
     }
@@ -167,7 +161,6 @@ export class CardanoService {
     console.error("Cardano transaction error:", error);
     let message = error?.message || "Unknown error occurred";
 
-    // Handle specific Cardano errors
     if (error?.code) {
       switch (error.code) {
         case "InvalidRequest":
@@ -187,7 +180,6 @@ export class CardanoService {
       }
     }
 
-    // Handle errors from Cardano SDK
     if (error?.details && typeof error.details === "string") {
       try {
         const details = JSON.parse(error.details);
@@ -195,25 +187,20 @@ export class CardanoService {
           message = details.message;
         }
       } catch {
-        // If not JSON, use as is
         message = error.details;
       }
     }
 
-    // Handle address validation errors
     if (message.includes("Invalid Cardano address")) {
       message = "Invalid recipient address";
     }
 
-    // Handle insufficient funds errors
     if (
       message.toLowerCase().includes("insufficient") ||
       message.toLowerCase().includes("not enough")
     ) {
       message = "Insufficient funds to complete transaction";
     }
-
-    // Create error notification (pattern from BackgroundTxService)
     this.notification.create({
       iconRelativeUrl: "assets/logo-256.png",
       title: "Cardano transaction failed",

@@ -16,6 +16,4 @@ export * from './background-api';
 export * from './utils/lovelacesToAdaString';
 export * from './utils/network';
 
-// Adapters following Lace patterns
-export * from './adapters/balance-adapter';
 export * from './adapters/env-adapter';

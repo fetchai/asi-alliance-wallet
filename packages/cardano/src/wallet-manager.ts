@@ -17,7 +17,6 @@ export class CardanoWalletManager {
     }
   }
 
-  // lace-style: WebSocket error handling and auto-reconnection
   private setupWSErrorHandling() {
     if (!this.wsProvider) return;
     

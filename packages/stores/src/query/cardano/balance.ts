@@ -33,7 +33,6 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddres
   }
 
   protected override canFetch(): boolean {
-    // Prevent fetching with invalid addresses
     return !!(this.bech32Address && 
               this.bech32Address !== "" && 
               this.bech32Address !== "undefined" &&
@@ -143,20 +142,16 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
       throw new Error(`Unknown currency: ${denom}`);
     }
 
-    // Graceful fallback: Check for valid balance data
     if (!this.queryBalance.response?.data || !this.queryBalance.response.data[0]) {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
 
     const balanceData = this.queryBalance.response.data[0];
     const balanceValue = balanceData.balance;
-
-    // Additional validation: ensure balance is a valid number
+    
     if (!balanceValue || balanceValue === "0" || balanceValue === "") {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
-
-    // Parse balance and validate it's a positive number
     const parsedBalance = parseInt(balanceValue, 10);
     if (isNaN(parsedBalance) || parsedBalance < 0) {
       return new CoinPretty(currency, new Int(0)).ready(false);
