@@ -142,6 +142,14 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
       throw new Error(`Unknown currency: ${denom}`);
     }
 
+    if (this.queryBalance.isFetching) {
+      return new CoinPretty(currency, new Int(0)).ready(false);
+    }
+
+    if (this.queryBalance.error) {
+      return new CoinPretty(currency, new Int(0)).ready(false);
+    }
+
     if (!this.queryBalance.response?.data || !this.queryBalance.response.data[0]) {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
@@ -149,15 +157,20 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
     const balanceData = this.queryBalance.response.data[0];
     const balanceValue = balanceData.balance;
     
-    if (!balanceValue || balanceValue === "0" || balanceValue === "") {
+    if (!balanceValue || balanceValue === "") {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
+    
+    if (balanceValue === "0") {
+      return new CoinPretty(currency, new Int(0)).ready(true);
+    }
+    
     const parsedBalance = parseInt(balanceValue, 10);
     if (isNaN(parsedBalance) || parsedBalance < 0) {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
 
-    return new CoinPretty(currency, new Int(parsedBalance));
+    return new CoinPretty(currency, new Int(parsedBalance)).ready(true);
   }
 }
 
