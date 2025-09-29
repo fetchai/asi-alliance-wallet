@@ -12,6 +12,7 @@ import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { useStore } from "../../../../../stores";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { Card } from "@components-v2/card";
+import { NoResults } from "@components-v2/no-results";
 
 export const PermissionsGetChainInfosPage: FunctionComponent = () => {
   const [requester] = useState(() => new InExtensionMessageRequester());
@@ -55,54 +56,78 @@ export const PermissionsGetChainInfosPage: FunctionComponent = () => {
       }}
     >
       <div className={style["container"]}>
-        {origins.map((origin) => {
-          return (
-            <Card
-              heading={origin}
-              key={origin}
-              onClick={async (e: any) => {
-                e.preventDefault();
-                analyticsStore.logEvent("show_hide_chain", {
-                  chainId: chainStore.current.chainId,
-                  chainName: chainStore.current.chainName,
-                });
+        {origins && origins?.length > 0 ? (
+          origins.map((origin) => {
+            return (
+              <Card
+                heading={origin}
+                key={origin}
+                onClick={async (e: any) => {
+                  e.preventDefault();
+                  analyticsStore.logEvent("show_hide_chain", {
+                    chainId: chainStore.current.chainId,
+                    chainName: chainStore.current.chainName,
+                  });
 
-                if (
-                  await confirm.confirm({
-                    img: (
-                      <img
-                        alt="unlink"
-                        src={require("../../../../../public/assets/img/broken-link.svg")}
-                        style={{ height: "80px" }}
-                      />
-                    ),
-                    title: intl.formatMessage({
-                      id: "setting.connections.confirm.delete-connection.title",
-                    }),
-                    paragraph: intl.formatMessage({
-                      id: "setting.connections.confirm.delete-connection.paragraph",
-                    }),
-                  })
-                ) {
-                  await requester.sendMessage(
-                    BACKGROUND_PORT,
-                    new RemoveGlobalPermissionOriginMsg(
-                      "get-chain-infos",
-                      origin
-                    )
-                  );
+                  if (
+                    await confirm.confirm({
+                      img: (
+                        <img
+                          alt="unlink"
+                          src={require("../../../../../public/assets/img/broken-link.svg")}
+                          style={{ height: "80px" }}
+                        />
+                      ),
+                      title: intl.formatMessage({
+                        id: "setting.connections.confirm.delete-connection.title",
+                      }),
+                      paragraph: intl.formatMessage({
+                        id: "setting.connections.confirm.delete-connection.paragraph",
+                      }),
+                    })
+                  ) {
+                    await requester.sendMessage(
+                      BACKGROUND_PORT,
+                      new RemoveGlobalPermissionOriginMsg(
+                        "get-chain-infos",
+                        origin
+                      )
+                    );
 
-                  const origins = await requester.sendMessage(
-                    BACKGROUND_PORT,
-                    new GetGlobalPermissionOriginsMsg("get-chain-infos")
-                  );
-                  setOrigins(origins);
-                }
-              }}
-              rightContent={xIcon}
-            />
-          );
-        })}
+                    const origins = await requester.sendMessage(
+                      BACKGROUND_PORT,
+                      new GetGlobalPermissionOriginsMsg("get-chain-infos")
+                    );
+                    setOrigins(origins);
+                  }
+                }}
+                rightContent={xIcon}
+              />
+            );
+          })
+        ) : (
+          <NoResults
+            styles={{
+              height: "410px",
+              rowGap: "0px",
+            }}
+            contentStyles={{
+              color: "var(--font-dark)",
+              textAlign: "center",
+              fontSize: "24px",
+              lineHeight: "34px",
+              width: "320px",
+            }}
+            message="No Chain List Access Permissions"
+            icon={
+              <img
+                src={require("@assets/svg/wireframe/no-activity.svg")}
+                style={{ marginBottom: "24px" }}
+                alt=""
+              />
+            }
+          />
+        )}
       </div>
     </HeaderLayout>
   );
