@@ -1,8 +1,11 @@
 export {
   ObservableQueryCardanoBalance,
-  ObservableQueryCardanoBalanceInner,
-  ObservableQueryCardanoBalanceRegistry
+  ObservableQueryCardanoBalanceInner
 } from "./balance";
+
+export {
+  ObservableQueryCardanoBalanceRegistry
+} from "./balance-registry";
 
 export {
   CardanoQueries,

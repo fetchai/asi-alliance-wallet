@@ -1,9 +1,11 @@
 import { DenomHelper, KVStore } from "@keplr-wallet/common";
 import { ChainGetter } from "../../common";
-import { ObservableQueryCardanoBalanceInner } from "./balance";
-import { ObservableQueryBalanceInner } from "../balances";
+import { ObservableQueryCardanoBalanceInner, ObservableQueryCardanoBalance } from "./balance";
+import { ObservableQueryBalanceInner, BalanceRegistry } from "../balances";
 
-export class ObservableQueryCardanoBalanceRegistry {
+export class ObservableQueryCardanoBalanceRegistry implements BalanceRegistry {
+  protected cardanoBalances: Map<string, ObservableQueryCardanoBalance> = new Map();
+
   constructor(protected readonly kvStore: KVStore) {}
 
   getBalanceInner(
@@ -19,12 +21,28 @@ export class ObservableQueryCardanoBalanceRegistry {
       return undefined;
     }
 
+    // Cache ObservableQueryCardanoBalance by address (like Cosmos does)
+    const key = `${chainId}/${bech32Address}`;
+
+    if (!this.cardanoBalances.has(key)) {
+      this.cardanoBalances.set(
+        key,
+        new ObservableQueryCardanoBalance(
+          this.kvStore,
+          chainId,
+          chainGetter,
+          bech32Address
+        )
+      );
+    }
+
     return new ObservableQueryCardanoBalanceInner(
       this.kvStore,
       chainId,
       chainGetter,
       denomHelper,
-      bech32Address
+      bech32Address,
+      this.cardanoBalances.get(key)!
     );
   }
 }

@@ -1,9 +1,9 @@
 import { computed, makeObservable, override } from "mobx";
 import { DenomHelper, KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQuery } from "../../common";
+import { ChainGetter, QueryResponse } from "../../common";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { ObservableQueryBalanceInner } from "../balances";
-import axios from "axios";
+import { ObservableChainQuery } from "../chain-query";
 
 interface CardanoAddressInfo {
   address: string;
@@ -11,7 +11,7 @@ interface CardanoAddressInfo {
   stake_address?: string;
 }
 
-export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddressInfo[]> {
+export class ObservableQueryCardanoBalance extends ObservableChainQuery<CardanoAddressInfo[]> {
   constructor(
     kvStore: KVStore,
     chainId: string,
@@ -20,56 +20,44 @@ export class ObservableQueryCardanoBalance extends ObservableQuery<CardanoAddres
   ) {
     super(
       kvStore,
-      axios.create({
-        baseURL: chainGetter.getChain(chainId).rest,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }),
-      "/address_info?select=address,balance,stake_address",
-      {}
+      chainId,
+      chainGetter,
+      "/address_info?select=address,balance,stake_address"
     );
     makeObservable(this);
   }
 
   protected override canFetch(): boolean {
+    // Prevent fetching with empty or invalid addresses (like Cosmos does)
     return !!(this.bech32Address && 
               this.bech32Address !== "" && 
               this.bech32Address !== "undefined" &&
-              this.bech32Address.length >= 10);
+              this.bech32Address.length > 0);
   }
 
-  @override
-  override *fetch(): Generator<any, void, any> {
-    try {
-      const response = yield this._instance.post('/address_info?select=address,balance,stake_address', {
-        _addresses: [this.bech32Address]
-      });
-      
-      if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
-        this.setResponse({
-          data: response.data,
-          status: 200,
-          staled: false,
-          timestamp: Date.now()
-        });
-      } else {
-        this.setResponse({
-          data: [],
-          status: 200,
-          staled: false,
-          timestamp: Date.now()
-        });
-      }
-    } catch (error) {
-      console.warn('Cardano balance fetch failed:', error);
-      this.setResponse({
-        data: [],
-        status: 500,
+  protected override getCacheKey(): string {
+    // Include address in cache key to prevent mixing data between different addresses
+    return `${super.getCacheKey()}/${this.bech32Address}`;
+  }
+
+  protected override async fetchResponse(
+    abortController: AbortController
+  ): Promise<{ response: QueryResponse<CardanoAddressInfo[]>; headers: any }> {
+    const result = await this.instance.post<CardanoAddressInfo[]>('/address_info?select=address,balance,stake_address', {
+      _addresses: [this.bech32Address]
+    }, {
+      signal: abortController.signal,
+    });
+    
+    return {
+      headers: result.headers,
+      response: {
+        data: result.data,
+        status: result.status,
         staled: false,
-        timestamp: Date.now()
-      });
-    }
+        timestamp: Date.now(),
+      },
+    };
   }
 
   get balance(): string {
@@ -94,13 +82,15 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
     chainId: string,
     chainGetter: ChainGetter,
     denomHelper: DenomHelper,
-    protected readonly address: string
+    protected readonly address: string,
+    queryBalance?: ObservableQueryCardanoBalance
   ) {
     super(kvStore, chainId, chainGetter, "", denomHelper);
 
     makeObservable(this);
 
-    this.queryBalance = new ObservableQueryCardanoBalance(
+    // Use provided queryBalance or create new one
+    this.queryBalance = queryBalance || new ObservableQueryCardanoBalance(
       kvStore,
       chainId,
       chainGetter,
@@ -142,14 +132,6 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
       throw new Error(`Unknown currency: ${denom}`);
     }
 
-    if (this.queryBalance.isFetching) {
-      return new CoinPretty(currency, new Int(0)).ready(false);
-    }
-
-    if (this.queryBalance.error) {
-      return new CoinPretty(currency, new Int(0)).ready(false);
-    }
-
     if (!this.queryBalance.response?.data || !this.queryBalance.response.data[0]) {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
@@ -162,7 +144,7 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
     }
     
     if (balanceValue === "0") {
-      return new CoinPretty(currency, new Int(0)).ready(true);
+      return new CoinPretty(currency, new Int(0));
     }
     
     const parsedBalance = parseInt(balanceValue, 10);
@@ -170,32 +152,11 @@ export class ObservableQueryCardanoBalanceInner extends ObservableQueryBalanceIn
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
 
-    return new CoinPretty(currency, new Int(parsedBalance)).ready(true);
+    return new CoinPretty(currency, new Int(parsedBalance));
   }
-}
 
-export class ObservableQueryCardanoBalanceRegistry {
-  constructor(protected readonly kvStore: KVStore) {}
-
-  getBalanceInner(
-    chainId: string,
-    chainGetter: ChainGetter,
-    bech32Address: string,
-    minimalDenom: string
-  ): ObservableQueryBalanceInner | undefined {
-    const denomHelper = new DenomHelper(minimalDenom);
-    const isCardano = chainGetter.getChain(chainId).features?.includes("cardano") ?? false;
-
-    if (!(isCardano && denomHelper.type === "native")) {
-      return undefined;
-    }
-
-    return new ObservableQueryCardanoBalanceInner(
-      this.kvStore,
-      chainId,
-      chainGetter,
-      denomHelper,
-      bech32Address
-    );
+  // Force refresh when address changes
+  forceRefresh(): void {
+    this.queryBalance.fetch();
   }
 }
