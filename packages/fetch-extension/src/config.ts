@@ -3226,12 +3226,63 @@ const EmbedChainInfos: ChainInfo[] = [
     features: ["cardano"],
     chainSymbolImageUrl: "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
   },
+  // Cardano Testnet (Preview)
+  {
+    rpc: "https://preview.koios.rest/api/v1",
+    rest: "https://preview.koios.rest/api/v1",
+    chainId: "cardano-preview",
+    chainName: "Cardano Preview",
+    stakeCurrency: {
+      coinDenom: "tADA",
+      coinMinimalDenom: "lovelace",
+      coinDecimals: 6,
+      coinGeckoId: "cardano",
+      coinImageUrl: "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    },
+    bip44: {
+      coinType: 1815,
+    },
+    bech32Config: {
+      bech32PrefixAccAddr: "addr_test",
+      bech32PrefixAccPub: "addr_testpub",
+      bech32PrefixValAddr: "stake_test",
+      bech32PrefixValPub: "stake_testpub",
+      bech32PrefixConsAddr: "",
+      bech32PrefixConsPub: "",
+    },
+    currencies: [
+      {
+        coinDenom: "tADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl: "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+      },
+    ],
+    feeCurrencies: [
+      {
+        coinDenom: "tADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl: "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+        gasPriceStep: {
+          low: 0.000044,
+          average: 0.0001,
+          high: 0.0002,
+        },
+      },
+    ],
+    features: ["cardano"],
+    chainSymbolImageUrl: "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    type: "testnet",
+  },
   // Cardano Testnet (Preprod)
   {
     rpc: "https://preprod.koios.rest/api/v1",
     rest: "https://preprod.koios.rest/api/v1",
-    chainId: "cardano-preview",
-    chainName: "Cardano Testnet (Preview)",
+    chainId: "cardano-preprod",
+    chainName: "Cardano Preprod",
     stakeCurrency: {
       coinDenom: "tADA",
       coinMinimalDenom: "lovelace",
