@@ -1,0 +1,47 @@
+name: Cross-Repo Artifact Exchange (Web5 Secured)
+
+on:
+  repository_dispatch:
+    types: [ "artifact-upload" ]
+
+env:
+  SECURE_CHANNEL: 'web5://artifact-hub'
+  STORAGE_PATH: 'central-artifacts'
+  AUTH_TOKEN: ${{ secrets.WEB5_AUTH }}
+
+jobs:
+  receive-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout orchestrator repo
+        uses: actions/checkout@v4
+
+      - name: Create secure storage path
+        run: mkdir -p ${{ env.STORAGE_PATH }}
+
+      - name: Download artifact from fork event payload
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{ secrets.GH_CROSSREPO_TOKEN }}
+          repo: ${{ github.event.client_payload.repo }}
+          run_id: ${{ github.event.client_payload.run_id }}
+
+      - name: Push artifacts into Web5-secure channel
+        run: |
+          echo "Uploading artifact package to Web5 channel..."
+          # Simulated secure Web5 API push
+          curl -X POST ${{ env.SECURE_CHANNEL }}/upload \
+               -H "Authorization: Bearer ${{ env.AUTH_TOKEN }}" \
+               -F "file=@./${{ env.STORAGE_PATH }}/artifact.zip"
+
+      - name: Update orchestrator logs
+        run: |
+          echo "Artifact received from repo: ${{ github.event.client_payload.repo }}" >> ./exchange.log
+          echo "Run ID: ${{ github.event.client_payload.run_id }}" >> ./exchange.log
+          echo "Timestamp: $(date -u)" >> ./exchange.log
+
+      - name: Upload updated logs back to orchestrator
+        uses: actions/upload-artifact@v3
+        with:
+          name: orchestrator-artifact-log
+          path: ./exchange.log
