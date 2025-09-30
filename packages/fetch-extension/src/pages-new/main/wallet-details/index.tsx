@@ -3,7 +3,12 @@ import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
 import { WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
-import { formatAddress, separateNumericAndDenom } from "@utils/format";
+import {
+  formatAddress,
+  formatAddressWithCustom,
+  separateNumericAndDenom,
+  splitBech32,
+} from "@utils/format";
 import React, { useCallback, useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
@@ -200,7 +205,7 @@ export const WalletDetailsView = observer(
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "24px",
+            marginBottom: "16px",
             fontWeight: 400,
           }}
         >
@@ -242,7 +247,12 @@ export const WalletDetailsView = observer(
             style={
               accountInfo.walletStatus === WalletStatus.Rejected
                 ? { display: "flex", gap: "10px", alignItems: "center" }
-                : { display: "flex", columnGap: "10px", width: "80%" }
+                : {
+                    display: "flex",
+                    columnGap: "10px",
+                    flexDirection: "column",
+                    width: "85%",
+                  }
             }
           >
             <div className={style["wallet-address"]}>
@@ -265,7 +275,7 @@ export const WalletDetailsView = observer(
                 }
               })()}
             </div>
-            <div style={{ width: "60%" }}>
+            <div style={{ width: "100%" }}>
               <div className={style["walletRejected"]}>
                 {accountInfo.walletStatus === WalletStatus.Rejected && (
                   <ToolTip
@@ -313,8 +323,21 @@ export const WalletDetailsView = observer(
                       }}
                       onClick={() => copyAddress(accountInfo.bech32Address)}
                     >
-                      <Address maxCharacters={16} lineBreakBeforePrefix={false}>
-                        {accountInfo.bech32Address}
+                      <Address
+                        maxCharacters={16}
+                        lineBreakBeforePrefix={false}
+                        tooltipAddress={accountInfo.bech32Address}
+                      >
+                        <span style={{ display: "flex" }}>
+                          {splitBech32(accountInfo.bech32Address).prefix}
+                          <span className={style["wallet-address-text"]}>
+                            {formatAddressWithCustom(
+                              splitBech32(accountInfo.bech32Address).rest,
+                              3,
+                              6
+                            )}
+                          </span>
+                        </span>
                       </Address>
                       <img
                         style={{ cursor: "pointer" }}
@@ -343,17 +366,22 @@ export const WalletDetailsView = observer(
                     >
                       <Address
                         isRaw={true}
+                        placement="bottom-end"
                         tooltipAddress={accountInfo.ethereumHexAddress}
                       >
-                        {accountInfo.walletStatus === WalletStatus.Loaded &&
-                        accountInfo.ethereumHexAddress
-                          ? accountInfo.ethereumHexAddress.length === 42
-                            ? `${accountInfo.ethereumHexAddress.slice(
-                                0,
-                                6
-                              )}...${accountInfo.ethereumHexAddress.slice(-6)}`
-                            : accountInfo.ethereumHexAddress
-                          : "..."}
+                        <span className={style["wallet-address-text-eth"]}>
+                          {accountInfo.walletStatus === WalletStatus.Loaded &&
+                          accountInfo.ethereumHexAddress
+                            ? accountInfo.ethereumHexAddress.length === 42
+                              ? `${accountInfo.ethereumHexAddress.slice(
+                                  0,
+                                  6
+                                )}...${accountInfo.ethereumHexAddress.slice(
+                                  -6
+                                )}`
+                              : accountInfo.ethereumHexAddress
+                            : "..."}
+                        </span>
                       </Address>
                     </div>
                     <img
