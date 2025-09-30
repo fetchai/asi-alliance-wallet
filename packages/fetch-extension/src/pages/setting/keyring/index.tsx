@@ -16,11 +16,12 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
+import { CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
 
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
 
-  const { keyRingStore, analyticsStore, chatStore, proposalStore } = useStore();
+  const { keyRingStore, analyticsStore, chatStore, proposalStore, chainStore } = useStore();
   const navigate = useNavigate();
 
   const loadingIndicator = useLoadingIndicator();
@@ -137,6 +138,20 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                       try {
                         await keyRingStore.changeKeyRing(i);
                         analyticsStore.logEvent("select_account_click");
+                        
+                        // Check if current chain is Cardano and new wallet doesn't support it
+                        const isCardanoSupportedWallet =
+                          keyStore?.meta["cardano"] === "true";
+                        const isCurrentChainCardano = 
+                          chainStore.current.chainId === "cardano-preview" ||
+                          chainStore.current.chainId === "cardano-mainnet" ||
+                          chainStore.current.chainId === "cardano-preprod";
+                        
+                        // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
+                        if (isCurrentChainCardano && !isCardanoSupportedWallet) {
+                          chainStore.selectChain(CHAIN_ID_FETCHHUB);
+                          chainStore.saveLastViewChainId();
+                        }
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();
                         proposalStore.resetProposals();

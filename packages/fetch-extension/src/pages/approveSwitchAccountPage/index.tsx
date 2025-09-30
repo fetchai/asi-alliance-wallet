@@ -13,6 +13,7 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -279,6 +280,21 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     try {
                       accountSwitchStore.approve(address);
                       keyRingStore.changeKeyRing(addressIndex);
+                      
+                      // Check if current chain is Cardano and new wallet doesn't support it
+                      const newKeyStore = keyRingStore.multiKeyStoreInfo[addressIndex];
+                      const isCardanoSupportedWallet =
+                        newKeyStore?.meta["cardano"] === "true";
+                      const isCurrentChainCardano = 
+                        chainStore.current.chainId === "cardano-preview" ||
+                        chainStore.current.chainId === "cardano-mainnet" ||
+                        chainStore.current.chainId === "cardano-preprod";
+                      
+                      // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
+                      if (isCurrentChainCardano && !isCardanoSupportedWallet) {
+                        chainStore.selectChain(CHAIN_ID_FETCHHUB);
+                        chainStore.saveLastViewChainId();
+                      }
                       analyticsStore.logEvent("change_wallet_click");
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();
