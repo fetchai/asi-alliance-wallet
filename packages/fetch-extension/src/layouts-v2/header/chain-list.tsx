@@ -7,7 +7,7 @@ import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { formatAddress } from "@utils/format";
 import classnames from "classnames";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useState } from "react";
+import React, { FunctionComponent, useState, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
@@ -26,6 +26,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
       chainStore,
       analyticsStore,
       accountStore,
+      keyRingStore,
     } = useStore();
     const [cosmosSearchTerm, setCosmosSearchTerm] = useState("");
     const [evmSearchTerm, setEvmSearchTerm] = useState("");
@@ -39,30 +40,37 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const confirm = useConfirm();
 
     const mainChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) =>
+      (chainInfo: any) =>
         !chainInfo.raw.beta && !chainInfo.raw.features?.includes("evm")
     );
 
-    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo: any) =>
       chainInfo.raw.features?.includes("evm")
     );
 
     const betaChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => chainInfo.raw.beta
+      (chainInfo: any) => chainInfo.raw.beta
     );
 
     const cosmosMainList = mainChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo: any) => chainInfo.raw.type !== "testnet"
     );
 
     const evmMainList = evmChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo: any) => chainInfo.raw.type !== "testnet"
     );
 
     const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;
     const evmList = chainStore.showTestnet ? evmChainList : evmMainList;
 
-    const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+    // Check if current wallet supports Cardano
+    const isCardanoSupportedWallet = useMemo(() => {
+      const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find((item: any) => item.selected);
+      return selectedKeyStore?.meta["cardano"] === "true" || 
+             (selectedKeyStore?.type === "mnemonic" && selectedKeyStore?.meta?.["mnemonicLength"] === "24");
+    }, [keyRingStore.multiKeyStoreInfo]);
+
+    const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo: any) =>
       chainInfo.features?.includes("cardano")
     );
 
@@ -172,7 +180,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
               <div className={style["chain-title"]}>Beta support</div>
             )}
 
-            {betaChainList.map((chainInfo) => (
+            {betaChainList.map((chainInfo: any) => (
               <Card
                 key={chainInfo.raw.chainId}
                 leftImage={
@@ -370,85 +378,96 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
         id: "Cardano",
         component: (
           <div>
-            <SearchBar
-              searchTerm={cardanoSearchTerm}
-              onSearchTermChange={setCardanoSearchTerm}
-              valuesArray={cardanoChainList}
-              itemsStyleProp={{ height: "100%" }}
-              filterFunction={getFilteredChainValues}
-              midElement={
-                <ButtonV2
-                  styleProps={{
-                    height: "48px",
-                    marginTop: "0px",
-                    fontSize: "14px",
-                  }}
-                  onClick={(e: any) => {
-                    e.preventDefault();
-                    analyticsStore.logEvent("manage_networks_click", {
-                      pageName: "Home",
-                    });
-                    navigate("/manage-networks");
-                  }}
-                  text={"Manage networks"}
-                />
-              }
-              renderResult={(chainInfo, index) => (
-                <Card
-                  key={index}
-                  leftImage={
-                    chainInfo.raw.chainSymbolImageUrl !== undefined
-                      ? chainInfo.raw.chainSymbolImageUrl
-                      : chainInfo.raw.chainName
-                      ? chainInfo.raw.chainName[0].toUpperCase()
-                      : ""
-                  }
-                  heading={chainInfo.raw.chainName}
-                  isActive={
-                    chainInfo.raw.chainId === chainStore.current.chainId
-                  }
-                  rightContent={
-                    clickedChain === chainInfo.raw.chainId
-                      ? require("@assets/svg/wireframe/check.svg")
-                      : ""
-                  }
-                  onClick={() => {
-                    setClickedChain(chainInfo.raw.chainId);
-                    let properties = {};
-                    if (chainInfo.raw.chainId !== chainStore.current.chainId) {
-                      properties = {
-                        chainId: chainStore.current.chainId,
-                        chainName: chainStore.current.chainName,
-                        toChainId: chainInfo.raw.chainId,
-                        toChainName: chainInfo.raw.chainName,
-                      };
+            {isCardanoSupportedWallet ? (
+              <SearchBar
+                searchTerm={cardanoSearchTerm}
+                onSearchTermChange={setCardanoSearchTerm}
+                valuesArray={cardanoChainList}
+                itemsStyleProp={{ height: "100%" }}
+                filterFunction={getFilteredChainValues}
+                midElement={
+                  <ButtonV2
+                    styleProps={{
+                      height: "48px",
+                      marginTop: "0px",
+                      fontSize: "14px",
+                    }}
+                    onClick={(e: any) => {
+                      e.preventDefault();
+                      analyticsStore.logEvent("manage_networks_click", {
+                        pageName: "Home",
+                      });
+                      navigate("/manage-networks");
+                    }}
+                    text={"Manage networks"}
+                  />
+                }
+                renderResult={(chainInfo, index) => (
+                  <Card
+                    key={index}
+                    leftImage={
+                      chainInfo.raw.chainSymbolImageUrl !== undefined
+                        ? chainInfo.raw.chainSymbolImageUrl
+                        : chainInfo.raw.chainName
+                        ? chainInfo.raw.chainName[0].toUpperCase()
+                        : ""
                     }
-                    chainStore.selectChain(chainInfo.raw.chainId);
-                    chainStore.saveLastViewChainId();
-                    chatStore.userDetailsStore.resetUser();
-                    proposalStore.resetProposals();
-                    chatStore.messagesStore.resetChatList();
-                    chatStore.messagesStore.setIsChatSubscriptionActive(false);
-                    messageAndGroupListenerUnsubscribe();
+                    heading={chainInfo.raw.chainName}
+                    isActive={
+                      chainInfo.raw.chainId === chainStore.current.chainId
+                    }
+                    rightContent={
+                      clickedChain === chainInfo.raw.chainId
+                        ? require("@assets/svg/wireframe/check.svg")
+                        : ""
+                    }
+                    onClick={() => {
+                      setClickedChain(chainInfo.raw.chainId);
+                      let properties = {};
+                      if (chainInfo.raw.chainId !== chainStore.current.chainId) {
+                        properties = {
+                          chainId: chainStore.current.chainId,
+                          chainName: chainStore.current.chainName,
+                          toChainId: chainInfo.raw.chainId,
+                          toChainName: chainInfo.raw.chainName,
+                        };
+                      }
+                      chainStore.selectChain(chainInfo.raw.chainId);
+                      chainStore.saveLastViewChainId();
+                      chatStore.userDetailsStore.resetUser();
+                      proposalStore.resetProposals();
+                      chatStore.messagesStore.resetChatList();
+                      chatStore.messagesStore.setIsChatSubscriptionActive(false);
+                      messageAndGroupListenerUnsubscribe();
 
-                    if (Object.values(properties).length > 0) {
-                      analyticsStore.logEvent("chain_change_click", properties);
+                      if (Object.values(properties).length > 0) {
+                        analyticsStore.logEvent("chain_change_click", properties);
+                      }
+                      if (setIsSelectNetOpen) {
+                        setIsSelectNetOpen(false);
+                      }
+                    }}
+                    subheading={
+                      showAddress
+                        ? formatAddress(
+                            accountStore.getAccount(chainInfo.raw.chainId)
+                              .bech32Address
+                          )
+                        : null
                     }
-                    if (setIsSelectNetOpen) {
-                      setIsSelectNetOpen(false);
-                    }
-                  }}
-                  subheading={
-                    showAddress
-                      ? formatAddress(
-                          accountStore.getAccount(chainInfo.raw.chainId)
-                            .bech32Address
-                        )
-                      : null
-                  }
-                />
-              )}
-            />
+                  />
+                )}
+              />
+            ) : (
+              <div className={style["unsupported-message"]}>
+                <div className={style["message-text"]}>
+                  Cardano networks are not supported with this seed phrase length
+                </div>
+                <div className={style["message-subtitle"]}>
+                  Please use a 24-word seed phrase to access Cardano networks
+                </div>
+              </div>
+            )}
           </div>
         ),
       },
