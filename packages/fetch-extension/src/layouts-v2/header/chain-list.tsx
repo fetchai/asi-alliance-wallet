@@ -66,7 +66,8 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     // Check if current wallet supports Cardano
     const isCardanoSupportedWallet = useMemo(() => {
       const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find((item: any) => item.selected);
-      return selectedKeyStore?.meta["cardano"] === "true";
+      return selectedKeyStore?.meta["cardano"] === "true" || 
+             (selectedKeyStore?.type === "mnemonic" && selectedKeyStore?.meta?.["mnemonicLength"] === "24");
     }, [keyRingStore.multiKeyStoreInfo]);
 
     const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo: any) =>

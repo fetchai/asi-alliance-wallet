@@ -284,7 +284,8 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                       // Check if current chain is Cardano and new wallet doesn't support it
                       const newKeyStore = keyRingStore.multiKeyStoreInfo[addressIndex];
                       const isCardanoSupportedWallet =
-                        newKeyStore?.meta["cardano"] === "true";
+                        newKeyStore?.meta["cardano"] === "true" || 
+                        (newKeyStore.type === "mnemonic" && newKeyStore.meta?.["mnemonicLength"] === "24");
                       const isCurrentChainCardano = 
                         chainStore.current.chainId === "cardano-preview" ||
                         chainStore.current.chainId === "cardano-mainnet" ||

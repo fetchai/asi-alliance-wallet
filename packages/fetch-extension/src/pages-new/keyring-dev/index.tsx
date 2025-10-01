@@ -180,7 +180,8 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                         
                         // Check if current chain is Cardano and new wallet doesn't support it
                         const isCardanoSupportedWallet =
-                          keyStore?.meta["cardano"] === "true";
+                          keyStore?.meta["cardano"] === "true" || 
+                          (keyStore.type === "mnemonic" && keyStore.meta?.["mnemonicLength"] === "24");
                         const isCurrentChainCardano = 
                           chainStore.current.chainId === "cardano-preview" ||
                           chainStore.current.chainId === "cardano-mainnet" ||
