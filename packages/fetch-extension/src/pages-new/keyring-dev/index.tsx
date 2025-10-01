@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, useState, useEffect, useRef } from "react";
 
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
@@ -12,6 +12,10 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { ListAccountsMsg, MultiKeyStoreInfoWithSelectedElem } from "@keplr-wallet/background";
+import { Skeleton } from "@components-v2/skeleton-loader";
 
 interface SetKeyRingProps {
   navigateTo?: any;
@@ -35,6 +39,83 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
 
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const loadingIndicator = useLoadingIndicator();
+    const [allWalletAddresses, setAllWalletAddresses] = useState<string[]>([]);
+    const [isLoadingAddresses, setIsLoadingAddresses] = useState<boolean>(true);
+    // Cache addresses per chain to avoid recomputing while staying on the same network
+    const cachedAddressesRef = useRef<{ chainId: string; byName: Record<string, string> } | null>(null);
+
+    const getAllWalletAddresses = async () => {
+      setIsLoadingAddresses(true);
+      try {
+        const currentChainId = chainStore.current.chainId;
+
+        if (cachedAddressesRef.current?.chainId === currentChainId) {
+          const cached = cachedAddressesRef.current.byName;
+          const names = keyRingStore.multiKeyStoreInfo.map(
+            (ks) => ks.meta?.["name"] || "Unnamed Account"
+          );
+          const addressesFromCache = names.map((n) => cached[n] || "");
+          if (addressesFromCache.some((a) => a)) {
+            setAllWalletAddresses(addressesFromCache);
+            setIsLoadingAddresses(false);
+            return;
+          }
+        }
+
+        try {
+          const cacheKey = `addr_cache:${currentChainId}`;
+          const cachedJson = localStorage.getItem(cacheKey);
+          if (cachedJson) {
+            const byName = JSON.parse(cachedJson) as Record<string, string>;
+            const names = keyRingStore.multiKeyStoreInfo.map(
+              (ks) => ks.meta?.["name"] || "Unnamed Account"
+            );
+            const addressesFromSession = names.map((n) => byName[n] || "");
+            if (addressesFromSession.some((a) => a)) {
+              setAllWalletAddresses(addressesFromSession);
+              cachedAddressesRef.current = { chainId: currentChainId, byName };
+              setIsLoadingAddresses(false);
+              return;
+            }
+          }
+        } catch {}
+
+        const requester = new InExtensionMessageRequester();
+        const msg = new ListAccountsMsg();
+        const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
+
+        const isEvm = chainStore.current.features?.includes("evm") ?? false;
+        
+        // Map strictly by index to avoid name-collision issues; backend preserves order
+        const addresses = keyRingStore.multiKeyStoreInfo.map((_ks: MultiKeyStoreInfoWithSelectedElem, idx: number) => {
+          const acc = accounts[idx];
+          if (!acc) return "";
+          return isEvm ? acc.EVMAddress : acc.bech32Address;
+        });
+        setAllWalletAddresses(addresses);
+
+        const byName: Record<string, string> = {};
+        keyRingStore.multiKeyStoreInfo.forEach((ks, idx) => {
+          const name = ks.meta?.["name"] || "Unnamed Account";
+          byName[name] = addresses[idx] || "";
+        });
+        cachedAddressesRef.current = { chainId: currentChainId, byName };
+        try {
+          const cacheKey = `addr_cache:${currentChainId}`;
+          localStorage.setItem(cacheKey, JSON.stringify(byName));
+        } catch {}
+      } catch (error) {
+        // Silently fallback to empty addresses
+        setAllWalletAddresses([]);
+      } finally {
+        setIsLoadingAddresses(false);
+      }
+    };
+
+    useEffect(() => {
+      getAllWalletAddresses();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chainStore.current.chainId, keyRingStore.multiKeyStoreInfo.length]);
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
@@ -63,7 +144,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
 
     return (
       <div>
-        {keyRingStore.multiKeyStoreInfo.map((keyStore, i) => {
+        {keyRingStore.multiKeyStoreInfo.map((keyStore: MultiKeyStoreInfoWithSelectedElem, i: number) => {
           const bip44HDPath = keyStore.bip44HDPath
             ? keyStore.bip44HDPath
             : {
@@ -108,6 +189,13 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
             }
           }
           console.log(paragraph);
+          const isCardanoNetwork =
+            chainStore.current.chainId === "cardano-preview" ||
+            chainStore.current.chainId === "cardano-preprod" ||
+            chainStore.current.chainId === "cardano-mainnet";
+          const hasAddressForWallet = Boolean(allWalletAddresses[i]);
+          const isClickable = !keyStore.selected && (!isCardanoNetwork || hasAddressForWallet);
+
           return (
             <Card
               key={i}
@@ -159,16 +247,44 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 )
               }
               subheading={
-                keyStore.selected
-                  ? formatAddress(accountInfo.bech32Address)
-                  : ""
+                (() => {
+                  if (keyStore.selected) {
+                    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+                    const addr = isEvm
+                      ? (accountInfo as any).ethereumHexAddress || accountInfo.bech32Address
+                      : accountInfo.bech32Address;
+                    return formatAddress(addr);
+                  }
+
+                  if (isLoadingAddresses) {
+                    return <Skeleton height="14px" width="120px" />;
+                  }
+
+                  const isCardanoNetwork =
+                    chainStore.current.chainId === "cardano-preview" ||
+                    chainStore.current.chainId === "cardano-preprod" ||
+                    chainStore.current.chainId === "cardano-mainnet";
+
+                  if (allWalletAddresses[i]) {
+                    return formatAddress(allWalletAddresses[i]);
+                  }
+
+                  // On Cardano, empty address means unsupported for that wallet
+                  if (isCardanoNetwork) {
+                    return "Not supported on Cardano";
+                  }
+
+                  return "";
+                })()
               }
               style={{
                 padding: keyStore.selected ? "18px 18px" : "18px 16px",
+                cursor: isClickable ? undefined : "default",
+                opacity: isCardanoNetwork && !hasAddressForWallet ? 0.6 : undefined,
               }}
               isActive={keyStore.selected}
               onClick={
-                keyStore.selected
+                keyStore.selected || !isClickable
                   ? undefined
                   : async (e: any) => {
                       e.preventDefault();

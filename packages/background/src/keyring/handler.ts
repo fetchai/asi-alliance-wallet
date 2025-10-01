@@ -738,9 +738,19 @@ const handleListAccountsMsg: (
     const returnData: Account[] = [];
 
     keys.forEach((key) => {
-      const bech32Add = new Bech32Address(key.address).toBech32(
-        chainInfo.bech32Config.bech32PrefixAccAddr
-      );
+      let bech32Add: string;
+      if (chainInfo.features?.includes("cardano")) {
+        if (key.algo === "ed25519") {
+          bech32Add = Buffer.from(key.address).toString("utf8");
+        } else {
+          bech32Add = "";
+        }
+      } else {
+        bech32Add = new Bech32Address(key.address).toBech32(
+          chainInfo.bech32Config.bech32PrefixAccAddr
+        );
+      }
+      
       returnData.push({
         name: key.name,
         algo: key.algo,

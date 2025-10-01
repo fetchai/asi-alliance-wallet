@@ -1359,6 +1359,72 @@ export class KeyRing {
     return result;
   }
 
+  /**
+   * Derive Cardano keys for all wallets (including non-selected) using the in-memory password.
+   * For wallets that don't support Cardano, returns an entry with empty address/pubKey and algo 'secp256k1'.
+   */
+  public async getKeysForCardano(
+    chainId: string
+  ): Promise<(Key & { name: string })[]> {
+    if (!this.password) {
+      throw new Error("Keyring is locked");
+    }
+
+    const keys: (Key & { name: string })[] = [];
+
+    // Lazy import to avoid cyclic deps at module load time
+    const { CardanoService } = await import("../cardano/service");
+
+    for (const keyStore of this.multiKeyStore) {
+      const walletName = keyStore.meta ? keyStore.meta["name"] : "Unnamed Account";
+
+      // Consider Cardano support if explicitly marked OR if mnemonic has 24 words
+      let shouldTryCardano = keyStore.meta?.["cardano"] === "true";
+      if (!shouldTryCardano && keyStore.type === "mnemonic") {
+        try {
+          const decrypted = await Crypto.decrypt(this.crypto, keyStore, this.password);
+          const mnemonic = Buffer.from(decrypted).toString();
+          const words = mnemonic.trim().split(/\s+/);
+          if (words.length === 24) {
+            shouldTryCardano = true;
+          }
+        } catch {
+          // ignore and fall back to non-cardano placeholder
+        }
+      }
+
+      if (shouldTryCardano) {
+        try {
+          const svc = new CardanoService();
+          // Use internal crypto/password to restore and derive address
+          await svc.restoreFromKeyStore(
+            keyStore as any,
+            this.password,
+            this.crypto,
+            chainId
+          );
+          const key = await svc.getKey(chainId);
+          keys.push({ ...key, name: walletName });
+          continue;
+        } catch {
+          // fall through to placeholder if restoration fails
+        }
+      }
+
+      // Placeholder entry for non-Cardano wallets or failed restoration (keep ordering)
+      keys.push({
+        name: walletName,
+        algo: "secp256k1",
+        pubKey: new Uint8Array(0),
+        address: new Uint8Array(0),
+        isKeystone: false,
+        isNanoLedger: false,
+      });
+    }
+
+    return keys;
+  }
+
   checkPassword(password: string): boolean {
     if (!this.password) {
       throw new Error("Keyring is locked");

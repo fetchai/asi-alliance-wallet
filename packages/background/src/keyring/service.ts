@@ -1168,10 +1168,15 @@ Salt: ${salt}`;
   }
 
   async getKeys(chainId: string): Promise<(Key & { name: string })[]> {
-    const isEvm =
-      (await this.chainsService.getChainInfo(chainId)).features?.includes(
-        "evm"
-      ) ?? false;
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
+    const isCardano = chainInfo.features?.includes("cardano") ?? false;
+
+    if (isCardano) {
+      // Return Cardano addresses for all wallets using internal password/crypto
+      const keys = await this.keyRing.getKeysForCardano(chainId);
+      return keys;
+    }
 
     return await this.keyRing.getKeys(chainId, isEvm);
   }
