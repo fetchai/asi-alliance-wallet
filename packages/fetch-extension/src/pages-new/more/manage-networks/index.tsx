@@ -20,6 +20,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
 
   const [cosmosSearchTerm, setCosmosSearchTerm] = useState("");
   const [evmSearchTerm, setEvmSearchTerm] = useState("");
+  const [cardanoSearchTerm, setCardanoSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
   const mainChainList = chainStore.chainInfos.filter(
@@ -31,6 +32,10 @@ export const ManageNetworks: FunctionComponent = observer(() => {
 
   const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
     chainInfo.features?.includes("evm")
+  );
+
+  const cardanoChainList = chainStore.chainInfos.filter((chainInfo) =>
+    chainInfo.features?.includes("cardano")
   );
 
   const disabledChainList = chainStore.disabledChainInfosInUI;
@@ -133,6 +138,45 @@ export const ManageNetworks: FunctionComponent = observer(() => {
         </div>
       ),
     },
+    {
+      id: "Cardano",
+      component: (
+        <div>
+          <SearchBar
+            searchTerm={cardanoSearchTerm}
+            onSearchTermChange={setCardanoSearchTerm}
+            valuesArray={cardanoChainList}
+            filterFunction={getFilteredChainValues}
+            renderResult={(chainInfo, index) => (
+              <Card
+                key={index}
+                leftImage={
+                  chainInfo.raw.chainSymbolImageUrl !== undefined
+                    ? chainInfo.raw.chainSymbolImageUrl
+                    : chainInfo.chainName
+                    ? chainInfo.chainName[0].toUpperCase()
+                    : ""
+                }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
+                heading={chainInfo.chainName}
+                rightContent={
+                  <ToggleSwitchButton
+                    checked={!disabledChainList.includes(chainInfo)}
+                    onChange={() => {
+                      chainStore.toggleChainInfoInUI(chainInfo.chainId);
+                    }}
+                  />
+                }
+              />
+            )}
+          />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -155,7 +199,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
       <div className={style["chainListContainer"]}>
         <TabsPanel
           onTabChange={(tabId: string) => {
-            setSelectedTab;
+            setSelectedTab(tabId);
             analyticsStore.logEvent(`${tabId.toLowerCase()}_tab_click`, {
               pageName: "Home",
             });
