@@ -23,7 +23,10 @@ export const ManageNetworks: FunctionComponent = observer(() => {
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
   const mainChainList = chainStore.chainInfos.filter(
-    (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    (chainInfo) =>
+      !chainInfo.beta &&
+      !chainInfo.features?.includes("evm") &&
+      !chainInfo.features?.includes("cardano")
   );
 
   const evmChainList = chainStore.chainInfos.filter((chainInfo) =>

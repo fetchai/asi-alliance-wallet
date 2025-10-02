@@ -41,7 +41,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
 
     const mainChainList = chainStore.chainInfosInUI.filter(
       (chainInfo: any) =>
-        !chainInfo.raw.beta && !chainInfo.raw.features?.includes("evm")
+        !chainInfo.raw.beta &&
+        !chainInfo.raw.features?.includes("evm") &&
+        !chainInfo.raw.features?.includes("cardano")
     );
 
     const evmChainList = chainStore.chainInfosInUI.filter((chainInfo: any) =>

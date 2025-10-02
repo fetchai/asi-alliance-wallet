@@ -117,7 +117,10 @@ export const ChainList: FunctionComponent = observer(() => {
   const navigate = useNavigate();
 
   const mainChainList = chainStore.chainInfosInUI.filter(
-    (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    (chainInfo) =>
+      !chainInfo.beta &&
+      !chainInfo.features?.includes("evm") &&
+      !chainInfo.features?.includes("cardano")
   );
 
   const evmChainList = chainStore.chainInfosInUI.filter(
