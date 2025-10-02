@@ -164,7 +164,7 @@ export class KeyRingStore {
 
   get keyRingType(): string {
     const keyStore = this.multiKeyStoreInfo.find(
-      (keyStore) => keyStore.selected
+      (keyStore: MultiKeyStoreInfoWithSelected[number]) => keyStore.selected
     );
 
     if (!keyStore) {
@@ -396,6 +396,14 @@ export class KeyRingStore {
     this._status = result.status;
 
     if (this._status === KeyRingStatus.UNLOCKED) {
+      // Refresh multiKeyStoreInfo after unlock
+      const refreshed = (yield* toGenerator(
+        this.requester.sendMessage(
+          BACKGROUND_PORT,
+          new GetMultiKeyStoreInfoMsg()
+        )
+      )) as { multiKeyStoreInfo: MultiKeyStoreInfoWithSelected };
+      this._multiKeyStoreInfo = refreshed.multiKeyStoreInfo;
       this._cardanoKeyRing = new CardanoKeyRing();
     }
 
@@ -438,7 +446,7 @@ export class KeyRingStore {
   @flow
   *deleteKeyRing(index: number, password: string) {
     const selectedIndex = this._multiKeyStoreInfo.findIndex(
-      (keyStore) => keyStore.selected
+      (keyStore: MultiKeyStoreInfoWithSelected[number]) => keyStore.selected
     );
     const msg = new DeleteKeyRingMsg(index, password);
     const result = (yield* toGenerator(
@@ -469,7 +477,7 @@ export class KeyRingStore {
     };
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
     const selectedIndex = this._multiKeyStoreInfo.findIndex(
-      (keyStore) => keyStore.selected
+      (keyStore: MultiKeyStoreInfoWithSelected[number]) => keyStore.selected
     );
     // If selectedIndex and index are same, name could be changed, so dispatch keystore event
     if (selectedIndex === index) {

@@ -544,6 +544,43 @@ export class KeyRing {
 
     this.password = password;
     
+    // Recompute mnemonicLength for all mnemonic keystores; ignore errors
+    try {
+      let hasUpdatedMnemonicLength = false;
+      for (let i = 0; i < this.multiKeyStore.length; i++) {
+        const ks = this.multiKeyStore[i];
+        if (ks.type === "mnemonic") {
+          try {
+            const decrypted = await Crypto.decrypt(this.crypto, ks, this.password);
+            const mnemonic = Buffer.from(decrypted).toString();
+            const words = mnemonic.trim().split(/\s+/);
+            const newLen = words.length.toString();
+            const prevLen = ks.meta?.["mnemonicLength"] ?? "";
+            if (!ks.meta || prevLen !== newLen) {
+              ks.meta = { ...(ks.meta ?? {}), mnemonicLength: newLen };
+              hasUpdatedMnemonicLength = true;
+            }
+            if (
+              this.keyStore &&
+              KeyRing.getKeyStoreId(this.keyStore) === KeyRing.getKeyStoreId(ks)
+            ) {
+              this.keyStore.meta = { ...(this.keyStore.meta ?? {}), mnemonicLength: newLen };
+            }
+          } catch (e: any) {
+            console.warn(
+              "Failed to recompute mnemonicLength for keystore",
+              { index: i, id: ks.meta?.["__id__"], error: e?.message }
+            );
+          }
+        }
+      }
+      if (hasUpdatedMnemonicLength) {
+        await this.save();
+      }
+    } catch (e: any) {
+      console.warn("Mnemonic metadata refresh encountered an error", e?.message);
+    }
+
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
   }
 
