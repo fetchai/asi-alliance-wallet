@@ -306,6 +306,13 @@ export class KeyRing {
       throw new Error("Key ring is not loaded or not empty");
     }
 
+    const words = mnemonic.trim().split(/\s+/);
+    const mnemonicLength = words.length.toString();
+    const metaWithMnemonicLength = {
+      ...meta,
+      mnemonicLength: mnemonicLength,
+    };
+
     // Cardano meta injected by KeyRingService when needed
     this.mnemonicMasterSeed = Mnemonic.generateMasterSeedFromMnemonic(mnemonic);
     this.keyStore = await KeyRing.CreateMnemonicKeyStore(
@@ -313,7 +320,7 @@ export class KeyRing {
       kdf,
       mnemonic,
       password,
-      await this.assignKeyStoreIdMeta(meta),
+      await this.assignKeyStoreIdMeta(metaWithMnemonicLength),
       bip44HDPath,
       curve
     );
@@ -1222,6 +1229,14 @@ export class KeyRing {
     if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
       throw new Error("Key ring is locked or not initialized");
     }
+
+    const words = mnemonic.trim().split(/\s+/);
+    const mnemonicLength = words.length.toString();
+    const metaWithMnemonicLength = {
+      ...meta,
+      mnemonicLength: mnemonicLength,
+    };
+    
     // Preserve previous behaviour — coin type is determined later when the
     // key is actually used. No need to pre-compute it here.
     const keyStore = await KeyRing.CreateMnemonicKeyStore(
@@ -1229,7 +1244,7 @@ export class KeyRing {
       kdf,
       mnemonic,
       this.password,
-      await this.assignKeyStoreIdMeta(meta),
+      await this.assignKeyStoreIdMeta(metaWithMnemonicLength),
       bip44HDPath,
       curve
     );
