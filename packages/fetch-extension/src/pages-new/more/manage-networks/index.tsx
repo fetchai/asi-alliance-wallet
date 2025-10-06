@@ -190,6 +190,8 @@ export const ManageNetworks: FunctionComponent = observer(() => {
         id:
           selectedTab === "EVM"
             ? "chain.manage-networks.evm"
+            : selectedTab === "Cardano"
+            ? "chain.manage-networks.cardano"
             : "chain.manage-networks.cosmos",
       })}
       onBackButton={() => {
