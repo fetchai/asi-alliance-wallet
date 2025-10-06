@@ -137,23 +137,18 @@ export class CardanoKeyRing {
     
     logApiKeyStatus(network);
     
-    // Always try to create walletManager, even without Blockfrost
+    // Try to create walletManager for transaction operations
     try {
       this.walletManager = await CardanoWalletManager.create({
         mnemonicWords,
         network,
         accountIndex
       });
-      
-      // Extract keyAgent from walletManager for direct access
-      if (this.walletManager) {
-        this.keyAgent = this.walletManager.getKeyAgent();
-      }
+      // DO NOT extract keyAgent from walletManager - use separate keyAgent instances
+      // WalletManager has its own keyAgent for transactions, this.keyAgent is for address derivation
     } catch (error) {
       console.warn("Failed to create CardanoWalletManager:", error);
-      // Continue without wallet manager - basic functionality will still work
       this.walletManager = undefined;
-      this.keyAgent = undefined;
     }
   }
 
