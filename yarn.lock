@@ -214,7 +214,7 @@ __metadata:
 
 "@asi-alliance/cardano@file:../cardano::locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores":
   version: 0.12.12
-  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=764d2e&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
+  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=4e3ba9&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
   dependencies:
     "@cardano-sdk/cardano-services-client": 0.26.19
     "@cardano-sdk/core": 0.46.3
@@ -239,7 +239,7 @@ __metadata:
     crc: ^4.3.2
     lodash: ^4.17.21
     rxjs: ^7.8.2
-  checksum: 20480e59d295a29b2a9709c7d7752fae2b57c263fc1a3f6834b2bdbefeef10b2cb843d9aa94ba0bbcb90b16590ab3b389b872f85b5e205e46248435ee322b774
+  checksum: cba66c71bea1f07884b893932206637403b32d29c463033ad3a5bda450f5e515c601a7d18fdc888f478be617f46b31e9f9f51ca0e09536605755370e17345a9c
   languageName: node
   linkType: hard
 

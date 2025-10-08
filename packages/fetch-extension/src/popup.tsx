@@ -1,7 +1,6 @@
 // popup.tsx
 
 async function startApp() {
-  console.log("[DEBUG] Start popup.tsx/startApp");
 
   // MobX strict mode (if needed)
   const { configure } = await import("mobx");
@@ -188,40 +187,11 @@ async function startApp() {
     },
   };
 
-  console.log("[DEBUG] After Keplr initialization and Modal setup");
-
-  // Logging all fetch requests to .wasm for debugging
-  const origFetch = window.fetch;
-  window.fetch = function (...args) {
-    if (args[0] && typeof args[0] === "string" && args[0].endsWith(".wasm")) {
-      console.log("[DEBUG] WASM fetch:", args[0]);
-    }
-    return origFetch.apply(this, args);
-  };
-
   // Extract StateRenderer and AutoLockMonitor into separate components
   const StateRenderer = observer(() => {
     const { keyRingStore } = useStore();
 
-    // Add initialization debugging
     React.useEffect(() => {
-      console.log(
-        "[DEBUG] StateRenderer mounted, status:",
-        keyRingStore.status
-      );
-
-      // Force initialize status if it's undefined
-      if (keyRingStore.status === undefined) {
-        console.log(
-          "[DEBUG] Status is undefined, waiting for initialization..."
-        );
-        // Don't call restore() directly as it's protected
-        // Instead wait for status to initialize
-      }
-    }, []);
-
-    React.useEffect(() => {
-      console.log("[DEBUG] Status changed to:", keyRingStore.status);
       if (keyRingStore.status === KeyRingStatus.UNLOCKED) {
         // Add delay to ensure wallet is fully unlocked
         setTimeout(() => {
@@ -234,16 +204,10 @@ async function startApp() {
       }
     }, [keyRingStore.status]);
 
-    console.log("[DEBUG] KeyRing status in render:", keyRingStore.status);
-
-    // Handle undefined status and NOTLOADED
     if (
       keyRingStore.status === undefined ||
       keyRingStore.status === KeyRingStatus.NOTLOADED
     ) {
-      console.log(
-        "[DEBUG] Status is undefined or NOTLOADED, showing loading..."
-      );
       return (
         <div
           style={{
@@ -283,7 +247,6 @@ async function startApp() {
       case KeyRingStatus.LOCKED:
         return <LockPage />;
       case KeyRingStatus.EMPTY:
-        console.log("[DEBUG] Redirecting to register page");
         browser.tabs.create({ url: "/popup.html#/register" });
         window.close();
         return (
@@ -305,8 +268,6 @@ async function startApp() {
 
   const queryClient = new QueryClient();
 
-  // Before rendering the React application
-  console.log("[DEBUG] Before ReactDOM.render");
   ReactDOM.render(
     React.createElement(
       QueryClientProvider,
