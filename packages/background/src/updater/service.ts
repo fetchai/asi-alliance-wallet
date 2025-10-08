@@ -7,6 +7,7 @@ import {
   validateBasicChainInfoType,
 } from "@keplr-wallet/chain-validator";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
+import { isCardanoChainId } from "@keplr-wallet/cardano";
 
 export class ChainUpdaterService {
   public chainsService!: ChainsService;
@@ -143,6 +144,10 @@ export class ChainUpdaterService {
     if (
       (await this.chainsService.getChainInfo(chainId)).updateFromRepoDisabled
     ) {
+      return false;
+    }
+    
+    if (isCardanoChainId(chainId)) {
       return false;
     }
 
