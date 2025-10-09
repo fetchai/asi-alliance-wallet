@@ -369,7 +369,10 @@ const handleGetKeyMsg: (
 
     const key = await service.getKey(msg.chainId);
     return {
-      name: service.getKeyStoreMeta("name"),
+      name:
+        JSON.parse(service.getKeyStoreMeta("nameByChain") || "{}")?.[
+          msg.chainId
+        ] || service.getKeyStoreMeta("name"),
       algo: "secp256k1",
       pubKey: key.pubKey,
       address: key.address,

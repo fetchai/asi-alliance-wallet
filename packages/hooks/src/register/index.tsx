@@ -121,16 +121,30 @@ export class RegisterConfig {
     mnemonic: string,
     password: string,
     bip44HDPath: BIP44HDPath,
-    meta: Record<string, string> = {}
+    meta: Record<string, string> = {},
+    selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
+    const totalAccounts = this.keyRingStore.multiKeyStoreInfo.length;
+    const defaultName = `account-${totalAccounts + 1}`;
+
+    if (selectedNetworks.length > 0) {
+      Object.assign(meta, {
+        nameByChain: JSON.stringify(
+          Object.fromEntries(
+            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+          )
+        ),
+      });
+    }
+
     try {
       if (this.mode === "create") {
         yield this.keyRingStore.createMnemonicKey(
           mnemonic,
           password,
           {
-            name,
+            name: defaultName,
             ...meta,
           },
           bip44HDPath
@@ -139,7 +153,7 @@ export class RegisterConfig {
         yield this.keyRingStore.addMnemonicKey(
           mnemonic,
           {
-            name,
+            name: defaultName,
             ...meta,
           },
           bip44HDPath
@@ -186,15 +200,30 @@ export class RegisterConfig {
     name: string,
     password: string,
     bip44HDPath: BIP44HDPath,
-    cosmosLikeApp: string
+    cosmosLikeApp: string,
+    selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
+    const totalAccounts = this.keyRingStore.multiKeyStoreInfo.length;
+    const defaultName = `account-${totalAccounts + 1}`;
+    const meta = {};
+    if (selectedNetworks.length > 0) {
+      Object.assign(meta, {
+        nameByChain: JSON.stringify(
+          Object.fromEntries(
+            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+          )
+        ),
+      });
+    }
+
     try {
       if (this.mode === "create") {
         yield this.keyRingStore.createLedgerKey(
           password,
           {
-            name,
+            name: defaultName,
+            ...meta,
           },
           bip44HDPath,
           cosmosLikeApp
@@ -202,7 +231,8 @@ export class RegisterConfig {
       } else {
         yield this.keyRingStore.addLedgerKey(
           {
-            name,
+            name: defaultName,
+            ...meta,
           },
           bip44HDPath,
           cosmosLikeApp
@@ -221,18 +251,33 @@ export class RegisterConfig {
     name: string,
     privateKey: Uint8Array,
     password: string,
-    meta: Record<string, string> = {}
+    meta: Record<string, string> = {},
+    selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
+
+    const totalAccounts = this.keyRingStore.multiKeyStoreInfo.length;
+    const defaultName = `account-${totalAccounts + 1}`;
+
+    if (selectedNetworks.length > 0) {
+      Object.assign(meta, {
+        nameByChain: JSON.stringify(
+          Object.fromEntries(
+            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+          )
+        ),
+      });
+    }
+
     try {
       if (this.mode === "create") {
         yield this.keyRingStore.createPrivateKey(privateKey, password, {
-          name,
+          name: defaultName,
           ...meta,
         });
       } else {
         yield this.keyRingStore.addPrivateKey(privateKey, {
-          name,
+          name: defaultName,
           ...meta,
         });
       }
