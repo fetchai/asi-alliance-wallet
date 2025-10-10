@@ -489,6 +489,14 @@ html[data-register-page="true"] #app .container {
   }
 }
 
+.networkDropdownContainer {
+  & .label {
+    color: $font-secondary;
+    font-size: 14px;
+    font-weight: 400;
+  }
+}
+
 .networkDropdown {
   width: 100% !important;
 }

@@ -4,8 +4,10 @@ import React, { useEffect } from "react";
 import { Label } from "reactstrap";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
+import classNames from "classnames";
 
 interface SelectNetworkProps {
+  className?: string;
   selectedNetworks: string[];
   disabled: boolean;
   onMultiSelectChange: (items: string[]) => void;
@@ -13,7 +15,13 @@ interface SelectNetworkProps {
 }
 
 export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
-  ({ selectedNetworks, disabled, onMultiSelectChange, onSelectAll }) => {
+  ({
+    className,
+    selectedNetworks,
+    disabled,
+    onMultiSelectChange,
+    onSelectAll,
+  }) => {
     const { chainStore } = useStore();
     const mainChainList = chainStore.chainInfos.filter(
       (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
@@ -33,23 +41,21 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     }, []);
 
     return (
-      <React.Fragment>
-        <div>
-          <Label for="network" className={style["label"]}>
-            Select Networks (for which you want to set account name)
-          </Label>
-          <MultiSelectDropdown
-            items={networkList}
-            value={selectedNetworks}
-            disabled={disabled}
-            className={style["networkDropdown"]}
-            showSelectAll={true}
-            selectAllLabel="Select All Networks"
-            onChange={onMultiSelectChange}
-            onSelectAll={onSelectAll}
-          />
-        </div>
-      </React.Fragment>
+      <div className={classNames(style["networkDropdownContainer"], className)}>
+        <Label for="network" className={style["label"]}>
+          Select Networks (for which you want to set account name)
+        </Label>
+        <MultiSelectDropdown
+          items={networkList}
+          value={selectedNetworks}
+          disabled={disabled}
+          className={style["networkDropdown"]}
+          showSelectAll={true}
+          selectAllLabel="Select All Networks"
+          onChange={onMultiSelectChange}
+          onSelectAll={onSelectAll}
+        />
+      </div>
     );
   }
 );

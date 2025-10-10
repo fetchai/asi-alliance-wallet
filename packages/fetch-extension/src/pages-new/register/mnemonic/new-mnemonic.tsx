@@ -34,6 +34,7 @@ import keyIcon from "@assets/svg/wireframe/key-icon.png";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -408,15 +409,13 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   }}
                 />
                 <div
-                  className={style["label"]}
-                  style={{
-                    marginBottom: "4px",
-                    visibility:
-                      newAccountName === defaultAccountName &&
-                      allNetworkSelected
-                        ? "hidden"
-                        : "visible",
-                  }}
+                  className={classNames(
+                    style["label"],
+                    "mb-1 text-xs",
+                    newAccountName === defaultAccountName && allNetworkSelected
+                      ? "invisible"
+                      : "visible"
+                  )}
                 >
                   * (Account name for unselected networks will be{" "}
                   {defaultAccountName})

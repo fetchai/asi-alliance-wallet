@@ -14,6 +14,8 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { LedgerSetupView } from "../../../pages/ledger";
 import { useNotification } from "@components/notification";
 import { PasswordValidationChecklist } from "../password-checklist";
+import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -55,7 +57,13 @@ export const ImportLedgerPage: FunctionComponent<{
     // initially sets the password error as true for create mode
     registerConfig.mode === "create" ? true : false
   );
-  const { analyticsStore, ledgerInitStore } = useStore();
+  const { analyticsStore, keyRingStore, ledgerInitStore } = useStore();
+
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+  const [allNetworkSelected, setAllNetworkSelected] = useState(true);
+  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
+  const defaultAccountName = `account-${totalAccount + 1}`;
+  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
   const {
     register,
@@ -120,7 +128,8 @@ export const ImportLedgerPage: FunctionComponent<{
         name,
         password,
         bip44Option.bip44HDPath,
-        "Cosmos"
+        "Cosmos",
+        allNetworkSelected ? [] : selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "ledger",
@@ -174,29 +183,46 @@ export const ImportLedgerPage: FunctionComponent<{
               await createLedger(data.name, data.password, true);
             })}
           >
-            <Label
-              for="name"
-              className={style["label"]}
-              style={{
-                marginBottom: "8px",
-              }}
-            >
+            <Label for="name" className={classNames(style["label"], "mb-2")}>
               {intl.formatMessage({ id: "register.name" })}
             </Label>
             <Input
               formGroupClassName={style["ledgerFormGroup"]}
-              className={style["addressInput"]}
+              className={classNames(style["addressInput"], "mt-0")}
               type="text"
               {...register("name", {
                 required: intl.formatMessage({
                   id: "register.name.error.required",
                 }),
               })}
+              onChange={(event) => {
+                const trimmedValue = event.target.value.trimStart();
+                setNewAccountName(trimmedValue);
+              }}
               error={errors.name && errors.name.message}
               maxLength={20}
-              style={{
-                marginTop: "0px",
-                marginBottom: "16px",
+            />
+            <div
+              className={classNames(
+                style["label"],
+                "mb-2 text-xs",
+                newAccountName === defaultAccountName && allNetworkSelected
+                  ? "invisible"
+                  : "visible"
+              )}
+            >
+              * (Account name for unselected networks will be{" "}
+              {defaultAccountName})
+            </div>
+            <SelectNetwork
+              className="mb-4"
+              selectedNetworks={selectedNetworks}
+              disabled={newAccountName === defaultAccountName}
+              onMultiSelectChange={(values) => {
+                setSelectedNetworks(values);
+              }}
+              onSelectAll={(value) => {
+                setAllNetworkSelected(value);
               }}
             />
             {registerConfig.mode === "create" ? (
@@ -256,7 +282,7 @@ export const ImportLedgerPage: FunctionComponent<{
                 </div>
               </React.Fragment>
             ) : null}
-            <div style={{ width: "100%", marginTop: "0px" }}>
+            <div className="w-full mt-0">
               <AdvancedBIP44Option bip44Option={bip44Option} />
             </div>
             <ButtonV2
@@ -279,8 +305,6 @@ export const ImportLedgerPage: FunctionComponent<{
               disabled={registerConfig.isLoading || passwordChecklistError}
               styleProps={{
                 height: "56px",
-                position: "absolute",
-                bottom: "5px",
               }}
             />
 

@@ -23,6 +23,7 @@ import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -677,28 +678,29 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     }}
                   />
                   <div
-                    className={style["label"]}
-                    style={{
-                      marginBottom: "4px",
-                      visibility:
-                        newAccountName === defaultAccountName &&
+                    className={classNames(
+                      style["label"],
+                      "mb-1 text-xs",
+                      newAccountName === defaultAccountName &&
                         allNetworkSelected
-                          ? "hidden"
-                          : "visible",
-                    }}
+                        ? "invisible"
+                        : "visible"
+                    )}
                   >
-                    *(Account name for unselected networks will be{" "}
+                    * (Account name for unselected networks will be{" "}
                     {defaultAccountName})
                   </div>
                 </div>
                 <SelectNetwork
+                  className={classNames(
+                    seedType === SeedType.PRIVATE_KEY && "mt-[16px]"
+                  )}
                   selectedNetworks={selectedNetworks}
                   disabled={newAccountName === defaultAccountName}
                   onMultiSelectChange={(values) => {
                     setSelectedNetworks(values);
                   }}
                   onSelectAll={(value) => {
-                    console.log("on select all", { value });
                     setAllNetworkSelected(value);
                   }}
                 />
