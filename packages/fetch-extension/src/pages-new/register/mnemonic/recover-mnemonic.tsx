@@ -22,6 +22,7 @@ import { ImportLedgerPage } from "../ledger";
 import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
 import { PasswordValidationChecklist } from "../password-checklist";
+import { SelectNetwork } from "../select-network";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -222,6 +223,11 @@ export const RecoverMnemonicPage: FunctionComponent<{
   );
 
   const { analyticsStore, keyRingStore } = useStore();
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+  const [allNetworkSelected, setAllNetworkSelected] = useState(true);
+  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
+  const defaultAccountName = `account-${totalAccount + 1}`;
+  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
   const {
     register,
@@ -231,7 +237,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      name: "",
+      name: defaultAccountName,
       password: "",
       confirmPassword: "",
     },
@@ -454,7 +460,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                       await registerConfig.createPrivateKey(
                         data.name,
                         privateKey,
-                        data.password
+                        data.password,
+                        {},
+                        allNetworkSelected ? [] : selectedNetworks
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
@@ -469,7 +477,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         // Therefore, trim should be done last.
                         seedWords.join(" ").trim(),
                         data.password,
-                        bip44Option.bip44HDPath
+                        bip44Option.bip44HDPath,
+                        {},
+                        allNetworkSelected ? [] : selectedNetworks
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
@@ -490,8 +500,8 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     : {}),
                   ...(seedType === SeedType.PRIVATE_KEY
                     ? {
-                        marginLeft: "170px",
-                        width: "333px",
+                        marginLeft: "145px",
+                        width: "390px",
                         gridTemplateColumns: "1fr",
                       }
                     : {}),
@@ -504,6 +514,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   }
                 )}
               >
+                {seedType === SeedType.PRIVATE_KEY && (
+                  <Label className={style["label"]}>Private Key</Label>
+                )}
                 {seedWords.map((word, index) => {
                   return (
                     <div
@@ -640,6 +653,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   </Label>
                   <Input
                     className={styleRecoverMnemonic["addressInput"]}
+                    formGroupClassName={style["inputFormGroup"]}
                     style={{ width: "333px" }}
                     type="text"
                     {...register("name", {
@@ -656,12 +670,38 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     onChange={(e) => {
                       const trimmedValue = e.target.value.trimStart();
                       setValue(e.target.name as keyof FormData, trimmedValue);
+                      setNewAccountName(trimmedValue);
                       setAccountNameValidationError(
                         !validateWalletName(trimmedValue)
                       );
                     }}
                   />
+                  <div
+                    className={style["label"]}
+                    style={{
+                      marginBottom: "4px",
+                      visibility:
+                        newAccountName === defaultAccountName &&
+                        allNetworkSelected
+                          ? "hidden"
+                          : "visible",
+                    }}
+                  >
+                    *(Account name for unselected networks will be{" "}
+                    {defaultAccountName})
+                  </div>
                 </div>
+                <SelectNetwork
+                  selectedNetworks={selectedNetworks}
+                  disabled={newAccountName === defaultAccountName}
+                  onMultiSelectChange={(values) => {
+                    setSelectedNetworks(values);
+                  }}
+                  onSelectAll={(value) => {
+                    console.log("on select all", { value });
+                    setAllNetworkSelected(value);
+                  }}
+                />
                 {registerConfig.mode === "create" ? (
                   <React.Fragment>
                     <PasswordInput

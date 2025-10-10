@@ -117,6 +117,9 @@
 }
 
 .select-list {
+  display: flex;
+  flex-direction: column;
+  row-gap: 3px;
   overflow: auto;
   max-height: 200px;
   padding: 6px;
