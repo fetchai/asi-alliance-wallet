@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./style.module.scss";
+import classNames from "classnames";
 
 export type MultiSelectItem = {
   id: string;
@@ -15,6 +16,9 @@ interface MultiSelectProps {
   onChange?: (selectedIds: string[]) => void;
   className?: string;
   maxVisibleLabelCount?: number;
+  showSelectAll?: boolean;
+  selectAllLabel?: string;
+  onSelectAll?: (selected: boolean) => void;
 }
 
 export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
@@ -25,6 +29,9 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
   className = "",
   disabled = false,
   maxVisibleLabelCount = 2,
+  showSelectAll = false,
+  selectAllLabel = "Select All",
+  onSelectAll,
 }) => {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set(value ?? []));
@@ -57,8 +64,12 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
     else next.add(id);
+
     if (!value) setSelected(next);
     onChange?.(Array.from(next));
+
+    const nextAllSelected = allSelectable.every((i) => next.has(i.id));
+    onSelectAll?.(nextAllSelected);
   };
 
   const clearAll = (e?: React.MouseEvent) => {
@@ -66,6 +77,7 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
     const next = new Set<string>();
     if (!value) setSelected(next);
     onChange?.([]);
+    onSelectAll?.(false);
   };
 
   const selectedLabels = items
@@ -75,6 +87,29 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
   const filteredItems = items.filter((item) =>
     item.label.toLowerCase().includes(search.toLowerCase())
   );
+
+  const allSelectable = filteredItems.filter((i) => !i.disabled);
+  const allSelected =
+    allSelectable.length > 0 &&
+    allSelectable.every((item) => selected.has(item.id));
+
+  const handleSelectAllToggle = () => {
+    let next: Set<string>;
+    if (allSelected) {
+      next = new Set(
+        [...selected].filter((id) => !allSelectable.some((i) => i.id === id))
+      );
+      onSelectAll?.(false);
+    } else {
+      next = new Set([...selected, ...allSelectable.map((item) => item.id)]);
+      onSelectAll?.(true);
+    }
+    if (!value) setSelected(next);
+    onChange?.(Array.from(next));
+  };
+
+  const someSelected =
+    allSelectable.some((item) => selected.has(item.id)) && !allSelected;
 
   return (
     <div className={`${styles["select-root"]} ${className}`} ref={rootRef}>
@@ -117,6 +152,7 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
           {selected.size > 0 && (
             <span
               className={styles["select-clear"]}
+              style={{ cursor: disabled ? "not-allowed" : "pointer" }}
               onClick={clearAll}
               aria-label="Clear selection"
             >
@@ -153,6 +189,37 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
             role="listbox"
             aria-multiselectable
           >
+            {showSelectAll && filteredItems.length > 0 && (
+              <li
+                className={`${styles["select-item"]} ${
+                  allSelected ? styles["selected"] : ""
+                }`}
+                onClick={handleSelectAllToggle}
+                role="option"
+                aria-selected={allSelected}
+              >
+                <span className={styles["select-item-label"]}>
+                  {selectAllLabel}
+                </span>
+                <label className={styles["select-checkbox-wrapper"]}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden
+                  />
+                  <span
+                    className={classNames(
+                      styles["select-checkbox"],
+                      someSelected && styles["minus"]
+                    )}
+                    aria-hidden
+                  />
+                </label>
+              </li>
+            )}
+
             {filteredItems.length === 0 ? (
               <li className={styles["select-empty"]}>No results</li>
             ) : (
@@ -177,7 +244,10 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
                       tabIndex={-1}
                       aria-hidden
                     />
-                    <span className={styles["select-checkbox"]} aria-hidden />
+                    <span
+                      className={classNames(styles["select-checkbox"])}
+                      aria-hidden
+                    />
                   </label>
                 </li>
               ))

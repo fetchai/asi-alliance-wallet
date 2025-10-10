@@ -170,10 +170,10 @@
 }
 
 .select-checkbox {
-  width: 18px;
-  height: 18px;
   border-radius: 4px;
   border: 1px solid #cbd5e1;
+  width: 18px;
+  height: 18px;
   display: inline-block;
   box-sizing: border-box;
 }
@@ -190,4 +190,15 @@
   color: white;
   text-align: center;
   line-height: 18px;
+}
+
+.select-item:not(.selected) .select-checkbox.minus::after {
+  content: "\2500";
+  display: block;
+  font-size: 12px;
+  color: white;
+  text-align: center;
+  line-height: 18px;
+  background: $bg-green-dark;
+  border-color: $bg-green-dark;
 }
