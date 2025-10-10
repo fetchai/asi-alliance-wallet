@@ -21,8 +21,9 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
 
   const intl = useIntl();
 
-  const { keyRingStore } = useStore();
+  const { keyRingStore, chainStore } = useStore();
 
+  const chainId = chainStore.current.chainId;
   const waitingNameData = keyRingStore.waitingNameData?.data;
 
   const {
@@ -59,9 +60,15 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
     }
   }, [index]);
 
+  const getNameByChain = (meta?: { [key: string]: string }) => {
+    return meta?.["nameByChain"]
+      ? JSON.parse(meta["nameByChain"])?.[chainId]
+      : undefined;
+  };
+
   const validateWalletName = (value: string) => {
     const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
-      (item) => item?.meta?.["name"]
+      (item) => item?.meta?.["name"] || getNameByChain(item?.meta)
     );
     const nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
     return !nameAlreadyExists;
@@ -70,6 +77,8 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   if (isKeyStoreReady && keyStore == null) {
     return null;
   }
+
+  const accountName = getNameByChain(keyStore?.meta) || keyStore.meta?.["name"];
 
   return (
     <HeaderLayout
@@ -128,7 +137,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           formGroupClassName={styleName["formGroup"]}
           floatLabel={true}
           className={styleName["input"]}
-          value={keyStore?.meta?.["name"] ?? ""}
+          value={accountName ?? ""}
           readOnly={true}
           style={{ opacity: 0.6 }}
         />

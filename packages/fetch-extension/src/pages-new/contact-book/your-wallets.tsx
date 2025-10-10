@@ -24,6 +24,8 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
     const intl = useIntl();
     const { chainStore, keyRingStore } = useStore();
 
+    const chainId = chainStore.current.chainId;
+
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
         return require("@assets/svg/wireframe/ledger-indicator.svg");
@@ -87,48 +89,57 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
           onSearchTermChange={setSearchTerm}
           filterFunction={getFilteredWallets}
           disabled={keyRingList?.length === 0}
-          renderResult={(keyStore, i) => (
-            <Card
-              key={i}
-              heading={
-                <React.Fragment>
-                  {keyStore.meta?.["name"]
-                    ? keyStore.meta["name"]
-                    : intl.formatMessage({
-                        id: "setting.keyring.unnamed-account",
-                      })}
-                  {getOptionIcon(keyStore) && (
-                    <span className={style["rightIconContainer"]}>
-                      <img
-                        src={getOptionIcon(keyStore)}
-                        alt="Right Section"
-                        className={style["rightIcon"]}
-                      />
-                    </span>
-                  )}
-                </React.Fragment>
-              }
-              subheading={
-                addresses[i] ? (
-                  formatAddress(addresses[i])
-                ) : (
-                  <Skeleton height="14px" width="100px" />
-                )
-              }
-              style={{
-                padding: "18px 16px",
-              }}
-              disabled={addresses?.length === 0}
-              onClick={async (e: any) => {
-                if (addresses?.[i]) {
-                  e.preventDefault();
-                  const address = addresses[i];
-                  selectWalletFromList(address);
-                  onBackButton?.();
+          renderResult={(keyStore, i) => {
+            const nameByChain = keyStore.meta?.["nameByChain"]
+              ? JSON.parse(keyStore.meta["nameByChain"])
+              : {};
+
+            const accountName =
+              nameByChain?.[chainId] ||
+              keyStore.meta?.["name"] ||
+              intl.formatMessage({
+                id: "setting.keyring.unnamed-account",
+              });
+
+            return (
+              <Card
+                key={i}
+                heading={
+                  <React.Fragment>
+                    {accountName}
+                    {getOptionIcon(keyStore) && (
+                      <span className={style["rightIconContainer"]}>
+                        <img
+                          src={getOptionIcon(keyStore)}
+                          alt="Right Section"
+                          className={style["rightIcon"]}
+                        />
+                      </span>
+                    )}
+                  </React.Fragment>
                 }
-              }}
-            />
-          )}
+                subheading={
+                  addresses[i] ? (
+                    formatAddress(addresses[i])
+                  ) : (
+                    <Skeleton height="14px" width="100px" />
+                  )
+                }
+                style={{
+                  padding: "18px 16px",
+                }}
+                disabled={addresses?.length === 0}
+                onClick={async (e: any) => {
+                  if (addresses?.[i]) {
+                    e.preventDefault();
+                    const address = addresses[i];
+                    selectWalletFromList(address);
+                    onBackButton?.();
+                  }
+                }}
+              />
+            );
+          }}
         />
         <div className={style["noAddressMessage"]}>
           {keyRingList?.length === 0 && (
