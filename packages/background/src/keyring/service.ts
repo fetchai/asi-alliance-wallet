@@ -158,11 +158,16 @@ export class KeyRingService {
 
   async updateNameKeyRing(
     index: number,
-    name: string
+    name: string,
+    nameByChain?: string
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    const multiKeyStoreInfo = await this.keyRing.updateNameKeyRing(index, name);
+    const multiKeyStoreInfo = await this.keyRing.updateNameKeyRing(
+      index,
+      name,
+      nameByChain
+    );
     return {
       multiKeyStoreInfo,
     };

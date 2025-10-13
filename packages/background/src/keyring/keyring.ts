@@ -751,7 +751,8 @@ export class KeyRing {
 
   public async updateNameKeyRing(
     index: number,
-    name: string
+    name: string,
+    nameByChain?: string
   ): Promise<MultiKeyStoreInfoWithSelected> {
     if (this.status !== KeyRingStatus.UNLOCKED) {
       throw new Error("Key ring is not unlocked");
@@ -764,6 +765,10 @@ export class KeyRing {
     }
 
     keyStore.meta = { ...keyStore.meta, name: name };
+
+    if (nameByChain) {
+      keyStore.meta = { ...keyStore.meta, nameByChain };
+    }
 
     // If select key store and changed store are same, sync keystore
     if (

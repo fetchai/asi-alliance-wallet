@@ -219,7 +219,11 @@ const handleUpdateNameKeyRingMsg: (
   service: KeyRingService
 ) => InternalHandler<UpdateNameKeyRingMsg> = (service) => {
   return async (_, msg) => {
-    return await service.updateNameKeyRing(msg.index, msg.name);
+    return await service.updateNameKeyRing(
+      msg.index,
+      msg.name,
+      msg.nameByChain
+    );
   };
 };
 
