@@ -25,6 +25,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   const { keyRingStore, chainStore } = useStore();
 
   const chainId = chainStore.current.chainId;
+  const chainName = chainStore.current.chainName;
   const waitingNameData = keyRingStore.waitingNameData?.data;
 
   const {
@@ -52,7 +53,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
 
   const getNameByChain = (meta?: { [key: string]: string }) => {
     return meta?.["nameByChain"]
-      ? JSON.parse(meta["nameByChain"] || "{}")?.[chainId]
+      ? JSON.parse(meta["nameByChain"])?.[chainId]
       : undefined;
   };
 
@@ -75,7 +76,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
         keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
           const defaultName = item?.meta?.["name"];
           const chainNames = item?.meta?.["nameByChain"]
-            ? Object.values(JSON.parse(item?.meta?.["nameByChain"] || "{}"))
+            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
             : [];
           return [defaultName, ...chainNames].filter(Boolean);
         }) ?? []
@@ -117,7 +118,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
             }
 
             const nameByChain = keyStore.meta?.["nameByChain"]
-              ? JSON.parse(keyStore.meta?.["nameByChain"] || "{}")
+              ? JSON.parse(keyStore.meta?.["nameByChain"])
               : {};
 
             const updatedAccountNames = {
@@ -192,13 +193,16 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
             <div
               className={classNames(
                 styleName["labelNetworkSelector"],
-                newAccountName === accountName || accountNameValidationError
+                newAccountName === accountName ||
+                  accountNameValidationError ||
+                  (errors.name && errors.name.message)
                   ? "invisible"
                   : "visible"
               )}
             >
-              *(Account name for unselected networks will be{" "}
-              {keyStore?.meta?.["name"]})
+              This will update the account name for the selected network (
+              {chainName}) only. Other networks will keep their current account
+              name.
             </div>
           }
           readOnly={waitingNameData !== undefined && !waitingNameData?.editable}

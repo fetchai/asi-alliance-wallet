@@ -1,26 +1,28 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
-import { Web3AuthNoModal as Web3Auth } from "@web3auth/no-modal";
-import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
+import { Input, PasswordInput } from "@components-v2/form";
+import { RegisterConfig } from "@keplr-wallet/hooks";
+import { AuthAdapter } from "@web3auth/auth-adapter";
 import {
   CHAIN_NAMESPACES,
   WALLET_ADAPTERS,
   WEB3AUTH_NETWORK,
 } from "@web3auth/base";
-import style from "./style.module.scss";
-import { RegisterConfig } from "@keplr-wallet/hooks";
+import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
+import { Web3AuthNoModal as Web3Auth } from "@web3auth/no-modal";
 import { observer } from "mobx-react-lite";
-import CosmosRpc from "./cosmos-rpc";
-import { Form, Label } from "reactstrap";
-import { FormattedMessage, useIntl } from "react-intl";
-import { BackButton } from "..";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Input, PasswordInput } from "@components-v2/form";
-import { AuthAdapter } from "@web3auth/auth-adapter";
+import { FormattedMessage, useIntl } from "react-intl";
+import { Form, Label } from "reactstrap";
+import { BackButton } from "..";
+import CosmosRpc from "./cosmos-rpc";
+import style from "./style.module.scss";
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { AuthApiKey } from "../../../config.ui";
-import { useStore } from "../../../stores";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { Card } from "@components-v2/card";
+import { AuthApiKey } from "../../../config.ui";
+import { useStore } from "../../../stores";
+import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
 // get from https://dashboard.web3auth.io
 
 export const AuthIntro: FunctionComponent<{
@@ -155,8 +157,17 @@ interface FormData {
 }
 export const AuthPage: FunctionComponent<{
   registerConfig: RegisterConfig;
-}> = observer(({ registerConfig }) => {
+  selectedNetworks: string[];
+  setSelectedNetworks: React.Dispatch<React.SetStateAction<string[]>>;
+}> = observer(({ registerConfig, selectedNetworks, setSelectedNetworks }) => {
+  const { keyRingStore } = useStore();
   const intl = useIntl();
+  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
+  const defaultAccountName = `account-${totalAccount + 1}`;
+  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
+
   const {
     register,
     getValues,
@@ -164,7 +175,7 @@ export const AuthPage: FunctionComponent<{
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      name: "",
+      name: defaultAccountName,
       password: "",
       confirmPassword: "",
     },
@@ -173,6 +184,30 @@ export const AuthPage: FunctionComponent<{
     registerConfig.privateKey.trim().replace("0x", ""),
     "hex"
   );
+
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = [
+      ...new Set(
+        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+          const defaultName = item?.meta?.["name"];
+          const chainNames = item?.meta?.["nameByChain"]
+            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+            : [];
+          return [defaultName, ...chainNames].filter(Boolean);
+        }) ?? []
+      ),
+    ];
+
+    let nameAlreadyExists = false;
+
+    // if create mode then wallet list is empty
+    if (registerConfig.mode !== "create") {
+      nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+    }
+
+    return !nameAlreadyExists;
+  };
+
   return (
     <React.Fragment>
       <BackButton
@@ -187,7 +222,8 @@ export const AuthPage: FunctionComponent<{
             data.name,
             privateKey,
             data.password,
-            { email: registerConfig.email }
+            { email: registerConfig.email },
+            selectedNetworks
           );
         })}
       >
@@ -202,9 +238,39 @@ export const AuthPage: FunctionComponent<{
               id: "register.name.error.required",
             }),
           })}
-          error={errors.name && errors.name.message}
           maxLength={20}
+          onChange={(event) => {
+            const trimmedValue = event.target.value.trimStart();
+            setNewAccountName(trimmedValue);
+            setAccountNameValidationError(!validateWalletName(trimmedValue));
+          }}
+          error={
+            accountNameValidationError
+              ? "Account name already exists, please try different name"
+              : errors.name && errors.name.message
+          }
           style={{ width: "333px !important" }}
+        />
+        <div
+          className={classNames(
+            style["label"],
+            "mb-2 text-xs",
+            newAccountName === defaultAccountName ||
+              accountNameValidationError ||
+              (errors.name && errors.name.message)
+              ? "invisible"
+              : "visible"
+          )}
+        >
+          * (Account name for unselected networks will be {defaultAccountName})
+        </div>
+        <SelectNetwork
+          className="mb-4"
+          selectedNetworks={selectedNetworks}
+          disabled={newAccountName === defaultAccountName}
+          onMultiSelectChange={(values) => {
+            setSelectedNetworks(values);
+          }}
         />
         {registerConfig.mode === "create" ? (
           <React.Fragment>
@@ -251,7 +317,12 @@ export const AuthPage: FunctionComponent<{
               <FormattedMessage id="register.create.button.next" />
             )
           }
-          disabled={registerConfig.isLoading}
+          disabled={
+            registerConfig.isLoading ||
+            accountNameValidationError ||
+            (selectedNetworks.length === 0 &&
+              newAccountName !== defaultAccountName)
+          }
           data-loading={registerConfig.isLoading}
         />
       </Form>

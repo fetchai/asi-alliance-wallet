@@ -60,10 +60,34 @@ export const ImportLedgerPage: FunctionComponent<{
   const { analyticsStore, keyRingStore, ledgerInitStore } = useStore();
 
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [allNetworkSelected, setAllNetworkSelected] = useState(true);
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
   const totalAccount = keyRingStore.multiKeyStoreInfo.length;
   const defaultAccountName = `account-${totalAccount + 1}`;
   const [newAccountName, setNewAccountName] = useState(defaultAccountName);
+
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = [
+      ...new Set(
+        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+          const defaultName = item?.meta?.["name"];
+          const chainNames = item?.meta?.["nameByChain"]
+            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+            : [];
+          return [defaultName, ...chainNames].filter(Boolean);
+        }) ?? []
+      ),
+    ];
+
+    let nameAlreadyExists = false;
+
+    // if create mode then wallet list is empty
+    if (registerConfig.mode !== "create") {
+      nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+    }
+
+    return !nameAlreadyExists;
+  };
 
   const {
     register,
@@ -72,7 +96,7 @@ export const ImportLedgerPage: FunctionComponent<{
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      name: "",
+      name: defaultAccountName,
       password: "",
       confirmPassword: "",
     },
@@ -129,7 +153,7 @@ export const ImportLedgerPage: FunctionComponent<{
         password,
         bip44Option.bip44HDPath,
         "Cosmos",
-        allNetworkSelected ? [] : selectedNetworks
+        selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "ledger",
@@ -198,15 +222,24 @@ export const ImportLedgerPage: FunctionComponent<{
               onChange={(event) => {
                 const trimmedValue = event.target.value.trimStart();
                 setNewAccountName(trimmedValue);
+                setAccountNameValidationError(
+                  !validateWalletName(trimmedValue)
+                );
               }}
-              error={errors.name && errors.name.message}
+              error={
+                accountNameValidationError
+                  ? "Account name already exists, please try different name"
+                  : errors.name && errors.name.message
+              }
               maxLength={20}
             />
             <div
               className={classNames(
                 style["label"],
                 "mb-2 text-xs",
-                newAccountName === defaultAccountName && allNetworkSelected
+                newAccountName === defaultAccountName ||
+                  accountNameValidationError ||
+                  (errors.name && errors.name.message)
                   ? "invisible"
                   : "visible"
               )}
@@ -220,9 +253,6 @@ export const ImportLedgerPage: FunctionComponent<{
               disabled={newAccountName === defaultAccountName}
               onMultiSelectChange={(values) => {
                 setSelectedNetworks(values);
-              }}
-              onSelectAll={(value) => {
-                setAllNetworkSelected(value);
               }}
             />
             {registerConfig.mode === "create" ? (
@@ -272,7 +302,7 @@ export const ImportLedgerPage: FunctionComponent<{
                     marginBottom: "5px",
                   }}
                 />
-                <div className="mt-4 space-y-1 text-sm">
+                <div className="mt-4 mb-3 space-y-1 text-sm">
                   <PasswordValidationChecklist
                     password={password}
                     onStatusChange={(status) =>
@@ -302,7 +332,13 @@ export const ImportLedgerPage: FunctionComponent<{
                   pageName: "Register",
                 });
               }}
-              disabled={registerConfig.isLoading || passwordChecklistError}
+              disabled={
+                registerConfig.isLoading ||
+                passwordChecklistError ||
+                accountNameValidationError ||
+                (selectedNetworks.length === 0 &&
+                  newAccountName !== defaultAccountName)
+              }
               styleProps={{
                 height: "56px",
               }}

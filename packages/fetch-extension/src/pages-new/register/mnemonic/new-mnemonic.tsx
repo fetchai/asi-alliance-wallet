@@ -92,11 +92,16 @@ export const NewMnemonicPage: FunctionComponent<{
   const [continueClicked, setContinueClicked] = useState(false);
   const [authClicked, setAuthClicked] = useState(false);
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [allNetworkSelected, setAllNetworkSelected] = useState(true);
 
   function decideView() {
     if (authClicked) {
-      return <AuthPage registerConfig={registerConfig} />;
+      return (
+        <AuthPage
+          registerConfig={registerConfig}
+          selectedNetworks={selectedNetworks}
+          setSelectedNetworks={setSelectedNetworks}
+        />
+      );
     }
 
     if (!isMainPage) {
@@ -111,8 +116,6 @@ export const NewMnemonicPage: FunctionComponent<{
             setContinueClicked={setContinueClicked}
             selectedNetworks={selectedNetworks}
             setSelectedNetworks={setSelectedNetworks}
-            allNetworkSelected={allNetworkSelected}
-            setAllNetworkSelected={setAllNetworkSelected}
           />
         );
       } else if (newMnemonicConfig.mode === "verify") {
@@ -123,7 +126,6 @@ export const NewMnemonicPage: FunctionComponent<{
             bip44Option={bip44Option}
             setContinueClicked={setContinueClicked}
             selectedNetworks={selectedNetworks}
-            allNetworkSelected={allNetworkSelected}
           />
         );
       }
@@ -186,8 +188,6 @@ interface GenerateMnemonicModePageProps {
   setContinueClicked: any;
   selectedNetworks: string[];
   setSelectedNetworks: React.Dispatch<React.SetStateAction<string[]>>;
-  allNetworkSelected: boolean;
-  setAllNetworkSelected: React.Dispatch<React.SetStateAction<boolean>>;
 }
 export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
   observer(
@@ -200,8 +200,6 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       setContinueClicked,
       selectedNetworks,
       setSelectedNetworks,
-      allNetworkSelected,
-      setAllNetworkSelected,
     }) => {
       const intl = useIntl();
       const notification = useNotification();
@@ -266,15 +264,25 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       }, []);
 
       const validateWalletName = (value: string) => {
-        const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
-          (item) => item?.meta?.["name"]
-        );
+        const alreadyImportedWalletNames = [
+          ...new Set(
+            keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+              const defaultName = item?.meta?.["name"];
+              const chainNames = item?.meta?.["nameByChain"]
+                ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+                : [];
+              return [defaultName, ...chainNames].filter(Boolean);
+            }) ?? []
+          ),
+        ];
+
         let nameAlreadyExists = false;
 
         // if create mode then wallet list is empty
         if (registerConfig.mode !== "create") {
-          nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+          nameAlreadyExists = alreadyImportedWalletNames.includes(value);
         }
+
         return !nameAlreadyExists;
       };
 
@@ -412,7 +420,9 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   className={classNames(
                     style["label"],
                     "mb-1 text-xs",
-                    newAccountName === defaultAccountName && allNetworkSelected
+                    newAccountName === defaultAccountName ||
+                      accountNameValidationError ||
+                      (errors.name && errors.name.message)
                       ? "invisible"
                       : "visible"
                   )}
@@ -425,9 +435,6 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   disabled={newAccountName === defaultAccountName}
                   onMultiSelectChange={(values) => {
                     setSelectedNetworks(values);
-                  }}
-                  onSelectAll={(value) => {
-                    setAllNetworkSelected(value);
                   }}
                 />
                 {registerConfig.mode === "create" ? (
@@ -483,7 +490,9 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   disabled={
                     !!errors.password?.message ||
                     passwordChecklistError ||
-                    accountNameValidationError
+                    accountNameValidationError ||
+                    (selectedNetworks.length === 0 &&
+                      newAccountName !== defaultAccountName)
                   }
                   text={""}
                   styleProps={{ marginBottom: "20px", height: "56px" }}
@@ -504,7 +513,6 @@ export const VerifyMnemonicModePage: FunctionComponent<{
   bip44Option: BIP44Option;
   setContinueClicked: any;
   selectedNetworks: string[];
-  allNetworkSelected: boolean;
 }> = observer(
   ({
     registerConfig,
@@ -512,7 +520,6 @@ export const VerifyMnemonicModePage: FunctionComponent<{
     bip44Option,
     setContinueClicked,
     selectedNetworks,
-    allNetworkSelected,
   }) => {
     const wordsSlice = useMemo(() => {
       const words = newMnemonicConfig.mnemonic.split(" ");
@@ -691,7 +698,7 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 newMnemonicConfig.password,
                 bip44Option.bip44HDPath,
                 {},
-                allNetworkSelected ? [] : selectedNetworks
+                selectedNetworks
               );
               analyticsStore.setUserProperties({
                 registerType: "seed",

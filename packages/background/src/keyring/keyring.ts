@@ -1682,9 +1682,16 @@ export class KeyRing {
         ? keyStore.coinTypeForChain[ChainIdHelper.parse(chainId).identifier] ??
           defaultCoinType
         : defaultCoinType;
-      const nameByChain = keyStore.meta?.["nameByChain"]
-        ? JSON.parse(keyStore.meta["nameByChain"])
-        : undefined;
+
+      let nameByChain;
+
+      try {
+        nameByChain = keyStore.meta?.["nameByChain"]
+          ? JSON.parse(keyStore.meta["nameByChain"])
+          : {};
+      } catch {
+        nameByChain = {};
+      }
 
       switch (keyStore.type) {
         case "mnemonic": {

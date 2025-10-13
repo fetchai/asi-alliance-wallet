@@ -31,7 +31,18 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
       chainInfo.features?.includes("evm")
     );
 
-    const networkList = [...mainChainList, ...evmChainList].map((chain) => ({
+    const cosmosMainList = mainChainList.filter(
+      (chainInfo) => chainInfo.raw.type !== "testnet"
+    );
+
+    const evmMainList = evmChainList.filter(
+      (chainInfo) => chainInfo.raw.type !== "testnet"
+    );
+
+    const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;
+    const evmList = chainStore.showTestnet ? evmChainList : evmMainList;
+
+    const networkList = [...cosmosList, ...evmList].map((chain) => ({
       id: chain.chainId,
       label: chain.chainName === "fetch" ? "Fetchhub" : chain.chainName,
     }));

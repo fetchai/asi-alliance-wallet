@@ -225,7 +225,6 @@ export const RecoverMnemonicPage: FunctionComponent<{
 
   const { analyticsStore, keyRingStore } = useStore();
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [allNetworkSelected, setAllNetworkSelected] = useState(true);
   const totalAccount = keyRingStore.multiKeyStoreInfo.length;
   const defaultAccountName = `account-${totalAccount + 1}`;
   const [newAccountName, setNewAccountName] = useState(defaultAccountName);
@@ -397,15 +396,25 @@ export const RecoverMnemonicPage: FunctionComponent<{
   }, [activeTab]);
 
   const validateWalletName = (value: string) => {
-    const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
-      (item) => item?.meta?.["name"]
-    );
+    const alreadyImportedWalletNames = [
+      ...new Set(
+        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+          const defaultName = item?.meta?.["name"];
+          const chainNames = item?.meta?.["nameByChain"]
+            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+            : [];
+          return [defaultName, ...chainNames].filter(Boolean);
+        }) ?? []
+      ),
+    ];
+
     let nameAlreadyExists = false;
 
     // if create mode then wallet list is empty
     if (registerConfig.mode !== "create") {
-      nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+      nameAlreadyExists = alreadyImportedWalletNames.includes(value);
     }
+
     return !nameAlreadyExists;
   };
 
@@ -463,7 +472,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         privateKey,
                         data.password,
                         {},
-                        allNetworkSelected ? [] : selectedNetworks
+                        selectedNetworks
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
@@ -480,7 +489,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         data.password,
                         bip44Option.bip44HDPath,
                         {},
-                        allNetworkSelected ? [] : selectedNetworks
+                        selectedNetworks
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
@@ -681,8 +690,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     className={classNames(
                       style["label"],
                       "mb-1 text-xs",
-                      newAccountName === defaultAccountName &&
-                        allNetworkSelected
+                      newAccountName === defaultAccountName ||
+                        accountNameValidationError ||
+                        (errors.name && errors.name.message)
                         ? "invisible"
                         : "visible"
                     )}
@@ -699,9 +709,6 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   disabled={newAccountName === defaultAccountName}
                   onMultiSelectChange={(values) => {
                     setSelectedNetworks(values);
-                  }}
-                  onSelectAll={(value) => {
-                    setAllNetworkSelected(value);
                   }}
                 />
                 {registerConfig.mode === "create" ? (
@@ -777,7 +784,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   disabled={
                     registerConfig.isLoading ||
                     passwordChecklistError ||
-                    accountNameValidationError
+                    accountNameValidationError ||
+                    (selectedNetworks.length === 0 &&
+                      newAccountName !== defaultAccountName)
                   }
                   onClick={() => {
                     analyticsStore.logEvent("register_next_click", {
