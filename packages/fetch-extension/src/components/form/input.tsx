@@ -77,6 +77,7 @@ export const Input = forwardRef<
         ) : text ? (
           <FormText>{text}</FormText>
         ) : null}
+        {append}
       </FormGroup>
     );
   }

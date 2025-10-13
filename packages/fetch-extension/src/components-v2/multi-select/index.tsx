@@ -191,9 +191,11 @@ export const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
           >
             {showSelectAll && filteredItems.length > 0 && (
               <li
-                className={`${styles["select-item"]} ${
-                  allSelected ? styles["selected"] : ""
-                }`}
+                className={classNames(
+                  styles["select-item"],
+                  allSelected ? styles["selected"] : "",
+                  styles["select-all-option"]
+                )}
                 onClick={handleSelectAllToggle}
                 role="option"
                 aria-selected={allSelected}

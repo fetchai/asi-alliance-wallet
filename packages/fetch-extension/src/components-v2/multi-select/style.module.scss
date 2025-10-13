@@ -116,6 +116,15 @@
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
+.select-all-option {
+  background: transparent !important;
+  font-weight: 500 !important;
+  border-radius: 0px !important;
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
 .select-list {
   display: flex;
   flex-direction: column;

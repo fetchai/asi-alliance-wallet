@@ -11,7 +11,7 @@ interface SelectNetworkProps {
   selectedNetworks: string[];
   disabled: boolean;
   onMultiSelectChange: (items: string[]) => void;
-  onSelectAll: (selected: boolean) => void;
+  onSelectAll?: (selected: boolean) => void;
 }
 
 export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
@@ -23,11 +23,11 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     onSelectAll,
   }) => {
     const { chainStore } = useStore();
-    const mainChainList = chainStore.chainInfos.filter(
+    const mainChainList = chainStore.chainInfosInUI.filter(
       (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
     );
 
-    const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
+    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
       chainInfo.features?.includes("evm")
     );
 
@@ -37,7 +37,8 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     }));
 
     useEffect(() => {
-      onMultiSelectChange?.(networkList.map((item) => item.id));
+      const items = networkList.map((item) => item.id);
+      onMultiSelectChange?.(items);
     }, []);
 
     return (

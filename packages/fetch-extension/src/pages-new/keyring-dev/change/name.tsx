@@ -10,6 +10,7 @@ import { observer } from "mobx-react-lite";
 import styleName from "./name.module.scss";
 import { KeyRingStatus } from "@keplr-wallet/background";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import classNames from "classnames";
 
 interface FormData {
   name: string;
@@ -47,12 +48,20 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   const [loading, setLoading] = useState(false);
   const [accountNameValidationError, setAccountNameValidationError] =
     useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+
+  const getNameByChain = (meta?: { [key: string]: string }) => {
+    return meta?.["nameByChain"]
+      ? JSON.parse(meta["nameByChain"] || "{}")?.[chainId]
+      : undefined;
+  };
 
   const keyStore = useMemo(() => {
     return keyRingStore.multiKeyStoreInfo[parseInt(index)];
   }, [keyRingStore.multiKeyStoreInfo, index]);
 
   const isKeyStoreReady = keyRingStore.status === KeyRingStatus.UNLOCKED;
+  const accountName = getNameByChain(keyStore?.meta) || keyStore.meta?.["name"];
 
   useEffect(() => {
     if (parseInt(index).toString() !== index) {
@@ -60,25 +69,26 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
     }
   }, [index]);
 
-  const getNameByChain = (meta?: { [key: string]: string }) => {
-    return meta?.["nameByChain"]
-      ? JSON.parse(meta["nameByChain"])?.[chainId]
-      : undefined;
-  };
-
   const validateWalletName = (value: string) => {
-    const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
-      (item) => item?.meta?.["name"] || getNameByChain(item?.meta)
-    );
-    const nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+    const alreadyImportedWalletNames = [
+      ...new Set(
+        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+          const defaultName = item?.meta?.["name"];
+          const chainNames = item?.meta?.["nameByChain"]
+            ? Object.values(JSON.parse(item?.meta?.["nameByChain"] || "{}"))
+            : [];
+          return [defaultName, ...chainNames].filter(Boolean);
+        }) ?? []
+      ),
+    ];
+
+    const nameAlreadyExists = alreadyImportedWalletNames.includes(value);
     return !nameAlreadyExists;
   };
 
   if (isKeyStoreReady && keyStore == null) {
     return null;
   }
-
-  const accountName = getNameByChain(keyStore?.meta) || keyStore.meta?.["name"];
 
   return (
     <HeaderLayout
@@ -106,10 +116,21 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
               return;
             }
 
+            const nameByChain = keyStore.meta?.["nameByChain"]
+              ? JSON.parse(keyStore.meta?.["nameByChain"] || "{}")
+              : {};
+
+            const updatedAccountNames = {
+              ...nameByChain,
+              [chainId]: data.name?.trim(),
+            };
+
             // Make sure that name is changed
+            // keep the default name, just update nameByChain
             await keyRingStore.updateNameKeyRing(
               parseInt(index),
-              data.name.trim()
+              keyStore.meta?.["name"] || "",
+              updatedAccountNames
             );
 
             navigate("/");
@@ -146,9 +167,9 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
             id: "setting.keyring.change.input.name",
           })}
           type="text"
-          formGroupClassName={styleName["formGroup"]}
+          formGroupClassName={classNames(styleName["formGroup"], "!mb-0")}
           floatLabel={true}
-          className={styleName["input"]}
+          className={classNames(styleName["input"], styleName["inputWithInfo"])}
           error={
             accountNameValidationError
               ? "Account name already exists, please try different name"
@@ -162,10 +183,24 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           onChange={(e) => {
             const trimmedValue = e.target.value.trimStart();
             setValue(e.target.name as keyof FormData, trimmedValue);
+            setNewAccountName(trimmedValue);
             setAccountNameValidationError(!validateWalletName(trimmedValue));
           }}
           maxLength={20}
           autoFocus
+          append={
+            <div
+              className={classNames(
+                styleName["labelNetworkSelector"],
+                newAccountName === accountName || accountNameValidationError
+                  ? "invisible"
+                  : "visible"
+              )}
+            >
+              *(Account name for unselected networks will be{" "}
+              {keyStore?.meta?.["name"]})
+            </div>
+          }
           readOnly={waitingNameData !== undefined && !waitingNameData?.editable}
         />
 
@@ -173,7 +208,9 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
         <ButtonV2
           variant="dark"
           dataLoading={loading}
-          disabled={loading || accountNameValidationError}
+          disabled={
+            loading || accountNameValidationError || newAccountName === ""
+          }
           text={
             loading ? (
               <i className="fas fa-spinner fa-spin ml-2" />
