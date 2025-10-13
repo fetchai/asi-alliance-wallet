@@ -29,6 +29,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     } = useStore();
     const [cosmosSearchTerm, setCosmosSearchTerm] = useState("");
     const [evmSearchTerm, setEvmSearchTerm] = useState("");
+    const [cardanoSearchTerm, setCardanoSearchTerm] = useState("");
     const [clickedChain, setClickedChain] = useState(
       chainStore.current.chainId
     );
@@ -38,15 +39,16 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const confirm = useConfirm();
 
     const mainChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+      (chainInfo) =>
+        !chainInfo.raw.beta && !chainInfo.raw.features?.includes("evm")
     );
 
     const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
-      chainInfo.features?.includes("evm")
+      chainInfo.raw.features?.includes("evm")
     );
 
     const betaChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => chainInfo.beta
+      (chainInfo) => chainInfo.raw.beta
     );
 
     const cosmosMainList = mainChainList.filter(
@@ -59,6 +61,10 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
 
     const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;
     const evmList = chainStore.showTestnet ? evmChainList : evmMainList;
+
+    const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+      chainInfo.features?.includes("cardano")
+    );
 
     const tabs = [
       {
@@ -107,34 +113,36 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   leftImage={
                     chainInfo.raw.chainSymbolImageUrl !== undefined
                       ? chainInfo.raw.chainSymbolImageUrl
-                      : chainInfo.chainName
-                      ? chainInfo.chainName[0].toUpperCase()
+                      : chainInfo.raw.chainName
+                      ? chainInfo.raw.chainName[0].toUpperCase()
                       : ""
+                  }
+                  heading={chainInfo.raw.chainName}
+                  isActive={
+                    chainInfo.raw.chainId === chainStore.current.chainId
                   }
                   leftImageStyle={{
                     backgroundColor: !chainInfo.raw.chainSymbolImageUrl
                       ? "#dddfdf"
                       : "transparent",
                   }}
-                  heading={chainInfo.chainName}
-                  isActive={chainInfo.chainId === chainStore.current.chainId}
                   rightContent={
-                    clickedChain === chainInfo.chainId
+                    clickedChain === chainInfo.raw.chainId
                       ? require("@assets/svg/wireframe/check.svg")
                       : ""
                   }
                   onClick={() => {
-                    setClickedChain(chainInfo.chainId);
+                    setClickedChain(chainInfo.raw.chainId);
                     let properties = {};
-                    if (chainInfo.chainId !== chainStore.current.chainId) {
+                    if (chainInfo.raw.chainId !== chainStore.current.chainId) {
                       properties = {
                         chainId: chainStore.current.chainId,
                         chainName: chainStore.current.chainName,
-                        toChainId: chainInfo.chainId,
-                        toChainName: chainInfo.chainName,
+                        toChainId: chainInfo.raw.chainId,
+                        toChainName: chainInfo.raw.chainName,
                       };
                     }
-                    chainStore.selectChain(chainInfo.chainId);
+                    chainStore.selectChain(chainInfo.raw.chainId);
                     chainStore.saveLastViewChainId();
                     chatStore.userDetailsStore.resetUser();
                     proposalStore.resetProposals();
@@ -152,7 +160,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   subheading={
                     showAddress
                       ? formatAddress(
-                          accountStore.getAccount(chainInfo.chainId)
+                          accountStore.getAccount(chainInfo.raw.chainId)
                             .bech32Address
                         )
                       : null
@@ -166,21 +174,21 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
 
             {betaChainList.map((chainInfo) => (
               <Card
-                key={chainInfo.chainId}
+                key={chainInfo.raw.chainId}
                 leftImage={
                   chainInfo.raw.chainSymbolImageUrl !== undefined
                     ? chainInfo.raw.chainSymbolImageUrl
-                    : chainInfo.chainName
-                    ? chainInfo.chainName[0].toUpperCase()
+                    : chainInfo.raw.chainName
+                    ? chainInfo.raw.chainName[0].toUpperCase()
                     : ""
                 }
+                heading={chainInfo.raw.chainName}
+                isActive={chainInfo.raw.chainId === chainStore.current.chainId}
                 leftImageStyle={{
                   backgroundColor: !chainInfo.raw.chainSymbolImageUrl
                     ? "#dddfdf"
                     : "transparent",
                 }}
-                heading={chainInfo.chainName}
-                isActive={chainInfo.chainId === chainStore.current.chainId}
                 rightContent={require("@assets/svg/wireframe/closeImage.svg")}
                 rightContentStyle={{ height: "24px", width: "24px" }}
                 rightContentOnClick={async (e: any) => {
@@ -194,25 +202,25 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                           id: "chain.remove.confirm.paragraph",
                         },
                         {
-                          chainName: chainInfo.chainName,
+                          chainName: chainInfo.raw.chainName,
                         }
                       ),
                     })
                   ) {
-                    await chainStore.removeChainInfo(chainInfo.chainId);
+                    await chainStore.removeChainInfo(chainInfo.raw.chainId);
                   }
                 }}
                 onClick={() => {
                   let properties = {};
-                  if (chainInfo.chainId !== chainStore.current.chainId) {
+                  if (chainInfo.raw.chainId !== chainStore.current.chainId) {
                     properties = {
                       chainId: chainStore.current.chainId,
                       chainName: chainStore.current.chainName,
-                      toChainId: chainInfo.chainId,
-                      toChainName: chainInfo.chainName,
+                      toChainId: chainInfo.raw.chainId,
+                      toChainName: chainInfo.raw.chainName,
                     };
                   }
-                  chainStore.selectChain(chainInfo.chainId);
+                  chainStore.selectChain(chainInfo.raw.chainId);
                   chainStore.saveLastViewChainId();
                   chatStore.userDetailsStore.resetUser();
                   proposalStore.resetProposals();
@@ -230,7 +238,8 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 subheading={
                   showAddress
                     ? formatAddress(
-                        accountStore.getAccount(chainInfo.chainId).bech32Address
+                        accountStore.getAccount(chainInfo.raw.chainId)
+                          .bech32Address
                       )
                     : null
                 }
@@ -274,6 +283,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
               searchTerm={evmSearchTerm}
               onSearchTermChange={setEvmSearchTerm}
               valuesArray={evmList}
+              itemsStyleProp={{ height: "100%" }}
               filterFunction={getFilteredChainValues}
               midElement={
                 <ButtonV2
@@ -298,34 +308,36 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   leftImage={
                     chainInfo.raw.chainSymbolImageUrl !== undefined
                       ? chainInfo.raw.chainSymbolImageUrl
-                      : chainInfo.chainName
-                      ? chainInfo.chainName[0].toUpperCase()
+                      : chainInfo.raw.chainName
+                      ? chainInfo.raw.chainName[0].toUpperCase()
                       : ""
+                  }
+                  heading={chainInfo.raw.chainName}
+                  isActive={
+                    chainInfo.raw.chainId === chainStore.current.chainId
                   }
                   leftImageStyle={{
                     backgroundColor: !chainInfo.raw.chainSymbolImageUrl
                       ? "#dddfdf"
                       : "transparent",
                   }}
-                  heading={chainInfo.chainName}
-                  isActive={chainInfo.chainId === chainStore.current.chainId}
                   rightContent={
-                    clickedChain === chainInfo.chainId
+                    clickedChain === chainInfo.raw.chainId
                       ? require("@assets/svg/wireframe/check.svg")
                       : ""
                   }
                   onClick={() => {
-                    setClickedChain(chainInfo.chainId);
+                    setClickedChain(chainInfo.raw.chainId);
                     let properties = {};
-                    if (chainInfo.chainId !== chainStore.current.chainId) {
+                    if (chainInfo.raw.chainId !== chainStore.current.chainId) {
                       properties = {
                         chainId: chainStore.current.chainId,
                         chainName: chainStore.current.chainName,
-                        toChainId: chainInfo.chainId,
-                        toChainName: chainInfo.chainName,
+                        toChainId: chainInfo.raw.chainId,
+                        toChainName: chainInfo.raw.chainName,
                       };
                     }
-                    chainStore.selectChain(chainInfo.chainId);
+                    chainStore.selectChain(chainInfo.raw.chainId);
                     chainStore.saveLastViewChainId();
                     chatStore.userDetailsStore.resetUser();
                     proposalStore.resetProposals();
@@ -343,7 +355,93 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   subheading={
                     showAddress
                       ? formatAddress(
-                          accountStore.getAccount(chainInfo.chainId)
+                          accountStore.getAccount(chainInfo.raw.chainId)
+                            .bech32Address
+                        )
+                      : null
+                  }
+                />
+              )}
+            />
+          </div>
+        ),
+      },
+      {
+        id: "Cardano",
+        component: (
+          <div>
+            <SearchBar
+              searchTerm={cardanoSearchTerm}
+              onSearchTermChange={setCardanoSearchTerm}
+              valuesArray={cardanoChainList}
+              itemsStyleProp={{ height: "100%" }}
+              filterFunction={getFilteredChainValues}
+              midElement={
+                <ButtonV2
+                  styleProps={{
+                    height: "48px",
+                    marginTop: "0px",
+                    fontSize: "14px",
+                  }}
+                  onClick={(e: any) => {
+                    e.preventDefault();
+                    analyticsStore.logEvent("manage_networks_click", {
+                      pageName: "Home",
+                    });
+                    navigate("/manage-networks");
+                  }}
+                  text={"Manage networks"}
+                />
+              }
+              renderResult={(chainInfo, index) => (
+                <Card
+                  key={index}
+                  leftImage={
+                    chainInfo.raw.chainSymbolImageUrl !== undefined
+                      ? chainInfo.raw.chainSymbolImageUrl
+                      : chainInfo.raw.chainName
+                      ? chainInfo.raw.chainName[0].toUpperCase()
+                      : ""
+                  }
+                  heading={chainInfo.raw.chainName}
+                  isActive={
+                    chainInfo.raw.chainId === chainStore.current.chainId
+                  }
+                  rightContent={
+                    clickedChain === chainInfo.raw.chainId
+                      ? require("@assets/svg/wireframe/check.svg")
+                      : ""
+                  }
+                  onClick={() => {
+                    setClickedChain(chainInfo.raw.chainId);
+                    let properties = {};
+                    if (chainInfo.raw.chainId !== chainStore.current.chainId) {
+                      properties = {
+                        chainId: chainStore.current.chainId,
+                        chainName: chainStore.current.chainName,
+                        toChainId: chainInfo.raw.chainId,
+                        toChainName: chainInfo.raw.chainName,
+                      };
+                    }
+                    chainStore.selectChain(chainInfo.raw.chainId);
+                    chainStore.saveLastViewChainId();
+                    chatStore.userDetailsStore.resetUser();
+                    proposalStore.resetProposals();
+                    chatStore.messagesStore.resetChatList();
+                    chatStore.messagesStore.setIsChatSubscriptionActive(false);
+                    messageAndGroupListenerUnsubscribe();
+
+                    if (Object.values(properties).length > 0) {
+                      analyticsStore.logEvent("chain_change_click", properties);
+                    }
+                    if (setIsSelectNetOpen) {
+                      setIsSelectNetOpen(false);
+                    }
+                  }}
+                  subheading={
+                    showAddress
+                      ? formatAddress(
+                          accountStore.getAccount(chainInfo.raw.chainId)
                             .bech32Address
                         )
                       : null

@@ -58,7 +58,7 @@ export class ObservableQueryRPCStatus extends ObservableChainQueryRPC<
   protected override canFetch(): boolean {
     // avoid fetching the endpoint for evm networks
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return !chainInfo?.features?.includes("evm");
+    return !chainInfo?.features?.includes("evm") && !chainInfo?.features?.includes("cardano");
   }
 
   get network(): string | undefined {

@@ -1,9 +1,10 @@
 import {
-  Key,
   KeyRing,
   KeyRingStatus,
   MultiKeyStoreInfoWithSelected,
 } from "./keyring";
+import { Key } from "./types";
+import { CardanoService } from "../cardano/service";
 
 import {
   Bech32Address,
@@ -45,12 +46,12 @@ import {
   TxBody,
 } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import Long from "long";
-import { KeyCurve, KeyCurves } from "@keplr-wallet/crypto";
+import { SupportedCurve } from "./types";
 import { Buffer } from "buffer/";
 import { trimAminoSignDoc } from "./amino-sign-doc";
 import { KeystoneService } from "../keystone";
 import { RequestICNSAdr36SignaturesMsg, SwitchAccountMsg } from "./messages";
-import { PubKeySecp256k1 } from "@keplr-wallet/crypto";
+import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
 
@@ -61,12 +62,18 @@ export class KeyRingService {
   protected interactionService!: InteractionService;
   public chainsService!: ChainsService;
   public permissionService!: PermissionService;
+  private cardanoService: CardanoService;
 
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly embedChainInfos: ChainInfo[],
-    protected readonly crypto: CommonCrypto
-  ) {}
+    protected readonly crypto: CommonCrypto,
+    cardanoService: CardanoService
+  ) {
+    this.cardanoService = cardanoService;
+  }
+
+  // syncCardanoService method removed - synchronization happens in unlock()
 
   init(
     interactionService: InteractionService,
@@ -80,13 +87,16 @@ export class KeyRingService {
     this.chainsService = chainsService;
     this.permissionService = permissionService;
 
+    // Provide chainGetter (chainsService) as the last argument expected by the
+    // updated KeyRing constructor signature.
     this.keyRing = new KeyRing(
       this.embedChainInfos,
       this.kvStore,
       ledgerService,
       keystoneService,
       interactionService,
-      this.crypto
+      this.crypto,
+      this.chainsService
     );
 
     this.chainsService.addChainRemovedHandler(this.onChainRemoved);
@@ -102,10 +112,29 @@ export class KeyRingService {
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     await this.keyRing.restore();
+    
+    // CardanoService initialized on-demand in getKey()
+    
     return {
       status: this.keyRing.status,
       multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo(),
     };
+  }
+
+  async checkReadiness(env: Env): Promise<KeyRingStatus> {
+    if (this.keyRing.status === KeyRingStatus.EMPTY) {
+      return KeyRingStatus.EMPTY;
+    }
+
+    if (this.keyRing.status === KeyRingStatus.NOTLOADED) {
+      await this.keyRing.restore();
+    }
+
+    if (this.keyRing.status === KeyRingStatus.LOCKED) {
+      await this.interactionService.waitApprove(env, "/unlock", "unlock", {});
+    }
+
+    return this.keyRing.status;
   }
 
   async enable(env: Env): Promise<KeyRingStatus> {
@@ -141,6 +170,7 @@ export class KeyRingService {
     try {
       const result = await this.keyRing.deleteKeyRing(index, password);
       keyStoreChanged = result.keyStoreChanged;
+      
       return {
         multiKeyStoreInfo: result.multiKeyStoreInfo,
         status: this.keyRing.status,
@@ -183,14 +213,34 @@ export class KeyRingService {
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     // TODO: Check mnemonic checksum.
-    return await this.keyRing.createMnemonicKey(
+
+    let currentChainId: string | undefined;
+    try {
+      const { ExtensionKVStore } = await import("@keplr-wallet/common");
+      const kvStore = new ExtensionKVStore("store_chain_config");
+      currentChainId = await kvStore.get<string>("extension_last_view_chain_id");
+    } catch (error) {
+      console.warn("Failed to get current chainId for Cardano meta:", error);
+    }
+    
+    const cardanoMeta = await this.cardanoService.createMetaFromMnemonic(
+      mnemonic,
+      password,
+      currentChainId
+    ).catch((error) => {
+      console.error("Failed to create Cardano meta:", error);
+      return {};
+    });
+
+    const keyStoreInfo = await this.keyRing.createMnemonicKey(
       kdf,
       mnemonic,
       password,
-      meta,
+      { ...meta, ...cardanoMeta },
       bip44HDPath,
-      KeyCurves.secp256k1
+      "secp256k1"
     );
+    return keyStoreInfo;
   }
 
   async createPrivateKey(
@@ -259,16 +309,34 @@ export class KeyRingService {
   async unlock(password: string): Promise<KeyRingStatus> {
     await this.keyRing.unlock(password);
 
+    // Initialize CardanoService for all wallets (multi-network support)
+    const ks = this.keyRing.getCurrentKeyStore();
+    if (ks) {
+      try {
+        await this.cardanoService.restoreFromKeyStore(
+          ks,
+          this.keyRing.currentPassword,
+          this.crypto
+        );
+      } catch (error) {
+        console.error("Failed to initialize CardanoService:", error);
+      }
+    }
+
     return this.keyRing.status;
   }
 
   async getKey(chainId: string): Promise<Key> {
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+
+    if (chainInfo.features?.includes("cardano")) {
+      await this.ensureCardanoServiceReady();
+      return await this.cardanoService.getKey(chainId);
+    }
+
     const ethereumKeyFeatures =
       await this.chainsService.getChainEthereumKeyFeatures(chainId);
-    const isEvm =
-      (await this.chainsService.getChainInfo(chainId)).features?.includes(
-        "evm"
-      ) ?? false;
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
 
     if (ethereumKeyFeatures.address || ethereumKeyFeatures.signing) {
       // Check the comment on the method itself.
@@ -281,6 +349,40 @@ export class KeyRingService {
       chainId,
       await this.chainsService.getChainCoinType(chainId),
       ethereumKeyFeatures.address
+    );
+  }
+
+  private cardanoServiceInitPromise: Promise<void> | null = null;
+
+  private async ensureCardanoServiceReady(): Promise<void> {
+    if (!this.cardanoService.isInitialized()) {
+      if (this.cardanoServiceInitPromise) {
+        return this.cardanoServiceInitPromise;
+      }
+
+      const ks = this.keyRing.getCurrentKeyStore();
+      
+      if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
+        this.cardanoServiceInitPromise = this.initializeCardanoService(ks);
+        try {
+          await this.cardanoServiceInitPromise;
+        } catch (error) {
+          this.cardanoServiceInitPromise = null;
+          throw error;
+        } finally {
+          this.cardanoServiceInitPromise = null;
+        }
+      } else {
+        throw new Error("KeyRing not ready for Cardano initialization");
+      }
+    }
+  }
+
+  private async initializeCardanoService(ks: any): Promise<void> {
+    await this.cardanoService.restoreFromKeyStore(
+      ks,
+      this.keyRing.currentPassword,
+      this.crypto
     );
   }
 
@@ -887,7 +989,7 @@ Salt: ${salt}`;
     mnemonic: string,
     meta: Record<string, string>,
     bip44HDPath: BIP44HDPath,
-    curve: KeyCurve = KeyCurves.secp256k1
+    curve: SupportedCurve = KeyCurves.secp256k1
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
@@ -898,7 +1000,7 @@ Salt: ${salt}`;
     kdf: "scrypt" | "sha256" | "pbkdf2",
     privateKey: Uint8Array,
     meta: Record<string, string>,
-    curve: KeyCurve = KeyCurves.secp256k1
+    curve: SupportedCurve = KeyCurves.secp256k1
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
@@ -938,7 +1040,23 @@ Salt: ${salt}`;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     try {
-      return await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
+      const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
+
+      const ks = this.keyRing.getCurrentKeyStore();
+      
+      if (ks) {
+        try {
+          await this.cardanoService.restoreFromKeyStore(
+            ks,
+            this.keyRing.currentPassword,
+            this.crypto
+          );
+        } catch (error) {
+          console.error("Failed to reinitialize CardanoService:", error);
+        }
+      }
+        
+      return result;
     } finally {
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,
@@ -1057,4 +1175,5 @@ Salt: ${salt}`;
 
     return await this.keyRing.getKeys(chainId, isEvm);
   }
+
 }

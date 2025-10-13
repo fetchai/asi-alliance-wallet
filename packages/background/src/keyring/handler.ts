@@ -361,6 +361,16 @@ const handleGetKeyMsg: (
   service: KeyRingService
 ) => InternalHandler<GetKeyMsg> = (service) => {
   return async (env, msg) => {
+    const status = service.keyRingStatus;
+    
+    if (status === KeyRingStatus.EMPTY) {
+      throw new Error("No keys available. Please create a wallet first.");
+    }
+
+    if (status === KeyRingStatus.LOCKED) {
+      throw new Error("Keyring is locked. Please unlock first.");
+    }
+
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,
       msg.chainId,
@@ -368,15 +378,22 @@ const handleGetKeyMsg: (
     );
 
     const key = await service.getKey(msg.chainId);
+    const chainInfo = await service.chainsService.getChainInfo(msg.chainId);
+    let bech32Address: string;
+    if (chainInfo.features?.includes("cardano")) {
+      bech32Address = Buffer.from(key.address).toString("utf8");
+    } else {
+      bech32Address = new Bech32Address(key.address).toBech32(
+        chainInfo.bech32Config.bech32PrefixAccAddr
+      );
+    }
+    
     return {
       name: service.getKeyStoreMeta("name"),
-      algo: "secp256k1",
+      algo: key.algo || "secp256k1",
       pubKey: key.pubKey,
       address: key.address,
-      bech32Address: new Bech32Address(key.address).toBech32(
-        (await service.chainsService.getChainInfo(msg.chainId)).bech32Config
-          .bech32PrefixAccAddr
-      ),
+      bech32Address: bech32Address,
       isNanoLedger: key.isNanoLedger,
       isKeystone: key.isKeystone,
     };
@@ -507,8 +524,13 @@ const handleRequestICNSAdr36SignaturesMsg: (
 const handleGetMultiKeyStoreInfoMsg: (
   service: KeyRingService
 ) => InternalHandler<GetMultiKeyStoreInfoMsg> = (service) => {
-  return () => {
+  return async () => {
+    if (service.keyRingStatus === KeyRingStatus.NOTLOADED) {
+      await service.restore();
+    }
+    
     return {
+      status: service.keyRingStatus,
       multiKeyStoreInfo: service.getMultiKeyStoreInfo(),
     };
   };
@@ -568,7 +590,11 @@ const handleChangeKeyNameMsg: (
 ) => InternalHandler<ChangeKeyRingNameMsg> = (service) => {
   return async (env, msg) => {
     // Ensure that keyring is unlocked and selected.
-    await service.enable(env);
+    // Don't call enable() if wallet is empty or status is undefined to avoid "key doesn't exist" errors
+    if (service.keyRingStatus !== KeyRingStatus.EMPTY && 
+        service.keyRingStatus !== undefined) {
+      await service.enable(env);
+    }
 
     let index = -1;
     service.getMultiKeyStoreInfo().forEach(({ selected }, idx) => {
@@ -634,7 +660,11 @@ const handleUnlockWallet: (
   service: KeyRingService
 ) => InternalHandler<UnlockWalletMsg> = (service) => {
   return async (env, _) => {
-    await service.enable(env);
+    // Don't call enable() if wallet is empty or status is undefined to avoid "key doesn't exist" errors
+    if (service.keyRingStatus !== KeyRingStatus.EMPTY && 
+        service.keyRingStatus !== undefined) {
+      await service.enable(env);
+    }
   };
 };
 
@@ -869,6 +899,12 @@ const handleGetKeyMsgFetchSigning: (
   service: KeyRingService
 ) => InternalHandler<GetKeyMsgFetchSigning> = (service) => {
   return async (env, msg) => {
+    const status = await service.checkReadiness(env);
+    
+    if (status === KeyRingStatus.EMPTY) {
+      throw new Error("No keys available. Please create a wallet first.");
+    }
+
     const chainId = await service.chainsService.getSelectedChain();
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,

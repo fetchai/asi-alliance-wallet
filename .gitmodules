@@ -1,0 +1,3 @@
+[submodule "third_party/lace"]
+	path = third_party/lace
+	url = https://github.com/input-output-hk/lace.git

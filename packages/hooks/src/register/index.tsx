@@ -121,7 +121,8 @@ export class RegisterConfig {
     mnemonic: string,
     password: string,
     bip44HDPath: BIP44HDPath,
-    meta: Record<string, string> = {}
+    chainInfos?: any[],
+    accountStore?: any
   ) {
     this._isLoading = true;
     try {
@@ -131,17 +132,15 @@ export class RegisterConfig {
           password,
           {
             name,
-            ...meta,
           },
-          bip44HDPath
+          bip44HDPath,
+          chainInfos ?? [],
+          accountStore
         );
       } else {
         yield this.keyRingStore.addMnemonicKey(
           mnemonic,
-          {
-            name,
-            ...meta,
-          },
+          { name },
           bip44HDPath
         );
       }

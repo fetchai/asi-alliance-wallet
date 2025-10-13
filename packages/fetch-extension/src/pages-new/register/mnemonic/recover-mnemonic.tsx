@@ -221,7 +221,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
     registerConfig.mode === "create" ? true : false
   );
 
-  const { analyticsStore, keyRingStore } = useStore();
+  const { analyticsStore, chainStore, accountStore, keyRingStore } = useStore();
 
   const {
     register,
@@ -461,16 +461,29 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         accountType: "privateKey",
                       });
                     } else {
-                      await registerConfig.createMnemonic(
-                        data.name,
-                        // In logic, not 12/24 words can be handled.
-                        // However, seed words have only a length of 12/24 when mnemonic.
-                        // Since the rest has an empty string, additional spaces are created by the empty string after join.
-                        // Therefore, trim should be done last.
-                        seedWords.join(" ").trim(),
-                        data.password,
-                        bip44Option.bip44HDPath
-                      );
+                      if (registerConfig.mode === "add") {
+                        await registerConfig.createMnemonic(
+                          data.name,
+                          // In logic, not 12/24 words can be handled.
+                          // However, seed words have only a length of 12/24 when mnemonic.
+                          // Since the rest has an empty string, additional spaces are created by the empty string after join.
+                          // Therefore, trim should be done last.
+                          seedWords.join(" ").trim(),
+                          data.password,
+                          bip44Option.bip44HDPath,
+                          chainStore.chainInfos,
+                          accountStore
+                        );
+                      } else {
+                        await registerConfig.createMnemonic(
+                          data.name,
+                          seedWords.join(" ").trim(),
+                          data.password,
+                          bip44Option.bip44HDPath,
+                          chainStore.chainInfos,
+                          accountStore
+                        );
+                      }
                       analyticsStore.setUserProperties({
                         registerType: "seed",
                         accountType: "mnemonic",

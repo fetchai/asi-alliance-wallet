@@ -6,7 +6,7 @@ import {
   updateProposalNodeOnTxnCompleted,
   TXNTYPE,
 } from "../account";
-import { ChainGetter } from "src/common";
+import { ChainGetter } from "../common";
 
 export class ActivityStore {
   @observable

@@ -120,8 +120,12 @@ export const ChainList: FunctionComponent = observer(() => {
     (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
   );
 
-  const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
-    chainInfo.features?.includes("evm")
+  const evmChainList = chainStore.chainInfosInUI.filter(
+    (chainInfo) => chainInfo.features?.includes("evm")
+  );
+
+  const cardanoChainList = chainStore.chainInfosInUI.filter(
+    (chainInfo) => chainInfo.features?.includes("cardano")
   );
 
   return (
@@ -145,6 +149,10 @@ export const ChainList: FunctionComponent = observer(() => {
           <div>+ Add custom EVM network</div>
         </div>
       </a>
+      {cardanoChainList.length > 0 ? <Divider> Cardano </Divider> : null}
+      {cardanoChainList.map((chainInfo) => (
+        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />
+      ))}
       <Divider> Cosmos </Divider>
       {mainChainList.map((chainInfo) => (
         <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />

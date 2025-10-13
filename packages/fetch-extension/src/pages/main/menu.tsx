@@ -44,6 +44,15 @@ export const Menu: FunctionComponent = observer(() => {
       >
         <FormattedMessage id="main.menu.guide" />
       </a>
+      <div
+        className={styleMenu["item"]}
+        onClick={() => {
+          navigate({ pathname: "/cardano-wallet" });
+          analyticsStore.logEvent("cardano_wallet_menu_click", { pageName: "More" });
+        }}
+      >
+        Cardano Wallet
+      </div>
       {/* Empty div for separating last item */}
       <div style={{ flex: 1 }} />
       <div

@@ -29,7 +29,8 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
       this.proposalStatus === ProposalStatus.VOTING_PERIOD &&
-      !chainInfo?.features?.includes("evm")
+      !chainInfo?.features?.includes("evm") &&
+      !chainInfo?.features?.includes("cardano")
     );
   }
 

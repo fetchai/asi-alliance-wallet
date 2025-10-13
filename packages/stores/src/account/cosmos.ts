@@ -57,7 +57,7 @@ import {
 import { ExtensionOptionsWeb3Tx } from "@keplr-wallet/proto-types/ethermint/types/v1/web3";
 import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
-import { ActivityStore } from "src/activity";
+import { ActivityStore } from "../activity";
 export interface CosmosAccount {
   cosmos: CosmosAccountImpl;
 }
