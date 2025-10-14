@@ -38,13 +38,19 @@ export const useAutoLockMonitoring = () => {
   useLayoutEffect(() => {
     if (keyRingStore.status === KeyRingStatus.UNLOCKED) {
       const sendAutoLockMonitorMsg = async () => {
-        const msg = new StartAutoLockMonitoringMsg();
-        const requester = new InExtensionMessageRequester();
-        await requester.sendMessage(BACKGROUND_PORT, msg);
+        try {
+          const msg = new StartAutoLockMonitoringMsg();
+          const requester = new InExtensionMessageRequester();
+          await requester.sendMessage(BACKGROUND_PORT, msg);
+        } catch (error) {
+          console.warn('Failed to send auto-lock monitoring message:', error);
+        }
       };
 
-      // Notify to auto lock service to start activation check whenever the keyring is unlocked.
-      sendAutoLockMonitorMsg();
+      // Add delay to ensure wallet is fully unlocked
+      setTimeout(() => {
+        sendAutoLockMonitorMsg();
+      }, 200);
 
       const autoLockInterval = setInterval(() => {
         sendAutoLockMonitorMsg();

@@ -55,10 +55,18 @@ export const LockPage: FunctionComponent = observer(() => {
           setLoading(true);
           try {
             await keyRingStore.unlock(data.password);
-            const msg = new StartAutoLockMonitoringMsg();
-            const requester = new InExtensionMessageRequester();
-            // Make sure to notify that auto lock service to start check locking after duration.
-            await requester.sendMessage(BACKGROUND_PORT, msg);
+            
+            // Add delay before starting auto-lock monitoring
+            setTimeout(async () => {
+              try {
+                const msg = new StartAutoLockMonitoringMsg();
+                const requester = new InExtensionMessageRequester();
+                // Make sure to notify that auto lock service to start check locking after duration.
+                await requester.sendMessage(BACKGROUND_PORT, msg);
+              } catch (error) {
+                console.warn('Failed to start auto-lock monitoring:', error);
+              }
+            }, 200);
 
             if (interactionInfo.interaction) {
               if (!interactionInfo.interactionInternal) {

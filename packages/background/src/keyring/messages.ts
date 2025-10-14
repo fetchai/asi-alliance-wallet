@@ -939,6 +939,7 @@ export class RequestSignDirectMsg extends Message<{
 }
 
 export class GetMultiKeyStoreInfoMsg extends Message<{
+  status: KeyRingStatus;
   multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
 }> {
   public static type() {

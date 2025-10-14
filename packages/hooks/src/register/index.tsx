@@ -122,7 +122,9 @@ export class RegisterConfig {
     password: string,
     bip44HDPath: BIP44HDPath,
     meta: Record<string, string> = {},
-    selectedNetworks: string[] = []
+    selectedNetworks: string[] = [],
+    chainInfos?: any[],
+    accountStore?: any
   ) {
     this._isLoading = true;
     const totalAccounts = this.keyRingStore.multiKeyStoreInfo.length;
@@ -147,7 +149,9 @@ export class RegisterConfig {
             name: defaultName,
             ...meta,
           },
-          bip44HDPath
+          bip44HDPath,
+          chainInfos ?? [],
+          accountStore
         );
       } else {
         yield this.keyRingStore.addMnemonicKey(

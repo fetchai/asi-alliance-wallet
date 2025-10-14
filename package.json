@@ -5,20 +5,6 @@
   "workspaces": {
     "packages": [
       "packages/*"
-    ],
-    "nohoist": [
-      "**/@react-native-*/**",
-      "**/react-native",
-      "**/react-native/**",
-      "**/*-react-native",
-      "**/react-native-*",
-      "**/@react-navigation/**",
-      "**/expo-*",
-      "**/native-base",
-      "**/@react-native-async-storage/async-storage",
-      "**/@ledgerhq/react-native-hw-transport-ble",
-      "**/jetifier",
-      "**/@Sentry/**"
     ]
   },
   "installConfig": {
@@ -80,6 +66,7 @@
   "devDependencies": {
     "@1stg/remark-preset": "^2.0.0",
     "@babel/preset-typescript": "^7.22.5",
+    "@emurgo/cardano-message-signing-asmjs": "1.0.1",
     "@octokit/core": "^3.5.1",
     "@storybook/addon-essentials": "^7.6.2",
     "@storybook/addon-interactions": "^7.6.2",
@@ -142,7 +129,30 @@
   "dependencies": {
     "@axelar-network/axelarjs-sdk": "^0.13.6",
     "@azoyalabs/fns-client": "0.0.3",
+    "@cardano-sdk/cardano-services-client": "^0.26.21",
+    "@cardano-sdk/core": "^0.46.3",
+    "@cardano-sdk/crypto": "^0.4.2",
+    "@cardano-sdk/key-management": "^0.29.2",
+    "@cardano-sdk/wallet": "^0.53.7",
     "@cosmjs/cosmwasm-stargate": "^0.31.0",
-    "vite": "^5.0.4"
+    "@dcspark/cardano-multiplatform-lib-browser": "^6.2.0",
+    "@emurgo/cardano-serialization-lib-browser": "^15.0.0",
+    "@noble/ed25519": "^2.3.0",
+    "@scure/base": "^1.2.6",
+    "@scure/bip39": "^1.6.0",
+    "bech32": "^2.0.0",
+    "bip39": "^3.1.0",
+    "blakejs": "^1.2.1",
+    "bottleneck": "^2.19.5",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
+    "ed25519-hd-key": "^1.3.0",
+    "lucid-cardano": "^0.10.11",
+    "node-polyfill-webpack-plugin": "^4.1.0",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "vite": "^5.0.4",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^5.0.1"
   }
 }

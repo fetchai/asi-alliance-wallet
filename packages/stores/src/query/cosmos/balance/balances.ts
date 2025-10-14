@@ -88,10 +88,12 @@ export class ObservableQueryCosmosBalances extends ObservableChainQuery<Balances
 
   protected override canFetch(): boolean {
     /* If bech32 address is empty, it will always fail, so don't need to fetch it.
-    also avoid fetching the endpoint for evm networks*/
+    also avoid fetching the endpoint for evm and cardano networks*/
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
-      this.bech32Address.length > 0 && !chainInfo?.features?.includes("evm")
+      this.bech32Address.length > 0 && 
+      !chainInfo?.features?.includes("evm") &&
+      !chainInfo?.features?.includes("cardano")
     );
   }
 
@@ -137,8 +139,10 @@ export class ObservableQueryCosmosBalanceRegistry implements BalanceRegistry {
     const denomHelper = new DenomHelper(minimalDenom);
     const isEvm =
       chainGetter.getChain(chainId).features?.includes("evm") ?? false;
+    const isCardano =
+      chainGetter.getChain(chainId).features?.includes("cardano") ?? false;
 
-    if (denomHelper.type !== "native" || isEvm) {
+    if (denomHelper.type !== "native" || isEvm || isCardano) {
       return;
     }
 

@@ -36,7 +36,7 @@ export function initEvents(router: Router) {
     switch (msg.constructor) {
       case PushEventDataMsg:
         if ((msg as PushEventDataMsg).data.type === "keystore-changed") {
-          window.dispatchEvent(new Event("fetchwallet_keystorechange"));
+          window.dispatchEvent(new Event("keplr_keystorechange"));
         }
 
         if ((msg as PushEventDataMsg).data.type === "status-changed") {
@@ -45,6 +45,10 @@ export function initEvents(router: Router) {
 
         if ((msg as PushEventDataMsg).data.type === "network-changed") {
           window.dispatchEvent(new Event("fetchwallet_networkchange"));
+        }
+
+        if ((msg as PushEventDataMsg).data.type === "clear-cache") {
+          window.dispatchEvent(new Event("keplr_keystorechange"));
         }
 
         return;

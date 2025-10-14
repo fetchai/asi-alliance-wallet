@@ -66,7 +66,7 @@ export interface ChainInfo {
 
   readonly grpcUrl?: string;
 
-  readonly type?: "mainnet" | "testnet";
+  readonly type?: "mainnet" | "testnet" | "cardano";
   readonly hideInUI?: boolean;
   readonly isTestnet?: boolean;
   readonly status?: "alpha" | "beta" | "production";

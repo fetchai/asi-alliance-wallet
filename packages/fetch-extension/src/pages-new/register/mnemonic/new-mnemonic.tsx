@@ -557,7 +557,7 @@ export const VerifyMnemonicModePage: FunctionComponent<{
       setRandomizedWords(words);
     }, [newMnemonicConfig.mnemonic]);
 
-    const { analyticsStore } = useStore();
+    const { analyticsStore, chainStore, accountStore } = useStore();
 
     const handleClickFirstButton = (word: string, index: number) => {
       if (!clickedButtons.includes(index)) {
@@ -698,7 +698,9 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 newMnemonicConfig.password,
                 bip44Option.bip44HDPath,
                 {},
-                selectedNetworks
+                selectedNetworks,
+                chainStore.chainInfos,
+                accountStore
               );
               analyticsStore.setUserProperties({
                 registerType: "seed",

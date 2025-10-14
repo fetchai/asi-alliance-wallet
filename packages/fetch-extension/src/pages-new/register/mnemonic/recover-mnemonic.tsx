@@ -223,7 +223,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
     registerConfig.mode === "create" ? true : false
   );
 
-  const { analyticsStore, keyRingStore } = useStore();
+  const { analyticsStore, chainStore, accountStore, keyRingStore } = useStore();
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const totalAccount = keyRingStore.multiKeyStoreInfo.length;
   const defaultAccountName = `account-${totalAccount + 1}`;
@@ -472,7 +472,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         privateKey,
                         data.password,
                         {},
-                        selectedNetworks
+                        selectedNetworks,
+                        chainStore.chainInfos,
+                        accountStore
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
@@ -489,7 +491,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         data.password,
                         bip44Option.bip44HDPath,
                         {},
-                        selectedNetworks
+                        selectedNetworks,
+                        chainStore.chainInfos,
+                        accountStore
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",

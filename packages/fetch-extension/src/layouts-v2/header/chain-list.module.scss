@@ -1,6 +1,23 @@
 @import "../../styles//var";
 
 .chainListContainer {
+  .unsupported-message {
+    padding: 40px 20px;
+    text-align: center;
+    
+    .message-text {
+      font-size: 16px;
+      color: $font-dark;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .message-subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.4;
+    }
+  }
   .chain-title {
     padding: 18px 12px;
     font-size: 14px;

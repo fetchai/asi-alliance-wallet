@@ -1,5 +1,6 @@
 import { ChainStore } from "./chain";
 import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
+import { KeyRingStatus } from "@keplr-wallet/background";
 import {
   AmplitudeApiKey,
   CoinGeckoAPIEndPoint,
@@ -20,6 +21,8 @@ import {
   CosmwasmAccount,
   CosmwasmQueries,
   EvmQueries,
+  CardanoQueries,
+  NameServiceQueries,
   OsmosisQueries,
   DeferInitialQueryController,
   getKeplrFromWindow,
@@ -38,15 +41,15 @@ import {
   TokensStore,
   WalletStatus,
   ICNSInteractionStore,
-  ICNSQueries,
   GeneralPermissionStore,
-  FNSQueries,
   EthereumAccount,
   ChatStore,
   ProposalStore,
   ActivityStore,
   TokenGraphStore,
 } from "@keplr-wallet/stores";
+
+import { CardanoAccount } from "@keplr-wallet/stores/build/account/cardano";
 import {
   KeplrETCQueries,
   GravityBridgeCurrencyRegsitrar,
@@ -98,13 +101,13 @@ export class RootStore {
       SecretQueries,
       OsmosisQueries,
       KeplrETCQueries,
-      ICNSQueries,
-      FNSQueries,
-      EvmQueries
+      NameServiceQueries,
+      EvmQueries,
+      CardanoQueries
     ]
   >;
   public readonly accountStore: AccountStore<
-    [CosmosAccount, CosmwasmAccount, SecretAccount, EthereumAccount]
+    [CosmosAccount, CosmwasmAccount, SecretAccount, EthereumAccount, CardanoAccount]
   >;
   public readonly priceStore: CoinGeckoPriceStore;
   public readonly tokensStore: TokensStore<ChainInfoWithCoreTypes>;
@@ -238,9 +241,9 @@ export class RootStore {
       KeplrETCQueries.use({
         ethereumURL: EthereumEndpoint,
       }),
-      ICNSQueries.use(),
-      FNSQueries.use(),
-      EvmQueries.use()
+      NameServiceQueries.use(),
+      EvmQueries.use(),
+      CardanoQueries.use()
     );
 
     this.activityStore = new ActivityStore(
@@ -264,7 +267,7 @@ export class RootStore {
       () => {
         return {
           suggestChain: false,
-          autoInit: true,
+          autoInit: false, // Changed to false to prevent premature initialization
           getKeplr: getKeplrFromWindow,
         };
       },
@@ -388,20 +391,34 @@ export class RootStore {
       }),
       EthereumAccount.use({
         queriesStore: this.queriesStore,
-      })
+      }),
+      CardanoAccount.use()
     );
 
     if (!window.location.href.includes("#/unlock")) {
-      // Start init for registered chains so that users can see account address more quickly.
-      for (const chainInfo of this.chainStore.chainInfos) {
-        const account = this.accountStore.getAccount(chainInfo.chainId);
-        // Because {autoInit: true} is given as the default option above,
-        // initialization for the account starts at this time just by using getAccount().
-        // However, run safe check on current status and init if status is not inited.
-        if (account.walletStatus === WalletStatus.NotInit) {
-          account.init();
+      // Wait for KeyRing to be fully initialized before initializing accounts
+      // This prevents "No keys available" errors during startup
+      const initAccountsWhenReady = () => {
+        // Only initialize when KeyRing is fully UNLOCKED, not just "not NOTLOADED"
+        // This prevents race conditions with Cardano initialization
+        if (this.keyRingStore.status === KeyRingStatus.UNLOCKED) {
+          // Start init for registered chains so that users can see account address more quickly.
+          for (const chainInfo of this.chainStore.chainInfos) {
+            const account = this.accountStore.getAccount(chainInfo.chainId);
+            // Because {autoInit: true} is given as the default option above,
+            // initialization for the account starts at this time just by using getAccount().
+            // However, run safe check on current status and init if status is not inited.
+            if (account.walletStatus === WalletStatus.NotInit) {
+              account.init();
+            }
+          }
+        } else {
+          // If KeyRing is not ready yet, wait a bit and try again
+          setTimeout(initAccountsWhenReady, 100);
         }
-      }
+      };
+      
+      initAccountsWhenReady();
     } else {
       // When the unlock request sent from external webpage,
       // it will open the extension popup below the uri "/unlock".

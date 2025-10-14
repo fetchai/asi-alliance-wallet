@@ -76,7 +76,12 @@ export class BIP44Option {
 
 // CONTRACT: Use with `observer`
 export const useBIP44Option = (coinType?: number) => {
-  const [bip44Option] = useState(() => new BIP44Option(coinType));
+  const [bip44Option] = useState(() => {
+    const option = new BIP44Option(coinType);
+    
+    // For new wallet import, use default BIP44 values (0,0,0)
+    return option;
+  });
 
   return bip44Option;
 };

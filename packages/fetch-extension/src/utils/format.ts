@@ -8,7 +8,7 @@ export const formatAddress = (address: string) => {
     return (
       address.substring(0, 8).toLowerCase() +
       "..." +
-      address.substring(36, 44).toLowerCase()
+      address.substring(Math.max(0, address.length - 8)).toLowerCase()
     );
   else return address;
 };
