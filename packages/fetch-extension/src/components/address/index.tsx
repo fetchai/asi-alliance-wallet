@@ -2,12 +2,14 @@ import React, { FunctionComponent } from "react";
 
 import { ToolTip } from "../tooltip";
 import { Bech32Address } from "@keplr-wallet/cosmos";
+import { PopperOptions } from "popper.js";
 
 export interface AddressProps {
-  children: string;
+  children: React.ReactNode;
   tooltipFontSize?: string;
   tooltipAddress?: string;
   iconClass?: string;
+  placement?: PopperOptions["placement"];
 }
 
 export interface Bech32AddressProps {
@@ -24,7 +26,8 @@ export const Address: FunctionComponent<
   AddressProps & (Bech32AddressProps | RawAddressProps)
 > = (props) => {
   const { tooltipFontSize, children } = props;
-  const tooltipAddress = props.tooltipAddress ? props.tooltipAddress : children;
+  const tooltipAddress =
+    props.tooltipAddress || (typeof children === "string" ? children : "");
 
   if ("maxCharacters" in props) {
     const { lineBreakBeforePrefix } = props;
@@ -34,7 +37,7 @@ export const Address: FunctionComponent<
     return (
       <ToolTip
         trigger="hover"
-        options={{ placement: "bottom-end" }}
+        options={{ placement: props?.placement || "bottom-end" }}
         tooltipStyle={{
           background: "var(--bg-green-light)",
           width: "330px",
@@ -61,7 +64,9 @@ export const Address: FunctionComponent<
         }}
       >
         {props.iconClass ? <i className={iconClass} /> : ""}
-        {Bech32Address.shortenAddress(children, props.maxCharacters)}
+        {typeof children === "string"
+          ? Bech32Address.shortenAddress(children, props.maxCharacters)
+          : children}
       </ToolTip>
     );
   }
@@ -69,7 +74,11 @@ export const Address: FunctionComponent<
   return (
     <ToolTip
       trigger="hover"
-      options={{ placement: "top" }}
+      options={{ placement: props?.placement || "top" }}
+      tooltipStyle={{
+        background: "var(--bg-green-light)",
+        color: "var(--font-dark)",
+      }}
       tooltip={
         <div className="address-tooltip" style={{ fontSize: tooltipFontSize }}>
           {tooltipAddress}

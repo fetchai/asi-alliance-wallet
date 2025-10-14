@@ -113,3 +113,8 @@
   stroke-dashoffset: 0;
   animation: pathRect 2s cubic-bezier(0.785, 0.135, 0.15, 0.86) infinite;
 }
+
+.validatorListContainer {
+  display: flex;
+  flex-direction: column;
+}

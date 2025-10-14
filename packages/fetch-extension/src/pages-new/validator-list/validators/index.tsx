@@ -5,6 +5,7 @@ import { observer } from "mobx-react-lite";
 import { Dec } from "@keplr-wallet/unit";
 import { StakeValidatorCard } from "@components-v2/stake-validator-card";
 import { shortenNumber } from "@utils/format";
+import { NoResults } from "@components-v2/no-results";
 
 type ValidatorData = Staking.Validator;
 
@@ -31,9 +32,7 @@ export const ValidatorsList = ({
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: "center", color: "white" }}>
-          No Validators Found
-        </div>
+        <NoResults message="No Validators found" />
       )}
     </React.Fragment>
   );

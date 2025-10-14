@@ -116,7 +116,7 @@
 
 .wallet-detail-card {
   font-size: 14px;
-  padding: 12px 8px 12px 18px;
+  padding: 8px 10px;
   gap: 12px;
   align-self: stretch;
   color: $font-secondary;
@@ -155,7 +155,7 @@
 .wallet-address {
   font-weight: 400;
   color: $font-dark;
-  max-width: 40%;
+  max-width: 90%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -246,4 +246,17 @@
   gap: 10px;
   color: orangered;
   font-size: 14px;
+}
+
+.wallet-address-text {
+  font-size: 14px;
+  font-weight: bold;
+  opacity: 1 !important;
+  color: $font-secondary;
+}
+
+.wallet-address-text-eth {
+  font-size: 14px;
+  opacity: 0.6 !important;
+  color: $font-secondary;
 }

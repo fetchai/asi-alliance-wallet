@@ -235,3 +235,33 @@ export const hasValidDecimals = (value: string) => {
   const parts = str.split(".");
   return parts.length < 2 || parts[1].length <= 18;
 };
+
+export const splitBech32 = (address: string) => {
+  const index = address.indexOf("1");
+  if (index === -1) {
+    return { prefix: address, rest: "" };
+  }
+
+  const prefix = address.slice(0, index + 1);
+  const rest = address.slice(index + 1);
+
+  return { prefix, rest };
+};
+
+export const formatAddressWithCustom = (
+  address: string,
+  startChars: number,
+  endChars: number
+) => {
+  if (Object.values(AGENT_ADDRESS).includes(address)) return "Fetchbot";
+
+  if (address?.length > startChars + endChars) {
+    return (
+      address.substring(0, startChars).toLowerCase() +
+      "..." +
+      address.substring(address.length - endChars).toLowerCase()
+    );
+  } else {
+    return address;
+  }
+};
