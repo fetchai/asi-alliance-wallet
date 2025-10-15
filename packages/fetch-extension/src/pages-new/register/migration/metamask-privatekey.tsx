@@ -11,6 +11,10 @@ import { RegisterConfig } from "@keplr-wallet/hooks";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { PasswordInput } from "@components-v2/form";
 import { PasswordValidationChecklist } from "../password-checklist";
+import { observer } from "mobx-react-lite";
+import { useStore } from "../../../stores";
+import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
 
 interface FormData {
   name: string;
@@ -31,13 +35,44 @@ function isPrivateKey(str: string): boolean {
 export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
   registerConfig: RegisterConfig;
   onBack: () => void;
-}> = ({ registerConfig, onBack }) => {
+}> = observer(({ registerConfig, onBack }) => {
   const intl = useIntl();
   const [password, setPassword] = useState("");
   const [passwordChecklistError, setPasswordChecklistError] = useState(
     // initially sets the password error as true for create mode
     registerConfig.mode === "create" ? true : false
   );
+  const { keyRingStore } = useStore();
+
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
+  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
+  const defaultAccountName = `account-${totalAccount + 1}`;
+  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
+
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = [
+      ...new Set(
+        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+          const defaultName = item?.meta?.["name"];
+          const chainNames = item?.meta?.["nameByChain"]
+            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+            : [];
+          return [defaultName, ...chainNames].filter(Boolean);
+        }) ?? []
+      ),
+    ];
+
+    let nameAlreadyExists = false;
+
+    // if create mode then wallet list is empty
+    if (registerConfig.mode !== "create") {
+      nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+    }
+
+    return !nameAlreadyExists;
+  };
 
   const {
     register,
@@ -46,7 +81,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
     getValues,
   } = useForm<FormData>({
     defaultValues: {
-      name: "",
+      name: defaultAccountName,
       ethAddress: "",
       ethPrivateKey: "",
       password: "",
@@ -86,11 +121,14 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
           await registerConfig.createPrivateKey(
             data.name,
             privateKey,
-            data.password
+            data.password,
+            {},
+            selectedNetworks
           );
         })}
       >
         <Input
+          formGroupClassName="mb-0"
           className={style["input"]}
           label={intl.formatMessage({
             id: "register.name",
@@ -101,8 +139,38 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
               id: "register.name.error.required",
             }),
           })}
-          error={errors.name && errors.name.message}
+          onChange={(event) => {
+            const trimmedValue = event.target.value.trimStart();
+            setNewAccountName(trimmedValue);
+            setAccountNameValidationError(!validateWalletName(trimmedValue));
+          }}
+          error={
+            accountNameValidationError
+              ? "Account name already exists, please try different name"
+              : errors.name && errors.name.message
+          }
           maxLength={20}
+        />
+        <div
+          className={classNames(
+            style["label"],
+            "mb-1 text-xs",
+            newAccountName === defaultAccountName ||
+              accountNameValidationError ||
+              (errors.name && errors.name.message)
+              ? "invisible"
+              : "visible"
+          )}
+        >
+          * (Account name for unselected networks will be {defaultAccountName})
+        </div>
+        <SelectNetwork
+          className="mb-3"
+          selectedNetworks={selectedNetworks}
+          disabled={newAccountName === defaultAccountName}
+          onMultiSelectChange={(values) => {
+            setSelectedNetworks(values);
+          }}
         />
         <Input
           className={style["input"]}
@@ -226,9 +294,15 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
               <FormattedMessage id="register.create.button.next" />
             )
           }
-          disabled={registerConfig.isLoading || passwordChecklistError}
+          disabled={
+            registerConfig.isLoading ||
+            passwordChecklistError ||
+            accountNameValidationError ||
+            (selectedNetworks.length === 0 &&
+              newAccountName !== defaultAccountName)
+          }
         />
       </Form>
     </div>
   );
-};
+});

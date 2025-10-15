@@ -404,8 +404,22 @@ export class KeyRingStore {
   }
 
   @flow
-  *updateNameKeyRing(index: number, name: string) {
-    const msg = new UpdateNameKeyRingMsg(index, name);
+  *updateNameKeyRing(
+    index: number,
+    name: string,
+    nameByChain?: Record<string, string>
+  ) {
+    let nameByChainStr: string | undefined;
+
+    if (nameByChain) {
+      try {
+        nameByChainStr = JSON.stringify(nameByChain);
+      } catch {
+        nameByChainStr = undefined;
+      }
+    }
+
+    const msg = new UpdateNameKeyRingMsg(index, name, nameByChainStr);
     const result = yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     );

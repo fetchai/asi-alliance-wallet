@@ -33,6 +33,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
       proposalStore,
     } = useStore();
 
+    const chainId = chainStore.current.chainId;
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const loadingIndicator = useLoadingIndicator();
 
@@ -108,16 +109,24 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
             }
           }
           console.log(paragraph);
+
+          const nameByChain = keyStore.meta?.["nameByChain"]
+            ? JSON.parse(keyStore.meta["nameByChain"])
+            : {};
+
+          const accountName =
+            nameByChain?.[chainId] ||
+            keyStore.meta?.["name"] ||
+            intl.formatMessage({
+              id: "setting.keyring.unnamed-account",
+            });
+
           return (
             <Card
               key={i}
               heading={
                 <React.Fragment>
-                  {keyStore.meta?.["name"]
-                    ? keyStore.meta["name"]
-                    : intl.formatMessage({
-                        id: "setting.keyring.unnamed-account",
-                      })}
+                  {accountName}
                   {getOptionIcon(keyStore) && (
                     <span className={style["rightIconContainer"]}>
                       <img

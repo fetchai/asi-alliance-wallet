@@ -439,8 +439,8 @@ html[data-register-page="true"] #app .container {
 .ledgerContainer {
   display: flex;
   flex-direction: column;
-  justify-content: "center";
-  align-items: "start";
+  justify-content: start;
+  align-items: start;
   width: 390px;
   height: 100%;
   position: relative;
@@ -487,4 +487,20 @@ html[data-register-page="true"] #app .container {
     font-size: 14px;
     color: $bg-red-40;
   }
+}
+
+.networkDropdownContainer {
+  & .label {
+    color: $font-secondary;
+    font-size: 14px;
+    font-weight: 400;
+  }
+}
+
+.networkDropdown {
+  width: 100% !important;
+}
+
+.inputFormGroup {
+  margin-bottom: 10px !important;
 }

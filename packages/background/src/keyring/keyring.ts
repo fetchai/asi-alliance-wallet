@@ -751,7 +751,8 @@ export class KeyRing {
 
   public async updateNameKeyRing(
     index: number,
-    name: string
+    name: string,
+    nameByChain?: string
   ): Promise<MultiKeyStoreInfoWithSelected> {
     if (this.status !== KeyRingStatus.UNLOCKED) {
       throw new Error("Key ring is not unlocked");
@@ -764,6 +765,10 @@ export class KeyRing {
     }
 
     keyStore.meta = { ...keyStore.meta, name: name };
+
+    if (nameByChain) {
+      keyStore.meta = { ...keyStore.meta, nameByChain };
+    }
 
     // If select key store and changed store are same, sync keystore
     if (
@@ -1678,6 +1683,16 @@ export class KeyRing {
           defaultCoinType
         : defaultCoinType;
 
+      let nameByChain;
+
+      try {
+        nameByChain = keyStore.meta?.["nameByChain"]
+          ? JSON.parse(keyStore.meta["nameByChain"])
+          : {};
+      } catch {
+        nameByChain = {};
+      }
+
       switch (keyStore.type) {
         case "mnemonic": {
           const mnemonic = Buffer.from(
@@ -1706,7 +1721,9 @@ export class KeyRing {
             // For Ethereum Key-Gen Only:
             const wallet = new Wallet(privKey.toBytes());
             keys.push({
-              name: keyStore.meta ? keyStore.meta["name"] : "Unnamed Account",
+              name: keyStore.meta
+                ? nameByChain?.[chainId] || keyStore.meta?.["name"]
+                : "Unnamed Account",
               algo: "ethsecp256k1",
               pubKey: pubKey.toBytes(),
               address: Buffer.from(wallet.address.replace("0x", ""), "hex"),
@@ -1715,7 +1732,9 @@ export class KeyRing {
             });
           } else {
             keys.push({
-              name: keyStore.meta ? keyStore.meta["name"] : "Unnamed Account",
+              name: keyStore.meta
+                ? nameByChain?.[chainId] || keyStore.meta?.["name"]
+                : "Unnamed Account",
               algo: "secp256k1",
               pubKey: pubKey.toBytes(),
               address: pubKey.getAddress(),
@@ -1747,7 +1766,9 @@ export class KeyRing {
             const wallet = new Wallet(privKey.toBytes());
 
             keys.push({
-              name: keyStore.meta ? keyStore.meta["name"] : "Unnamed Account",
+              name: keyStore.meta
+                ? nameByChain?.[chainId] || keyStore.meta?.["name"]
+                : "Unnamed Account",
               algo: "ethsecp256k1",
               pubKey: pubKey.toBytes(),
               address: Buffer.from(wallet.address.replace("0x", ""), "hex"),
@@ -1756,7 +1777,9 @@ export class KeyRing {
             });
           } else {
             keys.push({
-              name: keyStore.meta ? keyStore.meta["name"] : "Unnamed Account",
+              name: keyStore.meta
+                ? nameByChain?.[chainId] || keyStore.meta?.["name"]
+                : "Unnamed Account",
               algo: "secp256k1",
               pubKey: pubKey.toBytes(),
               address: pubKey.getAddress(),
@@ -1834,7 +1857,9 @@ export class KeyRing {
             const address = computeAddress(pubKey);
 
             keys.push({
-              name: keyStore.meta ? keyStore.meta["name"] : "Unnamed Account",
+              name: keyStore.meta
+                ? nameByChain?.[chainId] || keyStore.meta?.["name"]
+                : "Unnamed Account",
               algo: "ethsecp256k1",
               pubKey: pubKey,
               address: Buffer.from(address.replace("0x", ""), "hex"),
@@ -1845,7 +1870,9 @@ export class KeyRing {
             const pubKey = new PubKeySecp256k1(pubKeys[LedgerApp.Cosmos]);
 
             keys.push({
-              name: keyStore.meta ? keyStore.meta["name"] : "Unnamed Account",
+              name: keyStore.meta
+                ? nameByChain?.[chainId] || keyStore.meta?.["name"]
+                : "Unnamed Account",
               algo: KeyCurves.secp256k1,
               pubKey: pubKey.toBytes(),
               address: pubKey.getAddress(),

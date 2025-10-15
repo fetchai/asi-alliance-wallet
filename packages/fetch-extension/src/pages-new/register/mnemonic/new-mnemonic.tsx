@@ -33,6 +33,8 @@ import { Card } from "@components-v2/card";
 import keyIcon from "@assets/svg/wireframe/key-icon.png";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { PasswordValidationChecklist } from "../password-checklist";
+import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -89,10 +91,17 @@ export const NewMnemonicPage: FunctionComponent<{
   const { analyticsStore } = useStore();
   const [continueClicked, setContinueClicked] = useState(false);
   const [authClicked, setAuthClicked] = useState(false);
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
 
   function decideView() {
     if (authClicked) {
-      return <AuthPage registerConfig={registerConfig} />;
+      return (
+        <AuthPage
+          registerConfig={registerConfig}
+          selectedNetworks={selectedNetworks}
+          setSelectedNetworks={setSelectedNetworks}
+        />
+      );
     }
 
     if (!isMainPage) {
@@ -105,6 +114,8 @@ export const NewMnemonicPage: FunctionComponent<{
             isMainPage={isMainPage}
             continueClicked={continueClicked}
             setContinueClicked={setContinueClicked}
+            selectedNetworks={selectedNetworks}
+            setSelectedNetworks={setSelectedNetworks}
           />
         );
       } else if (newMnemonicConfig.mode === "verify") {
@@ -114,6 +125,7 @@ export const NewMnemonicPage: FunctionComponent<{
             newMnemonicConfig={newMnemonicConfig}
             bip44Option={bip44Option}
             setContinueClicked={setContinueClicked}
+            selectedNetworks={selectedNetworks}
           />
         );
       }
@@ -174,6 +186,8 @@ interface GenerateMnemonicModePageProps {
   isMainPage: boolean;
   continueClicked: boolean;
   setContinueClicked: any;
+  selectedNetworks: string[];
+  setSelectedNetworks: React.Dispatch<React.SetStateAction<string[]>>;
 }
 export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
   observer(
@@ -184,10 +198,16 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       isMainPage,
       continueClicked,
       setContinueClicked,
+      selectedNetworks,
+      setSelectedNetworks,
     }) => {
       const intl = useIntl();
       const notification = useNotification();
       const { keyRingStore } = useStore();
+      const totalAccount = keyRingStore.multiKeyStoreInfo.length;
+      const defaultAccountName = `account-${totalAccount + 1}`;
+      const [newAccountName, setNewAccountName] = useState(defaultAccountName);
+
       const {
         register,
         handleSubmit,
@@ -196,7 +216,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
         formState: { errors },
       } = useForm<FormData>({
         defaultValues: {
-          name: newMnemonicConfig.name,
+          name: defaultAccountName,
           words: newMnemonicConfig.mnemonic,
           password: "",
           confirmPassword: "",
@@ -244,15 +264,25 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       }, []);
 
       const validateWalletName = (value: string) => {
-        const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
-          (item) => item?.meta?.["name"]
-        );
+        const alreadyImportedWalletNames = [
+          ...new Set(
+            keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+              const defaultName = item?.meta?.["name"];
+              const chainNames = item?.meta?.["nameByChain"]
+                ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+                : [];
+              return [defaultName, ...chainNames].filter(Boolean);
+            }) ?? []
+          ),
+        ];
+
         let nameAlreadyExists = false;
 
         // if create mode then wallet list is empty
         if (registerConfig.mode !== "create") {
-          nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
+          nameAlreadyExists = alreadyImportedWalletNames.includes(value);
         }
+
         return !nameAlreadyExists;
       };
 
@@ -361,6 +391,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                 </Label>
                 <Input
                   className={style2["addressInput"]}
+                  formGroupClassName={style["inputFormGroup"]}
                   type="text"
                   {...register("name", {
                     required: intl.formatMessage({
@@ -370,6 +401,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   onChange={(event) => {
                     const trimmedValue = event.target.value.trimStart();
                     setValue(event.target.name as keyof FormData, trimmedValue);
+                    setNewAccountName(trimmedValue);
                     setAccountNameValidationError(
                       !validateWalletName(trimmedValue)
                     );
@@ -382,6 +414,27 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   maxLength={20}
                   style={{
                     width: "333px !important",
+                  }}
+                />
+                <div
+                  className={classNames(
+                    style["label"],
+                    "mb-1 text-xs",
+                    newAccountName === defaultAccountName ||
+                      accountNameValidationError ||
+                      (errors.name && errors.name.message)
+                      ? "invisible"
+                      : "visible"
+                  )}
+                >
+                  * (Account name for unselected networks will be{" "}
+                  {defaultAccountName})
+                </div>
+                <SelectNetwork
+                  selectedNetworks={selectedNetworks}
+                  disabled={newAccountName === defaultAccountName}
+                  onMultiSelectChange={(values) => {
+                    setSelectedNetworks(values);
                   }}
                 />
                 {registerConfig.mode === "create" ? (
@@ -437,7 +490,9 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   disabled={
                     !!errors.password?.message ||
                     passwordChecklistError ||
-                    accountNameValidationError
+                    accountNameValidationError ||
+                    (selectedNetworks.length === 0 &&
+                      newAccountName !== defaultAccountName)
                   }
                   text={""}
                   styleProps={{ marginBottom: "20px", height: "56px" }}
@@ -457,8 +512,15 @@ export const VerifyMnemonicModePage: FunctionComponent<{
   newMnemonicConfig: NewMnemonicConfig;
   bip44Option: BIP44Option;
   setContinueClicked: any;
+  selectedNetworks: string[];
 }> = observer(
-  ({ registerConfig, newMnemonicConfig, bip44Option, setContinueClicked }) => {
+  ({
+    registerConfig,
+    newMnemonicConfig,
+    bip44Option,
+    setContinueClicked,
+    selectedNetworks,
+  }) => {
     const wordsSlice = useMemo(() => {
       const words = newMnemonicConfig.mnemonic.split(" ");
       for (let i = 0; i < words.length; i++) {
@@ -634,7 +696,9 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 newMnemonicConfig.name,
                 newMnemonicConfig.mnemonic,
                 newMnemonicConfig.password,
-                bip44Option.bip44HDPath
+                bip44Option.bip44HDPath,
+                {},
+                selectedNetworks
               );
               analyticsStore.setUserProperties({
                 registerType: "seed",

@@ -14,6 +14,8 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { LedgerSetupView } from "../../../pages/ledger";
 import { useNotification } from "@components/notification";
 import { PasswordValidationChecklist } from "../password-checklist";
+import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -55,7 +57,37 @@ export const ImportLedgerPage: FunctionComponent<{
     // initially sets the password error as true for create mode
     registerConfig.mode === "create" ? true : false
   );
-  const { analyticsStore, ledgerInitStore } = useStore();
+  const { analyticsStore, keyRingStore, ledgerInitStore } = useStore();
+
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
+  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
+  const defaultAccountName = `account-${totalAccount + 1}`;
+  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
+
+  const validateWalletName = (value: string) => {
+    const alreadyImportedWalletNames = [
+      ...new Set(
+        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
+          const defaultName = item?.meta?.["name"];
+          const chainNames = item?.meta?.["nameByChain"]
+            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+            : [];
+          return [defaultName, ...chainNames].filter(Boolean);
+        }) ?? []
+      ),
+    ];
+
+    let nameAlreadyExists = false;
+
+    // if create mode then wallet list is empty
+    if (registerConfig.mode !== "create") {
+      nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+    }
+
+    return !nameAlreadyExists;
+  };
 
   const {
     register,
@@ -64,7 +96,7 @@ export const ImportLedgerPage: FunctionComponent<{
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      name: "",
+      name: defaultAccountName,
       password: "",
       confirmPassword: "",
     },
@@ -120,7 +152,8 @@ export const ImportLedgerPage: FunctionComponent<{
         name,
         password,
         bip44Option.bip44HDPath,
-        "Cosmos"
+        "Cosmos",
+        selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "ledger",
@@ -174,29 +207,52 @@ export const ImportLedgerPage: FunctionComponent<{
               await createLedger(data.name, data.password, true);
             })}
           >
-            <Label
-              for="name"
-              className={style["label"]}
-              style={{
-                marginBottom: "8px",
-              }}
-            >
+            <Label for="name" className={classNames(style["label"], "mb-2")}>
               {intl.formatMessage({ id: "register.name" })}
             </Label>
             <Input
               formGroupClassName={style["ledgerFormGroup"]}
-              className={style["addressInput"]}
+              className={classNames(style["addressInput"], "mt-0")}
               type="text"
               {...register("name", {
                 required: intl.formatMessage({
                   id: "register.name.error.required",
                 }),
               })}
-              error={errors.name && errors.name.message}
+              onChange={(event) => {
+                const trimmedValue = event.target.value.trimStart();
+                setNewAccountName(trimmedValue);
+                setAccountNameValidationError(
+                  !validateWalletName(trimmedValue)
+                );
+              }}
+              error={
+                accountNameValidationError
+                  ? "Account name already exists, please try different name"
+                  : errors.name && errors.name.message
+              }
               maxLength={20}
-              style={{
-                marginTop: "0px",
-                marginBottom: "16px",
+            />
+            <div
+              className={classNames(
+                style["label"],
+                "mb-2 text-xs",
+                newAccountName === defaultAccountName ||
+                  accountNameValidationError ||
+                  (errors.name && errors.name.message)
+                  ? "invisible"
+                  : "visible"
+              )}
+            >
+              * (Account name for unselected networks will be{" "}
+              {defaultAccountName})
+            </div>
+            <SelectNetwork
+              className="mb-4"
+              selectedNetworks={selectedNetworks}
+              disabled={newAccountName === defaultAccountName}
+              onMultiSelectChange={(values) => {
+                setSelectedNetworks(values);
               }}
             />
             {registerConfig.mode === "create" ? (
@@ -246,7 +302,7 @@ export const ImportLedgerPage: FunctionComponent<{
                     marginBottom: "5px",
                   }}
                 />
-                <div className="mt-4 space-y-1 text-sm">
+                <div className="mt-4 mb-3 space-y-1 text-sm">
                   <PasswordValidationChecklist
                     password={password}
                     onStatusChange={(status) =>
@@ -256,7 +312,7 @@ export const ImportLedgerPage: FunctionComponent<{
                 </div>
               </React.Fragment>
             ) : null}
-            <div style={{ width: "100%", marginTop: "0px" }}>
+            <div className="w-full mt-0">
               <AdvancedBIP44Option bip44Option={bip44Option} />
             </div>
             <ButtonV2
@@ -276,11 +332,15 @@ export const ImportLedgerPage: FunctionComponent<{
                   pageName: "Register",
                 });
               }}
-              disabled={registerConfig.isLoading || passwordChecklistError}
+              disabled={
+                registerConfig.isLoading ||
+                passwordChecklistError ||
+                accountNameValidationError ||
+                (selectedNetworks.length === 0 &&
+                  newAccountName !== defaultAccountName)
+              }
               styleProps={{
                 height: "56px",
-                position: "absolute",
-                bottom: "5px",
               }}
             />
 

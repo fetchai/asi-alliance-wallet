@@ -157,7 +157,6 @@ const EmbedChainInfos: ChainInfo[] = [
     chainId: "1",
     chainName: "Ethereum",
     explorerUrl: "https://etherscan.io",
-    hideInUI: true,
     stakeCurrency: {
       coinDenom: "ETH",
       coinMinimalDenom: "eth",

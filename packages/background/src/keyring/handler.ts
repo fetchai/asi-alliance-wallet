@@ -219,7 +219,11 @@ const handleUpdateNameKeyRingMsg: (
   service: KeyRingService
 ) => InternalHandler<UpdateNameKeyRingMsg> = (service) => {
   return async (_, msg) => {
-    return await service.updateNameKeyRing(msg.index, msg.name);
+    return await service.updateNameKeyRing(
+      msg.index,
+      msg.name,
+      msg.nameByChain
+    );
   };
 };
 
@@ -368,8 +372,17 @@ const handleGetKeyMsg: (
     );
 
     const key = await service.getKey(msg.chainId);
+
+    let nameByChain;
+
+    try {
+      nameByChain = JSON.parse(service.getKeyStoreMeta("nameByChain"));
+    } catch {
+      nameByChain = {};
+    }
+
     return {
-      name: service.getKeyStoreMeta("name"),
+      name: nameByChain?.[msg.chainId] || service.getKeyStoreMeta("name"),
       algo: "secp256k1",
       pubKey: key.pubKey,
       address: key.address,
