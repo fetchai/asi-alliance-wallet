@@ -43,13 +43,6 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
     },
   });
 
-  // Default value equals current name
-  useEffect(() => {
-    if (keyStore?.meta?.["name"]) {
-      setValue("name", keyStore.meta["name"]);
-    }
-  }, [keyStore, setValue]);
-
   const [loading, setLoading] = useState(false);
   const [accountNameValidationError, setAccountNameValidationError] =
     useState(false);

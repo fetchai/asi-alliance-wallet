@@ -51,7 +51,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             searchTerm={cosmosSearchTerm}
             valuesArray={mainChainList}
             filterFunction={getFilteredChainValues}
-            emptyContent={<NoResults styles={{ height: "250px" }} />}
+            emptyContent={<NoResults styles={{ height: "200px" }} />}
             itemsStyleProp={{ height: "360px" }}
             renderResult={(chainInfo, index) => (
               <Card
@@ -92,7 +92,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             onSearchTermChange={setEvmSearchTerm}
             valuesArray={evmChainList}
             filterFunction={getFilteredChainValues}
-            emptyContent={<NoResults styles={{ height: "290px" }} />}
+            emptyContent={<NoResults styles={{ height: "200px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
                 key={index}
@@ -141,7 +141,10 @@ export const ManageNetworks: FunctionComponent = observer(() => {
         </div>
       ),
     },
-    {
+  ];
+
+  if (process.env.NODE_ENV === "development") {
+    tabs.push({
       id: "Cardano",
       component: (
         <div>
@@ -150,6 +153,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             onSearchTermChange={setCardanoSearchTerm}
             valuesArray={cardanoChainList}
             filterFunction={getFilteredChainValues}
+            emptyContent={<NoResults styles={{ height: "200px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
                 key={index}
@@ -179,8 +183,8 @@ export const ManageNetworks: FunctionComponent = observer(() => {
           />
         </div>
       ),
-    },
-  ];
+    });
+  }
 
   return (
     <HeaderLayout

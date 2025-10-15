@@ -138,8 +138,6 @@ export class KeyRingStore {
   @observable
   protected _cardanoKeyRing: CardanoKeyRing | undefined = undefined;
 
-
-
   constructor(
     protected readonly eventDispatcher: {
       dispatchEvent: (type: string) => void;
@@ -152,6 +150,18 @@ export class KeyRingStore {
     makeObservable(this);
 
     this.restore();
+  }
+
+  get waitingNameData() {
+    const data = this.interactionStore.getDatas<{
+      defaultName: string;
+      editable: boolean;
+      isExternal: boolean;
+    }>("change-keyring-name");
+
+    if (data.length > 0) {
+      return data[0];
+    }
   }
 
   get status(): KeyRingStatus {
@@ -208,9 +218,7 @@ export class KeyRingStore {
     _accountStore: any, // Cardano auto-restore support
     kdf: "scrypt" | "sha256" | "pbkdf2" = this.defaultKdf
   ) {
-    if (
-      chainInfos.find((info: any) => info.features?.includes("cardano"))
-    ) {
+    if (chainInfos.find((info: any) => info.features?.includes("cardano"))) {
       this._cardanoKeyRing = new CardanoKeyRing();
     }
 
@@ -237,8 +245,8 @@ export class KeyRingStore {
     if (result.address && result.balance) {
       return {
         address: result.address,
-        balance: result.balance
-      }
+        balance: result.balance,
+      };
     }
   }
 
@@ -362,11 +370,13 @@ export class KeyRingStore {
   @flow
   *changeKeyRing(index: number) {
     const msg = new ChangeKeyRingMsg(index);
-    this._multiKeyStoreInfo = ((yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    )) as {
-      multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
-    }).multiKeyStoreInfo;
+    this._multiKeyStoreInfo = (
+      (yield* toGenerator(
+        this.requester.sendMessage(BACKGROUND_PORT, msg)
+      )) as {
+        multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
+      }
+    ).multiKeyStoreInfo;
 
     // Emit the key store changed event manually.
     this.dispatchKeyStoreChangeEvent();
@@ -430,11 +440,11 @@ export class KeyRingStore {
     );
     this._status = result.status;
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
-    
+
     if (this._status === KeyRingStatus.UNLOCKED) {
       this._cardanoKeyRing = new CardanoKeyRing();
     }
-    
+
     this.dispatchWalletStatusChangeEvent();
   }
 

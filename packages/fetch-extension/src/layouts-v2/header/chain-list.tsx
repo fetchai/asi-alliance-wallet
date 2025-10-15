@@ -67,12 +67,17 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const evmList = chainStore.showTestnet ? evmChainList : evmMainList;
 
     const isCardanoSupportedWallet = useMemo(() => {
-      const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find((item: any) => item.selected);
-      return selectedKeyStore?.type === "mnemonic" && selectedKeyStore?.meta?.["mnemonicLength"] === "24";
+      const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find(
+        (item: any) => item.selected
+      );
+      return (
+        selectedKeyStore?.type === "mnemonic" &&
+        selectedKeyStore?.meta?.["mnemonicLength"] === "24"
+      );
     }, [keyRingStore.multiKeyStoreInfo]);
 
-    const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo: any) =>
-      chainInfo.features?.includes("cardano")
+    const cardanoChainList = chainStore.chainInfosInUI.filter(
+      (chainInfo: any) => chainInfo.features?.includes("cardano")
     );
 
     const tabs = [
@@ -377,7 +382,10 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
           </div>
         ),
       },
-      {
+    ];
+
+    if (process.env.NODE_ENV === "development") {
+      tabs.push({
         id: "Cardano",
         component: (
           <div>
@@ -388,6 +396,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 valuesArray={cardanoChainList}
                 itemsStyleProp={{ height: "100%" }}
                 filterFunction={getFilteredChainValues}
+                emptyContent={<NoResults styles={{ height: "200px" }} />}
                 midElement={
                   <ButtonV2
                     styleProps={{
@@ -427,7 +436,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     onClick={() => {
                       setClickedChain(chainInfo.raw.chainId);
                       let properties = {};
-                      if (chainInfo.raw.chainId !== chainStore.current.chainId) {
+                      if (
+                        chainInfo.raw.chainId !== chainStore.current.chainId
+                      ) {
                         properties = {
                           chainId: chainStore.current.chainId,
                           chainName: chainStore.current.chainName,
@@ -440,11 +451,16 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();
                       chatStore.messagesStore.resetChatList();
-                      chatStore.messagesStore.setIsChatSubscriptionActive(false);
+                      chatStore.messagesStore.setIsChatSubscriptionActive(
+                        false
+                      );
                       messageAndGroupListenerUnsubscribe();
 
                       if (Object.values(properties).length > 0) {
-                        analyticsStore.logEvent("chain_change_click", properties);
+                        analyticsStore.logEvent(
+                          "chain_change_click",
+                          properties
+                        );
                       }
                       if (setIsSelectNetOpen) {
                         setIsSelectNetOpen(false);
@@ -464,7 +480,8 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
             ) : (
               <div className={style["unsupported-message"]}>
                 <div className={style["message-text"]}>
-                  Cardano networks are not supported with this seed phrase length
+                  Cardano networks are not supported with this seed phrase
+                  length
                 </div>
                 <div className={style["message-subtitle"]}>
                   Please use a 24-word seed phrase to access Cardano networks
@@ -473,8 +490,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
             )}
           </div>
         ),
-      },
-    ];
+      });
+    }
+
     return (
       <div className={style["chainListContainer"]}>
         <TabsPanel

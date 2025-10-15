@@ -472,9 +472,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         privateKey,
                         data.password,
                         {},
-                        selectedNetworks,
-                        chainStore.chainInfos,
-                        accountStore
+                        selectedNetworks
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
