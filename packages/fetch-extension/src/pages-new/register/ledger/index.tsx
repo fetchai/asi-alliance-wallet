@@ -16,6 +16,7 @@ import { useNotification } from "@components/notification";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
+import { validateWalletName } from "@utils/index";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -62,37 +63,16 @@ export const ImportLedgerPage: FunctionComponent<{
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [accountNameValidationError, setAccountNameValidationError] =
     useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const totalAccount = keyRingStore.multiKeyStoreInfo.length;
   const defaultAccountName = `account-${totalAccount + 1}`;
   const [newAccountName, setNewAccountName] = useState(defaultAccountName);
-
-  const validateWalletName = (value: string) => {
-    const alreadyImportedWalletNames = [
-      ...new Set(
-        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
-          const defaultName = item?.meta?.["name"];
-          const chainNames = item?.meta?.["nameByChain"]
-            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
-            : [];
-          return [defaultName, ...chainNames].filter(Boolean);
-        }) ?? []
-      ),
-    ];
-
-    let nameAlreadyExists = false;
-
-    // if create mode then wallet list is empty
-    if (registerConfig.mode !== "create") {
-      nameAlreadyExists = alreadyImportedWalletNames.includes(value);
-    }
-
-    return !nameAlreadyExists;
-  };
 
   const {
     register,
     handleSubmit,
     getValues,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -219,16 +199,34 @@ export const ImportLedgerPage: FunctionComponent<{
                   id: "register.name.error.required",
                 }),
               })}
-              onChange={(event) => {
-                const trimmedValue = event.target.value.trimStart();
+              onChange={(e) => {
+                setErrorMessage("");
+                const trimmedValue = e.target.value.trimStart();
+                setValue(e.target.name as keyof FormData, trimmedValue);
                 setNewAccountName(trimmedValue);
-                setAccountNameValidationError(
-                  !validateWalletName(trimmedValue)
-                );
+                const { isValid, isValidFormat, containsLetterOrNumber } =
+                  validateWalletName(
+                    trimmedValue,
+                    keyRingStore?.multiKeyStoreInfo,
+                    registerConfig.mode
+                  );
+                const isEmpty = trimmedValue === "";
+                if (!isValid || isEmpty) {
+                  setErrorMessage(
+                    !isValidFormat
+                      ? "Only letters, numbers, spaces and basic symbols (_-.@#()) are allowed."
+                      : isEmpty
+                      ? "Account name cannot be empty"
+                      : !containsLetterOrNumber
+                      ? "Account name must contain at least one letter or number."
+                      : "Account name already exists, please try different name"
+                  );
+                }
+                setAccountNameValidationError(!isValid || isEmpty);
               }}
               error={
                 accountNameValidationError
-                  ? "Account name already exists, please try different name"
+                  ? errorMessage
                   : errors.name && errors.name.message
               }
               maxLength={20}

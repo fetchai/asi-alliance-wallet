@@ -614,7 +614,7 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "umars",
       coinDecimals: 6,
       coinImageUrl:
-        "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-protocol.png",
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"

@@ -11,6 +11,7 @@ import styleName from "./name.module.scss";
 import { KeyRingStatus } from "@keplr-wallet/background";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import classNames from "classnames";
+import { validateWalletName } from "@utils/index";
 
 interface FormData {
   name: string;
@@ -47,6 +48,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   }, [waitingNameData, setValue]);
 
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [accountNameValidationError, setAccountNameValidationError] =
     useState(false);
   const [newAccountName, setNewAccountName] = useState("");
@@ -69,23 +71,6 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
       throw new Error("Invalid keyring index, check the url");
     }
   }, [index]);
-
-  const validateWalletName = (value: string) => {
-    const alreadyImportedWalletNames = [
-      ...new Set(
-        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
-          const defaultName = item?.meta?.["name"];
-          const chainNames = item?.meta?.["nameByChain"]
-            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
-            : [];
-          return [defaultName, ...chainNames].filter(Boolean);
-        }) ?? []
-      ),
-    ];
-
-    const nameAlreadyExists = alreadyImportedWalletNames.includes(value);
-    return !nameAlreadyExists;
-  };
 
   if (isKeyStoreReady && keyStore == null) {
     return null;
@@ -173,7 +158,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           className={classNames(styleName["input"], styleName["inputWithInfo"])}
           error={
             accountNameValidationError
-              ? "Account name already exists, please try different name"
+              ? errorMessage
               : errors.name && errors.name.message
           }
           {...register("name", {
@@ -182,10 +167,25 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
             }),
           })}
           onChange={(e) => {
+            setErrorMessage("");
             const trimmedValue = e.target.value.trimStart();
             setValue(e.target.name as keyof FormData, trimmedValue);
             setNewAccountName(trimmedValue);
-            setAccountNameValidationError(!validateWalletName(trimmedValue));
+            const { isValid, isValidFormat, containsLetterOrNumber } =
+              validateWalletName(trimmedValue, keyRingStore?.multiKeyStoreInfo);
+            const isEmpty = trimmedValue === "";
+            if (!isValid || isEmpty) {
+              setErrorMessage(
+                !isValidFormat
+                  ? "Only letters, numbers and basic symbols (_-.@#()) are allowed."
+                  : isEmpty
+                  ? "Account name cannot be empty"
+                  : !containsLetterOrNumber
+                  ? "Account name must contain at least one letter or number."
+                  : "Account name already exists, please try different name"
+              );
+            }
+            setAccountNameValidationError(!isValid || isEmpty);
           }}
           maxLength={20}
           autoFocus
