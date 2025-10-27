@@ -109,6 +109,100 @@ export class Crypto {
     };
   }
 
+  public static async encryptBlob(
+    crypto: CommonCrypto,
+    kdf: "scrypt" | "sha256" | "pbkdf2",
+    text: string,
+    password: string,
+    meta: Record<string, string>
+  ): Promise<{
+    version: "1.0";
+    crypto: {
+      cipher: "aes-128-ctr";
+      cipherparams: { iv: string };
+      kdf: "scrypt" | "sha256" | "pbkdf2";
+      kdfparams: ScryptParams;
+      ciphertext: string;
+      mac: string;
+    };
+    meta: Record<string, string>;
+  }> {
+    let random = new Uint8Array(32);
+    const salt = Buffer.from(await crypto.rng(random)).toString("hex");
+    const scryptParams: ScryptParams = {
+      salt,
+      dklen: 32,
+      n: 131072,
+      r: 8,
+      p: 1,
+    };
+    const derivedKey = await deriveKey(crypto, kdf, password, scryptParams);
+    const buf = Buffer.from(text);
+    random = new Uint8Array(16);
+    const iv = Buffer.from(await crypto.rng(random));
+    const counter = new Counter(0);
+    counter.setBytes(iv);
+    const aesCtr = new AES.ModeOfOperation.ctr(derivedKey, counter);
+    const ciphertext = Buffer.from(aesCtr.encrypt(buf));
+    const mac = Hash.sha256(
+      Buffer.concat([
+        Buffer.from(derivedKey.slice(derivedKey.length / 2)),
+        ciphertext,
+      ])
+    );
+    return {
+      version: "1.0",
+      crypto: {
+        cipher: "aes-128-ctr",
+        cipherparams: { iv: iv.toString("hex") },
+        kdf,
+        kdfparams: scryptParams,
+        ciphertext: ciphertext.toString("hex"),
+        mac: Buffer.from(mac).toString("hex"),
+      },
+      meta,
+    };
+  }
+
+  public static async decryptBlob(
+    crypto: CommonCrypto,
+    blob: {
+      version: "1.0";
+      crypto: {
+        cipher: "aes-128-ctr";
+        cipherparams: { iv: string };
+        kdf: "scrypt" | "sha256" | "pbkdf2";
+        kdfparams: ScryptParams;
+        ciphertext: string;
+        mac: string;
+      };
+      meta: Record<string, string>;
+    },
+    password: string
+  ): Promise<Uint8Array> {
+    const derivedKey = await deriveKey(
+      crypto,
+      blob.crypto.kdf as "scrypt" | "sha256" | "pbkdf2",
+      password,
+      blob.crypto.kdfparams as ScryptParams
+    );
+    const counter = new Counter(0);
+    counter.setBytes(Buffer.from(blob.crypto.cipherparams.iv, "hex"));
+    const aesCtr = new AES.ModeOfOperation.ctr(derivedKey, counter);
+    const mac = Hash.sha256(
+      Buffer.concat([
+        Buffer.from(derivedKey.slice(derivedKey.length / 2)),
+        Buffer.from(blob.crypto.ciphertext, "hex"),
+      ])
+    );
+    if (!Buffer.from(mac).equals(Buffer.from(blob.crypto.mac, "hex"))) {
+      throw new Error("Unmatched mac");
+    }
+    return Buffer.from(
+      aesCtr.decrypt(Buffer.from(blob.crypto.ciphertext, "hex"))
+    );
+  }
+
   public static async decrypt(
     crypto: CommonCrypto,
     keyStore: KeyStore,

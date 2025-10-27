@@ -32,9 +32,11 @@ import {
 } from "@fetchai/wallet-types";
 
 type ChainRemovedHandler = (chainId: string, identifier: string) => void;
+type NetworkSwitchHandler = (oldChainId: string | undefined, newChainId: string) => Promise<void>;
 
 export class ChainsService {
   protected onChainRemovedHandlers: ChainRemovedHandler[] = [];
+  protected onNetworkSwitchHandlers: NetworkSwitchHandler[] = [];
 
   protected cachedChainInfos: ChainInfoWithCoreTypes[] | undefined;
   protected selectedChainId: string | undefined;
@@ -440,15 +442,7 @@ export class ChainsService {
       updateFromRepoDisabled: receivedChainInfo.updateFromRepoDisabled,
     };
 
-    if (receivedChainInfo.updateFromRepoDisabled) {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added with updateFromRepoDisabled`
-      );
-    } else {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added`
-      );
-    }
+    
 
     await this.permissionService.addPermission(
       [chainInfo.chainId],
@@ -601,15 +595,7 @@ export class ChainsService {
       updateFromRepoDisabled: receivedChainInfo.updateFromRepoDisabled,
     };
 
-    if (receivedChainInfo.updateFromRepoDisabled) {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added with updateFromRepoDisabled`
-      );
-    } else {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added`
-      );
-    }
+    
 
     await this.permissionService.addPermission(
       [chainInfo.chainId],
@@ -625,7 +611,7 @@ export class ChainsService {
     chainId: string,
     origin: string
   ): Promise<void> {
-    const receivedChainId = (await this.interactionService.waitApprove(
+    await this.interactionService.waitApprove(
       env,
       "/switch-chain-by-chainid",
       SwitchNetworkByChainIdMsg.type(),
@@ -633,22 +619,38 @@ export class ChainsService {
         chainId,
         origin,
       }
-    )) as string;
+    );
     await this.permissionService.addPermission(
       [chainId],
       getBasicAccessPermissionType(),
       [origin]
     );
-    console.log(`Switched to chain with chainId ${receivedChainId}`);
+    
   }
 
   addChainRemovedHandler(handler: ChainRemovedHandler) {
     this.onChainRemovedHandlers.push(handler);
   }
 
-  setSelectedChain(chainId: string) {
+  addNetworkSwitchHandler(handler: NetworkSwitchHandler) {
+    this.onNetworkSwitchHandlers.push(handler);
+  }
+
+  async setSelectedChain(chainId: string) {
     if (this.selectedChainId !== chainId) {
+      const oldChainId = this.selectedChainId;
+      
+      // Update selected chain BEFORE calling handlers
+      // This ensures concurrent ListAccountsMsg calls get the correct chainId
       this.selectedChainId = chainId;
+      for (const handler of this.onNetworkSwitchHandlers) {
+        try {
+          await handler(oldChainId, chainId);
+        } catch (error) {
+          console.error("Network switch handler failed:", error);
+          // Continue with network switch even if handler fails
+        }
+      }
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,
         "network-changed",

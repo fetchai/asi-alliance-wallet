@@ -114,7 +114,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
 
           return (
             <PageButton
-              key={i.toString()}
+              key={(keyStore.meta && keyStore.meta["__id__"]) || i.toString()}
               title={`${
                 keyStore.meta?.["name"]
                   ? keyStore.meta["name"]
@@ -162,7 +162,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                         messageAndGroupListenerUnsubscribe();
                         navigate("/");
                       } catch (e: any) {
-                        console.log(`Failed to change keyring: ${e.message}`);
+                        console.warn(`Failed to change keyring: ${e.message}`);
                         loadingIndicator.setIsLoading("keyring", false);
                       }
                     }

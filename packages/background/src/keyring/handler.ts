@@ -726,6 +726,7 @@ const handleListAccountsMsg: (
 ) => InternalHandler<ListAccountsMsg> = (service) => {
   return async (env, msg) => {
     const chainId = await service.chainsService.getSelectedChain();
+    
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,
       [chainId],
@@ -733,13 +734,17 @@ const handleListAccountsMsg: (
     );
 
     const keys = await service.getKeys(chainId);
+    console.log(`[ListAccountsMsg] Retrieved ${keys.length} keys for ${chainId}`);
+    
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
+    const isCardano = chainInfo.features?.includes("cardano");
+    
     const returnData: Account[] = [];
 
-    keys.forEach((key) => {
+    keys.forEach((key, _idx) => {
       let bech32Add: string;
-      if (chainInfo.features?.includes("cardano")) {
+      if (isCardano) {
         if (key.algo === "ed25519") {
           bech32Add = Buffer.from(key.address).toString("utf8");
         } else {
@@ -768,6 +773,10 @@ const handleListAccountsMsg: (
       });
     });
 
+    console.log(`[ListAccountsMsg] Returning ${returnData.length} accounts:`, 
+      returnData.map(a => `${a.name}: ${a.bech32Address || a.EVMAddress}`).join(', ')
+    );
+    
     return returnData;
   };
 };

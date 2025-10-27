@@ -50,30 +50,40 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
     };
 
     const accountsAddress = async () => {
+      console.log('[YourWallets] accountsAddress() called');
+      const startTime = performance.now();
+      
       const requester = new InExtensionMessageRequester();
       const msg = new ListAccountsMsg();
       const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
-      const selectedAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
-        (value) => value.selected
-      );
+      
+      console.log(`[YourWallets] ListAccountsMsg completed in ${(performance.now() - startTime).toFixed(2)}ms, got ${accounts.length} accounts`);
+      
+      const currentWalletIds = keyRingStore.multiKeyStoreInfo.map((ks) => ks.meta?.["__id__"] || "");
+      const selectedWalletId = keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.["__id__"] || "";
 
       const isEvm = chainStore.current.features?.includes("evm") ?? false;
-      const addresses = accounts
-        .map((account) => {
-          if (isEvm) {
-            return account.EVMAddress;
-          }
+      
+      const addressesById: Record<string, string> = {};
+      currentWalletIds.forEach((walletId, idx) => {
+        const account = accounts[idx];
+        if (account && walletId) {
+          addressesById[walletId] = isEvm ? account.EVMAddress : account.bech32Address;
+        }
+      });
+      
+      const addresses = currentWalletIds
+        .filter((walletId) => walletId && walletId !== selectedWalletId)
+        .map((walletId) => addressesById[walletId] || "");
 
-          return account.bech32Address;
-        })
-        .filter((_, index) => index !== selectedAccountIndex);
-
+      console.log(`[YourWallets] Setting ${addresses.length} addresses:`, addresses.map(a => a.slice(0, 15) + '...').join(', '));
       setAddresses(addresses);
     };
 
     useEffect(() => {
+      console.log('[YourWallets] useEffect triggered, calling accountsAddress()');
       accountsAddress();
-    }, []);
+    }, [keyRingStore.multiKeyStoreInfo]); // Re-run when wallets change
 
     const keyRingList = keyRingStore.multiKeyStoreInfo.filter(
       (keyStore) => !keyStore.selected
