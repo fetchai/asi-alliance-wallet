@@ -32,7 +32,7 @@ import { computed, flow, makeObservable, observable, runInAction } from "mobx";
 import { InteractionStore } from "./interaction";
 import { ChainGetter } from "../common";
 import { BIP44 } from "@keplr-wallet/types";
-import { toGenerator } from "@keplr-wallet/common";
+import { toGenerator, getCacheManager } from "@keplr-wallet/common";
 import { CardanoKeyRing } from "@keplr-wallet/cardano";
 
 export class KeyRingSelectablesStore {
@@ -138,6 +138,8 @@ export class KeyRingStore {
   @observable
   protected _cardanoKeyRing: CardanoKeyRing | undefined = undefined;
 
+
+
   constructor(
     protected readonly eventDispatcher: {
       dispatchEvent: (type: string) => void;
@@ -150,18 +152,6 @@ export class KeyRingStore {
     makeObservable(this);
 
     this.restore();
-  }
-
-  get waitingNameData() {
-    const data = this.interactionStore.getDatas<{
-      defaultName: string;
-      editable: boolean;
-      isExternal: boolean;
-    }>("change-keyring-name");
-
-    if (data.length > 0) {
-      return data[0];
-    }
   }
 
   get status(): KeyRingStatus {
@@ -218,7 +208,9 @@ export class KeyRingStore {
     _accountStore: any, // Cardano auto-restore support
     kdf: "scrypt" | "sha256" | "pbkdf2" = this.defaultKdf
   ) {
-    if (chainInfos.find((info: any) => info.features?.includes("cardano"))) {
+    if (
+      chainInfos.find((info: any) => info.features?.includes("cardano"))
+    ) {
       this._cardanoKeyRing = new CardanoKeyRing();
     }
 
@@ -245,8 +237,8 @@ export class KeyRingStore {
     if (result.address && result.balance) {
       return {
         address: result.address,
-        balance: result.balance,
-      };
+        balance: result.balance
+      }
     }
   }
 
@@ -255,6 +247,7 @@ export class KeyRingStore {
     privateKey: Uint8Array,
     password: string,
     meta: Record<string, string>,
+    _selectedNetworks?: string[],
     kdf: "scrypt" | "sha256" | "pbkdf2" = this.defaultKdf
   ) {
     const msg = new CreatePrivateKeyMsg(kdf, privateKey, password, meta);
@@ -296,6 +289,7 @@ export class KeyRingStore {
     meta: Record<string, string>,
     bip44HDPath: BIP44HDPath,
     cosmosLikeApp: string,
+    _selectedNetworks?: string[],
     kdf: "scrypt" | "sha256" | "pbkdf2" = this.defaultKdf
   ) {
     const msg = new CreateLedgerKeyMsg(
@@ -334,6 +328,7 @@ export class KeyRingStore {
   *addPrivateKey(
     privateKey: Uint8Array,
     meta: Record<string, string>,
+    _selectedNetworks?: string[],
     kdf: "scrypt" | "sha256" | "pbkdf2" = this.defaultKdf
   ) {
     const msg = new AddPrivateKeyMsg(kdf, privateKey, meta);
@@ -359,6 +354,7 @@ export class KeyRingStore {
     meta: Record<string, string>,
     bip44HDPath: BIP44HDPath,
     cosmosLikeApp: string,
+    _selectedNetworks?: string[],
     kdf: "scrypt" | "sha256" | "pbkdf2" = this.defaultKdf
   ) {
     const msg = new AddLedgerKeyMsg(kdf, meta, bip44HDPath, cosmosLikeApp);
@@ -370,13 +366,11 @@ export class KeyRingStore {
   @flow
   *changeKeyRing(index: number) {
     const msg = new ChangeKeyRingMsg(index);
-    this._multiKeyStoreInfo = (
-      (yield* toGenerator(
-        this.requester.sendMessage(BACKGROUND_PORT, msg)
-      )) as {
-        multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
-      }
-    ).multiKeyStoreInfo;
+    this._multiKeyStoreInfo = ((yield* toGenerator(
+      this.requester.sendMessage(BACKGROUND_PORT, msg)
+    )) as {
+      multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
+    }).multiKeyStoreInfo;
 
     // Emit the key store changed event manually.
     this.dispatchKeyStoreChangeEvent();
@@ -406,6 +400,12 @@ export class KeyRingStore {
     this._status = result.status;
 
     if (this._status === KeyRingStatus.UNLOCKED) {
+      try {
+        getCacheManager().clearAllCaches();
+      } catch (e: any) {
+        console.warn("Failed to clear frontend cache on unlock:", e?.message);
+      }
+      
       // Refresh multiKeyStoreInfo after unlock
       const refreshed = (yield* toGenerator(
         this.requester.sendMessage(
@@ -433,6 +433,14 @@ export class KeyRingStore {
   }
 
   @flow
+  *refreshMultiKeyStoreInfo() {
+    const result = (yield* toGenerator(
+      this.requester.sendMessage(BACKGROUND_PORT, new GetMultiKeyStoreInfoMsg())
+    )) as { multiKeyStoreInfo: MultiKeyStoreInfoWithSelected };
+    this._multiKeyStoreInfo = result.multiKeyStoreInfo;
+  }
+
+  @flow
   protected *restore() {
     const msg = new RestoreKeyRingMsg();
     const result = yield* toGenerator(
@@ -440,11 +448,11 @@ export class KeyRingStore {
     );
     this._status = result.status;
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
-
+    
     if (this._status === KeyRingStatus.UNLOCKED) {
       this._cardanoKeyRing = new CardanoKeyRing();
     }
-
+    
     this.dispatchWalletStatusChangeEvent();
   }
 
@@ -478,22 +486,8 @@ export class KeyRingStore {
   }
 
   @flow
-  *updateNameKeyRing(
-    index: number,
-    name: string,
-    nameByChain?: Record<string, string>
-  ) {
-    let nameByChainStr: string | undefined;
-
-    if (nameByChain) {
-      try {
-        nameByChainStr = JSON.stringify(nameByChain);
-      } catch {
-        nameByChainStr = undefined;
-      }
-    }
-
-    const msg = new UpdateNameKeyRingMsg(index, name, nameByChainStr);
+  *updateNameKeyRing(index: number, name: string) {
+    const msg = new UpdateNameKeyRingMsg(index, name);
     const result = (yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     )) as {

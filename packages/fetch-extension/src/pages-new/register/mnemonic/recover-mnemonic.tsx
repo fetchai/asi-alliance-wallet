@@ -22,8 +22,6 @@ import { ImportLedgerPage } from "../ledger";
 import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
 import { PasswordValidationChecklist } from "../password-checklist";
-import { SelectNetwork } from "../select-network";
-import classNames from "classnames";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -224,10 +222,6 @@ export const RecoverMnemonicPage: FunctionComponent<{
   );
 
   const { analyticsStore, chainStore, accountStore, keyRingStore } = useStore();
-  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
-  const defaultAccountName = `account-${totalAccount + 1}`;
-  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
   const {
     register,
@@ -237,7 +231,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      name: defaultAccountName,
+      name: "",
       password: "",
       confirmPassword: "",
     },
@@ -396,25 +390,15 @@ export const RecoverMnemonicPage: FunctionComponent<{
   }, [activeTab]);
 
   const validateWalletName = (value: string) => {
-    const alreadyImportedWalletNames = [
-      ...new Set(
-        keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
-          const defaultName = item?.meta?.["name"];
-          const chainNames = item?.meta?.["nameByChain"]
-            ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
-            : [];
-          return [defaultName, ...chainNames].filter(Boolean);
-        }) ?? []
-      ),
-    ];
-
+    const alreadyImportedWalletNames = keyRingStore?.multiKeyStoreInfo?.map(
+      (item) => item?.meta?.["name"]
+    );
     let nameAlreadyExists = false;
 
     // if create mode then wallet list is empty
     if (registerConfig.mode !== "create") {
-      nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+      nameAlreadyExists = alreadyImportedWalletNames?.includes(value);
     }
-
     return !nameAlreadyExists;
   };
 
@@ -470,29 +454,36 @@ export const RecoverMnemonicPage: FunctionComponent<{
                       await registerConfig.createPrivateKey(
                         data.name,
                         privateKey,
-                        data.password,
-                        {},
-                        selectedNetworks
+                        data.password
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
                         accountType: "privateKey",
                       });
                     } else {
-                      await registerConfig.createMnemonic(
-                        data.name,
-                        // In logic, not 12/24 words can be handled.
-                        // However, seed words have only a length of 12/24 when mnemonic.
-                        // Since the rest has an empty string, additional spaces are created by the empty string after join.
-                        // Therefore, trim should be done last.
-                        seedWords.join(" ").trim(),
-                        data.password,
-                        bip44Option.bip44HDPath,
-                        {},
-                        selectedNetworks,
-                        chainStore.chainInfos,
-                        accountStore
-                      );
+                      if (registerConfig.mode === "add") {
+                        await registerConfig.createMnemonic(
+                          data.name,
+                          // In logic, not 12/24 words can be handled.
+                          // However, seed words have only a length of 12/24 when mnemonic.
+                          // Since the rest has an empty string, additional spaces are created by the empty string after join.
+                          // Therefore, trim should be done last.
+                          seedWords.join(" ").trim(),
+                          data.password,
+                          bip44Option.bip44HDPath,
+                          chainStore.chainInfos,
+                          accountStore
+                        );
+                      } else {
+                        await registerConfig.createMnemonic(
+                          data.name,
+                          seedWords.join(" ").trim(),
+                          data.password,
+                          bip44Option.bip44HDPath,
+                          chainStore.chainInfos,
+                          accountStore
+                        );
+                      }
                       analyticsStore.setUserProperties({
                         registerType: "seed",
                         accountType: "mnemonic",
@@ -512,8 +503,8 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     : {}),
                   ...(seedType === SeedType.PRIVATE_KEY
                     ? {
-                        marginLeft: "145px",
-                        width: "390px",
+                        marginLeft: "170px",
+                        width: "333px",
                         gridTemplateColumns: "1fr",
                       }
                     : {}),
@@ -526,9 +517,6 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   }
                 )}
               >
-                {seedType === SeedType.PRIVATE_KEY && (
-                  <Label className={style["label"]}>Private Key</Label>
-                )}
                 {seedWords.map((word, index) => {
                   return (
                     <div
@@ -665,7 +653,6 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   </Label>
                   <Input
                     className={styleRecoverMnemonic["addressInput"]}
-                    formGroupClassName={style["inputFormGroup"]}
                     style={{ width: "333px" }}
                     type="text"
                     {...register("name", {
@@ -682,37 +669,12 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     onChange={(e) => {
                       const trimmedValue = e.target.value.trimStart();
                       setValue(e.target.name as keyof FormData, trimmedValue);
-                      setNewAccountName(trimmedValue);
                       setAccountNameValidationError(
                         !validateWalletName(trimmedValue)
                       );
                     }}
                   />
-                  <div
-                    className={classNames(
-                      style["label"],
-                      "mb-1 text-xs",
-                      newAccountName === defaultAccountName ||
-                        accountNameValidationError ||
-                        (errors.name && errors.name.message)
-                        ? "invisible"
-                        : "visible"
-                    )}
-                  >
-                    * (Account name for unselected networks will be{" "}
-                    {defaultAccountName})
-                  </div>
                 </div>
-                <SelectNetwork
-                  className={classNames(
-                    seedType === SeedType.PRIVATE_KEY && "mt-[16px]"
-                  )}
-                  selectedNetworks={selectedNetworks}
-                  disabled={newAccountName === defaultAccountName}
-                  onMultiSelectChange={(values) => {
-                    setSelectedNetworks(values);
-                  }}
-                />
                 {registerConfig.mode === "create" ? (
                   <React.Fragment>
                     <PasswordInput
@@ -786,9 +748,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   disabled={
                     registerConfig.isLoading ||
                     passwordChecklistError ||
-                    accountNameValidationError ||
-                    (selectedNetworks.length === 0 &&
-                      newAccountName !== defaultAccountName)
+                    accountNameValidationError
                   }
                   onClick={() => {
                     analyticsStore.logEvent("register_next_click", {

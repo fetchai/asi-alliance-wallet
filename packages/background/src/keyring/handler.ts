@@ -219,11 +219,7 @@ const handleUpdateNameKeyRingMsg: (
   service: KeyRingService
 ) => InternalHandler<UpdateNameKeyRingMsg> = (service) => {
   return async (_, msg) => {
-    return await service.updateNameKeyRing(
-      msg.index,
-      msg.name,
-      msg.nameByChain
-    );
+    return await service.updateNameKeyRing(msg.index, msg.name);
   };
 };
 
@@ -382,15 +378,6 @@ const handleGetKeyMsg: (
     );
 
     const key = await service.getKey(msg.chainId);
-
-    let nameByChain;
-
-    try {
-      nameByChain = JSON.parse(service.getKeyStoreMeta("nameByChain"));
-    } catch {
-      nameByChain = {};
-    }
-
     const chainInfo = await service.chainsService.getChainInfo(msg.chainId);
     let bech32Address: string;
     if (chainInfo.features?.includes("cardano")) {
@@ -402,7 +389,7 @@ const handleGetKeyMsg: (
     }
     
     return {
-      name: nameByChain?.[msg.chainId] || service.getKeyStoreMeta("name"),
+      name: service.getKeyStoreMeta("name"),
       algo: key.algo || "secp256k1",
       pubKey: key.pubKey,
       address: key.address,
@@ -739,6 +726,7 @@ const handleListAccountsMsg: (
 ) => InternalHandler<ListAccountsMsg> = (service) => {
   return async (env, msg) => {
     const chainId = await service.chainsService.getSelectedChain();
+    
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,
       [chainId],
@@ -746,13 +734,17 @@ const handleListAccountsMsg: (
     );
 
     const keys = await service.getKeys(chainId);
+    console.log(`[ListAccountsMsg] Retrieved ${keys.length} keys for ${chainId}`);
+    
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
+    const isCardano = chainInfo.features?.includes("cardano");
+    
     const returnData: Account[] = [];
 
-    keys.forEach((key) => {
+    keys.forEach((key, _idx) => {
       let bech32Add: string;
-      if (chainInfo.features?.includes("cardano")) {
+      if (isCardano) {
         if (key.algo === "ed25519") {
           bech32Add = Buffer.from(key.address).toString("utf8");
         } else {
@@ -781,6 +773,10 @@ const handleListAccountsMsg: (
       });
     });
 
+    console.log(`[ListAccountsMsg] Returning ${returnData.length} accounts:`, 
+      returnData.map(a => `${a.name}: ${a.bech32Address || a.EVMAddress}`).join(', ')
+    );
+    
     return returnData;
   };
 };

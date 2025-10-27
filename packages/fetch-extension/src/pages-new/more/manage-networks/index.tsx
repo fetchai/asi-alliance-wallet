@@ -141,6 +141,45 @@ export const ManageNetworks: FunctionComponent = observer(() => {
         </div>
       ),
     },
+    {
+      id: "Cardano",
+      component: (
+        <div>
+          <SearchBar
+            searchTerm={cardanoSearchTerm}
+            onSearchTermChange={setCardanoSearchTerm}
+            valuesArray={cardanoChainList}
+            filterFunction={getFilteredChainValues}
+            renderResult={(chainInfo, index) => (
+              <Card
+                key={index}
+                leftImage={
+                  chainInfo.raw.chainSymbolImageUrl !== undefined
+                    ? chainInfo.raw.chainSymbolImageUrl
+                    : chainInfo.chainName
+                    ? chainInfo.chainName[0].toUpperCase()
+                    : ""
+                }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
+                heading={chainInfo.chainName}
+                rightContent={
+                  <ToggleSwitchButton
+                    checked={!disabledChainList.includes(chainInfo)}
+                    onChange={() => {
+                      chainStore.toggleChainInfoInUI(chainInfo.chainId);
+                    }}
+                  />
+                }
+              />
+            )}
+          />
+        </div>
+      ),
+    },
   ];
 
   if (process.env.NODE_ENV === "development") {
