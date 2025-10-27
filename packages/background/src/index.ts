@@ -174,7 +174,7 @@ export function init(
   Ledger.init(router, ledgerService);
   Messaging.init(router, messagingService);
   SidePanel.init(router, sidePanelService);
-  Cardano.init(router, cardanoService);
+  Cardano.init(router, cardanoService, keyRingService);
 
   return {
     initFn: async () => {

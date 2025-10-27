@@ -3370,7 +3370,7 @@ export enum TXNTYPE {
   createSecret20ViewingKey = "createSecret20ViewingKey",
 }
 
-if (process.env.NODE_ENV !== "production") {
+if (true) {
   EmbedChainInfos.push(
     LOCAL_TEST_NETWORK_CONFIG,
     REMOTE_TEST_NETWORK_CONFIG,

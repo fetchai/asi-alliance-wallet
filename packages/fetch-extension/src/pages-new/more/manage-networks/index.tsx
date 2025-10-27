@@ -143,7 +143,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
     },
   ];
 
-  if (process.env.NODE_ENV === "development") {
+  if (true) {
     tabs.push({
       id: "Cardano",
       component: (

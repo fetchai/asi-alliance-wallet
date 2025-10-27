@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import style from "./style.module.scss";
 import { useIntl } from "react-intl";
 import { AddressInput, MemoInput } from "@components-v2/form";
@@ -6,6 +6,7 @@ import { DenomHelper, ExtensionKVStore } from "@keplr-wallet/common";
 import { useStore } from "../../stores";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useGasSimulator } from "@keplr-wallet/hooks";
+import { EmptyAddressError } from "@keplr-wallet/hooks";
 import { useLocation, useNavigate } from "react-router";
 import { useLanguage } from "../../languages";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
@@ -16,6 +17,9 @@ import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
 import { useNotification } from "@components/notification";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { GetCardanoSyncStatusMsg } from "@keplr-wallet/background";
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -52,6 +56,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const { isFromPhase1 } = location.state || {};
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
+    const [isCardanoSyncing, setIsCardanoSyncing] = useState(false);
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
@@ -66,6 +72,58 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         sendConfigs.amountConfig.setSendCurrency(configs.sendCurr);
       }
     }, [configs, fromPhase1, sendConfigs]);
+
+    useEffect(() => {
+      if (!isCardano) {
+        setIsCardanoSyncing(false);
+        return;
+      }
+
+      let isSubscribed = true;
+      let pollInterval: NodeJS.Timeout | null = null;
+      
+      const checkSync = async () => {
+        try {
+          if (!isSubscribed) return;
+          const messageRequester = new InExtensionMessageRequester();
+          const syncStatus = await messageRequester.sendMessage(
+            BACKGROUND_PORT,
+            new GetCardanoSyncStatusMsg(chainStore.current.chainId)
+          );
+
+          if (!isSubscribed) return;
+
+          if (syncStatus?.isSettled) {
+            setIsCardanoSyncing(false);
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+          } else {
+            setIsCardanoSyncing(true);
+          }
+        } catch (error) {
+          if (isSubscribed) {
+            setIsCardanoSyncing(false);
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+          }
+        }
+      };
+
+      setIsCardanoSyncing(true);
+      checkSync();
+      pollInterval = setInterval(checkSync, 2000);
+      
+      return () => {
+        isSubscribed = false;
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
+      };
+    }, [isCardano, chainStore.current.chainId]);
 
     const gasSimulatorKey = useMemo(() => {
       if (sendConfigs.amountConfig.sendCurrency) {
@@ -98,13 +156,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           throw new Error("Send currency not set");
         }
 
-        // Prefer not to use the gas config or fee config,
-        // because gas simulator can change the gas config and fee config from the result of reaction,
-        // and it can make repeated reaction.
-        if (
-          sendConfigs.amountConfig.error != null ||
-          sendConfigs.recipientConfig.error != null
-        ) {
+        const hasAmountError = sendConfigs.amountConfig.error != null;
+        const hasRecipientError = sendConfigs.recipientConfig.error != null && 
+          !(sendConfigs.recipientConfig.error instanceof EmptyAddressError);
+        
+        if (hasAmountError || hasRecipientError) {
           throw new Error("Not ready to simulate tx");
         }
 
@@ -248,9 +304,24 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             gasSimulator={gasSimulator}
           />
         </div>
+        {isCardanoSyncing && (
+          <div style={{
+            textAlign: "center",
+            padding: "12px",
+            marginBottom: "8px",
+            background: "rgba(255, 193, 7, 0.1)",
+            border: "1px solid rgba(255, 193, 7, 0.3)",
+            borderRadius: "8px",
+            fontSize: "14px",
+            color: "#ffc107"
+          }}>
+            <i className="fas fa-sync fa-spin" style={{ marginRight: "8px" }} />
+            Syncing Cardano wallet... Please wait
+          </div>
+        )}
         <ButtonV2
           variant="dark"
-          text="Review transaction"
+          text={isCardanoSyncing ? "Syncing wallet..." : "Review transaction"}
           styleProps={{
             width: "94%",
             padding: "12px",
@@ -263,7 +334,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           }}
           onClick={async (e: any) => {
             e.preventDefault();
-            if (accountInfo.isReadyToSendMsgs && txStateIsValid) {
+            if (accountInfo.isReadyToSendMsgs && txStateIsValid && !isCardanoSyncing) {
               try {
                 analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
                 const stdFee = sendConfigs.feeConfig.toStdFee();
@@ -283,8 +354,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                     preferNoSetMemo: true,
                   },
                   {
-                    onBroadcastFailed: (e: any) => {
-                      console.log(e);
+                    onBroadcastFailed: () => {
                       const txnNavigationOptions = {
                         redirect: () => {
                           navigate("/send", {
@@ -436,7 +506,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             }
           }}
           data-loading={accountInfo.isSendingMsg === "send"}
-          disabled={!accountInfo.isReadyToSendMsgs || !txStateIsValid}
+          disabled={!accountInfo.isReadyToSendMsgs || !txStateIsValid || isCardanoSyncing}
           btnBgEnabled={true}
         >
           {activityStore.getPendingTxnTypes[TXNTYPE.send] && (

@@ -18,29 +18,49 @@ export const isValidAddress = (
 ) => {
   try {
     const addr = Cardano.Address.fromBech32(address);
-    if (
-      (addr.getNetworkId() === Cardano.NetworkId.Mainnet &&
-        currentChain.networkMagic === Cardano.NetworkMagics.Mainnet) ||
-      (addr.getNetworkId() === Cardano.NetworkId.Testnet &&
-        (currentChain.networkMagic === Cardano.NetworkMagics.Preview ||
-          currentChain.networkMagic === Cardano.NetworkMagics.Preprod))
-    ) {
-      return addr.toBytes();
+    const addrNetworkId = addr.getNetworkId();
+    
+    if (addrNetworkId === Cardano.NetworkId.Mainnet) {
+      return currentChain.networkMagic === Cardano.NetworkMagics.Mainnet
+        ? addr.toBytes()
+        : false;
     }
+    
+    if (addrNetworkId === Cardano.NetworkId.Testnet) {
+      // Accept any testnet networkMagic (Preview, Preprod, Sanchonet)
+      const isTestnetNetworkMagic = 
+        currentChain.networkMagic === Cardano.NetworkMagics.Preview ||
+        currentChain.networkMagic === Cardano.NetworkMagics.Preprod ||
+        currentChain.networkMagic === Cardano.NetworkMagics.Sanchonet;
+      return isTestnetNetworkMagic ? addr.toBytes() : false;
+    }
+    
     return false;
   } catch {}
   try {
     const addr = Cardano.ByronAddress.fromAddress(
       Cardano.Address.fromBase58(address),
     )?.toAddress();
-    if (
-      (addr?.getNetworkId() === Cardano.NetworkId.Mainnet &&
-        currentChain.networkMagic === Cardano.NetworkMagics.Mainnet) ||
-      (addr?.getNetworkId() === Cardano.NetworkId.Testnet &&
-        (currentChain.networkMagic === Cardano.NetworkMagics.Preview ||
-          currentChain.networkMagic === Cardano.NetworkMagics.Preprod))
-    )
-      return addr.toBytes();
+    
+    if (!addr) return false;
+    
+    const addrNetworkId = addr.getNetworkId();
+    
+    if (addrNetworkId === Cardano.NetworkId.Mainnet) {
+      return currentChain.networkMagic === Cardano.NetworkMagics.Mainnet
+        ? addr.toBytes()
+        : false;
+    }
+    
+    if (addrNetworkId === Cardano.NetworkId.Testnet) {
+      // Accept any testnet networkMagic (Preview, Preprod, Sanchonet)
+      const isTestnetNetworkMagic = 
+        currentChain.networkMagic === Cardano.NetworkMagics.Preview ||
+        currentChain.networkMagic === Cardano.NetworkMagics.Preprod ||
+        currentChain.networkMagic === Cardano.NetworkMagics.Sanchonet;
+      return isTestnetNetworkMagic ? addr.toBytes() : false;
+    }
+    
     return false;
   } catch {}
   return false;

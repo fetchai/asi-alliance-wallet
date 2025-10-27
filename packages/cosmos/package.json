@@ -9,8 +9,8 @@
   },
   "scripts": {
     "clean": "rm -rf node_modules; rm -rf build",
-    "build": "tsc",
-    "dev": "tsc -w",
+    "build": "npx tsc",
+    "dev": "npx tsc -w",
     "test": "jest --passWithNoTests",
     "lint-test": "eslint \"src/**/*\" && prettier --check \"src/**/*\"",
     "lint-fix": "eslint --fix \"src/**/*\" && prettier --write \"src/**/*\""

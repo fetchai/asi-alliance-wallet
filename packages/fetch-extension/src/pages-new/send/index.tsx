@@ -12,7 +12,7 @@ import { useNotification } from "@components/notification";
 import { useNavigate, useLocation } from "react-router";
 import queryString from "querystring";
 
-import { useGasSimulator, useSendTxConfig } from "@keplr-wallet/hooks";
+import { useGasSimulator, useSendTxConfig, EmptyAddressError } from "@keplr-wallet/hooks";
 import {
   fitPopupWindow,
   // openPopupWindow,
@@ -106,10 +106,26 @@ export const SendPage: FunctionComponent = observer(() => {
       // Prefer not to use the gas config or fee config,
       // because gas simulator can change the gas config and fee config from the result of reaction,
       // and it can make repeated reaction.
-      if (
-        sendConfigs.amountConfig.error != null ||
-        sendConfigs.recipientConfig.error != null
-      ) {
+      console.log("[SendPage] simulateGasFn: checking errors:", {
+        amountError: sendConfigs.amountConfig.error?.message || sendConfigs.amountConfig.error?.constructor?.name,
+        recipientError: sendConfigs.recipientConfig.error?.message || sendConfigs.recipientConfig.error?.constructor?.name,
+        recipient: sendConfigs.recipientConfig.recipient,
+        rawRecipient: sendConfigs.recipientConfig.rawRecipient,
+        hasRecipientError: sendConfigs.recipientConfig.error != null,
+        hasAmountError: sendConfigs.amountConfig.error != null
+      });
+      
+      // Check for errors, but allow EmptyAddressError (user is still typing)
+      // EmptyAddressError is expected when the address field is empty and should not block simulation
+      const hasAmountError = sendConfigs.amountConfig.error != null;
+      const hasRecipientError = sendConfigs.recipientConfig.error != null && 
+        !(sendConfigs.recipientConfig.error instanceof EmptyAddressError);
+      
+      if (hasAmountError || hasRecipientError) {
+        console.error("[SendPage] simulateGasFn: errors found, throwing Not ready to simulate tx", {
+          amountError: sendConfigs.amountConfig.error,
+          recipientError: sendConfigs.recipientConfig.error
+        });
         throw new Error("Not ready to simulate tx");
       }
 

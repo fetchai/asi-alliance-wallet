@@ -1,4 +1,4 @@
-import { AccountSetBaseSuper } from "./base";
+import { AccountSetBaseSuper, AccountSetBase } from "./base";
 import { ChainGetter } from "../common";
 import { ActivityStore } from "../activity";
 import { TokenGraphStore } from "../token-graph";
@@ -6,20 +6,81 @@ import { CosmosAccount } from "./cosmos";
 import { CosmwasmAccount } from "./cosmwasm";
 import { SecretAccount } from "./secret";
 import { EthereumAccount } from "./ethereum";
+import { AppCurrency } from "@keplr-wallet/types";
+import { CardanoSendAdapter } from "../cardano/send-adapter";
+import { MessageRequester } from "@keplr-wallet/router";
+import { DenomHelper } from "@keplr-wallet/common";
 
 export interface CardanoAccount {
   readonly isCardano: boolean;
 }
 
+export class CardanoAccountImpl {
+  private readonly sendAdapter: CardanoSendAdapter;
+
+  constructor(
+    protected readonly base: AccountSetBase,
+    protected readonly chainGetter: ChainGetter,
+    protected readonly chainId: string,
+    protected readonly messageRequester: MessageRequester
+  ) {
+    this.sendAdapter = new CardanoSendAdapter(messageRequester, chainId);
+    
+    // Register send token transaction handler for Cardano
+    this.base.registerMakeSendTokenFn((amount, currency, recipient) => {
+      return this.processMakeSendTokenTx(amount, currency, recipient, this.sendAdapter);
+    });
+  }
+
+  protected processMakeSendTokenTx(
+    amount: string,
+    currency: AppCurrency,
+    recipient: string,
+    sendAdapter: CardanoSendAdapter
+  ) {
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const isCardano = chainInfo.features?.includes("cardano") ?? false;
+    
+    // Only handle if this is a Cardano chain
+    if (!isCardano) {
+      return undefined;
+    }
+
+    const denomHelper = new DenomHelper(currency.coinMinimalDenom);
+    
+    // Only handle native Cardano currency (ADA)
+    if (denomHelper.type !== "native") {
+      return undefined;
+    }
+
+    // Delegate to send adapter
+    return sendAdapter.makeSendTokenTx(amount, currency, recipient);
+  }
+}
+
 export const CardanoAccount = {
-  use(): (
-    _base: AccountSetBaseSuper & CosmosAccount & CosmwasmAccount & SecretAccount & EthereumAccount,
-    _chainGetter: ChainGetter,
-    _chainId: string,
+  use(options: {
+    messageRequester: MessageRequester;
+  }): (
+    base: AccountSetBaseSuper & CosmosAccount & CosmwasmAccount & SecretAccount & EthereumAccount,
+    chainGetter: ChainGetter,
+    chainId: string,
     _activityStore: ActivityStore,
     _tokenGraphStore: TokenGraphStore
   ) => CardanoAccount {
-    return () => ({ isCardano: true });
+    return (base, chainGetter, chainId, _activityStore, _tokenGraphStore) => {
+      // CardanoAccountImpl registers handler internally
+      new CardanoAccountImpl(
+        base,
+        chainGetter,
+        chainId,
+        options.messageRequester
+      );
+      
+      return { 
+        isCardano: true
+      };
+    };
   },
 };
 

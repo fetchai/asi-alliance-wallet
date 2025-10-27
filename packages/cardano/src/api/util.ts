@@ -1,4 +1,4 @@
-import { Serialization } from '@cardano-sdk/core';
+import { Serialization, Cardano } from '@cardano-sdk/core';
 import { minAdaRequired as minAdaRequiredSDK } from '@cardano-sdk/tx-construction';
 import { crc8 } from 'crc';
 
@@ -72,10 +72,28 @@ export const assetsToValue = (assets: readonly any[]) => {
 };
 
 export const minAdaRequired = (
-  output: Serialization.TransactionOutput,
+  output: Serialization.TransactionOutput | Cardano.TxOut,
   coinsPerUtxoWord: bigint,
 ) => {
-  return minAdaRequiredSDK(output.toCore(), coinsPerUtxoWord).toString();
+  // Modern lace pattern: prefer Cardano.TxOut directly (as in balance.ts:55-61, useInitializeTx.ts:96)
+  // This avoids issues with Serialization.TransactionOutput.toCore() and asByron
+  let txOut: Cardano.TxOut;
+  if ('toCore' in output && typeof output.toCore === 'function') {
+    // Old lace pattern: Serialization.TransactionOutput with toCore() method (send.tsx:270-278)
+    // NOTE: This may fail with "asByron is not a function" error in some CSL versions
+    // Prefer passing Cardano.TxOut directly instead
+    try {
+      txOut = output.toCore();
+    } catch (error) {
+      // If toCore() fails, suggest using Cardano.TxOut directly
+      console.error('[minAdaRequired] toCore() failed - prefer passing Cardano.TxOut directly:', error);
+      throw new Error('Failed to convert TransactionOutput to TxOut. Use Cardano.TxOut directly instead.');
+    }
+  } else {
+    // Modern pattern: already Cardano.TxOut (preferred from useInitializeTx.ts:96)
+    txOut = output as Cardano.TxOut;
+  }
+  return minAdaRequiredSDK(txOut, coinsPerUtxoWord).toString();
 };
 
 const checksum = (num: string) =>

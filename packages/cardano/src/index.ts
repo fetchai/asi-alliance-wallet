@@ -16,4 +16,14 @@ export * from './background-api';
 export * from './utils/lovelacesToAdaString';
 export * from './utils/network';
 
+// Export validators with explicit names to avoid conflict with api/extension/isValidAddress
+export {
+  isValidAddress as isValidCardanoAddress,
+  validateMainnetAddress,
+  validateTestnetAddress,
+  isValidAddressPerNetwork,
+  validateWalletAddress,
+  validateWalletName
+} from './utils/validators/address-book';
+
 export * from './adapters/env-adapter';

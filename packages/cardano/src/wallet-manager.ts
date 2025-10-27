@@ -1,5 +1,7 @@
 import { firstValueFrom } from 'rxjs';
-import { getNetworkConfig } from './adapters/env-adapter';
+import { getNetworkConfig, type BlockfrostConfig } from './adapters/env-adapter';
+import { Cardano } from '@cardano-sdk/core';
+import type { Assets } from '@cardano-sdk/wallet';
 
 export class CardanoWalletManager {
   private wallet: any;
@@ -67,7 +69,7 @@ export class CardanoWalletManager {
       accountIndex,
       purpose: 1852,
       chainId: network === 'mainnet' ? Cardano.ChainIds.Mainnet : Cardano.ChainIds.Preview,
-      getPassphrase: async () => Buffer.from('')
+      getPassphrase: async () => new Uint8Array()
     }, { bip32Ed25519, logger: console });
 
     // Check if Blockfrost is available
@@ -76,30 +78,90 @@ export class CardanoWalletManager {
     
     if (networkConfig?.projectId) {
       try {
-        // Try to create full wallet with Blockfrost
-        wallet = await this.createFullWallet(networkConfig);
+        wallet = await this.createFullWallet(networkConfig, keyAgent);
       } catch (error) {
-        console.warn('Failed to create full wallet, using Koios-only mode:', error);
+        console.error('[CardanoWalletManager] Failed to create full wallet:', error);
       }
     } else {
+      console.warn('[CardanoWalletManager] No Blockfrost API key found for network:', network);
     }
 
     return new CardanoWalletManager(wallet, keyAgent);
   }
 
-  private static async createFullWallet(_networkConfig: any): Promise<any> {
-    // This would create the full BaseWallet with Blockfrost providers
-    // For now, return undefined to use basic mode
-    return undefined;
+  private static async createFullWallet(
+    networkConfig: BlockfrostConfig,
+    keyAgent: any
+  ): Promise<any> {
+    // Import necessary SDK modules
+    const walletModule = await import('@cardano-sdk/wallet');
+    const { createPersonalWallet, storage, DEFAULT_POLLING_CONFIG } = walletModule;
+    const KeyManagement = await import('@cardano-sdk/key-management');
+    const { createBlockfrostProviders } = await import('./wallet/lib/providers');
+    const { Cardano } = await import('@cardano-sdk/core');
+
+    let extensionLocalStorage: any = undefined;
+    try {
+      // Use require to avoid TypeScript errors with webextension-polyfill
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const webextensionPolyfill = require('webextension-polyfill');
+      if (webextensionPolyfill?.storage?.local) {
+        extensionLocalStorage = webextensionPolyfill.storage.local;
+      }
+    } catch (error) {
+      // If webextension-polyfill not available, use in-memory cache fallback
+    }
+
+    const chainId = keyAgent.chainId;
+    let chainName: 'Mainnet' | 'Preview' | 'Preprod' | 'Sanchonet' | undefined;
+    if (chainId) {
+      if (chainId.networkMagic === Cardano.NetworkMagics.Mainnet) {
+        chainName = 'Mainnet';
+      } else if (chainId.networkMagic === Cardano.NetworkMagics.Preview) {
+        chainName = 'Preview';
+      } else if (chainId.networkMagic === Cardano.NetworkMagics.Preprod) {
+        chainName = 'Preprod';
+      } else if (chainId.networkMagic === Cardano.NetworkMagics.Sanchonet) {
+        chainName = 'Sanchonet';
+      }
+    }
+
+    const providers = createBlockfrostProviders({
+      blockfrostConfig: networkConfig,
+      logger: console,
+      extensionLocalStorage,
+      chainName
+    });
+
+    const stores = storage.createInMemoryWalletStores();
+    const asyncKeyAgent = KeyManagement.util.createAsyncKeyAgent(keyAgent);
+    const witnesser = KeyManagement.util.createBip32Ed25519Witnesser(asyncKeyAgent);
+    const bip32Account = await KeyManagement.Bip32Account.fromAsyncKeyAgent(asyncKeyAgent) as any;
+
+    const wallet = createPersonalWallet(
+      {
+        name: 'Cardano Wallet',
+        polling: DEFAULT_POLLING_CONFIG
+      },
+      {
+        logger: console,
+        ...providers,
+        stores,
+        witnesser,
+        bip32Account
+      }
+    );
+
+    return wallet;
   }
 
   async getBalance() {
     if (!this.wallet) {
       return {
         utxo: {
-          available: { coins: BigInt(0) },
-          total: { coins: BigInt(0) },
-          unspendable: { coins: BigInt(0) }
+          available: { coins: BigInt(0), utxos: [] },
+          total: { coins: BigInt(0), utxos: [] },
+          unspendable: { coins: BigInt(0), utxos: [] }
         },
         rewards: BigInt(0),
         deposits: BigInt(0),
@@ -108,7 +170,12 @@ export class CardanoWalletManager {
     }
 
     try {
-      const [available, total, unspendable, rewards, deposits, assetInfo] = await Promise.all([
+      // Use timeout to prevent hanging on Blockfrost errors
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Balance fetch timeout')), 10000);
+      });
+
+      const balancePromise = Promise.all([
         firstValueFrom(this.wallet.balance.utxo.available$),
         firstValueFrom(this.wallet.balance.utxo.total$),
         firstValueFrom(this.wallet.balance.utxo.unspendable$),
@@ -117,19 +184,28 @@ export class CardanoWalletManager {
         firstValueFrom(this.wallet.assetInfo$).catch(() => new Map())
       ]);
 
+      const [available, total, unspendable, rewards, deposits, assetInfo] = await Promise.race([
+        balancePromise,
+        timeoutPromise
+      ]) as any;
+
       return {
-        utxo: { available, total, unspendable },
+        utxo: { 
+          available: available || { coins: BigInt(0), utxos: [] },
+          total: total || { coins: BigInt(0), utxos: [] },
+          unspendable: unspendable || { coins: BigInt(0), utxos: [] }
+        },
         rewards: rewards || BigInt(0),
         deposits: deposits || BigInt(0),
         assetInfo: assetInfo || new Map()
       };
-    } catch (error) {
-      console.warn("Failed to get balance:", error);
+    } catch (error: any) {
+      // Return zero balance on error - tx.inspect() will validate sufficient funds
       return {
         utxo: {
-          available: { coins: BigInt(0) },
-          total: { coins: BigInt(0) },
-          unspendable: { coins: BigInt(0) }
+          available: { coins: BigInt(0), utxos: [] },
+          total: { coins: BigInt(0), utxos: [] },
+          unspendable: { coins: BigInt(0), utxos: [] }
         },
         rewards: BigInt(0),
         deposits: BigInt(0),
@@ -161,7 +237,6 @@ export class CardanoWalletManager {
       const finalizedTx = await this.wallet.finalizeTx({ tx: txInit });
       return await this.wallet.submitTx(finalizedTx);
     } catch (error) {
-      console.error("Transaction failed:", error);
       if (error?.message?.includes('insufficient')) {
         throw new Error('Insufficient funds for transaction');
       }
@@ -183,6 +258,13 @@ export class CardanoWalletManager {
       throw new Error("Transaction features unavailable without Blockfrost API key");
     }
     return this.wallet.createTxBuilder();
+  }
+
+  get syncStatus$() {
+    if (!this.wallet) {
+      throw new Error("Wallet not initialized");
+    }
+    return this.wallet.syncStatus.isSettled$;
   }
 
   /**
@@ -237,6 +319,13 @@ export class CardanoWalletManager {
   }
 
   /**
+   * Checks if wallet is initialized and available for transactions
+   */
+  hasWallet(): boolean {
+    return !!this.wallet;
+  }
+
+  /**
    * Gets current blockchain tip
    * Needed for setting validity interval
    */
@@ -245,6 +334,17 @@ export class CardanoWalletManager {
       throw new Error("Transaction features unavailable without Blockfrost API key");
     }
     return this.wallet.tip$;
+  }
+
+  /**
+   * Gets protocol parameters
+   * Needed for minAdaRequired validation
+   */
+  get protocolParameters$() {
+    if (!this.wallet) {
+      throw new Error("Transaction features unavailable without Blockfrost API key");
+    }
+    return this.wallet.protocolParameters$;
   }
 
   /**
@@ -278,10 +378,88 @@ export class CardanoWalletManager {
     return this.wallet;
   }
 
-  /**
-   * High-level function for sending ADA
-   * Delegates execution to modular function from wallet/lib
-   */
+  private async buildSendTransaction(params: { to: string; amount: string; memo?: string }) {
+    if (!params.to || typeof params.to !== 'string') {
+      throw new Error(`Invalid recipient address: ${params.to}`);
+    }
+
+    let address: any;
+    try {
+      address = Cardano.PaymentAddress(params.to);
+    } catch (parseError: any) {
+      throw new Error(`Invalid Cardano address format: ${parseError?.message || parseError}`);
+    }
+
+    const { createWalletUtil } = await import('@cardano-sdk/wallet');
+    const { buildTransactionProps } = await import('./wallet/lib/build-transaction-props');
+    const { setMissingCoins } = await import('./wallet/lib/set-missing-coins');
+    const { TX } = await import('./config');
+
+    const outputsMap = new Map([
+      ['output1', { address, value: { coins: params.amount, assets: undefined } }]
+    ]);
+
+    const assetInfo: Assets | undefined = await firstValueFrom(this.wallet.assetInfo$).catch(() => undefined) as Assets | undefined;
+    const partialTxProps = buildTransactionProps({
+      outputsMap,
+      metadata: params.memo,
+      assetsInfo: assetInfo
+    });
+
+    if (!partialTxProps.outputs) {
+      throw new Error('Transaction outputs are undefined');
+    }
+
+    const util = createWalletUtil(this.wallet);
+    const minimumCoinQuantities = await util.validateOutputs(partialTxProps.outputs);
+    const outputsWithMissingCoins = setMissingCoins(minimumCoinQuantities, partialTxProps.outputs);
+
+    if (!outputsWithMissingCoins.outputs) {
+      throw new Error('Outputs with missing coins are undefined');
+    }
+
+    const txBuilder = this.createTxBuilder();
+    const tip = await firstValueFrom(this.tip$) as { slot: number };
+
+    txBuilder.setValidityInterval({
+      invalidHereafter: Cardano.Slot(tip.slot + TX.invalid_hereafter)
+    });
+
+    outputsWithMissingCoins.outputs.forEach((output) => txBuilder.addOutput(output));
+
+    if (partialTxProps?.auxiliaryData?.blob) {
+      txBuilder.metadata(partialTxProps.auxiliaryData.blob);
+    }
+
+    const tx = txBuilder.build();
+    const inspection = await tx.inspect();
+    const fee = inspection?.inputSelection?.fee;
+
+    if (!fee) {
+      throw new Error('Transaction inspection failed: no inputSelection');
+    }
+
+    return { tx, fee: fee.toString() };
+  }
+
+  async estimateSendAda(params: {
+    to: string;
+    amount: string;
+    memo?: string;
+  }): Promise<{ fee: string; total: string }> {
+    if (!this.wallet) {
+      throw new Error("Transaction features unavailable without Blockfrost API key");
+    }
+
+    const { fee } = await this.buildSendTransaction(params);
+    const totalAmount = (BigInt(params.amount) + BigInt(fee)).toString();
+
+    return {
+      fee,
+      total: totalAmount
+    };
+  }
+
   async sendAda(params: {
     to: string;
     amount: string; // in lovelaces (1 ADA = 1,000,000 lovelaces)
@@ -290,22 +468,30 @@ export class CardanoWalletManager {
     if (!this.wallet) {
       throw new Error("Transaction features unavailable without Blockfrost API key");
     }
-    
-    const { Cardano } = await import('@cardano-sdk/core');
-    const address = Cardano.Address.fromBech32(params.to);
-    const value = { coins: BigInt(params.amount) };
-    const output = { address, value } as any;
-    
-    const auxiliaryData = params.memo ? { blob: { 674: params.memo } } as any : undefined;
-    
-    const { buildTx, signAndSubmit } = await import('./api/extension/wallet');
-    const tx = await buildTx({
-      output,
-      auxiliaryData,
-      walletManager: this,
-    });
-    
-    return await signAndSubmit({ tx, walletManager: this });
+
+    try {
+      const { tx } = await this.buildSendTransaction(params);
+      const { submitTx } = await import('./api/extension');
+
+      const signedTx = (await tx.sign()).cbor;
+      const txId = await submitTx(signedTx, this);
+
+      return typeof txId === 'string' ? txId : txId.toString();
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+
+      if (errorMessage.includes('insufficient') || errorMessage.includes('UTxO Balance Insufficient')) {
+        throw new Error('Insufficient funds for transaction');
+      }
+      if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+        throw new Error('Network error. Please try again');
+      }
+      if (errorMessage.includes('Mock wallet') || errorMessage.includes('subscribe')) {
+        throw new Error('Transaction sending requires a full wallet with Blockfrost API key. Please configure Blockfrost API key.');
+      }
+
+      throw new Error(errorMessage);
+    }
   }
 
   // Key agent access for CardanoKeyRing

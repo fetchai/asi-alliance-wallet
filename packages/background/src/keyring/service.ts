@@ -414,19 +414,28 @@ export class KeyRingService {
     await this.keyRing.unlock(password);
 
     const ks = this.keyRing.getCurrentKeyStore();
+
     if (
       ks &&
       ks.type === "mnemonic" &&
       `${ks.meta?.["mnemonicLength"]}` === "24"
     ) {
       try {
+        let currentChainId: string | undefined;
+        try {
+          currentChainId = await this.chainsService.getSelectedChain();
+        } catch {
+          // chainsService might not be initialized yet, use undefined (defaults to mainnet)
+          currentChainId = undefined;
+        }
         await this.cardanoService.restoreFromKeyStore(
           ks,
           this.keyRing.currentPassword,
-          this.crypto
+          this.crypto,
+          currentChainId
         );
       } catch (error) {
-        console.error("Failed to initialize CardanoService:", error);
+        console.error("[KeyRingService] Failed to initialize CardanoService:", error);
       }
     }
 
@@ -437,7 +446,7 @@ export class KeyRingService {
     const chainInfo = await this.chainsService.getChainInfo(chainId);
 
     if (chainInfo.features?.includes("cardano")) {
-      await this.ensureCardanoServiceReady();
+      await this.ensureCardanoServiceReady(chainId);
       return await this.cardanoService.getKey(chainId);
     }
 
@@ -461,7 +470,24 @@ export class KeyRingService {
 
   private cardanoServiceInitPromise: Promise<void> | null = null;
 
-  private async ensureCardanoServiceReady(): Promise<void> {
+  public async ensureCardanoServiceReady(chainId?: string): Promise<void> {
+    // If service is initialized but not ready, try to restore with chainId
+    if (this.cardanoService.isInitialized() && !this.cardanoService.isReady() && chainId) {
+      const ks = this.keyRing.getCurrentKeyStore();
+      if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
+        try {
+          await this.cardanoService.restoreFromKeyStore(
+            ks,
+            this.keyRing.currentPassword,
+            this.crypto,
+            chainId
+          );
+        } catch (error) {
+          console.error("[KeyRingService] Failed to restore CardanoService:", error);
+        }
+      }
+    }
+
     if (!this.cardanoService.isInitialized()) {
       if (this.cardanoServiceInitPromise) {
         return this.cardanoServiceInitPromise;
@@ -470,10 +496,11 @@ export class KeyRingService {
       const ks = this.keyRing.getCurrentKeyStore();
 
       if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
-        this.cardanoServiceInitPromise = this.initializeCardanoService(ks);
+        this.cardanoServiceInitPromise = this.initializeCardanoService(ks, chainId);
         try {
           await this.cardanoServiceInitPromise;
         } catch (error) {
+          console.error("[KeyRingService] Failed to initialize CardanoService:", error);
           this.cardanoServiceInitPromise = null;
           throw error;
         } finally {
@@ -485,16 +512,31 @@ export class KeyRingService {
     }
   }
 
-  private async initializeCardanoService(ks: any): Promise<void> {
+  private async initializeCardanoService(ks: any, chainId?: string): Promise<void> {
     if (ks.type !== "mnemonic" || `${ks.meta?.["mnemonicLength"]}` !== "24") {
       throw new Error("Cardano requires 24-word mnemonic");
     }
-
-    await this.cardanoService.restoreFromKeyStore(
-      ks,
-      this.keyRing.currentPassword,
-      this.crypto
-    );
+try {
+      // Use provided chainId, or try to get selected chain, or use undefined (defaults to mainnet)
+      let currentChainId = chainId;
+      if (!currentChainId) {
+        try {
+          currentChainId = await this.chainsService.getSelectedChain();
+        } catch {
+          // chainsService might not be initialized yet, use undefined (defaults to mainnet)
+          currentChainId = undefined;
+        }
+      }
+      await this.cardanoService.restoreFromKeyStore(
+        ks,
+        this.keyRing.currentPassword,
+        this.crypto,
+        currentChainId
+      );
+    } catch (error) {
+      console.error("[KeyRingService] Failed to initialize CardanoService:", error);
+      throw error;
+    }
   }
 
   getKeyStoreMeta(key: string): string {

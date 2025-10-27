@@ -384,7 +384,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
       },
     ];
 
-    if (process.env.NODE_ENV === "development") {
+    if (true) {
       tabs.push({
         id: "Cardano",
         component: (

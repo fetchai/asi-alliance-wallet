@@ -1,4 +1,4 @@
-import { CardanoKeyRing, KeyStore, Key } from "@keplr-wallet/cardano";
+import { CardanoKeyRing, KeyStore, Key, CardanoWalletManager } from "@keplr-wallet/cardano";
 import { Crypto } from "../keyring/crypto";
 import { Notification } from "../tx/types";
 
@@ -33,12 +33,16 @@ export class CardanoService {
           Crypto.decrypt(crypto, keyStore as any, pwd)
       : undefined;
     
-    await this.keyRing.restore(
-      store as KeyStore,
-      password,
-      decryptFn,
-      chainId
-    );
+    try {
+      await this.keyRing.restore(
+        store as KeyStore,
+        password,
+        decryptFn,
+        chainId
+      );
+    } catch (error) {
+      throw error;
+    }
 
     await this.waitForKeyAgentReady();
   }
@@ -91,27 +95,9 @@ export class CardanoService {
       );
     }
 
-    if (this.notification) {
-      this.notification.create({
-        iconRelativeUrl: "assets/logo-256.png",
-        title: "Cardano transaction is pending...",
-        message: "Please wait while we process your ADA transaction",
-      });
-    }
-
     try {
-      const txId = await this.keyRing.sendAda(params);
-
-      if (this.notification) {
-        this.notification.create({
-          iconRelativeUrl: "assets/logo-256.png",
-          title: "Cardano transaction submitted",
-          message: `Transaction successful! TxID: ${txId.slice(0, 16)}...`,
-        });
-      }
-
-      return txId;
-    } catch (error) {
+      return await this.keyRing.sendAda(params);
+    } catch (error: any) {
       this.processCardanoTxError(error);
       throw error;
     }
@@ -128,6 +114,38 @@ export class CardanoService {
     }
 
     return this.keyRing.getBalance();
+  }
+
+  /**
+   * Estimate transaction fee and total amount for ADA send
+   * Proxies to walletManager which uses SDK's coin selection
+   */
+  async estimateSendAda(params: {
+    to: string;
+    amount: string; // in lovelaces
+  }): Promise<{ fee: string; total: string }> {
+    if (!this.keyRing) {
+      throw new Error(
+        "CardanoService not initialised. Call restoreFromKeyStore() first."
+      );
+    }
+
+    if (!this.keyRing.isTransactionReady()) {
+      throw new Error(
+        "CardanoService not ready for transactions. Wallet manager not initialized."
+      );
+    }
+
+    const walletManager: CardanoWalletManager | undefined = this.keyRing.getWalletManager();
+    if (!walletManager) {
+      throw new Error("Wallet manager not initialized");
+    }
+
+    try {
+      return await walletManager.estimateSendAda(params);
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -158,7 +176,6 @@ export class CardanoService {
   private processCardanoTxError(error: any): void {
     if (!this.notification) return;
 
-    console.error("Cardano transaction error:", error);
     let message = error?.message || "Unknown error occurred";
 
     if (error?.code) {
@@ -201,11 +218,7 @@ export class CardanoService {
     ) {
       message = "Insufficient funds to complete transaction";
     }
-    this.notification.create({
-      iconRelativeUrl: "assets/logo-256.png",
-      title: "Cardano transaction failed",
-      message,
-    });
+    // Notifications intentionally disabled to avoid blocking the tx flow
   }
 
   /**

@@ -52,7 +52,7 @@ import {
   TokenGraphStore,
 } from "@keplr-wallet/stores";
 
-import { CardanoAccount } from "@keplr-wallet/stores/build/account/cardano";
+import { CardanoAccount } from "@keplr-wallet/stores";
 import {
   KeplrETCQueries,
   GravityBridgeCurrencyRegsitrar,
@@ -515,7 +515,9 @@ export class RootStore {
       EthereumAccount.use({
         queriesStore: this.queriesStore,
       }),
-      CardanoAccount.use()
+      CardanoAccount.use({
+        messageRequester: new InExtensionMessageRequester()
+      })
     );
 
     if (!window.location.href.includes("#/unlock")) {

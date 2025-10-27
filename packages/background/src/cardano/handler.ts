@@ -1,20 +1,31 @@
 import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
-import { SendAdaMsg, GetCardanoBalanceMsg, IsCardanoReadyMsg } from "./messages";
+import { SendAdaMsg, GetCardanoBalanceMsg, IsCardanoReadyMsg, EstimateSendAdaMsg, GetCardanoSyncStatusMsg } from "./messages";
 import { CardanoService } from "./service";
+import { KeyRingService } from "../keyring/service";
 
-export const getHandler: (service: CardanoService) => Handler = (
-  service: CardanoService
+export const getHandler: (service: CardanoService, keyRingService: KeyRingService) => Handler = (
+  service: CardanoService,
+  keyRingService: KeyRingService
 ) => {
   return (env: Env, msg: Message<unknown>) => {
-    switch (msg.constructor) {
-      case SendAdaMsg:
-        return handleSendAdaMsg(service)(env, msg as SendAdaMsg);
-      case GetCardanoBalanceMsg:
+    // Use msg.type() instead of constructor comparison because parseMessage uses Object.setPrototypeOf
+    // which may not preserve exact constructor reference
+    const msgType = msg.type();
+
+    switch (msgType) {
+      case SendAdaMsg.type():
+        return handleSendAdaMsg(service, keyRingService)(env, msg as SendAdaMsg);
+      case GetCardanoBalanceMsg.type():
         return handleGetCardanoBalanceMsg(service)(env, msg as GetCardanoBalanceMsg);
-      case IsCardanoReadyMsg:
+      case IsCardanoReadyMsg.type():
         return handleIsCardanoReadyMsg(service)(env, msg as IsCardanoReadyMsg);
+      case EstimateSendAdaMsg.type():
+        return handleEstimateSendAdaMsg(service, keyRingService)(env, msg as EstimateSendAdaMsg);
+      case GetCardanoSyncStatusMsg.type():
+        return handleGetCardanoSyncStatusMsg(service, keyRingService)(env, msg as GetCardanoSyncStatusMsg);
       default:
-        throw new Error("Unknown msg type");
+        console.error("[Cardano Handler] Unknown message type:", msgType);
+        throw new Error(`Unknown msg type: ${msgType}`);
     }
   };
 };
@@ -23,19 +34,58 @@ export const getHandler: (service: CardanoService) => Handler = (
  * Handler for sending ADA transaction
  */
 const handleSendAdaMsg: (
-  service: CardanoService
-) => InternalHandler<SendAdaMsg> = (service) => {
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<SendAdaMsg> = (service, keyRingService) => {
   return async (_, msg) => {
-    // Check that service is ready (analog to permission check in Keplr)
+    // If chainId is provided, ensure service is ready for that network
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+
     if (!service.isReady()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
 
-    return await service.sendAda({
-      to: msg.to,
-      amount: msg.amount,
-      memo: msg.memo
-    });
+    try {
+      const walletManager = service.getWalletManager();
+      if (walletManager && walletManager.hasWallet()) {
+        const { firstValueFrom } = await import('rxjs');
+        const { filter, take, timeout } = await import('rxjs/operators');
+
+        try {
+          await firstValueFrom(
+            walletManager.syncStatus$.pipe(
+              filter((isSettled: boolean) => isSettled === true),
+              take(1),
+              timeout(5000) // 5 seconds - if already synced, will return immediately
+            )
+          );
+        } catch (syncError: any) {
+          // Check current state
+          const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(() => false);
+          if (!isSettled) {
+            throw new Error("Wallet is syncing. Please wait and try again.");
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error?.message?.includes('syncing')) {
+        throw error;
+      }
+      // Continue if sync check fails (wallet might not have this capability)
+    }
+
+    try {
+      const txHash = await service.sendAda({
+        to: msg.to,
+        amount: msg.amount,
+        memo: msg.memo
+      });
+      return txHash;
+    } catch (error) {
+      throw error;
+    }
   };
 };
 
@@ -63,5 +113,63 @@ const handleIsCardanoReadyMsg: (
 ) => InternalHandler<IsCardanoReadyMsg> = (service) => {
   return async (_, _msg) => {
     return service.isReady();
+  };
+};
+
+/**
+ * Handler for estimating Cardano transaction fee
+ */
+const handleEstimateSendAdaMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<EstimateSendAdaMsg> = (service, keyRingService) => {
+  return async (_, msg) => {
+    // If chainId is provided, ensure service is ready for that network
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+    
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    try {
+      return await service.estimateSendAda({
+        to: msg.to,
+        amount: msg.amount
+      });
+    } catch (error) {
+      throw error;
+    }
+  };
+};
+
+/** Handler for getting Cardano wallet sync status (for UI sync status check). */
+const handleGetCardanoSyncStatusMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<GetCardanoSyncStatusMsg> = (service, keyRingService) => {
+  return async (_, msg) => {
+    // If chainId is provided, ensure service is ready for that network
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+    
+    if (!service.isReady()) {
+      return { isSettled: false };
+    }
+
+    try {
+      const walletManager = service.getWalletManager();
+      if (!walletManager || !walletManager.hasWallet()) {
+        return { isSettled: false };
+      }
+      
+      const { firstValueFrom } = await import('rxjs');
+      const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(() => false) as boolean;
+      return { isSettled };
+    } catch (error) {
+      return { isSettled: false };
+    }
   };
 };
