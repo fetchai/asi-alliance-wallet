@@ -12303,6 +12303,7 @@ __metadata:
     "@types/eslint": ^8
     "@types/firefox-webext-browser": ^70.0.1
     "@types/js-yaml": ^4
+    "@types/lodash": ^4
     "@types/react-html-parser": ^2.0.2
     "@types/react-infinite-scroller": ^1.2.3
     "@types/react-is": ^16.7.2
@@ -12350,6 +12351,7 @@ __metadata:
     identity-obj-proxy: ^3.0.0
     joi: ^17.2.1
     js-yaml: ^4.1.0
+    lodash: ^4.17.21
     moment: ^2.10.2
     os-browserify: ^0.3.0
     popper.js: ^1.15.0
@@ -20112,6 +20114,13 @@ __metadata:
   version: 4.14.195
   resolution: "@types/lodash@npm:4.14.195"
   checksum: 39b75ca635b3fa943d17d3d3aabc750babe4c8212485a4df166fe0516e39288e14b0c60afc6e21913cc0e5a84734633c71e617e2bd14eaa1cf51b8d7799c432e
+  languageName: node
+  linkType: hard
+
+"@types/lodash@npm:^4":
+  version: 4.17.20
+  resolution: "@types/lodash@npm:4.17.20"
+  checksum: dc7bb4653514dd91117a4c4cec2c37e2b5a163d7643445e4757d76a360fabe064422ec7a42dde7450c5e7e0e7e678d5e6eae6d2a919abcddf581d81e63e63839
   languageName: node
   linkType: hard
 

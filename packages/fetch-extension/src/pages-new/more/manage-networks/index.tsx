@@ -24,7 +24,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
   const mainChainList = chainStore.chainInfos.filter(
-    (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    (chainInfo) => !chainInfo.features?.includes("evm")
   );
 
   const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
@@ -44,7 +44,6 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             valuesArray={mainChainList}
             filterFunction={getFilteredChainValues}
             emptyContent={<NoResults styles={{ height: "250px" }} />}
-            itemsStyleProp={{ height: "360px" }}
             renderResult={(chainInfo, index) => (
               <Card
                 key={index}
@@ -72,6 +71,24 @@ export const ManageNetworks: FunctionComponent = observer(() => {
               />
             )}
           />
+          <div style={{ width: "100%" }}>
+            <ButtonV2
+              styleProps={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "48px",
+                fontSize: "14px",
+                fontWeight: 400,
+              }}
+              onClick={(e: any) => {
+                e.preventDefault();
+                navigate("/setting/addCosmosChain");
+              }}
+              gradientText={""}
+              text="Add custom Cosmos network"
+            />
+          </div>
         </div>
       ),
     },

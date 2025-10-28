@@ -270,7 +270,6 @@ const EmbedChainInfos: ChainInfo[] = [
     rest: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
     chainId: "5",
     chainName: "Goerli-eth (Testnet)",
-
     stakeCurrency: {
       coinDenom: "ETH",
       coinMinimalDenom: "eth",

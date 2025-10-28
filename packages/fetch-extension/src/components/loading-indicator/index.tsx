@@ -10,6 +10,7 @@ import style from "./style.module.scss";
 
 export interface LoadingState {
   setIsLoading(type: string, isLoading: boolean): void;
+  isLoading: boolean;
 }
 
 const LoadingIndicatorContext = createContext<LoadingState | undefined>(
@@ -47,6 +48,7 @@ export const LoadingIndicatorProvider: FunctionComponent = ({ children }) => {
             );
           }
         },
+        isLoading,
       }}
     >
       {isLoading ? (
