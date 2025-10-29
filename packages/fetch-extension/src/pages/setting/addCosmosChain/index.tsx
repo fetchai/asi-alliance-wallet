@@ -70,14 +70,14 @@ export const AddCosmosChain: FunctionComponent = () => {
         const restUrl = registryData.apis?.rest?.[0]?.address ?? "";
         const prefix = registryData.bech32_prefix || "cosmos";
         const logo = registryData.logo_URIs?.png;
+        const denom = registryData.fees?.fee_tokens?.[0]?.denom;
 
         let coinData = {
-          coinDenom: "",
-          coinMinimalDenom: "",
+          coinDenom: denom,
+          coinMinimalDenom: denom,
           coinDecimals: 6,
         };
 
-        const denom = registryData.fees?.fee_tokens?.[0]?.denom;
         if (restUrl && denom) {
           try {
             const denomUrl = `${restUrl.replace(
@@ -231,7 +231,7 @@ export const AddCosmosChain: FunctionComponent = () => {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     try {
-      chainStore.addEVMChainInfo(newChainInfo);
+      chainStore.addCustomChainInfo(newChainInfo);
       chainStore.selectChain(newChainInfo.chainId);
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new Cosmos chain",
@@ -248,9 +248,9 @@ export const AddCosmosChain: FunctionComponent = () => {
     newChainInfo.rpc &&
     newChainInfo.rest &&
     newChainInfo.chainId &&
-    !hasErrors &&
-    !isChainIdExist &&
-    !isChainNameExist;
+    newChainInfo.stakeCurrency.coinDenom &&
+    newChainInfo.stakeCurrency.coinDecimals;
+  !hasErrors && !isChainIdExist && !isChainNameExist;
 
   return (
     <HeaderLayout
@@ -348,7 +348,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           }`}
         >
           <span className={style["select-item-label"]}>
-            Auto fetch network details
+            Automatically fetch network details
           </span>
           <label className={style["select-checkbox-wrapper"]}>
             <input
