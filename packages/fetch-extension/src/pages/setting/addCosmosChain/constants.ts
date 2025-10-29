@@ -11,20 +11,20 @@ export const INITIAL_CHAIN_CONFIG: ChainInfo = {
   stakeCurrency: {
     coinDenom: "",
     coinMinimalDenom: "",
-    coinDecimals: 6,
+    coinDecimals: 0,
   },
   currencies: [
     {
       coinDenom: "",
       coinMinimalDenom: "",
-      coinDecimals: 6,
+      coinDecimals: 0,
     },
   ],
   feeCurrencies: [
     {
       coinDenom: "",
       coinMinimalDenom: "",
-      coinDecimals: 6,
+      coinDecimals: 0,
       gasPriceStep: {
         low: 0,
         average: 5000000000,

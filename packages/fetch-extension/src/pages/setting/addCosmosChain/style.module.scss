@@ -13,15 +13,20 @@
   }
 }
 
+.formFeedback {
+  margin-top: 0px !important;
+  position: relative !important;
+}
+
 .formGroup {
   margin-bottom: 1rem;
 }
 
-.formGroupChainId {
+.formGroupChainName {
   margin-bottom: 0rem;
 }
 
-.formGroupChainId {
+.formGroupDecimals {
   margin-bottom: 0.5rem;
 }
 

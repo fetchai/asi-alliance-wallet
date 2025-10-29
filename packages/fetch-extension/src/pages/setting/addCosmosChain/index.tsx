@@ -27,13 +27,23 @@ export const AddCosmosChain: FunctionComponent = () => {
   const [autoFetchNetworkDetails, setAutoFetchNetworkDetails] = useState(true);
   const [newChainInfo, setNewChainInfo] = useState(INITIAL_CHAIN_CONFIG);
   const chainList = chainStore.chainInfosInUI;
-  const isChainIdExist = chainList.find(
+  const isChainIdExist = chainList.some(
     (chain) => chain.chainId === newChainInfo.chainId
   );
 
-  const isChainNameExist = chainList.find(
-    (chain) => chain.chainName === newChainInfo.chainName
+  const isChainNameExist = chainList.some(
+    (chain) =>
+      chain.chainName.toLowerCase() === newChainInfo.chainName.toLowerCase()
   );
+
+  const isRPCExist = chainList.some((chain) => chain.rpc === newChainInfo.rpc);
+
+  const isRESTExist = chainList.some(
+    (chain) => chain.rest === newChainInfo.rest
+  );
+
+  const isChainUnique =
+    !isChainIdExist && !isChainNameExist && !isRPCExist && !isRESTExist;
 
   const isUrlValid = (url: string) => {
     try {
@@ -136,31 +146,26 @@ export const AddCosmosChain: FunctionComponent = () => {
   // debounce the API calls to avoid excessive requests
   const debouncedFetchChainInfo = useMemo(
     () =>
-      debounce((chainName: string) => {
+      debounce((chainName: string, isUnique: boolean) => {
         const baseName = chainName
           .replace(/[-\s]/g, "") // remove all hyphens and spaces
           ?.toLowerCase();
-        if (
-          baseName &&
-          autoFetchNetworkDetails &&
-          !isChainIdExist &&
-          !isChainNameExist
-        )
+        if (baseName && autoFetchNetworkDetails && isUnique)
           fetchCosmosChainInfo(baseName);
       }, 2000),
-    [
-      fetchCosmosChainInfo,
-      autoFetchNetworkDetails,
-      isChainIdExist,
-      isChainNameExist,
-    ]
+    [fetchCosmosChainInfo, autoFetchNetworkDetails]
   );
 
   useEffect(() => {
+    // Cancel any pending call if chain becomes non-unique
+    if (!isChainNameExist && !isChainIdExist) {
+      debouncedFetchChainInfo.cancel();
+    }
+
     return () => {
       debouncedFetchChainInfo.cancel();
     };
-  }, [debouncedFetchChainInfo]);
+  }, [isChainNameExist, isChainIdExist, debouncedFetchChainInfo]);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setHasErrors(false);
@@ -171,7 +176,7 @@ export const AddCosmosChain: FunctionComponent = () => {
       setNewChainInfo({ ...newChainInfo, chainId: value });
     } else if (name === "chainName") {
       setNewChainInfo({ ...newChainInfo, chainName: value });
-      debouncedFetchChainInfo(value);
+      debouncedFetchChainInfo(value, !isChainNameExist && !isChainIdExist);
     } else if (name === "rpc" || name === "rest") {
       setNewChainInfo({ ...newChainInfo, [name]: value });
     } else if (name === "prefix") {
@@ -249,8 +254,9 @@ export const AddCosmosChain: FunctionComponent = () => {
     newChainInfo.rest &&
     newChainInfo.chainId &&
     newChainInfo.stakeCurrency.coinDenom &&
-    newChainInfo.stakeCurrency.coinDecimals;
-  !hasErrors && !isChainIdExist && !isChainNameExist;
+    newChainInfo.stakeCurrency.coinDecimals &&
+    !hasErrors &&
+    isChainUnique;
 
   return (
     <HeaderLayout
@@ -271,8 +277,11 @@ export const AddCosmosChain: FunctionComponent = () => {
             isChainNameExist ? "Network with this name already exists." : ""
           }
           formGroupClassName={
-            loadingIndicator.isLoading ? style["formGroupChainId"] : ""
+            loadingIndicator.isLoading
+              ? style["formGroupChainName"]
+              : style["formGroup"]
           }
+          formFeedbackClassName={style["formFeedback"]}
           value={newChainInfo.chainName}
           onChange={handleChange}
           required
@@ -288,6 +297,8 @@ export const AddCosmosChain: FunctionComponent = () => {
           error={
             isChainIdExist ? "Network with this chainId already exists." : ""
           }
+          formGroupClassName={style["formGroup"]}
+          formFeedbackClassName={style["formFeedback"]}
           onChange={handleChange}
           required
         />
@@ -298,9 +309,13 @@ export const AddCosmosChain: FunctionComponent = () => {
           value={newChainInfo.rpc}
           error={
             newChainInfo.rpc !== "" && !isUrlValid(newChainInfo.rpc)
-              ? "Invalid REST URL"
+              ? "Invalid RPC URL"
+              : isRPCExist
+              ? "Network with this RPC URL already exists."
               : ""
           }
+          formGroupClassName={style["formGroup"]}
+          formFeedbackClassName={style["formFeedback"]}
           onChange={handleChange}
           required
         />
@@ -311,9 +326,13 @@ export const AddCosmosChain: FunctionComponent = () => {
           value={newChainInfo.rest}
           error={
             newChainInfo.rest !== "" && !isUrlValid(newChainInfo.rpc)
-              ? "Invalid RPC URL"
+              ? "Invalid REST URL"
+              : isRESTExist
+              ? "Network with this REST URL already exists."
               : ""
           }
+          formGroupClassName={style["formGroup"]}
+          formFeedbackClassName={style["formFeedback"]}
           onChange={handleChange}
           required
         />
@@ -323,6 +342,8 @@ export const AddCosmosChain: FunctionComponent = () => {
           name="prefix"
           value={newChainInfo.bech32Config.bech32PrefixAccAddr}
           onChange={handleChange}
+          formGroupClassName={style["formGroup"]}
+          formFeedbackClassName={style["formFeedback"]}
           required
         />
         <Input
@@ -331,13 +352,16 @@ export const AddCosmosChain: FunctionComponent = () => {
           name="symbol"
           value={newChainInfo.stakeCurrency.coinDenom}
           onChange={handleChange}
+          formGroupClassName={style["formGroup"]}
+          formFeedbackClassName={style["formFeedback"]}
           required
         />
         <Input
-          label="Decimal"
+          label="Decimals"
           type="number"
           name="decimal"
           formGroupClassName={style["formGroupDecimals"]}
+          formFeedbackClassName={style["formFeedback"]}
           value={newChainInfo.stakeCurrency.coinDecimals}
           onChange={handleChange}
           required
