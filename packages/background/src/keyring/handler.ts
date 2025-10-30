@@ -366,7 +366,7 @@ const handleGetKeyMsg: (
 ) => InternalHandler<GetKeyMsg> = (service) => {
   return async (env, msg) => {
     const status = service.keyRingStatus;
-    
+
     if (status === KeyRingStatus.EMPTY) {
       throw new Error("No keys available. Please create a wallet first.");
     }
@@ -400,7 +400,7 @@ const handleGetKeyMsg: (
         chainInfo.bech32Config.bech32PrefixAccAddr
       );
     }
-    
+
     return {
       name: nameByChain?.[msg.chainId] || service.getKeyStoreMeta("name"),
       algo: key.algo || "secp256k1",
@@ -541,7 +541,7 @@ const handleGetMultiKeyStoreInfoMsg: (
     if (service.keyRingStatus === KeyRingStatus.NOTLOADED) {
       await service.restore();
     }
-    
+
     return {
       status: service.keyRingStatus,
       multiKeyStoreInfo: service.getMultiKeyStoreInfo(),
@@ -604,8 +604,10 @@ const handleChangeKeyNameMsg: (
   return async (env, msg) => {
     // Ensure that keyring is unlocked and selected.
     // Don't call enable() if wallet is empty or status is undefined to avoid "key doesn't exist" errors
-    if (service.keyRingStatus !== KeyRingStatus.EMPTY && 
-        service.keyRingStatus !== undefined) {
+    if (
+      service.keyRingStatus !== KeyRingStatus.EMPTY &&
+      service.keyRingStatus !== undefined
+    ) {
       await service.enable(env);
     }
 
@@ -674,8 +676,10 @@ const handleUnlockWallet: (
 ) => InternalHandler<UnlockWalletMsg> = (service) => {
   return async (env, _) => {
     // Don't call enable() if wallet is empty or status is undefined to avoid "key doesn't exist" errors
-    if (service.keyRingStatus !== KeyRingStatus.EMPTY && 
-        service.keyRingStatus !== undefined) {
+    if (
+      service.keyRingStatus !== KeyRingStatus.EMPTY &&
+      service.keyRingStatus !== undefined
+    ) {
       await service.enable(env);
     }
   };
@@ -739,6 +743,7 @@ const handleListAccountsMsg: (
 ) => InternalHandler<ListAccountsMsg> = (service) => {
   return async (env, msg) => {
     const chainId = await service.chainsService.getSelectedChain();
+
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,
       [chainId],
@@ -746,13 +751,19 @@ const handleListAccountsMsg: (
     );
 
     const keys = await service.getKeys(chainId);
+    console.log(
+      `[ListAccountsMsg] Retrieved ${keys.length} keys for ${chainId}`
+    );
+
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
+    const isCardano = chainInfo.features?.includes("cardano");
+
     const returnData: Account[] = [];
 
-    keys.forEach((key) => {
+    keys.forEach((key, _idx) => {
       let bech32Add: string;
-      if (chainInfo.features?.includes("cardano")) {
+      if (isCardano) {
         if (key.algo === "ed25519") {
           bech32Add = Buffer.from(key.address).toString("utf8");
         } else {
@@ -763,7 +774,7 @@ const handleListAccountsMsg: (
           chainInfo.bech32Config.bech32PrefixAccAddr
         );
       }
-      
+
       returnData.push({
         name: key.name,
         algo: key.algo,
@@ -780,6 +791,13 @@ const handleListAccountsMsg: (
           : "",
       });
     });
+
+    console.log(
+      `[ListAccountsMsg] Returning ${returnData.length} accounts:`,
+      returnData
+        .map((a) => `${a.name}: ${a.bech32Address || a.EVMAddress}`)
+        .join(", ")
+    );
 
     return returnData;
   };
@@ -923,7 +941,7 @@ const handleGetKeyMsgFetchSigning: (
 ) => InternalHandler<GetKeyMsgFetchSigning> = (service) => {
   return async (env, msg) => {
     const status = await service.checkReadiness(env);
-    
+
     if (status === KeyRingStatus.EMPTY) {
       throw new Error("No keys available. Please create a wallet first.");
     }

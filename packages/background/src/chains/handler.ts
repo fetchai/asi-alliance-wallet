@@ -93,7 +93,7 @@ const handleSetSelectedChainMsg: (
   service: ChainsService
 ) => InternalHandler<SetSelectedChainMsg> = (service) => {
   return async (_, msg) => {
-    service.setSelectedChain(msg.chainId);
+    await service.setSelectedChain(msg.chainId);
   };
 };
 

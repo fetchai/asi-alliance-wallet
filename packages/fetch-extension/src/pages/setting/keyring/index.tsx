@@ -21,7 +21,8 @@ import { CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
 
-  const { keyRingStore, analyticsStore, chatStore, proposalStore, chainStore } = useStore();
+  const { keyRingStore, analyticsStore, chatStore, proposalStore, chainStore } =
+    useStore();
   const navigate = useNavigate();
 
   const loadingIndicator = useLoadingIndicator();
@@ -114,7 +115,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
 
           return (
             <PageButton
-              key={i.toString()}
+              key={(keyStore.meta && keyStore.meta["__id__"]) || i.toString()}
               title={`${
                 keyStore.meta?.["name"]
                   ? keyStore.meta["name"]
@@ -138,17 +139,21 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                       try {
                         await keyRingStore.changeKeyRing(i);
                         analyticsStore.logEvent("select_account_click");
-                        
+
                         // Check if current chain is Cardano and new wallet doesn't support it
                         const isCardanoSupportedWallet =
-                          keyStore.type === "mnemonic" && keyStore.meta?.["mnemonicLength"] === "24";
-                        const isCurrentChainCardano = 
+                          keyStore.type === "mnemonic" &&
+                          keyStore.meta?.["mnemonicLength"] === "24";
+                        const isCurrentChainCardano =
                           chainStore.current.chainId === "cardano-preview" ||
                           chainStore.current.chainId === "cardano-mainnet" ||
                           chainStore.current.chainId === "cardano-preprod";
-                        
+
                         // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
-                        if (isCurrentChainCardano && !isCardanoSupportedWallet) {
+                        if (
+                          isCurrentChainCardano &&
+                          !isCardanoSupportedWallet
+                        ) {
                           chainStore.selectChain(CHAIN_ID_FETCHHUB);
                           chainStore.saveLastViewChainId();
                         }
@@ -162,7 +167,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                         messageAndGroupListenerUnsubscribe();
                         navigate("/");
                       } catch (e: any) {
-                        console.log(`Failed to change keyring: ${e.message}`);
+                        console.warn(`Failed to change keyring: ${e.message}`);
                         loadingIndicator.setIsLoading("keyring", false);
                       }
                     }

@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { ChainStore } from "./chain";
 import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
 import { KeyRingStatus } from "@keplr-wallet/background";
+import { setCacheManager } from "@keplr-wallet/common";
+import { addressCacheStore } from "../utils/address-cache-store";
 import {
   AmplitudeApiKey,
   CoinGeckoAPIEndPoint,
@@ -71,6 +74,8 @@ import { FeeType } from "@keplr-wallet/hooks";
 import { AnalyticsStore, NoopAnalyticsClient } from "@keplr-wallet/analytics";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { ExtensionAnalyticsClient } from "../analytics";
+import { autorun } from "mobx";
+import { AddressCacheById } from "../utils/address-cache-store";
 
 export class RootStore {
   public readonly uiConfigStore: UIConfigStore;
@@ -107,7 +112,13 @@ export class RootStore {
     ]
   >;
   public readonly accountStore: AccountStore<
-    [CosmosAccount, CosmwasmAccount, SecretAccount, EthereumAccount, CardanoAccount]
+    [
+      CosmosAccount,
+      CosmwasmAccount,
+      SecretAccount,
+      EthereumAccount,
+      CardanoAccount
+    ]
   >;
   public readonly priceStore: CoinGeckoPriceStore;
   public readonly tokensStore: TokensStore<ChainInfoWithCoreTypes>;
@@ -195,6 +206,34 @@ export class RootStore {
       {
         dispatchEvent: (type: string) => {
           window.dispatchEvent(new Event(type));
+          if (
+            type === "fetchwallet_walletstatuschange" ||
+            type === "keplr_walletstatuschange"
+          ) {
+            try {
+              const currentStatus = (this.keyRingStore as any).status;
+              const lastStatus = (this as any)._lastWalletStatus;
+              const isLockUnlockTransition =
+                lastStatus !== currentStatus &&
+                (currentStatus === 1 /* KeyRingStatus.LOCKED */ ||
+                  currentStatus === 2) /* KeyRingStatus.UNLOCKED */ &&
+                (lastStatus === 1 || lastStatus === 2);
+
+              (this as any)._lastWalletStatus = currentStatus;
+
+              if (isLockUnlockTransition) {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const {
+                  addressCacheStore,
+                } = require("../utils/address-cache-store");
+                addressCacheStore.clearAllCaches();
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                (this.keyRingStore as any).refreshMultiKeyStoreInfo();
+              }
+            } catch (e) {
+              // no-op
+            }
+          }
         },
       },
       "scrypt",
@@ -211,6 +250,18 @@ export class RootStore {
       this.interactionStore,
       new InExtensionMessageRequester()
     );
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("keplr_keystorechange", () => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { addressCacheStore } = require("../utils/address-cache-store");
+          addressCacheStore.clearAllCaches();
+        } catch {
+          // no-op
+        }
+      });
+    }
     this.generalPermissionStore = new GeneralPermissionStore(
       this.interactionStore,
       new InExtensionMessageRequester()
@@ -257,6 +308,78 @@ export class RootStore {
     );
 
     this.accountBaseStore = new ExtensionKVStore("store_account_config");
+
+    autorun(async () => {
+      const walletIds = this.keyRingStore.multiKeyStoreInfo.map(
+        (ks) => ks.meta?.["__id__"] || ""
+      );
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { addressCacheStore } = require("../utils/address-cache-store");
+
+      const currentSet = new Set(walletIds.filter(Boolean));
+
+      if (!(this as any)._lastWalletIds) {
+        (this as any)._lastWalletIds = new Set(currentSet);
+        return;
+      }
+
+      const lastWalletIds = (this as any)._lastWalletIds;
+      const hasWalletListChanged =
+        currentSet.size !== lastWalletIds.size ||
+        !Array.from(currentSet).every((id) => lastWalletIds.has(id));
+
+      if (!hasWalletListChanged) {
+        return;
+      }
+
+      const allChainIds = Object.keys(addressCacheStore.getAllCaches());
+
+      for (const chainId of allChainIds) {
+        await addressCacheStore.atomicCacheUpdate(
+          chainId,
+          (currentCache: AddressCacheById) => {
+            const newCache = { ...currentCache };
+
+            for (const id of currentSet) {
+              if (!lastWalletIds.has(id) && !newCache[id]) {
+                newCache[id] = "";
+              }
+            }
+
+            for (const id of lastWalletIds) {
+              if (!currentSet.has(id)) {
+                delete newCache[id];
+              }
+            }
+
+            return { newCache, result: newCache };
+          }
+        );
+      }
+
+      (this as any)._lastWalletIds = new Set(currentSet);
+    });
+
+    // This prevents showing incorrect addresses due to format differences
+    autorun(() => {
+      const currentChain = this.chainStore.current;
+      const isEvm = currentChain.features?.includes("evm") ?? false;
+
+      if (!(this as any)._lastChainType) {
+        (this as any)._lastChainType = isEvm;
+        return;
+      }
+
+      const lastChainType = (this as any)._lastChainType;
+      const hasChainTypeChanged = lastChainType !== isEvm;
+
+      if (hasChainTypeChanged) {
+        const { addressCacheStore } = require("../utils/address-cache-store");
+        addressCacheStore.clearAllCaches();
+      }
+
+      (this as any)._lastChainType = isEvm;
+    });
 
     this.accountStore = new AccountStore(
       window,
@@ -417,7 +540,7 @@ export class RootStore {
           setTimeout(initAccountsWhenReady, 100);
         }
       };
-      
+
       initAccountsWhenReady();
     } else {
       // When the unlock request sent from external webpage,
@@ -519,5 +642,7 @@ export class RootStore {
 }
 
 export function createRootStore() {
+  setCacheManager(addressCacheStore);
+
   return new RootStore();
 }
