@@ -32,7 +32,7 @@ import { computed, flow, makeObservable, observable, runInAction } from "mobx";
 import { InteractionStore } from "./interaction";
 import { ChainGetter } from "../common";
 import { BIP44 } from "@keplr-wallet/types";
-import { toGenerator } from "@keplr-wallet/common";
+import { toGenerator, getCacheManager } from "@keplr-wallet/common";
 import { CardanoKeyRing } from "@keplr-wallet/cardano";
 
 export class KeyRingSelectablesStore {
@@ -406,6 +406,12 @@ export class KeyRingStore {
     this._status = result.status;
 
     if (this._status === KeyRingStatus.UNLOCKED) {
+      try {
+        getCacheManager().clearAllCaches();
+      } catch (e: any) {
+        console.warn("Failed to clear frontend cache on unlock:", e?.message);
+      }
+
       // Refresh multiKeyStoreInfo after unlock
       const refreshed = (yield* toGenerator(
         this.requester.sendMessage(
@@ -430,6 +436,14 @@ export class KeyRingStore {
   @flow
   *rejectAll() {
     yield this.interactionStore.rejectAll("unlock");
+  }
+
+  @flow
+  *refreshMultiKeyStoreInfo() {
+    const result = (yield* toGenerator(
+      this.requester.sendMessage(BACKGROUND_PORT, new GetMultiKeyStoreInfoMsg())
+    )) as { multiKeyStoreInfo: MultiKeyStoreInfoWithSelected };
+    this._multiKeyStoreInfo = result.multiKeyStoreInfo;
   }
 
   @flow
