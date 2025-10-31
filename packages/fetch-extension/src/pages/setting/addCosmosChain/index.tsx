@@ -38,12 +38,7 @@ export const AddCosmosChain: FunctionComponent = () => {
 
   const isRPCExist = chainList.some((chain) => chain.rpc === newChainInfo.rpc);
 
-  const isRESTExist = chainList.some(
-    (chain) => chain.rest === newChainInfo.rest
-  );
-
-  const isChainUnique =
-    !isChainIdExist && !isChainNameExist && !isRPCExist && !isRESTExist;
+  const isChainUnique = !isChainNameExist && !isRPCExist && !isChainIdExist;
 
   const isUrlValid = (url: string) => {
     try {
@@ -134,7 +129,6 @@ export const AddCosmosChain: FunctionComponent = () => {
 
         setInfo("We've fetched information based on provided network name.");
       } catch (err) {
-        console.error("Failed to fetch chain info:", err);
         setInfo("Could not fetch chain details. Please fill manually.");
       } finally {
         loadingIndicator.setIsLoading("chain-details", false);
@@ -241,7 +235,6 @@ export const AddCosmosChain: FunctionComponent = () => {
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new Cosmos chain",
       });
-      setInfo("Cosmos chain added successfully");
     } catch (error) {
       console.error(error);
       setInfo("Error adding chain.");
@@ -325,10 +318,8 @@ export const AddCosmosChain: FunctionComponent = () => {
           name="rest"
           value={newChainInfo.rest}
           error={
-            newChainInfo.rest !== "" && !isUrlValid(newChainInfo.rpc)
+            newChainInfo.rest !== "" && !isUrlValid(newChainInfo.rest)
               ? "Invalid REST URL"
-              : isRESTExist
-              ? "Network with this REST URL already exists."
               : ""
           }
           formGroupClassName={style["formGroup"]}
