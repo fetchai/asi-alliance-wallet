@@ -11,6 +11,7 @@ import { ToolTip } from "@components/tooltip";
 import classNames from "classnames";
 import { GithubIcon, InformationCircleOutline } from "@components/icon";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { useLoadingIndicator } from "@components/loading-indicator";
 
 export const ChainSuggestedPage: FunctionComponent = observer(() => {
   const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
@@ -18,6 +19,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
   const [updateFromRepoDisabled, setUpdateFromRepoDisabled] = useState(false);
   const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
   const navigate = useNavigate();
+  const loadingIndicator = useLoadingIndicator();
 
   const interactionInfo = useInteractionInfo(() => {
     chainSuggestStore.rejectAll();
@@ -392,9 +394,11 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                     ...chainInfo,
                     updateFromRepoDisabled,
                   });
+                  loadingIndicator.setIsLoading("chain-switch", true);
                   chainStore.selectChain(chainInfo.chainId);
                   chainStore.saveLastViewChainId();
                   analyticsStore.logEvent("approve_click");
+                  loadingIndicator.setIsLoading("chain-switch", false);
                 }
 
                 if (

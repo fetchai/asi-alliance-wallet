@@ -15,6 +15,7 @@ import style from "./chain-list.module.scss";
 import { getFilteredChainValues } from "@utils/filters";
 import { NotificationOption } from "@components-v2/notification-option";
 import { NoResults } from "@components-v2/no-results";
+import { useLoadingIndicator } from "@components/loading-indicator";
 interface ChainListProps {
   showAddress?: boolean;
   setIsSelectNetOpen?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -37,6 +38,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const intl = useIntl();
     const navigate = useNavigate();
     const confirm = useConfirm();
+    const loadingIndicator = useLoadingIndicator();
 
     const mainChainList = chainStore.chainInfosInUI.filter(
       (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
@@ -203,7 +205,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                           ),
                         })
                       ) {
+                        loadingIndicator.setIsLoading("remove-chain", true);
                         await chainStore.removeChainInfo(chainInfo.chainId);
+                        loadingIndicator.setIsLoading("remove-chain", false);
                       }
                     }}
                     onClick={() => {
