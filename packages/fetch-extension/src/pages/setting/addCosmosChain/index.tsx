@@ -26,7 +26,7 @@ export const AddCosmosChain: FunctionComponent = () => {
   const [hasErrors, setHasErrors] = useState(false);
   const [autoFetchNetworkDetails, setAutoFetchNetworkDetails] = useState(true);
   const [newChainInfo, setNewChainInfo] = useState(INITIAL_CHAIN_CONFIG);
-  const chainList = chainStore.chainInfosInUI;
+  const chainList = chainStore.chainInfos;
   const isChainIdExist = chainList.some(
     (chain) => chain.chainId === newChainInfo.chainId
   );
