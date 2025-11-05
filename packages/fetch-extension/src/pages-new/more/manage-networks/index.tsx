@@ -43,6 +43,24 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             searchTerm={cosmosSearchTerm}
             valuesArray={mainChainList}
             filterFunction={getFilteredChainValues}
+            midElement={
+              <ButtonV2
+                styleProps={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "48px",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                }}
+                onClick={(e: any) => {
+                  e.preventDefault();
+                  navigate("/setting/addCosmosChain");
+                }}
+                gradientText={""}
+                text="Add custom Cosmos network"
+              />
+            }
             emptyContent={<NoResults styles={{ height: "250px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
@@ -71,24 +89,6 @@ export const ManageNetworks: FunctionComponent = observer(() => {
               />
             )}
           />
-          <div style={{ width: "100%" }}>
-            <ButtonV2
-              styleProps={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "48px",
-                fontSize: "14px",
-                fontWeight: 400,
-              }}
-              onClick={(e: any) => {
-                e.preventDefault();
-                navigate("/setting/addCosmosChain");
-              }}
-              gradientText={""}
-              text="Add custom Cosmos network"
-            />
-          </div>
         </div>
       ),
     },
@@ -101,6 +101,24 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             onSearchTermChange={setEvmSearchTerm}
             valuesArray={evmChainList}
             filterFunction={getFilteredChainValues}
+            midElement={
+              <ButtonV2
+                styleProps={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "48px",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                }}
+                onClick={(e: any) => {
+                  e.preventDefault();
+                  navigate("/setting/addEvmChain");
+                }}
+                gradientText={""}
+                text={"Add custom EVM network"}
+              />
+            }
             emptyContent={<NoResults styles={{ height: "290px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
@@ -129,24 +147,6 @@ export const ManageNetworks: FunctionComponent = observer(() => {
               />
             )}
           />
-          <div style={{ width: "100%" }}>
-            <ButtonV2
-              styleProps={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "48px",
-                fontSize: "14px",
-                fontWeight: 400,
-              }}
-              onClick={(e: any) => {
-                e.preventDefault();
-                navigate("/setting/addEvmChain");
-              }}
-              gradientText={""}
-              text={"Add custom EVM network"}
-            />
-          </div>
         </div>
       ),
     },
