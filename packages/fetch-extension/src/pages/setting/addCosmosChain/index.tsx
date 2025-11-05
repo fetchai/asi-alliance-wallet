@@ -127,7 +127,13 @@ export const AddCosmosChain: FunctionComponent = () => {
           chainSymbolImageUrl: logo,
         }));
 
-        setInfo("We've fetched information based on provided network name.");
+        if (!rpcUrl || !restUrl || !denom || !chainId || !prefix) {
+          setInfo(
+            "Fetched partial chain information. Some details are missing, please verify and fill manually."
+          );
+        } else {
+          setInfo("We've fetched information based on provided network name.");
+        }
       } catch (err) {
         setInfo("Could not fetch chain details. Please fill manually.");
       } finally {
@@ -270,7 +276,7 @@ export const AddCosmosChain: FunctionComponent = () => {
             isChainNameExist ? "Network with this name already exists." : ""
           }
           formGroupClassName={
-            loadingIndicator.isLoading
+            loadingIndicator.isLoading || (!hasErrors && info)
               ? style["formGroupChainName"]
               : style["formGroup"]
           }
@@ -281,6 +287,11 @@ export const AddCosmosChain: FunctionComponent = () => {
         />
         {loadingIndicator.isLoading && (
           <p className={style["infoMessage"]}>Fetching chain details...</p>
+        )}
+        {!hasErrors && info && (
+          <p className={style["infoMessage"]} style={{ marginTop: "0px" }}>
+            {info}
+          </p>
         )}
         <Input
           label="Chain ID"
@@ -363,7 +374,8 @@ export const AddCosmosChain: FunctionComponent = () => {
           }`}
         >
           <span className={style["select-item-label"]}>
-            Automatically fetch network details
+            Automatically fetch network details{" "}
+            <em>(may not be available for all networks)</em>
           </span>
           <label className={style["select-checkbox-wrapper"]}>
             <input
@@ -378,7 +390,7 @@ export const AddCosmosChain: FunctionComponent = () => {
             <span className={style["select-checkbox"]} />
           </label>
         </div>
-        {info && <p className={style["infoMessage"]}>{info}</p>}
+        {hasErrors && info && <p className={style["infoMessage"]}>{info}</p>}
         <ButtonV2
           variant="dark"
           styleProps={{

@@ -53,17 +53,15 @@
 .select-item {
   display: flex;
   align-items: center;
+  flex-direction: row-reverse;
   gap: 12px;
   border-radius: 6px;
   cursor: pointer;
 }
 
 .select-item-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 14px;
   color: $font-secondary;
-  white-space: nowrap;
 }
 
 .select-checkbox-wrapper {
