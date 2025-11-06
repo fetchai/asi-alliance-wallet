@@ -17,10 +17,12 @@ import axios from "axios";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { debounce } from "lodash";
 import { INITIAL_CHAIN_CONFIG } from "./constants";
+import { useNotification } from "@components/notification";
 
 export const AddCosmosChain: FunctionComponent = () => {
   const navigate = useNavigate();
   const loadingIndicator = useLoadingIndicator();
+  const notification = useNotification();
   const { chainStore, analyticsStore } = useStore();
   const [info, setInfo] = useState("");
   const [hasErrors, setHasErrors] = useState(false);
@@ -156,6 +158,31 @@ export const AddCosmosChain: FunctionComponent = () => {
     [fetchCosmosChainInfo, autoFetchNetworkDetails]
   );
 
+  const checkEndpointValidity = async (url: string, type: "rpc" | "rest") => {
+    if (!isUrlValid(url)) return false;
+
+    const path =
+      type === "rpc" ? "/status" : "/cosmos/base/tendermint/v1beta1/node_info";
+
+    try {
+      const fullUrl = `${url.replace(/\/$/, "")}${path}`;
+      const res = await axios.get(fullUrl, { timeout: 4000 });
+
+      if (!res || res.status !== 200 || typeof res.data !== "object") {
+        return false;
+      }
+
+      const network =
+        type === "rpc"
+          ? res.data?.result?.node_info?.network
+          : res.data?.default_node_info?.network ||
+            res?.data?.node_info?.network;
+      return typeof network === "string" && network.trim().length > 0;
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     // Cancel any pending call if chain becomes non-unique
     if (!isChainNameExist && !isChainIdExist) {
@@ -236,13 +263,44 @@ export const AddCosmosChain: FunctionComponent = () => {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     try {
+      loadingIndicator.setIsLoading("chain-details-adding", true);
+      // checking if the provided endpoint is a valid rest/rpc url
+      const [isRpcValid, isRestValid] = await Promise.all([
+        checkEndpointValidity(newChainInfo.rpc, "rpc"),
+        checkEndpointValidity(newChainInfo.rest, "rest"),
+      ]);
+
+      if (!isRpcValid || !isRestValid) {
+        const errorMessage = !isRpcValid
+          ? "Invalid RPC URL. Please enter a valid URL"
+          : !isRestValid
+          ? "Invalid REST URL. Please enter a valid URL"
+          : "Invalid REST or RPC URL. Please enter a valid URL";
+        notification.push({
+          type: "danger",
+          placement: "top-center",
+          duration: 5,
+          content: errorMessage,
+          canDelete: true,
+          transition: {
+            duration: 0.25,
+          },
+        });
+        loadingIndicator.setIsLoading("chain-details-adding", false);
+        setHasErrors(true);
+        setInfo(errorMessage);
+        return;
+      }
+
       chainStore.addCustomChainInfo(newChainInfo);
       chainStore.selectChain(newChainInfo.chainId);
+      loadingIndicator.setIsLoading("chain-details-adding", false);
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new Cosmos chain",
       });
     } catch (error) {
       console.error(error);
+      loadingIndicator.setIsLoading("chain-details-adding", false);
       setInfo("Error adding chain.");
       setHasErrors(true);
     }
