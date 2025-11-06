@@ -18,6 +18,7 @@ import { LedgerAppModal } from "./ledger-app-modal";
 import { WalletDetailsView } from "./wallet-details";
 import { WalletOptions } from "./wallet-options";
 import { useLanguage } from "../../languages";
+import { useLoadingIndicator } from "@components/loading-indicator";
 
 export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
@@ -26,6 +27,7 @@ export const MainPage: FunctionComponent = observer(() => {
   const [tokenState, setTokenState] = useState({});
   const intl = useIntl();
   const language = useLanguage();
+  const loadingIndicator = useLoadingIndicator();
   const fiatCurrency = language.fiatCurrency;
   const {
     chainStore,
@@ -91,6 +93,14 @@ export const MainPage: FunctionComponent = observer(() => {
     accountInfo.bech32Address,
     keyRingStore.keyRingType,
   ]);
+
+  // hides the loader after current chain is switched
+  // to the added custom chain from /suggest page
+  useEffect(() => {
+    if (chainStore.selectedChainId === chainStore.current.chainId) {
+      loadingIndicator.setIsLoading("chain-suggest-switch", false);
+    }
+  }, [chainStore.selectedChainId, chainStore.current]);
 
   return (
     <HeaderLayout

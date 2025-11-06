@@ -394,17 +394,17 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                     ...chainInfo,
                     updateFromRepoDisabled,
                   });
-                  loadingIndicator.setIsLoading("chain-switch", true);
+                  loadingIndicator.setIsLoading("chain-suggest-switch", true);
                   chainStore.selectChain(chainInfo.chainId);
                   chainStore.saveLastViewChainId();
                   analyticsStore.logEvent("approve_click");
-                  loadingIndicator.setIsLoading("chain-switch", false);
                 }
 
                 if (
                   interactionInfo.interaction &&
                   !interactionInfo.interactionInternal
                 ) {
+                  loadingIndicator.setIsLoading("chain-suggest-switch", false);
                   window.close();
                 } else {
                   navigate("/");
