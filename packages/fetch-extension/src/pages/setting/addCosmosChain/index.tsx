@@ -306,14 +306,23 @@ export const AddCosmosChain: FunctionComponent = () => {
     }
   };
 
+  const isChainNameValid =
+    /^[a-z0-9-_ ()]+$/i.test(newChainInfo.chainName) &&
+    (newChainInfo.chainName.match(/\(/g)?.length || 0) ===
+      (newChainInfo.chainName.match(/\)/g)?.length || 0);
+  const isChainIdValid = /^[a-z0-9-_]+$/.test(newChainInfo.chainId);
+
   const isValid =
     newChainInfo.rpc &&
     newChainInfo.rest &&
     newChainInfo.chainId &&
     newChainInfo.stakeCurrency.coinDenom &&
     newChainInfo.stakeCurrency.coinDecimals &&
+    newChainInfo.bech32Config.bech32PrefixAccAddr &&
     !hasErrors &&
-    isChainUnique;
+    isChainUnique &&
+    isChainIdValid &&
+    isChainNameValid;
 
   return (
     <HeaderLayout
@@ -331,10 +340,16 @@ export const AddCosmosChain: FunctionComponent = () => {
           type="text"
           name="chainName"
           error={
-            isChainNameExist ? "Network with this name already exists." : ""
+            isChainNameExist
+              ? "Network with this name already exists."
+              : !isChainNameValid && newChainInfo.chainName !== ""
+              ? "Invalid chain name. Use only letters, numbers and basic symbols."
+              : ""
           }
           formGroupClassName={
-            loadingIndicator.isLoading || (!hasErrors && info)
+            loadingIndicator.isLoading ||
+            (!hasErrors && info) ||
+            (!isChainNameValid && newChainInfo.chainName !== "")
               ? style["formGroupChainName"]
               : style["formGroup"]
           }
@@ -357,7 +372,11 @@ export const AddCosmosChain: FunctionComponent = () => {
           name="chainId"
           value={newChainInfo.chainId}
           error={
-            isChainIdExist ? "Network with this chainId already exists." : ""
+            isChainIdExist
+              ? "Network with this chainId already exists."
+              : !isChainIdValid && newChainInfo.chainId !== ""
+              ? "Please enter a valid chain ID using only lowercase letters, numbers, and hyphen."
+              : ""
           }
           formGroupClassName={style["formGroup"]}
           formFeedbackClassName={style["formFeedback"]}
