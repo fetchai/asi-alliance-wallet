@@ -209,7 +209,7 @@ export const AddCosmosChain: FunctionComponent = () => {
     } else if (name === "prefix") {
       setNewChainInfo({
         ...newChainInfo,
-        bech32Config: Bech32Address.defaultBech32Config(value),
+        bech32Config: Bech32Address.defaultBech32Config(value.trim()),
       });
     } else if (name === "symbol") {
       setNewChainInfo({
@@ -272,9 +272,9 @@ export const AddCosmosChain: FunctionComponent = () => {
 
       if (!isRpcValid || !isRestValid) {
         const errorMessage = !isRpcValid
-          ? "Invalid RPC URL. Please enter a valid URL"
+          ? "Please enter a valid RPC URL"
           : !isRestValid
-          ? "Invalid REST URL. Please enter a valid URL"
+          ? "Please enter a valid REST URL"
           : "Invalid REST or RPC URL. Please enter a valid URL";
         notification.push({
           type: "danger",
@@ -311,18 +311,21 @@ export const AddCosmosChain: FunctionComponent = () => {
     (newChainInfo.chainName.match(/\(/g)?.length || 0) ===
       (newChainInfo.chainName.match(/\)/g)?.length || 0);
   const isChainIdValid = /^[a-z0-9-_]+$/.test(newChainInfo.chainId);
+  const isValidBech32Prefix = /^[a-z][a-z0-9]{1,15}$/.test(
+    newChainInfo.bech32Config.bech32PrefixAccAddr
+  );
+  const isValidDenom = newChainInfo.stakeCurrency.coinDenom.trim().length > 0;
+
+  const hasValidInputs =
+    isChainIdValid && isChainNameValid && isValidBech32Prefix && isValidDenom;
 
   const isValid =
-    newChainInfo.rpc &&
-    newChainInfo.rest &&
-    newChainInfo.chainId &&
-    newChainInfo.stakeCurrency.coinDenom &&
+    isUrlValid(newChainInfo.rpc) &&
+    isUrlValid(newChainInfo.rest) &&
     newChainInfo.stakeCurrency.coinDecimals &&
-    newChainInfo.bech32Config.bech32PrefixAccAddr &&
     !hasErrors &&
     isChainUnique &&
-    isChainIdValid &&
-    isChainNameValid;
+    hasValidInputs;
 
   return (
     <HeaderLayout
@@ -339,11 +342,16 @@ export const AddCosmosChain: FunctionComponent = () => {
           label="Network Name"
           type="text"
           name="chainName"
+          text={
+            !loadingIndicator.isLoading
+              ? "The network name may automatically update based on registry data."
+              : ""
+          }
           error={
             isChainNameExist
               ? "Network with this name already exists."
               : !isChainNameValid && newChainInfo.chainName !== ""
-              ? "Invalid chain name. Use only letters, numbers and basic symbols."
+              ? "Please enter valid name. Use only letters, numbers and basic symbols."
               : ""
           }
           formGroupClassName={
@@ -354,6 +362,7 @@ export const AddCosmosChain: FunctionComponent = () => {
               : style["formGroup"]
           }
           formFeedbackClassName={style["formFeedback"]}
+          formTextClassName={style["formFeedback"]}
           value={newChainInfo.chainName}
           onChange={handleChange}
           required
@@ -420,6 +429,12 @@ export const AddCosmosChain: FunctionComponent = () => {
           type="text"
           name="prefix"
           value={newChainInfo.bech32Config.bech32PrefixAccAddr}
+          error={
+            !isValidBech32Prefix &&
+            newChainInfo.bech32Config.bech32PrefixAccAddr
+              ? "Please enter a valid address prefix"
+              : ""
+          }
           onChange={handleChange}
           formGroupClassName={style["formGroup"]}
           formFeedbackClassName={style["formFeedback"]}
@@ -430,6 +445,11 @@ export const AddCosmosChain: FunctionComponent = () => {
           type="text"
           name="symbol"
           value={newChainInfo.stakeCurrency.coinDenom}
+          error={
+            !isValidDenom && newChainInfo.stakeCurrency.coinDenom.trim() !== ""
+              ? "Please enter a valid symbol"
+              : ""
+          }
           onChange={handleChange}
           formGroupClassName={style["formGroup"]}
           formFeedbackClassName={style["formFeedback"]}

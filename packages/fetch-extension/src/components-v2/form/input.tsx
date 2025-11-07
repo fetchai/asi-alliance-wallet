@@ -26,6 +26,7 @@ export interface InputProps {
   formGroupClassName?: string;
   inputGroupClassName?: string;
   formFeedbackClassName?: string;
+  formTextClassName?: string;
   floatLabel?: boolean;
 }
 
@@ -39,6 +40,7 @@ export const Input = forwardRef<
     formGroupClassName,
     inputGroupClassName,
     formFeedbackClassName,
+    formTextClassName,
     type,
     label,
     text,
@@ -111,7 +113,7 @@ export const Input = forwardRef<
           {error}
         </FormFeedback>
       ) : text ? (
-        <FormText>{text}</FormText>
+        <FormText className={formTextClassName}>{text}</FormText>
       ) : null}
     </FormGroup>
   );
