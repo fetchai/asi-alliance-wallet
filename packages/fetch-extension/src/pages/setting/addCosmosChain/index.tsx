@@ -137,6 +137,10 @@ export const AddCosmosChain: FunctionComponent = () => {
           setInfo("We've fetched information based on provided network name.");
         }
       } catch (err) {
+        setNewChainInfo({
+          ...INITIAL_CHAIN_CONFIG,
+          chainName,
+        });
         setInfo("Could not fetch chain details. Please fill manually.");
       } finally {
         loadingIndicator.setIsLoading("chain-details", false);
