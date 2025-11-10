@@ -199,6 +199,11 @@ export const AddCosmosChain: FunctionComponent = () => {
     setInfo("");
     const { name, value } = e.target;
 
+    // Prevent spaces in all fields except chainName and decimal
+    if (name !== "chainName" && name !== "decimal" && /\s/.test(value)) {
+      return;
+    }
+
     if (name === "chainId") {
       setNewChainInfo({ ...newChainInfo, chainId: value });
     } else if (name === "chainName") {
@@ -223,14 +228,14 @@ export const AddCosmosChain: FunctionComponent = () => {
           {
             ...newChainInfo.currencies[0],
             coinDenom: value,
-            coinMinimalDenom: value.toLowerCase(),
+            coinMinimalDenom: value.trim().toLowerCase(),
           },
         ],
         feeCurrencies: [
           {
             ...newChainInfo.feeCurrencies[0],
             coinDenom: value,
-            coinMinimalDenom: value.toLowerCase(),
+            coinMinimalDenom: value.trim().toLowerCase(),
           },
         ],
       });
@@ -307,22 +312,29 @@ export const AddCosmosChain: FunctionComponent = () => {
   };
 
   const isChainNameValid =
-    /^[a-z0-9-_ ()]+$/i.test(newChainInfo.chainName) &&
+    /^[a-z0-9-_ ()]{1,64}$/i.test(newChainInfo.chainName) &&
     (newChainInfo.chainName.match(/\(/g)?.length || 0) ===
       (newChainInfo.chainName.match(/\)/g)?.length || 0);
-  const isChainIdValid = /^[a-z0-9-_]+$/.test(newChainInfo.chainId);
+  const isChainIdValid = /^[a-z0-9-_]{3,64}$/.test(newChainInfo.chainId);
   const isValidBech32Prefix = /^[a-z][a-z0-9]{1,15}$/.test(
     newChainInfo.bech32Config.bech32PrefixAccAddr
   );
-  const isValidDenom = newChainInfo.stakeCurrency.coinDenom.trim().length > 0;
+  const isValidDecimals =
+    newChainInfo.stakeCurrency.coinDecimals >= 0 &&
+    newChainInfo.stakeCurrency.coinDecimals <= 18;
+  const denom = newChainInfo.stakeCurrency.coinDenom.trim();
+  const isValidDenom = /^([A-Za-z]{2,10}|ibc\/[A-Fa-f0-9]{32,64})$/.test(denom);
 
   const hasValidInputs =
-    isChainIdValid && isChainNameValid && isValidBech32Prefix && isValidDenom;
+    isChainIdValid &&
+    isChainNameValid &&
+    isValidBech32Prefix &&
+    isValidDenom &&
+    isValidDecimals;
 
   const isValid =
     isUrlValid(newChainInfo.rpc) &&
     isUrlValid(newChainInfo.rest) &&
-    newChainInfo.stakeCurrency.coinDecimals &&
     !hasErrors &&
     isChainUnique &&
     hasValidInputs;
@@ -351,11 +363,11 @@ export const AddCosmosChain: FunctionComponent = () => {
             isChainNameExist
               ? "Network with this name already exists."
               : !isChainNameValid && newChainInfo.chainName !== ""
-              ? "Please enter valid name. Use only letters, numbers and basic symbols."
+              ? "Please enter valid network name. Use only letters, numbers and basic symbols."
               : ""
           }
           formGroupClassName={
-            loadingIndicator.isLoading ||
+            loadingIndicator.isLoading("chain-details") ||
             (!hasErrors && info) ||
             (!isChainNameValid && newChainInfo.chainName !== "")
               ? style["formGroupChainName"]
@@ -367,7 +379,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           onChange={handleChange}
           required
         />
-        {loadingIndicator.isLoading && (
+        {loadingIndicator.isLoading("chain-details") && (
           <p className={style["infoMessage"]}>Fetching chain details...</p>
         )}
         {!hasErrors && info && (
@@ -446,9 +458,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           name="symbol"
           value={newChainInfo.stakeCurrency.coinDenom}
           error={
-            !isValidDenom && newChainInfo.stakeCurrency.coinDenom.trim() !== ""
-              ? "Please enter a valid symbol"
-              : ""
+            !isValidDenom && denom !== "" ? "Please enter a valid symbol" : ""
           }
           onChange={handleChange}
           formGroupClassName={style["formGroup"]}
@@ -462,6 +472,12 @@ export const AddCosmosChain: FunctionComponent = () => {
           formGroupClassName={style["formGroupDecimals"]}
           formFeedbackClassName={style["formFeedback"]}
           value={newChainInfo.stakeCurrency.coinDecimals}
+          error={
+            !isValidDecimals &&
+            newChainInfo.stakeCurrency.coinDecimals !== undefined
+              ? "Please enter a valid integer between 0 and 18"
+              : ""
+          }
           onChange={handleChange}
           required
         />
@@ -499,7 +515,12 @@ export const AddCosmosChain: FunctionComponent = () => {
             fontWeight: 400,
           }}
           disabled={!isValid}
-          text={loadingIndicator.isLoading ? "Loading..." : "Add Chain"}
+          text={
+            loadingIndicator.isLoading("chain-details-adding") ||
+            loadingIndicator.isLoading("chain-details")
+              ? "Loading..."
+              : "Add Chain"
+          }
         />
       </Form>
     </HeaderLayout>
