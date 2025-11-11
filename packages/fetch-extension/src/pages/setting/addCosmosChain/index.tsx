@@ -198,6 +198,15 @@ export const AddCosmosChain: FunctionComponent = () => {
     };
   }, [isChainNameExist, isChainIdExist, debouncedFetchChainInfo]);
 
+  const cleanDecimalInput = (value: string) => {
+    if (value.trim() === "") return "";
+    value = value.replace(/\..*$/, "");
+    value = value.replace(/^0+(?=\d)/, "");
+    if (!/^\d+$/.test(value)) return "";
+    const num = Math.min(Number(value), 18);
+    return num.toString();
+  };
+
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setHasErrors(false);
     setInfo("");
@@ -244,7 +253,9 @@ export const AddCosmosChain: FunctionComponent = () => {
         ],
       });
     } else if (name === "decimal") {
-      const decimals = parseInt(value);
+      const cleanedValue = cleanDecimalInput(value);
+      e.target.value = cleanedValue; // To reflect the change in the input field immediately
+      const decimals = parseInt(cleanedValue);
       setNewChainInfo({
         ...newChainInfo,
         stakeCurrency: {
