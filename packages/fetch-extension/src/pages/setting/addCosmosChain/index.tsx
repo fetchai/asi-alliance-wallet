@@ -139,7 +139,7 @@ export const AddCosmosChain: FunctionComponent = () => {
       } catch (err) {
         setNewChainInfo({
           ...INITIAL_CHAIN_CONFIG,
-          chainName,
+          chainName: newChainInfo.chainName,
         });
         setInfo("Could not fetch chain details. Please fill manually.");
       } finally {
@@ -181,7 +181,11 @@ export const AddCosmosChain: FunctionComponent = () => {
           ? res.data?.result?.node_info?.network
           : res.data?.default_node_info?.network ||
             res?.data?.node_info?.network;
-      return typeof network === "string" && network.trim().length > 0;
+      return (
+        typeof network === "string" &&
+        network.trim().length > 0 &&
+        network.trim() === newChainInfo.chainId
+      );
     } catch {
       return false;
     }
