@@ -54,12 +54,15 @@ export const AddCosmosChain: FunctionComponent = () => {
   const fetchCosmosChainInfo = useCallback(
     async (chainName: string, autoFetch = true) => {
       if (!chainName || !autoFetch) return;
+      const baseName = chainName
+        .replace(/[-\s]/g, "") // remove all hyphens and spaces
+        ?.toLowerCase();
 
       loadingIndicator.setIsLoading("chain-details", true);
 
       try {
         // fetch from chain-registry
-        const registryUrl = `https://raw.githubusercontent.com/cosmos/chain-registry/master/${chainName}/chain.json`;
+        const registryUrl = `https://raw.githubusercontent.com/cosmos/chain-registry/master/${baseName}/chain.json`;
         const { data: registryData } = await axios.get(registryUrl);
 
         if (!registryData) {
@@ -139,7 +142,7 @@ export const AddCosmosChain: FunctionComponent = () => {
       } catch (err) {
         setNewChainInfo({
           ...INITIAL_CHAIN_CONFIG,
-          chainName: newChainInfo.chainName,
+          chainName: chainName,
         });
         setInfo("Could not fetch chain details. Please fill manually.");
       } finally {
@@ -153,11 +156,8 @@ export const AddCosmosChain: FunctionComponent = () => {
   const debouncedFetchChainInfo = useMemo(
     () =>
       debounce((chainName: string, isUnique: boolean) => {
-        const baseName = chainName
-          .replace(/[-\s]/g, "") // remove all hyphens and spaces
-          ?.toLowerCase();
-        if (baseName && autoFetchNetworkDetails && isUnique)
-          fetchCosmosChainInfo(baseName);
+        if (chainName && autoFetchNetworkDetails && isUnique)
+          fetchCosmosChainInfo(chainName);
       }, 2000),
     [fetchCosmosChainInfo, autoFetchNetworkDetails]
   );
