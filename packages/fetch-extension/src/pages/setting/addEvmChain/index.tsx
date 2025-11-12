@@ -247,7 +247,7 @@ export const AddEvmChain: FunctionComponent = () => {
   const handleSubmit = (e: any) => {
     e.preventDefault();
     try {
-      chainStore.addEVMChainInfo(newChainInfo);
+      chainStore.addCustomChainInfo(newChainInfo);
       chainStore.selectChain(newChainInfo.chainId);
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new EVM chain",

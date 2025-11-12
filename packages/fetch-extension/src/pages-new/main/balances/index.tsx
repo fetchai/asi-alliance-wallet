@@ -148,7 +148,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
           <div className={style["inUsd"]}>
             {totalPrice && ` ${totalPrice.toString()} `}
           </div>
-          {tokenState?.diff && (
+          {tokenState?.diff ? (
             <div
               className={` ${
                 tokenState.type === "positive"
@@ -171,6 +171,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
               </div>
               <div className={style["day"]}>{tokenState.time}</div>
             </div>
+          ) : (
+            ""
           )}
         </div>
       ) : (
@@ -203,7 +205,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                 .toString()} ${fiatCurrency.toUpperCase()}`
             )}
           </div>
-          {tokenState?.diff && (
+          {tokenState?.diff ? (
             <div
               className={` ${
                 tokenState.type === "positive"
@@ -226,6 +228,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
               </div>
               <div className={style["day"]}>{tokenState.time}</div>
             </div>
+          ) : (
+            ""
           )}
         </div>
       )}

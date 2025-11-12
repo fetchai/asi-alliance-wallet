@@ -349,6 +349,10 @@ export class ChainUpdaterService {
           }
       >(rpc + "/status");
 
+      if (!statusResponse?.data || typeof statusResponse?.data !== "object") {
+        throw new Error("Invalid or empty response from RPC endpoint");
+      }
+
       if ("result" in statusResponse.data) {
         return statusResponse.data.result.node_info.network;
       }

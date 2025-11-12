@@ -1,0 +1,99 @@
+@import "../../../styles/var";
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  label {
+    color: $font-secondary;
+  }
+  input:read-only {
+    background: rgba(255, 255, 255, 0.1);
+    color: $font-dark;
+  }
+}
+
+.formFeedback {
+  margin-top: 0px !important;
+  position: relative !important;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.formGroupChainName {
+  margin-bottom: 0rem;
+}
+
+.formGroupDecimals {
+  margin-bottom: 0.5rem;
+}
+
+.info {
+  color: green;
+}
+
+.infoMessage {
+  color: $font-secondary;
+  font-size: 12px;
+  margin: 4px 0px;
+}
+
+.inputField,
+.inputField:focus {
+  display: flex;
+  padding: 12px 18px;
+  align-items: center;
+  align-self: stretch;
+  border-radius: 12px;
+  color: $font-dark;
+}
+
+.select-item {
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.select-item-label {
+  font-size: 14px;
+  color: $font-secondary;
+}
+
+.select-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0px;
+}
+
+.select-checkbox-wrapper input {
+  display: none;
+}
+
+.select-checkbox {
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+.select-item.selected .select-checkbox {
+  background: $bg-green-dark;
+  border-color: $bg-green-dark;
+}
+
+.select-item.selected .select-checkbox:after {
+  content: "✔";
+  display: block;
+  font-size: 12px;
+  color: white;
+  text-align: center;
+  line-height: 18px;
+}

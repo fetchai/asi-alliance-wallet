@@ -51,6 +51,14 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     return currTime - prevUpdatedAt < 10 * 60 * 1000;
   };
 
+  const formatPrice = (price: any) => {
+    if (price == null || isNaN(price)) return "-";
+    if (price < 0.000001) return price.toExponential(2);
+
+    const fixed = price.toFixed(6);
+    return parseFloat(fixed).toString();
+  };
+
   useEffect(() => {
     const fetchPrices = async () => {
       setLoading(true);
@@ -190,7 +198,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
                           (item) =>
                             item.currency === chartData.datasets[0].vsCurrency
                         )?.symbol;
-                        return `${currencySymbol}${value}`;
+                        return `${currencySymbol}${formatPrice(value)}`;
                       }
                       return "";
                     },
