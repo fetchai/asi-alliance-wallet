@@ -19,6 +19,11 @@ import { debounce } from "lodash";
 import { INITIAL_CHAIN_CONFIG } from "./constants";
 import { useNotification } from "@components/notification";
 
+type EndpointCheckResult = {
+  valid: boolean;
+  reason?: string;
+};
+
 export const AddCosmosChain: FunctionComponent = () => {
   const navigate = useNavigate();
   const loadingIndicator = useLoadingIndicator();
@@ -162,8 +167,11 @@ export const AddCosmosChain: FunctionComponent = () => {
     [fetchCosmosChainInfo, autoFetchNetworkDetails]
   );
 
-  const checkEndpointValidity = async (url: string, type: "rpc" | "rest") => {
-    if (!isUrlValid(url)) return false;
+  const checkEndpointValidity = async (
+    url: string,
+    type: "rpc" | "rest"
+  ): Promise<EndpointCheckResult> => {
+    if (!isUrlValid(url)) return { valid: false, reason: "URL is invalid" };
 
     const path =
       type === "rpc" ? "/status" : "/cosmos/base/tendermint/v1beta1/node_info";
@@ -173,21 +181,30 @@ export const AddCosmosChain: FunctionComponent = () => {
       const res = await axios.get(fullUrl, { timeout: 4000 });
 
       if (!res || res.status !== 200 || typeof res.data !== "object") {
-        return false;
+        return { valid: false, reason: "Endpoint not reachable" };
       }
+
+      const expectedChainId = newChainInfo.chainId;
 
       const network =
         type === "rpc"
           ? res.data?.result?.node_info?.network
           : res.data?.default_node_info?.network ||
-            res?.data?.node_info?.network;
-      return (
-        typeof network === "string" &&
-        network.trim().length > 0 &&
-        network.trim() === newChainInfo.chainId
-      );
+            res.data?.node_info?.network;
+
+      if (!network)
+        return { valid: false, reason: "Endpoint did not return network info" };
+
+      if (network.trim() !== expectedChainId) {
+        return {
+          valid: false,
+          reason: `Endpoint network (${network}) does not match the provided chain ID (${expectedChainId})`,
+        };
+      }
+
+      return { valid: true };
     } catch {
-      return false;
+      return { valid: false, reason: "Endpoint unreachable or request failed" };
     }
   };
 
@@ -289,33 +306,34 @@ export const AddCosmosChain: FunctionComponent = () => {
     try {
       loadingIndicator.setIsLoading("chain-details-adding", true);
       // checking if the provided endpoint is a valid rest/rpc url
-      const [isRpcValid, isRestValid] = await Promise.all([
+      const [rpcResult, restResult] = await Promise.all([
         checkEndpointValidity(newChainInfo.rpc, "rpc"),
         checkEndpointValidity(newChainInfo.rest, "rest"),
       ]);
 
-      if (!isRpcValid || !isRestValid) {
-        const errorMessage = !isRpcValid
-          ? "Please enter a valid RPC URL"
-          : !isRestValid
-          ? "Please enter a valid REST URL"
-          : "Invalid REST or RPC URL. Please enter a valid URL";
+      const errors = [];
+      if (!rpcResult.valid) errors.push(`RPC: ${rpcResult.reason}`);
+      if (!restResult.valid) errors.push(`REST: ${restResult.reason}`);
+
+      errors.forEach((err) =>
         notification.push({
           type: "danger",
           placement: "top-center",
           duration: 5,
-          content: errorMessage,
+          content: err,
           canDelete: true,
-          transition: {
-            duration: 0.25,
-          },
-        });
-        loadingIndicator.setIsLoading("chain-details-adding", false);
+          transition: { duration: 0.25 },
+        })
+      );
+
+      if (errors.length > 0) {
         setHasErrors(true);
-        setInfo(errorMessage);
+        setInfo(
+          "Invalid REST or RPC endpoint. Please provide a valid endpoint."
+        );
+        loadingIndicator.setIsLoading("chain-details-adding", false);
         return;
       }
-
       chainStore.addCustomChainInfo(newChainInfo);
       chainStore.selectChain(newChainInfo.chainId);
       loadingIndicator.setIsLoading("chain-details-adding", false);
