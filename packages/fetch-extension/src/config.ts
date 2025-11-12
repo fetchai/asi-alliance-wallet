@@ -614,7 +614,7 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "umars",
       coinDecimals: 6,
       coinImageUrl:
-        "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-protocol.png",
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -639,7 +639,7 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "umars",
         coinDecimals: 6,
         coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-protocol.png",
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
       },
     ],
     feeCurrencies: [
@@ -647,8 +647,9 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "MARS",
         coinMinimalDenom: "umars",
         coinDecimals: 6,
+        coinGeckoId: "mars-protocol-a7fcbcfb-fd61-4017-92f0-7ee9f9cc6da3",
         coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-protocol.png",
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
         gasPriceStep: {
           low: 0,
           average: 0,
@@ -658,7 +659,7 @@ const EmbedChainInfos: ChainInfo[] = [
     ],
     features: [],
     chainSymbolImageUrl:
-      "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-protocol.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
   },
   {
     rpc: "https://rpc-crypto-org.keplr.app",

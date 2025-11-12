@@ -7,6 +7,8 @@ import {
 } from "../config.ui.var";
 import { formatAddress } from "./format";
 import { GroupEvent } from "./group-events";
+import { MultiKeyStoreInfoWithSelected } from "@keplr-wallet/background";
+import { RegisterMode } from "@keplr-wallet/hooks";
 
 // translate the contact address into the address book name if it exists
 export function getUserName(
@@ -57,6 +59,44 @@ export function getEventMessage(
 
   return eventMessage;
 }
+
+export const validateWalletName = (
+  value: string,
+  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  registerConfigMode?: RegisterMode
+) => {
+  const alreadyImportedWalletNames = [
+    ...new Set(
+      multiKeyStoreInfo?.flatMap((item) => {
+        const defaultName = item?.meta?.["name"];
+        const chainNames = item?.meta?.["nameByChain"]
+          ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+          : [];
+        return [defaultName, ...chainNames].filter(Boolean);
+      }) ?? []
+    ),
+  ];
+
+  let nameAlreadyExists = false;
+
+  // if create mode then wallet list is empty
+  if (!registerConfigMode || registerConfigMode !== "create") {
+    nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+  }
+
+  // Allow only alphanumeric and basic symbols
+  const allowedPattern = /^[a-zA-Z0-9 @_\-\.\(\)]*$/;
+  const isValidFormat = allowedPattern.test(value);
+
+  const containsLetterOrNumber = /[a-zA-Z0-9]/.test(value);
+
+  return {
+    isValidFormat,
+    nameAlreadyExists,
+    containsLetterOrNumber,
+    isValid: isValidFormat && !nameAlreadyExists && containsLetterOrNumber,
+  };
+};
 
 export function isFeatureAvailable(chainId: string): boolean {
   return [
