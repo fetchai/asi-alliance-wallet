@@ -1,18 +1,24 @@
-import { Rewards } from "./types";
-import { KVStore } from "@keplr-wallet/common";
 import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
-import { ChainGetter } from "../../../common";
-import { computed, makeObservable } from "mobx";
-import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
+  DistributionExtension,
+  setupDistributionExtension,
+} from "@cosmjs/stargate";
+import { KVStore } from "@keplr-wallet/common";
 import { Currency } from "@keplr-wallet/types";
-import { StoreUtils } from "../../../common";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
+import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
+import {
+  ChainGetter,
+  ObservableQueryMap,
+  ObservableQueryTendermint,
+  StoreUtils,
+} from "../../../common";
+import { QueryDelegationTotalRewardsResponse } from "cosmjs-types/cosmos/distribution/v1beta1/query";
 
-export class ObservableQueryRewardsInner extends ObservableChainQuery<Rewards> {
+export class ObservableQueryRewardsInner extends ObservableQueryTendermint<QueryDelegationTotalRewardsResponse> {
   protected bech32Address: string;
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
   constructor(
     kvStore: KVStore,
@@ -20,15 +26,44 @@ export class ObservableQueryRewardsInner extends ObservableChainQuery<Rewards> {
     chainGetter: ChainGetter,
     bech32Address: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as DistributionExtension;
+        const result = await client.distribution.delegationTotalRewards(
+          bech32Address
+        );
+        // Convert string amounts to dec here itself for safety
+        const converted = {
+          rewards: result?.rewards?.map((r) => ({
+            ...r,
+            reward: r.reward?.map((coin) => ({
+              ...coin,
+              amount: new Dec(
+                coin.amount,
+                chainInfo?.currencies?.[0]?.coinDecimals
+              ).toString(),
+            })),
+          })),
+          total: result?.total?.map((coin) => ({
+            ...coin,
+            amount: new Dec(
+              coin.amount,
+              chainInfo?.currencies?.[0]?.coinDecimals
+            ).toString(),
+          })),
+        };
+        return converted;
+      },
+      setupDistributionExtension,
       `/cosmos/distribution/v1beta1/delegators/${bech32Address}/rewards`
     );
     makeObservable(this);
-
+    this.chainId = chainId;
     this.bech32Address = bech32Address;
+    this.chainGetter = chainGetter;
   }
 
   protected override canFetch(): boolean {
@@ -75,7 +110,7 @@ export class ObservableQueryRewardsInner extends ObservableChainQuery<Rewards> {
       }, {});
 
       const reward = this.response?.data.rewards?.find((r) => {
-        return r.validator_address === validatorAddress;
+        return r.validatorAddress === validatorAddress;
       });
 
       return StoreUtils.getBalancesFromCurrencies(
@@ -100,7 +135,7 @@ export class ObservableQueryRewardsInner extends ObservableChainQuery<Rewards> {
       const chainInfo = this.chainGetter.getChain(this.chainId);
 
       const reward = this.response?.data.rewards?.find((r) => {
-        return r.validator_address === validatorAddress;
+        return r.validatorAddress === validatorAddress;
       });
 
       return StoreUtils.getBalanceFromCurrency(
@@ -151,7 +186,7 @@ export class ObservableQueryRewardsInner extends ObservableChainQuery<Rewards> {
       }, {});
 
       const reward = this.response?.data.rewards?.find((r) => {
-        return r.validator_address === validatorAddress;
+        return r.validatorAddress === validatorAddress;
       });
 
       return StoreUtils.getBalancesFromCurrencies(
@@ -174,7 +209,7 @@ export class ObservableQueryRewardsInner extends ObservableChainQuery<Rewards> {
         for (const r of reward.reward) {
           const dec = new Dec(r.amount);
           if (dec.truncate().gt(new Int(0))) {
-            result.push(reward.validator_address);
+            result.push(reward.validatorAddress);
             break;
           }
         }
@@ -229,18 +264,18 @@ export class ObservableQueryRewardsInner extends ObservableChainQuery<Rewards> {
           return false;
         })
         .slice(0, maxValiadtors)
-        .map((r) => r.validator_address);
+        .map((r) => r.validatorAddress);
     }
   );
 }
 
-export class ObservableQueryRewards extends ObservableChainQueryMap<Rewards> {
+export class ObservableQueryRewards extends ObservableQueryMap<QueryDelegationTotalRewardsResponse> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (bech32Address: string) => {
+    super((bech32Address: string) => {
       return new ObservableQueryRewardsInner(
         this.kvStore,
         this.chainId,
