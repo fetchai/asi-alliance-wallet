@@ -1,10 +1,14 @@
+import { BankExtension, setupBankExtension } from "@cosmjs/stargate";
 import { DenomHelper, KVStore } from "@keplr-wallet/common";
-import { ChainGetter, QueryResponse } from "../../../common";
-import { computed, makeObservable, override } from "mobx";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { StoreUtils } from "../../../common";
+import { computed, makeObservable, override } from "mobx";
+import {
+  ChainGetter,
+  QueryResponse,
+  StoreUtils,
+  ObservableQueryTendermint,
+} from "../../../common";
 import { BalanceRegistry, ObservableQueryBalanceInner } from "../../balances";
-import { ObservableChainQuery } from "../../chain-query";
 import { Balances } from "./types";
 
 export class ObservableQueryBalanceNative extends ObservableQueryBalanceInner {
@@ -63,10 +67,11 @@ export class ObservableQueryBalanceNative extends ObservableQueryBalanceInner {
   }
 }
 
-export class ObservableQueryCosmosBalances extends ObservableChainQuery<Balances> {
+export class ObservableQueryCosmosBalances extends ObservableQueryTendermint<Balances> {
   protected bech32Address: string;
-
   protected duplicatedFetchCheck: boolean = false;
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
   constructor(
     kvStore: KVStore,
@@ -74,16 +79,22 @@ export class ObservableQueryCosmosBalances extends ObservableChainQuery<Balances
     chainGetter: ChainGetter,
     bech32Address: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as BankExtension;
+        const result = await client.bank.allBalances(bech32Address);
+        return { balances: result };
+      },
+      setupBankExtension,
       `/cosmos/bank/v1beta1/balances/${bech32Address}?pagination.limit=1000`
     );
-
-    this.bech32Address = bech32Address;
-
     makeObservable(this);
+    this.chainId = chainId;
+    this.bech32Address = bech32Address;
+    this.chainGetter = chainGetter;
   }
 
   protected override canFetch(): boolean {
