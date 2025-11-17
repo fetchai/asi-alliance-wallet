@@ -115,7 +115,7 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
     }
 
     // TODO: Use `RatePretty`
-    let quorum = new Dec(paramTally.response.data.tally_params.quorum);
+    let quorum = new Dec(paramTally.response.data.tallyParams.quorum);
     // Multiply 100
     quorum = quorum.mulTruncate(DecUtils.getPrecisionDec(2));
 

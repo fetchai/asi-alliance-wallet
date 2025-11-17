@@ -1,5 +1,10 @@
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQueryTendermint } from "../../../common";
+import {
+  ChainGetter,
+  ObservableQueryTendermint,
+  decodeProposalContent,
+  parseRPCTimestamp,
+} from "../../../common";
 import { computed, makeObservable } from "mobx";
 import { CoinPretty, Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { ObservableQueryGovernance } from "./proposals";
@@ -9,7 +14,6 @@ import {
   QueryTallyResultResponse,
 } from "cosmjs-types/cosmos/gov/v1beta1/query";
 import { ProposalStatus } from "cosmjs-types/cosmos/gov/v1beta1/gov";
-import { decodeProposalContent, parseRPCTimestamp } from "./utils";
 
 export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTallyResultResponse> {
   protected readonly chainGetter: ChainGetter;
