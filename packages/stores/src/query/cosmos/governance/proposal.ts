@@ -1,69 +1,96 @@
-import { ObservableChainQuery } from "../../chain-query";
-import { Proposal, ProposalStatus, ProposalTally } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { ChainGetter, ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
-import { DeepReadonly } from "utility-types";
 import { CoinPretty, Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { ObservableQueryGovernance } from "./proposals";
+import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
+import {
+  QueryProposalResponse,
+  QueryTallyResultResponse,
+} from "cosmjs-types/cosmos/gov/v1beta1/query";
+import { ProposalStatus } from "cosmjs-types/cosmos/gov/v1beta1/gov";
+import { decodeProposalContent, parseRPCTimestamp } from "./utils";
 
-export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally> {
+export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTallyResultResponse> {
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
+
   constructor(
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly _raw: Proposal,
+    protected readonly _raw: QueryProposalResponse["proposal"],
     protected readonly governance: ObservableQueryGovernance
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
+    const proposalId = _raw.proposalId.toString();
     super(
       kvStore,
-      chainId,
-      chainGetter,
-      `/cosmos/gov/v1beta1/proposals/${_raw.proposal_id}/tally`
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as GovExtension;
+        const result = await client.gov.tally(proposalId);
+        return result;
+      },
+      setupGovExtension,
+      `/cosmos/gov/v1beta1/proposals/${proposalId}/tally`
     );
     makeObservable(this);
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
   }
 
   protected override canFetch(): boolean {
     // avoid fetching the endpoint for evm networks
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
-      this.proposalStatus === ProposalStatus.VOTING_PERIOD &&
+      this.proposalStatus === ProposalStatus.PROPOSAL_STATUS_VOTING_PERIOD &&
       !chainInfo?.features?.includes("evm")
     );
   }
 
-  get raw(): DeepReadonly<Proposal> {
+  get raw() {
     return this._raw;
   }
 
   get proposalStatus(): ProposalStatus {
-    switch (this.raw.status) {
-      case "PROPOSAL_STATUS_DEPOSIT_PERIOD":
-        return ProposalStatus.DEPOSIT_PERIOD;
-      case "PROPOSAL_STATUS_VOTING_PERIOD":
-        return ProposalStatus.VOTING_PERIOD;
-      case "PROPOSAL_STATUS_PASSED":
-        return ProposalStatus.PASSED;
-      case "PROPOSAL_STATUS_REJECTED":
-        return ProposalStatus.REJECTED;
-      case "PROPOSAL_STATUS_FAILED":
-        return ProposalStatus.FAILED;
-      default:
-        return ProposalStatus.UNSPECIFIED;
-    }
+    return this.raw.status;
+  }
+
+  get status(): string {
+    return ProposalStatus[this.raw.status];
+  }
+
+  get proposalId(): string {
+    return this.raw.proposalId.toString();
   }
 
   get id(): string {
-    return this.raw.proposal_id;
+    return this.proposalId;
   }
 
   get title(): string {
-    return this.raw.content.title;
+    return decodeProposalContent(this.raw?.content)?.title || "";
   }
 
   get description(): string {
-    return this.raw.content.description;
+    return decodeProposalContent(this.raw?.content)?.description || "";
+  }
+
+  get votingStartTime(): string {
+    return parseRPCTimestamp(this.raw.votingStartTime);
+  }
+
+  get votingEndTime(): string {
+    return parseRPCTimestamp(this.raw.votingEndTime);
+  }
+
+  get submitTime(): string {
+    return parseRPCTimestamp(this.raw.submitTime);
+  }
+
+  get depositEndTime(): string {
+    return parseRPCTimestamp(this.raw.depositEndTime);
   }
 
   @computed
@@ -106,20 +133,18 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
   } {
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
-    if (this.proposalStatus !== ProposalStatus.VOTING_PERIOD) {
+    if (this.proposalStatus !== ProposalStatus.PROPOSAL_STATUS_VOTING_PERIOD) {
       return {
-        yes: new IntPretty(new Int(this.raw.final_tally_result.yes))
+        yes: new IntPretty(new Int(this.raw.finalTallyResult.yes))
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
-        no: new IntPretty(new Int(this.raw.final_tally_result.no))
+        no: new IntPretty(new Int(this.raw.finalTallyResult.no))
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
-        abstain: new IntPretty(new Int(this.raw.final_tally_result.abstain))
+        abstain: new IntPretty(new Int(this.raw.finalTallyResult.abstain))
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
-        noWithVeto: new IntPretty(
-          new Int(this.raw.final_tally_result.no_with_veto)
-        )
+        noWithVeto: new IntPretty(new Int(this.raw.finalTallyResult.noWithVeto))
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
       };
@@ -156,7 +181,7 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
       abstain: new IntPretty(new Int(this.response.data.tally.abstain))
         .moveDecimalPointLeft(stakeCurrency.coinDecimals)
         .maxDecimals(stakeCurrency.coinDecimals),
-      noWithVeto: new IntPretty(new Int(this.response.data.tally.no_with_veto))
+      noWithVeto: new IntPretty(new Int(this.response.data.tally.noWithVeto))
         .moveDecimalPointLeft(stakeCurrency.coinDecimals)
         .maxDecimals(stakeCurrency.coinDecimals),
     };
