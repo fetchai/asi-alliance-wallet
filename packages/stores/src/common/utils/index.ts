@@ -130,7 +130,7 @@ export function decodeProposalContent(content?: Any): any {
 }
 
 export function parseRPCTimestamp(ts: {
-  seconds?: bigint;
+  seconds?: bigint | string;
   nanos?: number;
 }): string {
   if (ts.seconds === undefined) return "";
