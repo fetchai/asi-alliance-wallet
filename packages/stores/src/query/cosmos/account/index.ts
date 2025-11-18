@@ -1,12 +1,17 @@
-import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import {
+  ChainGetter,
+  ObservableQueryTendermint,
+  ObservableQueryMap,
+  camelToSnake,
+} from "../../../common";
 import { AuthAccount } from "./types";
 import { computed, makeObservable } from "mobx";
 import { BaseAccount } from "@keplr-wallet/cosmos";
+import { AuthExtension, setupAuthExtension } from "@cosmjs/stargate";
+import { BaseAccount as BaseAccountCSJ } from "cosmjs-types/cosmos/auth/v1beta1/auth";
+/* eslint-disable-next-line import/no-extraneous-dependencies */
+import { decodePubkey } from "@cosmjs/proto-signing";
 
 interface PubKey {
   "@type": string;
@@ -43,20 +48,49 @@ export enum VestingType {
   Delayed = "/cosmos.vesting.v1beta1.DelayedVestingAccount",
 }
 
-export class ObservableQueryAccountInner extends ObservableChainQuery<AuthAccount> {
+export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthAccount> {
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
   constructor(
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly bech32Address: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as AuthExtension;
+        const result = await client.auth.account(bech32Address);
+        const decodedValue = BaseAccountCSJ.decode(
+          result?.value || new Uint8Array()
+        );
+        const accountInfo = {
+          ...decodedValue,
+          "@type": result?.typeUrl,
+          address: decodedValue.address,
+          pubKey: {
+            "@type": decodedValue.pubKey?.typeUrl,
+            key: decodedValue.pubKey
+              ? decodePubkey(decodedValue.pubKey).value
+              : "",
+          },
+          accountNumber: decodedValue.accountNumber.toString(),
+          sequence: decodedValue.sequence.toString(),
+        };
+
+        return {
+          account: camelToSnake(accountInfo),
+        };
+      },
+      setupAuthExtension,
       `/cosmos/auth/v1beta1/accounts/${bech32Address}`
     );
-
+    this.chainId = chainId;
+    this.bech32Address = bech32Address;
+    this.chainGetter = chainGetter;
     makeObservable(this);
   }
 
@@ -110,17 +144,17 @@ export class ObservableQueryAccountInner extends ObservableChainQuery<AuthAccoun
   }
 }
 
-export class ObservableQueryAccount extends ObservableChainQueryMap<AuthAccount> {
+export class ObservableQueryAccount extends ObservableQueryMap<AuthAccount> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (bech32Address) => {
+    super((bech32Address) => {
       return new ObservableQueryAccountInner(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        kvStore,
+        chainId,
+        chainGetter,
         bech32Address
       );
     });
