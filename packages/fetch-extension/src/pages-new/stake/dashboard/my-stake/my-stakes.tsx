@@ -482,7 +482,7 @@ const DelegateReward: FunctionComponent = observer(() => {
   return (
     <React.Fragment>
       {delegations.map((del) => {
-        const val = validatorsMap.get(del.delegation.validatorAddress);
+        const val = validatorsMap.get(del.delegation.validator_address);
         if (!val) {
           return null;
         }
@@ -502,7 +502,7 @@ const DelegateReward: FunctionComponent = observer(() => {
 
         return parseFloat(rewards.toString().split(" ")[0]) > 0 ? (
           <div
-            key={del.delegation.validatorAddress}
+            key={del.delegation.validator_address}
             className={style["reward-container"]}
           >
             {thumbnail ? (

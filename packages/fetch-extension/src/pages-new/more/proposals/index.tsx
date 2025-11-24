@@ -7,18 +7,17 @@ import { Dropdown } from "@components-v2/dropdown";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { SearchBar } from "@components-v2/search-bar";
 import { HeaderLayout } from "@layouts-v2/header-layout";
-import { fetchProposals, fetchVote } from "@utils/fetch-proposals";
 import { getFilteredProposals } from "@utils/filters";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { ProposalType } from "src/@types/proposal-type";
 import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
 import { ErrorActivity } from "../../activity/error-activity";
-import { NoActivity } from "../../activity/no-activity";
 import { UnsupportedNetwork } from "../../activity/unsupported-network";
 import { GovtProposalRow } from "./proposal-row";
 import style from "./style.module.scss";
 import { NoResults } from "@components-v2/no-results";
+import { type ObservableQueryProposal as ProposalType } from "@keplr-wallet/stores";
+import { Governance } from "@keplr-wallet/stores";
 
 export const proposalOptions = {
   ProposalActive: "PROPOSAL_STATUS_VOTING_PERIOD",
@@ -34,7 +33,7 @@ export const Proposals = observer(() => {
   >("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const { chainStore, accountStore, proposalStore } = useStore();
+  const { chainStore, accountStore, proposalStore, queriesStore } = useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   const current = chainStore.current;
@@ -43,60 +42,57 @@ export const Proposals = observer(() => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isError, setIsError] = useState(false);
   const [proposals, setProposals] = useState<ProposalType[]>([]);
-
+  const queries = queriesStore.get(chainStore.current.chainId);
   const storedProposals = proposalStore.proposals;
 
   // Get proposals
   useEffect(() => {
     (async () => {
       try {
-        // if proposals are available don't fetch from api
+        // if proposals are available don't fetch from query
         if (storedProposals?.allProposals?.length > 0) {
           setProposals(storedProposals.allProposals);
           return;
         }
         setIsLoading(true);
-        const response = await fetchProposals(chainStore.current.chainId);
         const votedProposals: ProposalType[] = [];
-        const allProposals = response.proposals
-          .reverse()
-          .filter(
-            (proposal: any) =>
-              proposal.status !== "PROPOSAL_STATUS_DEPOSIT_PERIOD"
+        await queries.cosmos.queryGovernance.waitFreshResponse();
+        const govProposals = queries.cosmos.queryGovernance.proposals;
+        const allProposals = govProposals.filter(
+          (proposal) =>
+            proposal.proposalStatus !== Governance.ProposalStatus.DEPOSIT_PERIOD
+        );
+        let activeProposals = allProposals.filter((proposal) => {
+          return (
+            proposal.proposalStatus === Governance.ProposalStatus.VOTING_PERIOD
           );
-        let activeProposals = allProposals.filter((proposal: ProposalType) => {
-          return proposal.status === proposalOptions.ProposalActive;
         });
 
-        const promises = activeProposals.map(async (proposal: ProposalType) => {
+        const promises = activeProposals.map(async (proposal) => {
           try {
-            const vote = await fetchVote(
-              proposal.proposal_id,
-              accountInfo.bech32Address,
-              chainStore.current.rest
-            );
-            if (vote.vote.option && vote.vote.option != "Unspecified")
-              return proposal.proposal_id;
+            const vote = queries.cosmos.queryProposalVote.getVote(
+              proposal.id,
+              accountInfo.bech32Address
+            )?.vote;
+            if (vote && vote != "Unspecified") return proposal.id;
           } catch (e) {}
         });
         const voteArray = await Promise.all(promises);
 
-        activeProposals = activeProposals.filter((proposal: ProposalType) => {
-          if (voteArray.indexOf(proposal.proposal_id) != -1) {
+        activeProposals = activeProposals.filter((proposal) => {
+          if (voteArray.indexOf(proposal.id) != -1) {
             votedProposals.push(proposal);
             return false;
           }
           return true;
         });
-        const closedProposals = allProposals.filter(
-          (proposal: ProposalType) => {
-            return (
-              proposal.status === proposalOptions.ProposalPassed ||
-              proposal.status === proposalOptions.ProposalRejected ||
-              proposal.status === proposalOptions.ProposalFailed
-            );
-          }
-        );
+        const closedProposals = allProposals.filter((proposal) => {
+          return (
+            proposal.proposalStatus === Governance.ProposalStatus.PASSED ||
+            proposal.proposalStatus === Governance.ProposalStatus.REJECTED ||
+            proposal.proposalStatus === Governance.ProposalStatus.FAILED
+          );
+        });
         setProposals(allProposals);
         setIsLoading(false);
         proposalStore.setProposalsInStore({
@@ -161,16 +157,37 @@ export const Proposals = observer(() => {
       {isChainIdSupported(current.chainId) ? (
         isError ? (
           <ErrorActivity />
+        ) : isLoading ? (
+          <div className={style["activity-loading"]}>
+            Loading... <i className="fas fa-spinner fa-spin ml-2 mr-2" />
+          </div>
         ) : proposals && Object.keys(proposals).length > 0 ? (
           <GovtProposal
             proposals={proposals}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
           />
-        ) : isLoading ? (
-          <div className={style["activity-loading"]}>Loading Proposals...</div>
         ) : (
-          <NoActivity label="No Activity Yet" />
+          <NoResults
+            styles={{
+              height: "410px",
+              rowGap: "0px",
+            }}
+            contentStyles={{
+              color: "var(--font-dark)",
+              textAlign: "center",
+              fontSize: "24px",
+              lineHeight: "34px",
+              width: "320px",
+            }}
+            icon={
+              <img
+                src={require("@assets/svg/wireframe/no-activity.svg")}
+                style={{ marginBottom: "24px" }}
+                alt=""
+              />
+            }
+          />
         )
       ) : (
         <UnsupportedNetwork chainID={current.chainName} />
@@ -212,19 +229,19 @@ const GovtProposal = ({
         gap: "16px",
       }}
       emptyContent={<NoResults message="No Proposals Found" />}
-      renderResult={(proposal: ProposalType, index) => (
+      renderResult={(proposal, index) => (
         <div
           style={{
             cursor: "pointer",
           }}
           onClick={() => {
-            navigate(`/proposal-detail/${proposal.proposal_id}`);
+            navigate(`/proposal-detail/${proposal.id}`);
             analyticsStore.logEvent("proposal_item_click", {
               pageName: "More",
             });
           }}
         >
-          <GovtProposalRow key={index} proposal={proposal} />
+          <GovtProposalRow key={index} proposal={proposal.raw} />
         </div>
       )}
     />

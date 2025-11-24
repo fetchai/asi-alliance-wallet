@@ -1,5 +1,6 @@
 import { KVStore } from "@keplr-wallet/common";
 import {
+  camelToSnake,
   ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
@@ -9,8 +10,9 @@ import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 import { QueryDelegatorDelegationsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
 import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
+import { Delegation, Delegations } from "./types";
 
-export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<QueryDelegatorDelegationsResponse> {
+export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Delegations> {
   protected bech32Address: string;
   protected duplicatedFetchCheck: boolean = false;
   protected readonly chainGetter: ChainGetter;
@@ -29,7 +31,9 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Q
       async (queryClient) => {
         const client = queryClient as unknown as StakingExtension;
         const result = await client.staking.delegatorDelegations(bech32Address);
-        return result;
+        const decodedResponse =
+          QueryDelegatorDelegationsResponse.toJSON(result);
+        return camelToSnake(decodedResponse) as Delegations;
       },
       setupStakingExtension,
       `/cosmos/staking/v1beta1/delegations/${bech32Address}?pagination.limit=1000`
@@ -55,13 +59,13 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Q
     if (
       !this.response ||
       !this.response.data ||
-      !this.response.data.delegationResponses
+      !this.response.data.delegation_responses
     ) {
       return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
     }
 
     let totalBalance = new Int(0);
-    for (const delegation of this.response.data.delegationResponses) {
+    for (const delegation of this.response.data.delegation_responses) {
       totalBalance = totalBalance.add(new Int(delegation.balance.amount));
     }
 
@@ -76,7 +80,7 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Q
     if (
       !this.response ||
       !this.response.data ||
-      !this.response.data.delegationResponses
+      !this.response.data.delegation_responses
     ) {
       return [];
     }
@@ -85,9 +89,9 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Q
 
     const result = [];
 
-    for (const delegation of this.response.data.delegationResponses) {
+    for (const delegation of this.response.data.delegation_responses) {
       result.push({
-        validatorAddress: delegation.delegation.validatorAddress,
+        validatorAddress: delegation.delegation.validator_address,
         balance: new CoinPretty(
           stakeCurrency,
           new Int(delegation.balance.amount)
@@ -99,16 +103,16 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Q
   }
 
   @computed
-  get delegations(): QueryDelegatorDelegationsResponse["delegationResponses"] {
+  get delegations(): Delegation[] {
     if (
       !this.response ||
       !this.response.data ||
-      !this.response.data.delegationResponses
+      !this.response.data.delegation_responses
     ) {
       return [];
     }
 
-    return this.response.data.delegationResponses;
+    return this.response.data.delegation_responses;
   }
 
   readonly getDelegationTo = computedFn(
@@ -124,7 +128,7 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Q
       }
 
       for (const delegation of delegations) {
-        if (delegation.delegation.validatorAddress === validatorAddress) {
+        if (delegation.delegation.validator_address === validatorAddress) {
           return new CoinPretty(
             stakeCurrency,
             new Int(delegation.balance.amount)
@@ -137,7 +141,7 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Q
   );
 }
 
-export class ObservableQueryDelegations extends ObservableQueryMap<QueryDelegatorDelegationsResponse> {
+export class ObservableQueryDelegations extends ObservableQueryMap<Delegations> {
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly chainId: string,

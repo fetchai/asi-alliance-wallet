@@ -4,12 +4,14 @@ import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { QueryDelegatorUnbondingDelegationsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
 import { computed, makeObservable } from "mobx";
 import {
+  camelToSnake,
   ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
+import { UnbondingDelegation, UnbondingDelegations } from "./types";
 
-export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTendermint<QueryDelegatorUnbondingDelegationsResponse> {
+export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTendermint<UnbondingDelegations> {
   protected bech32Address: string;
   protected readonly chainGetter: ChainGetter;
   protected readonly chainId: string;
@@ -29,7 +31,9 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
         const result = await client.staking.delegatorUnbondingDelegations(
           bech32Address
         );
-        return result;
+        const decodedResponse =
+          QueryDelegatorUnbondingDelegationsResponse.toJSON(result);
+        return camelToSnake(decodedResponse) as UnbondingDelegations;
       },
       setupStakingExtension,
       `/cosmos/staking/v1beta1/delegators/${bech32Address}/unbonding_delegations?pagination.limit=1000`
@@ -56,13 +60,13 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
     if (
       !this.response ||
       !this.response.data ||
-      !this.response.data.unbondingResponses
+      !this.response.data.unbonding_responses
     ) {
       return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
     }
 
     let totalBalance = new Int(0);
-    for (const unbondingDelegation of this.response.data.unbondingResponses) {
+    for (const unbondingDelegation of this.response.data.unbonding_responses) {
       for (const entry of unbondingDelegation.entries) {
         totalBalance = totalBalance.add(new Int(entry.balance));
       }
@@ -89,14 +93,14 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
       const entries = [];
       for (const entry of unbonding.entries) {
         entries.push({
-          creationHeight: new Int(entry.creationHeight),
-          completionTime: entry.completionTime.seconds.toString(),
+          creationHeight: new Int(entry.creation_height),
+          completionTime: entry.completion_time,
           balance: new CoinPretty(stakeCurrency, new Int(entry.balance)),
         });
       }
 
       result.push({
-        validatorAddress: unbonding.validatorAddress,
+        validatorAddress: unbonding.validator_address,
         entries,
       });
     }
@@ -105,20 +109,20 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
   }
 
   @computed
-  get unbondings(): QueryDelegatorUnbondingDelegationsResponse["unbondingResponses"] {
+  get unbondings(): UnbondingDelegation[] {
     if (
       !this.response ||
       !this.response.data ||
-      !this.response.data.unbondingResponses
+      !this.response.data.unbonding_responses
     ) {
       return [];
     }
 
-    return this.response.data.unbondingResponses;
+    return this.response.data.unbonding_responses;
   }
 }
 
-export class ObservableQueryUnbondingDelegations extends ObservableQueryMap<QueryDelegatorUnbondingDelegationsResponse> {
+export class ObservableQueryUnbondingDelegations extends ObservableQueryMap<UnbondingDelegations> {
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly chainId: string,

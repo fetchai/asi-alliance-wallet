@@ -5,7 +5,12 @@ import {
   ObservableQueryGovParamVoting,
 } from "./params";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQueryTendermint } from "../../../common";
+import {
+  camelToSnake,
+  ChainGetter,
+  decodeProposalContent,
+  ObservableQueryTendermint,
+} from "../../../common";
 import { DeepReadonly } from "utility-types";
 import { Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { computedFn } from "mobx-utils";
@@ -13,7 +18,10 @@ import { ObservableQueryProposal } from "./proposal";
 import { ObservableQueryStakingPool } from "../staking";
 import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
 import { ProposalStatus } from "cosmjs-types/cosmos/gov/v1beta1/gov";
-import { QueryProposalsResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
+import {
+  QueryProposalResponse,
+  QueryProposalsResponse,
+} from "cosmjs-types/cosmos/gov/v1beta1/query";
 
 export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryProposalsResponse> {
   @observable.ref
@@ -50,12 +58,6 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
     makeObservable(this);
     this.chainId = chainId;
     this.chainGetter = chainGetter;
-  }
-
-  protected override canFetch(): boolean {
-    // avoid fetching the endpoint for evm networks
-    const chainInfo = this.chainGetter.getChain(this.chainId);
-    return !chainInfo?.features?.includes("evm");
   }
 
   getQueryPool(): DeepReadonly<ObservableQueryStakingPool> {
@@ -131,12 +133,19 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
     const result: ObservableQueryProposal[] = [];
 
     for (const raw of this.response.data.proposals) {
+      const decodedContent = decodeProposalContent(raw.content);
+      const decodedRawResponse = camelToSnake({
+        ...QueryProposalResponse.toJSON({
+          proposal: raw,
+        }).proposal,
+        content: decodedContent,
+      });
       result.push(
         new ObservableQueryProposal(
           this.kvStore,
           this.chainId,
           this.chainGetter,
-          raw,
+          decodedRawResponse,
           this
         )
       );

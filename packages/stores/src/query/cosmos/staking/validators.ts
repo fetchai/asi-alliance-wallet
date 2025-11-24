@@ -1,10 +1,10 @@
 import { BondStatus, Validator } from "./types";
 import { KVStore } from "@keplr-wallet/common";
 import {
+  base64ToBytes,
   ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
-  parseRPCTimestamp,
 } from "../../../common";
 import { computed, makeObservable, observable, runInAction } from "mobx";
 import { ObservableQuery, QueryResponse, camelToSnake } from "../../../common";
@@ -14,7 +14,6 @@ import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import { computedFn } from "mobx-utils";
 import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
 import { QueryValidatorsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
-import { BondStatus as BondStatusCSJ } from "cosmjs-types/cosmos/staking/v1beta1/staking";
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import { decodePubkey } from "@cosmjs/proto-signing";
 
@@ -142,17 +141,22 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
 
     const decimals = this.chainGetter.getChain(this.chainId).currencies[0]
       .coinDecimals;
-    const parsedValidators = this.response.data.validators.map((item) => ({
+    const decodedResponse = QueryValidatorsResponse.toJSON(this.response.data);
+    const parsedValidators = decodedResponse.validators.map((item) => ({
       ...item,
       unbondingHeight: item.unbondingHeight.toString(),
       delegatorShares: new Dec(item.delegatorShares, decimals).toString(),
       consensusPubkey: {
         "@type": item.consensusPubkey?.typeUrl,
         key: item?.consensusPubkey
-          ? decodePubkey(item.consensusPubkey).value
+          ? decodePubkey({
+              ...item.consensusPubkey,
+              value: base64ToBytes(item.consensusPubkey.value),
+            })?.value
           : "",
       },
       commission: {
+        ...item.commission,
         commissionRates: {
           maxRate: new Dec(
             item.commission.commissionRates.maxRate,
@@ -167,10 +171,7 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
             decimals
           ).toString(),
         },
-        updateTime: parseRPCTimestamp(item.commission.updateTime),
       },
-      unbondingTime: parseRPCTimestamp(item.unbondingTime),
-      status: BondStatusCSJ[item.status],
     }));
     return camelToSnake(parsedValidators) as Validator[];
   }

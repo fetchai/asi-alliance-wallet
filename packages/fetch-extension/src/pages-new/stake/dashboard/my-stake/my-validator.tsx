@@ -59,7 +59,7 @@ export const MyValidator = observer(() => {
     <React.Fragment>
       {delegations.length > 0 ? (
         delegations.map((del) => {
-          const val = validatorsMap.get(del.delegation.validatorAddress);
+          const val = validatorsMap.get(del.delegation.validator_address);
           if (!val) {
             return null;
           }
@@ -94,11 +94,11 @@ export const MyValidator = observer(() => {
                 analyticsStore.logEvent("stake_validator_click", {
                   pageName: "Stake",
                 });
-                navigate(`/validator/${del.delegation.validatorAddress}`, {
+                navigate(`/validator/${del.delegation.validator_address}`, {
                   state: { previousAddress: "stake" },
                 });
               }}
-              key={del.delegation.validatorAddress}
+              key={del.delegation.validator_address}
             >
               <div className={styles["validator-div"]}>
                 {thumbnail ? (

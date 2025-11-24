@@ -1,19 +1,11 @@
 import { KVStore } from "@keplr-wallet/common";
-import {
-  ChainGetter,
-  ObservableQueryTendermint,
-  decodeProposalContent,
-  parseRPCTimestamp,
-} from "../../../common";
+import { ChainGetter, ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
 import { CoinPretty, Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { ObservableQueryGovernance } from "./proposals";
 import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
-import {
-  QueryProposalResponse,
-  QueryTallyResultResponse,
-} from "cosmjs-types/cosmos/gov/v1beta1/query";
-import { ProposalStatus } from "cosmjs-types/cosmos/gov/v1beta1/gov";
+import { QueryTallyResultResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
+import { Proposal, ProposalStatus } from "./types";
 
 export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTallyResultResponse> {
   protected readonly chainGetter: ChainGetter;
@@ -23,11 +15,11 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly _raw: QueryProposalResponse["proposal"],
+    protected readonly _raw: Proposal,
     protected readonly governance: ObservableQueryGovernance
   ) {
     const chainInfo = chainGetter.getChain(chainId);
-    const proposalId = _raw.proposalId.toString();
+    const proposalId = _raw.proposal_id;
     super(
       kvStore,
       chainInfo.rpc,
@@ -48,7 +40,7 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
     // avoid fetching the endpoint for evm networks
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
-      this.proposalStatus === ProposalStatus.PROPOSAL_STATUS_VOTING_PERIOD &&
+      this.proposalStatus === ProposalStatus.VOTING_PERIOD &&
       !chainInfo?.features?.includes("evm")
     );
   }
@@ -57,44 +49,33 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
     return this._raw;
   }
 
-  get proposalStatus(): ProposalStatus {
-    return this.raw.status;
-  }
-
-  get status(): string {
-    return ProposalStatus[this.raw.status];
-  }
-
-  get proposalId(): string {
-    return this.raw.proposalId.toString();
-  }
-
   get id(): string {
-    return this.proposalId;
+    return this.raw.proposal_id;
   }
 
   get title(): string {
-    return decodeProposalContent(this.raw?.content)?.title || "";
+    return this.raw.content.title;
   }
 
   get description(): string {
-    return decodeProposalContent(this.raw?.content)?.description || "";
+    return this.raw.content.description;
   }
 
-  get votingStartTime(): string {
-    return parseRPCTimestamp(this.raw.votingStartTime);
-  }
-
-  get votingEndTime(): string {
-    return parseRPCTimestamp(this.raw.votingEndTime);
-  }
-
-  get submitTime(): string {
-    return parseRPCTimestamp(this.raw.submitTime);
-  }
-
-  get depositEndTime(): string {
-    return parseRPCTimestamp(this.raw.depositEndTime);
+  get proposalStatus(): ProposalStatus {
+    switch (this.raw.status) {
+      case "PROPOSAL_STATUS_DEPOSIT_PERIOD":
+        return ProposalStatus.DEPOSIT_PERIOD;
+      case "PROPOSAL_STATUS_VOTING_PERIOD":
+        return ProposalStatus.VOTING_PERIOD;
+      case "PROPOSAL_STATUS_PASSED":
+        return ProposalStatus.PASSED;
+      case "PROPOSAL_STATUS_REJECTED":
+        return ProposalStatus.REJECTED;
+      case "PROPOSAL_STATUS_FAILED":
+        return ProposalStatus.FAILED;
+      default:
+        return ProposalStatus.UNSPECIFIED;
+    }
   }
 
   @computed
@@ -137,18 +118,20 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
   } {
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
-    if (this.proposalStatus !== ProposalStatus.PROPOSAL_STATUS_VOTING_PERIOD) {
+    if (this.proposalStatus !== ProposalStatus.VOTING_PERIOD) {
       return {
-        yes: new IntPretty(new Int(this.raw.finalTallyResult.yes))
+        yes: new IntPretty(new Int(this.raw.final_tally_result.yes))
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
-        no: new IntPretty(new Int(this.raw.finalTallyResult.no))
+        no: new IntPretty(new Int(this.raw.final_tally_result.no))
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
-        abstain: new IntPretty(new Int(this.raw.finalTallyResult.abstain))
+        abstain: new IntPretty(new Int(this.raw.final_tally_result.abstain))
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
-        noWithVeto: new IntPretty(new Int(this.raw.finalTallyResult.noWithVeto))
+        noWithVeto: new IntPretty(
+          new Int(this.raw.final_tally_result.no_with_veto)
+        )
           .moveDecimalPointLeft(stakeCurrency.coinDecimals)
           .maxDecimals(stakeCurrency.coinDecimals),
       };

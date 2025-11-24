@@ -8,14 +8,16 @@ import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 import {
+  camelToSnake,
   ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
   StoreUtils,
 } from "../../../common";
 import { QueryDelegationTotalRewardsResponse } from "cosmjs-types/cosmos/distribution/v1beta1/query";
+import { Rewards } from "./types";
 
-export class ObservableQueryRewardsInner extends ObservableQueryTendermint<QueryDelegationTotalRewardsResponse> {
+export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Rewards> {
   protected bech32Address: string;
   protected readonly chainGetter: ChainGetter;
   protected readonly chainId: string;
@@ -35,9 +37,10 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Query
         const result = await client.distribution.delegationTotalRewards(
           bech32Address
         );
-        // Convert string amounts to dec here itself for safety
+        const decodedResponse =
+          QueryDelegationTotalRewardsResponse.toJSON(result);
         const converted = {
-          rewards: result?.rewards?.map((r) => ({
+          rewards: decodedResponse?.rewards?.map((r) => ({
             ...r,
             reward: r.reward?.map((coin) => ({
               ...coin,
@@ -55,7 +58,7 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Query
             ).toString(),
           })),
         };
-        return converted;
+        return camelToSnake(converted) as Rewards;
       },
       setupDistributionExtension,
       `/cosmos/distribution/v1beta1/delegators/${bech32Address}/rewards`
@@ -110,7 +113,7 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Query
       }, {});
 
       const reward = this.response?.data.rewards?.find((r) => {
-        return r.validatorAddress === validatorAddress;
+        return r.validator_address === validatorAddress;
       });
 
       return StoreUtils.getBalancesFromCurrencies(
@@ -135,7 +138,7 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Query
       const chainInfo = this.chainGetter.getChain(this.chainId);
 
       const reward = this.response?.data.rewards?.find((r) => {
-        return r.validatorAddress === validatorAddress;
+        return r.validator_address === validatorAddress;
       });
 
       return StoreUtils.getBalanceFromCurrency(
@@ -186,7 +189,7 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Query
       }, {});
 
       const reward = this.response?.data.rewards?.find((r) => {
-        return r.validatorAddress === validatorAddress;
+        return r.validator_address === validatorAddress;
       });
 
       return StoreUtils.getBalancesFromCurrencies(
@@ -209,7 +212,7 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Query
         for (const r of reward.reward) {
           const dec = new Dec(r.amount);
           if (dec.truncate().gt(new Int(0))) {
-            result.push(reward.validatorAddress);
+            result.push(reward.validator_address);
             break;
           }
         }
@@ -264,12 +267,12 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Query
           return false;
         })
         .slice(0, maxValiadtors)
-        .map((r) => r.validatorAddress);
+        .map((r) => r.validator_address);
     }
   );
 }
 
-export class ObservableQueryRewards extends ObservableQueryMap<QueryDelegationTotalRewardsResponse> {
+export class ObservableQueryRewards extends ObservableQueryMap<Rewards> {
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly chainId: string,
