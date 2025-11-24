@@ -4,14 +4,12 @@ import {
   ObservableQueryTendermint,
   ObservableQueryMap,
   camelToSnake,
+  decodeAccount,
 } from "../../../common";
 import { AuthAccount } from "./types";
 import { computed, makeObservable } from "mobx";
 import { BaseAccount } from "@keplr-wallet/cosmos";
 import { AuthExtension, setupAuthExtension } from "@cosmjs/stargate";
-import { BaseAccount as BaseAccountCSJ } from "cosmjs-types/cosmos/auth/v1beta1/auth";
-/* eslint-disable-next-line import/no-extraneous-dependencies */
-import { decodePubkey } from "@cosmjs/proto-signing";
 
 interface PubKey {
   "@type": string;
@@ -64,25 +62,9 @@ export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthA
       async (queryClient) => {
         const client = queryClient as unknown as AuthExtension;
         const result = await client.auth.account(bech32Address);
-        const decodedValue = BaseAccountCSJ.decode(
-          result?.value || new Uint8Array()
-        );
-        const accountInfo = {
-          ...decodedValue,
-          "@type": result?.typeUrl,
-          address: decodedValue.address,
-          pubKey: {
-            "@type": decodedValue.pubKey?.typeUrl,
-            key: decodedValue.pubKey
-              ? decodePubkey(decodedValue.pubKey).value
-              : "",
-          },
-          accountNumber: decodedValue.accountNumber.toString(),
-          sequence: decodedValue.sequence.toString(),
-        };
-
+        const decodedResponse = result ? decodeAccount(result) : {};
         return {
-          account: camelToSnake(accountInfo),
+          account: camelToSnake(decodedResponse),
         };
       },
       setupAuthExtension,

@@ -26,26 +26,34 @@ export class ObservableQueryTendermint<T, E = unknown> extends ObservableQuery<
     response: QueryResponse<T>;
     headers: any;
   }> {
-    const tmClient = await Comet38Client.connect(this.rpc);
+    try {
+      const tmClient = await Comet38Client.connect(this.rpc);
 
-    // Combine dynamically supplied extensions
-    const queryClient = QueryClient.withExtensions(
-      tmClient as CometClient,
-      this.extension
-    );
+      // Combine dynamically supplied extensions
+      const queryClient = QueryClient.withExtensions(
+        tmClient as CometClient,
+        this.extension
+      );
 
-    // Run the provided function that executes the actual query
-    const result = await this.queryFn(queryClient);
+      // Run the provided function that executes the actual query
+      const result = await this.queryFn(queryClient);
 
-    return {
-      headers: {},
-      response: {
-        data: result,
-        status: 200,
-        staled: false,
-        timestamp: Date.now(),
-      },
-    };
+      if (result == null) {
+        throw new Error("Unknown Tendermint RPC result");
+      }
+
+      return {
+        headers: {},
+        response: {
+          data: result,
+          status: 200,
+          staled: false,
+          timestamp: Date.now(),
+        },
+      };
+    } catch (err: any) {
+      throw new Error(err?.message || "Tendermint RPC error");
+    }
   }
 
   protected override getCacheKey(): string {

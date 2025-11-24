@@ -1,13 +1,15 @@
 import { KVStore } from "@keplr-wallet/common";
 import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
-import { ChainGetter } from "../../../common";
+  ChainGetter,
+  ObservableQueryMap,
+  ObservableQueryTendermint,
+} from "../../../common";
 import { DenomTraceResponse } from "./types";
-import { autorun, computed } from "mobx";
+import { computed } from "mobx";
+import { camelToSnake } from "../../../common";
+import { IbcExtension, setupIbcExtension } from "@cosmjs/stargate";
 
-export class ObservableChainQueryDenomTrace extends ObservableChainQuery<DenomTraceResponse> {
+export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<DenomTraceResponse> {
   protected disposer?: () => void;
 
   constructor(
@@ -16,34 +18,19 @@ export class ObservableChainQueryDenomTrace extends ObservableChainQuery<DenomTr
     chainGetter: ChainGetter,
     protected readonly hash: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
-      `/ibc/applications/transfer/v1beta1/denom_traces/${hash}`
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as IbcExtension;
+        const response = await client.ibc.transfer.denomTrace(this.hash);
+        console.log("ibc denom trace response", response);
+        return camelToSnake(response) as DenomTraceResponse;
+      },
+      setupIbcExtension,
+      `/ibc/apps/transfer/v1/denom_traces/${hash}`
     );
-  }
-
-  protected override onStart() {
-    super.onStart();
-
-    return new Promise<void>((resolve) => {
-      this.disposer = autorun(() => {
-        const chainInfo = this.chainGetter.getChain(this.chainId);
-        if (chainInfo.features && chainInfo.features.includes("ibc-go")) {
-          this.setUrl(`/ibc/apps/transfer/v1/denom_traces/${this.hash}`);
-        }
-        resolve();
-      });
-    });
-  }
-
-  protected override onStop() {
-    if (this.disposer) {
-      this.disposer();
-      this.disposer = undefined;
-    }
-    super.onStop();
   }
 
   @computed
@@ -104,13 +91,13 @@ export class ObservableChainQueryDenomTrace extends ObservableChainQuery<DenomTr
   }
 }
 
-export class ObservableQueryDenomTrace extends ObservableChainQueryMap<DenomTraceResponse> {
+export class ObservableQueryDenomTrace extends ObservableQueryMap<DenomTraceResponse> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (hash: string) => {
+    super((hash: string) => {
       return new ObservableChainQueryDenomTrace(
         this.kvStore,
         this.chainId,
