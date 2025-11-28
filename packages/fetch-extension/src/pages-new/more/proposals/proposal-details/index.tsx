@@ -13,6 +13,7 @@ import { ProposalDurationRow } from "../proposal-row/proposal-duration-row";
 import { ProgressBar } from "./progress-bar";
 import style from "./style.module.scss";
 import { VoteDropdown } from "./vote-dropdown";
+import Markdown from "react-markdown";
 
 type TallyResult = {
   title: string;
@@ -124,7 +125,7 @@ export const ProposalDetail = observer(() => {
                 {proposal?.raw.content.title}
               </div>
               <div className={style["description"]}>
-                {proposal?.raw.content.description}
+                <Markdown>{proposal?.raw.content.description}</Markdown>
               </div>
             </div>
 
