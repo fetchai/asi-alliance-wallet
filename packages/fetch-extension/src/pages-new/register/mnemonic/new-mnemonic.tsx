@@ -625,12 +625,14 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 <Button
                   className={style["button"]}
                   key={word + i.toString()}
-                  onClick={() =>
-                    handleClickFirstButton(
-                      word,
-                      rowIndex * firstButtonsPerRow + i
-                    )
-                  }
+                  onClick={() => {
+                    if (word !== " ") {
+                      handleClickFirstButton(
+                        word,
+                        rowIndex * firstButtonsPerRow + i
+                      );
+                    }
+                  }}
                 >
                   {word}
                 </Button>
@@ -648,7 +650,11 @@ export const VerifyMnemonicModePage: FunctionComponent<{
           text="Clear All"
           variant="dark"
           onClick={() => {
-            setSuggestedWords(Array(12).fill(" "));
+            setSuggestedWords(
+              Array(
+                newMnemonicConfig.numWords === NumWords.WORDS12 ? 12 : 24
+              ).fill(" ")
+            );
             setDisabledButtons([]);
           }}
         />
