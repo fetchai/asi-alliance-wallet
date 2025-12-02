@@ -113,6 +113,21 @@ export class RegisterConfig {
     this.setType("");
   }
 
+  @action
+  protected getNextDefaultAccountName(prefix = "account"): string {
+    const items = this.keyRingStore.multiKeyStoreInfo;
+    if (items.length === 0) {
+      return `${prefix}-1`;
+    }
+    // if any account is deleted in between
+    // we still want to increment the account number based on the last account
+    const lastName = items[items.length - 1]?.meta?.["name"] || "";
+    const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
+    const lastNum = match ? Number(match[1]) : 0;
+
+    return `${prefix}-${lastNum + 1}`;
+  }
+
   // Create or add the mnemonic account.
   // If the mode is "add", password will be ignored.
   @flow
@@ -125,8 +140,7 @@ export class RegisterConfig {
     selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
-    const totalAccounts = this.keyRingStore.multiKeyStoreInfo.length;
-    const defaultName = `account-${totalAccounts + 1}`;
+    const defaultName = this.getNextDefaultAccountName();
 
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
@@ -204,8 +218,7 @@ export class RegisterConfig {
     selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
-    const totalAccounts = this.keyRingStore.multiKeyStoreInfo.length;
-    const defaultName = `account-${totalAccounts + 1}`;
+    const defaultName = this.getNextDefaultAccountName();
     const meta = {};
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
@@ -255,9 +268,7 @@ export class RegisterConfig {
     selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
-
-    const totalAccounts = this.keyRingStore.multiKeyStoreInfo.length;
-    const defaultName = `account-${totalAccounts + 1}`;
+    const defaultName = this.getNextDefaultAccountName();
 
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {

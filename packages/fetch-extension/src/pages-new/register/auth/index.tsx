@@ -23,7 +23,7 @@ import { AuthApiKey } from "../../../config.ui";
 import { useStore } from "../../../stores";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { validateWalletName } from "@utils/index";
+import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
 // get from https://dashboard.web3auth.io
 
 export const AuthIntro: FunctionComponent<{
@@ -163,8 +163,8 @@ export const AuthPage: FunctionComponent<{
 }> = observer(({ registerConfig, selectedNetworks, setSelectedNetworks }) => {
   const { keyRingStore } = useStore();
   const intl = useIntl();
-  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
-  const defaultAccountName = `account-${totalAccount + 1}`;
+  const accountList = keyRingStore.multiKeyStoreInfo;
+  const defaultAccountName = getNextDefaultAccountName(accountList);
   const [newAccountName, setNewAccountName] = useState(defaultAccountName);
   const [errorMessage, setErrorMessage] = useState("");
   const [accountNameValidationError, setAccountNameValidationError] =

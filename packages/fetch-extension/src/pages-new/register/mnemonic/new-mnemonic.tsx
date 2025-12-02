@@ -35,7 +35,7 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { validateWalletName } from "@utils/index";
+import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -205,8 +205,8 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       const intl = useIntl();
       const notification = useNotification();
       const { keyRingStore } = useStore();
-      const totalAccount = keyRingStore.multiKeyStoreInfo.length;
-      const defaultAccountName = `account-${totalAccount + 1}`;
+      const accountList = keyRingStore.multiKeyStoreInfo;
+      const defaultAccountName = getNextDefaultAccountName(accountList);
       const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
       const {
