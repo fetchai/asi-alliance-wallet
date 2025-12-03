@@ -228,6 +228,31 @@ export const AddCosmosChain: FunctionComponent = () => {
     return num.toString();
   };
 
+  const updateCurrencyFields = (
+    field: "coinMinimalDenom" | "coinDenom" | "coinDecimals",
+    val: string | number
+  ) => {
+    setNewChainInfo((prev) => ({
+      ...prev,
+      stakeCurrency: {
+        ...prev.stakeCurrency,
+        [field]: val,
+      },
+      currencies: [
+        {
+          ...prev.currencies[0],
+          [field]: val,
+        },
+      ],
+      feeCurrencies: [
+        {
+          ...prev.feeCurrencies[0],
+          [field]: val,
+        },
+      ],
+    }));
+  };
+
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setHasErrors(false);
     setInfo("");
@@ -250,52 +275,15 @@ export const AddCosmosChain: FunctionComponent = () => {
         ...newChainInfo,
         bech32Config: Bech32Address.defaultBech32Config(value.trim()),
       });
+    } else if (name === "denom") {
+      updateCurrencyFields("coinMinimalDenom", value.trim().toLowerCase());
     } else if (name === "symbol") {
-      setNewChainInfo({
-        ...newChainInfo,
-        stakeCurrency: {
-          ...newChainInfo.stakeCurrency,
-          coinDenom: value,
-          coinMinimalDenom: value.toLowerCase(),
-        },
-        currencies: [
-          {
-            ...newChainInfo.currencies[0],
-            coinDenom: value,
-            coinMinimalDenom: value.trim().toLowerCase(),
-          },
-        ],
-        feeCurrencies: [
-          {
-            ...newChainInfo.feeCurrencies[0],
-            coinDenom: value,
-            coinMinimalDenom: value.trim().toLowerCase(),
-          },
-        ],
-      });
+      updateCurrencyFields("coinDenom", value.trim());
     } else if (name === "decimal") {
       const cleanedValue = cleanDecimalInput(value);
       e.target.value = cleanedValue; // To reflect the change in the input field immediately
       const decimals = parseInt(cleanedValue);
-      setNewChainInfo({
-        ...newChainInfo,
-        stakeCurrency: {
-          ...newChainInfo.stakeCurrency,
-          coinDecimals: decimals,
-        },
-        currencies: [
-          {
-            ...newChainInfo.currencies[0],
-            coinDecimals: decimals,
-          },
-        ],
-        feeCurrencies: [
-          {
-            ...newChainInfo.feeCurrencies[0],
-            coinDecimals: decimals,
-          },
-        ],
-      });
+      updateCurrencyFields("coinDecimals", decimals);
     } else {
       setNewChainInfo({ ...newChainInfo, [name]: value });
     }
@@ -359,14 +347,19 @@ export const AddCosmosChain: FunctionComponent = () => {
   const isValidDecimals =
     newChainInfo.stakeCurrency.coinDecimals >= 0 &&
     newChainInfo.stakeCurrency.coinDecimals <= 18;
-  const denom = newChainInfo.stakeCurrency.coinDenom.trim();
+  const denom = newChainInfo.stakeCurrency.coinMinimalDenom.trim();
+  const symbol = newChainInfo.stakeCurrency.coinDenom.trim();
   const isValidDenom = /^([A-Za-z]{2,10}|ibc\/[A-Fa-f0-9]{32,64})$/.test(denom);
+  const isValidSymbol = /^([a-zA-Z0-9]{2,10}|ibc\/[A-Fa-f0-9]{32,64})$/.test(
+    symbol
+  );
 
   const hasValidInputs =
     isChainIdValid &&
     isChainNameValid &&
     isValidBech32Prefix &&
     isValidDenom &&
+    isValidSymbol &&
     isValidDecimals;
 
   const isValid =
@@ -389,6 +382,7 @@ export const AddCosmosChain: FunctionComponent = () => {
       <Form onSubmit={handleSubmit} className={style["container"]}>
         <Input
           label="Network Name"
+          placeholder="Fetchhub"
           type="text"
           name="chainName"
           text={
@@ -428,6 +422,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           label="Chain ID"
           type="text"
           name="chainId"
+          placeholder="fetchhub-4"
           value={newChainInfo.chainId}
           error={
             isChainIdExist
@@ -445,6 +440,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           label="RPC URL"
           type="text"
           name="rpc"
+          placeholder="https://rpc-fetchhub.fetch-ai.com"
           value={newChainInfo.rpc}
           error={
             newChainInfo.rpc !== "" && !isUrlValid(newChainInfo.rpc)
@@ -462,6 +458,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           label="REST URL"
           type="text"
           name="rest"
+          placeholder="https://rest-fetchhub.fetch-ai.com"
           value={newChainInfo.rest}
           error={
             newChainInfo.rest !== "" && !isUrlValid(newChainInfo.rest)
@@ -477,6 +474,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           label="Address Prefix"
           type="text"
           name="prefix"
+          placeholder="fetch"
           value={newChainInfo.bech32Config.bech32PrefixAccAddr}
           error={
             !isValidBech32Prefix &&
@@ -490,12 +488,27 @@ export const AddCosmosChain: FunctionComponent = () => {
           required
         />
         <Input
+          label="Denom"
+          type="text"
+          name="denom"
+          placeholder="afet"
+          value={newChainInfo.stakeCurrency.coinMinimalDenom}
+          error={
+            !isValidDenom && denom !== "" ? "Please enter a valid denom" : ""
+          }
+          onChange={handleChange}
+          formGroupClassName={style["formGroup"]}
+          formFeedbackClassName={style["formFeedback"]}
+          required
+        />
+        <Input
           label="Symbol"
           type="text"
           name="symbol"
+          placeholder="FET"
           value={newChainInfo.stakeCurrency.coinDenom}
           error={
-            !isValidDenom && denom !== "" ? "Please enter a valid symbol" : ""
+            !isValidSymbol && symbol !== "" ? "Please enter a valid symbol" : ""
           }
           onChange={handleChange}
           formGroupClassName={style["formGroup"]}
@@ -506,6 +519,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           label="Decimals"
           type="number"
           name="decimal"
+          placeholder="18"
           formGroupClassName={style["formGroupDecimals"]}
           formFeedbackClassName={style["formFeedback"]}
           value={newChainInfo.stakeCurrency.coinDecimals}
