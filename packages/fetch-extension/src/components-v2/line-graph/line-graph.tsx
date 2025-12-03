@@ -5,6 +5,8 @@ import { Line } from "react-chartjs-2";
 import { chartOptions } from "./chart-options";
 import style from "./style.module.scss";
 import { FiatCurrencies } from "../../config.ui";
+import classNames from "classnames";
+import { isRunningInSidePanel } from "@utils/side-panel";
 
 interface LineGraphProps {
   duration: number;
@@ -160,7 +162,12 @@ export const LineGraph: React.FC<LineGraphProps> = ({
   }
 
   return (
-    <div className={style["line-graph"]}>
+    <div
+      className={classNames(
+        style["line-graph"],
+        isRunningInSidePanel() && style["line-graph-sidepanel"]
+      )}
+    >
       {loading ? (
         <div>
           {error ? (
