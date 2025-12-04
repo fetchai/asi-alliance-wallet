@@ -1,5 +1,3 @@
-import { ObservableChainQuery } from "../../chain-query";
-import { GovProposals } from "./types";
 import { computed, makeObservable, observable, runInAction } from "mobx";
 import {
   ObservableQueryGovParamDeposit,
@@ -7,20 +5,33 @@ import {
   ObservableQueryGovParamVoting,
 } from "./params";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import {
+  camelToSnake,
+  ChainGetter,
+  decodeProposalContent,
+  ObservableQueryTendermint,
+} from "../../../common";
 import { DeepReadonly } from "utility-types";
 import { Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { computedFn } from "mobx-utils";
 import { ObservableQueryProposal } from "./proposal";
 import { ObservableQueryStakingPool } from "../staking";
+import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
+import { ProposalStatus } from "cosmjs-types/cosmos/gov/v1beta1/gov";
+import {
+  QueryProposalResponse,
+  QueryProposalsResponse,
+} from "cosmjs-types/cosmos/gov/v1beta1/query";
 
-export class ObservableQueryGovernance extends ObservableChainQuery<GovProposals> {
+export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryProposalsResponse> {
   @observable.ref
   protected paramDeposit?: ObservableQueryGovParamDeposit = undefined;
   @observable.ref
   protected paramVoting?: ObservableQueryGovParamVoting = undefined;
   @observable.ref
   protected paramTally?: ObservableQueryGovParamTally = undefined;
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
   constructor(
     kvStore: KVStore,
@@ -28,14 +39,25 @@ export class ObservableQueryGovernance extends ObservableChainQuery<GovProposals
     chainGetter: ChainGetter,
     protected readonly _queryPool: ObservableQueryStakingPool
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
-      // TODO: Handle pagination
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as GovExtension;
+        const result = await client.gov.proposals(
+          ProposalStatus.PROPOSAL_STATUS_UNSPECIFIED,
+          "",
+          ""
+        );
+        return result;
+      },
+      setupGovExtension,
       "/cosmos/gov/v1beta1/proposals?pagination.limit=3000"
     );
     makeObservable(this);
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
   }
 
   getQueryPool(): DeepReadonly<ObservableQueryStakingPool> {
@@ -95,7 +117,7 @@ export class ObservableQueryGovernance extends ObservableChainQuery<GovProposals
     }
 
     // TODO: Use `RatePretty`
-    let quorum = new Dec(paramTally.response.data.tally_params.quorum);
+    let quorum = new Dec(paramTally.response.data.tallyParams.quorum);
     // Multiply 100
     quorum = quorum.mulTruncate(DecUtils.getPrecisionDec(2));
 
@@ -111,12 +133,19 @@ export class ObservableQueryGovernance extends ObservableChainQuery<GovProposals
     const result: ObservableQueryProposal[] = [];
 
     for (const raw of this.response.data.proposals) {
+      const decodedContent = decodeProposalContent(raw.content);
+      const decodedRawResponse = camelToSnake({
+        ...QueryProposalResponse.toJSON({
+          proposal: raw,
+        }).proposal,
+        content: decodedContent,
+      });
       result.push(
         new ObservableQueryProposal(
           this.kvStore,
           this.chainId,
           this.chainGetter,
-          raw,
+          decodedRawResponse,
           this
         )
       );

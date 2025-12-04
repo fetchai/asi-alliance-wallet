@@ -11,7 +11,6 @@ import {
   ZeroAmountError,
   useUndelegateTxConfig,
 } from "@keplr-wallet/hooks";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { observer } from "mobx-react-lite";
 import React, { useEffect, useMemo, useState } from "react";
@@ -69,29 +68,16 @@ export const Unstake = observer(() => {
     return value && value.shrink(true).maxDecimals(6).toString();
   };
 
-  const queryBalances = queriesStore
-    .get(sendConfigs.amountConfig.chainId)
-    .queryBalances.getQueryBech32Address(sendConfigs.amountConfig.sender);
-
-  const queryBalance = queryBalances.balances.find(
-    (bal) =>
-      sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-      bal.currency.coinMinimalDenom
-  );
-  const balance = queryBalance
-    ? queryBalance.balance
-    : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
-
   useEffect(() => {
-    const inputValueInUsd = convertToUsd(balance);
+    const inputValueInUsd = convertToUsd(stakedAmount);
     setInputInFiatCurrency(inputValueInUsd);
-  }, [sendConfigs.amountConfig.amount]);
+  }, [stakedAmount]);
 
   const FiatCurrency = inputInFiatCurrency
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
   const queries = queriesStore.get(chainStore.current.chainId);
-  const availableBalance = `${balance
+  const availableBalance = `${stakedAmount
     .trim(true)
     .shrink(true)
     .maxDecimals(6)

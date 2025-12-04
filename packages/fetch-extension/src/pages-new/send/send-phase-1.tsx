@@ -13,9 +13,10 @@ import { useNavigate } from "react-router";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { removeComma } from "@utils/format";
 import style from "./style.module.scss";
+import { SendConfigs } from "./types";
 
 interface SendPhase1Props {
-  sendConfigs: any;
+  sendConfigs: SendConfigs;
   setIsNext: any;
   setFromPhase1: any;
 }
@@ -58,11 +59,19 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
     return (
       <div>
         <CoinInput
-          onPress={() =>
-            sendConfigs.amountConfig.setAmount(
-              removeComma(balance.shrink(true).hideDenom(true).toString())
-            )
-          }
+          onPress={() => {
+            const fees = sendConfigs.feeConfig.getFeeTypePrettyForFeeCurrency(
+              sendConfigs?.feeConfig?.feeCurrencies?.[0],
+              sendConfigs.feeConfig.feeType ?? "average" // fee type is not set at this point, so default to average
+            );
+            // subtract fee from balance to set max amount to avoid insufficient balance error
+            const actualAmount = balance
+              .sub(fees)
+              .shrink(true)
+              .hideDenom(true)
+              .toString();
+            sendConfigs.amountConfig.setAmount(removeComma(actualAmount));
+          }}
           amountConfig={sendConfigs.amountConfig}
           label={intl.formatMessage({ id: "send.input.amount" })}
           balanceText={intl.formatMessage({
@@ -128,10 +137,10 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
         />
         <ButtonV2
           variant="dark"
-          disabled={
+          disabled={Boolean(
             sendConfigs.amountConfig.amount === "" ||
-            sendConfigs.amountConfig.error
-          }
+              sendConfigs.amountConfig.error
+          )}
           text="Next"
           onClick={() => {
             setIsNext(true);

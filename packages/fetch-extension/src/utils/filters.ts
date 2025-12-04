@@ -25,10 +25,8 @@ export const getFilteredChainValues = (values: any[], searchTerm: string) => {
 export const getFilteredProposals = (values: any[], searchTerm: string) => {
   const filteredValues = values.filter((proposal: any) => {
     if (
-      proposal.content.title
-        .toLowerCase()
-        .includes(searchTerm.trim().toLowerCase()) ||
-      proposal.proposal_id.includes(searchTerm)
+      proposal.title.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      proposal.id.includes(searchTerm)
     )
       return true;
   });

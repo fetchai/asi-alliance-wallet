@@ -1,16 +1,21 @@
-import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
-import { BondStatus, Validators, Validator } from "./types";
+import { BondStatus, Validator } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import {
+  base64ToBytes,
+  ChainGetter,
+  ObservableQueryMap,
+  ObservableQueryTendermint,
+} from "../../../common";
 import { computed, makeObservable, observable, runInAction } from "mobx";
-import { ObservableQuery, QueryResponse } from "../../../common";
+import { ObservableQuery, QueryResponse, camelToSnake } from "../../../common";
 import Axios from "axios";
 import PQueue from "p-queue";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import { computedFn } from "mobx-utils";
+import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
+import { QueryValidatorsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
+/* eslint-disable-next-line import/no-extraneous-dependencies */
+import { decodePubkey } from "@cosmjs/proto-signing";
 
 interface KeybaseResult {
   status: {
@@ -85,7 +90,9 @@ export class ObservableQueryValidatorThumbnail extends ObservableQuery<KeybaseRe
   }
 }
 
-export class ObservableQueryValidatorsInner extends ObservableChainQuery<Validators> {
+export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<QueryValidatorsResponse> {
+  protected readonly chainId: string;
+  protected readonly chainGetter: ChainGetter;
   @observable.shallow
   protected thumbnailMap: Map<string, ObservableQueryValidatorThumbnail> =
     new Map();
@@ -96,24 +103,34 @@ export class ObservableQueryValidatorsInner extends ObservableChainQuery<Validat
     chainGetter: ChainGetter,
     protected readonly status: BondStatus
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
-      `/cosmos/staking/v1beta1/validators?pagination.limit=1000&status=${(() => {
-        switch (status) {
-          case BondStatus.Bonded:
-            return "BOND_STATUS_BONDED";
-          case BondStatus.Unbonded:
-            return "BOND_STATUS_UNBONDED";
-          case BondStatus.Unbonding:
-            return "BOND_STATUS_UNBONDING";
-          default:
-            return "BOND_STATUS_UNSPECIFIED";
-        }
-      })()}`
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as StakingExtension;
+        const bondStatus = (() => {
+          switch (status) {
+            case BondStatus.Bonded:
+              return "BOND_STATUS_BONDED";
+            case BondStatus.Unbonded:
+              return "BOND_STATUS_UNBONDED";
+            case BondStatus.Unbonding:
+              return "BOND_STATUS_UNBONDING";
+            default:
+              return "";
+          }
+        })();
+
+        const response = await client.staking.validators(bondStatus);
+        return response;
+      },
+      setupStakingExtension,
+      `/cosmos/staking/v1beta1/validators?status=${status}&pagination.limit=1000`
     );
     makeObservable(this);
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
   }
 
   @computed
@@ -122,15 +139,48 @@ export class ObservableQueryValidatorsInner extends ObservableChainQuery<Validat
       return [];
     }
 
-    return this.response.data.validators;
+    const decimals = this.chainGetter.getChain(this.chainId).currencies[0]
+      .coinDecimals;
+    const decodedResponse = QueryValidatorsResponse.toJSON(this.response.data);
+    const parsedValidators = decodedResponse.validators.map((item) => ({
+      ...item,
+      unbondingHeight: item.unbondingHeight.toString(),
+      delegatorShares: new Dec(item.delegatorShares, decimals).toString(),
+      consensusPubkey: {
+        "@type": item.consensusPubkey?.typeUrl,
+        key: item?.consensusPubkey
+          ? decodePubkey({
+              ...item.consensusPubkey,
+              value: base64ToBytes(item.consensusPubkey.value),
+            })?.value
+          : "",
+      },
+      commission: {
+        ...item.commission,
+        commissionRates: {
+          maxRate: new Dec(
+            item.commission.commissionRates.maxRate,
+            decimals
+          ).toString(),
+          rate: new Dec(
+            item.commission.commissionRates.rate,
+            decimals
+          ).toString(),
+          maxChangeRate: new Dec(
+            item.commission.commissionRates.maxChangeRate,
+            decimals
+          ).toString(),
+        },
+      },
+    }));
+    return camelToSnake(parsedValidators) as Validator[];
   }
 
   readonly getValidator = computedFn(
     (validatorAddress: string): Validator | undefined => {
       const validators = this.validators;
-
-      return validators.find(
-        (val) => val.operator_address === validatorAddress
+      return camelToSnake(
+        validators.find((val) => val.operator_address === validatorAddress)
       );
     }
   );
@@ -196,13 +246,13 @@ export class ObservableQueryValidatorsInner extends ObservableChainQuery<Validat
   );
 }
 
-export class ObservableQueryValidators extends ObservableChainQueryMap<Validators> {
+export class ObservableQueryValidators extends ObservableQueryMap<QueryValidatorsResponse> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (status: string) => {
+    super((status: string) => {
       return new ObservableQueryValidatorsInner(
         this.kvStore,
         this.chainId,

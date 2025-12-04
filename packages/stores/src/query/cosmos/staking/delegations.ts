@@ -1,16 +1,22 @@
-import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
-import { Delegation, Delegations } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import {
+  camelToSnake,
+  ChainGetter,
+  ObservableQueryMap,
+  ObservableQueryTendermint,
+} from "../../../common";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
+import { QueryDelegatorDelegationsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
+import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
+import { Delegation, Delegations } from "./types";
 
-export class ObservableQueryDelegationsInner extends ObservableChainQuery<Delegations> {
+export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Delegations> {
   protected bech32Address: string;
+  protected duplicatedFetchCheck: boolean = false;
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
   constructor(
     kvStore: KVStore,
@@ -18,15 +24,24 @@ export class ObservableQueryDelegationsInner extends ObservableChainQuery<Delega
     chainGetter: ChainGetter,
     bech32Address: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as StakingExtension;
+        const result = await client.staking.delegatorDelegations(bech32Address);
+        const decodedResponse =
+          QueryDelegatorDelegationsResponse.toJSON(result);
+        return camelToSnake(decodedResponse) as Delegations;
+      },
+      setupStakingExtension,
       `/cosmos/staking/v1beta1/delegations/${bech32Address}?pagination.limit=1000`
     );
     makeObservable(this);
-
+    this.chainId = chainId;
     this.bech32Address = bech32Address;
+    this.chainGetter = chainGetter;
   }
 
   protected override canFetch(): boolean {
@@ -126,13 +141,13 @@ export class ObservableQueryDelegationsInner extends ObservableChainQuery<Delega
   );
 }
 
-export class ObservableQueryDelegations extends ObservableChainQueryMap<Delegations> {
+export class ObservableQueryDelegations extends ObservableQueryMap<Delegations> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (bech32Address: string) => {
+    super((bech32Address: string) => {
       return new ObservableQueryDelegationsInner(
         this.kvStore,
         this.chainId,

@@ -11,6 +11,7 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { Skeleton } from "@components-v2/skeleton-loader";
+import { NoResults } from "@components-v2/no-results";
 
 interface YourWalletProps {
   selectWalletFromList: (recipient: string) => void;
@@ -88,6 +89,7 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
           searchTerm={searchTerm}
           onSearchTermChange={setSearchTerm}
           filterFunction={getFilteredWallets}
+          emptyContent={<NoResults />}
           disabled={keyRingList?.length === 0}
           renderResult={(keyStore, i) => {
             const nameByChain = keyStore.meta?.["nameByChain"]
@@ -141,19 +143,28 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
             );
           }}
         />
-        <div className={style["noAddressMessage"]}>
-          {keyRingList?.length === 0 && (
-            <React.Fragment>
+        {keyRingList?.length === 0 && (
+          <NoResults
+            message="You don’t have any other wallets added"
+            styles={{
+              height: "320px",
+              rowGap: "0px",
+            }}
+            contentStyles={{
+              color: "var(--font-dark)",
+              textAlign: "center",
+              fontSize: "24px",
+              lineHeight: "34px",
+              width: "320px",
+            }}
+            icon={
               <img
                 src={require("@assets/svg/wireframe/no-address.svg")}
                 alt=""
               />
-              <div className={style["message"]}>
-                You don’t have any other wallets added
-              </div>
-            </React.Fragment>
-          )}
-        </div>
+            }
+          />
+        )}
       </div>
     );
   }

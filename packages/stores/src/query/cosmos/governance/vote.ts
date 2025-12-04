@@ -1,14 +1,18 @@
-import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
-import { ProposalVoter } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import {
+  ChainGetter,
+  ObservableQueryMap,
+  ObservableQueryTendermint,
+} from "../../../common";
+import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
+import { QueryVoteResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
+import { VoteOption } from "cosmjs-types/cosmos/gov/v1beta1/gov";
 
-export class ObservableQueryProposalVoteInner extends ObservableChainQuery<ProposalVoter> {
+export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<QueryVoteResponse> {
   protected proposalId: string;
   protected bech32Address: string;
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
   constructor(
     kvStore: KVStore,
@@ -17,12 +21,20 @@ export class ObservableQueryProposalVoteInner extends ObservableChainQuery<Propo
     proposalsId: string,
     bech32Address: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as GovExtension;
+        const result = await client.gov.vote(proposalsId, bech32Address);
+        return result;
+      },
+      setupGovExtension,
       `/cosmos/gov/v1beta1/proposals/${proposalsId}/votes/${bech32Address}`
     );
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
 
     this.proposalId = proposalsId;
     this.bech32Address = bech32Address;
@@ -34,13 +46,13 @@ export class ObservableQueryProposalVoteInner extends ObservableChainQuery<Propo
     }
 
     switch (this.response.data.vote.option) {
-      case "VOTE_OPTION_YES":
+      case VoteOption.VOTE_OPTION_YES:
         return "Yes";
-      case "VOTE_OPTION_ABSTAIN":
+      case VoteOption.VOTE_OPTION_ABSTAIN:
         return "Abstain";
-      case "VOTE_OPTION_NO":
+      case VoteOption.VOTE_OPTION_NO:
         return "No";
-      case "VOTE_OPTION_NO_WITH_VETO":
+      case VoteOption.VOTE_OPTION_NO_WITH_VETO:
         return "NoWithVeto";
       default:
         return "Unspecified";
@@ -57,13 +69,13 @@ export class ObservableQueryProposalVoteInner extends ObservableChainQuery<Propo
   }
 }
 
-export class ObservableQueryProposalVote extends ObservableChainQueryMap<ProposalVoter> {
+export class ObservableQueryProposalVote extends ObservableQueryMap<QueryVoteResponse> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (param: string) => {
+    super((param: string) => {
       const { proposalId, voter } = JSON.parse(param);
 
       return new ObservableQueryProposalVoteInner(

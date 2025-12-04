@@ -24,7 +24,7 @@ import { NewMnemonicStep } from "./hook";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { validateWalletName } from "@utils/index";
+import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -227,8 +227,8 @@ export const RecoverMnemonicPage: FunctionComponent<{
 
   const { analyticsStore, keyRingStore } = useStore();
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
-  const defaultAccountName = `account-${totalAccount + 1}`;
+  const accountList = keyRingStore.multiKeyStoreInfo;
+  const defaultAccountName = getNextDefaultAccountName(accountList);
   const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
   const {

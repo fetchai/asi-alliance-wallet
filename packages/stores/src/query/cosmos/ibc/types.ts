@@ -17,8 +17,8 @@ export type ChannelResponse = {
   proof: string;
   proof_path: string;
   proof_height: {
-    epoch_number: string;
-    epoch_height: string;
+    revision_number: string;
+    revision_height: string;
   };
 };
 

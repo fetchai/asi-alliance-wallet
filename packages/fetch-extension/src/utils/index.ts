@@ -98,6 +98,21 @@ export const validateWalletName = (
   };
 };
 
+export const getNextDefaultAccountName = (
+  items: MultiKeyStoreInfoWithSelected,
+  prefix = "account"
+) => {
+  if (items.length === 0) {
+    return `${prefix}-1`;
+  }
+
+  const lastName = items[items.length - 1]?.meta?.["name"] || "";
+  const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
+  const lastNum = match ? Number(match[1]) : 0;
+
+  return `${prefix}-${lastNum + 1}`;
+};
+
 export function isFeatureAvailable(chainId: string): boolean {
   return [
     CHAIN_ID_FETCHHUB,

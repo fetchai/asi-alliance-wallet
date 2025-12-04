@@ -529,7 +529,7 @@ const DelegateReward: FunctionComponent = observer(() => {
                 height: "36px",
                 marginTop: "0",
                 fontSize: "14px",
-                backgroundColor: "#B1FCAB",
+                backgroundColor: "var(--bg-green-base)",
               }}
               disabled={
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]

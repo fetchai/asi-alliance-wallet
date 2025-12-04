@@ -5,6 +5,8 @@ import { Line } from "react-chartjs-2";
 import { chartOptions } from "./chart-options";
 import style from "./style.module.scss";
 import { FiatCurrencies } from "../../config.ui";
+import classNames from "classnames";
+import { isRunningInSidePanel } from "@utils/side-panel";
 
 interface LineGraphProps {
   duration: number;
@@ -49,14 +51,6 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     const prevUpdatedAt = Date.parse(updatedAt.toString());
 
     return currTime - prevUpdatedAt < 10 * 60 * 1000;
-  };
-
-  const formatPrice = (price: any) => {
-    if (price == null || isNaN(price)) return "-";
-    if (price < 0.000001) return price.toExponential(2);
-
-    const fixed = price.toFixed(6);
-    return parseFloat(fixed).toString();
   };
 
   useEffect(() => {
@@ -168,7 +162,12 @@ export const LineGraph: React.FC<LineGraphProps> = ({
   }
 
   return (
-    <div className={style["line-graph"]}>
+    <div
+      className={classNames(
+        style["line-graph"],
+        isRunningInSidePanel() && style["line-graph-sidepanel"]
+      )}
+    >
       {loading ? (
         <div>
           {error ? (
@@ -194,11 +193,28 @@ export const LineGraph: React.FC<LineGraphProps> = ({
                     display: true,
                     callback: function (value: any, index: any, values: any) {
                       if (index === 0 || index === values.length - 1) {
+                        // max decimals in these tick values
+                        const maxDecimals = Math.max(
+                          ...values?.map((v: number) => {
+                            const parts = v?.toString().split(".");
+                            return parts?.[1] ? parts[1].length : 0;
+                          })
+                        );
+
+                        let formattedValue: string;
+
+                        if (Number.isInteger(value)) {
+                          formattedValue = value.toString();
+                        } else {
+                          formattedValue = value.toFixed(maxDecimals);
+                        }
+
                         const currencySymbol = FiatCurrencies.find(
                           (item) =>
                             item.currency === chartData.datasets[0].vsCurrency
                         )?.symbol;
-                        return `${currencySymbol}${formatPrice(value)}`;
+
+                        return `${currencySymbol}${formattedValue}`;
                       }
                       return "";
                     },

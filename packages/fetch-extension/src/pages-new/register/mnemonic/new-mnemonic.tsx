@@ -35,7 +35,7 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { validateWalletName } from "@utils/index";
+import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -205,8 +205,8 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       const intl = useIntl();
       const notification = useNotification();
       const { keyRingStore } = useStore();
-      const totalAccount = keyRingStore.multiKeyStoreInfo.length;
-      const defaultAccountName = `account-${totalAccount + 1}`;
+      const accountList = keyRingStore.multiKeyStoreInfo;
+      const defaultAccountName = getNextDefaultAccountName(accountList);
       const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
       const {
@@ -625,12 +625,14 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 <Button
                   className={style["button"]}
                   key={word + i.toString()}
-                  onClick={() =>
-                    handleClickFirstButton(
-                      word,
-                      rowIndex * firstButtonsPerRow + i
-                    )
-                  }
+                  onClick={() => {
+                    if (word !== " ") {
+                      handleClickFirstButton(
+                        word,
+                        rowIndex * firstButtonsPerRow + i
+                      );
+                    }
+                  }}
                 >
                   {word}
                 </Button>
@@ -648,7 +650,11 @@ export const VerifyMnemonicModePage: FunctionComponent<{
           text="Clear All"
           variant="dark"
           onClick={() => {
-            setSuggestedWords(Array(12).fill(" "));
+            setSuggestedWords(
+              Array(
+                newMnemonicConfig.numWords === NumWords.WORDS12 ? 12 : 24
+              ).fill(" ")
+            );
             setDisabledButtons([]);
           }}
         />

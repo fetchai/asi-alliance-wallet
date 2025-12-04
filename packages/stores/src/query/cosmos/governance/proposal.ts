@@ -1,13 +1,16 @@
-import { ObservableChainQuery } from "../../chain-query";
-import { Proposal, ProposalStatus, ProposalTally } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { ChainGetter, ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
-import { DeepReadonly } from "utility-types";
 import { CoinPretty, Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { ObservableQueryGovernance } from "./proposals";
+import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
+import { QueryTallyResultResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
+import { Proposal, ProposalStatus } from "./types";
 
-export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally> {
+export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTallyResultResponse> {
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
+
   constructor(
     kvStore: KVStore,
     chainId: string,
@@ -15,13 +18,22 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
     protected readonly _raw: Proposal,
     protected readonly governance: ObservableQueryGovernance
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
+    const proposalId = _raw.proposal_id;
     super(
       kvStore,
-      chainId,
-      chainGetter,
-      `/cosmos/gov/v1beta1/proposals/${_raw.proposal_id}/tally`
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as GovExtension;
+        const result = await client.gov.tally(proposalId);
+        return result;
+      },
+      setupGovExtension,
+      `/cosmos/gov/v1beta1/proposals/${proposalId}/tally`
     );
     makeObservable(this);
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
   }
 
   protected override canFetch(): boolean {
@@ -33,8 +45,20 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
     );
   }
 
-  get raw(): DeepReadonly<Proposal> {
+  get raw() {
     return this._raw;
+  }
+
+  get id(): string {
+    return this.raw.proposal_id;
+  }
+
+  get title(): string {
+    return this.raw.content.title;
+  }
+
+  get description(): string {
+    return this.raw.content.description;
   }
 
   get proposalStatus(): ProposalStatus {
@@ -52,18 +76,6 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
       default:
         return ProposalStatus.UNSPECIFIED;
     }
-  }
-
-  get id(): string {
-    return this.raw.proposal_id;
-  }
-
-  get title(): string {
-    return this.raw.content.title;
-  }
-
-  get description(): string {
-    return this.raw.content.description;
   }
 
   @computed
@@ -156,7 +168,7 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
       abstain: new IntPretty(new Int(this.response.data.tally.abstain))
         .moveDecimalPointLeft(stakeCurrency.coinDecimals)
         .maxDecimals(stakeCurrency.coinDecimals),
-      noWithVeto: new IntPretty(new Int(this.response.data.tally.no_with_veto))
+      noWithVeto: new IntPretty(new Int(this.response.data.tally.noWithVeto))
         .moveDecimalPointLeft(stakeCurrency.coinDecimals)
         .maxDecimals(stakeCurrency.coinDecimals),
     };

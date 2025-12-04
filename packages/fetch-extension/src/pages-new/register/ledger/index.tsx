@@ -16,7 +16,7 @@ import { useNotification } from "@components/notification";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { validateWalletName } from "@utils/index";
+import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -64,8 +64,8 @@ export const ImportLedgerPage: FunctionComponent<{
   const [accountNameValidationError, setAccountNameValidationError] =
     useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const totalAccount = keyRingStore.multiKeyStoreInfo.length;
-  const defaultAccountName = `account-${totalAccount + 1}`;
+  const accountList = keyRingStore.multiKeyStoreInfo;
+  const defaultAccountName = getNextDefaultAccountName(accountList);
   const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
   const {
