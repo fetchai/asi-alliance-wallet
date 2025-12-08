@@ -1,12 +1,28 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import styleWelcome from "./welcome.module.scss";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useStore } from "../../stores";
 import { useIntl } from "react-intl";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { GetSidePanelIsSupportedMsg } from "@keplr-wallet/background";
+import { toggleSidePanel } from "@utils/side-panel";
+import { ToolTip } from "@components/tooltip";
 
 export const WelcomePage: FunctionComponent = () => {
   const { analyticsStore } = useStore();
   const intl = useIntl();
+  const [sidePanelSupported, setSidePanelSupported] = useState(false);
+
+  useEffect(() => {
+    const msg = new GetSidePanelIsSupportedMsg();
+    new InExtensionMessageRequester()
+      .sendMessage(BACKGROUND_PORT, msg)
+      .then((res) => {
+        setSidePanelSupported(res.supported);
+      });
+  }, []);
+
   return (
     <div style={{ marginLeft: "-27px" }}>
       <img
@@ -30,31 +46,41 @@ export const WelcomePage: FunctionComponent = () => {
           Your ASI Alliance Wallet journey now begins.
         </div>
       </div>
-      <ButtonV2
-        variant="dark"
-        styleProps={{
-          height: "56px",
-        }}
-        onClick={() => {
-          analyticsStore.logEvent("start_using_your_wallet_click", {
-            pageName: "Register",
-          });
-          if (typeof browser !== "undefined") {
-            browser.tabs.getCurrent().then((tab) => {
-              if (tab.id) {
-                browser.tabs.remove(tab.id);
-              } else {
-                window.close();
-              }
-            });
-          } else {
-            window.close();
-          }
-        }}
-        text={""}
+      <ToolTip
+        tooltip="Opens the wallet in the side panel."
+        trigger="hover"
+        options={{ placement: "top" }}
       >
-        Start using your wallet
-      </ButtonV2>
+        <ButtonV2
+          variant="dark"
+          styleProps={{
+            height: "56px",
+          }}
+          onClick={async () => {
+            analyticsStore.logEvent("start_using_your_wallet_click", {
+              pageName: "Register",
+            });
+            if (typeof browser !== "undefined") {
+              if (sidePanelSupported) {
+                await toggleSidePanel(false);
+              } else {
+                browser.tabs.getCurrent().then((tab) => {
+                  if (tab.id) {
+                    browser.tabs.remove(tab.id);
+                  } else {
+                    window.close();
+                  }
+                });
+              }
+            } else {
+              window.close();
+            }
+          }}
+          text={""}
+        >
+          Start using your wallet
+        </ButtonV2>
+      </ToolTip>
     </div>
   );
 };
