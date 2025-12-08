@@ -275,7 +275,7 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   }
 
   @flow
-  *addEVMChainInfo(chainInfo: ChainInfo) {
+  *addCustomChainInfo(chainInfo: ChainInfo) {
     const msg = new SuggestChainInfoMsg(chainInfo);
     yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
 

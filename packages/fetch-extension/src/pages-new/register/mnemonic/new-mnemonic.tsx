@@ -35,6 +35,7 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
+import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -204,8 +205,8 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       const intl = useIntl();
       const notification = useNotification();
       const { keyRingStore } = useStore();
-      const totalAccount = keyRingStore.multiKeyStoreInfo.length;
-      const defaultAccountName = `account-${totalAccount + 1}`;
+      const accountList = keyRingStore.multiKeyStoreInfo;
+      const defaultAccountName = getNextDefaultAccountName(accountList);
       const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
       const {
@@ -236,6 +237,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       );
       const { analyticsStore } = useStore();
       const [activeTab, setActiveTab] = useState(tabs[0].id);
+      const [errorMessage, setErrorMessage] = useState("");
       const [accountNameValidationError, setAccountNameValidationError] =
         useState(false);
 
@@ -262,29 +264,6 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
           },
         });
       }, []);
-
-      const validateWalletName = (value: string) => {
-        const alreadyImportedWalletNames = [
-          ...new Set(
-            keyRingStore?.multiKeyStoreInfo?.flatMap((item) => {
-              const defaultName = item?.meta?.["name"];
-              const chainNames = item?.meta?.["nameByChain"]
-                ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
-                : [];
-              return [defaultName, ...chainNames].filter(Boolean);
-            }) ?? []
-          ),
-        ];
-
-        let nameAlreadyExists = false;
-
-        // if create mode then wallet list is empty
-        if (registerConfig.mode !== "create") {
-          nameAlreadyExists = alreadyImportedWalletNames.includes(value);
-        }
-
-        return !nameAlreadyExists;
-      };
 
       return (
         <div>
@@ -398,17 +377,34 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                       id: "register.name.error.required",
                     }),
                   })}
-                  onChange={(event) => {
-                    const trimmedValue = event.target.value.trimStart();
-                    setValue(event.target.name as keyof FormData, trimmedValue);
+                  onChange={(e) => {
+                    setErrorMessage("");
+                    const trimmedValue = e.target.value.trimStart();
+                    setValue(e.target.name as keyof FormData, trimmedValue);
                     setNewAccountName(trimmedValue);
-                    setAccountNameValidationError(
-                      !validateWalletName(trimmedValue)
-                    );
+                    const { isValid, isValidFormat, containsLetterOrNumber } =
+                      validateWalletName(
+                        trimmedValue,
+                        keyRingStore?.multiKeyStoreInfo,
+                        registerConfig.mode
+                      );
+                    const isEmpty = trimmedValue === "";
+                    if (!isValid || isEmpty) {
+                      setErrorMessage(
+                        !isValidFormat
+                          ? "Only letters, numbers and basic symbols (_-.@#()) are allowed."
+                          : isEmpty
+                          ? "Account name cannot be empty"
+                          : !containsLetterOrNumber
+                          ? "Account name must contain at least one letter or number."
+                          : "Account name already exists, please try different name"
+                      );
+                    }
+                    setAccountNameValidationError(!isValid || isEmpty);
                   }}
                   error={
                     accountNameValidationError
-                      ? "Account name already exists, please try different name"
+                      ? errorMessage
                       : errors.name && errors.name.message
                   }
                   maxLength={20}
@@ -629,12 +625,14 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 <Button
                   className={style["button"]}
                   key={word + i.toString()}
-                  onClick={() =>
-                    handleClickFirstButton(
-                      word,
-                      rowIndex * firstButtonsPerRow + i
-                    )
-                  }
+                  onClick={() => {
+                    if (word !== " ") {
+                      handleClickFirstButton(
+                        word,
+                        rowIndex * firstButtonsPerRow + i
+                      );
+                    }
+                  }}
                 >
                   {word}
                 </Button>
@@ -652,7 +650,11 @@ export const VerifyMnemonicModePage: FunctionComponent<{
           text="Clear All"
           variant="dark"
           onClick={() => {
-            setSuggestedWords(Array(12).fill(" "));
+            setSuggestedWords(
+              Array(
+                newMnemonicConfig.numWords === NumWords.WORDS12 ? 12 : 24
+              ).fill(" ")
+            );
             setDisabledButtons([]);
           }}
         />

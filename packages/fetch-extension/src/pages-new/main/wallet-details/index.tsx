@@ -5,11 +5,10 @@ import { WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
 import {
   formatAddress,
-  formatAddressWithCustom,
   separateNumericAndDenom,
   splitBech32,
 } from "@utils/format";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { Button } from "reactstrap";
@@ -21,6 +20,7 @@ import { observer } from "mobx-react-lite";
 import { txType } from "./constants";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { fetchProposalNodes } from "../../activity/utils";
+import { ResponsiveAddressView } from "./address-view";
 
 export const WalletDetailsView = observer(
   ({
@@ -49,6 +49,8 @@ export const WalletDetailsView = observer(
     const current = chainStore.current;
     const [chatTooltip, setChatTooltip] = useState("");
     const [chatDisabled, setChatDisabled] = useState(false);
+    const outerDivRef = useRef<HTMLDivElement>(null);
+    const outerDivRefEvm = useRef<HTMLDivElement>(null);
 
     const [currentTxnType, setCurrentTxnType] = useState<string>("");
 
@@ -310,7 +312,7 @@ export const WalletDetailsView = observer(
                 )}
               </div>
               {accountInfo.walletStatus !== WalletStatus.Rejected && !isEvm && (
-                <div>
+                <React.Fragment>
                   {accountInfo.walletStatus === WalletStatus.Loaded &&
                   accountInfo.bech32Address ? (
                     <div
@@ -321,21 +323,24 @@ export const WalletDetailsView = observer(
                         cursor: "pointer",
                         fontWeight: 400,
                       }}
+                      ref={outerDivRef}
                       onClick={() => copyAddress(accountInfo.bech32Address)}
                     >
                       <Address
                         maxCharacters={16}
                         lineBreakBeforePrefix={false}
                         tooltipAddress={accountInfo.bech32Address}
+                        childrenStyle={{ opacity: 1 }}
                       >
                         <span style={{ display: "flex" }}>
                           {splitBech32(accountInfo.bech32Address).prefix}
                           <span className={style["wallet-address-text"]}>
-                            {formatAddressWithCustom(
-                              splitBech32(accountInfo.bech32Address).rest,
-                              3,
-                              6
-                            )}
+                            <ResponsiveAddressView
+                              containerRef={outerDivRef}
+                              address={
+                                splitBech32(accountInfo.bech32Address).rest
+                              }
+                            />
                           </span>
                         </span>
                       </Address>
@@ -348,7 +353,7 @@ export const WalletDetailsView = observer(
                   ) : (
                     <Skeleton height="21px" />
                   )}
-                </div>
+                </React.Fragment>
               )}
               {accountInfo.walletStatus !== WalletStatus.Rejected &&
                 (isEvm || accountInfo.hasEthereumHexAddress) && (
@@ -356,39 +361,45 @@ export const WalletDetailsView = observer(
                     style={{
                       display: "flex",
                       alignItems: "center",
+                      cursor: "pointer",
                       gap: "6px",
                     }}
+                    ref={outerDivRefEvm}
+                    onClick={() => copyAddress(accountInfo.ethereumHexAddress)}
                   >
-                    <div
-                      onClick={() =>
-                        copyAddress(accountInfo.ethereumHexAddress)
-                      }
+                    <Address
+                      isRaw={true}
+                      placement="bottom-end"
+                      tooltipAddress={accountInfo.ethereumHexAddress}
+                      childrenStyle={{ opacity: 1 }}
                     >
-                      <Address
-                        isRaw={true}
-                        placement="bottom-end"
-                        tooltipAddress={accountInfo.ethereumHexAddress}
-                      >
-                        <span className={style["wallet-address-text-eth"]}>
-                          {accountInfo.walletStatus === WalletStatus.Loaded &&
-                          accountInfo.ethereumHexAddress
-                            ? accountInfo.ethereumHexAddress.length === 42
-                              ? `${accountInfo.ethereumHexAddress.slice(
-                                  0,
-                                  6
-                                )}...${accountInfo.ethereumHexAddress.slice(
-                                  -6
-                                )}`
-                              : accountInfo.ethereumHexAddress
-                            : "..."}
-                        </span>
-                      </Address>
-                    </div>
+                      <span style={{ display: "flex" }}>
+                        {accountInfo.walletStatus === WalletStatus.Loaded &&
+                        accountInfo.ethereumHexAddress ? (
+                          accountInfo.ethereumHexAddress.length === 42 ? (
+                            <React.Fragment>
+                              {accountInfo.ethereumHexAddress.slice(0, 2)}
+                              <span className={style["wallet-address-text"]}>
+                                <ResponsiveAddressView
+                                  containerRef={outerDivRefEvm}
+                                  address={accountInfo.ethereumHexAddress.slice(
+                                    2
+                                  )}
+                                />
+                              </span>
+                            </React.Fragment>
+                          ) : (
+                            <React.Fragment>
+                              {accountInfo.ethereumHexAddress}
+                            </React.Fragment>
+                          )
+                        ) : (
+                          "..."
+                        )}
+                      </span>
+                    </Address>
                     <img
                       style={{ cursor: "pointer" }}
-                      onClick={() =>
-                        copyAddress(accountInfo.ethereumHexAddress)
-                      }
                       src={require("@assets/svg/wireframe/copy.svg")}
                       alt=""
                     />

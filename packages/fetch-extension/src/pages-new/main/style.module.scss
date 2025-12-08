@@ -251,12 +251,5 @@
 .wallet-address-text {
   font-size: 14px;
   font-weight: bold;
-  opacity: 1 !important;
-  color: $font-secondary;
-}
-
-.wallet-address-text-eth {
-  font-size: 14px;
-  opacity: 0.6 !important;
-  color: $font-secondary;
+  color: rgba($font-dark, 0.8);
 }

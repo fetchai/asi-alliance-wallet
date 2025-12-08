@@ -10,6 +10,7 @@ export interface AddressProps {
   tooltipAddress?: string;
   iconClass?: string;
   placement?: PopperOptions["placement"];
+  childrenStyle?: React.CSSProperties;
 }
 
 export interface Bech32AddressProps {
@@ -61,6 +62,7 @@ export const Address: FunctionComponent<
         childrenStyle={{
           opacity: 0.6,
           color: "var(--font-secondary)",
+          ...props.childrenStyle,
         }}
       >
         {props.iconClass ? <i className={iconClass} /> : ""}

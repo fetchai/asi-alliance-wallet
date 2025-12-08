@@ -44,7 +44,7 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
 
     const networkList = [...cosmosList, ...evmList].map((chain) => ({
       id: chain.chainId,
-      label: chain.chainName === "fetch" ? "Fetchhub" : chain.chainName,
+      label: chain.chainName === "fetch" ? "FetchHub" : chain.chainName,
     }));
 
     useEffect(() => {

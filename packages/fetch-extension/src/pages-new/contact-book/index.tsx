@@ -24,6 +24,7 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { SearchBar } from "@components-v2/search-bar";
 import { getFilteredAddressValues } from "@utils/filters";
 import { AddAddress } from "../more/address-book/add-address";
+import { NoResults } from "@components-v2/no-results";
 
 export interface chatSectionParams {
   openModal: boolean;
@@ -204,6 +205,7 @@ export const ContactBookPage: FunctionComponent<{
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
             filterFunction={getFilteredAddressValues}
+            emptyContent={<NoResults />}
             disabled={addressBookConfig.addressBookDatas.length === 0}
             renderResult={(data, i) => (
               <Card
@@ -226,19 +228,28 @@ export const ContactBookPage: FunctionComponent<{
               />
             )}
           />
-          <div className={style["noAddressMessage"]}>
-            {addressBookConfig.addressBookDatas.length === 0 && (
-              <React.Fragment>
+          {addressBookConfig.addressBookDatas.length === 0 && (
+            <NoResults
+              message="You haven’t saved any addresses yet"
+              styles={{
+                height: "250px",
+                rowGap: "0px",
+              }}
+              contentStyles={{
+                color: "var(--font-dark)",
+                textAlign: "center",
+                fontSize: "24px",
+                lineHeight: "34px",
+                width: "250px",
+              }}
+              icon={
                 <img
                   src={require("@assets/svg/wireframe/no-address.svg")}
                   alt=""
                 />
-                <div className={style["message"]}>
-                  You haven’t saved any addresses yet
-                </div>
-              </React.Fragment>
-            )}
-          </div>
+              }
+            />
+          )}
           <ButtonV2
             variant="dark"
             styleProps={{

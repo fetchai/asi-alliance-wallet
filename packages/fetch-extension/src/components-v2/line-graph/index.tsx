@@ -80,7 +80,7 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
         vsCurrency={fiatCurrency}
         setTokenCurrentPrice={setTokenCurrentPrice}
       />
-      {tokenState?.diff && (
+      {tokenState?.diff ? (
         <div style={{ marginBottom: "-18px" }}>
           <TabsPanel
             className={style["graphOption"]}
@@ -90,6 +90,8 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
             setActiveTab={setActiveTab}
           />
         </div>
+      ) : (
+        ""
       )}
     </div>
   );

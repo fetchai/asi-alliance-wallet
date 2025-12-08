@@ -21,6 +21,7 @@
   "dependencies": {
     "@asi-alliance/cardano": "../cardano",
     "@emurgo/cardano-serialization-lib-browser": "^15.0.0",
+    "@cosmjs/stargate": "^0.36.2",
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/address": "^5.7.0",
@@ -38,6 +39,7 @@
     "@keplr-wallet/unit": "0.12.12",
     "axios": "^0.27.2",
     "buffer": "^6.0.3",
+    "cosmjs-types": "^0.10.1",
     "deepmerge": "^4.2.2",
     "eventemitter3": "^4.0.7",
     "mobx": "^6.1.7",

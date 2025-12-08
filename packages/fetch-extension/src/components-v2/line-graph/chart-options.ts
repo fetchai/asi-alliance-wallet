@@ -21,6 +21,8 @@ export const chartOptions: ChartOptions = {
     bodyFontColor: "#151A1A",
     displayColors: false,
     caretSize: 3,
+    titleFontSize: 14,
+    bodyFontSize: 14,
     callbacks: {
       label: (tooltipItem: any, data: any) => {
         const label = data.datasets[tooltipItem.datasetIndex].label || "";

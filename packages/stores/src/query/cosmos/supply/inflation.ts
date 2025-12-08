@@ -1,7 +1,6 @@
 import { Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { computed, makeObservable } from "mobx";
-import { ChainGetter } from "../../../common";
-import { ObservableChainQuery } from "../../chain-query";
+import { ChainGetter, ObservableQueryTendermint } from "../../../common";
 import { ObservableQueryDistributionParams } from "../distribution";
 import { ObservableQueryStakingPool } from "../staking";
 import { ObservableQueryIrisMintingInfation } from "./iris-minting";
@@ -23,7 +22,7 @@ export class ObservableQueryInflation {
   constructor(
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter,
-    protected readonly _queryMint: ObservableChainQuery<MintingInflation>,
+    protected readonly _queryMint: ObservableQueryTendermint<MintingInflation>,
     protected readonly _queryPool: ObservableQueryStakingPool,
     protected readonly _querySupplyTotal: ObservableQuerySupplyTotal,
     protected readonly _queryIrisMint: ObservableQueryIrisMintingInfation,
@@ -122,7 +121,7 @@ export class ObservableQueryInflation {
           this._queryPool.response
         ) {
           const bondedToken = new Dec(
-            this._queryPool.response.data.pool.bonded_tokens
+            this._queryPool.response.data.pool.bondedTokens
           );
 
           const dec = this._queryJunoAnnualProvisions.annualProvisionsRaw
@@ -165,7 +164,7 @@ export class ObservableQueryInflation {
 
       if (this._queryPool.response) {
         const bondedToken = new Dec(
-          this._queryPool.response.data.pool.bonded_tokens
+          this._queryPool.response.data.pool.bondedTokens
         );
 
         const totalStr = (() => {

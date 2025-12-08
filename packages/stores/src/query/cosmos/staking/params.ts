@@ -1,13 +1,23 @@
-import { ObservableChainQuery } from "../../chain-query";
-import { StakingParams } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { ChainGetter, ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
+import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
+import { QueryParamsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
 
-export class ObservableQueryStakingParams extends ObservableChainQuery<StakingParams> {
+export class ObservableQueryStakingParams extends ObservableQueryTendermint<QueryParamsResponse> {
   constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
-    super(kvStore, chainId, chainGetter, "/cosmos/staking/v1beta1/params");
-
+    const chainInfo = chainGetter.getChain(chainId);
+    super(
+      kvStore,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as StakingExtension;
+        const result = await client.staking.params();
+        return result;
+      },
+      setupStakingExtension,
+      "/cosmos/staking/v1beta1/params"
+    );
     makeObservable(this);
   }
 
@@ -17,22 +27,22 @@ export class ObservableQueryStakingParams extends ObservableChainQuery<StakingPa
       return 0;
     }
 
-    return parseInt(this.response.data.params.unbonding_time.replace("s", ""));
+    return parseInt(this.response.data.params.unbondingTime.seconds.toString());
   }
 
   get maxValidators(): number {
-    return this.response?.data.params.max_validators ?? 0;
+    return this.response?.data.params.maxValidators ?? 0;
   }
 
   get maxEntries(): number {
-    return this.response?.data.params.max_entries ?? 0;
+    return this.response?.data.params.maxEntries ?? 0;
   }
 
   get historicalEntries(): number {
-    return this.response?.data.params.historical_entries ?? 0;
+    return this.response?.data.params.historicalEntries ?? 0;
   }
 
   get bondDenom(): string {
-    return this.response?.data.params.bond_denom ?? "";
+    return this.response?.data.params.bondDenom ?? "";
   }
 }

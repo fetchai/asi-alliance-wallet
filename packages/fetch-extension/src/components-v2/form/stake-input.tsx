@@ -116,7 +116,12 @@ export const StakeInput: FunctionComponent<{
         onChange={(e) => {
           let value = e.target.value;
 
-          if (value !== "" && !validateDecimalPlaces(value)) {
+          if (value === "") {
+            amountConfig.setAmount("");
+            return;
+          }
+
+          if (!validateDecimalPlaces(value)) {
             return;
           }
 

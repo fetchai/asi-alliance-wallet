@@ -9,6 +9,10 @@
   margin-bottom: -9px;
 }
 
+.line-graph-sidepanel {
+  height: 180px;
+}
+
 .graph-container {
   // position: absolute;
   width: 100%;
@@ -17,7 +21,6 @@
 .errorText {
   justify-content: center;
   display: flex;
-  margin-top: 44px;
   color: #fa8f6b;
 }
 

@@ -167,7 +167,12 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
             </div>
           </div>
         </div>
-        <ValidatorsList filteredValidators={data} />
+        <ValidatorsList
+          filteredValidators={data}
+          bondedValidators={bondedValidators}
+          unbondedValidators={unbondedValidators}
+          unbondingValidators={unbondingValidators}
+        />
         <Dropdown
           closeClicked={() => {
             setIsSortModalOpen(false);

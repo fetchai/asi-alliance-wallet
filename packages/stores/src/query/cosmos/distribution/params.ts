@@ -1,14 +1,40 @@
-import { ObservableChainQuery } from "../../chain-query";
-import { DistributionParams } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { ChainGetter, ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
-import { RatePretty } from "@keplr-wallet/unit";
+import { RatePretty, Dec } from "@keplr-wallet/unit";
+import {
+  DistributionExtension,
+  setupDistributionExtension,
+} from "@cosmjs/stargate";
+import { QueryParamsResponse } from "cosmjs-types/cosmos/distribution/v1beta1/query";
 
-export class ObservableQueryDistributionParams extends ObservableChainQuery<DistributionParams> {
+export class ObservableQueryDistributionParams extends ObservableQueryTendermint<QueryParamsResponse> {
   constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
-    super(kvStore, chainId, chainGetter, "/cosmos/distribution/v1beta1/params");
+    const chainInfo = chainGetter.getChain(chainId);
+    super(
+      kvStore,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as DistributionExtension;
+        const result = await client.distribution.params();
+        const decimals = chainInfo.currencies[0].coinDecimals;
+        const normalize = (val: string): string => {
+          if (!val) return "0";
+          return new Dec(val, decimals).toString();
+        };
 
+        return {
+          params: {
+            communityTax: normalize(result.params.communityTax),
+            baseProposerReward: normalize(result.params.baseProposerReward),
+            bonusProposerReward: normalize(result.params.bonusProposerReward),
+            withdrawAddrEnabled: result.params.withdrawAddrEnabled,
+          },
+        };
+      },
+      setupDistributionExtension,
+      "/cosmos/distribution/v1beta1/params"
+    );
     makeObservable(this);
   }
 
@@ -18,6 +44,6 @@ export class ObservableQueryDistributionParams extends ObservableChainQuery<Dist
       return new RatePretty(0);
     }
 
-    return new RatePretty(this.response.data.params.community_tax);
+    return new RatePretty(this.response.data.params.communityTax);
   }
 }

@@ -15,6 +15,7 @@ import style from "./chain-list.module.scss";
 import { getFilteredChainValues } from "@utils/filters";
 import { NotificationOption } from "@components-v2/notification-option";
 import { NoResults } from "@components-v2/no-results";
+import { useLoadingIndicator } from "@components/loading-indicator";
 interface ChainListProps {
   showAddress?: boolean;
   setIsSelectNetOpen?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -39,6 +40,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const intl = useIntl();
     const navigate = useNavigate();
     const confirm = useConfirm();
+    const loadingIndicator = useLoadingIndicator();
 
     const mainChainList = chainStore.chainInfosInUI.filter(
       (chainInfo: any) =>
@@ -183,83 +185,93 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 />
               )}
             />
-            {betaChainList.length > 0 && (
-              <div className={style["chain-title"]}>Beta support</div>
-            )}
+            {cosmosSearchTerm === "" && (
+              <React.Fragment>
+                {betaChainList.length > 0 && (
+                  <div className={style["chain-title"]}>Beta support</div>
+                )}
 
-            {betaChainList.map((chainInfo: any) => (
-              <Card
-                key={chainInfo.raw.chainId}
-                leftImage={
-                  chainInfo.raw.chainSymbolImageUrl !== undefined
-                    ? chainInfo.raw.chainSymbolImageUrl
-                    : chainInfo.raw.chainName
-                    ? chainInfo.raw.chainName[0].toUpperCase()
-                    : ""
-                }
-                heading={chainInfo.raw.chainName}
+                {betaChainList.map((chainInfo: any) => (
+                  <Card
+                    key={chainInfo.raw.chainId}
+                    leftImage={
+                      chainInfo.raw.chainSymbolImageUrl !== undefined
+                        ? chainInfo.raw.chainSymbolImageUrl
+                        : chainInfo.raw.chainName
+                        ? chainInfo.raw.chainName[0].toUpperCase()
+                        : ""
+                    }
+                    heading={chainInfo.raw.chainName}
                 isActive={chainInfo.raw.chainId === chainStore.current.chainId}
                 leftImageStyle={{
                   backgroundColor: !chainInfo.raw.chainSymbolImageUrl
                     ? "#dddfdf"
                     : "transparent",
                 }}
-                rightContent={require("@assets/svg/wireframe/closeImage.svg")}
-                rightContentStyle={{ height: "24px", width: "24px" }}
-                rightContentOnClick={async (e: any) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                    rightContent={require("@assets/svg/wireframe/closeImage.svg")}
+                    rightContentStyle={{ height: "24px", width: "24px" }}
+                    rightContentOnClick={async (e: any) => {
+                      e.preventDefault();
+                      e.stopPropagation();
 
-                  if (
-                    await confirm.confirm({
-                      paragraph: intl.formatMessage(
-                        {
-                          id: "chain.remove.confirm.paragraph",
-                        },
-                        {
-                          chainName: chainInfo.raw.chainName,
-                        }
-                      ),
-                    })
-                  ) {
-                    await chainStore.removeChainInfo(chainInfo.raw.chainId);
-                  }
-                }}
-                onClick={() => {
-                  let properties = {};
-                  if (chainInfo.raw.chainId !== chainStore.current.chainId) {
-                    properties = {
-                      chainId: chainStore.current.chainId,
-                      chainName: chainStore.current.chainName,
-                      toChainId: chainInfo.raw.chainId,
-                      toChainName: chainInfo.raw.chainName,
-                    };
-                  }
-                  chainStore.selectChain(chainInfo.raw.chainId);
-                  chainStore.saveLastViewChainId();
-                  chatStore.userDetailsStore.resetUser();
-                  proposalStore.resetProposals();
-                  chatStore.messagesStore.resetChatList();
-                  chatStore.messagesStore.setIsChatSubscriptionActive(false);
-                  messageAndGroupListenerUnsubscribe();
-                  // navigate("/");
-                  if (Object.values(properties).length > 0) {
-                    analyticsStore.logEvent("chain_change_click", properties);
-                  }
-                  if (setIsSelectNetOpen) {
-                    setIsSelectNetOpen(false);
-                  }
-                }}
-                subheading={
-                  showAddress
-                    ? formatAddress(
-                        accountStore.getAccount(chainInfo.raw.chainId)
+                      if (
+                        await confirm.confirm({
+                          paragraph: intl.formatMessage(
+                            {
+                              id: "chain.remove.confirm.paragraph",
+                            },
+                            {
+                              chainName: chainInfo.raw.chainName,
+                            }
+                          ),
+                        })
+                      ) {
+                        loadingIndicator.setIsLoading("remove-chain", true);
+                        await chainStore.removeChainInfo(chainInfo.raw.chainId);
+                        loadingIndicator.setIsLoading("remove-chain", false);
+                      }
+                    }}
+                    onClick={() => {
+                      let properties = {};
+                      if (chainInfo.raw.chainId !== chainStore.current.chainId) {
+                        properties = {
+                          chainId: chainStore.current.chainId,
+                          chainName: chainStore.current.chainName,
+                          toChainId: chainInfo.raw.chainId,
+                          toChainName: chainInfo.raw.chainName,
+                        };
+                      }
+                      chainStore.selectChain(chainInfo.raw.chainId);
+                      chainStore.saveLastViewChainId();
+                      chatStore.userDetailsStore.resetUser();
+                      proposalStore.resetProposals();
+                      chatStore.messagesStore.resetChatList();
+                      chatStore.messagesStore.setIsChatSubscriptionActive(
+                        false
+                      );
+                      messageAndGroupListenerUnsubscribe();
+                      // navigate("/");
+                      if (Object.values(properties).length > 0) {
+                        analyticsStore.logEvent(
+                          "chain_change_click",
+                          properties
+                        );
+                      }
+                      if (setIsSelectNetOpen) {
+                        setIsSelectNetOpen(false);
+                      }
+                    }}
+                    subheading={
+                      showAddress
+                        ? formatAddress(
+                            accountStore.getAccount(chainInfo.raw.chainId)
                           .bech32Address
                       )
                     : null
                 }
               />
-            ))}
+            ))}</React.Fragment>
+            )}
 
             <a
               href="https://chains.keplr.app/"

@@ -175,7 +175,13 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                 onChange={(e: any) => {
                   e.preventDefault();
                   let value = e.target.value;
-                  if (value !== "" && !validateDecimalPlaces(value)) {
+
+                  if (value === "") {
+                    amountConfig.setAmount("");
+                    return;
+                  }
+
+                  if (!validateDecimalPlaces(value)) {
                     return;
                   }
 
