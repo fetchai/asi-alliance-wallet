@@ -47,7 +47,11 @@ export const WelcomePage: FunctionComponent = () => {
         </div>
       </div>
       <ToolTip
-        tooltip="Opens the wallet in the side panel."
+        tooltip={
+          sidePanelSupported
+            ? "Opens the wallet in the side panel."
+            : "Closes the welcome page."
+        }
         trigger="hover"
         options={{ placement: "top" }}
       >

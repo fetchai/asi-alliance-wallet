@@ -25,6 +25,9 @@ import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
 import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { RefreshAccountList } from "@keplr-wallet/background";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -475,6 +478,13 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         accountType: "mnemonic",
                       });
                     }
+                    await keyRingStore.changeKeyRing(
+                      keyRingStore.multiKeyStoreInfo.length - 1
+                    );
+                    await new InExtensionMessageRequester().sendMessage(
+                      BACKGROUND_PORT,
+                      new RefreshAccountList()
+                    );
                   } catch (e) {
                     alert(e.message ? e.message : e.toString());
                     registerConfig.clear();
