@@ -40,6 +40,7 @@ import {
   GetAccountMsg,
   RestoreWalletMsg,
   GetKeyMsgFetchSigning,
+  RefreshAccountList,
 } from "./messages";
 import { KeyRingService } from "./service";
 import { Bech32Address } from "@keplr-wallet/cosmos";
@@ -193,6 +194,11 @@ export const getHandler: (service: KeyRingService) => Handler = (
           env,
           msg as RequestVerifyADR36AminoSignDocFetchSigning
         );
+      case RefreshAccountList:
+        return handleRefreshAccountListMsg(service)(
+          env,
+          msg as RefreshAccountList
+        );
       default:
         throw new Error("Unknown msg type");
     }
@@ -204,6 +210,15 @@ const handleRestoreKeyRingMsg: (
 ) => InternalHandler<RestoreKeyRingMsg> = (service) => {
   return async (_env, _msg) => {
     return await service.restore();
+  };
+};
+
+// RefreshAccountList does not need to do anything in the background
+const handleRefreshAccountListMsg: (
+  service: KeyRingService
+) => InternalHandler<RefreshAccountList> = (_service) => {
+  return async (_env, _msg) => {
+    return true;
   };
 };
 
