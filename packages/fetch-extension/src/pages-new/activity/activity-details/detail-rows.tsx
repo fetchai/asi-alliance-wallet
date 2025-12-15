@@ -70,7 +70,7 @@ export const DetailRows = ({ details }: { details: any }) => {
       type: "success",
       duration: 2,
       content: intl.formatMessage({
-        id: "main.address.copied",
+        id: "Transaction hash copied",
       }),
       canDelete: true,
       transition: {
