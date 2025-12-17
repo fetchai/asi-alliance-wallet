@@ -36,7 +36,8 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
     }, []);
 
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
-    const spendableBalances = isEvm
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+    const spendableBalances = isEvm || isCardano
       ? queries.queryBalances
           .getQueryBech32Address(accountInfo.bech32Address)
           .balances?.find(
@@ -65,8 +66,11 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
               sendConfigs.feeConfig.feeType ?? "average" // fee type is not set at this point, so default to average
             );
             // subtract fee from balance to set max amount to avoid insufficient balance error
-            const actualAmount = balance
-              .sub(fees)
+            const maxAmount = balance.sub(fees);
+            const safeMaxAmount = maxAmount.toDec().isNegative()
+              ? new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0))
+              : maxAmount;
+            const actualAmount = safeMaxAmount
               .shrink(true)
               .hideDenom(true)
               .toString();
