@@ -284,18 +284,22 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
   const { queriesStore, priceStore, accountStore, chainStore, analyticsStore } =
     useStore();
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
   const queryBalances = queriesStore
     .get(amountConfig.chainId)
     .queryBalances.getQueryBech32Address(amountConfig.sender);
 
-  const selectableCurrencies = (
-    overrideSelectableCurrencies ||
-    queries.cosmos.querySpendableBalances
-      .getQueryBech32Address(accountInfo.bech32Address)
-      .balances.map((b) => b.currency)
-  )
+  const selectableCurrenciesSource =
+    overrideSelectableCurrencies ??
+    (isEvm || isCardano
+      ? queryBalances.balances.map((b) => b.currency)
+      : queries.cosmos.querySpendableBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances.map((b) => b.currency));
+
+  const selectableCurrencies = selectableCurrenciesSource
     .filter((cur) => {
       const bal = queryBalances.getBalanceFromCurrency(cur);
       return !bal.toDec().isZero();
@@ -303,13 +307,16 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
     .sort((a, b) => {
       return a.coinDenom < b.coinDenom ? -1 : 1;
     });
-  const spendableBalances = queries.cosmos.querySpendableBalances
-    .getQueryBech32Address(accountInfo.bech32Address)
-    .balances?.find(
-      (bal) =>
-        amountConfig.sendCurrency.coinMinimalDenom ===
-        bal.currency.coinMinimalDenom
-    );
+  const spendableBalances =
+    isEvm || isCardano
+      ? undefined
+      : queries.cosmos.querySpendableBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances?.find(
+            (bal) =>
+              amountConfig.sendCurrency.coinMinimalDenom ===
+              bal.currency.coinMinimalDenom
+          );
   const balance = spendableBalances
     ? spendableBalances
     : new CoinPretty(amountConfig.sendCurrency, new Int(0));
@@ -333,11 +340,19 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
     balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
     new CoinPretty(amountConfig.sendCurrency, new Int(0));
 
+  const balanceCardano =
+    balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
+    new CoinPretty(amountConfig.sendCurrency, new Int(0));
+
   useEffect(() => {
-    const currentChainBalance = isEvm ? balanceETH : balance;
+    const currentChainBalance = isEvm
+      ? balanceETH
+      : isCardano
+        ? balanceCardano
+        : balance;
     const valueInUsd = convertToFiatCurrency(currentChainBalance);
     setInputInFiatCurrency(valueInUsd);
-  }, [amountConfig.sendCurrency]);
+  }, [amountConfig.sendCurrency, isCardano, isEvm]);
 
   return (
     <React.Fragment>
@@ -368,7 +383,9 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
             {`Available: ${
               isEvm
                 ? balanceETH.shrink(true).maxDecimals(6).toString()
-                : balance.shrink(true).maxDecimals(6).toString()
+                : isCardano
+                  ? balanceCardano.shrink(true).maxDecimals(6).toString()
+                  : balance.shrink(true).maxDecimals(6).toString()
             } `}
             {inputInFiatCurrency &&
               `(${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`}
