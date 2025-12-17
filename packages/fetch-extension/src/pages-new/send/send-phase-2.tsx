@@ -1,12 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import style from "./style.module.scss";
 import { useIntl } from "react-intl";
-import { AddressInput, MemoInput } from "@components-v2/form";
-import { DenomHelper, ExtensionKVStore } from "@keplr-wallet/common";
+import { AddressInput, MemoInput, PasswordInput } from "@components-v2/form";
 import { useStore } from "../../stores";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { useGasSimulator } from "@keplr-wallet/hooks";
-import { EmptyAddressError } from "@keplr-wallet/hooks";
 import { useLocation, useNavigate } from "react-router";
 import { useLanguage } from "../../languages";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
@@ -19,7 +16,232 @@ import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { GetCardanoSyncStatusMsg } from "@keplr-wallet/background";
+import { GetCardanoSyncStatusMsg, KeyRingStatus } from "@keplr-wallet/background";
+import { Modal, ModalBody } from "reactstrap";
+import type { KeplrSignOptions } from "@keplr-wallet/types";
+
+type CardanoSignOptions = KeplrSignOptions & {
+  cardano?: { spendingPassword?: string };
+};
+
+type CardanoPasswordConfirmModalProps = {
+  isOpen: boolean;
+  isSyncing: boolean;
+  feeText: string;
+  isWalletLocked: boolean;
+  networkName: string;
+  recipient: string;
+  amountText: string;
+  memo?: string;
+  passwordInputRef: React.RefObject<HTMLInputElement>;
+  onConfirm: (password: string) => Promise<void>;
+  onCancel: () => void;
+  onNotifyWarning: (content: string) => void;
+};
+
+const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = (
+  props
+) => {
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (props.isOpen) {
+      setPassword("");
+      setPasswordError(undefined);
+      setIsLoading(false);
+      // Focus after modal mount.
+      setTimeout(() => {
+        props.passwordInputRef.current?.focus();
+      }, 0);
+    }
+  }, [props.isOpen, props.passwordInputRef]);
+
+  return (
+    <Modal
+      isOpen={props.isOpen}
+      centered
+      toggle={() => {
+        if (isLoading) return;
+        props.onCancel();
+      }}
+      backdrop={isLoading ? "static" : true}
+      keyboard={!isLoading}
+    >
+      <ModalBody>
+        <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>
+          Confirm transaction
+        </div>
+        <div style={{ fontSize: "13px", opacity: 0.8, marginBottom: "12px" }}>
+          Enter your wallet password to confirm this Cardano transaction.
+        </div>
+        {props.isWalletLocked ? (
+          <div style={{ fontSize: "12px", opacity: 0.75, marginBottom: "12px" }}>
+            This will also unlock your wallet.
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            padding: "12px",
+            borderRadius: "10px",
+            background: "rgba(0,0,0,0.04)",
+            marginBottom: "12px",
+            fontSize: "13px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ opacity: 0.7 }}>Network</div>
+            <div style={{ fontWeight: 600 }}>{props.networkName}</div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+            <div style={{ opacity: 0.7 }}>To</div>
+            <div
+              style={{
+                fontWeight: 600,
+                maxWidth: "260px",
+                textAlign: "right",
+                wordBreak: "break-all",
+              }}
+            >
+              {props.recipient}
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+            <div style={{ opacity: 0.7 }}>Amount</div>
+            <div style={{ fontWeight: 600 }}>{props.amountText}</div>
+          </div>
+          {props.feeText ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: "6px",
+              }}
+            >
+              <div style={{ opacity: 0.7 }}>Fee</div>
+              <div style={{ fontWeight: 600 }}>{props.feeText}</div>
+            </div>
+          ) : null}
+          {props.memo ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: "6px",
+              }}
+            >
+              <div style={{ opacity: 0.7 }}>Memo</div>
+              <div
+                style={{
+                  fontWeight: 600,
+                  maxWidth: "260px",
+                  textAlign: "right",
+                  wordBreak: "break-word",
+                }}
+              >
+                {props.memo}
+              </div>
+            </div>
+          ) : null}
+          {props.isSyncing ? (
+            <div style={{ marginTop: "10px", color: "#b8860b", fontWeight: 600 }}>
+              Syncing wallet… Please wait
+            </div>
+          ) : null}
+        </div>
+
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!password) {
+              setPasswordError("Password is required");
+              return;
+            }
+            if (props.isSyncing) {
+              return;
+            }
+
+            setIsLoading(true);
+            try {
+              await props.onConfirm(password);
+              props.onCancel();
+            } catch (err: any) {
+              const message = `${err?.message ?? ""}`.toLowerCase();
+              if (
+                message.includes("invalid password") ||
+                message.includes("fail to decrypt")
+              ) {
+                setPasswordError("Invalid password");
+              } else if (message.includes("password is required")) {
+                setPasswordError("Password is required");
+              } else if (message.includes("wallet is syncing")) {
+                setPasswordError("Wallet is syncing. Please wait.");
+              } else if (message.includes("please unlock wallet first")) {
+                setPasswordError("Wallet is locked. Please unlock and try again.");
+              } else {
+                setPasswordError(undefined);
+                props.onNotifyWarning(
+                  err?.message ? `Transaction Failed: ${err.message}` : "Transaction Failed"
+                );
+              }
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+        >
+          <div style={{ marginBottom: "12px" }}>
+            <PasswordInput
+              placeholder="Password"
+              value={password}
+              ref={props.passwordInputRef}
+              containerStyle={{ width: "100%" }}
+              inputStyle={{
+                width: "100%",
+                minWidth: "100%",
+                paddingRight: "42px",
+              }}
+              onChange={(e: any) => {
+                setPassword(e.target.value);
+                setPasswordError(undefined);
+              }}
+              error={passwordError}
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: "8px" }}>
+            <ButtonV2
+              variant="dark"
+              type="submit"
+              text={
+                isLoading
+                  ? "Confirming..."
+                  : props.isSyncing
+                    ? "Syncing wallet..."
+                    : "Confirm"
+              }
+              disabled={isLoading || !password || props.isSyncing}
+              styleProps={{ flex: 1, height: "44px" }}
+            />
+            <ButtonV2
+              variant="light"
+              type="button"
+              text="Cancel"
+              styleProps={{ flex: 1, height: "44px" }}
+              disabled={isLoading}
+              onClick={() => {
+                if (isLoading) return;
+                props.onCancel();
+              }}
+            />
+          </div>
+        </form>
+      </ModalBody>
+    </Modal>
+  );
+};
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -29,6 +251,7 @@ interface SendPhase2Props {
   fromPhase1: boolean;
   configs: any;
   setFromPhase1: any;
+  gasSimulator: any;
 }
 
 export const SendPhase2: React.FC<SendPhase2Props> = observer(
@@ -40,6 +263,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     fromPhase1,
     configs,
     setFromPhase1,
+    gasSimulator,
   }) => {
     const {
       chainStore,
@@ -59,6 +283,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const [isCardanoSyncing, setIsCardanoSyncing] = useState(false);
     const isCardano = chainStore.current.features?.includes("cardano") ?? false;
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const shouldRequireCardanoPassword =
+      isCardano && keyRingStore.keyRingType === "mnemonic";
+    const [isCardanoPasswordConfirmOpen, setIsCardanoPasswordConfirmOpen] =
+      useState(false);
+    const passwordInputRef = useRef<HTMLInputElement>(null);
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
       return value && value.shrink(true).maxDecimals(6).toString();
@@ -125,99 +354,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       };
     }, [isCardano, chainStore.current.chainId]);
 
-    const gasSimulatorKey = useMemo(() => {
-      if (sendConfigs.amountConfig.sendCurrency) {
-        const denomHelper = new DenomHelper(
-          sendConfigs.amountConfig.sendCurrency.coinMinimalDenom
-        );
-
-        if (denomHelper.type !== "native") {
-          if (denomHelper.type === "cw20") {
-            // Probably, the gas can be different per cw20 according to how the contract implemented.
-            return `${denomHelper.type}/${denomHelper.contractAddress}`;
-          }
-
-          return denomHelper.type;
-        }
-      }
-
-      return "native";
-    }, [sendConfigs.amountConfig.sendCurrency]);
-
-    const gasSimulator = useGasSimulator(
-      new ExtensionKVStore("gas-simulator.main.send"),
-      chainStore,
-      chainStore.current.chainId,
-      sendConfigs.gasConfig,
-      sendConfigs.feeConfig,
-      gasSimulatorKey,
-      () => {
-        if (!sendConfigs.amountConfig.sendCurrency) {
-          throw new Error("Send currency not set");
-        }
-
-        const hasAmountError = sendConfigs.amountConfig.error != null;
-        const hasRecipientError = sendConfigs.recipientConfig.error != null && 
-          !(sendConfigs.recipientConfig.error instanceof EmptyAddressError);
-        
-        if (hasAmountError || hasRecipientError) {
-          throw new Error("Not ready to simulate tx");
-        }
-
-        const denomHelper = new DenomHelper(
-          sendConfigs.amountConfig.sendCurrency.coinMinimalDenom
-        );
-        // I don't know why, but simulation does not work for secret20
-        if (denomHelper.type === "secret20") {
-          throw new Error("Simulating secret wasm not supported");
-        }
-
-        return accountInfo.makeSendTokenTx(
-          sendConfigs.amountConfig.amount,
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          sendConfigs.amountConfig.sendCurrency!,
-          sendConfigs.recipientConfig.recipient
-        );
-      }
-    );
-
-    useEffect(() => {
-      // To simulate secretwasm, we need to include the signature in the tx.
-      // With the current structure, this approach is not possible.
-      if (
-        sendConfigs.amountConfig.sendCurrency &&
-        new DenomHelper(sendConfigs.amountConfig.sendCurrency.coinMinimalDenom)
-          .type === "secret20"
-      ) {
-        gasSimulator.forceDisable(
-          new Error("Simulating secret20 is not supported")
-        );
-        sendConfigs.gasConfig.setGas(
-          accountInfo.secret.msgOpts.send.secret20.gas
-        );
-      } else {
-        gasSimulator.forceDisable(false);
-        gasSimulator.setEnabled(true);
-      }
-    }, [
-      accountInfo.secret.msgOpts.send.secret20.gas,
-      gasSimulator,
-      sendConfigs.amountConfig.sendCurrency,
-      sendConfigs.gasConfig,
-    ]);
-
-    useEffect(() => {
-      if (
-        sendConfigs.feeConfig.chainInfo.features &&
-        sendConfigs.feeConfig.chainInfo.features.includes("terra-classic-fee")
-      ) {
-        // When considering stability tax for terra classic.
-        // Simulation itself doesn't consider the stability tax send.
-        // Thus, it always returns fairly lower gas.
-        // To adjust this, for terra classic, increase the default gas adjustment
-        gasSimulator.setGasAdjustment(1.6);
-      }
-    }, [gasSimulator, sendConfigs.feeConfig.chainInfo]);
     const sendConfigError =
       sendConfigs.recipientConfig.error ??
       sendConfigs.amountConfig.error ??
@@ -237,6 +373,164 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         .toString();
 
       return BigInt(scaledAmount);
+    };
+
+    useEffect(() => {
+      // Close the confirm modal if Cardano context changes underneath (chain switch / key type switch).
+      if (isCardanoPasswordConfirmOpen && !shouldRequireCardanoPassword) {
+        setIsCardanoPasswordConfirmOpen(false);
+      }
+    }, [isCardanoPasswordConfirmOpen, shouldRequireCardanoPassword]);
+
+    const feeText = (() => {
+      try {
+        const fee = sendConfigs?.feeConfig?.fee;
+        if (fee && typeof fee.toString === "function") {
+          return fee.toString();
+        }
+      } catch {
+        // noop
+      }
+      return "";
+    })();
+
+    const doSend = async (options?: { cardanoSpendingPassword?: string }) => {
+      try {
+        analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
+        const stdFee = sendConfigs.feeConfig.toStdFee();
+
+        const tx = accountInfo.makeSendTokenTx(
+          sendConfigs.amountConfig.amount,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          sendConfigs.amountConfig.sendCurrency!,
+          sendConfigs.recipientConfig.recipient
+        );
+
+        if (shouldRequireCardanoPassword && !options?.cardanoSpendingPassword) {
+          throw new Error("Password is required");
+        }
+
+        const signOptions = shouldRequireCardanoPassword
+          ? ({
+              preferNoSetFee: true,
+              preferNoSetMemo: true,
+              cardano: {
+                spendingPassword: options?.cardanoSpendingPassword,
+              },
+            } satisfies CardanoSignOptions)
+          : {
+              preferNoSetFee: true,
+              preferNoSetMemo: true,
+            };
+
+        await tx.send(stdFee, sendConfigs.memoConfig.memo, signOptions, {
+          onBroadcastFailed: () => {
+            const txnNavigationOptions = {
+              redirect: () => {
+                navigate("/send", {
+                  replace: true,
+                  state: { trnsxStatus: "failed", isNext: true },
+                });
+              },
+              txType: TXNTYPE.send,
+              txInProgress: accountInfo.txInProgress,
+              toastNotification: () => {
+                notification.push({
+                  type: "warning",
+                  placement: "top-center",
+                  duration: 5,
+                  content: `Transaction Failed`,
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+              },
+              isEVM: isEvm,
+            };
+            navigateOnTxnEvents(txnNavigationOptions);
+          },
+          onBroadcasted: () => {
+            analyticsStore.logEvent("send_txn_broadcasted", {
+              chainId: chainStore.current.chainId,
+              chainName: chainStore.current.chainName,
+              feeType: sendConfigs.feeConfig.feeType,
+            });
+            const txnNavigationOptions = {
+              redirect: () => {
+                navigate("/send", {
+                  replace: true,
+                  state: { trnsxStatus: "pending", isNext: true },
+                });
+              },
+              txType: TXNTYPE.send,
+              txInProgress: accountInfo.txInProgress,
+              toastNotification: () => {
+                notification.push({
+                  type: "primary",
+                  placement: "top-center",
+                  duration: 2,
+                  content: `Transaction broadcasted`,
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+              },
+              isEVM: isEvm,
+            };
+            navigateOnTxnEvents(txnNavigationOptions);
+            if (keyRingStore.keyRingType === "ledger") {
+              navigate("/send");
+            }
+            if (isDetachedPage) {
+              window.close();
+            }
+          },
+          onFulfill: (tx: any) => {
+            const istxnSuccess = !tx.code;
+            const txnNavigationOptions = {
+              redirect: () => {
+                navigate("/send", {
+                  replace: true,
+                  state: { trnsxStatus: "success", isNext: true },
+                });
+              },
+              pagePathname: "send",
+              txType: TXNTYPE.send,
+              txInProgress: accountInfo.txInProgress,
+              toastNotification: () => {
+                notification.push({
+                  type: istxnSuccess ? "success" : "danger",
+                  placement: "top-center",
+                  duration: 5,
+                  content: istxnSuccess
+                    ? `Transaction Completed`
+                    : `Transaction Failed`,
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+              },
+              isEVM: isEvm,
+            };
+            navigateOnTxnEvents(txnNavigationOptions);
+          },
+        });
+
+        if (!isDetachedPage) {
+          const currentPathName = getPathname();
+          if (currentPathName === "send" || currentPathName === "sign") {
+            navigate("/send", {
+              replace: true,
+              state: { trnsxStatus: "pending", isNext: true },
+            });
+          }
+        }
+      } finally {
+        // noop
+      }
     };
 
     return (
@@ -321,6 +615,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         )}
         <ButtonV2
           variant="dark"
+          type="button"
           text={isCardanoSyncing ? "Syncing wallet..." : "Review transaction"}
           styleProps={{
             width: "94%",
@@ -335,129 +630,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           onClick={async (e: any) => {
             e.preventDefault();
             if (accountInfo.isReadyToSendMsgs && txStateIsValid && !isCardanoSyncing) {
+              if (shouldRequireCardanoPassword) {
+                setIsCardanoPasswordConfirmOpen(true);
+                return;
+              }
+
               try {
-                analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
-                const stdFee = sendConfigs.feeConfig.toStdFee();
-
-                const tx = accountInfo.makeSendTokenTx(
-                  sendConfigs.amountConfig.amount,
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                  sendConfigs.amountConfig.sendCurrency!,
-                  sendConfigs.recipientConfig.recipient
-                );
-
-                await tx.send(
-                  stdFee,
-                  sendConfigs.memoConfig.memo,
-                  {
-                    preferNoSetFee: true,
-                    preferNoSetMemo: true,
-                  },
-                  {
-                    onBroadcastFailed: () => {
-                      const txnNavigationOptions = {
-                        redirect: () => {
-                          navigate("/send", {
-                            replace: true,
-                            state: { trnsxStatus: "failed", isNext: true },
-                          });
-                        },
-                        txType: TXNTYPE.send,
-                        txInProgress: accountInfo.txInProgress,
-                        toastNotification: () => {
-                          notification.push({
-                            type: "warning",
-                            placement: "top-center",
-                            duration: 5,
-                            content: `Transaction Failed`,
-                            canDelete: true,
-                            transition: {
-                              duration: 0.25,
-                            },
-                          });
-                        },
-                        isEVM: isEvm,
-                      };
-                      navigateOnTxnEvents(txnNavigationOptions);
-                    },
-                    onBroadcasted: () => {
-                      analyticsStore.logEvent("send_txn_broadcasted", {
-                        chainId: chainStore.current.chainId,
-                        chainName: chainStore.current.chainName,
-                        feeType: sendConfigs.feeConfig.feeType,
-                      });
-                      const txnNavigationOptions = {
-                        redirect: () => {
-                          navigate("/send", {
-                            replace: true,
-                            state: { trnsxStatus: "pending", isNext: true },
-                          });
-                        },
-                        txType: TXNTYPE.send,
-                        txInProgress: accountInfo.txInProgress,
-                        toastNotification: () => {
-                          notification.push({
-                            type: "primary",
-                            placement: "top-center",
-                            duration: 2,
-                            content: `Transaction broadcasted`,
-                            canDelete: true,
-                            transition: {
-                              duration: 0.25,
-                            },
-                          });
-                        },
-                        isEVM: isEvm,
-                      };
-                      navigateOnTxnEvents(txnNavigationOptions);
-                      if (keyRingStore.keyRingType === "ledger") {
-                        navigate("/send");
-                      }
-                    },
-                    onFulfill: (tx: any) => {
-                      const istxnSuccess = !tx.code;
-                      const txnNavigationOptions = {
-                        redirect: () => {
-                          navigate("/send", {
-                            replace: true,
-                            state: { trnsxStatus: "success", isNext: true },
-                          });
-                        },
-                        pagePathname: "send",
-                        txType: TXNTYPE.send,
-                        txInProgress: accountInfo.txInProgress,
-                        toastNotification: () => {
-                          notification.push({
-                            type: istxnSuccess ? "success" : "danger",
-                            placement: "top-center",
-                            duration: 5,
-                            content: istxnSuccess
-                              ? `Transaction Completed`
-                              : `Transaction Failed`,
-                            canDelete: true,
-                            transition: {
-                              duration: 0.25,
-                            },
-                          });
-                        },
-                        isEVM: isEvm,
-                      };
-                      navigateOnTxnEvents(txnNavigationOptions);
-                    },
-                  }
-                );
-                if (!isDetachedPage) {
-                  const currentPathName = getPathname();
-                  if (
-                    currentPathName === "send" ||
-                    currentPathName === "sign"
-                  ) {
-                    navigate("/send", {
-                      replace: true,
-                      state: { trnsxStatus: "pending", isNext: true },
-                    });
-                  }
-                }
+                await doSend();
               } catch (e) {
                 analyticsStore.logEvent("send_txn_broadcasted_fail", {
                   chainId: chainStore.current.chainId,
@@ -496,12 +675,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                     },
                   });
                 }
-              } finally {
-                // XXX: If the page is in detached state,
-                // close the window without waiting for tx to commit. analytics won't work.
-                if (isDetachedPage) {
-                  window.close();
-                }
               }
             }
           }}
@@ -513,6 +686,41 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             <i className="fas fa-spinner fa-spin ml-2 mr-2" />
           )}
         </ButtonV2>
+
+        <CardanoPasswordConfirmModal
+          isOpen={isCardanoPasswordConfirmOpen && shouldRequireCardanoPassword}
+          isSyncing={isCardanoSyncing}
+          feeText={feeText}
+          isWalletLocked={keyRingStore.status === KeyRingStatus.LOCKED}
+          networkName={chainStore.current.chainName}
+          recipient={sendConfigs.recipientConfig.recipient}
+          amountText={`${sendConfigs.amountConfig.amount} ${sendConfigs.amountConfig.sendCurrency.coinDenom}`}
+          memo={sendConfigs.memoConfig.memo}
+          passwordInputRef={passwordInputRef}
+          onConfirm={async (password) => {
+            if (keyRingStore.status === KeyRingStatus.LOCKED) {
+              await keyRingStore.unlock(password);
+            }
+
+            await doSend({ cardanoSpendingPassword: password });
+          }}
+          onCancel={() => {
+            setIsCardanoPasswordConfirmOpen(false);
+          }}
+          onNotifyWarning={(content) => {
+            notification.push({
+              type: "warning",
+              placement: "top-center",
+              duration: 5,
+              content,
+              canDelete: true,
+              transition: {
+                duration: 0.25,
+              },
+            });
+          }}
+        />
+
         {trnsxStatus !== undefined && <TransxStatus status={trnsxStatus} />}
       </div>
     );

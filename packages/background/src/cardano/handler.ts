@@ -1,11 +1,24 @@
 import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
-import { SendAdaMsg, GetCardanoBalanceMsg, IsCardanoReadyMsg, EstimateSendAdaMsg, GetCardanoSyncStatusMsg } from "./messages";
+import {
+  SendAdaMsg,
+  SendAdaWithPasswordMsg,
+  GetCardanoBalanceMsg,
+  IsCardanoReadyMsg,
+  EstimateSendAdaMsg,
+  GetCardanoSyncStatusMsg,
+} from "./messages";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
+import { PermissionService } from "../permission/service";
 
-export const getHandler: (service: CardanoService, keyRingService: KeyRingService) => Handler = (
+export const getHandler: (
   service: CardanoService,
-  keyRingService: KeyRingService
+  keyRingService: KeyRingService,
+  permissionService: PermissionService
+) => Handler = (
+  service: CardanoService,
+  keyRingService: KeyRingService,
+  permissionService: PermissionService
 ) => {
   return (env: Env, msg: Message<unknown>) => {
     // Use msg.type() instead of constructor comparison because parseMessage uses Object.setPrototypeOf
@@ -14,13 +27,24 @@ export const getHandler: (service: CardanoService, keyRingService: KeyRingServic
 
     switch (msgType) {
       case SendAdaMsg.type():
-        return handleSendAdaMsg(service, keyRingService)(env, msg as SendAdaMsg);
+        return handleSendAdaMsg(service, keyRingService, permissionService)(
+          env,
+          msg as SendAdaMsg
+        );
+      case SendAdaWithPasswordMsg.type():
+        return handleSendAdaWithPasswordMsg(service, keyRingService)(
+          env,
+          msg as SendAdaWithPasswordMsg
+        );
       case GetCardanoBalanceMsg.type():
         return handleGetCardanoBalanceMsg(service)(env, msg as GetCardanoBalanceMsg);
       case IsCardanoReadyMsg.type():
         return handleIsCardanoReadyMsg(service)(env, msg as IsCardanoReadyMsg);
       case EstimateSendAdaMsg.type():
-        return handleEstimateSendAdaMsg(service, keyRingService)(env, msg as EstimateSendAdaMsg);
+        return handleEstimateSendAdaMsg(service, keyRingService, permissionService)(
+          env,
+          msg as EstimateSendAdaMsg
+        );
       case GetCardanoSyncStatusMsg.type():
         return handleGetCardanoSyncStatusMsg(service, keyRingService)(env, msg as GetCardanoSyncStatusMsg);
       default:
@@ -31,13 +55,90 @@ export const getHandler: (service: CardanoService, keyRingService: KeyRingServic
 };
 
 /**
+ * Handler for sending ADA transaction with password confirmation (internal only).
+ */
+const handleSendAdaWithPasswordMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<SendAdaWithPasswordMsg> = (service, keyRingService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    // Password confirmation step: require correct password even if the keyring is already unlocked.
+    if (!keyRingService.checkPassword(msg.password)) {
+      throw new Error("Invalid password");
+    }
+
+    // Ensure Cardano service is initialized for the requested network (requires unlocked keyring).
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    // Keep existing sync safety check.
+    try {
+      const walletManager = service.getWalletManager();
+      if (walletManager && walletManager.hasWallet()) {
+        const { firstValueFrom } = await import("rxjs");
+        const { filter, take, timeout } = await import("rxjs/operators");
+
+        try {
+          await firstValueFrom(
+            walletManager.syncStatus$.pipe(
+              filter((isSettled: boolean) => isSettled === true),
+              take(1),
+              timeout(5000)
+            )
+          );
+        } catch (syncError: any) {
+          const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(
+            () => false
+          );
+          if (!isSettled) {
+            throw new Error("Wallet is syncing. Please wait and try again.");
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error?.message?.includes("syncing")) {
+        throw error;
+      }
+      // Continue if sync check fails (wallet might not have this capability)
+    }
+
+    return await service.sendAda({
+      to: msg.to,
+      amount: msg.amount,
+      memo: msg.memo,
+    });
+  };
+};
+
+/**
  * Handler for sending ADA transaction
  */
 const handleSendAdaMsg: (
   service: CardanoService,
-  keyRingService: KeyRingService
-) => InternalHandler<SendAdaMsg> = (service, keyRingService) => {
-  return async (_, msg) => {
+  keyRingService: KeyRingService,
+  permissionService: PermissionService
+) => InternalHandler<SendAdaMsg> = (service, keyRingService, permissionService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      if (!msg.chainId) {
+        throw new Error("chainId is required");
+      }
+      await permissionService.checkOrGrantBasicAccessPermission(
+        env,
+        msg.chainId,
+        msg.origin
+      );
+    }
+
     // If chainId is provided, ensure service is ready for that network
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
@@ -121,9 +222,21 @@ const handleIsCardanoReadyMsg: (
  */
 const handleEstimateSendAdaMsg: (
   service: CardanoService,
-  keyRingService: KeyRingService
-) => InternalHandler<EstimateSendAdaMsg> = (service, keyRingService) => {
-  return async (_, msg) => {
+  keyRingService: KeyRingService,
+  permissionService: PermissionService
+) => InternalHandler<EstimateSendAdaMsg> = (service, keyRingService, permissionService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      if (!msg.chainId) {
+        throw new Error("chainId is required");
+      }
+      await permissionService.checkOrGrantBasicAccessPermission(
+        env,
+        msg.chainId,
+        msg.origin
+      );
+    }
+
     // If chainId is provided, ensure service is ready for that network
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);

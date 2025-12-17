@@ -382,6 +382,7 @@ export const SendPage: FunctionComponent = observer(() => {
                 fromPhase1={fromPhase1}
                 configs={configs}
                 setFromPhase1={setFromPhase1}
+                gasSimulator={gasSimulator}
               />
             )}
           </div>

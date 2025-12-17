@@ -1,16 +1,30 @@
 import { Router } from "@keplr-wallet/router";
-import { SendAdaMsg, GetCardanoBalanceMsg, IsCardanoReadyMsg, EstimateSendAdaMsg, GetCardanoSyncStatusMsg } from "./messages";
+import {
+  SendAdaMsg,
+  SendAdaWithPasswordMsg,
+  GetCardanoBalanceMsg,
+  IsCardanoReadyMsg,
+  EstimateSendAdaMsg,
+  GetCardanoSyncStatusMsg,
+} from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
+import { PermissionService } from "../permission/service";
 
-export function init(router: Router, service: CardanoService, keyRingService: KeyRingService): void {
+export function init(
+  router: Router,
+  service: CardanoService,
+  keyRingService: KeyRingService,
+  permissionService: PermissionService
+): void {
   router.registerMessage(SendAdaMsg);
+  router.registerMessage(SendAdaWithPasswordMsg);
   router.registerMessage(GetCardanoBalanceMsg);
   router.registerMessage(IsCardanoReadyMsg);
   router.registerMessage(EstimateSendAdaMsg);
   router.registerMessage(GetCardanoSyncStatusMsg);
 
-  router.addHandler(ROUTE, getHandler(service, keyRingService));
+  router.addHandler(ROUTE, getHandler(service, keyRingService, permissionService));
 }

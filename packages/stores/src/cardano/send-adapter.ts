@@ -4,8 +4,22 @@ import { MakeTxResponse } from "../account/types";
 import { MessageRequester, BACKGROUND_PORT } from "@keplr-wallet/router";
 import { 
   EstimateSendAdaMsg, 
-  SendAdaMsg 
+  SendAdaMsg,
+  SendAdaWithPasswordMsg,
 } from "@keplr-wallet/background";
+import type { KeplrSignOptions } from "@keplr-wallet/types";
+
+type CardanoSignOptions = KeplrSignOptions & {
+  cardano?: {
+    spendingPassword?: string;
+  };
+};
+
+function getCardanoSpendingPassword(
+  signOptions?: KeplrSignOptions
+): string | undefined {
+  return (signOptions as CardanoSignOptions | undefined)?.cardano?.spendingPassword;
+}
 
 /**
  * Cardano transaction adapter that implements the unified Tx handle interface.
@@ -63,13 +77,24 @@ export class CardanoSendAdapter {
       send: async (
         _fee: any,
         _memo?: string,
-        _signOptions?: any,
+        _signOptions?: KeplrSignOptions,
         onTxEvents?: any
       ) => {
         try {
+          const spendingPassword = getCardanoSpendingPassword(_signOptions);
+          const msg = spendingPassword
+            ? new SendAdaWithPasswordMsg(
+              recipient,
+              actualAmount,
+              spendingPassword,
+              _memo,
+              this.chainId
+            )
+            : new SendAdaMsg(recipient, actualAmount, _memo, this.chainId);
+
           const txHash = await this.messageRequester.sendMessage(
             BACKGROUND_PORT,
-            new SendAdaMsg(recipient, actualAmount, _memo, this.chainId)
+            msg
           );
 
           if (onTxEvents?.onBroadcasted) {
@@ -89,13 +114,24 @@ export class CardanoSendAdapter {
       simulateAndSend: async (
         _feeOptions: any,
         _memo?: string,
-        _signOptions?: any,
+        _signOptions?: KeplrSignOptions,
         onTxEvents?: any
       ) => {
         try {
+          const spendingPassword = getCardanoSpendingPassword(_signOptions);
+          const msg = spendingPassword
+            ? new SendAdaWithPasswordMsg(
+              recipient,
+              actualAmount,
+              spendingPassword,
+              _memo,
+              this.chainId
+            )
+            : new SendAdaMsg(recipient, actualAmount, _memo, this.chainId);
+
           const txHash = await this.messageRequester.sendMessage(
             BACKGROUND_PORT,
-            new SendAdaMsg(recipient, actualAmount, _memo, this.chainId)
+            msg
           );
 
           if (onTxEvents?.onBroadcasted) {
@@ -115,13 +151,24 @@ export class CardanoSendAdapter {
       sendWithGasPrice: async (
         _gasInfo: any,
         _memo?: string,
-        _signOptions?: any,
+        _signOptions?: KeplrSignOptions,
         onTxEvents?: any
       ) => {
         try {
+          const spendingPassword = getCardanoSpendingPassword(_signOptions);
+          const msg = spendingPassword
+            ? new SendAdaWithPasswordMsg(
+              recipient,
+              actualAmount,
+              spendingPassword,
+              _memo,
+              this.chainId
+            )
+            : new SendAdaMsg(recipient, actualAmount, _memo, this.chainId);
+
           const txHash = await this.messageRequester.sendMessage(
             BACKGROUND_PORT,
-            new SendAdaMsg(recipient, actualAmount, _memo, this.chainId)
+            msg
           );
 
           if (onTxEvents?.onBroadcasted) {
