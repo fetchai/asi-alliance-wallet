@@ -24,7 +24,7 @@ export const WelcomePage: FunctionComponent = () => {
   }, []);
 
   return (
-    <div style={{ marginLeft: "-27px" }}>
+    <div className={styleWelcome["welcomePageContainer"]}>
       <img
         className={styleWelcome["pinWalletArrow"]}
         src={require("@assets/svg/wireframe/pin-arrow.svg")}
@@ -53,7 +53,15 @@ export const WelcomePage: FunctionComponent = () => {
             : "Closes the welcome page"
         }
         trigger="hover"
-        options={{ placement: "top" }}
+        options={{
+          placement: "top-end",
+          modifiers: {
+            arrow: {
+              enabled: true,
+              element: "[data-arrow]",
+            },
+          },
+        }}
       >
         <ButtonV2
           variant="dark"
