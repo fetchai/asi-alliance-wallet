@@ -177,7 +177,7 @@
   "setting.autolock.duration": "Set the duration (unit: minutes)",
   "setting.autolock.description": "With Auto-Lock enabled, Wallet will lock when the device is in sleep mode",
   "setting.autolock.error.required": "Duration is required",
-  "setting.autolock.error.out-of-range": "It cannot be less than 0 or greater than 4320(3days)",
+  "setting.autolock.error.out-of-range": "It cannot be less than 0 or greater than 4320(3 days)",
 
   "setting.developer-mode": "Developer Mode",
 
