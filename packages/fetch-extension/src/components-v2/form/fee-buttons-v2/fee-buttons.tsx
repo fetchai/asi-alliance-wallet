@@ -258,24 +258,12 @@ export const FeeButtonsInner: FunctionComponent<
 
     return (
       <FormGroup>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className={feeButtonStyles["transactionFeeContainer"]}>
           <div className={feeButtonStyles["transactionFeeLabel"]}>
             Transaction fee:
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "6px",
-              alignItems: "center",
-            }}
-          >
+          <div className={feeButtonStyles["transactionFeeValueContainer"]}>
             <div className={feeButtonStyles["transactionFeeValue"]}>
               {feeButtonState.isGasInputOpen
                 ? gasConfig.gasRaw
@@ -293,12 +281,8 @@ export const FeeButtonsInner: FunctionComponent<
             </div>
 
             <button
-              style={{
-                background: "transparent",
-                borderRadius: "12px",
-                padding: "2px 12px",
-                border: "1px solid var(--bg-grey-dark)",
-              }}
+              className={feeButtonStyles["transactionFeeToggleButton"]}
+              type="button"
             >
               <img
                 onClick={() => {
@@ -575,15 +559,7 @@ export const FeeButtonsInner: FunctionComponent<
             ) : null}
 
             {/* XXX: In fact, it is not only set gas, but fee currency can also be set depending on the option. */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "12px 0",
-                marginTop: "12px",
-              }}
-            >
+            <div className={feeButtonStyles["advancedSettingsContainer"]}>
               <div className={feeButtonStyles["advancedSettingsLabel"]}>
                 Advanced settings
               </div>
