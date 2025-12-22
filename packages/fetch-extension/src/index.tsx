@@ -122,6 +122,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
 import { BuySellTokenPage } from "./pages-new/more/token/moonpay";
 import { AddCosmosChain } from "./pages/setting/addCosmosChain";
+import { useAccountChangeMonitoring } from "./use-account-change-monitoring";
 
 const queryClient = new QueryClient();
 
@@ -215,6 +216,11 @@ const AutoLockMonitor: FunctionComponent = observer(() => {
   return null;
 });
 
+const AccountChangeMonitor = observer(() => {
+  useAccountChangeMonitoring();
+  return null;
+});
+
 ReactDOM.render(
   <QueryClientProvider client={queryClient}>
     <StoreProvider>
@@ -228,6 +234,7 @@ ReactDOM.render(
               <ConfirmProvider>
                 <ErrorBoundary>
                   <AutoLockMonitor />
+                  <AccountChangeMonitor />
                   <HashRouter>
                     <DropdownContextProvider>
                       <ChatStoreProvider>

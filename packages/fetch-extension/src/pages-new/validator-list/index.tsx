@@ -122,6 +122,11 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
     }
   }, [apr]);
 
+  const isLoading =
+    bondedValidators.isFetching ||
+    unbondedValidators.isFetching ||
+    unbondingValidators.isFetching;
+
   return (
     <HeaderLayout
       smallTitle={true}
@@ -168,6 +173,7 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
           </div>
         </div>
         <ValidatorsList
+          isLoading={isLoading}
           filteredValidators={data}
           bondedValidators={bondedValidators}
           unbondedValidators={unbondedValidators}

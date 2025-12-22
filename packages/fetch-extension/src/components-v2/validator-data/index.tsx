@@ -1,12 +1,18 @@
 import { GlassCard } from "@components-v2/glass-card";
 import { ToolTip } from "@components/tooltip";
 import { Staking } from "@keplr-wallet/stores";
-import { formatAddress, shortenNumber, titleCase } from "@utils/format";
-import React, { useMemo } from "react";
+import {
+  formatAddressWithCustom,
+  shortenNumber,
+  titleCase,
+} from "@utils/format";
+import React, { useMemo, useCallback } from "react";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
+import { useNotification } from "@components/notification";
+import { useIntl } from "react-intl";
 
 interface ItemData {
   title: string;
@@ -16,6 +22,8 @@ interface ItemData {
 export const ValidatorData = observer(
   ({ validatorAddress }: { validatorAddress: string }) => {
     const { chainStore, queriesStore } = useStore();
+    const notification = useNotification();
+    const intl = useIntl();
 
     const queries = queriesStore.get(chainStore.current.chainId);
 
@@ -103,6 +111,25 @@ export const ValidatorData = observer(
       },
     ];
 
+    const copyAddress = useCallback(
+      async (address: string) => {
+        await navigator.clipboard.writeText(address);
+        notification.push({
+          placement: "top-center",
+          type: "success",
+          duration: 2,
+          content: intl.formatMessage({
+            id: "main.address.copied",
+          }),
+          canDelete: true,
+          transition: {
+            duration: 0.25,
+          },
+        });
+      },
+      [notification, intl]
+    );
+
     return (
       <GlassCard>
         <div className={style["validator-data-container"]}>
@@ -131,19 +158,42 @@ export const ValidatorData = observer(
                   </React.Fragment>
                 )}
               </div>
-              <ToolTip
-                trigger="hover"
-                options={{ placement: "bottom-end" }}
-                tooltip={
-                  <div className={style["tooltip"]}>
-                    {validator.operator_address}
-                  </div>
-                }
+              <div
+                style={{
+                  display: "flex",
+                  columnGap: "3px",
+                  alignItems: "center",
+                }}
+                onClick={() => copyAddress(validator.operator_address)}
               >
-                <span className={style["address"]}>
-                  {formatAddress(validator.operator_address)}
-                </span>
-              </ToolTip>
+                <ToolTip
+                  trigger="hover"
+                  options={{ placement: "bottom-end" }}
+                  tooltip={
+                    <div className={style["tooltip"]}>
+                      {validator.operator_address}
+                    </div>
+                  }
+                >
+                  <span className={style["address"]}>
+                    {formatAddressWithCustom(
+                      validator.operator_address,
+                      12,
+                      12
+                    )}
+                  </span>
+                </ToolTip>
+                <img
+                  style={{
+                    cursor: "pointer",
+                    width: "14px",
+                    height: "14px",
+                    borderRadius: "0px",
+                  }}
+                  src={require("@assets/svg/wireframe/copyGrey.svg")}
+                  alt=""
+                />
+              </div>
             </div>
           </div>
           {validator.description.details && (

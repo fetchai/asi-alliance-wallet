@@ -36,6 +36,9 @@ import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
 import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { RefreshAccountList } from "@keplr-wallet/background";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -553,7 +556,7 @@ export const VerifyMnemonicModePage: FunctionComponent<{
       setRandomizedWords(words);
     }, [newMnemonicConfig.mnemonic]);
 
-    const { analyticsStore } = useStore();
+    const { analyticsStore, keyRingStore } = useStore();
 
     const handleClickFirstButton = (word: string, index: number) => {
       if (!clickedButtons.includes(index)) {
@@ -702,6 +705,16 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 {},
                 selectedNetworks
               );
+              // if we already have accounts, switch to the newly created account
+              if (registerConfig.mode !== "create") {
+                await keyRingStore.changeKeyRing(
+                  keyRingStore.multiKeyStoreInfo.length - 1
+                );
+                await new InExtensionMessageRequester().sendMessage(
+                  BACKGROUND_PORT,
+                  new RefreshAccountList()
+                );
+              }
               analyticsStore.setUserProperties({
                 registerType: "seed",
                 accountType: "mnemonic",

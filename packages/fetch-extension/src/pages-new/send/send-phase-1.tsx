@@ -10,7 +10,7 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { Label } from "reactstrap";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { removeComma } from "@utils/format";
 import style from "./style.module.scss";
 import { SendConfigs } from "./types";
@@ -77,7 +77,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           balanceText={intl.formatMessage({
             id: "send.input-button.balance",
           })}
-          disableAllBalance={(() => {
+          showAllBalance={(() => {
             if (
               // In the case of terra classic, tax is applied in proportion to the amount.
               // However, in this case, the tax itself changes the fee,
@@ -92,6 +92,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
             }
             return false;
           })()}
+          disableAllBalance={balance.toDec().lte(new Dec(0))}
           overrideSelectableCurrencies={(() => {
             if (
               chainStore.current.features &&

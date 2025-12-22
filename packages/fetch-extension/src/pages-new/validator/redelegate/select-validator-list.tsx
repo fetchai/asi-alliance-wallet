@@ -12,6 +12,7 @@ type Sort = "APR" | "Voting Power" | "Name";
 type ValidatorData = Staking.Validator;
 export const SelectValidatorList = observer(
   ({
+    isLoading,
     filteredValidators,
     selectedValidator,
     setShowValidatorListDropDown,
@@ -20,6 +21,7 @@ export const SelectValidatorList = observer(
     sort,
     setIsSortModalOpen,
   }: {
+    isLoading: boolean;
     filteredValidators: ValidatorData[];
     selectedValidator: ValidatorData;
     setShowValidatorListDropDown: React.Dispatch<React.SetStateAction<boolean>>;
@@ -102,9 +104,7 @@ export const SelectValidatorList = observer(
               <span className={style["sort-by"]}>{sort}</span>
             </div>
             <div>
-              <img
-                src={require("../../../public/assets/svg/wireframe/chevron-down.svg")}
-              />
+              <img src={require("@assets/svg/wireframe/chevron-down.svg")} />
             </div>
           </div>
         </div>
@@ -126,6 +126,11 @@ export const SelectValidatorList = observer(
               />
             </React.Fragment>
           ))
+        ) : isLoading ? (
+          <div className={style["loading-message"]}>
+            Loading Validators...
+            <i className="fas fa-spinner fa-spin ml-2 mr-2" />
+          </div>
         ) : (
           <NoResults message="No Validators found" />
         )}

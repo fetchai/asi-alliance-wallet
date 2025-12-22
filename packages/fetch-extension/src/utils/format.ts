@@ -250,8 +250,8 @@ export const splitBech32 = (address: string) => {
 
 export const formatAddressWithCustom = (
   address: string,
-  startChars: number,
-  endChars: number
+  startChars: number = 8,
+  endChars: number = 8
 ) => {
   if (Object.values(AGENT_ADDRESS).includes(address)) return "Fetchbot";
 

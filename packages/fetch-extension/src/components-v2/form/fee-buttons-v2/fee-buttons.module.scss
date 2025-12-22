@@ -163,6 +163,12 @@ $border-radius: 6px;
   }
 }
 
+.transactionFeeContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .transactionFeeLabel {
   font-size: 14px;
   font-weight: 400;
@@ -173,6 +179,27 @@ $border-radius: 6px;
   font-size: 14px;
   font-weight: 400;
   color: $font-dark;
+}
+
+.transactionFeeValueContainer {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.transactionFeeToggleButton {
+  background: transparent;
+  border-radius: 12px;
+  padding: 2px 12px;
+  border: 1px solid var(--bg-grey-dark);
+}
+
+.advancedSettingsContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0px;
+  margin-top: 12px;
 }
 
 .advancedSettingsLabel {

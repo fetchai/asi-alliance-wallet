@@ -1300,6 +1300,28 @@ export class ListAccountsMsg extends Message<Account[]> {
   }
 }
 
+export class RefreshAccountList extends Message<boolean> {
+  public static type() {
+    return "refresh-accounts-list";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return RefreshAccountList.type();
+  }
+}
+
 export class GetAccountMsg extends Message<Account | null> {
   public static type() {
     return "get-account-msg";
