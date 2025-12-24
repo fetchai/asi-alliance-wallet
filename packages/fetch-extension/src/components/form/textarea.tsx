@@ -14,7 +14,7 @@ import style from "./textarea.module.scss";
 
 export interface TextareaProps {
   type?: string;
-
+  formGroupClassName?: string;
   label?: string;
   error?: string;
 }
@@ -41,7 +41,7 @@ export const TextArea = forwardRef<
   });
 
   return (
-    <FormGroup>
+    <FormGroup className={props.formGroupClassName}>
       {label ? (
         <Label for={inputId} className={style["label"]}>
           {label}
