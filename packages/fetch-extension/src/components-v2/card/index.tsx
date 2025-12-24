@@ -9,15 +9,16 @@ export interface CardProps {
   rightContent?: any;
   isActive?: boolean;
   style?: any;
-  subheadingStyle?: any;
-  headingStyle?: any;
+  subheadingStyle?: React.CSSProperties;
+  headingStyle?: React.CSSProperties;
   onClick?: any;
   rightContentOnClick?: any;
-  rightContentStyle?: any;
+  rightContentStyle?: React.CSSProperties;
   inActiveBackground?: any;
   disabled?: boolean;
   bottomContent?: any;
-  bottomContentStyle?: any;
+  bottomContentStyle?: React.CSSProperties;
+  middleSectionStyle?: React.CSSProperties;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -32,6 +33,7 @@ export const Card: React.FC<CardProps> = ({
   isActive,
   style,
   subheadingStyle,
+  middleSectionStyle,
   headingStyle,
   onClick,
   rightContentOnClick,
@@ -81,7 +83,10 @@ export const Card: React.FC<CardProps> = ({
             width: "100%",
           }}
         >
-          <div className={styles["middleSection"]}>
+          <div
+            className={styles["middleSection"]}
+            style={{ ...middleSectionStyle }}
+          >
             <div
               style={{ ...headingStyle }}
               className={`${styles["heading"]} ${styles["wordBreak"]}`}
