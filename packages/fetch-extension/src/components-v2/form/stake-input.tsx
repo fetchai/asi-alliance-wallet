@@ -73,10 +73,23 @@ export const StakeInput: FunctionComponent<{
 
   const convertToFiatCurrency = (currency: any) => {
     const value = priceStore.calculatePrice(currency, fiatCurrency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    const pretty = value && value.shrink(true).maxDecimals(6).toString();
+    const numeric = parseDollarAmount(pretty);
+    return Number.isNaN(numeric) ? "" : numeric.toString();
   };
 
+  const [prevFiatMode] = useState(() => ({
+    isToggleClicked: false,
+    coinMinimalDenom: "",
+    fiatCurrency: "",
+  }));
+
   useEffect(() => {
+    // Keep fiat input stable while user is typing in fiat mode.
+    if (isToggleClicked) {
+      return;
+    }
+
     const currencyDecimals = amountConfig.sendCurrency.coinDecimals;
 
     let dec = new Dec(amountConfig.amount ? amountConfig.amount : "0");
@@ -88,7 +101,37 @@ export const StakeInput: FunctionComponent<{
     );
     const inputValueInUsd = convertToFiatCurrency(inputValue);
     setInputInFiatCurrency(inputValueInUsd);
-  }, [amountConfig.amount]);
+  }, [amountConfig.amount, amountConfig.sendCurrency, fiatCurrency, isToggleClicked]);
+
+  useEffect(() => {
+    // Initialize fiat input only when entering fiat mode or when fiat/currency changes.
+    const shouldInit =
+      !!isToggleClicked &&
+      !!amountConfig.sendCurrency["coinGeckoId"] &&
+      (( !prevFiatMode.isToggleClicked &&
+        (inputInFiatCurrency == null || inputInFiatCurrency === "") ) ||
+        prevFiatMode.coinMinimalDenom !== amountConfig.sendCurrency.coinMinimalDenom ||
+        prevFiatMode.fiatCurrency !== fiatCurrency);
+
+    prevFiatMode.isToggleClicked = !!isToggleClicked;
+    prevFiatMode.coinMinimalDenom = amountConfig.sendCurrency.coinMinimalDenom;
+    prevFiatMode.fiatCurrency = fiatCurrency;
+
+    if (!shouldInit) {
+      return;
+    }
+
+    const currencyDecimals = amountConfig.sendCurrency.coinDecimals;
+    let dec = new Dec(amountConfig.amount ? amountConfig.amount : "0");
+    dec = dec.mul(DecUtils.getTenExponentNInPrecisionRange(currencyDecimals));
+    const amountInNumber = dec.truncate().toString();
+    const inputValue = new CoinPretty(
+      amountConfig.sendCurrency,
+      new Int(amountInNumber)
+    );
+    const inputValueInUsd = convertToFiatCurrency(inputValue);
+    setInputInFiatCurrency(inputValueInUsd ?? "");
+  }, [amountConfig.amount, amountConfig.sendCurrency, fiatCurrency, isToggleClicked, prevFiatMode]);
 
   return (
     <div>
@@ -96,7 +139,7 @@ export const StakeInput: FunctionComponent<{
         label={label}
         value={
           isToggleClicked
-            ? parseDollarAmount(inputInFiatCurrency).toString()
+            ? inputInFiatCurrency ?? ""
             : amountConfig.amount
         }
         placeholder={`0`}
@@ -118,6 +161,7 @@ export const StakeInput: FunctionComponent<{
 
           if (value === "") {
             amountConfig.setAmount("");
+            setInputInFiatCurrency("");
             return;
           }
 
@@ -140,9 +184,25 @@ export const StakeInput: FunctionComponent<{
                 }
               }
             }
-            isToggleClicked
-              ? parseDollarAmount(inputInFiatCurrency)
-              : amountConfig.setAmount(value);
+            if (isToggleClicked && amountConfig.sendCurrency["coinGeckoId"]) {
+              setInputInFiatCurrency(value);
+
+              const coinGeckoId = amountConfig.sendCurrency["coinGeckoId"];
+              const price = priceStore.getPrice(coinGeckoId, fiatCurrency);
+              if (price == null) {
+                return;
+              }
+
+              const fiatDec = new Dec(value);
+              const priceDec = new Dec(price.toString());
+              const coinDec = fiatDec.quo(priceDec);
+
+              amountConfig.setAmount(
+                coinDec.toString(amountConfig.sendCurrency.coinDecimals)
+              );
+            } else {
+              amountConfig.setAmount(value);
+            }
           }
         }}
         bottomContent={
