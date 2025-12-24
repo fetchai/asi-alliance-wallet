@@ -1,0 +1,27 @@
+@import "../../styles/var";
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  label {
+    color: $font-secondary;
+  }
+  input:read-only {
+    color: $font-dark;
+  }
+}
+
+.formFeedback {
+  margin-top: 0px !important;
+  position: relative !important;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.txnPayloadInput {
+  min-height: 250px;
+  max-height: 250px;
+}
