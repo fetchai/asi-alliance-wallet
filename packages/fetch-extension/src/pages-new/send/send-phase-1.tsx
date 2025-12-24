@@ -124,7 +124,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           }}
           headingStyle={{
             fontSize: "14px",
-            fontWeight: "400",
+            fontWeight: 400,
             opacity: "1",
           }}
           heading={accountInfo.name}
