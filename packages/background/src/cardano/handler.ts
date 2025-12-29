@@ -6,6 +6,8 @@ import {
   IsCardanoReadyMsg,
   EstimateSendAdaMsg,
   GetCardanoSyncStatusMsg,
+  GetCardanoTxHistoryMsg,
+  LoadMoreCardanoTxHistoryMsg,
 } from "./messages";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
@@ -47,6 +49,10 @@ export const getHandler: (
         );
       case GetCardanoSyncStatusMsg.type():
         return handleGetCardanoSyncStatusMsg(service, keyRingService)(env, msg as GetCardanoSyncStatusMsg);
+      case GetCardanoTxHistoryMsg.type():
+        return handleGetCardanoTxHistoryMsg(service, keyRingService)(env, msg as GetCardanoTxHistoryMsg);
+      case LoadMoreCardanoTxHistoryMsg.type():
+        return handleLoadMoreCardanoTxHistoryMsg(service, keyRingService)(env, msg as LoadMoreCardanoTxHistoryMsg);
       default:
         console.error("[Cardano Handler] Unknown message type:", msgType);
         throw new Error(`Unknown msg type: ${msgType}`);
@@ -284,5 +290,55 @@ const handleGetCardanoSyncStatusMsg: (
     } catch (error) {
       return { isSettled: false };
     }
+  };
+};
+
+/** Handler for getting Cardano tx history (internal-only). */
+const handleGetCardanoTxHistoryMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<GetCardanoTxHistoryMsg> = (service, keyRingService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    return await service.getTxHistory({
+      pageSize: msg.pageSize,
+      chainId: msg.chainId
+    });
+  };
+};
+
+/** Handler for loading more Cardano tx history (internal-only). */
+const handleLoadMoreCardanoTxHistoryMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<LoadMoreCardanoTxHistoryMsg> = (service, keyRingService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    return await service.loadMoreTxHistory({
+      pageSize: msg.pageSize,
+      chainId: msg.chainId
+    });
   };
 };

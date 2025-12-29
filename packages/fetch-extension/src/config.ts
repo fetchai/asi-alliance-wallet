@@ -3222,9 +3222,13 @@ export const CardanoChainInfos: ChainInfo[] = [
         coinImageUrl:
           "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
         gasPriceStep: {
-          low: 0.000044,
-          average: 0.0001,
-          high: 0.0002,
+          // Cardano doesn't have "gas price" semantics like Cosmos/EVM.
+          // We use the unified feeConfig pipeline in the UI, and our Cardano simulate() returns
+          // the estimated fee in lovelace as `gasUsed`. Setting gasPriceStep=1 makes feeConfig
+          // treat that value as the final fee (lovelace) without scaling.
+          low: 1,
+          average: 1,
+          high: 1,
         },
       },
     ],
@@ -3276,9 +3280,9 @@ export const CardanoChainInfos: ChainInfo[] = [
         coinImageUrl:
           "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
         gasPriceStep: {
-          low: 0.000044,
-          average: 0.0001,
-          high: 0.0002,
+          low: 1,
+          average: 1,
+          high: 1,
         },
       },
     ],
@@ -3331,9 +3335,9 @@ export const CardanoChainInfos: ChainInfo[] = [
         coinImageUrl:
           "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
         gasPriceStep: {
-          low: 0.000044,
-          average: 0.0001,
-          high: 0.0002,
+          low: 1,
+          average: 1,
+          high: 1,
         },
       },
     ],

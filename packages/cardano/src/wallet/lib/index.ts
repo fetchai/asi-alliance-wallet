@@ -6,3 +6,7 @@ export { buildDelegation } from './build-delegation';
 export { getTxInputsValueAndAddress } from './get-inputs-value';
 export { getAuxiliaryData } from './get-auxiliary-data';
 export { ADA_HANDLE_POLICY_ID } from './config';
+export {
+  createTxHistoryLoader,
+  createObservableTransactionsByAddressesProvider
+} from './tx-history-loader';

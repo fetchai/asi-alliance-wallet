@@ -62,6 +62,7 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import manifest from "./manifest.v2.json";
 import { ActivityPage } from "./pages-new/activity";
 import { ActivityDetails } from "./pages-new/activity/activity-details";
+import { CardanoActivityDetails } from "./pages-new/activity/cardano/details";
 import { AssetView } from "./pages-new/asset-view";
 
 import { DropdownContextProvider } from "@components-v2/dropdown/dropdown-context";
@@ -245,6 +246,10 @@ ReactDOM.render(
                           <Route
                             path="/activity-details"
                             element={<ActivityDetails />}
+                          />
+                          <Route
+                            path="/cardano-activity-details"
+                            element={<CardanoActivityDetails />}
                           />
                           <Route path="/register" element={<RegisterPage />} />
                           <Route path="/send" element={<SendPage />} />

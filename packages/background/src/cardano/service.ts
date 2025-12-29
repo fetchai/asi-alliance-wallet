@@ -1,6 +1,10 @@
 import { CardanoKeyRing, KeyStore, Key, CardanoWalletManager } from "@keplr-wallet/cardano";
 import { Crypto } from "../keyring/crypto";
 import { Notification } from "../tx/types";
+import type { CardanoTxHistoryItem, CardanoTxHistoryResponse } from "./messages";
+import { createObservableTransactionsByAddressesProvider, createTxHistoryLoader, getTxInputsValueAndAddress } from "@keplr-wallet/cardano";
+import { firstValueFrom, ReplaySubject, Subscription } from "rxjs";
+import { skip, take, timeout } from "rxjs/operators";
 
 /**
  * Thin wrapper around @keplr-wallet/cardano that makes Cardano logic look like
@@ -10,6 +14,19 @@ import { Notification } from "../tx/types";
 export class CardanoService {
   private keyRing?: CardanoKeyRing;
   private notification?: Notification;
+  private txHistoryControllers = new Map<
+    string,
+    {
+      pageSize: number;
+      walletManagerRef: unknown;
+      hasRealEmission: boolean;
+      last: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean };
+      loader: ReturnType<typeof createTxHistoryLoader>;
+      latest$: ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean }>;
+      sub: Subscription;
+      errorSub: Subscription;
+    }
+  >();
 
   constructor(notification?: Notification) {
     this.notification = notification;
@@ -168,6 +185,314 @@ export class CardanoService {
     }
 
     return this.keyRing.getWalletManager();
+  }
+
+  /**
+   * Returns paginated transaction history for Cardano (ADA-only MVP).
+   * Uses lace-style tx-history-loader to page beyond local wallet store.
+   */
+  async getTxHistory(params: { pageSize: number; chainId?: string }): Promise<CardanoTxHistoryResponse> {
+    const key = params.chainId || "default";
+    const controller = await this.ensureTxHistoryController(key, params.pageSize);
+    // If controller was just created, it will have a seeded value. Prefer waiting for the first real emission
+    // (from wallet history stream), but don't block forever.
+    if (!controller.hasRealEmission) {
+      try {
+        const res = await firstValueFrom(controller.latest$.pipe(skip(1), take(1), timeout(10000)));
+        return await this.withPendingTxs(res, params.chainId);
+      } catch {
+        const res = await firstValueFrom(controller.latest$);
+        return await this.withPendingTxs(res, params.chainId);
+      }
+    }
+    const res = await firstValueFrom(controller.latest$);
+    return await this.withPendingTxs(res, params.chainId);
+  }
+
+  async loadMoreTxHistory(params: { pageSize: number; chainId?: string }): Promise<CardanoTxHistoryResponse> {
+    const key = params.chainId || "default";
+    const controller = await this.ensureTxHistoryController(key, params.pageSize);
+    if (!controller.last.mightHaveMore) {
+      return await this.withPendingTxs(controller.last, params.chainId);
+    }
+    // ReplaySubject emits current immediately; skip it and wait for the next update after loadMore().
+    const next = firstValueFrom(controller.latest$.pipe(skip(1), take(1), timeout(10000))).catch(() => controller.last);
+    controller.loader.loadMore();
+    return await this.withPendingTxs(await next, params.chainId);
+  }
+
+  private async withPendingTxs(
+    res: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean },
+    _chainId?: string
+  ): Promise<CardanoTxHistoryResponse> {
+    const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+    if (!walletManager || !walletManager.hasWallet()) {
+      return res;
+    }
+
+    const wallet = walletManager.getWallet();
+    const walletAddresses = await this.getWalletAddressSet(wallet);
+    const pending = await this.transformPendingTxsToItems(wallet, walletAddresses);
+
+    if (!pending.length) {
+      return res;
+    }
+
+    const confirmedIds = new Set((res.items || []).map((i) => i.id));
+    const pendingFiltered = pending.filter((p) => !confirmedIds.has(p.id));
+
+    // Lace behavior: pending txs are shown above confirmed history.
+    return {
+      items: [...pendingFiltered, ...(res.items || [])],
+      mightHaveMore: res.mightHaveMore
+    };
+  }
+
+  private async getWalletAddressSet(wallet: any): Promise<Set<string>> {
+    const addressObjects = (await firstValueFrom(wallet.addresses$ as any).catch(() => [])) as any[];
+    return new Set((addressObjects || []).map((a: any) => String(a.address ?? a)));
+  }
+
+  private async transformPendingTxsToItems(wallet: any, walletAddresses: Set<string>): Promise<CardanoTxHistoryItem[]> {
+    const inFlight = (await firstValueFrom(wallet?.transactions?.outgoing?.inFlight$ as any).catch(() => [])) as any[];
+    const signed = (await firstValueFrom(wallet?.transactions?.outgoing?.signed$ as any).catch(() => [])) as any[];
+
+    const pendingTxs = ([] as any[]).concat(inFlight || [], signed || []);
+    if (!pendingTxs.length) return [];
+
+    const getCoins = (value: any): bigint => {
+      const coins = value?.coins ?? value;
+      if (typeof coins === "bigint") return coins;
+      if (typeof coins === "number") return BigInt(coins);
+      if (typeof coins === "string") return BigInt(coins);
+      return BigInt(0);
+    };
+
+    const items: CardanoTxHistoryItem[] = [];
+
+    for (const pending of pendingTxs) {
+      const tx = pending?.tx ?? pending; // some SDK shapes wrap the tx in { tx, status, ... }
+      const txId = String(tx?.id ?? pending?.id ?? "");
+      if (!txId) continue;
+
+      const body = tx?.body ?? {};
+      const outputs = body?.outputs ?? tx?.outputs ?? [];
+      const fee = getCoins(body?.fee ?? tx?.fee);
+
+      // Outgoing pending: sum outputs that are not ours (exclude change).
+      let sentCoins = BigInt(0);
+      for (const out of outputs) {
+        const addr = String(out?.address ?? "");
+        if (!addr) continue;
+        if (!walletAddresses.has(addr)) {
+          sentCoins += getCoins(out?.value);
+        }
+      }
+
+      items.push({
+        id: txId,
+        status: "pending",
+        direction: "sent",
+        amount: sentCoins.toString(),
+        fee: fee.toString()
+      });
+    }
+
+    return items;
+  }
+
+  private async ensureTxHistoryController(key: string, pageSize: number) {
+    const existing = this.txHistoryControllers.get(key);
+    const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+    if (!walletManager) {
+      throw new Error("Wallet manager not initialized");
+    }
+
+    if (existing && existing.pageSize === pageSize && existing.walletManagerRef === walletManager) {
+      return existing;
+    }
+
+    if (existing) {
+      existing.sub.unsubscribe();
+      existing.errorSub.unsubscribe();
+      this.txHistoryControllers.delete(key);
+    }
+
+    if (!walletManager || !walletManager.hasWallet()) {
+      throw new Error("Transaction features unavailable without Blockfrost API key");
+    }
+
+    const wallet = walletManager.getWallet();
+    const chainHistoryProvider = walletManager.getChainHistoryProvider();
+
+    // lace-style provider with polling/backoff
+    const { DEFAULT_POLLING_CONFIG } = await import("@cardano-sdk/wallet");
+    const retryBackoffConfig = {
+      initialInterval: DEFAULT_POLLING_CONFIG.pollInterval,
+      maxInterval: DEFAULT_POLLING_CONFIG.pollInterval * DEFAULT_POLLING_CONFIG.maxIntervalMultiplier
+    };
+
+    const provider = createObservableTransactionsByAddressesProvider(chainHistoryProvider, retryBackoffConfig, console);
+
+    const loader = createTxHistoryLoader(
+      provider,
+      {
+        addresses$: wallet.addresses$,
+        transactions: { history$: wallet.transactions.history$ },
+        syncStatus: { isSettled$: wallet.syncStatus.isSettled$ }
+      },
+      pageSize
+    );
+
+    const latest$ = new ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean }>(1);
+    // Seed an initial value to guarantee GetTxHistory doesn't hang indefinitely.
+    // The real values will overwrite this once wallet history emits.
+    latest$.next({ items: [], mightHaveMore: true });
+
+    const controller = {
+      pageSize,
+      walletManagerRef: walletManager,
+      hasRealEmission: false,
+      last: { items: [] as CardanoTxHistoryItem[], mightHaveMore: true },
+      loader,
+      latest$,
+      // will be assigned below
+      sub: undefined as unknown as Subscription,
+      errorSub: undefined as unknown as Subscription
+    };
+
+    const sub = loader.loadedHistory$.subscribe(async (loaded) => {
+      try {
+        const items = await this.transformHydratedTxsToItems(
+          loaded.transactions,
+          wallet,
+          chainHistoryProvider
+        );
+        controller.hasRealEmission = true;
+        const next = { items, mightHaveMore: loaded.mightHaveMore };
+        controller.last = next;
+        latest$.next(next);
+      } catch {
+        // If transformation fails, still emit an empty list to avoid UI deadlock.
+        controller.hasRealEmission = true;
+        const next = { items: [], mightHaveMore: loaded.mightHaveMore };
+        controller.last = next;
+        latest$.next(next);
+      }
+    });
+
+    const errorSub = loader.error$.subscribe(() => {
+      // Intentionally no-op: UI will treat missing items as empty.
+    });
+    controller.sub = sub;
+    controller.errorSub = errorSub;
+    this.txHistoryControllers.set(key, controller);
+
+    return controller;
+  }
+
+  private async transformHydratedTxsToItems(
+    txs: any[],
+    wallet: any,
+    chainHistoryProvider: any
+  ): Promise<CardanoTxHistoryItem[]> {
+    const walletAddresses = await this.getWalletAddressSet(wallet);
+
+    const getCoins = (value: any): bigint => {
+      const coins = value?.coins ?? value;
+      if (typeof coins === "bigint") return coins;
+      if (typeof coins === "number") return BigInt(coins);
+      if (typeof coins === "string") return BigInt(coins);
+      return BigInt(0);
+    };
+
+    const getFee = (tx: any): bigint => {
+      const fee = tx?.body?.fee ?? tx?.fee;
+      return getCoins(fee);
+    };
+
+    const getOutputs = (tx: any): any[] => tx?.body?.outputs ?? tx?.outputs ?? [];
+    const getInputs = (tx: any): any[] => tx?.body?.inputs ?? tx?.inputs ?? [];
+
+    const items: CardanoTxHistoryItem[] = [];
+
+    for (const tx of txs) {
+      const txId = String(tx?.id ?? "");
+      if (!txId) continue;
+
+      const outputs = getOutputs(tx);
+      let ownedOutputsCoins = BigInt(0);
+      for (const out of outputs) {
+        const addr = String(out?.address ?? "");
+        if (walletAddresses.has(addr)) {
+          ownedOutputsCoins += getCoins(out?.value);
+        }
+      }
+
+      let ownedInputsCoins = BigInt(0);
+      try {
+        const inputs = getInputs(tx);
+        const missingInputs: any[] = [];
+
+        for (const input of inputs) {
+          const addr = String(input?.address ?? "");
+          const hasAddr = addr.length > 0;
+          const hasValue = input?.value != null;
+
+          if (hasAddr && hasValue) {
+            if (walletAddresses.has(addr)) {
+              ownedInputsCoins += getCoins(input.value);
+            }
+          } else {
+            missingInputs.push(input);
+          }
+        }
+
+        if (missingInputs.length > 0) {
+          const resolvedInputs = await getTxInputsValueAndAddress(missingInputs, chainHistoryProvider, wallet);
+          for (const input of resolvedInputs) {
+            const addr = String(input?.address ?? "");
+            if (walletAddresses.has(addr)) {
+              ownedInputsCoins += getCoins(input?.value);
+            }
+          }
+        }
+      } catch {
+        // If inputs can't be resolved, leave as 0 and fall back to unknown direction.
+      }
+
+      const fee = getFee(tx);
+      const net = ownedOutputsCoins - ownedInputsCoins;
+
+      let direction: CardanoTxHistoryItem["direction"] = "unknown";
+      let amount = BigInt(0);
+
+      if (net > 0) {
+        direction = "received";
+        amount = net;
+      } else if (net < 0) {
+        // net = -(sent + fee) for typical outgoing transactions with change.
+        const abs = net * BigInt(-1);
+        const maybeSent = abs > fee ? abs - fee : abs;
+        direction = abs === fee ? "self" : "sent";
+        amount = maybeSent;
+      } else {
+        direction = "self";
+        amount = BigInt(0);
+      }
+
+      items.push({
+        id: txId,
+        blockNo: tx?.blockHeader?.blockNo != null ? Number(tx.blockHeader.blockNo) : undefined,
+        slot: tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : undefined,
+                  status: "confirmed",
+        direction,
+        amount: amount.toString(),
+        fee: fee.toString()
+      });
+    }
+
+    return items;
   }
 
   /**

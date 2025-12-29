@@ -6,6 +6,8 @@ import {
   IsCardanoReadyMsg,
   EstimateSendAdaMsg,
   GetCardanoSyncStatusMsg,
+  GetCardanoTxHistoryMsg,
+  LoadMoreCardanoTxHistoryMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
@@ -25,6 +27,8 @@ export function init(
   router.registerMessage(IsCardanoReadyMsg);
   router.registerMessage(EstimateSendAdaMsg);
   router.registerMessage(GetCardanoSyncStatusMsg);
+  router.registerMessage(GetCardanoTxHistoryMsg);
+  router.registerMessage(LoadMoreCardanoTxHistoryMsg);
 
   router.addHandler(ROUTE, getHandler(service, keyRingService, permissionService));
 }

@@ -1,6 +1,21 @@
 import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 
+export interface CardanoTxHistoryItem {
+  id: string; // tx id / hash
+  blockNo?: number;
+  slot?: number;
+  status?: "pending" | "confirmed";
+  direction: "sent" | "received" | "self" | "unknown";
+  amount: string; // lovelace (absolute, no sign)
+  fee?: string; // lovelace
+}
+
+export interface CardanoTxHistoryResponse {
+  items: CardanoTxHistoryItem[];
+  mightHaveMore: boolean;
+}
+
 /**
  * Message for sending ADA transaction
  */
@@ -226,5 +241,76 @@ export class GetCardanoSyncStatusMsg extends Message<{ isSettled: boolean }> {
 
   type(): string {
     return GetCardanoSyncStatusMsg.type();
+  }
+}
+
+/**
+ * Message for getting Cardano transaction history (ADA-only MVP).
+ * Internal-only: the UI requests a serializable list, background uses wallet SDK + providers.
+ */
+export class GetCardanoTxHistoryMsg extends Message<CardanoTxHistoryResponse> {
+  public static type() {
+    return "cardano-get-tx-history";
+  }
+
+  constructor(
+    public readonly pageSize: number,
+    public readonly chainId?: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.pageSize || isNaN(Number(this.pageSize)) || Number(this.pageSize) <= 0) {
+      throw new Error("pageSize must be a positive number");
+    }
+  }
+
+  override approveExternal(): boolean {
+    // Tx history can reveal sensitive activity. Only allow internal UI to query it.
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetCardanoTxHistoryMsg.type();
+  }
+}
+
+/**
+ * Message for loading more Cardano tx history items (ADA-only MVP).
+ * Internal-only.
+ */
+export class LoadMoreCardanoTxHistoryMsg extends Message<CardanoTxHistoryResponse> {
+  public static type() {
+    return "cardano-load-more-tx-history";
+  }
+
+  constructor(
+    public readonly pageSize: number,
+    public readonly chainId?: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.pageSize || isNaN(Number(this.pageSize)) || Number(this.pageSize) <= 0) {
+      throw new Error("pageSize must be a positive number");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return LoadMoreCardanoTxHistoryMsg.type();
   }
 }

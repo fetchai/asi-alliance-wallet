@@ -9,6 +9,7 @@ export class CardanoWalletManager {
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
   private keyAgent: any;
+  private chainHistoryProvider: any;
 
   private constructor(wallet: any, keyAgent: any, wsProvider?: any) {
     this.wallet = wallet;
@@ -75,10 +76,13 @@ export class CardanoWalletManager {
     // Check if Blockfrost is available
     const networkConfig = getNetworkConfig(network);
     let wallet: any = undefined;
+    let chainHistoryProvider: any = undefined;
     
     if (networkConfig?.projectId) {
       try {
-        wallet = await this.createFullWallet(networkConfig, keyAgent);
+        const created = await this.createFullWallet(networkConfig, keyAgent);
+        wallet = created.wallet;
+        chainHistoryProvider = created.providers?.chainHistoryProvider;
       } catch (error) {
         console.error('[CardanoWalletManager] Failed to create full wallet:', error);
       }
@@ -86,13 +90,15 @@ export class CardanoWalletManager {
       console.warn('[CardanoWalletManager] No Blockfrost API key found for network:', network);
     }
 
-    return new CardanoWalletManager(wallet, keyAgent);
+    const manager = new CardanoWalletManager(wallet, keyAgent);
+    manager.chainHistoryProvider = chainHistoryProvider;
+    return manager;
   }
 
   private static async createFullWallet(
     networkConfig: BlockfrostConfig,
     keyAgent: any
-  ): Promise<any> {
+  ): Promise<{ wallet: any; providers: any }> {
     // Import necessary SDK modules
     const walletModule = await import('@cardano-sdk/wallet');
     const { createPersonalWallet, storage, DEFAULT_POLLING_CONFIG } = walletModule;
@@ -152,7 +158,7 @@ export class CardanoWalletManager {
       }
     );
 
-    return wallet;
+    return { wallet, providers };
   }
 
   async getBalance() {
@@ -376,6 +382,17 @@ export class CardanoWalletManager {
       throw new Error("Transaction features unavailable without Blockfrost API key");
     }
     return this.wallet;
+  }
+
+  /**
+   * Returns ChainHistoryProvider used by the wallet.
+   * This is required for lace-style tx history loading and input resolution.
+   */
+  getChainHistoryProvider() {
+    if (!this.chainHistoryProvider) {
+      throw new Error("Chain history provider unavailable without Blockfrost API key");
+    }
+    return this.chainHistoryProvider;
   }
 
   private async buildSendTransaction(params: { to: string; amount: string; memo?: string }) {
