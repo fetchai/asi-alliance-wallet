@@ -182,6 +182,7 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string }> 
   constructor(
     public readonly to: string,
     public readonly amount: string, // in lovelaces
+    public readonly memo?: string,
     public readonly chainId?: string // Optional chainId to ensure correct network
   ) {
     super();
@@ -211,6 +212,159 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string }> 
 
   type(): string {
     return EstimateSendAdaMsg.type();
+  }
+}
+
+export interface CardanoSendAdaTxDraft {
+  draftId: string;
+  fee: string; // lovelace
+  total: string; // lovelace (amount + fee)
+}
+
+/**
+ * Internal-only: Build a Cardano ADA send transaction draft once and reuse it for fee display + signing/submission.
+ */
+export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
+  public static type() {
+    return "cardano-build-send-ada-tx-draft";
+  }
+
+  constructor(
+    public readonly to: string,
+    public readonly amount: string, // in lovelaces
+    public readonly memo?: string,
+    public readonly chainId?: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.to) {
+      throw new Error("recipient address is empty");
+    }
+
+    if (!this.amount) {
+      throw new Error("amount is empty");
+    }
+
+    if (isNaN(Number(this.amount)) || Number(this.amount) <= 0) {
+      throw new Error("amount must be a positive number");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return BuildSendAdaTxDraftMsg.type();
+  }
+}
+
+/**
+ * Internal-only: Sign and submit a previously built Cardano tx draft.
+ */
+export class SubmitSendAdaTxDraftMsg extends Message<string> {
+  public static type() {
+    return "cardano-submit-send-ada-tx-draft";
+  }
+
+  constructor(
+    public readonly draftId: string,
+    public readonly chainId?: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.draftId) {
+      throw new Error("draftId is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return SubmitSendAdaTxDraftMsg.type();
+  }
+}
+
+/**
+ * Internal-only: same as SubmitSendAdaTxDraftMsg, but requires password confirmation even if wallet is already unlocked.
+ */
+export class SubmitSendAdaTxDraftWithPasswordMsg extends Message<string> {
+  public static type() {
+    return "cardano-submit-send-ada-tx-draft-with-password";
+  }
+
+  constructor(
+    public readonly draftId: string,
+    public readonly password: string,
+    public readonly chainId?: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.draftId) {
+      throw new Error("draftId is empty");
+    }
+    if (!this.password) {
+      throw new Error("password is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return SubmitSendAdaTxDraftWithPasswordMsg.type();
+  }
+}
+
+/**
+ * Internal-only: discard a previously built Cardano tx draft (to avoid leaking drafts while user edits form).
+ */
+export class DiscardSendAdaTxDraftMsg extends Message<void> {
+  public static type() {
+    return "cardano-discard-send-ada-tx-draft";
+  }
+
+  constructor(public readonly draftId: string) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.draftId) {
+      throw new Error("draftId is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return DiscardSendAdaTxDraftMsg.type();
   }
 }
 

@@ -64,7 +64,7 @@ export class CardanoSendAdapter {
         try {
           const estimate = await this.messageRequester.sendMessage(
             BACKGROUND_PORT,
-            new EstimateSendAdaMsg(recipient, actualAmount, this.chainId)
+            new EstimateSendAdaMsg(recipient, actualAmount, undefined, this.chainId)
           );
 
           return {

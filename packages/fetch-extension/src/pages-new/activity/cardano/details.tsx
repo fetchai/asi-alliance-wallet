@@ -83,7 +83,9 @@ export const CardanoActivityDetails = () => {
             />
             <div className={style["topBar-details"]}>
               <div className={style["verb"]}>{directionLabel(item.direction)}</div>
-              <div className={style["status"]}>Confirmed</div>
+              <div className={style["status"]}>
+                {item.status === "pending" ? "Pending" : "Confirmed"}
+              </div>
             </div>
           </div>
 

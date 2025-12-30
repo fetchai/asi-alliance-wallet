@@ -5,7 +5,13 @@ import { TransxPending } from "./transx-pending";
 import { TransxSuccess } from "./transx-success";
 import { TransxFailed } from "./transx-failed";
 
-export const TransxStatus = ({ status }: { status: string }) => {
+export const TransxStatus = ({
+  status,
+  onClose,
+}: {
+  status: string;
+  onClose?: () => void;
+}) => {
   const [isOpen, setIsOpen] = useState(true);
   return (
     <div>
@@ -13,7 +19,10 @@ export const TransxStatus = ({ status }: { status: string }) => {
         title={""}
         setIsOpen={setIsOpen}
         isOpen={isOpen}
-        closeClicked={() => setIsOpen(false)}
+        closeClicked={() => {
+          setIsOpen(false);
+          onClose?.();
+        }}
         showCloseIcon={true}
         showTopNav={true}
       >

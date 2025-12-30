@@ -5,6 +5,10 @@ import {
   GetCardanoBalanceMsg,
   IsCardanoReadyMsg,
   EstimateSendAdaMsg,
+  BuildSendAdaTxDraftMsg,
+  SubmitSendAdaTxDraftMsg,
+  SubmitSendAdaTxDraftWithPasswordMsg,
+  DiscardSendAdaTxDraftMsg,
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
   LoadMoreCardanoTxHistoryMsg,
@@ -26,6 +30,10 @@ export function init(
   router.registerMessage(GetCardanoBalanceMsg);
   router.registerMessage(IsCardanoReadyMsg);
   router.registerMessage(EstimateSendAdaMsg);
+  router.registerMessage(BuildSendAdaTxDraftMsg);
+  router.registerMessage(SubmitSendAdaTxDraftMsg);
+  router.registerMessage(SubmitSendAdaTxDraftWithPasswordMsg);
+  router.registerMessage(DiscardSendAdaTxDraftMsg);
   router.registerMessage(GetCardanoSyncStatusMsg);
   router.registerMessage(GetCardanoTxHistoryMsg);
   router.registerMessage(LoadMoreCardanoTxHistoryMsg);

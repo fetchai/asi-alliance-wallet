@@ -211,6 +211,7 @@ export const FeeButtonsInner: FunctionComponent<
 
     const intl = useIntl();
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
 
     const language = useLanguage();
 
@@ -280,16 +281,16 @@ export const FeeButtonsInner: FunctionComponent<
               {feeButtonState.isGasInputOpen
                 ? gasConfig.gasRaw
                 : feeConfig.feeType === "low"
-                ? lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+                ? isCardano
+                  ? lowFee.hideIBCMetadata(true).trim(true).toString()
+                  : lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
                 : feeConfig.feeType === "average"
-                ? averageFee
-                    .hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)
-                : highFee
-                    .hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)}
+                ? isCardano
+                  ? averageFee.hideIBCMetadata(true).trim(true).toString()
+                  : averageFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+                : isCardano
+                ? highFee.hideIBCMetadata(true).trim(true).toString()
+                : highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
             </div>
 
             <button
@@ -384,24 +385,16 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {
-                      lowFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[0]
-                    }
+                    {(isCardano
+                      ? lowFee.hideIBCMetadata(true).trim(true).toString()
+                      : lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
+                    ).split(" ")[0]}
                   </div>
                   <div>
-                    {
-                      lowFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[1]
-                    }
+                    {(isCardano
+                      ? lowFee.hideIBCMetadata(true).trim(true).toString()
+                      : lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
+                    ).split(" ")[1]}
                   </div>
                 </div>
               }
@@ -465,24 +458,16 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {
-                      averageFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[0]
-                    }
+                    {(isCardano
+                      ? averageFee.hideIBCMetadata(true).trim(true).toString()
+                      : averageFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
+                    ).split(" ")[0]}
                   </div>
                   <div>
-                    {
-                      averageFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[1]
-                    }
+                    {(isCardano
+                      ? averageFee.hideIBCMetadata(true).trim(true).toString()
+                      : averageFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
+                    ).split(" ")[1]}
                   </div>
                 </div>
               }
@@ -546,24 +531,16 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {
-                      highFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[0]
-                    }
+                    {(isCardano
+                      ? highFee.hideIBCMetadata(true).trim(true).toString()
+                      : highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
+                    ).split(" ")[0]}
                   </div>
                   <div>
-                    {
-                      highFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[1]
-                    }
+                    {(isCardano
+                      ? highFee.hideIBCMetadata(true).trim(true).toString()
+                      : highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
+                    ).split(" ")[1]}
                   </div>
                 </div>
               }

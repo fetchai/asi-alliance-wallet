@@ -456,7 +456,21 @@ export class CardanoWalletManager {
       throw new Error('Transaction inspection failed: no inputSelection');
     }
 
-    return { tx, fee: fee.toString() };
+    const feeStr = fee.toString();
+    return { tx, fee: feeStr };
+  }
+
+  async buildSendAdaTx(params: {
+    to: string;
+    amount: string;
+    memo?: string;
+  }): Promise<{ tx: any; fee: string; total: string }> {
+    if (!this.wallet) {
+      throw new Error("Transaction features unavailable without Blockfrost API key");
+    }
+    const { tx, fee } = await this.buildSendTransaction(params);
+    const total = (BigInt(params.amount) + BigInt(fee)).toString();
+    return { tx, fee, total };
   }
 
   async estimateSendAda(params: {
@@ -468,12 +482,11 @@ export class CardanoWalletManager {
       throw new Error("Transaction features unavailable without Blockfrost API key");
     }
 
-    const { fee } = await this.buildSendTransaction(params);
-    const totalAmount = (BigInt(params.amount) + BigInt(fee)).toString();
+    const { fee, total } = await this.buildSendAdaTx(params);
 
     return {
       fee,
-      total: totalAmount
+      total
     };
   }
 
@@ -487,10 +500,10 @@ export class CardanoWalletManager {
     }
 
     try {
-      const { tx } = await this.buildSendTransaction(params);
+      const { tx: builtTx } = await this.buildSendTransaction(params);
       const { submitTx } = await import('./api/extension');
 
-      const signedTx = (await tx.sign()).cbor;
+      const signedTx = (await builtTx.sign()).cbor;
       const txId = await submitTx(signedTx, this);
 
       return typeof txId === 'string' ? txId : txId.toString();

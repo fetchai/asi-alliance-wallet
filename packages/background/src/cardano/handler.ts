@@ -5,6 +5,10 @@ import {
   GetCardanoBalanceMsg,
   IsCardanoReadyMsg,
   EstimateSendAdaMsg,
+  BuildSendAdaTxDraftMsg,
+  SubmitSendAdaTxDraftMsg,
+  SubmitSendAdaTxDraftWithPasswordMsg,
+  DiscardSendAdaTxDraftMsg,
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
   LoadMoreCardanoTxHistoryMsg,
@@ -37,6 +41,26 @@ export const getHandler: (
         return handleSendAdaWithPasswordMsg(service, keyRingService)(
           env,
           msg as SendAdaWithPasswordMsg
+        );
+      case BuildSendAdaTxDraftMsg.type():
+        return handleBuildSendAdaTxDraftMsg(service, keyRingService)(
+          env,
+          msg as BuildSendAdaTxDraftMsg
+        );
+      case SubmitSendAdaTxDraftMsg.type():
+        return handleSubmitSendAdaTxDraftMsg(service, keyRingService)(
+          env,
+          msg as SubmitSendAdaTxDraftMsg
+        );
+      case SubmitSendAdaTxDraftWithPasswordMsg.type():
+        return handleSubmitSendAdaTxDraftWithPasswordMsg(service, keyRingService)(
+          env,
+          msg as SubmitSendAdaTxDraftWithPasswordMsg
+        );
+      case DiscardSendAdaTxDraftMsg.type():
+        return handleDiscardSendAdaTxDraftMsg(service)(
+          env,
+          msg as DiscardSendAdaTxDraftMsg
         );
       case GetCardanoBalanceMsg.type():
         return handleGetCardanoBalanceMsg(service)(env, msg as GetCardanoBalanceMsg);
@@ -255,11 +279,123 @@ const handleEstimateSendAdaMsg: (
     try {
       return await service.estimateSendAda({
         to: msg.to,
-        amount: msg.amount
+        amount: msg.amount,
+        memo: msg.memo
       });
     } catch (error) {
       throw error;
     }
+  };
+};
+
+const waitForCardanoWalletSettled = async (service: CardanoService) => {
+  try {
+    const walletManager = service.getWalletManager();
+    if (walletManager && walletManager.hasWallet()) {
+      const { firstValueFrom } = await import("rxjs");
+      const { filter, take, timeout } = await import("rxjs/operators");
+
+      try {
+        await firstValueFrom(
+          walletManager.syncStatus$.pipe(
+            filter((isSettled: boolean) => isSettled === true),
+            take(1),
+            timeout(5000)
+          )
+        );
+      } catch {
+        const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(
+          () => false
+        );
+        if (!isSettled) {
+          throw new Error("Wallet is syncing. Please wait and try again.");
+        }
+      }
+    }
+  } catch (error: any) {
+    if (error?.message?.includes("syncing")) {
+      throw error;
+    }
+    // Continue if sync check fails (wallet might not have this capability)
+  }
+};
+
+const handleBuildSendAdaTxDraftMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<BuildSendAdaTxDraftMsg> = (service, keyRingService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+    await waitForCardanoWalletSettled(service);
+    return await service.buildSendAdaTxDraft({
+      to: msg.to,
+      amount: msg.amount,
+      memo: msg.memo,
+      chainId: msg.chainId,
+    });
+  };
+};
+
+const handleSubmitSendAdaTxDraftMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<SubmitSendAdaTxDraftMsg> = (service, keyRingService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+    await waitForCardanoWalletSettled(service);
+    return await service.submitSendAdaTxDraft({ draftId: msg.draftId, chainId: msg.chainId });
+  };
+};
+
+const handleSubmitSendAdaTxDraftWithPasswordMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<SubmitSendAdaTxDraftWithPasswordMsg> = (
+  service,
+  keyRingService
+) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+    if (!keyRingService.checkPassword(msg.password)) {
+      throw new Error("Invalid password");
+    }
+    if (msg.chainId) {
+      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+    }
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+    await waitForCardanoWalletSettled(service);
+    return await service.submitSendAdaTxDraft({ draftId: msg.draftId, chainId: msg.chainId });
+  };
+};
+
+const handleDiscardSendAdaTxDraftMsg: (
+  service: CardanoService
+) => InternalHandler<DiscardSendAdaTxDraftMsg> = (service) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+    service.discardSendAdaTxDraft(msg.draftId);
   };
 };
 

@@ -2,6 +2,7 @@ import { CardanoKeyRing, KeyStore, Key, CardanoWalletManager } from "@keplr-wall
 import { Crypto } from "../keyring/crypto";
 import { Notification } from "../tx/types";
 import type { CardanoTxHistoryItem, CardanoTxHistoryResponse } from "./messages";
+import type { CardanoSendAdaTxDraft } from "./messages";
 import { createObservableTransactionsByAddressesProvider, createTxHistoryLoader, getTxInputsValueAndAddress } from "@keplr-wallet/cardano";
 import { firstValueFrom, ReplaySubject, Subscription } from "rxjs";
 import { skip, take, timeout } from "rxjs/operators";
@@ -113,11 +114,30 @@ export class CardanoService {
     }
 
     try {
-      return await this.keyRing.sendAda(params);
+      const txId = await this.keyRing.sendAda(params);
+      this.registerLocallyPendingSentTx(params, txId);
+      return txId;
     } catch (error: any) {
       this.processCardanoTxError(error);
       throw error;
     }
+  }
+
+  private readonly locallyPendingSentTxs: Map<
+    string,
+    Map<string, { createdAt: number; amount: string }>
+  > = new Map();
+
+  private registerLocallyPendingSentTx(
+    params: { amount: string },
+    txId: string,
+    chainId?: string
+  ) {
+    const chainKey = chainId || "default";
+    const perChain =
+      this.locallyPendingSentTxs.get(chainKey) ?? new Map<string, { createdAt: number; amount: string }>();
+    perChain.set(txId, { createdAt: Date.now(), amount: params.amount });
+    this.locallyPendingSentTxs.set(chainKey, perChain);
   }
 
   /**
@@ -140,6 +160,7 @@ export class CardanoService {
   async estimateSendAda(params: {
     to: string;
     amount: string; // in lovelaces
+    memo?: string;
   }): Promise<{ fee: string; total: string }> {
     if (!this.keyRing) {
       throw new Error(
@@ -163,6 +184,107 @@ export class CardanoService {
     } catch (error) {
       throw error;
     }
+  }
+
+  private readonly sendAdaTxDrafts: Map<
+    string,
+    {
+      createdAt: number;
+      chainId?: string;
+      to: string;
+      amount: string;
+      memo?: string;
+      fee: string;
+      total: string;
+      tx: any;
+    }
+  > = new Map();
+
+  async buildSendAdaTxDraft(params: {
+    to: string;
+    amount: string;
+    memo?: string;
+    chainId?: string;
+  }): Promise<CardanoSendAdaTxDraft> {
+    const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+    if (!walletManager) {
+      throw new Error("Wallet manager not initialized");
+    }
+
+    // NOTE: this method is implemented in our @keplr-wallet/cardano wrapper. Depending on workspace
+    // TS resolution, background may see older typings; keep the call robust.
+    const built = await (walletManager as any).buildSendAdaTx({
+      to: params.to,
+      amount: params.amount,
+      memo: params.memo,
+    });
+
+    const draftId = `cad_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2)}`;
+
+    this.sendAdaTxDrafts.set(draftId, {
+      createdAt: Date.now(),
+      chainId: params.chainId,
+      to: params.to,
+      amount: params.amount,
+      memo: params.memo,
+      fee: built.fee,
+      total: built.total,
+      tx: built.tx,
+    });
+
+    return {
+      draftId,
+      fee: built.fee,
+      total: built.total,
+    };
+  }
+
+  async submitSendAdaTxDraft(params: {
+    draftId: string;
+    chainId?: string;
+  }): Promise<string> {
+    const draft = this.sendAdaTxDrafts.get(params.draftId);
+    if (!draft) {
+      throw new Error("Transaction draft not found. Please rebuild and try again.");
+    }
+
+    // Enforce a generous TTL. If expired, refuse to submit to avoid mismatches and stale validity interval.
+    const ttlMs = 60 * 60 * 1000; // 1 hour
+    if (Date.now() - draft.createdAt > ttlMs) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      throw new Error("Transaction draft expired. Please rebuild and try again.");
+    }
+
+    // Optional safety: ensure the draft is used on the intended chain.
+    if (draft.chainId && params.chainId && draft.chainId !== params.chainId) {
+      throw new Error("Transaction draft chain mismatch. Please rebuild and try again.");
+    }
+
+    try {
+      const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+      if (!walletManager) {
+        throw new Error("Wallet manager not initialized");
+      }
+      const signedTx = (await draft.tx.sign()).cbor;
+      const txIdAny = await walletManager.submitTx(signedTx);
+      const txId = typeof txIdAny === "string" ? txIdAny : txIdAny?.toString?.() ?? String(txIdAny);
+
+      // Lace-like behavior: show pending immediately after broadcast.
+      this.registerLocallyPendingSentTx({ amount: draft.amount }, txId, params.chainId);
+
+      this.sendAdaTxDrafts.delete(params.draftId);
+      return txId;
+    } catch (error: any) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      this.processCardanoTxError(error);
+      throw error;
+    }
+  }
+
+  discardSendAdaTxDraft(draftId: string): void {
+    this.sendAdaTxDrafts.delete(draftId);
   }
 
   /**
@@ -223,7 +345,7 @@ export class CardanoService {
 
   private async withPendingTxs(
     res: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean },
-    _chainId?: string
+    chainId?: string
   ): Promise<CardanoTxHistoryResponse> {
     const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
     if (!walletManager || !walletManager.hasWallet()) {
@@ -234,16 +356,70 @@ export class CardanoService {
     const walletAddresses = await this.getWalletAddressSet(wallet);
     const pending = await this.transformPendingTxsToItems(wallet, walletAddresses);
 
-    if (!pending.length) {
-      return res;
-    }
+    const locallyPending = (() => {
+      const chainKey = chainId || "default";
+      const perChainKey =
+        this.locallyPendingSentTxs.has(chainKey) ? chainKey : chainId ? "default" : chainKey;
+      const perChain = this.locallyPendingSentTxs.get(perChainKey);
+      if (!perChain) return [] as CardanoTxHistoryItem[];
+
+      const ttlMs = 10 * 60 * 1000;
+      const now = Date.now();
+
+      const items: CardanoTxHistoryItem[] = [];
+      for (const [id, v] of perChain.entries()) {
+        if (now - v.createdAt > ttlMs) {
+          perChain.delete(id);
+          continue;
+        }
+        items.push({
+          id,
+          status: "pending",
+          direction: "sent",
+          amount: v.amount,
+        });
+      }
+
+      if (perChain.size === 0) {
+        this.locallyPendingSentTxs.delete(perChainKey);
+      }
+      return items;
+    })();
 
     const confirmedIds = new Set((res.items || []).map((i) => i.id));
     const pendingFiltered = pending.filter((p) => !confirmedIds.has(p.id));
+    const locallyPendingFiltered = locallyPending.filter((p) => !confirmedIds.has(p.id));
+
+    // Remove confirmed txs from local pending cache.
+    if (confirmedIds.size > 0) {
+      const chainKey = chainId || "default";
+      const perChainKey =
+        this.locallyPendingSentTxs.has(chainKey) ? chainKey : chainId ? "default" : chainKey;
+      const perChain = this.locallyPendingSentTxs.get(perChainKey);
+      if (perChain) {
+        for (const id of confirmedIds) {
+          perChain.delete(id);
+        }
+        if (perChain.size === 0) {
+          this.locallyPendingSentTxs.delete(perChainKey);
+        }
+      }
+    }
 
     // Lace behavior: pending txs are shown above confirmed history.
+    // Also dedupe by txId to avoid temporary duplicates between local pending vs wallet outgoing pending.
+    const mergedPendingById = new Map<string, CardanoTxHistoryItem>();
+    for (const p of locallyPendingFiltered) {
+      mergedPendingById.set(p.id, p);
+    }
+    for (const p of pendingFiltered) {
+      if (!mergedPendingById.has(p.id)) {
+        mergedPendingById.set(p.id, p);
+      }
+    }
+
     return {
-      items: [...pendingFiltered, ...(res.items || [])],
+      items: [...Array.from(mergedPendingById.values()), ...(res.items || [])],
       mightHaveMore: res.mightHaveMore
     };
   }
@@ -485,7 +661,7 @@ export class CardanoService {
         id: txId,
         blockNo: tx?.blockHeader?.blockNo != null ? Number(tx.blockHeader.blockNo) : undefined,
         slot: tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : undefined,
-                  status: "confirmed",
+        status: tx?.blockHeader?.blockNo != null || tx?.blockHeader?.slot != null ? "confirmed" : "pending",
         direction,
         amount: amount.toString(),
         fee: fee.toString()

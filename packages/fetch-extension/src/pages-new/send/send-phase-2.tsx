@@ -16,7 +16,14 @@ import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { GetCardanoSyncStatusMsg, KeyRingStatus } from "@keplr-wallet/background";
+import {
+  BuildSendAdaTxDraftMsg,
+  DiscardSendAdaTxDraftMsg,
+  GetCardanoSyncStatusMsg,
+  KeyRingStatus,
+  SubmitSendAdaTxDraftMsg,
+  SubmitSendAdaTxDraftWithPasswordMsg,
+} from "@keplr-wallet/background";
 import { Modal, ModalBody } from "reactstrap";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
 
@@ -281,6 +288,15 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
     const [isCardanoSyncing, setIsCardanoSyncing] = useState(false);
+    const [cardanoDraft, setCardanoDraft] = useState<{
+      draftId: string;
+      fee: string;
+      total: string;
+    } | null>(null);
+    const [cardanoDraftError, setCardanoDraftError] = useState<string | null>(
+      null
+    );
+    const [isBuildingCardanoDraft, setIsBuildingCardanoDraft] = useState(false);
     const isCardano = chainStore.current.features?.includes("cardano") ?? false;
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
     const shouldRequireCardanoPassword =
@@ -358,8 +374,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       sendConfigs.recipientConfig.error ??
       sendConfigs.amountConfig.error ??
       sendConfigs.memoConfig.error ??
-      sendConfigs.gasConfig.error ??
-      sendConfigs.feeConfig.error;
+      (isCardano
+        ? cardanoDraftError
+          ? new Error(cardanoDraftError)
+          : !cardanoDraft && !isBuildingCardanoDraft
+          ? new Error("Transaction is not ready")
+          : undefined
+        : sendConfigs.gasConfig.error ?? sendConfigs.feeConfig.error);
     const txStateIsValid = sendConfigError == null;
 
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
@@ -375,6 +396,19 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       return BigInt(scaledAmount);
     };
 
+    const formatLovelaceToAda = (lovelace: string) => {
+      try {
+        const v = BigInt(lovelace || "0");
+        const oneMillion = BigInt(1000000);
+        const whole = v / oneMillion;
+        const frac = v % oneMillion;
+        const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
+        return fracStr ? `${whole.toString()}.${fracStr}` : whole.toString();
+      } catch {
+        return "0";
+      }
+    };
+
     useEffect(() => {
       // Close the confirm modal if Cardano context changes underneath (chain switch / key type switch).
       if (isCardanoPasswordConfirmOpen && !shouldRequireCardanoPassword) {
@@ -382,8 +416,98 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       }
     }, [isCardanoPasswordConfirmOpen, shouldRequireCardanoPassword]);
 
+    useEffect(() => {
+      if (!isCardano) {
+        if (cardanoDraft?.draftId) {
+          const requester = new InExtensionMessageRequester();
+          requester.sendMessage(
+            BACKGROUND_PORT,
+            new DiscardSendAdaTxDraftMsg(cardanoDraft.draftId)
+          );
+        }
+        setCardanoDraft(null);
+        setCardanoDraftError(null);
+        setIsBuildingCardanoDraft(false);
+        return;
+      }
+
+      if (isCardanoSyncing) {
+        return;
+      }
+
+      const recipient = sendConfigs?.recipientConfig?.recipient ?? "";
+      const amountStr = sendConfigs?.amountConfig?.amount ?? "";
+      const memo = sendConfigs?.memoConfig?.memo ?? "";
+      const decimals = sendConfigs?.amountConfig?.sendCurrency?.coinDecimals ?? 6;
+
+      if (!recipient || !amountStr) {
+        setCardanoDraft(null);
+        setCardanoDraftError(null);
+        setIsBuildingCardanoDraft(false);
+        return;
+      }
+
+      let cancelled = false;
+      const timeoutId = setTimeout(async () => {
+        try {
+          setIsBuildingCardanoDraft(true);
+          setCardanoDraftError(null);
+
+          const lovelaceAmount = parseAmount(amountStr, decimals).toString();
+          const requester = new InExtensionMessageRequester();
+          const res = await requester.sendMessage(
+            BACKGROUND_PORT,
+            new BuildSendAdaTxDraftMsg(
+              recipient,
+              lovelaceAmount,
+              memo,
+              chainStore.current.chainId
+            )
+          );
+
+          if (cancelled) return;
+
+          if (cardanoDraft?.draftId) {
+            requester.sendMessage(
+              BACKGROUND_PORT,
+              new DiscardSendAdaTxDraftMsg(cardanoDraft.draftId)
+            );
+          }
+
+          setCardanoDraft(res ?? null);
+          setCardanoDraftError(null);
+        } catch (e: any) {
+          if (!cancelled) {
+            setCardanoDraft(null);
+            setCardanoDraftError(e?.message ?? "Failed to build transaction");
+          }
+        } finally {
+          if (!cancelled) {
+            setIsBuildingCardanoDraft(false);
+          }
+        }
+      }, 300);
+
+      return () => {
+        cancelled = true;
+        clearTimeout(timeoutId);
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      isCardano,
+      isCardanoSyncing,
+      chainStore.current.chainId,
+      sendConfigs?.recipientConfig?.recipient,
+      sendConfigs?.amountConfig?.amount,
+      sendConfigs?.amountConfig?.sendCurrency?.coinDecimals,
+      sendConfigs?.memoConfig?.memo,
+    ]);
+
     const feeText = (() => {
       try {
+        if (isCardano && cardanoDraft?.fee) {
+          return `${formatLovelaceToAda(cardanoDraft.fee)} ADA`;
+        }
         const fee = sendConfigs?.feeConfig?.fee;
         if (fee && typeof fee.toString === "function") {
           return fee.toString();
@@ -397,6 +521,54 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const doSend = async (options?: { cardanoSpendingPassword?: string }) => {
       try {
         analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
+        if (isCardano) {
+          if (!cardanoDraft?.draftId) {
+            throw new Error(cardanoDraftError || "Transaction is not ready");
+          }
+
+          const requester = new InExtensionMessageRequester();
+          const msg = shouldRequireCardanoPassword
+            ? new SubmitSendAdaTxDraftWithPasswordMsg(
+                cardanoDraft.draftId,
+                options?.cardanoSpendingPassword || "",
+                chainStore.current.chainId
+              )
+            : new SubmitSendAdaTxDraftMsg(
+                cardanoDraft.draftId,
+                chainStore.current.chainId
+              );
+
+          await requester.sendMessage(BACKGROUND_PORT, msg);
+
+          analyticsStore.logEvent("send_txn_broadcasted", {
+            chainId: chainStore.current.chainId,
+            chainName: chainStore.current.chainName,
+            feeType: sendConfigs.feeConfig.feeType,
+          });
+
+          navigate("/send", {
+            replace: true,
+            state: { trnsxStatus: "pending", isNext: true },
+          });
+          notification.push({
+            type: "primary",
+            placement: "top-center",
+            duration: 2,
+            content: `Transaction broadcasted`,
+            canDelete: true,
+            transition: { duration: 0.25 },
+          });
+
+          if (keyRingStore.keyRingType === "ledger") {
+            navigate("/send");
+          }
+          if (isDetachedPage) {
+            window.close();
+          }
+
+          return;
+        }
+
         const stdFee = sendConfigs.feeConfig.toStdFee();
 
         const tx = accountInfo.makeSendTokenTx(
@@ -582,21 +754,40 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         />
 
         <div className={style["transactionFeeContainer"]}>
-          <FeeButtons
-            feeConfig={sendConfigs.feeConfig}
-            gasConfig={sendConfigs.gasConfig}
-            priceStore={priceStore}
-            label={intl.formatMessage({ id: "send.input.fee" })}
-            feeSelectLabels={{
-              low: intl.formatMessage({ id: "fee-buttons.select.low" }),
-              average: intl.formatMessage({
-                id: "fee-buttons.select.average",
-              }),
-              high: intl.formatMessage({ id: "fee-buttons.select.high" }),
-            }}
-            gasLabel={intl.formatMessage({ id: "send.input.gas" })}
-            gasSimulator={gasSimulator}
-          />
+          {isCardano ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                background: "var(--card-bg)",
+                border: "1px solid var(--border-grey)",
+              }}
+            >
+              <div style={{ opacity: 0.7 }}>Fee</div>
+              <div style={{ fontWeight: 600 }}>
+                {isBuildingCardanoDraft ? "Calculating..." : feeText || "-"}
+              </div>
+            </div>
+          ) : (
+            <FeeButtons
+              feeConfig={sendConfigs.feeConfig}
+              gasConfig={sendConfigs.gasConfig}
+              priceStore={priceStore}
+              label={intl.formatMessage({ id: "send.input.fee" })}
+              feeSelectLabels={{
+                low: intl.formatMessage({ id: "fee-buttons.select.low" }),
+                average: intl.formatMessage({
+                  id: "fee-buttons.select.average",
+                }),
+                high: intl.formatMessage({ id: "fee-buttons.select.high" }),
+              }}
+              gasLabel={intl.formatMessage({ id: "send.input.gas" })}
+              gasSimulator={gasSimulator}
+            />
+          )}
         </div>
         {isCardanoSyncing && (
           <div style={{
@@ -721,7 +912,14 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           }}
         />
 
-        {trnsxStatus !== undefined && <TransxStatus status={trnsxStatus} />}
+        {trnsxStatus !== undefined && (
+          <TransxStatus
+            status={trnsxStatus}
+            onClose={() => {
+              navigate("/activity", { replace: true });
+            }}
+          />
+        )}
       </div>
     );
   }
