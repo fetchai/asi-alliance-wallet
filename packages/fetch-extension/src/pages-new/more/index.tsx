@@ -191,18 +191,20 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ marginBottom: "5px" }}
-        leftImage={require("@assets/svg/wireframe/signature-doc.svg")}
-        onClick={() => {
-          navigate("/more/sign-manual-txn");
-          analyticsStore.logEvent("sign_manual_txn_click", {
-            pageName: "More",
-          });
-        }}
-        heading="Sign Manual Transaction"
-      />
+      {!chainStore.current.features?.includes("evm") && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "5px" }}
+          leftImage={require("@assets/svg/wireframe/signature-doc.svg")}
+          onClick={() => {
+            navigate("/more/sign-manual-txn");
+            analyticsStore.logEvent("sign_manual_txn_click", {
+              pageName: "More",
+            });
+          }}
+          heading="Sign Manual Transaction"
+        />
+      )}
       <Card
         leftImageStyle={{ background: "transparent", height: "18px" }}
         style={{ marginBottom: "6px" }}
