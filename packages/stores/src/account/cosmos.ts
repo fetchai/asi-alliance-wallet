@@ -431,6 +431,7 @@ export class CosmosAccountImpl {
 
     let txHash: Uint8Array;
     let signDoc: StdSignDoc;
+    let signature: string;
     let txId: string;
     let proposalNode: ProposalNode;
 
@@ -448,6 +449,7 @@ export class CosmosAccountImpl {
       );
       txHash = result.txHash;
       signDoc = result.signDoc;
+      signature = result.signature;
 
       txId = Buffer.from(txHash).toString("hex").toLocaleUpperCase();
 
@@ -577,7 +579,7 @@ export class CosmosAccountImpl {
         }
 
         if (onFulfill) {
-          onFulfill(tx);
+          onFulfill({ ...tx, signature });
         }
       })
       .catch(() => {
@@ -605,6 +607,7 @@ export class CosmosAccountImpl {
   ): Promise<{
     txHash: Uint8Array;
     signDoc: StdSignDoc;
+    signature: string;
   }> {
     if (this.base.walletStatus !== WalletStatus.Loaded) {
       throw new Error(`Wallet is not loaded: ${this.base.walletStatus}`);
@@ -796,6 +799,7 @@ export class CosmosAccountImpl {
           throw err;
         }),
       signDoc: signResponse.signed,
+      signature: signResponse.signature.signature,
     };
   }
 
