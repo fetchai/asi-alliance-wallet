@@ -25,3 +25,39 @@
   min-height: 250px;
   max-height: 250px;
 }
+
+.inputLabel {
+  color: $font-secondary;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.signingTypeDropdownContainer {
+  margin-bottom: 1rem;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
+.dropdownToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid $border-grey;
+  box-shadow: none !important;
+  font-weight: 400 !important;
+}
+
+.dropdownToggle:hover {
+  border-color: $border-grey;
+  box-shadow: none !important;
+}
+
+.transactionDetailsRow {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  background-color: white;
+  padding: 10px;
+  border-radius: 10px;
+  color: black;
+}

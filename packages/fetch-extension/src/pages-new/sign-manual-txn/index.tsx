@@ -1,22 +1,30 @@
-import { HeaderLayout } from "@layouts-v2/header-layout";
-import { observer } from "mobx-react-lite";
-import React, { useEffect, useState, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { ButtonV2 } from "@components-v2/buttons/button";
+import { Checkbox } from "@components-v2/checkbox/checkbox";
 import { Input } from "@components-v2/form";
 import { TextArea } from "@components/form";
-import { useStore } from "../../stores";
-import style from "./styles.module.scss";
-import { Checkbox } from "@components-v2/checkbox/checkbox";
-import { ButtonV2 } from "@components-v2/buttons/button";
+import { useNotification } from "@components/notification";
+import { NotificationElementProps } from "@components/notification/element";
 import {
   RequestSignAminoMsg,
   RequestSignDirectMsg,
+  SignMode,
 } from "@keplr-wallet/background";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { SignMode } from "@keplr-wallet/background";
-import { Card } from "@components-v2/card";
-import { useNotification } from "@components/notification";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { HeaderLayout } from "@layouts-v2/header-layout";
+import { observer } from "mobx-react-lite";
+import React, { useCallback, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { useStore } from "../../stores";
+import style from "./styles.module.scss";
+import { TransactionDetails } from "./transaction-details";
+import {
+  CosmosMsgTypes,
+  convertAminoToProtoMsg,
+  formatJson,
+  validateAminoSignDoc,
+  validateDirectSignDoc,
+} from "./utils";
 
 type TxnType = SignMode.Amino | SignMode.Direct;
 
@@ -29,39 +37,42 @@ export const SignManualTxn = observer(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const notification = useNotification();
-  const { signed, txSignature } = location.state || {};
+  const { signed, signType } = location.state || {};
 
   const { chainStore, accountStore } = useStore();
 
   const [txnPayload, setTxnPayload] = useState("");
   const [broadcastTxn, setBroadcastTxn] = useState(false);
-  const [txnSigned, setTxnSigned] = useState(false);
-  const [signature, setSignature] = useState("");
+  const [payloadError, setPayloadError] = useState("");
+  const signingType = SignMode.Amino;
 
   const chainId = chainStore.current.chainId;
-  const address = accountStore.getAccount(chainId).bech32Address;
+  const account = accountStore.getAccount(chainId);
+  const address = account.bech32Address;
+
+  const showNotification = (
+    message: string,
+    type: NotificationElementProps["type"] = "success"
+  ) => {
+    notification.push({
+      placement: "top-center",
+      type,
+      duration: 2,
+      content: message || "Copied to clipboard",
+      canDelete: true,
+      transition: {
+        duration: 0.25,
+      },
+    });
+  };
 
   const copyAddress = useCallback(
-    async (text: string) => {
+    async (text: string, message: string) => {
       await navigator.clipboard.writeText(text);
-      notification.push({
-        placement: "top-center",
-        type: "success",
-        duration: 2,
-        content: "Transaction signature copied",
-        canDelete: true,
-        transition: {
-          duration: 0.25,
-        },
-      });
+      showNotification(message);
     },
     [notification]
   );
-
-  useEffect(() => {
-    setTxnSigned(signed);
-    setSignature(txSignature);
-  }, [location]);
 
   const detectTxType = (tx: any): TxnType => {
     if (!tx || typeof tx !== "object") {
@@ -83,23 +94,6 @@ export const SignManualTxn = observer(() => {
     }
 
     throw new Error("Unknown transaction format");
-  };
-
-  const formatJson = (value: string) => {
-    try {
-      return JSON.stringify(JSON.parse(value), null, 2);
-    } catch {
-      try {
-        const hex = value.startsWith("0x") ? value.slice(2) : value;
-
-        if (!/^[0-9a-fA-F]+$/.test(hex)) return value;
-
-        const decoded = Buffer.from(hex, "hex").toString("utf8");
-        return JSON.stringify(JSON.parse(decoded), null, 2);
-      } catch {
-        return value;
-      }
-    }
   };
 
   const signManualTxn = async (type: TxnType) => {
@@ -138,6 +132,7 @@ export const SignManualTxn = observer(() => {
         state: {
           signed: true,
           txSignature: result.signature.signature,
+          signType: SignType.SIGN,
         },
       });
     } catch (err) {
@@ -149,8 +144,48 @@ export const SignManualTxn = observer(() => {
     if (type === SignType.SIGN) {
       const txnType = detectTxType(JSON.parse(txnPayload));
       await signManualTxn(txnType);
-      console.log(signature);
     } else {
+      const payloadObj = JSON.parse(txnPayload);
+      //TODO: on sign and broadcast
+      await account.cosmos.sendMsgs(
+        CosmosMsgTypes[payloadObj?.msgs[0]?.type],
+        {
+          aminoMsgs: payloadObj.msgs,
+          protoMsgs: convertAminoToProtoMsg(payloadObj),
+        },
+        payloadObj.memo,
+        payloadObj.fee,
+        {
+          disableBalanceCheck: true,
+          preferNoSetFee: true,
+        },
+        {
+          onFulfill: (tx) => {
+            console.log("tx", tx);
+            navigate("/more/sign-manual-txn", {
+              replace: true,
+              state: {
+                signed: true,
+                txSignature: tx.signature,
+                txHash: tx.hash,
+                signType: SignType.SIGN_AND_BROADCAST,
+              },
+            });
+          },
+          onBroadcasted: (txHash) => {
+            console.log("txHash", txHash);
+            showNotification("Transaction broadcasted");
+          },
+          onBroadcastFailed: (error) => {
+            console.log("error", error);
+            showNotification("Transaction Failed", "danger");
+            navigate("/more/sign-manual-txn", {
+              replace: true,
+              state: {},
+            });
+          },
+        }
+      );
     }
   };
 
@@ -161,13 +196,17 @@ export const SignManualTxn = observer(() => {
       showChainName={false}
       canChangeChainInfo={false}
       alternativeTitle={
-        !txnSigned ? "Sign Manual Transaction" : "Signed Transaction"
+        !signed
+          ? "Sign Manual Transaction"
+          : signType === SignType.SIGN
+          ? "Signed Transaction"
+          : "Transaction Details"
       }
       showBottomMenu={false}
       onBackButton={() => navigate(-1)}
     >
       <div className={style["container"]}>
-        {!txnSigned ? (
+        {!signed ? (
           <React.Fragment>
             <Input
               label="Chain ID"
@@ -187,17 +226,38 @@ export const SignManualTxn = observer(() => {
               formFeedbackClassName={style["formFeedback"]}
               readOnly
             />
+            {/* <div className={style["signingTypeDropdownContainer"]}>
+              <Label className={style["inputLabel"]}>Signing Type</Label>
+              <SigningTypeDropdown
+                value={signingType}
+                onChange={(type) => setSigningType(type)}
+              />
+            </div> */}
             <TextArea
               label="Transaction Data (JSON)"
               className={style["txnPayloadInput"]}
               placeholder="Paste the transaction payload to sign"
               value={txnPayload}
-              onChange={(e) => setTxnPayload(e.target.value)}
+              onChange={(e) => {
+                setTxnPayload(e.target.value);
+                setPayloadError("");
+                const formatted = formatJson(e.target.value);
+                try {
+                  const signDoc = JSON.parse(formatted);
+                  if (signingType === SignMode.Amino) {
+                    validateAminoSignDoc(signDoc, chainId, address);
+                  } else {
+                    validateDirectSignDoc(signDoc, chainId);
+                  }
+                } catch (err) {
+                  setPayloadError(err.message);
+                }
+              }}
               onBlur={(e: any) => {
                 const formatted = formatJson(e.target.value);
-
                 setTxnPayload(formatted);
               }}
+              error={payloadError}
             />
             <Checkbox
               isChecked={broadcastTxn}
@@ -214,6 +274,7 @@ export const SignManualTxn = observer(() => {
                 fontSize: "14px",
                 fontWeight: 400,
               }}
+              disabled={payloadError !== "" || txnPayload.trim() === ""}
               text={
                 broadcastTxn
                   ? "Sign and Broadcast Transaction"
@@ -227,88 +288,7 @@ export const SignManualTxn = observer(() => {
             />
           </React.Fragment>
         ) : (
-          <Card
-            heading="Signed Transaction"
-            style={{
-              minHeight: "200px",
-            }}
-            middleSectionStyle={{
-              width: "100%",
-            }}
-            subheadingStyle={{
-              backgroundColor: "white",
-              padding: "10px",
-              borderRadius: "10px",
-              color: "black",
-              maxWidth: "100%",
-            }}
-            subheading={
-              <div
-                style={{
-                  overflowWrap: "break-word",
-                  wordWrap: "break-word",
-                }}
-              >
-                {signature}
-              </div>
-            }
-            bottomContent={
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-around",
-                  width: "100%",
-                }}
-              >
-                <ButtonV2
-                  styleProps={{
-                    width: "fit-content",
-                    fontSize: "12px",
-                    margin: "0px 0px 16px",
-                    display: "flex",
-                    height: "40px",
-                    alignItems: "center",
-                    columnGap: "2px",
-                  }}
-                  variant="dark"
-                  text=""
-                  onClick={() => copyAddress(signature)}
-                >
-                  Copy Signature
-                  <img
-                    style={{ cursor: "pointer", filter: "invert(1)" }}
-                    src={require("@assets/svg/wireframe/copyGrey.svg")}
-                    alt=""
-                  />
-                </ButtonV2>
-                <ButtonV2
-                  styleProps={{
-                    width: "fit-content",
-                    fontSize: "12px",
-                    margin: "0px 0px 16px",
-                    display: "flex",
-                    alignItems: "center",
-                    height: "40px",
-                    columnGap: "2px",
-                  }}
-                  variant="dark"
-                  text=""
-                  onClick={() => navigate("/more/sign-manual-txn")}
-                >
-                  Sign New Transaction
-                  <img
-                    style={{
-                      cursor: "pointer",
-                      filter: "invert(1)",
-                      width: "20px",
-                    }}
-                    src={require("@assets/svg/wireframe/signature-doc.svg")}
-                    alt=""
-                  />
-                </ButtonV2>
-              </div>
-            }
-          />
+          <TransactionDetails onCopy={copyAddress} />
         )}
       </div>
     </HeaderLayout>
