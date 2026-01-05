@@ -101,7 +101,7 @@ export const TransactionDetails: React.FC<{
             styleProps={buttonStyles}
             variant="dark"
             text=""
-            onClick={() => navigate("/more/sign-manual-txn")}
+            onClick={() => navigate("/more/sign-manual-txn", { state: {} })}
           >
             Sign New Transaction
             <img
