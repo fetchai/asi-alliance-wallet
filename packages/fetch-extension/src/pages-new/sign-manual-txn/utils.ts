@@ -76,35 +76,61 @@ export function validateAminoSignDoc(
   }
 }
 
-export const formatJson = (value: string) => {
-  // Helper to remove trailing commas from JSON-like strings
-  const removeTrailingCommas = (str: string) => {
-    return (
-      str
-        // Remove trailing commas in objects
-        .replace(/,\s*}/g, "}")
-        // Remove trailing commas in arrays
-        .replace(/,\s*]/g, "]")
-    );
+export const formatJson = (value: string): string => {
+  const cleanJsonString = (str: string) =>
+    str.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+
+  const tryParseJson = (str: string): string | null => {
+    try {
+      return JSON.stringify(JSON.parse(str), null, 2);
+    } catch {
+      return null;
+    }
   };
 
-  try {
-    // Clean the input first
-    const cleaned = removeTrailingCommas(value);
-    return JSON.stringify(JSON.parse(cleaned), null, 2);
-  } catch {
+  const tryDecodeHex = (str: string): string | null => {
     try {
-      const hex = value.startsWith("0x") ? value.slice(2) : value;
-
-      if (!/^[0-9a-fA-F]+$/.test(hex)) return value;
-
-      const decoded = Buffer.from(hex, "hex").toString("utf8");
-      const cleanedDecoded = removeTrailingCommas(decoded);
-      return JSON.stringify(JSON.parse(cleanedDecoded), null, 2);
+      const hex = str.startsWith("0x") ? str.slice(2) : str;
+      // Remove spaces/newlines just in case
+      const cleanedHex = hex.replace(/\s+/g, "");
+      if (!/^[0-9a-fA-F]+$/.test(cleanedHex)) return null;
+      return Buffer.from(cleanedHex, "hex").toString("utf8");
     } catch {
-      return value;
+      return null;
     }
+  };
+
+  const tryDecodeBase64 = (str: string): string | null => {
+    try {
+      return Buffer.from(str, "base64").toString("utf8");
+    } catch {
+      return null;
+    }
+  };
+
+  const strategies: Array<() => string | null> = [
+    // Raw JSON-like
+    () => tryParseJson(cleanJsonString(value)),
+
+    // Hex-encoded
+    () => {
+      const decoded = tryDecodeHex(value);
+      return decoded ? tryParseJson(cleanJsonString(decoded)) : null;
+    },
+
+    // Base64-encoded
+    () => {
+      const decoded = tryDecodeBase64(value);
+      return decoded ? tryParseJson(cleanJsonString(decoded)) : null;
+    },
+  ];
+
+  for (const parse of strategies) {
+    const result = parse();
+    if (result) return result;
   }
+
+  return value;
 };
 
 export const CosmosMsgTypes: Record<string, string> = {
@@ -117,92 +143,90 @@ export const CosmosMsgTypes: Record<string, string> = {
   "cosmos-sdk/MsgVote": "govVote",
 };
 
-export const convertAminoToProtoMsg = (aminoMsg: any): any => {
-  let protoMsg: any = [];
+export const convertAminoToProtoMsgs = (aminoDoc: any) => {
+  return aminoDoc.msgs.map((msg: any) => {
+    switch (msg.type) {
+      case "cosmos-sdk/MsgSend":
+        return {
+          typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+          value: MsgSend.encode({
+            fromAddress: msg.value.from_address,
+            toAddress: msg.value.to_address,
+            amount: msg.value.amount,
+          }).finish(),
+        };
 
-  switch (aminoMsg.type) {
-    case "cosmos-sdk/MsgSend":
-      protoMsg = aminoMsg.msgs.map((msg: any) => ({
-        typeUrl: "/cosmos.bank.v1beta1.MsgSend",
-        value: MsgSend.encode({
-          fromAddress: msg.value.from_address,
-          toAddress: msg.value.to_address,
-          amount: msg.value.amount,
-        }).finish(),
-      }));
-      break;
-    case "cosmos-sdk/MsgDelegate":
-      protoMsg = aminoMsg.msgs.map((msg: any) => ({
-        typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
-        value: MsgDelegate.encode({
-          delegatorAddress: msg.value.delegator_address,
-          validatorAddress: msg.value.validator_address,
-          amount: msg.value.amount,
-        }).finish(),
-      }));
-      break;
-    case "cosmos-sdk/MsgUndelegate":
-      protoMsg = aminoMsg.msgs.map((msg: any) => ({
-        typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
-        value: MsgUndelegate.encode({
-          delegatorAddress: msg.value.delegator_address,
-          validatorAddress: msg.value.validator_address,
-          amount: {
-            denom: msg.value.amount.denom,
-            amount: msg.value.amount.amount,
-          },
-        }).finish(),
-      }));
-      break;
-    case "cosmos-sdk/MsgBeginRedelegate":
-      protoMsg = aminoMsg.msgs.map((msg: any) => ({
-        typeUrl: "/cosmos.staking.v1beta1.MsgBeginRedelegate",
-        value: MsgBeginRedelegate.encode({
-          delegatorAddress: msg.value.delegator_address,
-          validatorSrcAddress: msg.value.validator_src_address,
-          validatorDstAddress: msg.value.validator_dst_address,
-          amount: {
-            denom: msg.value.amount.denom,
-            amount: msg.value.amount.amount,
-          },
-        }).finish(),
-      }));
-      break;
-    case "cosmos-sdk/MsgWithdrawDelegationReward":
-      protoMsg = aminoMsg.msgs.map((msg: any) => ({
-        typeUrl: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
-        value: MsgWithdrawDelegatorReward.encode({
-          delegatorAddress: msg.value.delegator_address,
-          validatorAddress: msg.value.validator_address,
-        }).finish(),
-      }));
-      break;
-    case "cosmos-sdk/MsgVote":
-      protoMsg = aminoMsg.msgs.map((msg: any) => ({
-        typeUrl: "/cosmos.gov.v1beta1.MsgVote",
-        value: MsgVote.encode({
-          proposalId: msg.value.proposal_id,
-          voter: msg.value.voter,
-          option: (() => {
-            switch (msg.value.option) {
-              case 1:
-                return VoteOption.VOTE_OPTION_YES;
-              case 2:
-                return VoteOption.VOTE_OPTION_ABSTAIN;
-              case 3:
-                return VoteOption.VOTE_OPTION_NO;
-              case 4:
-                return VoteOption.VOTE_OPTION_NO_WITH_VETO;
-              default:
-                return VoteOption.VOTE_OPTION_UNSPECIFIED;
-            }
-          })(),
-        }).finish(),
-      }));
-      break;
-    default:
-      throw new Error(`Unsupported amino message type: ${aminoMsg.type}`);
-  }
+      case "cosmos-sdk/MsgDelegate":
+        return {
+          typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
+          value: MsgDelegate.encode({
+            delegatorAddress: msg.value.delegator_address,
+            validatorAddress: msg.value.validator_address,
+            amount: msg.value.amount,
+          }).finish(),
+        };
 
-  return protoMsg;
+      case "cosmos-sdk/MsgUndelegate":
+        return {
+          typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
+          value: MsgUndelegate.encode({
+            delegatorAddress: msg.value.delegator_address,
+            validatorAddress: msg.value.validator_address,
+            amount: {
+              denom: msg.value.amount.denom,
+              amount: msg.value.amount.amount,
+            },
+          }).finish(),
+        };
+
+      case "cosmos-sdk/MsgBeginRedelegate":
+        return {
+          typeUrl: "/cosmos.staking.v1beta1.MsgBeginRedelegate",
+          value: MsgBeginRedelegate.encode({
+            delegatorAddress: msg.value.delegator_address,
+            validatorSrcAddress: msg.value.validator_src_address,
+            validatorDstAddress: msg.value.validator_dst_address,
+            amount: {
+              denom: msg.value.amount.denom,
+              amount: msg.value.amount.amount,
+            },
+          }).finish(),
+        };
+
+      case "cosmos-sdk/MsgWithdrawDelegationReward":
+        return {
+          typeUrl: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+          value: MsgWithdrawDelegatorReward.encode({
+            delegatorAddress: msg.value.delegator_address,
+            validatorAddress: msg.value.validator_address,
+          }).finish(),
+        };
+
+      case "cosmos-sdk/MsgVote":
+        return {
+          typeUrl: "/cosmos.gov.v1beta1.MsgVote",
+          value: MsgVote.encode({
+            proposalId: msg.value.proposal_id,
+            voter: msg.value.voter,
+            option: (() => {
+              switch (msg.value.option) {
+                case 1:
+                  return VoteOption.VOTE_OPTION_YES;
+                case 2:
+                  return VoteOption.VOTE_OPTION_ABSTAIN;
+                case 3:
+                  return VoteOption.VOTE_OPTION_NO;
+                case 4:
+                  return VoteOption.VOTE_OPTION_NO_WITH_VETO;
+                default:
+                  return VoteOption.VOTE_OPTION_UNSPECIFIED;
+              }
+            })(),
+          }).finish(),
+        };
+
+      default:
+        throw new Error(`Unsupported amino message type: ${msg.type}`);
+    }
+  });
 };
