@@ -8,8 +8,140 @@ import {
   MsgUndelegate,
 } from "@keplr-wallet/proto-types/cosmos/staking/v1beta1/tx";
 import { SignDoc, StdSignDoc } from "@keplr-wallet/types";
+import {
+  MultisigThresholdPubkey,
+  pubkeyToAddress,
+  SinglePubkey,
+} from "@cosmjs/amino";
+import { SignMode } from "@keplr-wallet/background";
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import Long from "long";
+
+type SingleSignature = {
+  public_key: { "@type": string; key: string };
+  data: {
+    single: {
+      mode: string;
+      signature: string;
+    };
+  };
+  sequence: string;
+};
+
+type ProtoMultisigPubkey = {
+  "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey";
+  threshold: number;
+  public_keys: Array<{
+    "@type": "/cosmos.crypto.secp256k1.PubKey";
+    key: string;
+  }>;
+};
+
+type MultisigPubKey = {
+  threshold: number;
+  pubKeys: { "@type": string; key: string }[];
+};
+
+export function assembleMultisigTx(
+  bech32PrefixAccAddr: string,
+  unsignedTx: any,
+  threshold: number,
+  singleSignatures: SingleSignature[],
+  sequence: string
+) {
+  if (
+    !unsignedTx ||
+    !unsignedTx.body ||
+    !unsignedTx.auth_info ||
+    singleSignatures.length === 0
+  ) {
+    throw new Error("Invalid unsigned TxRaw");
+  }
+
+  const multisigPubKey: MultisigPubKey = {
+    threshold,
+    pubKeys: singleSignatures.map((value) => value.public_key),
+  };
+
+  // Build the auth_info for multisig
+  const modeInfos = singleSignatures.map((sig) => ({
+    single: { mode: sig.data.single.mode },
+  }));
+
+  const bitarray = {
+    extra_bits_stored: singleSignatures.length,
+    elems: "4A==",
+  };
+
+  const multisigModeInfo = {
+    multi: {
+      bitarray,
+      mode_infos: modeInfos,
+    },
+  };
+
+  const signerInfo = {
+    public_key: {
+      "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey",
+      threshold: multisigPubKey.threshold,
+      public_keys: multisigPubKey.pubKeys,
+    },
+    mode_info: multisigModeInfo,
+    sequence,
+  };
+
+  // Collect the signatures in the same order
+  const signatures = singleSignatures.map((sig) => sig.data.single.signature);
+  const signaturesMap = singleSignatures.reduce((map, sig) => {
+    const pubkey = {
+      type: "tendermint/PubKeySecp256k1",
+      value: sig.public_key.key,
+    };
+    const address = pubkeyToAddress(pubkey, bech32PrefixAccAddr);
+    map.set(
+      address,
+      Uint8Array.from(atob(sig.data.single.signature), (c) => c.charCodeAt(0))
+    );
+    return map;
+  }, new Map<string, Uint8Array>());
+
+  // Assemble final TxRaw
+  const finalTx = {
+    body: unsignedTx.body,
+    auth_info: {
+      ...unsignedTx.auth_info,
+      signer_infos: [signerInfo],
+    },
+    signatures,
+  };
+
+  return { txRaw: finalTx, signatures: signaturesMap, multisigPubKey };
+}
+
+export function protoMultisigToAmino(
+  proto: ProtoMultisigPubkey
+): MultisigThresholdPubkey {
+  if (proto["@type"] !== "/cosmos.crypto.multisig.LegacyAminoPubKey") {
+    throw new Error("Unsupported multisig pubkey type");
+  }
+
+  return {
+    type: "tendermint/PubKeyMultisigThreshold",
+    value: {
+      threshold: proto.threshold.toString(),
+      pubkeys: proto.public_keys.map<SinglePubkey>((pk) => {
+        if (pk["@type"] !== "/cosmos.crypto.secp256k1.PubKey") {
+          throw new Error("Unsupported inner pubkey type");
+        }
+
+        return {
+          type: "tendermint/PubKeySecp256k1",
+          value: pk.key,
+        };
+      }),
+    },
+  };
+}
 
 //Validate a Direct SignDoc (protobuf)
 export function validateDirectSignDoc(
@@ -230,3 +362,137 @@ export const convertAminoToProtoMsgs = (aminoDoc: any) => {
     }
   });
 };
+
+export const convertMultiSigToProtoMsgs = (messages: any[]) => {
+  return messages.map((msg: any) => {
+    switch (msg["@type"]) {
+      case "/cosmos.bank.v1beta1.MsgSend":
+        return {
+          typeUrl: msg["@type"],
+          value: MsgSend.encode({
+            fromAddress: msg.from_address,
+            toAddress: msg.to_address,
+            amount: msg.amount,
+          }).finish(),
+        };
+
+      case "/cosmos.staking.v1beta1.MsgDelegate":
+        return {
+          typeUrl: msg["@type"],
+          value: MsgDelegate.encode({
+            delegatorAddress: msg.delegator_address,
+            validatorAddress: msg.validator_address,
+            amount: msg.amount,
+          }).finish(),
+        };
+
+      case "/cosmos.staking.v1beta1.MsgUndelegate":
+        return {
+          typeUrl: msg["@type"],
+          value: MsgUndelegate.encode({
+            delegatorAddress: msg.delegator_address,
+            validatorAddress: msg.validator_address,
+            amount: {
+              denom: msg.amount.denom,
+              amount: msg.amount.amount,
+            },
+          }).finish(),
+        };
+
+      case "/cosmos.staking.v1beta1.MsgBeginRedelegate":
+        return {
+          typeUrl: msg["@type"],
+          value: MsgBeginRedelegate.encode({
+            delegatorAddress: msg.delegator_address,
+            validatorSrcAddress: msg.validator_src_address,
+            validatorDstAddress: msg.validator_dst_address,
+            amount: {
+              denom: msg.amount.denom,
+              amount: msg.amount.amount,
+            },
+          }).finish(),
+        };
+
+      case "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward":
+        return {
+          typeUrl: msg["@type"],
+          value: MsgWithdrawDelegatorReward.encode({
+            delegatorAddress: msg.delegator_address,
+            validatorAddress: msg.validator_address,
+          }).finish(),
+        };
+
+      case "/cosmos.gov.v1beta1.MsgVote":
+        return {
+          typeUrl: msg["@type"],
+          value: MsgVote.encode({
+            proposalId: msg.proposal_id,
+            voter: msg.voter,
+            option: (() => {
+              switch (msg.option) {
+                case 1:
+                  return VoteOption.VOTE_OPTION_YES;
+                case 2:
+                  return VoteOption.VOTE_OPTION_ABSTAIN;
+                case 3:
+                  return VoteOption.VOTE_OPTION_NO;
+                case 4:
+                  return VoteOption.VOTE_OPTION_NO_WITH_VETO;
+                default:
+                  return VoteOption.VOTE_OPTION_UNSPECIFIED;
+              }
+            })(),
+          }).finish(),
+        };
+
+      default:
+        throw new Error(`Unsupported message type: ${msg.type}`);
+    }
+  });
+};
+
+export const detectTxType = (tx: any): SignMode.Amino | SignMode.Direct => {
+  if (!tx || typeof tx !== "object") {
+    throw new Error("Invalid tx object");
+  }
+
+  if (
+    "bodyBytes" in tx &&
+    tx.bodyBytes != null &&
+    "authInfoBytes" in tx &&
+    tx.authInfoBytes != null
+  ) {
+    return SignMode.Direct;
+  }
+
+  // Amino transaction detection
+  if (Array.isArray(tx.msgs) && "chain_id" in tx && "account_number" in tx) {
+    return SignMode.Amino;
+  }
+
+  throw new Error("Unknown transaction format");
+};
+
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+function isPlainObject(val: unknown): val is Record<string, unknown> {
+  return Object.prototype.toString.call(val) === "[object Object]";
+}
+
+export function snakeToCamelDeep<T>(input: T): T {
+  if (Array.isArray(input)) {
+    return input.map(snakeToCamelDeep) as T;
+  }
+
+  if (isPlainObject(input)) {
+    return Object.entries(input).reduce((acc, [key, value]) => {
+      const camelKey = snakeToCamel(key);
+      acc[camelKey] = snakeToCamelDeep(value);
+      return acc;
+    }, {} as Record<string, unknown>) as T;
+  }
+
+  return input;
+}

@@ -202,7 +202,7 @@ export const MorePage: FunctionComponent = () => {
               pageName: "More",
             });
           }}
-          heading="Sign Manual Transaction"
+          heading="Sign/Broadcast Manual Transaction"
         />
       )}
       <Card

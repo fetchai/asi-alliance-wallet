@@ -94,7 +94,7 @@ export const TransactionDetails: React.FC<{
                 })
               }
             >
-              View Transaction Details
+              Transaction Details
             </ButtonV2>
           )}
           <ButtonV2
