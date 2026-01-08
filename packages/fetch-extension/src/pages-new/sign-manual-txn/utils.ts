@@ -135,7 +135,7 @@ export function protoMultisigToAmino(
         }
 
         return {
-          type: "tendermint/PubKeySecp256k1",
+          type: pk["@type"],
           value: pk.key,
         };
       }),
@@ -446,7 +446,7 @@ export const convertMultiSigToProtoMsgs = (messages: any[]) => {
         };
 
       default:
-        throw new Error(`Unsupported message type: ${msg.type}`);
+        throw new Error(`Unsupported message type: ${msg["@type"]}`);
     }
   });
 };
