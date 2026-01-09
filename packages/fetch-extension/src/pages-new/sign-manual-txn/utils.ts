@@ -14,36 +14,93 @@ import {
   SinglePubkey,
 } from "@cosmjs/amino";
 import { SignMode } from "@keplr-wallet/background";
+import {
+  AuthInfo,
+  TxBody,
+} from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
+import {
+  ProtoUnsignedTx,
+  SignDocParams,
+  SingleSignature,
+  InputDocType,
+  MultisigPubKey,
+  ProtoMultisigPubkey,
+} from "./types";
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import Long from "long";
 
-type SingleSignature = {
-  public_key: { "@type": string; key: string };
-  data: {
-    single: {
-      mode: string;
-      signature: string;
-    };
+export function buildProtoSignDoc(
+  protoTx: ProtoUnsignedTx,
+  params: SignDocParams
+): SignDoc {
+  const body: any = snakeToCamelDeep(protoTx.body);
+  const authInfo: any = snakeToCamelDeep(protoTx.auth_info);
+  console.log({
+    body,
+    authInfo,
+    messages: convertProtoJsontoProtoMsgs(protoTx.body.messages),
+  });
+  return {
+    bodyBytes: TxBody.encode({
+      ...body,
+      messages: convertProtoJsontoProtoMsgs(protoTx.body.messages),
+    }).finish(),
+    authInfoBytes: AuthInfo.encode({
+      ...authInfo,
+      signerInfos: [
+        {
+          sequence: Long.fromString(params.sequence),
+        },
+      ],
+    }).finish(),
+    chainId: params.chainId,
+    accountNumber: Long.fromString(params.accountNumber),
   };
-  sequence: string;
-};
+}
 
-type ProtoMultisigPubkey = {
-  "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey";
-  threshold: number;
-  public_keys: Array<{
-    "@type": "/cosmos.crypto.secp256k1.PubKey";
-    key: string;
-  }>;
-};
+export function convertProtoTxToAminoSignDoc(
+  protoTx: ProtoUnsignedTx,
+  params: SignDocParams
+): StdSignDoc {
+  // Convert proto messages to Amino messages
+  const aminoMsgs = protoJsonToAminoMsg(protoTx.body.messages);
 
-type MultisigPubKey = {
-  threshold: number;
-  pubKeys: { "@type": string; key: string }[];
+  return {
+    chain_id: params.chainId,
+    account_number: params.accountNumber,
+    sequence: params.sequence,
+    fee: {
+      amount: protoTx.auth_info.fee.amount,
+      gas: protoTx.auth_info.fee.gas_limit,
+      payer: protoTx.auth_info.fee?.payer || "",
+      granter: protoTx.auth_info.fee?.granter || "",
+    },
+    msgs: aminoMsgs,
+    memo: protoTx.body.memo ?? "",
+  };
+}
+
+export const createSignaturesMap = (
+  bech32PrefixAccAddr: string,
+  singleSignatures: SingleSignature[]
+) => {
+  const signaturesMap = singleSignatures.reduce((map, sig) => {
+    const pubkey = {
+      type: "tendermint/PubKeySecp256k1",
+      value: sig.public_key.key,
+    };
+    const address = pubkeyToAddress(pubkey, bech32PrefixAccAddr);
+    map.set(
+      address,
+      Uint8Array.from(atob(sig.data.single.signature), (c) => c.charCodeAt(0))
+    );
+    return map;
+  }, new Map<string, Uint8Array>());
+
+  return signaturesMap;
 };
 
 export function assembleMultisigTx(
-  bech32PrefixAccAddr: string,
   unsignedTx: any,
   threshold: number,
   singleSignatures: SingleSignature[],
@@ -92,18 +149,6 @@ export function assembleMultisigTx(
 
   // Collect the signatures in the same order
   const signatures = singleSignatures.map((sig) => sig.data.single.signature);
-  const signaturesMap = singleSignatures.reduce((map, sig) => {
-    const pubkey = {
-      type: "tendermint/PubKeySecp256k1",
-      value: sig.public_key.key,
-    };
-    const address = pubkeyToAddress(pubkey, bech32PrefixAccAddr);
-    map.set(
-      address,
-      Uint8Array.from(atob(sig.data.single.signature), (c) => c.charCodeAt(0))
-    );
-    return map;
-  }, new Map<string, Uint8Array>());
 
   // Assemble final TxRaw
   const finalTx = {
@@ -115,7 +160,7 @@ export function assembleMultisigTx(
     signatures,
   };
 
-  return { txRaw: finalTx, signatures: signaturesMap, multisigPubKey };
+  return finalTx;
 }
 
 export function protoMultisigToAmino(
@@ -135,12 +180,74 @@ export function protoMultisigToAmino(
         }
 
         return {
-          type: pk["@type"],
+          type: "tendermint/PubKeySecp256k1",
           value: pk.key,
         };
       }),
     },
   };
+}
+
+export function validateProtoJsonSignDoc(doc: any): asserts doc is {
+  body: any;
+  auth_info: any;
+  signatures: any[];
+} {
+  if (!doc) throw new Error("Proto JSON doc is null or undefined");
+
+  if (!doc.body) throw new Error("body is missing");
+
+  if (!Array.isArray(doc.body.messages))
+    throw new Error("body.messages must be an array");
+
+  if (doc.body.messages.length === 0)
+    throw new Error("body.messages must not be empty");
+
+  if (typeof doc.body.memo !== "string")
+    throw new Error("body.memo must be a string");
+
+  if (
+    doc.body.timeout_height !== undefined &&
+    typeof doc.body.timeout_height !== "string"
+  )
+    throw new Error("body.timeout_height must be a string");
+
+  if (
+    (doc.body.extension_options?.length ?? 0) > 0 ||
+    (doc.body.non_critical_extension_options?.length ?? 0) > 0
+  ) {
+    throw new Error("extension options are not supported");
+  }
+
+  for (const msg of doc.body.messages) {
+    if (!msg["@type"]) throw new Error("message is missing @type");
+
+    if (typeof msg["@type"] !== "string")
+      throw new Error("message @type must be a string");
+  }
+
+  if (!doc.auth_info) throw new Error("auth_info is missing");
+
+  if (!doc.auth_info.fee) throw new Error("auth_info.fee is missing");
+
+  if (!Array.isArray(doc.auth_info.fee.amount))
+    throw new Error("fee.amount must be an array");
+
+  if (
+    doc.auth_info.fee.gas_limit === undefined ||
+    typeof doc.auth_info.fee.gas_limit !== "string"
+  )
+    throw new Error("fee.gas_limit must be a string");
+
+  if (doc.auth_info.signer_infos && doc.auth_info.signer_infos.length > 0) {
+    throw new Error("signer_infos must be empty for unsigned tx");
+  }
+
+  if (!Array.isArray(doc.signatures))
+    throw new Error("signatures must be an array");
+
+  if (doc.signatures.length !== 0)
+    throw new Error("signatures must be empty for signing");
 }
 
 //Validate a Direct SignDoc (protobuf)
@@ -265,9 +372,8 @@ export const formatJson = (value: string): string => {
   return value;
 };
 
-export const CosmosMsgTypes: Record<string, string> = {
+export const CosmosMsgTypesAmino: Record<string, string> = {
   "cosmos-sdk/MsgSend": "send",
-  "cosmos-sdk/MsgTransfer": "ibcTransfer",
   "cosmos-sdk/MsgDelegate": "delegate",
   "cosmos-sdk/MsgUndelegate": "undelegate",
   "cosmos-sdk/MsgBeginRedelegate": "redelegate",
@@ -275,8 +381,17 @@ export const CosmosMsgTypes: Record<string, string> = {
   "cosmos-sdk/MsgVote": "govVote",
 };
 
-export const convertAminoToProtoMsgs = (aminoDoc: any) => {
-  return aminoDoc.msgs.map((msg: any) => {
+export const CosmosMsgTypesProto: Record<string, string> = {
+  "/cosmos.bank.v1beta1.MsgSend": "send",
+  "/cosmos.staking.v1beta1.MsgDelegate": "delegate",
+  "/cosmos.staking.v1beta1.MsgUndelegate": "undelegate",
+  "/cosmos.staking.v1beta1.MsgBeginRedelegate": "redelegate",
+  "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward": "withdrawRewards",
+  "/cosmos.gov.v1beta1.MsgVote": "govVote",
+};
+
+export const convertAminoToProtoMsgs = (aminoDocMsgs: any[]) => {
+  return aminoDocMsgs.map((msg: any) => {
     switch (msg.type) {
       case "cosmos-sdk/MsgSend":
         return {
@@ -363,7 +478,7 @@ export const convertAminoToProtoMsgs = (aminoDoc: any) => {
   });
 };
 
-export const convertMultiSigToProtoMsgs = (messages: any[]) => {
+export const convertProtoJsontoProtoMsgs = (messages: any[]) => {
   return messages.map((msg: any) => {
     switch (msg["@type"]) {
       case "/cosmos.bank.v1beta1.MsgSend":
@@ -451,6 +566,75 @@ export const convertMultiSigToProtoMsgs = (messages: any[]) => {
   });
 };
 
+export function protoJsonToAminoMsg(messages: any[]) {
+  return messages.map((msg: any) => {
+    switch (msg["@type"]) {
+      case "/cosmos.bank.v1beta1.MsgSend":
+        return {
+          type: "cosmos-sdk/MsgSend",
+          value: {
+            from_address: msg.from_address,
+            to_address: msg.to_address,
+            amount: msg.amount,
+          },
+        };
+
+      case "/cosmos.staking.v1beta1.MsgDelegate":
+        return {
+          type: "cosmos-sdk/MsgDelegate",
+          value: {
+            delegator_address: msg.delegator_address,
+            validator_address: msg.validator_address,
+            amount: msg.amount,
+          },
+        };
+
+      case "/cosmos.staking.v1beta1.MsgUndelegate":
+        return {
+          type: "cosmos-sdk/MsgUndelegate",
+          value: {
+            delegator_address: msg.delegator_address,
+            validator_address: msg.validator_address,
+            amount: msg.amount,
+          },
+        };
+
+      case "/cosmos.staking.v1beta1.MsgBeginRedelegate":
+        return {
+          type: "cosmos-sdk/MsgBeginRedelegate",
+          value: {
+            delegator_address: msg.delegator_address,
+            validator_src_address: msg.validator_src_address,
+            validator_dst_address: msg.validator_dst_address,
+            amount: msg.amount,
+          },
+        };
+
+      case "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward":
+        return {
+          type: "cosmos-sdk/MsgWithdrawDelegationReward",
+          value: {
+            delegator_address: msg.delegator_address,
+            validator_address: msg.validator_address,
+          },
+        };
+
+      case "/cosmos.gov.v1beta1.MsgVote":
+        return {
+          type: "cosmos-sdk/MsgVote",
+          value: {
+            proposal_id: msg.proposal_id,
+            voter: msg.voter,
+            option: msg.option,
+          },
+        };
+
+      default:
+        throw new Error(`Unsupported proto JSON message: ${msg["@type"]}`);
+    }
+  });
+}
+
 export const detectTxType = (tx: any): SignMode.Amino | SignMode.Direct => {
   if (!tx || typeof tx !== "object") {
     throw new Error("Invalid tx object");
@@ -473,15 +657,15 @@ export const detectTxType = (tx: any): SignMode.Amino | SignMode.Direct => {
   throw new Error("Unknown transaction format");
 };
 
-function snakeToCamel(str: string): string {
+const snakeToCamel = (str: string): string => {
   return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-}
+};
 
-function isPlainObject(val: unknown): val is Record<string, unknown> {
+const isPlainObject = (val: unknown): val is Record<string, unknown> => {
   return Object.prototype.toString.call(val) === "[object Object]";
-}
+};
 
-export function snakeToCamelDeep<T>(input: T): T {
+export const snakeToCamelDeep = <T>(input: T): T => {
   if (Array.isArray(input)) {
     return input.map(snakeToCamelDeep) as T;
   }
@@ -495,4 +679,51 @@ export function snakeToCamelDeep<T>(input: T): T {
   }
 
   return input;
+};
+
+export const downloadJson = (data: unknown, filename: string) => {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+};
+
+export function detectInputType(doc: any): InputDocType {
+  if (doc?.msgs && Array.isArray(doc.msgs)) {
+    return "amino";
+  }
+
+  if (doc?.body?.messages && Array.isArray(doc.body.messages)) {
+    return "proto-json";
+  }
+
+  throw new Error("Unsupported signing payload format");
 }
+
+export const createSignature = (result: any, sequence: string) => {
+  return formatJson(
+    JSON.stringify({
+      signatures: [
+        {
+          public_key: {
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            key: result.signature.pub_key.value,
+          },
+          data: {
+            single: {
+              mode: "SIGN_MODE_LEGACY_AMINO_JSON",
+              signature: result.signature.signature,
+            },
+          },
+          sequence,
+        },
+      ],
+    })
+  );
+};
