@@ -7,6 +7,7 @@ import React, { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { SignTransactionForm } from "./signing-form";
 import { TransactionDetails } from "./transaction-details";
+import style from "./styles.module.scss";
 
 enum SignType {
   SIGN = "sign",
@@ -67,9 +68,10 @@ export const SignManualTxn = observer(() => {
       showTopMenu={true}
       showChainName={false}
       canChangeChainInfo={false}
+      headerTitleClass={style["header-title"]}
       alternativeTitle={
         !signed
-          ? "Sign Manual Transaction"
+          ? "Sign/Broadcast Manual Transaction"
           : signType === SignType.SIGN
           ? "Signed Transaction"
           : "Transaction Details"

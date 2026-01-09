@@ -1,5 +1,17 @@
 @import "../../styles/var";
 
+.header-title {
+  min-width: 235px !important;
+  width: inherit !important;
+}
+
+:global {
+  .headerSection {
+    margin-left: 68px !important;
+    padding-right: 25px !important;
+  }
+}
+
 .container {
   display: flex;
   flex-direction: column;
@@ -45,4 +57,18 @@
   padding: 10px;
   border-radius: 10px;
   color: black;
+}
+
+.jsonPreview {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  color: $font-dark;
+}
+
+.radioItemLabel {
+  font-size: 14px;
 }
