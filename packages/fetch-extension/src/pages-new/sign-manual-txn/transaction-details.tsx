@@ -3,6 +3,7 @@ import { Card } from "@components-v2/card";
 import React from "react";
 import { useLocation, useNavigate } from "react-router";
 import style from "./styles.module.scss";
+import { downloadJson } from "./utils";
 
 const buttonStyles: React.CSSProperties = {
   width: "fit-content",
@@ -19,7 +20,8 @@ export const TransactionDetails: React.FC<{
 }> = ({ onCopy }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { txSignature, txHash } = location.state || {};
+  const { txSignature, txHash, signatureName, broadcasted } =
+    location.state || {};
   return (
     <Card
       heading="Transaction Details"
@@ -34,23 +36,84 @@ export const TransactionDetails: React.FC<{
         display: "flex",
         flexDirection: "column",
         rowGap: "10px",
+        opacity: 1,
       }}
       subheading={
         <React.Fragment>
           <div>Signature</div>
           <div className={style["transactionDetailsRow"]}>
-            {txSignature}
-            <img
-              style={{
-                cursor: "pointer",
-                marginLeft: "10px",
-              }}
-              src={require("@assets/svg/wireframe/copyGrey.svg")}
-              alt=""
-              onClick={() =>
-                onCopy(txSignature, "Transaction signature copied")
+            {broadcasted ? (
+              txSignature
+            ) : (
+              <pre className={style["jsonPreview"]}>{txSignature}</pre>
+            )}
+            <div
+              style={
+                broadcasted
+                  ? { display: "inline" }
+                  : {
+                      display: "flex",
+                      justifyContent: "space-around",
+                    }
               }
-            />
+            >
+              {broadcasted ? (
+                <img
+                  style={{
+                    cursor: "pointer",
+                    marginLeft: "10px",
+                  }}
+                  onClick={() =>
+                    onCopy(txSignature, "Transaction signature copied")
+                  }
+                  src={require("@assets/svg/wireframe/copyGrey.svg")}
+                  alt=""
+                />
+              ) : (
+                <ButtonV2
+                  text=""
+                  styleProps={buttonStyles}
+                  variant="dark"
+                  onClick={() =>
+                    onCopy(txSignature, "Transaction signature copied")
+                  }
+                >
+                  Copy
+                  <img
+                    style={{
+                      cursor: "pointer",
+                      marginLeft: "10px",
+                    }}
+                    src={require("@assets/svg/wireframe/copyGrey.svg")}
+                    alt=""
+                  />
+                </ButtonV2>
+              )}
+              {signatureName && (
+                <ButtonV2
+                  text=""
+                  styleProps={buttonStyles}
+                  variant="dark"
+                  onClick={() =>
+                    downloadJson(
+                      JSON.parse(txSignature),
+                      `${signatureName}.json`
+                    )
+                  }
+                >
+                  Download
+                  <img
+                    style={{
+                      cursor: "pointer",
+                      marginLeft: "10px",
+                      filter: "invert(1)",
+                    }}
+                    src={require("@assets/svg/wireframe/arrow-down.svg")}
+                    alt=""
+                  />
+                </ButtonV2>
+              )}
+            </div>
           </div>
           {txHash && (
             <React.Fragment>
