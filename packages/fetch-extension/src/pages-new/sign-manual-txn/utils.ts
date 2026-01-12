@@ -28,6 +28,17 @@ import {
 } from "./types";
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import Long from "long";
+import { MsgExecuteContract } from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
+import { fromBech32 } from "@cosmjs/encoding";
+
+export const isValidBech32Address = (address: string, prefix: string) => {
+  try {
+    const { prefix: actualPrefix } = fromBech32(address);
+    return actualPrefix === prefix;
+  } catch (e) {
+    return false;
+  }
+};
 
 export const isSignatureCollected = (sigStr: string) => {
   if (!sigStr) return false;
@@ -485,6 +496,16 @@ export const convertAminoToProtoMsgs = (aminoDocMsgs: any[]) => {
             })(),
           }).finish(),
         };
+      case "wasm/MsgExecuteContract":
+        return {
+          typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+          value: MsgExecuteContract.encode({
+            sender: msg.value.sender,
+            contract: msg.value.contract,
+            msg: Buffer.from(JSON.stringify(msg.value.msg)) as any,
+            funds: msg.value.funds,
+          }).finish(),
+        };
 
       default:
         throw new Error(`Unsupported amino message type: ${msg.type}`);
@@ -573,6 +594,16 @@ export const convertProtoJsontoProtoMsgs = (messages: any[]) => {
             })(),
           }).finish(),
         };
+      case "/cosmwasm.wasm.v1.MsgExecuteContract":
+        return {
+          typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+          value: MsgExecuteContract.encode({
+            sender: msg.sender,
+            contract: msg.contract,
+            msg: Buffer.from(JSON.stringify(msg.msg)) as any,
+            funds: msg.funds,
+          }).finish(),
+        };
 
       default:
         throw new Error(`Unsupported message type: ${msg["@type"]}`);
@@ -640,6 +671,16 @@ export function protoJsonToAminoMsg(messages: any[]) {
             proposal_id: msg.proposal_id,
             voter: msg.voter,
             option: msg.option,
+          },
+        };
+      case "/cosmwasm.wasm.v1.MsgExecuteContract":
+        return {
+          type: "wasm/MsgExecuteContract",
+          value: {
+            sender: msg.sender,
+            contract: msg.contract,
+            msg: msg.msg,
+            funds: msg.funds,
           },
         };
 
