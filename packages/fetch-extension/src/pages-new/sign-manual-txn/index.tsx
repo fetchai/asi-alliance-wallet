@@ -8,11 +8,7 @@ import { useLocation, useNavigate } from "react-router";
 import { SignTransactionForm } from "./signing-form";
 import { TransactionDetails } from "./transaction-details";
 import style from "./styles.module.scss";
-
-enum SignType {
-  SIGN = "sign",
-  SIGN_AND_BROADCAST = "sign_and_broadcast",
-}
+import { SignAction } from "./types";
 
 export const SignManualTxn = observer(() => {
   const navigate = useNavigate();
@@ -72,7 +68,7 @@ export const SignManualTxn = observer(() => {
       alternativeTitle={
         !signed
           ? "Sign/Broadcast Manual Transaction"
-          : signType === SignType.SIGN
+          : signType === SignAction.SIGN
           ? "Signed Transaction"
           : "Transaction Details"
       }
