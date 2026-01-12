@@ -4,6 +4,7 @@ import React from "react";
 import { useLocation, useNavigate } from "react-router";
 import style from "./styles.module.scss";
 import { downloadJson } from "./utils";
+import { EXPLORER_URL } from "../../config.ui.var";
 
 const buttonStyles: React.CSSProperties = {
   width: "fit-content",
@@ -20,7 +21,7 @@ export const TransactionDetails: React.FC<{
 }> = ({ onCopy }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { txSignature, txHash, signatureName, broadcasted } =
+  const { txSignature, txHash, signatureName, broadcastType, chainId } =
     location.state || {};
   return (
     <Card
@@ -42,14 +43,14 @@ export const TransactionDetails: React.FC<{
         <React.Fragment>
           <div>Signature</div>
           <div className={style["transactionDetailsRow"]}>
-            {broadcasted ? (
+            {!signatureName ? (
               txSignature
             ) : (
               <pre className={style["jsonPreview"]}>{txSignature}</pre>
             )}
             <div
               style={
-                broadcasted
+                !signatureName
                   ? { display: "inline" }
                   : {
                       display: "flex",
@@ -57,7 +58,7 @@ export const TransactionDetails: React.FC<{
                     }
               }
             >
-              {broadcasted ? (
+              {!signatureName ? (
                 <img
                   style={{
                     cursor: "pointer",
@@ -149,13 +150,18 @@ export const TransactionDetails: React.FC<{
               styleProps={buttonStyles}
               variant="dark"
               text=""
-              onClick={() =>
-                navigate("/activity-details", {
-                  state: {
-                    nodeId: txHash.toLocaleUpperCase(),
-                  },
-                })
-              }
+              onClick={() => {
+                if (broadcastType === "single") {
+                  navigate("/activity-details", {
+                    state: {
+                      nodeId: txHash.toLocaleUpperCase(),
+                    },
+                  });
+                } else {
+                  const url = `${EXPLORER_URL}/${chainId}/transactions/${txHash}/`;
+                  window.open(url, "_blank", "noopener,noreferrer");
+                }
+              }}
             >
               Transaction Details
             </ButtonV2>

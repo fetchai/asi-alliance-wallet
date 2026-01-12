@@ -19,6 +19,7 @@ import {
 } from "@utils/moonpay-currency";
 import * as manifest from "../../manifest.v3.json";
 import { useConfirm } from "@components/confirm";
+import { isRunningInSidePanel, toggleSidePanel } from "@utils/side-panel";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
@@ -196,13 +197,22 @@ export const MorePage: FunctionComponent = () => {
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "5px" }}
           leftImage={require("@assets/svg/wireframe/signature-doc.svg")}
-          onClick={() => {
-            navigate("/more/sign-manual-txn");
+          onClick={async () => {
+            if (isRunningInSidePanel()) {
+              navigate("/more/sign-manual-txn");
+            } else {
+              await toggleSidePanel(false, setSidePanelEnabled);
+            }
             analyticsStore.logEvent("sign_manual_txn_click", {
               pageName: "More",
             });
           }}
           heading="Sign/Broadcast Manual Transaction"
+          subheading={
+            !isRunningInSidePanel()
+              ? "Requires side panel (file upload & signing)"
+              : ""
+          }
         />
       )}
       <Card
