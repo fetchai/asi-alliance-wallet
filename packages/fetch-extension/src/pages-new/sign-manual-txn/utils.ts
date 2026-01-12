@@ -29,6 +29,20 @@ import {
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import Long from "long";
 
+export const isSignatureCollected = (sigStr: string) => {
+  if (!sigStr) return false;
+  try {
+    const sigObj = JSON.parse(sigStr);
+    return (
+      sigObj.signatures?.some(
+        (s: any) => s.data?.single?.signature?.trim() !== ""
+      ) || false
+    );
+  } catch (err) {
+    return false;
+  }
+};
+
 export function buildProtoSignDoc(
   protoTx: ProtoUnsignedTx,
   params: SignDocParams
@@ -703,7 +717,7 @@ export function detectInputType(doc: any): InputDocType {
     return "proto-json";
   }
 
-  throw new Error("Unsupported signing payload format");
+  throw new Error("Unsupported transaction data format");
 }
 
 export const createSignature = (result: any, sequence: string) => {
