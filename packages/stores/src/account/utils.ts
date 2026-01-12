@@ -1,8 +1,9 @@
 import { EthermintChainIdHelper } from "@keplr-wallet/cosmos";
-import { ProtoMsgsOrWithAminoMsgs } from "./types";
-import { ProposalNode } from "./cosmos";
-import { Node } from "./cosmos";
+import { Fee } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
+import { StdFee } from "@keplr-wallet/types";
 import { ActivityStore } from "src/activity";
+import { Node, ProposalNode } from "./cosmos";
+import { ProtoMsgsOrWithAminoMsgs } from "./types";
 
 export function txEventsWithPreOnFulfill(
   onTxEvents:
@@ -468,3 +469,12 @@ export const getActivityNode = ({
 
   return newNode;
 };
+
+export function protoFeeToStdFee(fee?: Fee): StdFee {
+  return {
+    amount: fee?.amount ?? [],
+    gas: fee?.gasLimit?.toString() || "0",
+    ...(fee?.granter ? { granter: fee.granter } : {}),
+    ...(fee?.payer ? { payer: fee.payer } : {}),
+  };
+}
