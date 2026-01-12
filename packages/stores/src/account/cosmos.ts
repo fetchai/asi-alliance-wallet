@@ -52,12 +52,24 @@ import {
   txEventsWithPreOnFulfill,
   updateNodeOnTxnCompleted,
   updateProposalNodeOnTxnCompleted,
+  protoFeeToStdFee,
 } from "./utils";
 import { ExtensionOptionsWeb3Tx } from "@keplr-wallet/proto-types/ethermint/types/v1/web3";
 import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
 import { ActivityStore } from "src/activity";
 import { CosmosTxTracer } from "./cosmos-tx-tracer";
+import { makeMultisignedTx } from "@cosmjs/stargate";
+import { LegacyAminoPubKey } from "cosmjs-types/cosmos/crypto/multisig/keys";
+/* eslint-disable import/no-extraneous-dependencies */
+import { MultisigThresholdPubkey } from "@cosmjs/amino";
+import { pubkeyToAddress } from "@cosmjs/amino";
+
+export interface TxRawJSON {
+  body: TxBody;
+  auth_info: AuthInfo;
+  signatures: string[];
+}
 
 export interface CosmosAccount {
   cosmos: CosmosAccountImpl;
@@ -801,6 +813,188 @@ export class CosmosAccountImpl {
         }),
       signDoc: signResponse.signed,
       signature: signResponse.signature.signature,
+    };
+  }
+
+  /**
+   * Broadcast a Cosmos multisig transaction.
+   *
+   * This method assembles and broadcasts a multisig transaction using a
+   * LegacyAmino multisig public key. It supports both unsigned multisig
+   * transactions (where signatures are supplied separately) and fully
+   * signed multisig transactions.
+   *
+   * Important:
+   * - The full multisig public key (threshold + all pubkeys) is required,
+   *   even if only a subset of cosigners provide signatures.
+   * - Multisig signing uses SIGN_MODE_LEGACY_AMINO_JSON.
+   * - The provided multisig address is validated against the derived address
+   *   from the multisig public key and the current chain's bech32 prefix.
+   *
+   * @param multisigPubKey - The multisig threshold public key (LegacyAminoPubKey)
+   * @param msgs - Transaction messages (proto or amino-compatible)
+   * @param signDoc - Unsigned or signed transaction JSON payload
+   * @param type - Whether the transaction is "unsigned" (assemble from signatures)
+   *               or "signed" (already contains multisig signing info)
+   * @param signatures - Map of signer address to signature bytes (used for unsigned flow)
+   * @param multisigAddress - Bech32 multisig account address for the current chain
+   * @param mode - Broadcast mode: "block", "sync", or "async"
+   *
+   * @returns An object containing:
+   * - txHash: Broadcast transaction hash (hex-encoded)
+   * - signDoc: The original transaction payload
+   * - signature: Base64-encoded aggregated multisig signature
+   *
+   * @throws Error if the multisig public key does not match the provided address
+   * @throws Error if the transaction cannot be assembled or broadcast
+   */
+  async broadcastMultisigMsgs(
+    multisigPubKey: MultisigThresholdPubkey,
+    msgs: ProtoMsgsOrWithAminoMsgs,
+    signDoc: TxRawJSON,
+    type: "signed" | "unsigned" = "signed",
+    signatures: Map<string, Uint8Array> = new Map<string, Uint8Array>([]),
+    multisigAddress: string,
+    mode: "block" | "async" | "sync" = "sync"
+  ): Promise<{
+    txHash: string;
+    signDoc: TxRawJSON;
+    signature: string;
+  }> {
+    const keplr = (await this.base.getKeplr())!;
+    const multisigAddressDerived = pubkeyToAddress(
+      multisigPubKey,
+      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+    );
+
+    if (multisigAddress !== multisigAddressDerived) {
+      throw new Error(
+        "Multisig public key does not match the multisig address in the transaction"
+      );
+    }
+
+    const account = await BaseAccount.fetchFromRest(
+      this.chainGetter.getChain(this.chainId).rest,
+      multisigAddress,
+      true
+    );
+
+    const sequence = account.getSequence().toString();
+
+    const bodyBytes = TxBody.encode({
+      messages: msgs.protoMsgs,
+      memo: signDoc.body.memo,
+      timeoutHeight: signDoc.body.timeoutHeight,
+      extensionOptions: signDoc.body.extensionOptions,
+      nonCriticalExtensionOptions: signDoc.body.nonCriticalExtensionOptions,
+    }).finish();
+
+    const stdFee = protoFeeToStdFee(signDoc.auth_info.fee);
+    let multisignedTx: any;
+    let bitarray: any;
+    let authInfoBytes: any;
+
+    // Create the multisigned tx
+    if (type === "unsigned") {
+      multisignedTx = makeMultisignedTx(
+        multisigPubKey,
+        parseInt(sequence),
+        stdFee,
+        bodyBytes,
+        signatures
+      );
+      authInfoBytes = multisignedTx.authInfoBytes;
+    } else {
+      multisignedTx = signDoc;
+      const rawBitarray =
+        signDoc.auth_info.signerInfos[0].modeInfo?.multi?.bitarray;
+
+      let elems: Buffer | undefined;
+
+      if (typeof rawBitarray?.elems === "string") {
+        // base64 to Buffer
+        elems = Buffer.from(rawBitarray.elems, "base64");
+      } else if (rawBitarray?.elems instanceof Uint8Array) {
+        // Uint8Array to  Buffer
+        elems = Buffer.from(rawBitarray.elems);
+      }
+
+      bitarray = {
+        extraBitsStored: rawBitarray?.extraBitsStored,
+        elems: elems ?? [],
+      };
+
+      // Build authInfoBytes
+      authInfoBytes = AuthInfo.encode({
+        signerInfos: [
+          {
+            publicKey: {
+              typeUrl: "/cosmos.crypto.multisig.LegacyAminoPubKey",
+              value: LegacyAminoPubKey.encode({
+                threshold: parseInt(multisigPubKey.value.threshold),
+                publicKeys: multisigPubKey.value.pubkeys.map((pk) => ({
+                  typeUrl: "/cosmos.crypto.secp256k1.PubKey",
+                  value: Uint8Array.from(Buffer.from(pk.value, "base64")),
+                })),
+              }).finish(),
+            },
+            modeInfo: {
+              single: undefined,
+              multi: {
+                bitarray: bitarray,
+                modeInfos: multisigPubKey.value.pubkeys.map(() => ({
+                  multi: undefined,
+                  single: {
+                    mode: SignMode.SIGN_MODE_LEGACY_AMINO_JSON,
+                  },
+                })),
+              },
+            },
+            sequence,
+          },
+        ],
+        fee: Fee.fromPartial({
+          amount: stdFee.amount as Coin[],
+          gasLimit: stdFee.gas,
+          payer: stdFee.payer,
+          granter: stdFee.granter,
+        }),
+      }).finish();
+    }
+
+    const signatureBytes =
+      type === "signed"
+        ? [Uint8Array.from(Buffer.from(multisignedTx.signatures[0], "base64"))]
+        : multisignedTx.signatures;
+
+    const txRaw = TxRaw.encode({
+      bodyBytes,
+      authInfoBytes,
+      signatures: signatureBytes,
+    }).finish();
+
+    this.base.setBroadcastInProgress(true);
+
+    const txHash = await keplr.sendTx(
+      this.chainId,
+      txRaw,
+      mode as BroadcastMode
+    );
+
+    this.base.setBroadcastInProgress(false);
+
+    return {
+      txHash: Buffer.from(txHash).toString("hex").toLocaleUpperCase(),
+      signDoc,
+      signature: Buffer.from(
+        // combine all signatures as one base64 string
+        Uint8Array.from(
+          multisignedTx.signatures.reduce(
+            (prev: any, curr: any) => [...prev, ...curr],
+            [] as number[]
+          )
+        )
+      ).toString("base64"),
     };
   }
 
