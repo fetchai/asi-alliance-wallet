@@ -9,12 +9,16 @@ import { SignTransactionForm } from "./signing-form";
 import { TransactionDetails } from "./transaction-details";
 import style from "./styles.module.scss";
 import { SignAction } from "./types";
+import { useStore } from "../../stores";
+import { UnsupportedNetwork } from "../activity/unsupported-network";
 
 export const SignManualTxn = observer(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signed, signType } = location.state || {};
   const notification = useNotification();
+  const { chainStore } = useStore();
+  const chainInfo = chainStore.current;
 
   const showNotification = (
     message: string,
@@ -75,10 +79,16 @@ export const SignManualTxn = observer(() => {
       showBottomMenu={false}
       onBackButton={() => navigate(-1)}
     >
-      {!signed ? (
-        <TabsPanel tabs={TABS} activeTabId={TABS[0].id} />
+      {chainInfo.features?.includes("evm") ? (
+        <UnsupportedNetwork chainID={chainInfo.chainName} />
       ) : (
-        <TransactionDetails onCopy={copyAddress} />
+        <React.Fragment>
+          {!signed ? (
+            <TabsPanel tabs={TABS} activeTabId={TABS[0].id} />
+          ) : (
+            <TransactionDetails onCopy={copyAddress} />
+          )}
+        </React.Fragment>
       )}
     </HeaderLayout>
   );

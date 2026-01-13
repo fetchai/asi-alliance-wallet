@@ -25,11 +25,13 @@ import {
   InputDocType,
   MultisigPubKey,
   ProtoMultisigPubkey,
+  SignDocData,
 } from "./types";
-/* eslint-disable-next-line import/no-extraneous-dependencies */
-import Long from "long";
 import { MsgExecuteContract } from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
 import { fromBech32 } from "@cosmjs/encoding";
+import { sortObjectByKey } from "@keplr-wallet/common";
+/* eslint-disable-next-line import/no-extraneous-dependencies */
+import Long from "long";
 
 export const isValidBech32Address = (address: string, prefix: string) => {
   try {
@@ -120,16 +122,41 @@ export const createSignaturesMap = (
       Uint8Array.from(atob(sig.data.single.signature), (c) => c.charCodeAt(0))
     );
     return map;
-  }, new Map<string, Uint8Array>());
+  }, new Map<string, Uint8Array | null>());
 
   return signaturesMap;
 };
+
+export function orderMultisigSignatures(
+  multiSignatures: SingleSignature[],
+  publicKeys: {
+    type: string;
+    value: string;
+  }[]
+): (SingleSignature | null)[] {
+  // Map pubkey -> signature
+  const signatureByPubKey = new Map<string, SingleSignature>();
+  multiSignatures.forEach((sig) => {
+    const pubKey = sig?.public_key?.key;
+    if (pubKey) {
+      signatureByPubKey.set(pubKey, sig);
+    }
+  });
+
+  // Order signatures according to multisig public_keys
+  return publicKeys
+    .map((pubKey) => {
+      return signatureByPubKey.get(pubKey.value) ?? null;
+    })
+    .filter(Boolean);
+}
 
 export function assembleMultisigTx(
   unsignedTx: any,
   threshold: number,
   singleSignatures: SingleSignature[],
-  sequence: string
+  sequence: string,
+  publicKeys?: MultisigPubKey["pubKeys"]
 ) {
   if (
     !unsignedTx ||
@@ -141,9 +168,16 @@ export function assembleMultisigTx(
   }
 
   const multisigPubKey: MultisigPubKey = {
-    threshold,
-    pubKeys: singleSignatures.map((value) => value.public_key),
+    threshold: threshold,
+    pubKeys: publicKeys?.length
+      ? publicKeys.map((value) => ({
+          ...value,
+          "@type": "/cosmos.crypto.secp256k1.PubKey",
+        }))
+      : singleSignatures.map((value) => value.public_key),
   };
+
+  console.log("inside assemble signature", { multisigPubKey, publicKeys });
 
   // Build the auth_info for multisig
   const modeInfos = singleSignatures.map((sig) => ({
@@ -213,7 +247,10 @@ export function protoMultisigToAmino(
   };
 }
 
-export function validateProtoJsonSignDoc(doc: any): asserts doc is {
+export function validateProtoJsonSignDoc(
+  doc: any,
+  targetAddress?: string
+): asserts doc is {
   body: any;
   auth_info: any;
   signatures: any[];
@@ -249,6 +286,21 @@ export function validateProtoJsonSignDoc(doc: any): asserts doc is {
 
     if (typeof msg["@type"] !== "string")
       throw new Error("message @type must be a string");
+
+    if (targetAddress) {
+      const actorAddress =
+        msg.from_address || msg.delegator_address || msg.sender || msg.voter;
+
+      if (!actorAddress) {
+        throw new Error("message does not contain a supported signer address");
+      }
+
+      if (actorAddress !== targetAddress) {
+        throw new Error(
+          `message uses ${actorAddress}, expected signer address ${targetAddress}`
+        );
+      }
+    }
   }
 
   if (!doc.auth_info) throw new Error("auth_info is missing");
@@ -332,6 +384,7 @@ export function validateAminoSignDoc(
     (msg: any) =>
       msg.value?.from_address === targetAccountAddress ||
       msg.value?.delegator_address === targetAccountAddress ||
+      msg.value.voter === targetAccountAddress ||
       msg.value?.sender === targetAccountAddress
   );
 
@@ -781,4 +834,34 @@ export const createSignature = (result: any, sequence: string) => {
       ],
     })
   );
+};
+
+export const prepareSignDoc = async (
+  txnPayload: any,
+  accountData: any,
+  chainId: string
+): Promise<SignDocData> => {
+  // Parse txn payload
+  const payloadObj = JSON.parse(txnPayload);
+
+  // Detect sign doc type
+  const signDocType = detectInputType(payloadObj);
+
+  const signDocParams = {
+    chainId,
+    sequence: accountData?.account.sequence,
+    accountNumber: accountData?.account.account_number,
+  };
+
+  // Build Amino signDoc
+  const signDoc =
+    signDocType === "amino"
+      ? sortObjectByKey({
+          ...payloadObj,
+          sequence: signDocParams.sequence,
+          account_number: signDocParams.accountNumber,
+        })
+      : convertProtoTxToAminoSignDoc(payloadObj, signDocParams);
+
+  return { payloadObj, signDocType, signDocParams, signDoc };
 };
