@@ -210,7 +210,7 @@ export const MorePage: FunctionComponent = () => {
           heading="Sign/Broadcast Manual Transaction"
           subheading={
             !isRunningInSidePanel()
-              ? "Requires side panel (file upload & signing)"
+              ? "Open side panel to upload and sign/broadcast transactions"
               : ""
           }
         />
