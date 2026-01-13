@@ -850,7 +850,7 @@ export class CosmosAccountImpl {
    */
   async broadcastMultisigMsgs(
     multisigPubKey: MultisigThresholdPubkey,
-    msgs: ProtoMsgsOrWithAminoMsgs,
+    msgs: ProtoMsgsOrWithAminoMsgs["protoMsgs"],
     signDoc: TxRawJSON,
     type: "signed" | "unsigned" = "signed",
     signatures: Map<string, Uint8Array> = new Map<string, Uint8Array>([]),
@@ -882,7 +882,7 @@ export class CosmosAccountImpl {
     const sequence = account.getSequence().toString();
 
     const bodyBytes = TxBody.encode({
-      messages: msgs.protoMsgs,
+      messages: msgs,
       memo: signDoc.body.memo,
       timeoutHeight: signDoc.body.timeoutHeight,
       extensionOptions: signDoc.body.extensionOptions,
