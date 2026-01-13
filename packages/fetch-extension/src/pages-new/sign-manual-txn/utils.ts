@@ -177,8 +177,6 @@ export function assembleMultisigTx(
       : singleSignatures.map((value) => value.public_key),
   };
 
-  console.log("inside assemble signature", { multisigPubKey, publicKeys });
-
   // Build the auth_info for multisig
   const modeInfos = singleSignatures.map((sig) => ({
     single: { mode: sig.data.single.mode },
@@ -849,8 +847,8 @@ export const prepareSignDoc = async (
 
   const signDocParams = {
     chainId,
-    sequence: accountData?.account.sequence,
-    accountNumber: accountData?.account.account_number,
+    sequence: accountData?.sequence,
+    accountNumber: accountData?.account_number,
   };
 
   // Build Amino signDoc
