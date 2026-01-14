@@ -434,10 +434,14 @@ export class AccountSetBase {
       return "";
     }
 
-    return Bech32Address.fromBech32(
-      this.bech32Address,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
-    ).toHex(true);
+    try {
+      return Bech32Address.fromBech32(
+        this.bech32Address,
+        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+      ).toHex(true);
+    } catch {
+      return "";
+    }
   }
 
   @action

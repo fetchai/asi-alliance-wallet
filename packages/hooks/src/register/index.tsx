@@ -143,12 +143,13 @@ export class RegisterConfig {
   ) {
     this._isLoading = true;
     const defaultName = this.getNextDefaultAccountName();
+    const finalName = (name || "").trim() || defaultName;
 
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
         nameByChain: JSON.stringify(
           Object.fromEntries(
-            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+            selectedNetworks.map((id) => [id, finalName]) // only selected networks
           )
         ),
       });
@@ -160,7 +161,7 @@ export class RegisterConfig {
           mnemonic,
           password,
           {
-            name: defaultName,
+            name: finalName,
             ...meta,
           },
           bip44HDPath,
@@ -171,7 +172,7 @@ export class RegisterConfig {
         yield this.keyRingStore.addMnemonicKey(
           mnemonic,
           {
-            name: defaultName,
+            name: finalName,
             ...meta,
           },
           bip44HDPath
@@ -223,12 +224,13 @@ export class RegisterConfig {
   ) {
     this._isLoading = true;
     const defaultName = this.getNextDefaultAccountName();
+    const finalName = (name || "").trim() || defaultName;
     const meta = {};
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
         nameByChain: JSON.stringify(
           Object.fromEntries(
-            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+            selectedNetworks.map((id) => [id, finalName]) // only selected networks
           )
         ),
       });
@@ -239,7 +241,7 @@ export class RegisterConfig {
         yield this.keyRingStore.createLedgerKey(
           password,
           {
-            name: defaultName,
+            name: finalName,
             ...meta,
           },
           bip44HDPath,
@@ -248,7 +250,7 @@ export class RegisterConfig {
       } else {
         yield this.keyRingStore.addLedgerKey(
           {
-            name: defaultName,
+            name: finalName,
             ...meta,
           },
           bip44HDPath,
@@ -273,12 +275,13 @@ export class RegisterConfig {
   ) {
     this._isLoading = true;
     const defaultName = this.getNextDefaultAccountName();
+    const finalName = (name || "").trim() || defaultName;
 
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
         nameByChain: JSON.stringify(
           Object.fromEntries(
-            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+            selectedNetworks.map((id) => [id, finalName]) // only selected networks
           )
         ),
       });
@@ -287,12 +290,12 @@ export class RegisterConfig {
     try {
       if (this.mode === "create") {
         yield this.keyRingStore.createPrivateKey(privateKey, password, {
-          name: defaultName,
+          name: finalName,
           ...meta,
         });
       } else {
         yield this.keyRingStore.addPrivateKey(privateKey, {
-          name: defaultName,
+          name: finalName,
           ...meta,
         });
       }

@@ -76,6 +76,12 @@ import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { ExtensionAnalyticsClient } from "../analytics";
 import { autorun } from "mobx";
 import { AddressCacheById } from "../utils/address-cache-store";
+import { ListAccountsMsg } from "@keplr-wallet/background";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import {
+  mergePartialCacheData,
+  normalizeCacheData,
+} from "../utils/cache-validation";
 
 export class RootStore {
   public readonly uiConfigStore: UIConfigStore;
@@ -256,7 +262,7 @@ export class RootStore {
         try {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const { addressCacheStore } = require("../utils/address-cache-store");
-          addressCacheStore.clearAllCaches();
+          addressCacheStore.bumpEpoch();
         } catch {
           // no-op
         }
@@ -379,6 +385,96 @@ export class RootStore {
       }
 
       (this as any)._lastChainType = isEvm;
+    });
+
+    autorun(async () => {
+      try {
+        if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+          return;
+        }
+
+        const currentChainId = this.chainStore.current.chainId;
+        if (!currentChainId) return;
+
+        const currentWalletIds = this.keyRingStore.multiKeyStoreInfo
+          .map((ks) => ks.meta?.["__id__"] || "")
+          .filter(Boolean);
+
+        if (currentWalletIds.length === 0) return;
+
+        const isCurrentChainCardano =
+          currentChainId === "cardano-preview" ||
+          currentChainId === "cardano-preprod" ||
+          currentChainId === "cardano-mainnet";
+
+        const requiredWalletIds: string[] = isCurrentChainCardano
+          ? this.keyRingStore.multiKeyStoreInfo
+              .map((ks) => ({
+                id: ks.meta?.["__id__"] || "",
+                supported:
+                  ks.type === "mnemonic" &&
+                  `${ks.meta?.["mnemonicLength"]}` === "24",
+              }))
+              .filter((w) => w.supported)
+              .map((w) => w.id)
+          : currentWalletIds;
+
+        const syncKey = `${currentChainId}|${currentWalletIds.join(
+          ","
+        )}|${requiredWalletIds.join(",")}`;
+        if ((this as any)._lastAddressCacheSyncKey === syncKey) {
+          return;
+        }
+
+        const existingCache = addressCacheStore.getCache(currentChainId);
+        const hasRequired = requiredWalletIds.every((id) =>
+          Boolean(existingCache[id])
+        );
+        const shouldSyncFromBackend =
+          Object.keys(existingCache).length === 0 || !hasRequired;
+
+        if (!shouldSyncFromBackend) {
+          (this as any)._lastAddressCacheSyncKey = syncKey;
+          return;
+        }
+
+        const requester = new InExtensionMessageRequester();
+        const accounts = await requester.sendMessage(
+          BACKGROUND_PORT,
+          new ListAccountsMsg()
+        );
+
+        const isEvm = this.chainStore.current.features?.includes("evm") ?? false;
+        const snapshotWalletIds = [...currentWalletIds];
+
+        const fetchedById: Record<string, string> = {};
+        snapshotWalletIds.forEach((id, idx) => {
+          const acc = accounts[idx];
+          fetchedById[id] = acc
+            ? isEvm
+              ? acc.EVMAddress
+              : acc.bech32Address
+            : "";
+        });
+
+        await addressCacheStore.atomicCacheUpdate(currentChainId, (currentCache) => {
+          const normalizedCache = normalizeCacheData(
+            currentCache,
+            snapshotWalletIds
+          );
+          const fetchedAddresses = snapshotWalletIds.map(
+            (id) => fetchedById[id] || ""
+          );
+          const mergedCache = mergePartialCacheData(
+            normalizedCache,
+            snapshotWalletIds,
+            fetchedAddresses
+          );
+          return { newCache: mergedCache, result: mergedCache };
+        });
+
+        (this as any)._lastAddressCacheSyncKey = syncKey;
+      } catch {}
     });
 
     this.accountStore = new AccountStore(

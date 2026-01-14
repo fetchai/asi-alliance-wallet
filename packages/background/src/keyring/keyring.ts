@@ -35,6 +35,7 @@ import { publicKeyConvert } from "secp256k1";
 import { KeystoneKeyringData } from "../keystone/cosmos-keyring";
 import { InteractionService } from "../interaction";
 import { AddressCacheManager } from "./cache-manager";
+import { isValidCardanoAddress } from "@keplr-wallet/cardano";
 
 export enum KeyRingStatus {
   NOTLOADED,
@@ -825,7 +826,7 @@ export class KeyRing {
 
       if (isCardano) {
         const existingCache = await this.loadCardanoChainCache(chainId);
-        const activeAddr = Buffer.from(activeKey.address).toString("hex");
+        const activeAddr = Buffer.from(activeKey.address).toString("utf8");
         const activePub =
           activeKey.algo === "ed25519"
             ? Buffer.from(activeKey.pubKey).toString("utf8")
@@ -1725,7 +1726,14 @@ export class KeyRing {
 
     try {
       const currentChainId = await this.chainsService.getSelectedChain();
-      const keys = await this.getKeys(currentChainId, false);
+      const isCardano =
+        this.embedChainInfos
+          .find((c) => c.chainId === currentChainId)
+          ?.features?.includes("cardano") ?? false;
+
+      const keys = isCardano
+        ? await this.getKeysForCardano(currentChainId)
+        : await this.getKeys(currentChainId, false);
       const walletIds = this.multiKeyStore.map((ks) =>
         KeyRing.getKeyStoreId(ks)
       );
@@ -1749,13 +1757,10 @@ export class KeyRing {
       const activeWalletIndex = walletIds.indexOf(activeWalletId);
       const activeWalletAddress =
         activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
-          ? Buffer.from(keys[activeWalletIndex].address).toString("hex")
+          ? isCardano
+            ? Buffer.from(keys[activeWalletIndex].address).toString("utf8")
+            : Buffer.from(keys[activeWalletIndex].address).toString("hex")
           : "";
-
-      const isCardano =
-        this.embedChainInfos
-          .find((c) => c.chainId === currentChainId)
-          ?.features?.includes("cardano") ?? false;
 
       await this.updateCacheForActiveWallet(
         currentChainId,
@@ -1890,21 +1895,25 @@ export class KeyRing {
 
       const persisted = persistent[storeId];
       if (persisted && persisted.address) {
-        const addressBytes = Buffer.from(persisted.address, "utf8");
-        const pubKeyBytes = Buffer.from(persisted.pubKey, "utf8");
-        this.cardanoKeyCache.set(keyId, {
-          address: addressBytes,
-          pubKey: pubKeyBytes,
-        });
-        keys.push({
-          name: walletName,
-          algo: "ed25519",
-          pubKey: pubKeyBytes,
-          address: addressBytes,
-          isKeystone: false,
-          isNanoLedger: false,
-        });
-        continue;
+        if (!isValidCardanoAddress(persisted.address)) {
+          delete persistent[storeId];
+        } else {
+          const addressBytes = Buffer.from(persisted.address, "utf8");
+          const pubKeyBytes = Buffer.from(persisted.pubKey, "utf8");
+          this.cardanoKeyCache.set(keyId, {
+            address: addressBytes,
+            pubKey: pubKeyBytes,
+          });
+          keys.push({
+            name: walletName,
+            algo: "ed25519",
+            pubKey: pubKeyBytes,
+            address: addressBytes,
+            isKeystone: false,
+            isNanoLedger: false,
+          });
+          continue;
+        }
       }
 
       // 2) Not cached: decide support without decryption when possible

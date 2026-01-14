@@ -21,11 +21,20 @@ interface YourWalletProps {
 export const YourWallets: FunctionComponent<YourWalletProps> = observer(
   ({ selectWalletFromList, onBackButton }) => {
     const [searchTerm, setSearchTerm] = useState("");
-    const [addresses, setAddresses] = useState<string[]>([]);
+    const [addressesById, setAddressesById] = useState<Record<string, string>>(
+      {}
+    );
+    const [isLoadingAddresses, setIsLoadingAddresses] = useState<boolean>(true);
     const intl = useIntl();
     const { chainStore, keyRingStore } = useStore();
 
     const chainId = chainStore.current.chainId;
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+
+    const currentWalletIds = keyRingStore.multiKeyStoreInfo.map(
+      (ks) => ks.meta?.["__id__"] || ""
+    );
+    const walletIdsKey = currentWalletIds.join(",");
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
@@ -52,57 +61,42 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
       return;
     };
 
-    const accountsAddress = async () => {
-      console.log("[YourWallets] accountsAddress() called");
-      const startTime = performance.now();
+    const syncAddressesFromBackground = async (abortSignal?: AbortSignal) => {
+      setIsLoadingAddresses(true);
+      try {
+        const requester = new InExtensionMessageRequester();
+        const msg = new ListAccountsMsg();
+        const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
 
-      const requester = new InExtensionMessageRequester();
-      const msg = new ListAccountsMsg();
-      const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
-
-      console.log(
-        `[YourWallets] ListAccountsMsg completed in ${(
-          performance.now() - startTime
-        ).toFixed(2)}ms, got ${accounts.length} accounts`
-      );
-
-      const currentWalletIds = keyRingStore.multiKeyStoreInfo.map(
-        (ks) => ks.meta?.["__id__"] || ""
-      );
-      const selectedWalletId =
-        keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.[
-          "__id__"
-        ] || "";
-
-      const isEvm = chainStore.current.features?.includes("evm") ?? false;
-
-      const addressesById: Record<string, string> = {};
-      currentWalletIds.forEach((walletId, idx) => {
-        const account = accounts[idx];
-        if (account && walletId) {
-          addressesById[walletId] = isEvm
-            ? account.EVMAddress
-            : account.bech32Address;
+        if (abortSignal?.aborted) {
+          return;
         }
-      });
 
-      const addresses = currentWalletIds
-        .filter((walletId) => walletId && walletId !== selectedWalletId)
-        .map((walletId) => addressesById[walletId] || "");
+        const snapshotWalletIds = [...currentWalletIds];
+        const next: Record<string, string> = {};
+        snapshotWalletIds.forEach((walletId, idx) => {
+          const account = accounts[idx];
+          if (account && walletId) {
+            next[walletId] = isEvm ? account.EVMAddress : account.bech32Address;
+          }
+        });
 
-      console.log(
-        `[YourWallets] Setting ${addresses.length} addresses:`,
-        addresses.map((a) => a.slice(0, 15) + "...").join(", ")
-      );
-      setAddresses(addresses);
+        setAddressesById(next);
+      } finally {
+        if (!abortSignal?.aborted) {
+          setIsLoadingAddresses(false);
+        }
+      }
     };
 
     useEffect(() => {
-      console.log(
-        "[YourWallets] useEffect triggered, calling accountsAddress()"
-      );
-      accountsAddress();
-    }, [keyRingStore.multiKeyStoreInfo]); // Re-run when wallets change
+      const abort = new AbortController();
+      syncAddressesFromBackground(abort.signal);
+      return () => {
+        abort.abort();
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [walletIdsKey, chainId]);
 
     const keyRingList = keyRingStore.multiKeyStoreInfo.filter(
       (keyStore) => !keyStore.selected
@@ -129,6 +123,10 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                 id: "setting.keyring.unnamed-account",
               });
 
+            const walletId = keyStore.meta?.["__id__"] || "";
+            const address = walletId ? addressesById[walletId] : "";
+            const hasAddress = Boolean(address);
+
             return (
               <Card
                 key={i}
@@ -147,23 +145,23 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                   </React.Fragment>
                 }
                 subheading={
-                  addresses[i] ? (
-                    formatAddress(addresses[i])
-                  ) : (
+                  hasAddress ? (
+                    formatAddress(address)
+                  ) : isLoadingAddresses ? (
                     <Skeleton height="14px" width="100px" />
+                  ) : (
+                    ""
                   )
                 }
                 style={{
                   padding: "18px 16px",
                 }}
-                disabled={addresses?.length === 0}
+                disabled={!hasAddress}
                 onClick={async (e: any) => {
-                  if (addresses?.[i]) {
-                    e.preventDefault();
-                    const address = addresses[i];
-                    selectWalletFromList(address);
-                    onBackButton?.();
-                  }
+                  if (!hasAddress) return;
+                  e.preventDefault();
+                  selectWalletFromList(address);
+                  onBackButton?.();
                 }}
               />
             );

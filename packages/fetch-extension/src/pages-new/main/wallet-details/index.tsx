@@ -13,6 +13,7 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { Button } from "reactstrap";
 import { useStore } from "../../../stores";
+import { addressCacheStore } from "../../../utils/address-cache-store";
 import { Balances } from "../balances";
 import style from "../style.module.scss";
 import { WalletConfig } from "@keplr-wallet/stores/build/chat/user-details";
@@ -105,10 +106,46 @@ export const WalletDetailsView = observer(
       }
     })();
 
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
-
     const intl = useIntl();
     const notification = useNotification();
+
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const selectedWalletId =
+      keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.[
+        "__id__"
+      ] || "";
+    const cachedSelectedAddress =
+      selectedWalletId && chainStore.current.chainId
+        ? addressCacheStore.getCache(chainStore.current.chainId)[selectedWalletId] ||
+          ""
+        : "";
+    const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected);
+    const displayAccountName = (() => {
+      const meta = selectedKeyStore?.meta;
+      if (!meta) return "";
+      try {
+        const nameByChain = meta["nameByChain"] ? JSON.parse(meta["nameByChain"]) : {};
+        return (
+          nameByChain?.[chainStore.current.chainId] ||
+          meta["name"] ||
+          intl.formatMessage({ id: "setting.keyring.unnamed-account" })
+        );
+      } catch {
+        return (
+          meta["name"] || intl.formatMessage({ id: "setting.keyring.unnamed-account" })
+        );
+      }
+    })();
+    const displayBech32Address =
+      accountInfo.walletStatus === WalletStatus.Loaded
+        ? accountInfo.bech32Address
+        : cachedSelectedAddress;
+    const displayEvmAddress =
+      isEvm || accountInfo.hasEthereumHexAddress
+        ? accountInfo.walletStatus === WalletStatus.Loaded
+          ? accountInfo.ethereumHexAddress
+          : cachedSelectedAddress || accountInfo.ethereumHexAddress
+        : "";
     const copyAddress = useCallback(
       async (address: string) => {
         if (accountInfo.walletStatus === WalletStatus.Loaded) {
@@ -273,7 +310,7 @@ export const WalletDetailsView = observer(
                 } else if (accountInfo.walletStatus === WalletStatus.Rejected) {
                   return "Unable to Load Key";
                 } else {
-                  return <Skeleton height="21px" />;
+                  return displayAccountName ? displayAccountName : <Skeleton height="21px" />;
                 }
               })()}
             </div>
@@ -313,8 +350,7 @@ export const WalletDetailsView = observer(
               </div>
               {accountInfo.walletStatus !== WalletStatus.Rejected && !isEvm && (
                 <React.Fragment>
-                  {accountInfo.walletStatus === WalletStatus.Loaded &&
-                  accountInfo.bech32Address ? (
+                  {displayBech32Address ? (
                     <div
                       style={{
                         display: "flex",
@@ -324,22 +360,20 @@ export const WalletDetailsView = observer(
                         fontWeight: 400,
                       }}
                       ref={outerDivRef}
-                      onClick={() => copyAddress(accountInfo.bech32Address)}
+                      onClick={() => copyAddress(displayBech32Address)}
                     >
                       <Address
                         maxCharacters={16}
                         lineBreakBeforePrefix={false}
-                        tooltipAddress={accountInfo.bech32Address}
+                        tooltipAddress={displayBech32Address}
                         childrenStyle={{ opacity: 1 }}
                       >
                         <span style={{ display: "flex" }}>
-                          {splitBech32(accountInfo.bech32Address).prefix}
+                          {splitBech32(displayBech32Address).prefix}
                           <span className={style["wallet-address-text"]}>
                             <ResponsiveAddressView
                               containerRef={outerDivRef}
-                              address={
-                                splitBech32(accountInfo.bech32Address).rest
-                              }
+                              address={splitBech32(displayBech32Address).rest}
                             />
                           </span>
                         </span>
@@ -370,27 +404,24 @@ export const WalletDetailsView = observer(
                     <Address
                       isRaw={true}
                       placement="bottom-end"
-                      tooltipAddress={accountInfo.ethereumHexAddress}
+                      tooltipAddress={displayEvmAddress}
                       childrenStyle={{ opacity: 1 }}
                     >
                       <span style={{ display: "flex" }}>
-                        {accountInfo.walletStatus === WalletStatus.Loaded &&
-                        accountInfo.ethereumHexAddress ? (
-                          accountInfo.ethereumHexAddress.length === 42 ? (
+                        {displayEvmAddress ? (
+                          displayEvmAddress.length === 42 ? (
                             <React.Fragment>
-                              {accountInfo.ethereumHexAddress.slice(0, 2)}
+                              {displayEvmAddress.slice(0, 2)}
                               <span className={style["wallet-address-text"]}>
                                 <ResponsiveAddressView
                                   containerRef={outerDivRefEvm}
-                                  address={accountInfo.ethereumHexAddress.slice(
-                                    2
-                                  )}
+                                  address={displayEvmAddress.slice(2)}
                                 />
                               </span>
                             </React.Fragment>
                           ) : (
                             <React.Fragment>
-                              {accountInfo.ethereumHexAddress}
+                              {displayEvmAddress}
                             </React.Fragment>
                           )
                         ) : (
