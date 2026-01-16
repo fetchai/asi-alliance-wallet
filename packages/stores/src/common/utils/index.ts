@@ -27,7 +27,7 @@ import { Any } from "cosmjs-types/google/protobuf/any";
 import {
   ClientUpdateProposal,
   UpgradeProposal as IbcUpgradeProposal,
-} from "cosmjs-types/ibc/core/client/v1/client";
+} from "@keplr-wallet/proto-types/ibc/core/client/v1/client";
 import { ClientState } from "cosmjs-types/ibc/lightclients/tendermint/v1/tendermint";
 import {
   GenericAuthorization,
