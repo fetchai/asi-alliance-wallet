@@ -317,8 +317,8 @@ const EmbedChainInfos: ChainInfo[] = [
     explorerUrl: "https://goerli.etherscan.io",
   },
   {
-    rpc: "https://rpc-cosmoshub.keplr.app",
-    rest: "https://lcd-cosmoshub.keplr.app",
+    rpc: "https://cosmos-rpc.publicnode.com:443",
+    rest: "https://cosmos-rest.publicnode.com",
     chainId: "cosmoshub-4",
     chainName: "Cosmos Hub",
     stakeCurrency: {

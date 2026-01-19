@@ -44,18 +44,12 @@ export class ObservableQueryRewardsInner extends ObservableQueryTendermint<Rewar
             ...r,
             reward: r.reward?.map((coin) => ({
               ...coin,
-              amount: new Dec(
-                coin.amount,
-                chainInfo?.currencies?.[0]?.coinDecimals
-              ).toString(),
+              amount: new Dec(coin.amount, 18).toString(),
             })),
           })),
           total: result?.total?.map((coin) => ({
             ...coin,
-            amount: new Dec(
-              coin.amount,
-              chainInfo?.currencies?.[0]?.coinDecimals
-            ).toString(),
+            amount: new Dec(coin.amount, 18).toString(),
           })),
         };
         return camelToSnake(converted) as Rewards;
