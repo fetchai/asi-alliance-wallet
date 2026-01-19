@@ -10,6 +10,7 @@ import { AppCurrency } from "@keplr-wallet/types";
 import { CardanoSendAdapter } from "../cardano/send-adapter";
 import { MessageRequester } from "@keplr-wallet/router";
 import { DenomHelper } from "@keplr-wallet/common";
+import type { CardanoNetwork } from "@keplr-wallet/cardano";
 
 export interface CardanoAccount {
   readonly isCardano: boolean;
@@ -90,7 +91,7 @@ export interface CardanoAccountMixin {
 
 export const CardanoAccountMixin = {
   use(
-    options?: { mnemonicWords: string[]; accountIndex?: number; network?: 'mainnet' | 'testnet'; blockfrostApiKey?: string }
+    options?: { mnemonicWords: string[]; accountIndex?: number; network?: CardanoNetwork; blockfrostApiKey?: string }
   ): (
     _base: AccountSetBaseSuper & CosmosAccount & CosmwasmAccount & SecretAccount & EthereumAccount,
     _chainGetter: ChainGetter,
@@ -104,7 +105,7 @@ export const CardanoAccountMixin = {
         const { CardanoWalletManager } = await import("@keplr-wallet/cardano");
         
 
-        let network: 'mainnet' | 'testnet' = 'mainnet';
+        let network: CardanoNetwork = 'mainnet';
         if (options.network) {
           network = options.network;
         } else {

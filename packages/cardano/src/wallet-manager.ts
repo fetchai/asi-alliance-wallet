@@ -1,5 +1,6 @@
 import { firstValueFrom } from 'rxjs';
-import { getNetworkConfig, type BlockfrostConfig, type CardanoNetwork } from './adapters/env-adapter';
+import { getNetworkConfig, type BlockfrostConfig } from './adapters/env-adapter';
+import type { CardanoNetwork } from './utils/network';
 import { Cardano } from '@cardano-sdk/core';
 import type { Assets } from '@cardano-sdk/wallet';
 

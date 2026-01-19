@@ -1,4 +1,5 @@
 import { CARDANO_SERVICES_URLS } from '../config/config';
+import type { CardanoNetwork } from '../utils/network';
 
 export interface BlockfrostConfig {
   baseUrl: string;
@@ -8,8 +9,6 @@ export interface BlockfrostConfig {
 export interface CardanoServicesConfig {
   baseUrl: string;
 }
-
-export type CardanoNetwork = 'mainnet' | 'preview' | 'preprod' | 'sanchonet';
 
 export interface NetworkConfigs {
   mainnet: BlockfrostConfig;
