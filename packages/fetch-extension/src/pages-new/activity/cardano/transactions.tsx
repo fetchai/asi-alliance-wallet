@@ -52,6 +52,7 @@ export const CardanoTransactionsTab = observer(() => {
   const navigate = useNavigate();
   const { chainStore } = useStore();
   const chainId = chainStore.current.chainId;
+  const denom = chainStore.current.stakeCurrency.coinDenom;
 
   const [items, setItems] = useState<CardanoTxHistoryItem[]>([]);
   const [mightHaveMore, setMightHaveMore] = useState(false);
@@ -232,7 +233,7 @@ export const CardanoTransactionsTab = observer(() => {
             </div>
             <div className={styles["amountWrapper"]}>
               <div className={styles["amountNumber"]}>{amountAda}</div>
-              <div className={styles["amountAlphabetic"]}>ADA</div>
+              <div className={styles["amountAlphabetic"]}>{denom}</div>
             </div>
           </div>
         );

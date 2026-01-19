@@ -287,10 +287,15 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
               chainStore.current.chainId === "cardano-preview" ||
               chainStore.current.chainId === "cardano-preprod" ||
               chainStore.current.chainId === "cardano-mainnet";
+            const isCardanoSupportedWallet =
+              keyStore.type === "mnemonic" &&
+              `${keyStore.meta?.["mnemonicLength"]}` === "24";
             const walletId = keyStore.meta?.["__id__"] || "";
             const hasAddressForWallet = Boolean(addressesById[walletId]);
             const isClickable =
-              !keyStore.selected && (!isCardanoNetwork || hasAddressForWallet);
+              !keyStore.selected &&
+              (!isCardanoNetwork ||
+                (isCardanoSupportedWallet && hasAddressForWallet));
 
             return (
               <Card
@@ -358,6 +363,10 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                     chainStore.current.chainId === "cardano-preprod" ||
                     chainStore.current.chainId === "cardano-mainnet";
 
+                  if (isCardanoNetwork && !isCardanoSupportedWallet) {
+                    return "Not supported on Cardano";
+                  }
+
                   if (isLoadingAddresses) {
                     return <Skeleton height="14px" width="120px" />;
                   }
@@ -373,7 +382,9 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                   padding: keyStore.selected ? "18px 18px" : "18px 16px",
                   cursor: isClickable ? undefined : "default",
                   opacity:
-                    isCardanoNetwork && !hasAddressForWallet ? 0.6 : undefined,
+                    isCardanoNetwork && !isCardanoSupportedWallet
+                      ? 0.6
+                      : undefined,
                 }}
                 isActive={keyStore.selected}
                 onClick={

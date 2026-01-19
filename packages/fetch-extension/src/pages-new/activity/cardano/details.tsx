@@ -5,6 +5,7 @@ import { Card } from "@components-v2/card";
 import style from "../activity-details/style.module.scss";
 import { useNotification } from "@components/notification";
 import { useIntl } from "react-intl";
+import { useStore } from "../../../stores";
 
 type CardanoTxHistoryItem = {
   id: string;
@@ -48,6 +49,8 @@ export const CardanoActivityDetails = () => {
   const item = (location?.state?.item ?? null) as CardanoTxHistoryItem | null;
   const notification = useNotification();
   const intl = useIntl();
+  const { chainStore } = useStore();
+  const denom = chainStore.current.stakeCurrency.coinDenom;
 
   const amountAda = useMemo(() => (item ? formatLovelaceToAda(item.amount) : "0"), [item]);
   const feeAda = useMemo(() => (item?.fee ? formatLovelaceToAda(item.fee) : "0"), [item]);
@@ -93,14 +96,14 @@ export const CardanoActivityDetails = () => {
             leftImage={require("@assets/svg/wireframe/wallet.svg")}
             leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
             heading={"Amount"}
-            subheading={`${amountAda} ADA`}
+            subheading={`${amountAda} ${denom}`}
           />
 
           <Card
             leftImage={require("@assets/svg/wireframe/wallet.svg")}
             leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
             heading={"Fee"}
-            subheading={`${feeAda} ADA`}
+            subheading={`${feeAda} ${denom}`}
           />
 
           <Card

@@ -9,6 +9,8 @@ export interface CardanoServicesConfig {
   baseUrl: string;
 }
 
+export type CardanoNetwork = 'mainnet' | 'preview' | 'preprod' | 'sanchonet';
+
 export interface NetworkConfigs {
   mainnet: BlockfrostConfig;
   preview: BlockfrostConfig;
@@ -61,55 +63,31 @@ export function getCardanoServicesConfigs(): CardanoServicesConfigs {
   };
 }
 
-export function getApiKeyForNetwork(network: 'mainnet' | 'testnet'): string | null {
+export function getApiKeyForNetwork(network: CardanoNetwork): string | null {
   const configs = getBlockfrostConfigs();
   
-  if (network === 'mainnet') {
-    return configs.mainnet.projectId || null;
-  } else {
-    // Try preview first, then preprod, then fallback
-    return configs.preview.projectId || 
-           configs.preprod.projectId || 
-           configs.sanchonet.projectId || 
-           null;
-  }
+  const config = configs[network];
+  return config?.projectId || null;
 }
 
 export function isValidApiKey(key: string | null | undefined): boolean {
   return !!(key && key !== '' && key !== '<API_KEY>' && key !== 'undefined');
 }
 
-export function getNetworkConfig(network: 'mainnet' | 'testnet'): BlockfrostConfig | null {
+export function getNetworkConfig(network: CardanoNetwork): BlockfrostConfig | null {
   const configs = getBlockfrostConfigs();
   
-  if (network === 'mainnet') {
-    return isValidApiKey(configs.mainnet.projectId) ? configs.mainnet : null;
-  } else {
-    // Try preview first, then preprod, then sanchonet
-    if (isValidApiKey(configs.preview.projectId)) {
-      return configs.preview;
-    }
-    if (isValidApiKey(configs.preprod.projectId)) {
-      return configs.preprod;
-    }
-    if (isValidApiKey(configs.sanchonet.projectId)) {
-      return configs.sanchonet;
-    }
-    return null;
-  }
+  const config = configs[network];
+  return config && isValidApiKey(config.projectId) ? config : null;
 }
 
-export function getCardanoServicesConfig(network: 'mainnet' | 'testnet'): CardanoServicesConfig | null {
+export function getCardanoServicesConfig(network: CardanoNetwork): CardanoServicesConfig | null {
   const configs = getCardanoServicesConfigs();
   
-  if (network === 'mainnet') {
-    return configs.mainnet;
-  } else {
-    return configs.preview || configs.preprod || configs.sanchonet;
-  }
+  return configs[network] ?? null;
 }
 
-export function logApiKeyStatus(network: 'mainnet' | 'testnet'): void {
+export function logApiKeyStatus(network: CardanoNetwork): void {
   const config = getNetworkConfig(network);
   
   if (config && isValidApiKey(config.projectId)) {

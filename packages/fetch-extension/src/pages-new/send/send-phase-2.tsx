@@ -299,6 +299,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const [isBuildingCardanoDraft, setIsBuildingCardanoDraft] = useState(false);
     const isCardano = chainStore.current.features?.includes("cardano") ?? false;
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const cardanoDenom = chainStore.current.stakeCurrency.coinDenom;
     const shouldRequireCardanoPassword =
       isCardano && keyRingStore.keyRingType === "mnemonic";
     const [isCardanoPasswordConfirmOpen, setIsCardanoPasswordConfirmOpen] =
@@ -506,7 +507,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const feeText = (() => {
       try {
         if (isCardano && cardanoDraft?.fee) {
-          return `${formatLovelaceToAda(cardanoDraft.fee)} ADA`;
+          return `${formatLovelaceToAda(cardanoDraft.fee)} ${cardanoDenom}`;
         }
         const fee = sendConfigs?.feeConfig?.fee;
         if (fee && typeof fee.toString === "function") {

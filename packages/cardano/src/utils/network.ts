@@ -1,25 +1,36 @@
 
-export function getCardanoNetworkFromChainId(chainId: string): 'mainnet' | 'testnet' {
+export type CardanoNetwork = 'mainnet' | 'preview' | 'preprod' | 'sanchonet';
+
+export function getCardanoNetworkFromChainId(chainId: string): CardanoNetwork {
   switch (chainId) {
     case 'cardano-mainnet':
       return 'mainnet';
     case 'cardano-preview':
+      return 'preview';
     case 'cardano-preprod':
+      return 'preprod';
     case 'cardano-sanchonet':
-      return 'testnet';
+      return 'sanchonet';
     default:
-
       return 'mainnet';
   }
 }
 
 
-export async function getCardanoChainIdFromNetwork(network: 'mainnet' | 'testnet') {
+export async function getCardanoChainIdFromNetwork(network: CardanoNetwork) {
   const { Cardano } = await import('@cardano-sdk/core');
   
-  return network === 'mainnet' 
-    ? Cardano.ChainIds.Mainnet 
-    : Cardano.ChainIds.Preview;
+  switch (network) {
+    case 'mainnet':
+      return Cardano.ChainIds.Mainnet;
+    case 'preprod':
+      return Cardano.ChainIds.Preprod;
+    case 'sanchonet':
+      return Cardano.ChainIds.Sanchonet;
+    case 'preview':
+    default:
+      return Cardano.ChainIds.Preview;
+  }
 }
 
 

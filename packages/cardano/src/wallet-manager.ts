@@ -1,5 +1,5 @@
 import { firstValueFrom } from 'rxjs';
-import { getNetworkConfig, type BlockfrostConfig } from './adapters/env-adapter';
+import { getNetworkConfig, type BlockfrostConfig, type CardanoNetwork } from './adapters/env-adapter';
 import { Cardano } from '@cardano-sdk/core';
 import type { Assets } from '@cardano-sdk/wallet';
 
@@ -56,7 +56,7 @@ export class CardanoWalletManager {
 
   static async create({ mnemonicWords, network, accountIndex = 0 }: {
     mnemonicWords: string[];
-    network: 'mainnet' | 'testnet';
+    network: CardanoNetwork;
     accountIndex?: number;
   }): Promise<CardanoWalletManager> {
     // Create key agent
@@ -69,7 +69,13 @@ export class CardanoWalletManager {
       mnemonicWords,
       accountIndex,
       purpose: 1852,
-      chainId: network === 'mainnet' ? Cardano.ChainIds.Mainnet : Cardano.ChainIds.Preview,
+      chainId: network === 'mainnet'
+        ? Cardano.ChainIds.Mainnet
+        : network === 'preprod'
+          ? Cardano.ChainIds.Preprod
+          : network === 'sanchonet'
+            ? Cardano.ChainIds.Sanchonet
+            : Cardano.ChainIds.Preview,
       getPassphrase: async () => new Uint8Array()
     }, { bip32Ed25519, logger: console });
 
