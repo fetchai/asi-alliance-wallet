@@ -160,15 +160,12 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
         commissionRates: {
           maxRate: new Dec(
             item.commission.commissionRates.maxRate,
-            decimals
+            18
           ).toString(),
-          rate: new Dec(
-            item.commission.commissionRates.rate,
-            decimals
-          ).toString(),
+          rate: new Dec(item.commission.commissionRates.rate, 18).toString(),
           maxChangeRate: new Dec(
             item.commission.commissionRates.maxChangeRate,
-            decimals
+            18
           ).toString(),
         },
       },

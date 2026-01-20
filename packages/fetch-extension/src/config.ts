@@ -3127,6 +3127,54 @@ const EmbedChainInfos: ChainInfo[] = [
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
   },
+  {
+    rpc: "https://rpc-gemini.fetch.ai",
+    rest: "https://rest-gemini.fetch.ai",
+    chainId: "gemini-1",
+    chainName: "Gemini",
+    hideInUI: false,
+    stakeCurrency: {
+      coinDenom: "TESTFET",
+      coinMinimalDenom: "atestfet",
+      coinDecimals: 18,
+      coinGeckoId: "fetch-ai",
+    },
+    bip44: {
+      coinType: 118,
+    },
+    bech32Config: Bech32Address.defaultBech32Config("fetch"),
+    type: "testnet",
+    currencies: [
+      {
+        coinDenom: "TESTFET",
+        coinMinimalDenom: "atestfet",
+        coinDecimals: 18,
+        coinGeckoId: "fetch-ai",
+      },
+      {
+        coinDenom: "MOBX",
+        coinMinimalDenom: "nanomobx",
+        coinDecimals: 9,
+      },
+    ],
+    feeCurrencies: [
+      {
+        coinDenom: "TESTFET",
+        coinMinimalDenom: "atestfet",
+        coinDecimals: 18,
+        coinGeckoId: "fetch-ai",
+        gasPriceStep: {
+          low: 0,
+          average: 5000000000,
+          high: 6250000000,
+        },
+      },
+    ],
+    features: ["cosmwasm"],
+    walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
+    govUrl: "https://explore-dorado.fetch.ai/proposals/",
+    chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
+  },
   // {
   //   rpc: "https://rpc-eridanus-1.fetch.ai",
   //   rest: "https://rest-eridanus-1.fetch.ai",
