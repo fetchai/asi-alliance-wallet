@@ -7,7 +7,7 @@ import React, {
 
 import { useNavigate, useLocation, useParams } from "react-router";
 import { FormattedMessage, useIntl } from "react-intl";
-import { Form } from "reactstrap";
+import { Alert, Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { WarningView } from "./warning-view";
 import classnames from "classnames";
@@ -19,6 +19,7 @@ import { HeaderLayout } from "@layouts-v2/header-layout";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { PasswordInput } from "@components-v2/form";
 import { useNotification } from "@components/notification";
+import { Card } from "@components-v2/card";
 
 interface FormData {
   password: string;
@@ -104,31 +105,60 @@ export const ExportPage: FunctionComponent = observer(() => {
     >
       <div className={style["container"]}>
         {keyRing ? (
-          <div
-            className={classnames(style["mnemonic"], {
-              [style["altHex"]]: type !== "mnemonic",
-            })}
-          >
+          <React.Fragment>
+            <Alert className={style["alertMessage"]}>
+              <i className="fas fa-exclamation-circle" />
+              <div>
+                <h1>
+                  Your secret&nbsp;
+                  {type === "mnemonic" ? "Recovery Phrase" : "Private Key"}
+                </h1>
+                <p>Make sure no one is looking at your screen</p>
+              </div>
+            </Alert>
             <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "6px",
-                marginBottom: "30px",
-              }}
+              className={classnames(style["mnemonic"], {
+                [style["altHex"]]: type !== "mnemonic",
+              })}
             >
-              {type === "mnemonic"
-                ? displayKeyRing.map((key) => (
-                    <div
-                      style={{
-                        fontSize: "26px",
-                      }}
-                      key={key}
-                    >
-                      {key}
-                    </div>
-                  ))
-                : displayKeyRing[0] &&
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  margin: "30px 0px",
+                }}
+              >
+                {type === "mnemonic" ? (
+                  <Card
+                    heading=""
+                    style={{
+                      borderRadius: "8px",
+                    }}
+                    rightContent={
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "6px",
+                          flexWrap: "wrap",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {displayKeyRing.map((key) => (
+                          <div
+                            style={{
+                              fontSize: "20px",
+                            }}
+                            key={key}
+                          >
+                            {key}
+                          </div>
+                        ))}
+                      </div>
+                    }
+                  />
+                ) : (
+                  displayKeyRing[0] &&
                   (type === "ledger" ? (
                     Object.keys(JSON.parse(displayKeyRing[0])).map((key) => (
                       <div
@@ -139,7 +169,7 @@ export const ExportPage: FunctionComponent = observer(() => {
                       >
                         <div
                           style={{
-                            fontSize: "26px",
+                            fontSize: "24px",
                             alignItems: "center",
                             marginBottom: "18px",
                           }}
@@ -158,30 +188,40 @@ export const ExportPage: FunctionComponent = observer(() => {
                       </div>
                     ))
                   ) : (
-                    <div
+                    <Card
+                      heading=""
                       style={{
-                        fontSize: "18px",
-                        wordBreak: "break-all",
+                        borderRadius: "8px",
                       }}
-                    >
-                      {displayKeyRing[0]}
-                    </div>
-                  ))}
+                      rightContent={
+                        <div
+                          style={{
+                            fontSize: "18px",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {displayKeyRing[0]}
+                        </div>
+                      }
+                    />
+                  ))
+                )}
+              </div>
+              <ButtonV2
+                variant="dark"
+                styleProps={{
+                  position: "fixed",
+                  bottom: "12px",
+                  width: "333px",
+                  height: "56px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                }}
+                text="Copy to clipboard"
+                onClick={() => copyMnemonic(keyRing)}
+              />
             </div>
-            <ButtonV2
-              variant="dark"
-              styleProps={{
-                position: "fixed",
-                bottom: "12px",
-                width: "333px",
-                height: "56px",
-                left: "50%",
-                transform: "translateX(-50%)",
-              }}
-              text={"Copy to clipboard"}
-              onClick={() => copyMnemonic(keyRing)}
-            />
-          </div>
+          </React.Fragment>
         ) : (
           <React.Fragment>
             <WarningView />
