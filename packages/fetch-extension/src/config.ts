@@ -152,8 +152,10 @@ const EmbedChainInfos: ChainInfo[] = [
     govUrl: "https://www.mintscan.io/fetchai/proposals/",
   },
   {
-    rpc: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
-    rest: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
+    rpc: "https://evm-1.keplr.app",
+    rest: "https://evm-1.keplr.app",
+    // rpc: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
+    // rest: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
     chainId: "1",
     chainName: "Ethereum",
     explorerUrl: "https://etherscan.io",
