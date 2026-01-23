@@ -3175,7 +3175,6 @@ const EmbedChainInfos: ChainInfo[] = [
     features: ["cosmwasm"],
     walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
-    chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
   },
   // {
   //   rpc: "https://rpc-eridanus-1.fetch.ai",
