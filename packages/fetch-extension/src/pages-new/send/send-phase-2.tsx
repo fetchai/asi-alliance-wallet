@@ -250,7 +250,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         </div>
         <ButtonV2
           variant="dark"
-          text="Review transaction"
+          text="Review Transaction"
           styleProps={{
             width: "94%",
             padding: "12px",

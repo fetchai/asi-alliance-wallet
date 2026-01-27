@@ -173,9 +173,15 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                         amountConfig.sendCurrency.coinDecimals
                       )
                 }
+                onBeforeInput={(e) => {
+                  const data = (e as any).data;
+                  if (data && !/[0-9.]/.test(data)) {
+                    e.preventDefault();
+                  }
+                }}
                 onChange={(e: any) => {
                   e.preventDefault();
-                  let value = e.target.value;
+                  let value = e.target.value.replace(/[^0-9.]/g, "");
 
                   if (value === "") {
                     amountConfig.setAmount("");

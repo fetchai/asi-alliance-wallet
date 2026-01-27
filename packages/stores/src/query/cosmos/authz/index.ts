@@ -7,10 +7,8 @@ import {
   ObservableQueryTendermint,
 } from "../../../common";
 import { Granter } from "./types";
-import {
-  AuthzExtension,
-  setupAuthzExtension,
-} from "@cosmjs/stargate/build/modules/authz/queries";
+import { setupAuthzExtension } from "@cosmjs/stargate";
+import { AuthzExtension } from "@cosmjs/stargate/build/modules/authz/queries";
 import { QueryGranterGrantsResponse } from "cosmjs-types/cosmos/authz/v1beta1/query";
 
 export class ObservableQueryAuthZGranterInner extends ObservableQueryTendermint<Granter> {

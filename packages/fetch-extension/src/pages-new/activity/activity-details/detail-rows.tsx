@@ -8,7 +8,7 @@ import { DetailRow } from "./detail-row";
 import { useStore } from "../../../stores";
 import { useNotification } from "@components/notification";
 import { useIntl } from "react-intl";
-import { EXPLORER_URL } from "../../../config.ui.var";
+import { EXPLORER_URL, GEMINI_EXPLORER_URL } from "../../../config.ui.var";
 
 export const DetailRows = ({ details }: { details: any }) => {
   const currency: AppCurrency = {
@@ -23,8 +23,17 @@ export const DetailRows = ({ details }: { details: any }) => {
   const notification = useNotification();
   const intl = useIntl();
   const { chainStore, analyticsStore } = useStore();
+
+  const explorerBaseURL = () => {
+    if (chainStore.current.chainId === "gemini-1") {
+      return GEMINI_EXPLORER_URL;
+    } else {
+      return `${EXPLORER_URL}/${chainStore.current.chainId}`;
+    }
+  };
+
   const handleClick = () => {
-    const url = `${EXPLORER_URL}/${chainStore.current.chainId}/transactions/${details.hash}/`;
+    const url = `${explorerBaseURL()}/transactions/${details.hash}/`;
     window.open(url, "_blank", "noopener,noreferrer");
     analyticsStore.logEvent("view_on_mintscan_click", {
       chainId: chainStore.current.chainId,

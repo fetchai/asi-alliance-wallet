@@ -19,7 +19,8 @@
     "@keplr-wallet/provider-mock": "0.12.12"
   },
   "dependencies": {
-    "@cosmjs/stargate": "^0.36.2",
+    "@cosmjs/stargate": "^0.38.1",
+    "@cosmjs/tendermint-rpc": "^0.38.1",
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/address": "^5.7.0",
@@ -36,7 +37,7 @@
     "@keplr-wallet/unit": "0.12.12",
     "axios": "^0.27.2",
     "buffer": "^6.0.3",
-    "cosmjs-types": "^0.10.1",
+    "cosmjs-types": "^0.11.0",
     "deepmerge": "^4.2.2",
     "eventemitter3": "^4.0.7",
     "mobx": "^6.1.7",

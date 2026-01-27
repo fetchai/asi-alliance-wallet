@@ -142,8 +142,8 @@
   "dependencies": {
     "@axelar-network/axelarjs-sdk": "^0.13.6",
     "@azoyalabs/fns-client": "0.0.3",
-    "@cosmjs/cosmwasm-stargate": "^0.31.0",
-    "@cosmjs/stargate": "^0.37.0",
+    "@cosmjs/cosmwasm-stargate": "^0.38.1",
+    "@cosmjs/stargate": "^0.38.1",
     "vite": "^5.0.4"
   }
 }

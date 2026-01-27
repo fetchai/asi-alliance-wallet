@@ -71,7 +71,7 @@ export const StakeValidatorCard = ({
             <img src={thumbnailUrl} alt={"validator"} />
           ) : (
             <div className={style["validator-avatar"]}>
-              {heading?.toString()[0].toUpperCase()}
+              {heading?.toString()?.[0]?.toUpperCase()}
             </div>
           )}
 
