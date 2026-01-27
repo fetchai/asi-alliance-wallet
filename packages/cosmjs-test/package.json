@@ -11,7 +11,7 @@
     "lint-fix": "eslint --fix \"src/**/*\" && prettier --write \"src/**/*\""
   },
   "devDependencies": {
-    "@cosmjs/stargate": "^0.38.1",
+    "@cosmjs/stargate": "^0.36.1",
     "@keplr-wallet/provider-mock": "0.12.12",
     "secretjs": "^1.6.0"
   }
