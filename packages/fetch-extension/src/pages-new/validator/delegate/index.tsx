@@ -6,10 +6,15 @@ import { ValidatorCardV2 } from "@components-v2/validator-card";
 import { useNotification } from "@components/notification";
 import { useDelegateTxConfig } from "@keplr-wallet/hooks";
 import { Staking } from "@keplr-wallet/stores";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { useIntl } from "react-intl";
 import { useLocation, useNavigate } from "react-router";
 import { Alert, FormGroup } from "reactstrap";
@@ -18,6 +23,7 @@ import { useStore } from "../../../stores";
 import { useLanguage } from "../../../languages";
 import style from "./style.module.scss";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { removeComma } from "@utils/format";
 
 export const Delegate: FunctionComponent = observer(() => {
   const location = useLocation();
@@ -37,6 +43,7 @@ export const Delegate: FunctionComponent = observer(() => {
   } = useStore();
 
   const [isToggleClicked, setIsToggleClicked] = useState<boolean>(false);
+  const [_, setIsMaxAmount] = useState<boolean>(false);
 
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
@@ -195,6 +202,29 @@ export const Delegate: FunctionComponent = observer(() => {
 
   const intl = useIntl();
 
+  const onMaxButtonClick = useCallback(() => {
+    setIsMaxAmount((prev) => {
+      if (!prev) {
+        const fees = sendConfigs.feeConfig.getFeeTypePrettyForFeeCurrency(
+          sendConfigs?.feeConfig?.feeCurrencies?.[0],
+          sendConfigs.feeConfig.feeType ?? "average"
+        );
+
+        const actualAmount = balance
+          .sub(fees)
+          .shrink(true)
+          .hideDenom(true)
+          .toString();
+
+        sendConfigs.amountConfig.setAmount(removeComma(actualAmount));
+      } else {
+        sendConfigs.amountConfig.setAmount("");
+      }
+
+      return !prev;
+    });
+  }, [balance, sendConfigs]);
+
   return (
     <HeaderLayout
       smallTitle={true}
@@ -226,7 +256,9 @@ export const Delegate: FunctionComponent = observer(() => {
             <UseMaxButton
               amountConfig={sendConfigs.amountConfig}
               isToggleClicked={isToggleClicked}
+              disableAllBalance={balance.toDec().lte(new Dec(0))}
               setIsToggleClicked={setIsToggleClicked}
+              onMaxButtonClick={onMaxButtonClick}
             />
 
             <MemoInput memoConfig={sendConfigs.memoConfig} />

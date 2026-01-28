@@ -27,12 +27,14 @@ export const ADDITIONAL_INTL_MESSAGES: IntlMessages = {};
 
 export const AUTH_SERVER = "https://accounts.fetch.ai/v1";
 export const EXPLORER_URL = "https://hub.fetch.ai";
+export const GEMINI_EXPLORER_URL = "https://explore-gemini.fetch.ai";
 
 export const FNS_TEST_ADDRESS = "fetch1s84mudgmjfjmkef7ludqnwy0fchh3mf4p4rmll";
 
 export const CHAIN_ID_DORADO = "dorado-1";
 export const CHAIN_ID_ERIDANUS = "eridanus-1";
 export const CHAIN_ID_FETCHHUB = "fetchhub-4";
+export const CHAIN_ID_GEMINI = "gemini-1";
 export const CHAIN_ID_LOCAL_TEST_NETWORK = "test-local";
 export const CHAIN_ID_REMOTE_TEST_NETWORK = "test";
 export const GROUP_PAGE_COUNT = 30;

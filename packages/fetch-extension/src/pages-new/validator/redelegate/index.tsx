@@ -77,6 +77,11 @@ export const Redelegate = observer(() => {
     ...unbondingValidators.validators,
   ].filter((validator) => validator.operator_address != validatorAddress);
 
+  const isLoading =
+    bondedValidators.isFetching ||
+    unbondedValidators.isFetching ||
+    unbondingValidators.isFetching;
+
   const [selectedValidator, setSelectedValidator] = useState<Staking.Validator>(
     validatorsList[0]
   );
@@ -379,6 +384,7 @@ export const Redelegate = observer(() => {
           }}
         >
           <SelectValidatorList
+            isLoading={isLoading}
             filteredValidators={validatorsList}
             selectedValidator={selectedValidator}
             setShowValidatorDropdown={setShowValidatorDropdown}

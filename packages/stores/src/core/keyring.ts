@@ -368,6 +368,25 @@ export class KeyRingStore {
   }
 
   @flow
+  *refreshMultiKeyStoreInfo() {
+    const currentSelectedIndex = this.multiKeyStoreInfo.findIndex(
+      (keyStore) => keyStore.selected
+    );
+    const updatedMultiKeyStoreInfo = (yield* toGenerator(
+      this.requester.sendMessage(BACKGROUND_PORT, new GetMultiKeyStoreInfoMsg())
+    )).multiKeyStoreInfo;
+    const updatedSelectedIndex = updatedMultiKeyStoreInfo.findIndex(
+      (keyStore) => keyStore.selected
+    );
+    this._multiKeyStoreInfo = updatedMultiKeyStoreInfo;
+    // if selected index is changed in background keystore, update it here
+    if (currentSelectedIndex !== updatedSelectedIndex) {
+      this.dispatchKeyStoreChangeEvent();
+      this.selectablesMap.forEach((selectables) => selectables.refresh());
+    }
+  }
+
+  @flow
   *changeKeyRing(index: number) {
     const msg = new ChangeKeyRingMsg(index);
     this._multiKeyStoreInfo = (
@@ -436,14 +455,6 @@ export class KeyRingStore {
   @flow
   *rejectAll() {
     yield this.interactionStore.rejectAll("unlock");
-  }
-
-  @flow
-  *refreshMultiKeyStoreInfo() {
-    const result = (yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, new GetMultiKeyStoreInfoMsg())
-    )) as { multiKeyStoreInfo: MultiKeyStoreInfoWithSelected };
-    this._multiKeyStoreInfo = result.multiKeyStoreInfo;
   }
 
   @flow

@@ -62,7 +62,9 @@ export const MyStakes = observer(
       queries.cosmos.queryDelegations.getQueryBech32Address(
         account.bech32Address
       );
-    const delegations = queryDelegations.delegations;
+    const delegations = queryDelegations.delegations.filter((del) =>
+      new Dec(del.balance.amount).gt(new Dec(0))
+    );
 
     const queryReward = queries.cosmos.queryRewards.getQueryBech32Address(
       account.bech32Address

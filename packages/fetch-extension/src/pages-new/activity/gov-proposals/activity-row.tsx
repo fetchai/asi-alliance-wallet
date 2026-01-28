@@ -3,7 +3,7 @@ import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 import { StatusButton } from "@components-v2/status-button";
 import { useStore } from "../../../stores";
-import { EXPLORER_URL } from "../../../config.ui.var";
+import { EXPLORER_URL, GEMINI_EXPLORER_URL } from "../../../config.ui.var";
 
 const cardStatus = (status: string) => {
   switch (status) {
@@ -58,10 +58,19 @@ export const ActivityRow = observer(({ node }: { node: any }) => {
       pageName: "Activity",
     });
   };
+
+  const explorerBaseURL = () => {
+    if (chainStore.current.chainId === "gemini-1") {
+      return GEMINI_EXPLORER_URL;
+    } else {
+      return `${EXPLORER_URL}/${chainStore.current.chainId}`;
+    }
+  };
+
   return (
     <React.Fragment>
       <a
-        href={`${EXPLORER_URL}/${chainStore.current.chainId}/transactions/${id}`}
+        href={`${explorerBaseURL()}/transactions/${id}`}
         target="_blank"
         rel="noreferrer"
         onClick={handleClick}

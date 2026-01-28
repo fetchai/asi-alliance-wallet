@@ -145,3 +145,11 @@
     padding-left: 18px !important;
   }
 }
+
+.loading-message {
+  height: 310px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: $font-secondary;
+}

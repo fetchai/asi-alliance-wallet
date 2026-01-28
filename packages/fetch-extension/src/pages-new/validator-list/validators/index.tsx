@@ -6,10 +6,12 @@ import { Dec } from "@keplr-wallet/unit";
 import { StakeValidatorCard } from "@components-v2/stake-validator-card";
 import { shortenNumber } from "@utils/format";
 import { NoResults } from "@components-v2/no-results";
+import style from "../style.module.scss";
 
 type ValidatorData = Staking.Validator;
 
 interface ValidatorListProps {
+  isLoading: boolean;
   filteredValidators: ValidatorData[];
   bondedValidators: ObservableQueryValidatorsInner;
   unbondedValidators: ObservableQueryValidatorsInner;
@@ -18,6 +20,7 @@ interface ValidatorListProps {
 
 export const ValidatorsList = observer(
   ({
+    isLoading,
     filteredValidators,
     bondedValidators,
     unbondedValidators,
@@ -43,6 +46,11 @@ export const ValidatorsList = observer(
               />
             ))}
           </div>
+        ) : isLoading ? (
+          <div className={style["loading-message"]}>
+            Loading Validators...
+            <i className="fas fa-spinner fa-spin ml-2 mr-2" />
+          </div>
         ) : (
           <NoResults message="No Validators found" />
         )}
@@ -54,7 +62,7 @@ export const ValidatorsList = observer(
 const ValidatorItem: FunctionComponent<
   {
     validatorAddress: string;
-  } & Omit<ValidatorListProps, "filteredValidators">
+  } & Omit<ValidatorListProps, "filteredValidators" | "isLoading">
 > = observer(
   ({
     validatorAddress,

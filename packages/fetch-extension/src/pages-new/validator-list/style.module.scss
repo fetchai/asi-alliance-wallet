@@ -118,3 +118,11 @@
   display: flex;
   flex-direction: column;
 }
+
+.loading-message {
+  height: 310px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: $font-secondary;
+}

@@ -303,12 +303,33 @@ export const updateNodeOnTxnCompleted = (
 ) => {
   if (type === "withdrawRewards") {
     let sum = 0;
+    if (tx.log) {
+      try {
+        JSON.parse(tx.log).map((txn: any, index: number) => {
+          const currentAmount = parseAmount(txn.events[0].attributes[1].value);
+          activityStore.updateTxnJson(txId, index, currentAmount);
+          sum += Number(currentAmount[0]);
+        });
+      } catch (e) {
+        console.warn("Failed to parse tx.log, falling back to events", e);
+      }
+    }
 
-    JSON.parse(tx.log).map((txn: any, index: number) => {
-      const currentAmount = parseAmount(txn.events[0].attributes[1].value);
-      activityStore.updateTxnJson(txId, index, currentAmount);
-      sum += Number(currentAmount[0]);
-    });
+    // fallback: events (new SDKs)
+    if (!tx.log && Array.isArray(tx.events)) {
+      tx.events.forEach((event: any) => {
+        if (event.type !== "coin_received") return;
+
+        const amountAttr = event.attributes?.find(
+          (a: any) => a.key === "amount"
+        );
+
+        if (!amountAttr?.value) return;
+        const currentAmount = parseAmount(amountAttr.value);
+        activityStore.updateTxnJson(txId, 0, currentAmount);
+        sum += Number(currentAmount[0]);
+      });
+    }
     activityStore.updateTxnBalance(txId, sum);
   }
 

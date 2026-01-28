@@ -16,6 +16,9 @@ import { useStore } from "../../../stores";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
 import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { RefreshAccountList } from "@keplr-wallet/background";
 
 interface FormData {
   name: string;
@@ -104,6 +107,13 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
             data.password,
             {},
             selectedNetworks
+          );
+          await keyRingStore.changeKeyRing(
+            keyRingStore.multiKeyStoreInfo.length - 1
+          );
+          await new InExtensionMessageRequester().sendMessage(
+            BACKGROUND_PORT,
+            new RefreshAccountList()
           );
         })}
       >

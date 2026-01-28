@@ -157,7 +157,7 @@ export const StakeInput: FunctionComponent<{
           </div>
         }
         onChange={(e) => {
-          let value = e.target.value;
+          let value = e.target.value.replace(/[^0-9.]/g, "");
 
           if (value === "") {
             amountConfig.setAmount("");
@@ -203,6 +203,12 @@ export const StakeInput: FunctionComponent<{
             } else {
               amountConfig.setAmount(value);
             }
+          }
+        }}
+        onBeforeInput={(e) => {
+          const data = (e as any).data;
+          if (data && !/[0-9.]/.test(data)) {
+            e.preventDefault();
           }
         }}
         bottomContent={

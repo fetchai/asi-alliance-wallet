@@ -17,12 +17,10 @@ export class ObservableQueryDistributionParams extends ObservableQueryTendermint
       async (queryClient) => {
         const client = queryClient as unknown as DistributionExtension;
         const result = await client.distribution.params();
-        const decimals = chainInfo.currencies[0].coinDecimals;
         const normalize = (val: string): string => {
           if (!val) return "0";
-          return new Dec(val, decimals).toString();
+          return new Dec(val, 18).toString();
         };
-
         return {
           params: {
             communityTax: normalize(result.params.communityTax),

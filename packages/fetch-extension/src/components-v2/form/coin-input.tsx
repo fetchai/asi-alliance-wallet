@@ -34,6 +34,7 @@ export interface CoinInputProps {
   balanceText?: string;
   className?: string;
   label?: string;
+  showAllBalance?: boolean;
   disableAllBalance?: boolean;
   overrideSelectableCurrencies?: AppCurrency[];
   dropdownDisabled?: boolean;
@@ -41,7 +42,7 @@ export interface CoinInputProps {
 }
 
 export const CoinInput: FunctionComponent<CoinInputProps> = observer(
-  ({ amountConfig, disableAllBalance, onPress }) => {
+  ({ amountConfig, showAllBalance, disableAllBalance, onPress }) => {
     const intl = useIntl();
     const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
       string | undefined
@@ -221,9 +222,15 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                         amountConfig.sendCurrency.coinDecimals
                       )
                 }
+                onBeforeInput={(e) => {
+                  const data = (e as any).data;
+                  if (data && !/[0-9.]/.test(data)) {
+                    e.preventDefault();
+                  }
+                }}
                 onChange={(e: any) => {
                   e.preventDefault();
-                  let value = e.target.value;
+                  let value = e.target.value.replace(/[^0-9.]/g, "");
 
                   if (value === "") {
                     amountConfig.setAmount("");
@@ -231,7 +238,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                     return;
                   }
 
-                  if (!validateDecimalPlaces(value)) {
+                  if (!validateDecimalPlaces(value) || Number(value) < 0) {
                     return;
                   }
 
@@ -318,10 +325,11 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                   : amountConfig.sendCurrency.coinDenom
               }`}
             </button>
-            {!disableAllBalance ? (
+            {!showAllBalance ? (
               <button
                 style={{ margin: "0px" }}
                 className={styleCoinInput["widgetButton"]}
+                disabled={disableAllBalance}
                 onClick={(e) => {
                   e.preventDefault();
                   onPress ? onPress() : amountConfig.toggleIsMax();

@@ -2,6 +2,7 @@ import { NameAddress } from "@chatTypes";
 import {
   CHAIN_ID_DORADO,
   CHAIN_ID_FETCHHUB,
+  CHAIN_ID_GEMINI,
   CHAIN_ID_LOCAL_TEST_NETWORK,
   CHAIN_ID_REMOTE_TEST_NETWORK,
 } from "../config.ui.var";
@@ -119,5 +120,6 @@ export function isFeatureAvailable(chainId: string): boolean {
     CHAIN_ID_DORADO,
     CHAIN_ID_LOCAL_TEST_NETWORK,
     CHAIN_ID_REMOTE_TEST_NETWORK,
+    CHAIN_ID_GEMINI,
   ].includes(chainId);
 }

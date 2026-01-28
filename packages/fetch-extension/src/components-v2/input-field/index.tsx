@@ -14,6 +14,7 @@ interface Props {
   disabled?: boolean;
   value: string | number | undefined;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBeforeInput?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   inputContainerClassName?: string;
   placeholder?: string;
   rightIcon?: ReactElement;
@@ -32,6 +33,7 @@ export const InputField = ({
   bottomContent,
   inputContainerClassName,
   onClick,
+  onBeforeInput,
   labelStyle,
 }: Props) => {
   return (
@@ -61,6 +63,7 @@ export const InputField = ({
             value={value}
             placeholder={placeholder ? placeholder : ""}
             onChange={onChange}
+            onBeforeInput={onBeforeInput}
             disabled={disabled}
             style={disabled ? disabledStyle : inputStyle}
             min={0}

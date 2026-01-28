@@ -327,7 +327,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
       let isSubscribed = true;
       let pollInterval: NodeJS.Timeout | null = null;
-      
+
       const checkSync = async () => {
         try {
           if (!isSubscribed) return;
@@ -362,7 +362,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       setIsCardanoSyncing(true);
       checkSync();
       pollInterval = setInterval(checkSync, 2000);
-      
+
       return () => {
         isSubscribed = false;
         if (pollInterval) {
@@ -791,16 +791,18 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           )}
         </div>
         {isCardanoSyncing && (
-          <div style={{
-            textAlign: "center",
-            padding: "12px",
-            marginBottom: "8px",
-            background: "rgba(255, 193, 7, 0.1)",
-            border: "1px solid rgba(255, 193, 7, 0.3)",
-            borderRadius: "8px",
-            fontSize: "14px",
-            color: "#ffc107"
-          }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "12px",
+              marginBottom: "8px",
+              background: "rgba(255, 193, 7, 0.1)",
+              border: "1px solid rgba(255, 193, 7, 0.3)",
+              borderRadius: "8px",
+              fontSize: "14px",
+              color: "#ffc107",
+            }}
+          >
             <i className="fas fa-sync fa-spin" style={{ marginRight: "8px" }} />
             Syncing Cardano wallet... Please wait
           </div>
@@ -808,7 +810,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         <ButtonV2
           variant="dark"
           type="button"
-          text={isCardanoSyncing ? "Syncing wallet..." : "Review transaction"}
+          text={isCardanoSyncing ? "Syncing wallet..." : "Review Transaction"}
           styleProps={{
             width: "94%",
             padding: "12px",
@@ -821,7 +823,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           }}
           onClick={async (e: any) => {
             e.preventDefault();
-            if (accountInfo.isReadyToSendMsgs && txStateIsValid && !isCardanoSyncing) {
+            if (
+              accountInfo.isReadyToSendMsgs &&
+              txStateIsValid &&
+              !isCardanoSyncing
+            ) {
               if (shouldRequireCardanoPassword) {
                 setIsCardanoPasswordConfirmOpen(true);
                 return;
@@ -871,7 +877,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             }
           }}
           data-loading={accountInfo.isSendingMsg === "send"}
-          disabled={!accountInfo.isReadyToSendMsgs || !txStateIsValid || isCardanoSyncing}
+          disabled={
+            !accountInfo.isReadyToSendMsgs ||
+            !txStateIsValid ||
+            isCardanoSyncing
+          }
           btnBgEnabled={true}
         >
           {activityStore.getPendingTxnTypes[TXNTYPE.send] && (

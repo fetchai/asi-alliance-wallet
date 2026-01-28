@@ -24,8 +24,8 @@
   "dependencies": {
     "@amplitude/react-native": "^2.17.2",
     "@apollo/client": "^3.9.8",
-    "@cosmjs/proto-signing": "^0.34.0",
-    "@cosmjs/stargate": "^0.34.0",
+    "@cosmjs/proto-signing": "^0.38.1",
+    "@cosmjs/stargate": "^0.38.1",
     "@ethersproject/shims": "^5.7.0",
     "@fetchai/eth-migration": "^0.8.8",
     "@formatjs/intl-datetimeformat": "^6.10.0",

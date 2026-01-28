@@ -1,6 +1,10 @@
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useEffect, useState } from "react";
-import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
+import {
+  CHAIN_ID_DORADO,
+  CHAIN_ID_FETCHHUB,
+  CHAIN_ID_GEMINI,
+} from "../../../config.ui.var";
 import { useStore } from "../../../stores";
 import { FilterActivities, FilterDropdown } from "../filter";
 import { NoActivity } from "../no-activity";
@@ -82,6 +86,13 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
       setIsOpen(false);
     };
 
+    const isSupportedNetwork =
+      current.chainId === CHAIN_ID_FETCHHUB ||
+      current.chainId === CHAIN_ID_DORADO ||
+      current.chainId === CHAIN_ID_GEMINI ||
+      current.chainId === "test" ||
+      current.chainId === "test-local";
+
     return (
       <React.Fragment>
         <FilterDropdown
@@ -103,10 +114,7 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
           setIsOpen={setIsOpen}
           isOpen={isOpen}
         />
-        {current.chainId === CHAIN_ID_FETCHHUB ||
-        current.chainId === CHAIN_ID_DORADO ||
-        current.chainId === "test" ||
-        current.chainId === "test-local" ? (
+        {isSupportedNetwork ? (
           proposalNodes.length > 0 &&
           proposalNodes.filter((node: any) => filter.includes(node.option))
             .length > 0 ? (

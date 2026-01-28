@@ -36,3 +36,40 @@ div[class^="innerContainer-sidePanel"] .container {
     }
   }
 }
+
+.alertMessage {
+  font-family: $font-family-base;
+  display: flex;
+  padding: 12px;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
+  border-radius: 12px;
+  background: $bg-red-base;
+  border: none !important;
+  color: $font-dark;
+  margin-top: 16px;
+
+  i {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+
+  img {
+    padding-top: 4px;
+  }
+
+  h1 {
+    font-size: 14px;
+    font-weight: 500;
+    color: $font-dark;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 12px;
+    line-height: 1.57;
+    color: rgba($font-dark, 0.8);
+    margin: 0;
+  }
+}

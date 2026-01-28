@@ -128,7 +128,7 @@ export const StakeDetails = observer(
                     parseFloat(
                       rewards[0]?.maxDecimals(4).toString().split(" ")[0]
                     ) < 0.00001 ? (
-                      <span style={{ color: "white" }}>0</span>
+                      <span style={{ color: "var(--font-dark)" }}>0</span>
                     ) : (
                       rewards[0]?.maxDecimals(4).toString()
                     )}

@@ -36,6 +36,7 @@ export const AutoLockPage: FunctionComponent = () => {
     setValue,
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -53,6 +54,20 @@ export const AutoLockPage: FunctionComponent = () => {
   }, [setValue]);
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const validateInput = (value: string) => {
+    const duration = parseInt(value);
+
+    if (Number.isNaN(duration)) {
+      return "Please enter a valid number between 0 to 4320(3 days)";
+    }
+
+    if (duration < minDuration || duration > maxDuration) {
+      return intl.formatMessage({
+        id: "setting.autolock.error.out-of-range",
+      });
+    }
+  };
 
   return (
     <HeaderLayout
@@ -99,20 +114,11 @@ export const AutoLockPage: FunctionComponent = () => {
               required: intl.formatMessage({
                 id: "setting.autolock.error.required",
               }),
-              validate: (input: string): string | undefined => {
-                const duration = parseInt(input);
-
-                if (Number.isNaN(duration)) {
-                  return "NaN";
-                }
-
-                if (duration < minDuration || duration > maxDuration) {
-                  return intl.formatMessage({
-                    id: "setting.autolock.error.out-of-range",
-                  });
-                }
-              },
+              validate: validateInput,
             })}
+            onChange={(e: any) => {
+              setError("duration", { message: validateInput(e.target.value) });
+            }}
             type="number"
             pattern="[0-9]*"
             error={errors.duration && errors.duration.message}
@@ -129,6 +135,7 @@ export const AutoLockPage: FunctionComponent = () => {
               left: "0px",
               right: "0px",
             }}
+            disabled={Boolean(errors.duration && errors.duration.message)}
             dataLoading={isLoading}
             text={""}
           >
