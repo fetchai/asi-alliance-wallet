@@ -20,9 +20,9 @@ export class ExtensionKVStore extends BaseKVStore implements MultiGet {
         );
       } else {
         ExtensionKVStore.KVStoreProvider = {
-          get: browser.storage.local.get,
-          set: browser.storage.local.set,
-          multiGet: browser.storage.local.get,
+          get: browser.storage.local.get.bind(browser.storage.local),
+          set: browser.storage.local.set.bind(browser.storage.local),
+          multiGet: browser.storage.local.get.bind(browser.storage.local),
         };
       }
     }
