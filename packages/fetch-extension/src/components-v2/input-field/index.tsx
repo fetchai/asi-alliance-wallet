@@ -16,6 +16,7 @@ interface Props {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBeforeInput?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   inputContainerClassName?: string;
+  inputClassname?: string;
   placeholder?: string;
   rightIcon?: ReactElement;
   bottomContent?: ReactElement;
@@ -31,6 +32,7 @@ export const InputField = ({
   placeholder,
   rightIcon,
   bottomContent,
+  inputClassname,
   inputContainerClassName,
   onClick,
   onBeforeInput,
@@ -58,7 +60,7 @@ export const InputField = ({
         >
           <Input
             width={"100%"}
-            className="form-control-alternative"
+            className={classNames("form-control-alternative", inputClassname)}
             type={typeof value === "string" ? "text" : "number"}
             value={value}
             placeholder={placeholder ? placeholder : ""}
