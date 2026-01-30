@@ -8,7 +8,13 @@ import { DetailRow } from "./detail-row";
 import { useStore } from "../../../stores";
 import { useNotification } from "@components/notification";
 import { useIntl } from "react-intl";
-import { EXPLORER_URL, GEMINI_EXPLORER_URL } from "../../../config.ui.var";
+import {
+  CHAIN_ID_DORADO,
+  CHAIN_ID_FETCHHUB,
+  CHAIN_ID_GEMINI,
+  EXPLORER_URL,
+  GEMINI_EXPLORER_URL,
+} from "../../../config.ui.var";
 
 export const DetailRows = ({ details }: { details: any }) => {
   const currency: AppCurrency = {
@@ -23,20 +29,25 @@ export const DetailRows = ({ details }: { details: any }) => {
   const notification = useNotification();
   const intl = useIntl();
   const { chainStore, analyticsStore } = useStore();
+  const chainId = chainStore.current.chainId;
 
   const explorerBaseURL = () => {
-    if (chainStore.current.chainId === "gemini-1") {
+    if (chainId === CHAIN_ID_GEMINI) {
       return GEMINI_EXPLORER_URL;
-    } else {
-      return `${EXPLORER_URL}/${chainStore.current.chainId}`;
+    } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
+      return `${EXPLORER_URL}/${chainId}`;
     }
   };
 
   const handleClick = () => {
-    const url = `${explorerBaseURL()}/transactions/${details.hash}/`;
+    const explorerURL = explorerBaseURL();
+    if (!explorerURL) {
+      return;
+    }
+    const url = `${explorerURL}/transactions/${details.hash}/`;
     window.open(url, "_blank", "noopener,noreferrer");
     analyticsStore.logEvent("view_on_mintscan_click", {
-      chainId: chainStore.current.chainId,
+      chainId,
       chainName: chainStore.current.chainName,
       pageName: "Activity Detail",
     });
@@ -163,28 +174,36 @@ export const DetailRows = ({ details }: { details: any }) => {
                 </React.Fragment>
               )}
             </ButtonV2>{" "}
+            {[CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
+              chainId
+            ) && (
+              <ButtonV2
+                styleProps={{
+                  height: "48px",
+                  marginTop: 0,
+                }}
+                text=""
+                onClick={handleClick}
+              >
+                View on explorer
+              </ButtonV2>
+            )}
+          </div>
+        ) : (
+          [CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
+            chainId
+          ) && (
             <ButtonV2
               styleProps={{
                 height: "48px",
                 marginTop: 0,
               }}
-              text=""
               onClick={handleClick}
+              text=""
             >
               View on explorer
             </ButtonV2>
-          </div>
-        ) : (
-          <ButtonV2
-            styleProps={{
-              height: "48px",
-              marginTop: 0,
-            }}
-            onClick={handleClick}
-            text=""
-          >
-            View on explorer
-          </ButtonV2>
+          )
         )}
       </div>
     </div>

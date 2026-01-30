@@ -30,7 +30,7 @@ export const Stats = observer(
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
 
-    const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
+    const [isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
 
     const {
       chainStore,
@@ -538,11 +538,11 @@ export const Stats = observer(
               disabled={
                 rewardsBal === "0.000000000000000000 FET" ||
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                _isWithdrawingRewards
+                isWithdrawingRewards
               }
             >
               {(activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                _isWithdrawingRewards) && (
+                isWithdrawingRewards) && (
                 <i className="fas fa-spinner fa-spin ml-2 mr-2" />
               )}
             </ButtonV2>
