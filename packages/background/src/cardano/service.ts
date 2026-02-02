@@ -83,6 +83,19 @@ export class CardanoService {
     return this.keyRing !== undefined;
   }
 
+  /** Reset CardanoService to avoid stale wallet state after switches */
+  reset(): void {
+    for (const controller of this.txHistoryControllers.values()) {
+      try {
+        controller.sub?.unsubscribe();
+        controller.errorSub?.unsubscribe();
+      } catch {
+      }
+    }
+    this.txHistoryControllers.clear();
+    this.keyRing = undefined;
+  }
+
   /** Get Cardano public key/address for UI and signing */
   async getKey(chainId?: string): Promise<Key> {
     if (!this.keyRing) {

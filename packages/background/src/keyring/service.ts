@@ -73,6 +73,10 @@ export class KeyRingService {
     this.cardanoService = cardanoService;
   }
 
+  public getKeyRing(): KeyRing {
+    return this.keyRing;
+  }
+
   init(
     interactionService: InteractionService,
     chainsService: ChainsService,
@@ -1218,23 +1222,7 @@ Salt: ${salt}`;
   }> {
     try {
       const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
-
-      const ks = this.keyRing.getCurrentKeyStore();
-      if (
-        ks &&
-        ks.type === "mnemonic" &&
-        `${ks.meta?.["mnemonicLength"]}` === "24"
-      ) {
-        try {
-          await this.cardanoService.restoreFromKeyStore(
-            ks,
-            this.keyRing.currentPassword,
-            this.crypto
-          );
-        } catch (error) {
-          console.error("Failed to reinitialize CardanoService:", error);
-        }
-      }
+      this.cardanoService.reset();
 
       return result;
     } finally {

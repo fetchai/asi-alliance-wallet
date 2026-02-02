@@ -44,6 +44,7 @@ import {
 } from "./messages";
 import { KeyRingService } from "./service";
 import { Bech32Address } from "@keplr-wallet/cosmos";
+import { isValidCardanoAddress } from "@keplr-wallet/cardano";
 import { SignDoc } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import { KeyRingStatus } from "./keyring";
 import { ExtensionKVStore } from "@keplr-wallet/common";
@@ -765,14 +766,126 @@ const handleListAccountsMsg: (
       msg.origin
     );
 
+    const chainInfo = await service.chainsService.getChainInfo(chainId);
+    const isEVM = chainInfo.features?.includes("evm");
+    const isCardano = chainInfo.features?.includes("cardano");
+
+    const walletInfos = service.getKeyRing().getMultiKeyStoreInfo();
+    const walletIds = walletInfos.map((w) => (w.meta as any)?.["__id__"] || "");
+    const walletNames = walletInfos.map((w) => {
+      const meta = w.meta as any;
+      if (!meta) return "Unnamed Account";
+      try {
+        const nameByChain = meta["nameByChain"]
+          ? JSON.parse(meta["nameByChain"])
+          : {};
+        return nameByChain?.[chainId] || meta["name"] || "Unnamed Account";
+      } catch {
+        return meta["name"] || "Unnamed Account";
+      }
+    });
+
+    const tryBuildFromCache = async (): Promise<Account[] | null> => {
+      try {
+        if (walletIds.some((id) => !id)) return null;
+
+        if (isCardano) {
+          const cache = await service.getKeyRing().loadCardanoChainCache(chainId);
+
+          const supportedFlags = walletInfos.map((w) => {
+            const meta = w.meta as any;
+            if (meta?.["cardano"] === "true") return true;
+            if (w.type === "mnemonic") {
+              return `${meta?.["mnemonicLength"]}` === "24";
+            }
+            return false;
+          });
+
+          const hasAll = walletIds.every((id, idx) => {
+            if (!supportedFlags[idx]) return true;
+            const entry = cache[id];
+            return Boolean(entry?.address && isValidCardanoAddress(entry.address));
+          });
+
+          if (!hasAll) return null;
+
+          return walletIds.map((id, idx) => {
+            const entry = cache[id];
+            const address = entry?.address || "";
+            const pubKey = entry?.pubKey || "";
+            const isSupported = supportedFlags[idx];
+            const keyStoreType = walletInfos[idx]?.type;
+            const addressBytes = isSupported
+              ? Buffer.from(address, "utf8")
+              : new Uint8Array(0);
+            const pubKeyBytes = isSupported
+              ? Buffer.from(pubKey, "utf8")
+              : new Uint8Array(0);
+
+            return {
+              name: walletNames[idx],
+              algo: isSupported ? "ed25519" : "secp256k1",
+              pubKey: pubKeyBytes,
+              address: addressBytes,
+              bech32Address: address,
+              isNanoLedger: keyStoreType === "ledger",
+              isKeystone: keyStoreType === "keystone",
+              EVMAddress: "",
+            };
+          });
+        }
+
+        const cache = await service.getKeyRing().loadGenericChainCache(chainId);
+        const hasAll = walletIds.every((id) => Boolean(cache[id]?.address));
+        if (!hasAll) return null;
+
+        return walletIds.map((id, idx) => {
+          const entry = cache[id];
+          const addressHex = entry?.address || "";
+          const pubKeyHex = entry?.pubKey || "";
+          const keyStoreType = walletInfos[idx]?.type;
+          let bech32Add = "";
+
+          try {
+            if (addressHex) {
+              bech32Add = new Bech32Address(
+                Buffer.from(addressHex, "hex")
+              ).toBech32(chainInfo.bech32Config.bech32PrefixAccAddr);
+            }
+          } catch {
+            bech32Add = "";
+          }
+
+          return {
+            name: entry?.name || walletNames[idx],
+            algo: "secp256k1",
+            pubKey: pubKeyHex ? Buffer.from(pubKeyHex, "hex") : new Uint8Array(0),
+            address: addressHex ? Buffer.from(addressHex, "hex") : new Uint8Array(0),
+            bech32Address: isEVM ? "" : bech32Add,
+            isNanoLedger: keyStoreType === "ledger",
+            isKeystone: keyStoreType === "keystone",
+            EVMAddress: isEVM && bech32Add
+              ? Bech32Address.fromBech32(
+                  bech32Add,
+                  chainInfo.bech32Config.bech32PrefixAccAddr
+                ).toHex(true)
+              : "",
+          };
+        });
+      } catch {
+        return null;
+      }
+    };
+
+    const cachedAccounts = await tryBuildFromCache();
+    if (cachedAccounts) {
+      return cachedAccounts;
+    }
+
     const keys = await service.getKeys(chainId);
     console.log(
       `[ListAccountsMsg] Retrieved ${keys.length} keys for ${chainId}`
     );
-
-    const chainInfo = await service.chainsService.getChainInfo(chainId);
-    const isEVM = chainInfo.features?.includes("evm");
-    const isCardano = chainInfo.features?.includes("cardano");
 
     const returnData: Account[] = [];
 

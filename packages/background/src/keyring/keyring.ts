@@ -1730,10 +1730,6 @@ export class KeyRing {
         this.embedChainInfos
           .find((c) => c.chainId === currentChainId)
           ?.features?.includes("cardano") ?? false;
-
-      const keys = isCardano
-        ? await this.getKeysForCardano(currentChainId)
-        : await this.getKeys(currentChainId, false);
       const walletIds = this.multiKeyStore.map((ks) =>
         KeyRing.getKeyStoreId(ks)
       );
@@ -1753,49 +1749,157 @@ export class KeyRing {
         return walletName;
       });
       const activeWalletId = KeyRing.getKeyStoreId(this.keyStore);
-
-      const activeWalletIndex = walletIds.indexOf(activeWalletId);
-      const activeWalletAddress =
-        activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
-          ? isCardano
-            ? Buffer.from(keys[activeWalletIndex].address).toString("utf8")
-            : Buffer.from(keys[activeWalletIndex].address).toString("hex")
-          : "";
-
-      await this.updateCacheForActiveWallet(
-        currentChainId,
-        keys,
-        walletIds,
-        walletNames,
-        activeWalletId,
-        isCardano
-      );
-
-      const consistencyResult = await this.cacheManager.checkConsistency(
-        currentChainId,
-        walletIds,
-        walletNames,
-        activeWalletId,
-        activeWalletAddress,
-        isCardano
-      );
-
-      if (!consistencyResult.isConsistent) {
-        await this.clearAllAddressCaches();
-
+      void (async () => {
         try {
-          const seq = Date.now();
-          this.interactionService.dispatchEvent(WEBPAGE_PORT, "clear-cache", {
-            seq,
-          });
+          if (!isCardano) {
+            let cachedActiveAddress = "";
+            let hasFullCache = false;
+
+            try {
+              const cache = await this.loadGenericChainCache(currentChainId);
+              const activeEntry = activeWalletId ? cache[activeWalletId] : undefined;
+              if (activeEntry?.address) {
+                cachedActiveAddress = activeEntry.address;
+              }
+              hasFullCache =
+                walletIds.length > 0 &&
+                walletIds.every((id) => Boolean(cache[id]?.address));
+            } catch {
+              // Skip cache-based checks if cache cannot be read
+            }
+
+            let activeWalletAddress = cachedActiveAddress;
+            let keys: Key[] | undefined;
+
+            if (!activeWalletAddress || !hasFullCache) {
+              keys = await this.getKeys(currentChainId, false);
+              const activeWalletIndex = walletIds.indexOf(activeWalletId);
+              activeWalletAddress =
+                activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
+                  ? Buffer.from(keys[activeWalletIndex].address).toString("hex")
+                  : "";
+
+              await this.updateCacheForActiveWallet(
+                currentChainId,
+                keys,
+                walletIds,
+                walletNames,
+                activeWalletId,
+                isCardano
+              );
+            }
+
+            if (activeWalletAddress) {
+              const consistencyResult = await this.cacheManager.checkConsistency(
+                currentChainId,
+                walletIds,
+                walletNames,
+                activeWalletId,
+                activeWalletAddress,
+                isCardano
+              );
+
+              if (!consistencyResult.isConsistent) {
+                await this.clearAllAddressCaches();
+
+                try {
+                  const seq = Date.now();
+                  this.interactionService.dispatchEvent(
+                    WEBPAGE_PORT,
+                    "clear-cache",
+                    {
+                      seq,
+                    }
+                  );
+                } catch (e: unknown) {
+                  console.error(
+                    `[KeyRing] Failed to dispatch clear-cache event:`,
+                    e
+                  );
+                  // Continue execution - event dispatch failure is not critical
+                }
+              }
+            }
+          } else {
+            let cachedActiveAddress = "";
+            let hasFullCache = false;
+
+            try {
+              const cache = await this.loadCardanoChainCache(currentChainId);
+              const activeEntry = activeWalletId ? cache[activeWalletId] : undefined;
+              if (activeEntry?.address && isValidCardanoAddress(activeEntry.address)) {
+                cachedActiveAddress = activeEntry.address;
+              }
+              hasFullCache =
+                walletIds.length > 0 &&
+                walletIds.every((id) => Boolean(cache[id]?.address));
+            } catch {
+              // Skip cache-based checks if cache cannot be read
+            }
+
+            let activeWalletAddress = cachedActiveAddress;
+            let keys: Key[] | undefined;
+
+            if (!activeWalletAddress || !hasFullCache) {
+              keys = await this.getKeysForCardano(currentChainId);
+              const activeWalletIndex = walletIds.indexOf(activeWalletId);
+              activeWalletAddress =
+                activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
+                  ? Buffer.from(keys[activeWalletIndex].address).toString("utf8")
+                  : "";
+
+              await this.updateCacheForActiveWallet(
+                currentChainId,
+                keys,
+                walletIds,
+                walletNames,
+                activeWalletId,
+                isCardano
+              );
+            }
+
+            if (activeWalletAddress && hasFullCache) {
+              const consistencyResult = await this.cacheManager.checkConsistency(
+                currentChainId,
+                walletIds,
+                walletNames,
+                activeWalletId,
+                activeWalletAddress,
+                isCardano
+              );
+
+              if (!consistencyResult.isConsistent) {
+                await this.clearAllAddressCaches();
+
+                try {
+                  const seq = Date.now();
+                  this.interactionService.dispatchEvent(
+                    WEBPAGE_PORT,
+                    "clear-cache",
+                    {
+                      seq,
+                    }
+                  );
+                } catch (e: unknown) {
+                  console.error(
+                    `[KeyRing] Failed to dispatch clear-cache event:`,
+                    e
+                  );
+                  // Continue execution - event dispatch failure is not critical
+                }
+              }
+            }
+          }
         } catch (e: unknown) {
-          console.error(`[KeyRing] Failed to dispatch clear-cache event:`, e);
-          // Continue execution - event dispatch failure is not critical
+          console.error(
+            `[KeyRing] Failed to update caches after wallet switch:`,
+            e
+          );
         }
-      }
+      })();
     } catch (e: unknown) {
       console.error(
-        `[KeyRing] Failed to check consistency after wallet switch:`,
+        `[KeyRing] Failed to schedule cache updates after wallet switch:`,
         e
       );
       // Continue execution - consistency check failure is not critical

@@ -11,6 +11,12 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { Skeleton } from "@components-v2/skeleton-loader";
+import { addressCacheStore } from "../../utils/address-cache-store";
+import {
+  hasRequiredAddresses,
+  mergePartialCacheData,
+  normalizeCacheData,
+} from "../../utils/cache-validation";
 import { NoResults } from "@components-v2/no-results";
 
 interface YourWalletProps {
@@ -64,6 +70,39 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
     const syncAddressesFromBackground = async (abortSignal?: AbortSignal) => {
       setIsLoadingAddresses(true);
       try {
+        const existingCache = addressCacheStore.getCache(chainId);
+        const hasAnyCachedAddress =
+          Object.keys(existingCache).length > 0 &&
+          Object.values(existingCache).some((addr) => Boolean(addr));
+        setAddressesById(existingCache);
+
+        const isCurrentChainCardano =
+          chainId === "cardano-preview" ||
+          chainId === "cardano-preprod" ||
+          chainId === "cardano-mainnet";
+
+        const requiredWalletIds: string[] = isCurrentChainCardano
+          ? keyRingStore.multiKeyStoreInfo
+              .map((ks) => ({
+                id: ks.meta?.["__id__"] || "",
+                supported:
+                  ks.type === "mnemonic" &&
+                  `${ks.meta?.["mnemonicLength"]}` === "24",
+              }))
+              .filter((w) => w.supported)
+              .map((w) => w.id)
+          : currentWalletIds;
+
+        const shouldSyncFromBackend =
+          Object.keys(existingCache).length === 0 ||
+          !hasRequiredAddresses(existingCache, requiredWalletIds);
+
+        if (!shouldSyncFromBackend) {
+          setIsLoadingAddresses(false);
+          return;
+        }
+
+        setIsLoadingAddresses(!hasAnyCachedAddress);
         const requester = new InExtensionMessageRequester();
         const msg = new ListAccountsMsg();
         const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
@@ -73,15 +112,34 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
         }
 
         const snapshotWalletIds = [...currentWalletIds];
-        const next: Record<string, string> = {};
+        const fetchedById: Record<string, string> = {};
         snapshotWalletIds.forEach((walletId, idx) => {
           const account = accounts[idx];
           if (account && walletId) {
-            next[walletId] = isEvm ? account.EVMAddress : account.bech32Address;
+            fetchedById[walletId] = isEvm
+              ? account.EVMAddress
+              : account.bech32Address;
           }
         });
 
-        setAddressesById(next);
+        await addressCacheStore.atomicCacheUpdate(chainId, (currentCache) => {
+          const normalizedCache = normalizeCacheData(
+            currentCache,
+            snapshotWalletIds
+          );
+          const fetchedAddresses = snapshotWalletIds.map(
+            (id) => fetchedById[id] || ""
+          );
+          const mergedCache = mergePartialCacheData(
+            normalizedCache,
+            snapshotWalletIds,
+            fetchedAddresses
+          );
+          return { newCache: mergedCache, result: mergedCache };
+        });
+
+        const syncedCache = addressCacheStore.getCache(chainId);
+        setAddressesById(syncedCache);
       } finally {
         if (!abortSignal?.aborted) {
           setIsLoadingAddresses(false);

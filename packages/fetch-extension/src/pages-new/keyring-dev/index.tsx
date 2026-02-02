@@ -73,12 +73,15 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
       }
 
       isLoadingRef.current = true;
-      setIsLoadingAddresses(true);
 
       const currentChainId = chainStore.current.chainId;
 
       try {
         const existingCache = addressCacheStore.getCache(currentChainId);
+        const hasAnyCachedAddress =
+          Object.keys(existingCache).length > 0 &&
+          Object.values(existingCache).some((addr) => Boolean(addr));
+        setAddressesById(existingCache);
 
         const isCurrentChainCardano =
           currentChainId === "cardano-preview" ||
@@ -102,6 +105,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
           !hasRequiredAddresses(existingCache, requiredWalletIds);
 
         if (shouldSyncFromBackend) {
+          setIsLoadingAddresses(!hasAnyCachedAddress);
           const requester = new InExtensionMessageRequester();
 
           const msg = new ListAccountsMsg();
@@ -150,8 +154,6 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
           setIsLoadingAddresses(false);
           return;
         }
-
-        setAddressesById(existingCache);
 
         isLoadingRef.current = false;
         setIsLoadingAddresses(false);

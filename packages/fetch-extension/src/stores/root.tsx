@@ -623,9 +623,9 @@ export class RootStore {
         // Only initialize when KeyRing is fully UNLOCKED, not just "not NOTLOADED"
         // This prevents race conditions with Cardano initialization
         if (this.keyRingStore.status === KeyRingStatus.UNLOCKED) {
-          // Start init for registered chains so that users can see account address more quickly.
-          for (const chainInfo of this.chainStore.chainInfos) {
-            const account = this.accountStore.getAccount(chainInfo.chainId);
+          const currentChainId = this.chainStore.current.chainId;
+          if (currentChainId) {
+            const account = this.accountStore.getAccount(currentChainId);
             // Because {autoInit: true} is given as the default option above,
             // initialization for the account starts at this time just by using getAccount().
             // However, run safe check on current status and init if status is not inited.
@@ -649,6 +649,20 @@ export class RootStore {
       // To prevent this problem, just check the first uri is "#/unlcok" and
       // if it is "#/unlock", don't use the prefetching option.
     }
+
+    autorun(() => {
+      if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+        return;
+      }
+
+      const currentChainId = this.chainStore.current.chainId;
+      if (!currentChainId) return;
+
+      const account = this.accountStore.getAccount(currentChainId);
+      if (account.walletStatus === WalletStatus.NotInit) {
+        account.init();
+      }
+    });
 
     this.priceStore = new CoinGeckoPriceStore(
       new ExtensionKVStore("store_prices"),
