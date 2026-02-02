@@ -36,7 +36,6 @@ import {
   Bech32Address,
   ChainIdHelper,
   EthermintChainIdHelper,
-  TendermintTxTracer,
 } from "@keplr-wallet/cosmos";
 import { BondStatus } from "../query/cosmos/staking/types";
 import { CosmosQueries, IQueriesStore, QueriesSetBase } from "../query";
@@ -58,6 +57,8 @@ import { ExtensionOptionsWeb3Tx } from "@keplr-wallet/proto-types/ethermint/type
 import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
 import { ActivityStore } from "src/activity";
+import { CosmosTxTracer } from "./cosmos-tx-tracer";
+
 export interface CosmosAccount {
   cosmos: CosmosAccountImpl;
 }
@@ -529,7 +530,7 @@ export class CosmosAccountImpl {
       onBroadcasted(txHash);
     }
 
-    const txTracer = new TendermintTxTracer(
+    const txTracer = new CosmosTxTracer(
       this.chainGetter.getChain(this.chainId).rpc,
       "/websocket",
       {
