@@ -131,7 +131,7 @@ const extensionConfig = () => {
     name: "extension",
     mode: isEnvDevelopment ? "development" : "production",
     // In development environment, turn on source map.
-    devtool: "source-map",
+    devtool: isEnvDevelopment ? "cheap-source-map" : false,
     // In development environment, webpack watch the file changes, and recompile
     watch: isEnvDevelopment,
     entry: {
