@@ -9,7 +9,6 @@ import { ActivityRow } from "./activity-row";
 import styles from "./style.module.scss";
 import { NoActivity } from "../no-activity";
 import { UnsupportedNetwork } from "../unsupported-network";
-import { isFeatureAvailable } from "@utils/index";
 
 const options = [
   {
@@ -63,6 +62,7 @@ export const NativeTab = observer(() => {
     useStore();
   const current = chainStore.current;
   const accountInfo = accountStore.getAccount(current.chainId);
+  const isActivitySupported = !(current.features?.includes("evm") ?? false);
   const [isOpen, setIsOpen] = useState(false);
   const [_date, setDate] = useState("");
   const [activities, setActivities] = useState<unknown[]>([]);
@@ -221,7 +221,7 @@ export const NativeTab = observer(() => {
         />
       </div>
 
-      {isFeatureAvailable(current.chainId) ? (
+      {isActivitySupported ? (
         activities.length > 0 &&
         activities.filter((node: any) =>
           processFilters(selectedFilter).includes(

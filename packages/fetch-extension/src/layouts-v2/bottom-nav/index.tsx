@@ -13,7 +13,6 @@ import { WalletActions } from "../../pages-new/main/wallet-actions";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { Tab } from "./tab";
-import { isFeatureAvailable } from "@utils/index";
 
 const bottomNav = [
   {
@@ -62,11 +61,12 @@ const HomeTab = () => <Tab {...bottomNav[0]} />;
 const StakeTab = () => {
   const { chainStore } = useStore();
   const current = chainStore.current;
+  const isEvm = current.features?.includes("evm") ?? false;
 
   const [stakingTooltip, setStakingTooltip] = useState("");
   const [stakingDisabled, setStakingDisabled] = useState(false);
   useEffect(() => {
-    if (isFeatureAvailable(current.chainId)) {
+    if (!isEvm) {
       setStakingDisabled(false);
       setStakingTooltip("");
     } else {
