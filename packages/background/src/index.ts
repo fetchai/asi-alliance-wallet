@@ -119,7 +119,10 @@ export function init(
     analyticsPrivilegedOrigins
   );
 
-  const cardanoService = new Cardano.CardanoService(notification);
+  const cardanoService = new Cardano.CardanoService(
+    notification,
+    storeCreator("cardano.tx-history")
+  );
 
   const keyRingService = new KeyRing.KeyRingService(
     storeCreator("keyring"),

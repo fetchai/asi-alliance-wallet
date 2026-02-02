@@ -6,6 +6,8 @@ import type { CardanoSendAdaTxDraft } from "./messages";
 import { createObservableTransactionsByAddressesProvider, createTxHistoryLoader, getTxInputsValueAndAddress } from "@keplr-wallet/cardano";
 import { firstValueFrom, ReplaySubject, Subscription } from "rxjs";
 import { skip, take, timeout } from "rxjs/operators";
+import type { KVStore } from "@keplr-wallet/common";
+import { CardanoTxHistoryStore } from "./tx-history-store";
 
 /**
  * Thin wrapper around @keplr-wallet/cardano that makes Cardano logic look like
@@ -15,10 +17,12 @@ import { skip, take, timeout } from "rxjs/operators";
 export class CardanoService {
   private keyRing?: CardanoKeyRing;
   private notification?: Notification;
+  private txHistoryStore?: CardanoTxHistoryStore;
   private txHistoryControllers = new Map<
     string,
     {
       pageSize: number;
+      walletId: string;
       walletManagerRef: unknown;
       hasRealEmission: boolean;
       last: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean };
@@ -29,8 +33,11 @@ export class CardanoService {
     }
   >();
 
-  constructor(notification?: Notification) {
+  constructor(notification?: Notification, kvStore?: KVStore) {
     this.notification = notification;
+    if (kvStore) {
+      this.txHistoryStore = new CardanoTxHistoryStore(kvStore);
+    }
   }
 
   /**
@@ -326,9 +333,25 @@ export class CardanoService {
    * Returns paginated transaction history for Cardano (ADA-only MVP).
    * Uses lace-style tx-history-loader to page beyond local wallet store.
    */
-  async getTxHistory(params: { pageSize: number; chainId?: string }): Promise<CardanoTxHistoryResponse> {
-    const key = params.chainId || "default";
-    const controller = await this.ensureTxHistoryController(key, params.pageSize);
+  async getTxHistory(params: {
+    pageSize: number;
+    chainId?: string;
+    walletId?: string;
+  }): Promise<CardanoTxHistoryResponse> {
+    const chainKey = params.chainId || "default";
+    const walletKey = params.walletId || "default";
+    const controller = await this.ensureTxHistoryController(
+      chainKey,
+      params.pageSize,
+      walletKey
+    );
+    const stored = await this.txHistoryStore?.get(chainKey, walletKey);
+    if (!controller.hasRealEmission && stored) {
+      controller.hasRealEmission = true;
+      controller.last = stored;
+      controller.latest$.next(stored);
+      return await this.withPendingTxs(stored, params.chainId);
+    }
     // If controller was just created, it will have a seeded value. Prefer waiting for the first real emission
     // (from wallet history stream), but don't block forever.
     if (!controller.hasRealEmission) {
@@ -344,9 +367,18 @@ export class CardanoService {
     return await this.withPendingTxs(res, params.chainId);
   }
 
-  async loadMoreTxHistory(params: { pageSize: number; chainId?: string }): Promise<CardanoTxHistoryResponse> {
-    const key = params.chainId || "default";
-    const controller = await this.ensureTxHistoryController(key, params.pageSize);
+  async loadMoreTxHistory(params: {
+    pageSize: number;
+    chainId?: string;
+    walletId?: string;
+  }): Promise<CardanoTxHistoryResponse> {
+    const chainKey = params.chainId || "default";
+    const walletKey = params.walletId || "default";
+    const controller = await this.ensureTxHistoryController(
+      chainKey,
+      params.pageSize,
+      walletKey
+    );
     if (!controller.last.mightHaveMore) {
       return await this.withPendingTxs(controller.last, params.chainId);
     }
@@ -490,14 +522,24 @@ export class CardanoService {
     return items;
   }
 
-  private async ensureTxHistoryController(key: string, pageSize: number) {
+  private async ensureTxHistoryController(
+    chainKey: string,
+    pageSize: number,
+    walletId: string
+  ) {
+    const key = `${chainKey}:${walletId}`;
     const existing = this.txHistoryControllers.get(key);
     const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
     if (!walletManager) {
       throw new Error("Wallet manager not initialized");
     }
 
-    if (existing && existing.pageSize === pageSize && existing.walletManagerRef === walletManager) {
+    if (
+      existing &&
+      existing.pageSize === pageSize &&
+      existing.walletId === walletId &&
+      existing.walletManagerRef === walletManager
+    ) {
       return existing;
     }
 
@@ -540,6 +582,7 @@ export class CardanoService {
 
     const controller = {
       pageSize,
+      walletId,
       walletManagerRef: walletManager,
       hasRealEmission: false,
       last: { items: [] as CardanoTxHistoryItem[], mightHaveMore: true },
@@ -561,12 +604,14 @@ export class CardanoService {
         const next = { items, mightHaveMore: loaded.mightHaveMore };
         controller.last = next;
         latest$.next(next);
+        await this.txHistoryStore?.set(chainKey, walletId, next);
       } catch {
         // If transformation fails, still emit an empty list to avoid UI deadlock.
         controller.hasRealEmission = true;
         const next = { items: [], mightHaveMore: loaded.mightHaveMore };
         controller.last = next;
         latest$.next(next);
+        await this.txHistoryStore?.set(chainKey, walletId, next);
       }
     });
 

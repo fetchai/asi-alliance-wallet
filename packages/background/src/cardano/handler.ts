@@ -447,9 +447,13 @@ const handleGetCardanoTxHistoryMsg: (
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
 
+    const walletId =
+      keyRingService.getKeyRing().getCurrentKeyStore()?.meta?.["__id__"] || "";
+
     return await service.getTxHistory({
       pageSize: msg.pageSize,
-      chainId: msg.chainId
+      chainId: msg.chainId,
+      walletId,
     });
   };
 };
@@ -472,9 +476,13 @@ const handleLoadMoreCardanoTxHistoryMsg: (
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
 
+    const walletId =
+      keyRingService.getKeyRing().getCurrentKeyStore()?.meta?.["__id__"] || "";
+
     return await service.loadMoreTxHistory({
       pageSize: msg.pageSize,
-      chainId: msg.chainId
+      chainId: msg.chainId,
+      walletId,
     });
   };
 };

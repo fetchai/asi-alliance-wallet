@@ -60,6 +60,8 @@ export const CardanoTransactionsTab = observer(() => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
+  const [isSyncingDueToTimeout, setIsSyncingDueToTimeout] = useState(false);
 
   const pageSize = 20;
 
@@ -94,19 +96,24 @@ export const CardanoTransactionsTab = observer(() => {
       if (res === "timeout") {
         // If background is still syncing/initializing, don't lock the UI in "Loading..." forever.
         setIsSyncing(true);
+        setIsSyncingDueToTimeout(true);
         return;
       }
-        const nextItems = (res?.items ?? []) as CardanoTxHistoryItem[];
-        setItems(nextItems);
-        setMightHaveMore(!!res?.mightHaveMore);
+      const nextItems = (res?.items ?? []) as CardanoTxHistoryItem[];
+      setItems(nextItems);
+      setMightHaveMore(!!res?.mightHaveMore);
+      setHasFetchedHistory(true);
       setIsSyncing(false);
-      } catch (e: any) {
-        setError(e?.message || "Failed to load transaction history");
-        setItems([]);
-        setMightHaveMore(false);
-      } finally {
-        setIsLoading(false);
-      }
+      setIsSyncingDueToTimeout(false);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load transaction history");
+      setItems([]);
+      setMightHaveMore(false);
+      setHasFetchedHistory(true);
+      setIsSyncingDueToTimeout(false);
+    } finally {
+      setIsLoading(false);
+    }
   }, [chainId, requester, sendWithTimeout]);
 
   const loadMore = useCallback(async () => {
@@ -130,6 +137,11 @@ export const CardanoTransactionsTab = observer(() => {
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  useEffect(() => {
+    setHasFetchedHistory(false);
+    setIsSyncingDueToTimeout(false);
+  }, [chainId]);
 
   // Lace behavior: if first page has fewer txs than the viewport/pageSize (local store is often small),
   // auto-load more once to confirm whether there are more transactions and to fill the page.
@@ -160,8 +172,10 @@ export const CardanoTransactionsTab = observer(() => {
         if (!isSubscribed) return;
 
         const settled = !!syncStatus?.isSettled;
-        setIsSyncing(!settled);
-        if (settled && items.length === 0 && !isLoading && !error) {
+        if (!hasFetchedHistory) {
+          setIsSyncing(!settled);
+        }
+        if (settled && items.length === 0 && !isLoading && !error && !hasFetchedHistory) {
           fetchHistory();
         }
         if (settled && interval) {
@@ -171,12 +185,14 @@ export const CardanoTransactionsTab = observer(() => {
       } catch {
         // If sync status can't be fetched, don't block UI.
         if (!isSubscribed) return;
-        setIsSyncing(false);
+        if (!hasFetchedHistory) {
+          setIsSyncing(false);
+        }
       }
     };
 
     // Start polling only when we have no items yet.
-    if (items.length === 0) {
+    if (items.length === 0 && !hasFetchedHistory) {
       checkSyncAndMaybeRefetch();
       interval = setInterval(checkSyncAndMaybeRefetch, 2000);
     }
@@ -185,9 +201,19 @@ export const CardanoTransactionsTab = observer(() => {
       isSubscribed = false;
       if (interval) clearInterval(interval);
     };
-  }, [chainId, requester, fetchHistory, items.length, isLoading, error]);
+  }, [
+    chainId,
+    requester,
+    fetchHistory,
+    items.length,
+    isLoading,
+    error,
+    hasFetchedHistory,
+  ]);
 
-  if (isLoading && isSyncing) {
+  const shouldShowSyncing = isSyncingDueToTimeout || (!hasFetchedHistory && isSyncing);
+
+  if (isLoading && isSyncingDueToTimeout) {
     return <NoActivity label="Wallet is syncing. Please wait..." />;
   }
 
@@ -199,7 +225,7 @@ export const CardanoTransactionsTab = observer(() => {
     return <NoActivity label={error} />;
   }
 
-  if (isSyncing && !items.length) {
+  if (shouldShowSyncing && !items.length) {
     return <NoActivity label="Wallet is syncing. Please wait..." />;
   }
 

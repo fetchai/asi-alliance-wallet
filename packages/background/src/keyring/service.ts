@@ -132,6 +132,22 @@ export class KeyRingService {
       const isCardano = chainInfo.features?.includes("cardano") ?? false;
       const isEvm = chainInfo.features?.includes("evm") ?? false;
 
+      if (isCardano) {
+        const ks = this.keyRing.getCurrentKeyStore();
+        if (ks) {
+          try {
+            await this.cardanoService.restoreFromKeyStore(
+              ks,
+              this.keyRing.currentPassword,
+              this.crypto,
+              newChainId
+            );
+          } catch (error) {
+            console.error("[KeyRingService] Failed to rebind CardanoService:", error);
+          }
+        }
+      }
+
       const keys = isCardano
         ? await this.keyRing.getKeysForCardano(newChainId)
         : await this.keyRing.getKeys(newChainId, isEvm);
