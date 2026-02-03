@@ -14,6 +14,13 @@ import { ProgressBar } from "./progress-bar";
 import style from "./style.module.scss";
 import { VoteDropdown } from "./vote-dropdown";
 import Markdown from "react-markdown";
+import {
+  CHAIN_ID_FETCHHUB,
+  CHAIN_ID_DORADO,
+  CHAIN_ID_GEMINI,
+  EXPLORER_URL,
+  GEMINI_EXPLORER_URL,
+} from "../../../../config.ui.var";
 
 type TallyResult = {
   title: string;
@@ -34,6 +41,15 @@ export const ProposalDetail = observer(() => {
   const accountInfo = accountStore.getAccount(current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
   const proposal = queries.cosmos.queryGovernance.getProposal(id || "");
+  const chainId = current.chainId;
+
+  const explorerBaseURL = () => {
+    if (chainId === CHAIN_ID_GEMINI) {
+      return GEMINI_EXPLORER_URL;
+    } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
+      return `${EXPLORER_URL}/${chainId}`;
+    }
+  };
 
   useEffect(() => {
     if (proposal) {
@@ -134,33 +150,36 @@ export const ProposalDetail = observer(() => {
               voting_end_time={proposal?.raw.voting_end_time}
               status={proposal?.raw.status}
             />
-
-            <Link
-              to={`https://www.mintscan.io/fetchai/proposals/${id}`}
-              target="_blank"
-              onClick={() => {
-                analyticsStore.logEvent(
-                  "proposal_view_in_block_explorer_click",
-                  {
-                    pageName: "Proposals",
-                  }
-                );
-              }}
-            >
-              <Card
-                style={{
-                  cursor: "pointer",
+            {[CHAIN_ID_FETCHHUB, CHAIN_ID_DORADO, CHAIN_ID_GEMINI].includes(
+              chainId
+            ) && (
+              <Link
+                to={`${explorerBaseURL()}/proposals/${id}`}
+                target="_blank"
+                onClick={() => {
+                  analyticsStore.logEvent(
+                    "proposal_view_in_block_explorer_click",
+                    {
+                      pageName: "Proposals",
+                    }
+                  );
                 }}
-                heading="View full text of the proposal"
-                leftImage={require("@assets/svg/wireframe/proposal.svg")}
-                rightContent={require("@assets/svg/wireframe/external-link.svg")}
-                leftImageStyle={{
-                  height: "32px",
-                  width: "32px",
-                  padding: "4px",
-                }}
-              />
-            </Link>
+              >
+                <Card
+                  style={{
+                    cursor: "pointer",
+                  }}
+                  heading="View full text of the proposal"
+                  leftImage={require("@assets/svg/wireframe/proposal.svg")}
+                  rightContent={require("@assets/svg/wireframe/external-link.svg")}
+                  leftImageStyle={{
+                    height: "32px",
+                    width: "32px",
+                    padding: "4px",
+                  }}
+                />
+              </Link>
+            )}
 
             <div className={style["turnout"]}>
               <div className={style["label"]}>TURNOUT</div>

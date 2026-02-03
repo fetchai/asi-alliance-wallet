@@ -3,7 +3,13 @@ import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 import { StatusButton } from "@components-v2/status-button";
 import { useStore } from "../../../stores";
-import { EXPLORER_URL, GEMINI_EXPLORER_URL } from "../../../config.ui.var";
+import {
+  EXPLORER_URL,
+  GEMINI_EXPLORER_URL,
+  CHAIN_ID_DORADO,
+  CHAIN_ID_FETCHHUB,
+  CHAIN_ID_GEMINI,
+} from "../../../config.ui.var";
 
 const cardStatus = (status: string) => {
   switch (status) {
@@ -52,29 +58,32 @@ export const ActivityRow = observer(({ node }: { node: any }) => {
   const current = chainStore.current;
   const queries = queriesStore.get(current.chainId);
   const proposal = queries.cosmos.queryGovernance.getProposal(proposalId || "");
+  const chainId = current.chainId;
+
+  const explorerBaseURL = () => {
+    if (chainId === CHAIN_ID_GEMINI) {
+      return GEMINI_EXPLORER_URL;
+    } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
+      return `${EXPLORER_URL}/${chainId}`;
+    }
+  };
+
   const handleClick = () => {
+    const explorerURL = explorerBaseURL();
+    if (!explorerURL) {
+      return;
+    }
+    const url = `${explorerURL}/transactions/${id}`;
+    window.open(url, "_blank", "noopener,noreferrer");
     analyticsStore.logEvent("activity_transactions_click", {
       tabName: "Gov Proposals",
       pageName: "Activity",
     });
   };
 
-  const explorerBaseURL = () => {
-    if (chainStore.current.chainId === "gemini-1") {
-      return GEMINI_EXPLORER_URL;
-    } else {
-      return `${EXPLORER_URL}/${chainStore.current.chainId}`;
-    }
-  };
-
   return (
     <React.Fragment>
-      <a
-        href={`${explorerBaseURL()}/transactions/${id}`}
-        target="_blank"
-        rel="noreferrer"
-        onClick={handleClick}
-      >
+      <div onClick={handleClick}>
         <div className={style["activityRow"]}>
           <div className={style["middle"]}>
             <div className={style["activityCol"]}>
@@ -105,7 +114,7 @@ export const ActivityRow = observer(({ node }: { node: any }) => {
             />
           </div>
         </div>
-      </a>
+      </div>
       <div className={style["hr"]} />
     </React.Fragment>
   );

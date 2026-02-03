@@ -163,7 +163,7 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {chainStore.current.govUrl && (
+      {!chainStore.current.features?.includes("evm") && (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "8px" }}

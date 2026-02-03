@@ -10,11 +10,6 @@ import { HeaderLayout } from "@layouts-v2/header-layout";
 import { getFilteredProposals } from "@utils/filters";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import {
-  CHAIN_ID_DORADO,
-  CHAIN_ID_FETCHHUB,
-  CHAIN_ID_GEMINI,
-} from "../../../config.ui.var";
 import { ErrorActivity } from "../../activity/error-activity";
 import { UnsupportedNetwork } from "../../activity/unsupported-network";
 import { GovtProposalRow } from "./proposal-row";
@@ -158,7 +153,7 @@ export const Proposals = observer(() => {
         </div>
       }
     >
-      {isChainIdSupported(current.chainId) ? (
+      {!current.features?.includes("evm") ? (
         isError ? (
           <ErrorActivity />
         ) : isLoading ? (
@@ -328,15 +323,5 @@ const GovtProposalFilterDropdown = ({
         </ButtonV2>
       </div>
     </Dropdown>
-  );
-};
-
-const isChainIdSupported = (chainId: string) => {
-  return (
-    chainId === CHAIN_ID_FETCHHUB ||
-    chainId === CHAIN_ID_DORADO ||
-    chainId === CHAIN_ID_GEMINI ||
-    chainId === "test" ||
-    chainId === "test-local"
   );
 };
