@@ -609,63 +609,63 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer"],
     updateFromRepoDisabled: true,
   },
-  {
-    rpc: "https://rpc-mars.keplr.app",
-    rest: "https://lcd-mars.keplr.app",
-    chainId: "mars-1",
-    chainName: "Mars Hub",
-    stakeCurrency: {
-      coinDenom: "MARS",
-      coinMinimalDenom: "umars",
-      coinDecimals: 6,
-      coinImageUrl:
-        "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
-    },
-    walletUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/mars"
-        : "http://localhost:8080/chains/mars",
-    walletUrlForStaking:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/mars"
-        : "http://localhost:8080/chains/mars",
-    bip44: {
-      coinType: 118,
-    },
-    alternativeBIP44s: [
-      {
-        coinType: 330,
-      },
-    ],
-    bech32Config: Bech32Address.defaultBech32Config("mars"),
-    currencies: [
-      {
-        coinDenom: "MARS",
-        coinMinimalDenom: "umars",
-        coinDecimals: 6,
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "MARS",
-        coinMinimalDenom: "umars",
-        coinDecimals: 6,
-        coinGeckoId: "mars-protocol-a7fcbcfb-fd61-4017-92f0-7ee9f9cc6da3",
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
-        gasPriceStep: {
-          low: 0,
-          average: 0,
-          high: 0.01,
-        },
-      },
-    ],
-    features: [],
-    chainSymbolImageUrl:
-      "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
-  },
+  // {
+  //   rpc: "https://rpc-mars.keplr.app",
+  //   rest: "https://lcd-mars.keplr.app",
+  //   chainId: "mars-1",
+  //   chainName: "Mars Hub",
+  //   stakeCurrency: {
+  //     coinDenom: "MARS",
+  //     coinMinimalDenom: "umars",
+  //     coinDecimals: 6,
+  //     coinImageUrl:
+  //       "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  //   },
+  //   walletUrl:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/mars"
+  //       : "http://localhost:8080/chains/mars",
+  //   walletUrlForStaking:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/mars"
+  //       : "http://localhost:8080/chains/mars",
+  //   bip44: {
+  //     coinType: 118,
+  //   },
+  //   alternativeBIP44s: [
+  //     {
+  //       coinType: 330,
+  //     },
+  //   ],
+  //   bech32Config: Bech32Address.defaultBech32Config("mars"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "MARS",
+  //       coinMinimalDenom: "umars",
+  //       coinDecimals: 6,
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "MARS",
+  //       coinMinimalDenom: "umars",
+  //       coinDecimals: 6,
+  //       coinGeckoId: "mars-protocol-a7fcbcfb-fd61-4017-92f0-7ee9f9cc6da3",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  //       gasPriceStep: {
+  //         low: 0,
+  //         average: 0,
+  //         high: 0.01,
+  //       },
+  //     },
+  //   ],
+  //   features: [],
+  //   chainSymbolImageUrl:
+  //     "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  // },
   {
     rpc: "https://rpc.mainnet.crypto.org",
     rest: "https://rest.mainnet.crypto.org",
@@ -728,61 +728,61 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/cryptoorgchain/images/cronos.png",
     features: ["ibc-transfer"],
   },
-  {
-    rpc: "https://rpc-iov.keplr.app",
-    rest: "https://lcd-iov.keplr.app",
-    chainId: "iov-mainnet-ibc",
-    chainName: "Starname",
-    hideInUI: true,
-    stakeCurrency: {
-      coinDenom: "IOV",
-      coinMinimalDenom: "uiov",
-      coinDecimals: 6,
-      coinGeckoId: "starname",
-      coinImageUrl:
-        "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
-    },
-    walletUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/starname"
-        : "http://localhost:8080/chains/starname",
-    walletUrlForStaking:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/starname"
-        : "http://localhost:8080/chains/starname",
-    bip44: {
-      coinType: 234,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("star"),
-    currencies: [
-      {
-        coinDenom: "IOV",
-        coinMinimalDenom: "uiov",
-        coinDecimals: 6,
-        coinGeckoId: "starname",
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "IOV",
-        coinMinimalDenom: "uiov",
-        coinDecimals: 6,
-        coinGeckoId: "starname",
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
-        gasPriceStep: {
-          low: 1,
-          average: 2,
-          high: 3,
-        },
-      },
-    ],
-    chainSymbolImageUrl:
-      "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
-    features: ["ibc-transfer"],
-  },
+  // {
+  //   rpc: "https://rpc-iov.keplr.app",
+  //   rest: "https://lcd-iov.keplr.app",
+  //   chainId: "iov-mainnet-ibc",
+  //   chainName: "Starname",
+  //   hideInUI: true,
+  //   stakeCurrency: {
+  //     coinDenom: "IOV",
+  //     coinMinimalDenom: "uiov",
+  //     coinDecimals: 6,
+  //     coinGeckoId: "starname",
+  //     coinImageUrl:
+  //       "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //   },
+  //   walletUrl:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/starname"
+  //       : "http://localhost:8080/chains/starname",
+  //   walletUrlForStaking:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/starname"
+  //       : "http://localhost:8080/chains/starname",
+  //   bip44: {
+  //     coinType: 234,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("star"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "IOV",
+  //       coinMinimalDenom: "uiov",
+  //       coinDecimals: 6,
+  //       coinGeckoId: "starname",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "IOV",
+  //       coinMinimalDenom: "uiov",
+  //       coinDecimals: 6,
+  //       coinGeckoId: "starname",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //       gasPriceStep: {
+  //         low: 1,
+  //         average: 2,
+  //         high: 3,
+  //       },
+  //     },
+  //   ],
+  //   chainSymbolImageUrl:
+  //     "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //   features: ["ibc-transfer"],
+  // },
   {
     rpc: "https://rpc-sifchain.keplr.app",
     rest: "https://lcd-sifchain.keplr.app",
@@ -2487,7 +2487,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     rest: "https://lcd-injective.keplr.app",
     chainId: "injective-1",
     chainName: "Injective",
-    hideInUI: true,
     stakeCurrency: {
       coinDenom: "INJ",
       coinMinimalDenom: "inj",

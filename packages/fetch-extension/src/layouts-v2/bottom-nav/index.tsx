@@ -66,12 +66,12 @@ const StakeTab = () => {
   const [stakingTooltip, setStakingTooltip] = useState("");
   const [stakingDisabled, setStakingDisabled] = useState(false);
   useEffect(() => {
-    if (!isEvm) {
-      setStakingDisabled(false);
-      setStakingTooltip("");
-    } else {
+    if (isEvm || current.chainId === "noble-1") {
       setStakingDisabled(true);
       setStakingTooltip("Feature not available on this network");
+    } else {
+      setStakingDisabled(false);
+      setStakingTooltip("");
     }
   }, [current.chainId]);
 

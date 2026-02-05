@@ -119,7 +119,9 @@ export const AddCosmosChain: FunctionComponent = () => {
             if (metadata) {
               const displayUnit =
                 metadata.denom_units?.find(
-                  (unit: any) => unit.denom === metadata.display
+                  (unit: any) =>
+                    unit.denom === metadata?.display ||
+                    unit.denom === metadata?.name
                 )?.exponent ?? 6;
 
               coinData = {

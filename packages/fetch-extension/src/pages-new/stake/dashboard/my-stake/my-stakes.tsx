@@ -43,7 +43,7 @@ export const MyStakes = observer(
 
     const fiatCurrency = language.fiatCurrency;
 
-    const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
+    const [isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
     const {
       chainStore,
       analyticsStore,
@@ -66,6 +66,7 @@ export const MyStakes = observer(
       new Dec(del.balance.amount).gt(new Dec(0))
     );
 
+    console.log("delegations", delegations, queryDelegations.delegations);
     const queryReward = queries.cosmos.queryRewards.getQueryBech32Address(
       account.bech32Address
     );
@@ -262,11 +263,11 @@ export const MyStakes = observer(
                   }}
                   disabled={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    _isWithdrawingRewards
+                    isWithdrawingRewards
                   }
                   text={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    _isWithdrawingRewards
+                    isWithdrawingRewards
                       ? ""
                       : "Claim all"
                   }
@@ -275,14 +276,14 @@ export const MyStakes = observer(
                       activityStore.getPendingTxnTypes[
                         TXNTYPE.withdrawRewards
                       ] ||
-                      _isWithdrawingRewards
+                      isWithdrawingRewards
                     )
                       return;
                     handleClaimRewards();
                   }}
                 >
                   {(activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    _isWithdrawingRewards) && (
+                    isWithdrawingRewards) && (
                     <i className="fas fa-spinner fa-spin ml-2 mr-2" />
                   )}
                 </ButtonV2>

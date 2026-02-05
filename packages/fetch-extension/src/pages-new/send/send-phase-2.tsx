@@ -16,6 +16,7 @@ import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
 import { useNotification } from "@components/notification";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
+import { removeComma } from "@utils/format";
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -25,6 +26,7 @@ interface SendPhase2Props {
   fromPhase1: boolean;
   configs: any;
   setFromPhase1: any;
+  balance: CoinPretty;
 }
 
 export const SendPhase2: React.FC<SendPhase2Props> = observer(
@@ -35,6 +37,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     trnsxStatus,
     fromPhase1,
     configs,
+    balance,
     setFromPhase1,
   }) => {
     const {
@@ -49,7 +52,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const navigate = useNavigate();
     const notification = useNotification();
     const location = useLocation();
-    const { isFromPhase1 } = location.state || {};
+    const { isFromPhase1, isMaxAmount } = location.state || {};
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
@@ -182,6 +185,25 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
       return BigInt(scaledAmount);
     };
+
+    useEffect(() => {
+      const fee = sendConfigs.feeConfig.fee;
+      if (!fee || !balance) return;
+
+      const maxAmount = balance.sub(fee);
+      if (maxAmount.toDec().isNegative()) return;
+
+      if (isMaxAmount) {
+        sendConfigs.amountConfig.setAmount(
+          removeComma(maxAmount.shrink(true).hideDenom(true).toString())
+        );
+      }
+    }, [
+      isMaxAmount,
+      sendConfigs.feeConfig.fee,
+      sendConfigs.feeConfig.feeType,
+      balance,
+    ]);
 
     return (
       <div>
