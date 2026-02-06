@@ -18,6 +18,7 @@ import {
 } from "@utils/format";
 import { useIntl } from "react-intl";
 import { useLanguage } from "../../languages";
+import style from "./stake-input.module.scss";
 
 export const StakeInput: FunctionComponent<{
   label: string;
@@ -94,6 +95,8 @@ export const StakeInput: FunctionComponent<{
     <div>
       <InputField
         label={label}
+        inputClassname={style["stakeInput"]}
+        inputContainerClassName={style["stakeInputContainer"]}
         value={
           isToggleClicked
             ? parseDollarAmount(inputInFiatCurrency).toString()
@@ -101,13 +104,7 @@ export const StakeInput: FunctionComponent<{
         }
         placeholder={`0`}
         rightIcon={
-          <div
-            style={{
-              fontSize: "16px",
-              fontWeight: 400,
-              color: "var(--font-secondary)",
-            }}
-          >
+          <div className={style["stakeInputDenomSection"]}>
             {isToggleClicked
               ? fiatCurrency.toUpperCase()
               : amountConfig.sendCurrency.coinDenom}
@@ -152,15 +149,7 @@ export const StakeInput: FunctionComponent<{
           }
         }}
         bottomContent={
-          <div
-            style={{
-              fontSize: "12px",
-              fontWeight: 400,
-              color: "var(--font-secondary)",
-              padding: "0px 10px",
-              marginBottom: "4px",
-            }}
-          >
+          <div className={style["stakeInputAvailableBalance"]}>
             {`${intl.formatMessage({
               id: "unstake.available",
             })} ${availableBalance}`}
@@ -169,15 +158,7 @@ export const StakeInput: FunctionComponent<{
       />
 
       {error && (
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#fa8f6b",
-            marginTop: "6px",
-          }}
-        >
-          {errorText}
-        </div>
+        <div className={style["stakeInputErrorMessage"]}>{errorText}</div>
       )}
     </div>
   );

@@ -163,21 +163,22 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {chainStore.current.govUrl && (
-        <Card
-          leftImageStyle={{ background: "transparent" }}
-          style={{ marginBottom: "8px" }}
-          leftImage={require("@assets/svg/wireframe/voting-power.svg")}
-          heading={"Proposals"}
-          onClick={(e: any) => {
-            e.preventDefault();
-            analyticsStore.logEvent("proposal_view_click", {
-              pageName: "More",
-            });
-            navigate("/proposal");
-          }}
-        />
-      )}
+      {!chainStore.current.features?.includes("evm") &&
+        chainId !== "noble-1" && (
+          <Card
+            leftImageStyle={{ background: "transparent" }}
+            style={{ marginBottom: "8px" }}
+            leftImage={require("@assets/svg/wireframe/voting-power.svg")}
+            heading={"Proposals"}
+            onClick={(e: any) => {
+              e.preventDefault();
+              analyticsStore.logEvent("proposal_view_click", {
+                pageName: "More",
+              });
+              navigate("/proposal");
+            }}
+          />
+        )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ marginBottom: "6px" }}

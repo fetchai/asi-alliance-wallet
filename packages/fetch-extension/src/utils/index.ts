@@ -123,3 +123,53 @@ export function isFeatureAvailable(chainId: string): boolean {
     CHAIN_ID_GEMINI,
   ].includes(chainId);
 }
+
+export const checkWebSocket = (
+  url: string,
+  timeout = 5000
+): Promise<boolean> => {
+  return new Promise((resolve) => {
+    let socket: WebSocket;
+    let settled = false;
+
+    try {
+      socket = new WebSocket(url);
+    } catch (e) {
+      return resolve(false);
+    }
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        socket.close();
+        resolve(false);
+      }
+    }, timeout);
+
+    socket.onopen = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.close();
+      resolve(true);
+    };
+
+    socket.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(false);
+    };
+  });
+};
+
+export function toWssUrl(input: string): string {
+  if (!input) return "";
+
+  const stripped = input
+    .trim()
+    .replace(/^(https?:\/\/|wss?:\/\/)/i, "")
+    .replace(/\/+$/, "");
+
+  return `wss://${stripped}/websocket`;
+}

@@ -38,11 +38,18 @@ export interface CoinInputProps {
   disableAllBalance?: boolean;
   overrideSelectableCurrencies?: AppCurrency[];
   dropdownDisabled?: boolean;
+  onAmountChange?: (value: string) => void;
   onPress?: () => void;
 }
 
 export const CoinInput: FunctionComponent<CoinInputProps> = observer(
-  ({ amountConfig, showAllBalance, disableAllBalance, onPress }) => {
+  ({
+    amountConfig,
+    showAllBalance,
+    disableAllBalance,
+    onPress,
+    onAmountChange,
+  }) => {
     const intl = useIntl();
     const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
       string | undefined
@@ -182,6 +189,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                 onChange={(e: any) => {
                   e.preventDefault();
                   let value = e.target.value.replace(/[^0-9.]/g, "");
+                  onAmountChange?.(value);
 
                   if (value === "") {
                     amountConfig.setAmount("");

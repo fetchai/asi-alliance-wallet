@@ -1,10 +1,5 @@
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useEffect, useState } from "react";
-import {
-  CHAIN_ID_DORADO,
-  CHAIN_ID_FETCHHUB,
-  CHAIN_ID_GEMINI,
-} from "../../../config.ui.var";
 import { useStore } from "../../../stores";
 import { FilterActivities, FilterDropdown } from "../filter";
 import { NoActivity } from "../no-activity";
@@ -86,12 +81,7 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
       setIsOpen(false);
     };
 
-    const isSupportedNetwork =
-      current.chainId === CHAIN_ID_FETCHHUB ||
-      current.chainId === CHAIN_ID_DORADO ||
-      current.chainId === CHAIN_ID_GEMINI ||
-      current.chainId === "test" ||
-      current.chainId === "test-local";
+    const isSupportedNetwork = !(current.features?.includes("evm") ?? false);
 
     return (
       <React.Fragment>
@@ -126,14 +116,20 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
                 ))}
             </React.Fragment>
           ) : (
-            <NoActivity label="No Gov Proposal Activity Yet" />
+            <NoActivity
+              label="No Gov Proposal Activity Yet"
+              content="Governance proposals you’ve voted on will appear here"
+            />
           )
         ) : (
           <UnsupportedNetwork chainID={current.chainName} />
         )}
 
         {filter.length === 0 && (
-          <NoActivity label="No Gov Proposal Activity Yet" />
+          <NoActivity
+            label="No Gov Proposal Activity Yet"
+            content="Governance proposals you’ve voted on will appear here"
+          />
         )}
       </React.Fragment>
     );
