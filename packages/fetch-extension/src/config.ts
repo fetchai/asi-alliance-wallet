@@ -1484,7 +1484,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
   },
   {
-    rpc: "https://stargaze-rpc.publicnode.com:443",
+    rpc: "https://sentinel-rpc.publicnode.com:443",
     rest: "https://lcd-sentinel.keplr.app",
     chainId: "sentinelhub-2",
     chainName: "Sentinel",
