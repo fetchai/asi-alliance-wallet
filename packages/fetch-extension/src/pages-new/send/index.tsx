@@ -239,8 +239,6 @@ export const SendPage: FunctionComponent = observer(() => {
     }
   }, [trnsxStatus, next]);
 
-  console.log("index fromPhase1:", fromPhase1);
-
   return (
     <HeaderLayout
       showTopMenu={true}
