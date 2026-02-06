@@ -4,8 +4,8 @@
   font-size: 16px;
   font-weight: 400;
   color: $font-secondary;
-  min-width: inherit;
-  max-width: 100px;
+  min-width: fit-content;
+  max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
