@@ -443,8 +443,12 @@ const handleGetCardanoTxHistoryMsg: (
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
     }
 
-    if (!service.isReady()) {
+    if (!service.isInitialized()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    if (!service.isReady()) {
+      return { items: [], mightHaveMore: false };
     }
 
     const walletId =
@@ -472,8 +476,15 @@ const handleLoadMoreCardanoTxHistoryMsg: (
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
     }
 
-    if (!service.isReady()) {
+    if (!service.isInitialized()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    // When wallet is unlocked but walletManager is not ready for this network
+    // (e.g. after network switch or no Blockfrost for this chain), return empty history
+    // instead of misleading "unlock wallet" so UI shows "No Activity Yet".
+    if (!service.isReady()) {
+      return { items: [], mightHaveMore: false };
     }
 
     const walletId =
