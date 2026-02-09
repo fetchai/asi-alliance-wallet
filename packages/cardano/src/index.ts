@@ -3,6 +3,7 @@ export * from './api/extension/wallet';
 export * from './api/util';
 
 export * from './wallet/lib';
+export * from './wallet/util';
 
 export { CardanoWalletManager } from './wallet-manager';
 export { CardanoKeyRing } from './cardano-keyring';
@@ -14,6 +15,8 @@ export type { KeyStore, Key, CoinTypeForChain, BIP44HDPath, SupportedCurve } fro
 export * from './background-api';
 
 export * from './utils/lovelacesToAdaString';
+export * from './utils/parseAssetId';
+export * from './utils/formatAssetAmount';
 export * from './utils/network';
 
 // Export validators with explicit names to avoid conflict with api/extension/isValidAddress

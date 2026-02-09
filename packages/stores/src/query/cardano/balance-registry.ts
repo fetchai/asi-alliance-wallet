@@ -5,8 +5,14 @@ import { ObservableQueryBalanceInner, BalanceRegistry } from "../balances";
 
 export class ObservableQueryCardanoBalanceRegistry implements BalanceRegistry {
   protected cardanoBalances: Map<string, ObservableQueryCardanoBalance> = new Map();
+  // Addresses for which token discovery has already been triggered
+  private discoveryTriggered: Set<string> = new Set();
 
-  constructor(protected readonly kvStore: KVStore) {}
+  constructor(
+    protected readonly kvStore: KVStore,
+    // Called when a Cardano address balance is first accessed; triggers native token discovery
+    private readonly onAddressAccessed?: (chainId: string, bech32Address: string) => void
+  ) {}
 
   getBalanceInner(
     chainId: string,
@@ -21,7 +27,6 @@ export class ObservableQueryCardanoBalanceRegistry implements BalanceRegistry {
       return undefined;
     }
 
-    // Cache ObservableQueryCardanoBalance by address (like Cosmos does)
     const key = `${chainId}/${bech32Address}`;
 
     if (!this.cardanoBalances.has(key)) {
@@ -34,6 +39,12 @@ export class ObservableQueryCardanoBalanceRegistry implements BalanceRegistry {
           bech32Address
         )
       );
+    }
+
+    // Auto-trigger native token discovery (idempotent)
+    if (this.onAddressAccessed && !this.discoveryTriggered.has(key)) {
+      this.discoveryTriggered.add(key);
+      this.onAddressAccessed(chainId, bech32Address);
     }
 
     return new ObservableQueryCardanoBalanceInner(

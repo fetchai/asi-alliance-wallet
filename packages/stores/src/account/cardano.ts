@@ -11,6 +11,7 @@ import { CardanoSendAdapter } from "../cardano/send-adapter";
 import { MessageRequester } from "@keplr-wallet/router";
 import { DenomHelper } from "@keplr-wallet/common";
 import type { CardanoNetwork } from "@keplr-wallet/cardano";
+import { CARDANO_NATIVE_TOKEN_TYPE } from "../query/cardano/token-balance-registry";
 
 export interface CardanoAccount {
   readonly isCardano: boolean;
@@ -49,12 +50,12 @@ export class CardanoAccountImpl {
 
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
     
-    // Only handle native Cardano currency (ADA)
-    if (denomHelper.type !== "native") {
+    // Handle both native ADA and cardanonative tokens
+    if (denomHelper.type !== "native" && denomHelper.type !== CARDANO_NATIVE_TOKEN_TYPE) {
       return undefined;
     }
 
-    // Delegate to send adapter
+    // Delegate to send adapter (handles both ADA and native tokens)
     return sendAdapter.makeSendTokenTx(amount, currency, recipient);
   }
 }

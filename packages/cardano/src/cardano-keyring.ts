@@ -266,12 +266,15 @@ export class CardanoKeyRing {
   }
 
   /**
-   * Send ADA transaction
+   * Send ADA (or ADA + native assets) transaction.
+   * When assets are provided, sends a multi-asset transaction.
+   * assets: map of assetId (policyId+assetName hex) to base-unit amount string.
    */
   async sendAda(params: {
     to: string;
     amount: string; // in lovelaces
     memo?: string;
+    assets?: Map<string, string>;
   }): Promise<string> {
     if (!this.walletManager) {
       throw new Error("CardanoWalletManager not initialized - transaction features unavailable without API key");

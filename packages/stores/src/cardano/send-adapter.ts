@@ -2,12 +2,14 @@ import { AppCurrency } from "@keplr-wallet/types";
 import { DenomHelper } from "@keplr-wallet/common";
 import { MakeTxResponse } from "../account/types";
 import { MessageRequester, BACKGROUND_PORT } from "@keplr-wallet/router";
-import { 
-  EstimateSendAdaMsg, 
+import {
+  EstimateSendAdaMsg,
   SendAdaMsg,
   SendAdaWithPasswordMsg,
 } from "@keplr-wallet/background";
+import type { CardanoAssetAmount } from "@keplr-wallet/background";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
+import { CARDANO_NATIVE_TOKEN_TYPE } from "../query/cardano/token-balance-registry";
 
 type CardanoSignOptions = KeplrSignOptions & {
   cardano?: {
@@ -23,6 +25,7 @@ function getCardanoSpendingPassword(
 
 /**
  * Cardano transaction adapter that implements the unified Tx handle interface.
+ * Supports both ADA-only and multi-asset (native token) transactions.
  */
 export class CardanoSendAdapter {
   constructor(
@@ -31,7 +34,7 @@ export class CardanoSendAdapter {
   ) {}
 
   /**
-   * Creates transaction handle for Cardano ADA transfers
+   * Creates transaction handle for Cardano ADA or native token transfers.
    */
   makeSendTokenTx(
     amount: string,
@@ -40,152 +43,90 @@ export class CardanoSendAdapter {
   ): MakeTxResponse | undefined {
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
 
-    // Only handle native Cardano currency (ADA)
-    if (denomHelper.type !== "native") {
+    const isNativeAda = denomHelper.type === "native";
+    const isCardanoToken = denomHelper.type === CARDANO_NATIVE_TOKEN_TYPE;
+
+    if (!isNativeAda && !isCardanoToken) {
       return undefined;
     }
 
-    // Convert ADA to lovelace (1 ADA = 1,000,000 lovelace)
+    // Convert display amount to base units
     const actualAmount = (() => {
       let dec = parseFloat(amount);
       dec = dec * Math.pow(10, currency.coinDecimals);
       return Math.floor(dec).toString();
     })();
 
+    // Build assets array for native token sends
+    let assets: CardanoAssetAmount[] | undefined;
+    let lovelaceAmount = actualAmount;
+    if (isCardanoToken) {
+      const assetId = denomHelper.contractAddress;
+      assets = [{ assetId, amount: actualAmount }];
+      // ADA amount is "0" -- minAda will be auto-calculated by the SDK
+      lovelaceAmount = "0";
+    }
+
+    // Shared send logic: build message, broadcast, fire events
+    const executeSend = async (
+      _memo?: string,
+      _signOptions?: KeplrSignOptions,
+      onTxEvents?: any
+    ) => {
+      try {
+        const spendingPassword = getCardanoSpendingPassword(_signOptions);
+        const msg = spendingPassword
+          ? new SendAdaWithPasswordMsg(
+            recipient,
+            lovelaceAmount,
+            spendingPassword,
+            _memo,
+            this.chainId,
+            assets
+          )
+          : new SendAdaMsg(recipient, lovelaceAmount, _memo, this.chainId, assets);
+
+        const txHash = await this.messageRequester.sendMessage(
+          BACKGROUND_PORT,
+          msg
+        ) as string;
+
+        if (onTxEvents?.onBroadcasted) {
+          onTxEvents.onBroadcasted(Buffer.from(txHash));
+        }
+        if (onTxEvents?.onFulfill) {
+          onTxEvents.onFulfill({ txHash });
+        }
+      } catch (error) {
+        if (onTxEvents?.onBroadcastFailed) {
+          onTxEvents.onBroadcastFailed(error);
+        }
+        throw error;
+      }
+    };
+
     return {
-      msgs: async () => {
-        // Cardano doesn't use amino/proto msgs, return empty structure
-        return {
-          aminoMsgs: [],
-          protoMsgs: []
-        };
-      },
+      msgs: async () => ({ aminoMsgs: [], protoMsgs: [] }),
       simulate: async () => {
-        try {
-          const estimate = await this.messageRequester.sendMessage(
-            BACKGROUND_PORT,
-            new EstimateSendAdaMsg(recipient, actualAmount, undefined, this.chainId)
-          );
-
-          return {
-            gasUsed: parseInt(estimate.fee, 10)
-          };
-        } catch (error) {
-          throw error;
-        }
+        const estimateMsg = new EstimateSendAdaMsg(
+          recipient, lovelaceAmount, undefined, this.chainId, assets
+        );
+        const estimate = await this.messageRequester.sendMessage(BACKGROUND_PORT, estimateMsg) as {
+          fee: string;
+          total: string;
+          minAdaForTokens?: string;
+        };
+        return { gasUsed: parseInt(estimate.fee, 10) };
       },
-      send: async (
-        _fee: any,
-        _memo?: string,
-        _signOptions?: KeplrSignOptions,
-        onTxEvents?: any
-      ) => {
-        try {
-          const spendingPassword = getCardanoSpendingPassword(_signOptions);
-          const msg = spendingPassword
-            ? new SendAdaWithPasswordMsg(
-              recipient,
-              actualAmount,
-              spendingPassword,
-              _memo,
-              this.chainId
-            )
-            : new SendAdaMsg(recipient, actualAmount, _memo, this.chainId);
-
-          const txHash = await this.messageRequester.sendMessage(
-            BACKGROUND_PORT,
-            msg
-          );
-
-          if (onTxEvents?.onBroadcasted) {
-            onTxEvents.onBroadcasted(Buffer.from(txHash));
-          }
-
-          if (onTxEvents?.onFulfill) {
-            onTxEvents.onFulfill({ txHash });
-          }
-        } catch (error) {
-          if (onTxEvents?.onBroadcastFailed) {
-            onTxEvents.onBroadcastFailed(error);
-          }
-          throw error;
-        }
+      send: async (_fee: any, _memo?: string, _signOptions?: KeplrSignOptions, onTxEvents?: any) => {
+        await executeSend(_memo, _signOptions, onTxEvents);
       },
-      simulateAndSend: async (
-        _feeOptions: any,
-        _memo?: string,
-        _signOptions?: KeplrSignOptions,
-        onTxEvents?: any
-      ) => {
-        try {
-          const spendingPassword = getCardanoSpendingPassword(_signOptions);
-          const msg = spendingPassword
-            ? new SendAdaWithPasswordMsg(
-              recipient,
-              actualAmount,
-              spendingPassword,
-              _memo,
-              this.chainId
-            )
-            : new SendAdaMsg(recipient, actualAmount, _memo, this.chainId);
-
-          const txHash = await this.messageRequester.sendMessage(
-            BACKGROUND_PORT,
-            msg
-          );
-
-          if (onTxEvents?.onBroadcasted) {
-            onTxEvents.onBroadcasted(Buffer.from(txHash));
-          }
-
-          if (onTxEvents?.onFulfill) {
-            onTxEvents.onFulfill({ txHash });
-          }
-        } catch (error) {
-          if (onTxEvents?.onBroadcastFailed) {
-            onTxEvents.onBroadcastFailed(error);
-          }
-          throw error;
-        }
+      simulateAndSend: async (_feeOptions: any, _memo?: string, _signOptions?: KeplrSignOptions, onTxEvents?: any) => {
+        await executeSend(_memo, _signOptions, onTxEvents);
       },
-      sendWithGasPrice: async (
-        _gasInfo: any,
-        _memo?: string,
-        _signOptions?: KeplrSignOptions,
-        onTxEvents?: any
-      ) => {
-        try {
-          const spendingPassword = getCardanoSpendingPassword(_signOptions);
-          const msg = spendingPassword
-            ? new SendAdaWithPasswordMsg(
-              recipient,
-              actualAmount,
-              spendingPassword,
-              _memo,
-              this.chainId
-            )
-            : new SendAdaMsg(recipient, actualAmount, _memo, this.chainId);
-
-          const txHash = await this.messageRequester.sendMessage(
-            BACKGROUND_PORT,
-            msg
-          );
-
-          if (onTxEvents?.onBroadcasted) {
-            onTxEvents.onBroadcasted(Buffer.from(txHash));
-          }
-
-          if (onTxEvents?.onFulfill) {
-            onTxEvents.onFulfill({ txHash });
-          }
-        } catch (error) {
-          if (onTxEvents?.onBroadcastFailed) {
-            onTxEvents.onBroadcastFailed(error);
-          }
-          throw error;
-        }
+      sendWithGasPrice: async (_gasInfo: any, _memo?: string, _signOptions?: KeplrSignOptions, onTxEvents?: any) => {
+        await executeSend(_memo, _signOptions, onTxEvents);
       }
     };
   }
 }
-

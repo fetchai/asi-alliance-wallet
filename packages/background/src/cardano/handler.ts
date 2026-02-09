@@ -145,6 +145,7 @@ const handleSendAdaWithPasswordMsg: (
       to: msg.to,
       amount: msg.amount,
       memo: msg.memo,
+      assets: msg.assets,
     });
   };
 };
@@ -211,7 +212,8 @@ const handleSendAdaMsg: (
       const txHash = await service.sendAda({
         to: msg.to,
         amount: msg.amount,
-        memo: msg.memo
+        memo: msg.memo,
+        assets: msg.assets,
       });
       return txHash;
     } catch (error) {
@@ -280,7 +282,8 @@ const handleEstimateSendAdaMsg: (
       return await service.estimateSendAda({
         to: msg.to,
         amount: msg.amount,
-        memo: msg.memo
+        memo: msg.memo,
+        assets: msg.assets,
       });
     } catch (error) {
       throw error;
@@ -340,6 +343,7 @@ const handleBuildSendAdaTxDraftMsg: (
       amount: msg.amount,
       memo: msg.memo,
       chainId: msg.chainId,
+      assets: msg.assets,
     });
   };
 };

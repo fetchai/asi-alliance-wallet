@@ -350,7 +350,7 @@ export interface TokenDropdownProps {
   amountConfig: IAmountConfig;
   overrideSelectableCurrencies?: AppCurrency[];
 }
-export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
+export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = observer(({
   amountConfig,
   overrideSelectableCurrencies,
 }) => {
@@ -379,7 +379,10 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
   const selectableCurrencies = selectableCurrenciesSource
     .filter((cur) => {
       const bal = queryBalances.getBalanceFromCurrency(cur);
-      return !bal.toDec().isZero();
+      if (bal.toDec().isZero()) return false;
+      // Filter out NFTs from send token selector (Cardano)
+      if (isCardano && (cur as any).isNft) return false;
+      return true;
     })
     .sort((a, b) => {
       return a.coinDenom < b.coinDenom ? -1 : 1;
@@ -507,4 +510,4 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
       </Dropdown>
     </React.Fragment>
   );
-};
+});

@@ -2,7 +2,6 @@ import { firstValueFrom } from 'rxjs';
 import { getNetworkConfig, type BlockfrostConfig } from './adapters/env-adapter';
 import type { CardanoNetwork } from './utils/network';
 import { Cardano } from '@cardano-sdk/core';
-import type { Assets } from '@cardano-sdk/wallet';
 
 export class CardanoWalletManager {
   private wallet: any;
@@ -402,7 +401,21 @@ export class CardanoWalletManager {
     return this.chainHistoryProvider;
   }
 
-  private async buildSendTransaction(params: { to: string; amount: string; memo?: string }) {
+  /** Convert string-keyed asset map to SDK AssetId map (lace buildTransactionProps contract). */
+  private toSdkAssetMap(assets: Map<string, string>): Map<Cardano.AssetId, string> {
+    const map = new Map<Cardano.AssetId, string>();
+    for (const [id, amount] of assets) {
+      map.set(Cardano.AssetId(id), amount);
+    }
+    return map;
+  }
+
+  private async buildSendTransaction(params: {
+    to: string;
+    amount: string;
+    memo?: string;
+    assets?: Map<string, string>;
+  }) {
     if (!params.to || typeof params.to !== 'string') {
       throw new Error(`Invalid recipient address: ${params.to}`);
     }
@@ -419,20 +432,35 @@ export class CardanoWalletManager {
     const { setMissingCoins } = await import('./wallet/lib/set-missing-coins');
     const { TX } = await import('./config');
 
+    const sdkAssets =
+      params.assets && params.assets.size > 0 ? this.toSdkAssetMap(params.assets) : undefined;
+
     const outputsMap = new Map([
-      ['output1', { address, value: { coins: params.amount, assets: undefined } }]
+      ['output1', {
+        address,
+        value: {
+          coins: params.amount,
+          assets: sdkAssets,
+        }
+      }]
     ]);
 
-    const assetInfo: Assets | undefined = await firstValueFrom(this.wallet.assetInfo$).catch(() => undefined) as Assets | undefined;
+    // Omit assetsInfo: our asset amounts are already in base units (lovelace / token smallest unit).
+    // Passing assetsInfo would trigger assetBalanceToBigInt to apply decimal scaling again (double conversion).
     const partialTxProps = buildTransactionProps({
       outputsMap,
       metadata: params.memo,
-      assetsInfo: assetInfo
     });
 
     if (!partialTxProps.outputs) {
       throw new Error('Transaction outputs are undefined');
     }
+
+    // Track coins before setMissingCoins to calculate minAda added for tokens
+    const coinsBefore = [...partialTxProps.outputs].reduce(
+      (sum, out) => sum + (out.value?.coins ?? BigInt(0)),
+      BigInt(0)
+    );
 
     const util = createWalletUtil(this.wallet);
     const minimumCoinQuantities = await util.validateOutputs(partialTxProps.outputs);
@@ -441,6 +469,12 @@ export class CardanoWalletManager {
     if (!outputsWithMissingCoins.outputs) {
       throw new Error('Outputs with missing coins are undefined');
     }
+
+    const coinsAfter = [...outputsWithMissingCoins.outputs].reduce(
+      (sum, out) => sum + (out.value?.coins ?? BigInt(0)),
+      BigInt(0)
+    );
+    const minAdaForTokens = coinsAfter > coinsBefore ? (coinsAfter - coinsBefore).toString() : "0";
 
     const txBuilder = this.createTxBuilder();
     const tip = await firstValueFrom(this.tip$) as { slot: number };
@@ -464,36 +498,39 @@ export class CardanoWalletManager {
     }
 
     const feeStr = fee.toString();
-    return { tx, fee: feeStr };
+    return { tx, fee: feeStr, minAdaForTokens };
   }
 
   async buildSendAdaTx(params: {
     to: string;
     amount: string;
     memo?: string;
-  }): Promise<{ tx: any; fee: string; total: string }> {
+    assets?: Map<string, string>;
+  }): Promise<{ tx: any; fee: string; total: string; minAdaForTokens: string }> {
     if (!this.wallet) {
       throw new Error("Transaction features unavailable without Blockfrost API key");
     }
-    const { tx, fee } = await this.buildSendTransaction(params);
-    const total = (BigInt(params.amount) + BigInt(fee)).toString();
-    return { tx, fee, total };
+    const { tx, fee, minAdaForTokens } = await this.buildSendTransaction(params);
+    const total = (BigInt(params.amount) + BigInt(fee) + BigInt(minAdaForTokens)).toString();
+    return { tx, fee, total, minAdaForTokens };
   }
 
   async estimateSendAda(params: {
     to: string;
     amount: string;
     memo?: string;
-  }): Promise<{ fee: string; total: string }> {
+    assets?: Map<string, string>;
+  }): Promise<{ fee: string; total: string; minAdaForTokens?: string }> {
     if (!this.wallet) {
       throw new Error("Transaction features unavailable without Blockfrost API key");
     }
 
-    const { fee, total } = await this.buildSendAdaTx(params);
+    const { fee, total, minAdaForTokens } = await this.buildSendAdaTx(params);
 
     return {
       fee,
-      total
+      total,
+      minAdaForTokens,
     };
   }
 
@@ -501,6 +538,7 @@ export class CardanoWalletManager {
     to: string;
     amount: string; // in lovelaces (1 ADA = 1,000,000 lovelaces)
     memo?: string;
+    assets?: Map<string, string>;
   }): Promise<string> {
     if (!this.wallet) {
       throw new Error("Transaction features unavailable without Blockfrost API key");

@@ -284,7 +284,7 @@ __metadata:
 
 "@asi-alliance/cardano@file:../cardano::locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores":
   version: 0.12.12
-  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=c0f3ff&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
+  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=7e16df&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
   dependencies:
     "@blockfrost/blockfrost-js": ^5.5.0
     "@cardano-sdk/cardano-services-client": 0.26.28
@@ -311,7 +311,7 @@ __metadata:
     fuse.js: ^7.1.0
     lodash: ^4.17.21
     rxjs: ^7.8.2
-  checksum: 5ec8e1c0698d02d46776fd7c402ef512a89cfeab8c602dcd382dd2afc4eaa5e8ede4ed1d19046bc4845023ef171db7a231a089a139d304ceab6e05f2adf5ba22
+  checksum: 43afc446cbbe5be90d54da9b7057ba8620d94e7873cb3797069e974ed9420bb06f98ca738dbbe5fabd7688a189dd6fdb6016058a5d0f96d8d322dd09be3cfbce
   languageName: node
   linkType: hard
 
@@ -12749,6 +12749,7 @@ __metadata:
     "@graphql-codegen/typescript-react-apollo": ^3.3.3
     "@keplr-wallet/analytics": 0.12.12
     "@keplr-wallet/background": 0.12.12
+    "@keplr-wallet/cardano": 0.12.12
     "@keplr-wallet/chain-validator": 0.12.12
     "@keplr-wallet/common": 0.12.12
     "@keplr-wallet/cosmos": 0.12.12

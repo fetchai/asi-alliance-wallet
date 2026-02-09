@@ -106,15 +106,6 @@ export const SendPage: FunctionComponent = observer(() => {
       // Prefer not to use the gas config or fee config,
       // because gas simulator can change the gas config and fee config from the result of reaction,
       // and it can make repeated reaction.
-      console.log("[SendPage] simulateGasFn: checking errors:", {
-        amountError: sendConfigs.amountConfig.error?.message || sendConfigs.amountConfig.error?.constructor?.name,
-        recipientError: sendConfigs.recipientConfig.error?.message || sendConfigs.recipientConfig.error?.constructor?.name,
-        recipient: sendConfigs.recipientConfig.recipient,
-        rawRecipient: sendConfigs.recipientConfig.rawRecipient,
-        hasRecipientError: sendConfigs.recipientConfig.error != null,
-        hasAmountError: sendConfigs.amountConfig.error != null
-      });
-      
       // Check for errors, but allow EmptyAddressError (user is still typing)
       // EmptyAddressError is expected when the address field is empty and should not block simulation
       const hasAmountError = sendConfigs.amountConfig.error != null;
@@ -122,10 +113,6 @@ export const SendPage: FunctionComponent = observer(() => {
         !(sendConfigs.recipientConfig.error instanceof EmptyAddressError);
       
       if (hasAmountError || hasRecipientError) {
-        console.error("[SendPage] simulateGasFn: errors found, throwing Not ready to simulate tx", {
-          amountError: sendConfigs.amountConfig.error,
-          recipientError: sendConfigs.recipientConfig.error
-        });
         throw new Error("Not ready to simulate tx");
       }
 
@@ -217,6 +204,9 @@ export const SendPage: FunctionComponent = observer(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.defaultAmount, query.defaultMemo, query.defaultRecipient]);
 
+  // Token discovery is auto-triggered by ObservableQueryCardanoBalanceRegistry
+  // when the ADA balance is first queried for this address (no manual trigger needed).
+
   const sendConfigError =
     sendConfigs.recipientConfig.error ??
     sendConfigs.amountConfig.error ??
@@ -231,8 +221,6 @@ export const SendPage: FunctionComponent = observer(() => {
       setIsNext(next);
     }
   }, [trnsxStatus, next]);
-
-  console.log("index fromPhase1:", fromPhase1);
 
   return (
     <HeaderLayout
@@ -325,9 +313,7 @@ export const SendPage: FunctionComponent = observer(() => {
                   preferNoSetMemo: true,
                 },
                 {
-                  onBroadcastFailed: (e: any) => {
-                    console.log(e);
-                  },
+                  onBroadcastFailed: () => {},
                   onBroadcasted: () => {
                     analyticsStore.logEvent("Send token tx broadcasted", {
                       chainId: chainStore.current.chainId,

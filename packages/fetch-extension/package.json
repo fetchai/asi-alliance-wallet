@@ -45,6 +45,7 @@
     "@graphql-codegen/typescript-react-apollo": "^3.3.3",
     "@keplr-wallet/analytics": "0.12.12",
     "@keplr-wallet/background": "0.12.12",
+    "@keplr-wallet/cardano": "0.12.12",
     "@keplr-wallet/chain-validator": "0.12.12",
     "@keplr-wallet/common": "0.12.12",
     "@keplr-wallet/cosmos": "0.12.12",

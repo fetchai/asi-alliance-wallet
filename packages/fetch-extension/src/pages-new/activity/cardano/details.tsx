@@ -6,29 +6,9 @@ import style from "../activity-details/style.module.scss";
 import { useNotification } from "@components/notification";
 import { useIntl } from "react-intl";
 import { useStore } from "../../../stores";
-
-type CardanoTxHistoryItem = {
-  id: string;
-  blockNo?: number;
-  slot?: number;
-  status?: "pending" | "confirmed";
-  direction: "sent" | "received" | "self" | "unknown";
-  amount: string;
-  fee?: string;
-};
-
-const formatLovelaceToAda = (lovelace: string) => {
-  try {
-    const v = BigInt(lovelace || "0");
-    const oneMillion = BigInt(1000000);
-    const whole = v / oneMillion;
-    const frac = v % oneMillion;
-    const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
-    return fracStr ? `${whole.toString()}.${fracStr}` : whole.toString();
-  } catch {
-    return "0";
-  }
-};
+import { lovelacesToAdaString, formatAssetAmount } from "@keplr-wallet/cardano";
+import { getCardanoAssetIconUrl } from "./cardano-asset-utils";
+import type { CardanoTxHistoryItem } from "@keplr-wallet/background";
 
 const directionLabel = (d: CardanoTxHistoryItem["direction"]) => {
   switch (d) {
@@ -43,17 +23,20 @@ const directionLabel = (d: CardanoTxHistoryItem["direction"]) => {
   }
 };
 
+type CardanoActivityLocationState = { item?: CardanoTxHistoryItem | null };
+
 export const CardanoActivityDetails = () => {
   const navigate = useNavigate();
-  const location = useLocation() as any;
-  const item = (location?.state?.item ?? null) as CardanoTxHistoryItem | null;
+  const location = useLocation() as { state?: CardanoActivityLocationState };
+  const item = location?.state?.item ?? null;
   const notification = useNotification();
   const intl = useIntl();
   const { chainStore } = useStore();
   const denom = chainStore.current.stakeCurrency.coinDenom;
+  const adaIcon = chainStore.current.stakeCurrency?.coinImageUrl || denom[0]?.toUpperCase() || "A";
 
-  const amountAda = useMemo(() => (item ? formatLovelaceToAda(item.amount) : "0"), [item]);
-  const feeAda = useMemo(() => (item?.fee ? formatLovelaceToAda(item.fee) : "0"), [item]);
+  const amountAda = useMemo(() => (item ? lovelacesToAdaString(item.amount) : "0"), [item]);
+  const feeAda = useMemo(() => (item?.fee ? lovelacesToAdaString(item.fee) : "0"), [item]);
 
   const copyTxId = useCallback(async () => {
     if (!item?.id) return;
@@ -93,18 +76,64 @@ export const CardanoActivityDetails = () => {
           </div>
 
           <Card
-            leftImage={require("@assets/svg/wireframe/wallet.svg")}
-            leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+            leftImage={adaIcon}
+            leftImageStyle={{ height: "32px", width: "32px", background: "rgba(255,255,255,0.1)", padding: 2, borderRadius: "50%" }}
             heading={"Amount"}
             subheading={`${amountAda} ${denom}`}
           />
 
           <Card
-            leftImage={require("@assets/svg/wireframe/wallet.svg")}
-            leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+            leftImage={adaIcon}
+            leftImageStyle={{ height: "32px", width: "32px", background: "rgba(255,255,255,0.1)", padding: 2, borderRadius: "50%" }}
             heading={"Fee"}
             subheading={`${feeAda} ${denom}`}
           />
+
+          {item.assets && item.assets.length > 0 && (
+            <Card
+              leftImage={require("@assets/svg/wireframe/wallet.svg")}
+              leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+              heading={"Token Transfers"}
+              subheading={
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {item.assets.map((a) => {
+                    const name = a.ticker || a.displayName || a.fingerprint?.slice(0, 16) || a.assetId.slice(0, 16);
+                    const formattedAmount = formatAssetAmount(a.amount, a.decimals);
+                    const iconUrl = getCardanoAssetIconUrl(chainStore.current.currencies, a.assetId);
+
+                    return (
+                      <div key={a.assetId} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {iconUrl ? (
+                          <img
+                            src={iconUrl}
+                            alt={name}
+                            style={{
+                              width: 20, height: 20, borderRadius: "50%",
+                              objectFit: "contain", flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 20, height: 20, borderRadius: "50%",
+                              background: "rgba(255,255,255,0.1)",
+                              display: "flex", justifyContent: "center", alignItems: "center",
+                              fontSize: "10px", fontWeight: 600, flexShrink: 0,
+                            }}
+                          >
+                            {name[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
+                        <div style={{ fontWeight: 500 }}>
+                          {formattedAmount} {name}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              }
+            />
+          )}
 
           <Card
             leftImage={require("@assets/svg/wireframe/wallet.svg")}

@@ -1,6 +1,24 @@
 import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 
+/** Describes a single native asset transfer within a Cardano transaction. */
+export interface CardanoTxHistoryAsset {
+  policyId: string;
+  assetName: string; // hex-encoded
+  assetId: string; // policyId + assetName (Cardano.AssetId format)
+  amount: string; // absolute, in base units
+  fingerprint?: string; // CIP-14 asset fingerprint
+  displayName?: string; // resolved metadata name
+  ticker?: string;
+  decimals?: number;
+}
+
+/** Serializable asset reference used in send messages. */
+export interface CardanoAssetAmount {
+  assetId: string; // policyId + assetName
+  amount: string; // base-unit amount (no decimals)
+}
+
 export interface CardanoTxHistoryItem {
   id: string; // tx id / hash
   blockNo?: number;
@@ -9,6 +27,7 @@ export interface CardanoTxHistoryItem {
   direction: "sent" | "received" | "self" | "unknown";
   amount: string; // lovelace (absolute, no sign)
   fee?: string; // lovelace
+  assets?: CardanoTxHistoryAsset[]; // native asset transfers in this tx
 }
 
 export interface CardanoTxHistoryResponse {
@@ -28,7 +47,8 @@ export class SendAdaMsg extends Message<string> {
     public readonly to: string,
     public readonly amount: string, // in lovelaces
     public readonly memo?: string,
-    public readonly chainId?: string // Optional chainId to ensure correct network
+    public readonly chainId?: string, // Optional chainId to ensure correct network
+    public readonly assets?: CardanoAssetAmount[] // Optional native assets
   ) {
     super();
   }
@@ -42,8 +62,9 @@ export class SendAdaMsg extends Message<string> {
       throw new Error("amount is empty");
     }
 
-    // Check that amount is a number
-    if (isNaN(Number(this.amount)) || Number(this.amount) <= 0) {
+    // When assets are present, ADA amount may be "0" (minAda auto-calculated)
+    const hasAssets = this.assets && this.assets.length > 0;
+    if (!hasAssets && (isNaN(Number(this.amount)) || Number(this.amount) <= 0)) {
       throw new Error("amount must be a positive number");
     }
   }
@@ -75,7 +96,8 @@ export class SendAdaWithPasswordMsg extends Message<string> {
     public readonly amount: string, // in lovelaces
     public readonly password: string,
     public readonly memo?: string,
-    public readonly chainId?: string // Optional chainId to ensure correct network
+    public readonly chainId?: string, // Optional chainId to ensure correct network
+    public readonly assets?: CardanoAssetAmount[] // Optional native assets
   ) {
     super();
   }
@@ -89,7 +111,8 @@ export class SendAdaWithPasswordMsg extends Message<string> {
       throw new Error("amount is empty");
     }
 
-    if (isNaN(Number(this.amount)) || Number(this.amount) <= 0) {
+    const hasAssets = this.assets && this.assets.length > 0;
+    if (!hasAssets && (isNaN(Number(this.amount)) || Number(this.amount) <= 0)) {
       throw new Error("amount must be a positive number");
     }
 
@@ -174,7 +197,7 @@ export class IsCardanoReadyMsg extends Message<boolean> {
 /**
  * Message for estimating Cardano transaction fee
  */
-export class EstimateSendAdaMsg extends Message<{ fee: string; total: string }> {
+export class EstimateSendAdaMsg extends Message<{ fee: string; total: string; minAdaForTokens?: string }> {
   public static type() {
     return "cardano-estimate-send-ada";
   }
@@ -183,7 +206,8 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string }> 
     public readonly to: string,
     public readonly amount: string, // in lovelaces
     public readonly memo?: string,
-    public readonly chainId?: string // Optional chainId to ensure correct network
+    public readonly chainId?: string, // Optional chainId to ensure correct network
+    public readonly assets?: CardanoAssetAmount[] // Optional native assets
   ) {
     super();
   }
@@ -197,7 +221,8 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string }> 
       throw new Error("amount is empty");
     }
 
-    if (isNaN(Number(this.amount)) || Number(this.amount) <= 0) {
+    const hasAssets = this.assets && this.assets.length > 0;
+    if (!hasAssets && (isNaN(Number(this.amount)) || Number(this.amount) <= 0)) {
       throw new Error("amount must be a positive number");
     }
   }
@@ -218,11 +243,14 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string }> 
 export interface CardanoSendAdaTxDraft {
   draftId: string;
   fee: string; // lovelace
-  total: string; // lovelace (amount + fee)
+  total: string; // lovelace (amount + fee + minAda for token outputs)
+  assets?: CardanoAssetAmount[]; // native assets included in draft
+  minAdaForTokens?: string; // minAda required by token outputs (lovelace)
 }
 
 /**
- * Internal-only: Build a Cardano ADA send transaction draft once and reuse it for fee display + signing/submission.
+ * Internal-only: Build a Cardano send transaction draft once and reuse it for fee display + signing/submission.
+ * Supports both ADA-only and multi-asset transactions.
  */
 export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
   public static type() {
@@ -231,9 +259,10 @@ export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
 
   constructor(
     public readonly to: string,
-    public readonly amount: string, // in lovelaces
+    public readonly amount: string, // in lovelaces (ADA portion)
     public readonly memo?: string,
-    public readonly chainId?: string
+    public readonly chainId?: string,
+    public readonly assets?: CardanoAssetAmount[] // Optional native assets
   ) {
     super();
   }
@@ -247,7 +276,8 @@ export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
       throw new Error("amount is empty");
     }
 
-    if (isNaN(Number(this.amount)) || Number(this.amount) <= 0) {
+    const hasAssets = this.assets && this.assets.length > 0;
+    if (!hasAssets && (isNaN(Number(this.amount)) || Number(this.amount) <= 0)) {
       throw new Error("amount must be a positive number");
     }
   }

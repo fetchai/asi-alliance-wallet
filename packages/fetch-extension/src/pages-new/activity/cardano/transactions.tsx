@@ -8,32 +8,14 @@ import {
   LoadMoreCardanoTxHistoryMsg,
   GetCardanoSyncStatusMsg,
 } from "@keplr-wallet/background";
+import type { CardanoTxHistoryAsset, CardanoTxHistoryItem } from "@keplr-wallet/background";
 import { NoActivity } from "../no-activity";
 import styles from "../native/style.module.scss";
 import { useNavigate } from "react-router";
-
-type CardanoTxHistoryItem = {
-  id: string;
-  blockNo?: number;
-  slot?: number;
-  status?: "pending" | "confirmed";
-  direction: "sent" | "received" | "self" | "unknown";
-  amount: string;
-  fee?: string;
-};
-
-const formatLovelaceToAda = (lovelace: string) => {
-  try {
-    const v = BigInt(lovelace || "0");
-    const oneMillion = BigInt(1000000);
-    const whole = v / oneMillion;
-    const frac = v % oneMillion;
-    const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
-    return fracStr ? `${whole.toString()}.${fracStr}` : whole.toString();
-  } catch {
-    return "0";
-  }
-};
+import sendIcon from "@assets/svg/wireframe/asi-send.svg";
+import { lovelacesToAdaString, formatAssetAmount } from "@keplr-wallet/cardano";
+import { getCardanoAssetIconUrl } from "./cardano-asset-utils";
+import receiveIcon from "@assets/svg/wireframe/activity-recieve.svg";
 
 const directionLabel = (d: CardanoTxHistoryItem["direction"]) => {
   switch (d) {
@@ -236,7 +218,26 @@ export const CardanoTransactionsTab = observer(() => {
   return (
     <div>
       {items.map((item) => {
-        const amountAda = formatLovelaceToAda(item.amount);
+        const amountAda = lovelacesToAdaString(item.amount);
+        const hasAssets = item.assets && item.assets.length > 0;
+        const assetName = (a: CardanoTxHistoryAsset) =>
+          a.ticker || a.displayName || a.fingerprint?.slice(0, 12) || a.assetId.slice(0, 12);
+
+        // Main row always shows ADA (so pending token sends show "0 tADA" + tokens below)
+        const stakeCur = chainStore.current.stakeCurrency;
+        const adaIcon = {
+          url: stakeCur?.coinImageUrl,
+          letter: denom[0]?.toUpperCase() || "A",
+        };
+
+        const assetIcon = (a: CardanoTxHistoryAsset) => {
+          const url = getCardanoAssetIconUrl(chainStore.current.currencies, a.assetId);
+          const letter = assetName(a)[0]?.toUpperCase() || "T";
+          return { url, letter };
+        };
+
+        const directionIcon = item.direction === "sent" ? sendIcon : receiveIcon;
+
         return (
           <div
             key={item.id}
@@ -247,7 +248,13 @@ export const CardanoTransactionsTab = observer(() => {
               });
             }}
           >
-            <div className={styles["middleSection"]}>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <img
+                className={styles["img"]}
+                src={directionIcon}
+                alt={item.direction}
+              />
+              <div className={styles["middleSection"]}>
               <div className={styles["rowTitle"]}>{directionLabel(item.direction)}</div>
               <div className={styles["rowSubtitle"]}>
                 {item.status === "pending"
@@ -257,9 +264,51 @@ export const CardanoTransactionsTab = observer(() => {
                     : "Confirmed"}
               </div>
             </div>
-            <div className={styles["amountWrapper"]}>
-              <div className={styles["amountNumber"]}>{amountAda}</div>
-              <div className={styles["amountAlphabetic"]}>{denom}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
+              <div className={styles["amountWrapper"]} style={{ alignItems: "center" }}>
+                {adaIcon.url ? (
+                  <img
+                    src={adaIcon.url}
+                    alt={adaIcon.letter}
+                    style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      objectFit: "contain", flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      background: "rgba(255,255,255,0.1)",
+                      display: "flex", justifyContent: "center", alignItems: "center",
+                      fontSize: "10px", fontWeight: 600, flexShrink: 0,
+                    }}
+                  >
+                    {adaIcon.letter}
+                  </div>
+                )}
+                <div className={styles["amountNumber"]}>{amountAda}</div>
+                <div className={styles["amountAlphabetic"]}>{denom}</div>
+              </div>
+              {hasAssets && (
+                <div className={styles["rowSubtitle"]} style={{ fontSize: "12px", textAlign: "right", display: "flex", flexWrap: "wrap", gap: "6px 10px", justifyContent: "flex-end" }}>
+                  {item.assets!.slice(0, 3).map((a) => {
+                    const ico = assetIcon(a);
+                    return (
+                      <span key={a.assetId} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {ico.url ? (
+                          <img src={ico.url} alt="" style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "contain" }} />
+                        ) : (
+                          <span style={{ width: 14, height: 14, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>{ico.letter}</span>
+                        )}
+                        {formatAssetAmount(a.amount, a.decimals)} {assetName(a)}
+                      </span>
+                    );
+                  })}
+                  {item.assets!.length > 3 && ` +${item.assets!.length - 3} more`}
+                </div>
+              )}
             </div>
           </div>
         );

@@ -24,6 +24,9 @@ import {
   SubmitSendAdaTxDraftMsg,
   SubmitSendAdaTxDraftWithPasswordMsg,
 } from "@keplr-wallet/background";
+import { DenomHelper } from "@keplr-wallet/common";
+import { CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
+import { lovelacesToAdaString } from "@keplr-wallet/cardano";
 import { Modal, ModalBody } from "reactstrap";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
 
@@ -292,6 +295,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       draftId: string;
       fee: string;
       total: string;
+      minAdaForTokens?: string;
     } | null>(null);
     const [cardanoDraftError, setCardanoDraftError] = useState<string | null>(
       null
@@ -397,19 +401,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       return BigInt(scaledAmount);
     };
 
-    const formatLovelaceToAda = (lovelace: string) => {
-      try {
-        const v = BigInt(lovelace || "0");
-        const oneMillion = BigInt(1000000);
-        const whole = v / oneMillion;
-        const frac = v % oneMillion;
-        const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
-        return fracStr ? `${whole.toString()}.${fracStr}` : whole.toString();
-      } catch {
-        return "0";
-      }
-    };
-
     useEffect(() => {
       // Close the confirm modal if Cardano context changes underneath (chain switch / key type switch).
       if (isCardanoPasswordConfirmOpen && !shouldRequireCardanoPassword) {
@@ -439,7 +430,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       const recipient = sendConfigs?.recipientConfig?.recipient ?? "";
       const amountStr = sendConfigs?.amountConfig?.amount ?? "";
       const memo = sendConfigs?.memoConfig?.memo ?? "";
-      const decimals = sendConfigs?.amountConfig?.sendCurrency?.coinDecimals ?? 6;
+      const sendCurrency = sendConfigs?.amountConfig?.sendCurrency;
+      const decimals = sendCurrency?.coinDecimals ?? 6;
+      const denomHelper = sendCurrency ? new DenomHelper(sendCurrency.coinMinimalDenom) : null;
+      const isTokenSend = denomHelper?.type === CARDANO_NATIVE_TOKEN_TYPE;
 
       if (!recipient || !amountStr) {
         setCardanoDraft(null);
@@ -454,17 +448,25 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           setIsBuildingCardanoDraft(true);
           setCardanoDraftError(null);
 
-          const lovelaceAmount = parseAmount(amountStr, decimals).toString();
+          const baseAmount = parseAmount(amountStr, decimals).toString();
+          // For token sends, ADA amount is "0" and token goes into assets
+          const lovelaceAmount = isTokenSend ? "0" : baseAmount;
+          const assets = isTokenSend && denomHelper
+            ? [{ assetId: denomHelper.contractAddress, amount: baseAmount }]
+            : undefined;
+
           const requester = new InExtensionMessageRequester();
+          const draftMsg = new BuildSendAdaTxDraftMsg(
+            recipient,
+            lovelaceAmount,
+            memo,
+            chainStore.current.chainId,
+            assets
+          );
           const res = await requester.sendMessage(
             BACKGROUND_PORT,
-            new BuildSendAdaTxDraftMsg(
-              recipient,
-              lovelaceAmount,
-              memo,
-              chainStore.current.chainId
-            )
-          );
+            draftMsg
+          ) as { draftId: string; fee: string; total: string; minAdaForTokens?: string } | null;
 
           if (cancelled) return;
 
@@ -501,13 +503,19 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       sendConfigs?.recipientConfig?.recipient,
       sendConfigs?.amountConfig?.amount,
       sendConfigs?.amountConfig?.sendCurrency?.coinDecimals,
+      sendConfigs?.amountConfig?.sendCurrency?.coinMinimalDenom,
       sendConfigs?.memoConfig?.memo,
     ]);
 
     const feeText = (() => {
       try {
         if (isCardano && cardanoDraft?.fee) {
-          return `${formatLovelaceToAda(cardanoDraft.fee)} ${cardanoDenom}`;
+          const feeAda = lovelacesToAdaString(cardanoDraft.fee);
+          if (cardanoDraft.minAdaForTokens && cardanoDraft.minAdaForTokens !== "0") {
+            const minAda = lovelacesToAdaString(cardanoDraft.minAdaForTokens);
+            return `${feeAda} ${cardanoDenom} (+ ${minAda} ${cardanoDenom} min ADA)`;
+          }
+          return `${feeAda} ${cardanoDenom}`;
         }
         const fee = sendConfigs?.feeConfig?.fee;
         if (fee && typeof fee.toString === "function") {
@@ -756,22 +764,36 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
         <div className={style["transactionFeeContainer"]}>
           {isCardano ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "14px 16px",
-                borderRadius: "12px",
-                background: "var(--card-bg)",
-                border: "1px solid var(--border-grey)",
-              }}
-            >
-              <div style={{ opacity: 0.7 }}>Fee</div>
-              <div style={{ fontWeight: 600 }}>
+            <React.Fragment>
+              <div
+                style={{
+                  color: "var(--font-secondary, #737676)",
+                  fontFamily: "inherit",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                  lineHeight: "24px",
+                }}
+              >
+                Fee
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "12px 18px",
+                  height: "48px",
+                  borderRadius: "12px",
+                  background: "transparent",
+                  border: "1.5px solid var(--border-grey, #d0d1d1)",
+                  boxSizing: "border-box",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                  color: "var(--font-dark, #f0f0f0)",
+                }}
+              >
                 {isBuildingCardanoDraft ? "Calculating..." : feeText || "-"}
               </div>
-            </div>
+            </React.Fragment>
           ) : (
             <FeeButtons
               feeConfig={sendConfigs.feeConfig}

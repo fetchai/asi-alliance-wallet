@@ -9,10 +9,14 @@ import { useLanguage } from "../../../languages";
 import { Card } from "@components-v2/card";
 import { ToolTip } from "@components/tooltip";
 import { formatTokenName } from "@utils/format";
-import { WrongViewingKeyError } from "@keplr-wallet/stores";
+import { WrongViewingKeyError, CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
 import { UncontrolledTooltip } from "reactstrap";
 import { useNotification } from "@components/notification";
 import { observer } from "mobx-react-lite";
+import type { AppCurrency } from "@keplr-wallet/types";
+
+/** Cardano token currencies may have isNft set at registration (queries.ts). */
+type AppCurrencyWithNft = AppCurrency & { isNft?: boolean };
 
 export const Tokens = observer(() => {
   const navigate = useNavigate();
@@ -30,6 +34,10 @@ export const Tokens = observer(() => {
   const current = chainStore.current;
   const accountInfo = accountStore.getAccount(current.chainId);
   const loadingIndicator = useLoadingIndicator();
+  const isCardano = current.features?.includes("cardano") ?? false;
+
+  // Token discovery is auto-triggered by ObservableQueryCardanoBalanceRegistry
+  // when the ADA balance is first queried for this address (no manual trigger needed).
 
   const tokens = queriesStore
     .get(current.chainId)
@@ -68,9 +76,27 @@ export const Tokens = observer(() => {
     const inUsd = value && value.shrink(true).maxDecimals(6).toString();
     return inUsd;
   };
+  // Separate fungible tokens from NFTs for Cardano
+  const fungibleTokens = isCardano
+    ? tokens.filter((token) => {
+        const denom = new DenomHelper(token.currency.coinMinimalDenom);
+        if (denom.type === CARDANO_NATIVE_TOKEN_TYPE) {
+          return !(token.currency as AppCurrencyWithNft).isNft;
+        }
+        return true;
+      })
+    : tokens;
+
+  const nftTokens = isCardano
+    ? tokens.filter((token) => {
+        const denom = new DenomHelper(token.currency.coinMinimalDenom);
+        return denom.type === CARDANO_NATIVE_TOKEN_TYPE && (token.currency as AppCurrencyWithNft).isNft;
+      })
+    : [];
+
   return (
     <React.Fragment>
-      {tokens.map((token) => {
+      {fungibleTokens.map((token) => {
         const error = token.error;
         const validSelector = Buffer.from(
           Hash.sha256(Buffer.from(token.balance.currency.coinMinimalDenom))
@@ -217,6 +243,68 @@ export const Tokens = observer(() => {
           </React.Fragment>
         );
       })}
+
+      {/* NFT Section for Cardano */}
+      {nftTokens.length > 0 && (
+        <>
+          <div style={{
+            fontSize: "13px",
+            fontWeight: 600,
+            color: "rgba(255,255,255,0.6)",
+            padding: "16px 4px 8px",
+          }}>
+            NFTs
+          </div>
+          {nftTokens.map((token) => {
+            const tokenInfo = token.balance.currency;
+            const tokenString = encodeURIComponent(JSON.stringify(tokenInfo));
+            const tokenBalance = {
+              balance: token.balance.maxDecimals(0).hideDenom(false).toString(),
+              balanceInUsd: "",
+            };
+            const tokenBalanceString = encodeURIComponent(
+              JSON.stringify(tokenBalance)
+            );
+            return (
+              <Card
+                key={`nft-${token.currency.coinDenom}`}
+                leftImage={
+                  tokenInfo.coinImageUrl
+                    ? tokenInfo.coinImageUrl
+                    : tokenInfo.coinDenom[0].toUpperCase()
+                }
+                heading={
+                  <ToolTip trigger="hover" tooltip={tokenInfo.coinDenom}>
+                    {formatTokenName(tokenInfo.coinDenom)}
+                  </ToolTip>
+                }
+                subheading={
+                  token.isFetching ? (
+                    <i className="fas fa-spinner fa-spin ml-1" />
+                  ) : (
+                    token.balance.maxDecimals(0).hideDenom(false).toString()
+                  )
+                }
+                subheadingStyle={{ fontSize: "14px" }}
+                rightContent={"NFT"}
+                style={{
+                  marginBottom: "6px",
+                  padding: "18px",
+                }}
+                onClick={() => {
+                  analyticsStore.logEvent("token_click", {
+                    pageName: "Portfolio",
+                  });
+                  navigate({
+                    pathname: "/asset",
+                    search: `?tokenDetails=${tokenString}&balance=${tokenBalanceString}`,
+                  });
+                }}
+              />
+            );
+          })}
+        </>
+      )}
     </React.Fragment>
   );
 });
