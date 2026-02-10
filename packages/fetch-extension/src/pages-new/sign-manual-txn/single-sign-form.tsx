@@ -14,6 +14,7 @@ import {
   CosmosMsgTypesProto,
   convertAminoToProtoMsgs,
   convertProtoJsontoProtoMsgs,
+  createSignature,
   detectInputType,
   formatJson,
   isValidBech32Address,
@@ -33,12 +34,18 @@ export const SingleSignForm: React.FC<{
   const [txnPayload, setTxnPayload] = useState("");
   const [broadcastTxn, setBroadcastTxn] = useState(false);
   const [payloadError, setPayloadError] = useState("");
+  const [offlineSigning, setOfflineSigning] = useState(false);
+  const [accountInfo, setAccountInfo] = useState({
+    accountNumber: "",
+    sequence: "",
+  });
 
   const chainId = chainStore.current.chainId;
   const account = accountStore.getAccount(chainId);
   const queries = queriesStore.get(chainId);
   const bech32Prefix = chainStore.current.bech32Config.bech32PrefixAccAddr;
   const address = account.bech32Address;
+  const accountName = account.name;
   const accountAddress = address;
 
   const { data: accountData } = useQuery({
@@ -51,16 +58,18 @@ export const SingleSignForm: React.FC<{
       return accountData?.data;
     },
     enabled:
-      !!accountAddress && isValidBech32Address(accountAddress, bech32Prefix),
+      !!accountAddress &&
+      isValidBech32Address(accountAddress, bech32Prefix) &&
+      !offlineSigning,
   });
 
-  const onSignSuccess = (_: any, result: any) => {
+  const onSignSuccess = (signDocParams: any, result: any) => {
     navigate("/more/sign-manual-txn", {
       replace: true,
       state: {
         signed: true,
-        txSignature: result.signature.signature,
-        signatureName: "",
+        txSignature: createSignature(result, signDocParams.sequence),
+        signatureName: `signature-${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
       },
     });
   };
@@ -131,10 +140,16 @@ export const SingleSignForm: React.FC<{
   };
 
   const handleSubmit = async () => {
-    const accountDetails = {
-      sequence: accountData?.account?.sequence || "0",
-      account_number: accountData?.account?.account_number || "0",
-    };
+    const accountDetails =
+      offlineSigning && !broadcastTxn
+        ? {
+            sequence: accountInfo.sequence || "0",
+            account_number: accountInfo.accountNumber || "0",
+          }
+        : {
+            sequence: accountData?.account?.sequence || "0",
+            account_number: accountData?.account?.account_number || "0",
+          };
     const signDocData = await prepareSignDoc(
       txnPayload,
       accountDetails,
@@ -169,6 +184,12 @@ export const SingleSignForm: React.FC<{
       <TransactionSection
         chainId={chainId}
         address={address}
+        accountName={accountName}
+        broadcastTxn={broadcastTxn}
+        offlineSigning={offlineSigning}
+        setOfflineSigning={setOfflineSigning}
+        accountInfo={accountInfo}
+        setAccountInfo={setAccountInfo}
         onTxnSignDocChange={onTxnSignDocChange}
         payloadError={payloadError}
         showNotification={showNotification}

@@ -60,12 +60,18 @@ export const MultiSignForm: React.FC<{
   const [multiSigStep, setMultiSigStep] = useState<MultiSigSteps>(
     MultiSigSteps.Transaction
   );
+  const [offlineSigning, setOfflineSigning] = useState(false);
+  const [accountInfo, setAccountInfo] = useState({
+    accountNumber: "",
+    sequence: "",
+  });
 
   const chainId = chainStore.current.chainId;
   const account = accountStore.getAccount(chainId);
   const queries = queriesStore.get(chainId);
   const bech32Prefix = chainStore.current.bech32Config.bech32PrefixAccAddr;
   const address = account.bech32Address;
+  const accountName = account.name;
   const accountAddress = multisigAccount;
 
   const { data: accountData } = useQuery({
@@ -77,7 +83,9 @@ export const MultiSignForm: React.FC<{
       return accountData?.data;
     },
     enabled:
-      !!accountAddress && isValidBech32Address(accountAddress, bech32Prefix),
+      !!accountAddress &&
+      isValidBech32Address(accountAddress, bech32Prefix) &&
+      !offlineSigning,
   });
 
   const pubKeyMultisigAccount =
@@ -110,10 +118,16 @@ export const MultiSignForm: React.FC<{
   };
 
   const handleSubmit = async () => {
-    const accountDetails = {
-      sequence: accountData?.account?.sequence || "0",
-      account_number: accountData?.account?.account_number || "0",
-    };
+    const accountDetails =
+      offlineSigning && !broadcastTxn
+        ? {
+            sequence: accountInfo.sequence || "0",
+            account_number: accountInfo.accountNumber || "0",
+          }
+        : {
+            sequence: accountData?.account?.sequence || "0",
+            account_number: accountData?.account?.account_number || "0",
+          };
     const signDocData = await prepareSignDoc(
       txnPayload,
       accountDetails,
@@ -260,6 +274,7 @@ export const MultiSignForm: React.FC<{
 
   const multiSigAccountError =
     multisigAccount !== "" &&
+    !offlineSigning &&
     !isValidBech32Address(multisigAccount, bech32Prefix)
       ? "Please enter a valid bech32 address"
       : multisigAccount !== "" &&
@@ -312,6 +327,12 @@ export const MultiSignForm: React.FC<{
         <TransactionSection
           chainId={chainId}
           address={address}
+          accountName={accountName}
+          broadcastTxn={broadcastTxn}
+          offlineSigning={offlineSigning}
+          setOfflineSigning={setOfflineSigning}
+          accountInfo={accountInfo}
+          setAccountInfo={setAccountInfo}
           type="multi"
           onTxnSignDocChange={onTxnSignDocChange}
           multisigAccount={multisigAccount}
@@ -323,7 +344,8 @@ export const MultiSignForm: React.FC<{
         />
         {broadcastTxn && (
           <div className={style["multiSignatureContainer"]}>
-            {multiSigAccountError && !accountData?.account?.pub_key && (
+            {((multiSigAccountError && !accountData?.account?.pub_key) ||
+              offlineSigning) && (
               <React.Fragment>
                 <p style={{ marginBottom: 0 }} className={style["inputLabel"]}>
                   Multisig Account Pubkey
