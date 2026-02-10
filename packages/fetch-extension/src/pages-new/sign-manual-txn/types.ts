@@ -1,3 +1,5 @@
+import { SignMode } from "@keplr-wallet/background";
+
 export type SingleSignature = {
   public_key: { "@type": string; key: string };
   data: {
@@ -68,3 +70,18 @@ export enum SignAction {
   SIGN = "sign",
   SIGN_AND_BROADCAST = "sign_and_broadcast",
 }
+
+export enum MultiSigSteps {
+  Transaction = "Transaction",
+  Signatures = "Signatures",
+  ReviewAndBroadcast = "Review And Broadcast",
+}
+
+export type SignManualTxn = (
+  signType: TxnType,
+  signDoc: unknown,
+  signDocParams: unknown,
+  onSignSuccess: (signDocParams: unknown, result: unknown) => void
+) => Promise<void>;
+
+export type TxnType = SignMode.Amino | SignMode.Direct;

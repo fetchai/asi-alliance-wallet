@@ -2,12 +2,21 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
 import { Input } from "@components-v2/form";
 import { TextArea } from "@components/form";
+import {
+  RequestSignAminoMsg,
+  RequestSignDirectMsg,
+  SignMode,
+} from "@keplr-wallet/background";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { useQuery } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
 import { JsonUploadButton } from "./json-upload-button";
 import style from "./styles.module.scss";
+import { SignAction, SignDocData, TxnType /*, MultiSigSteps*/ } from "./types";
 import {
   CosmosMsgTypesAmino,
   CosmosMsgTypesProto,
@@ -27,19 +36,19 @@ import {
   validateAminoSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
-import {
-  RequestSignAminoMsg,
-  RequestSignDirectMsg,
-  SignMode,
-} from "@keplr-wallet/background";
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { SignAction, SignDocData } from "./types";
-import { useQuery } from "@tanstack/react-query";
-
-type TxnType = SignMode.Amino | SignMode.Direct;
 
 type SignerMode = "single" | "multi";
+
+export const buttonStyles = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  height: "40px",
+  width: "fit-content",
+  fontSize: "14px",
+  marginBottom: "12px",
+  fontWeight: 400,
+};
 
 export const SignTransactionForm: React.FC<{
   type: SignerMode;
@@ -58,6 +67,10 @@ export const SignTransactionForm: React.FC<{
   const [allSignaturesCollected, setAllSignaturesCollected] = useState(false);
   const [multiSigTransactionAssembled, setMultiSigTransactionAssembled] =
     useState(false);
+  const [threshold, setThreshold] = useState<number | undefined>(0);
+  // const [multiSigStep, setMultiSigStep] = useState<MultiSigSteps>(
+  //   MultiSigSteps.Transaction
+  // );
 
   const chainId = chainStore.current.chainId;
   const account = accountStore.getAccount(chainId);
@@ -67,7 +80,6 @@ export const SignTransactionForm: React.FC<{
   const collectedSignaturesCount =
     multiSignatures.filter(isSignatureCollected).length;
   const accountAddress = type === "single" ? address : multisigAccount;
-  const [threshold, setThreshold] = useState<number | undefined>(0);
 
   const { data: accountData } = useQuery({
     queryKey: ["accountData", accountAddress],
@@ -75,11 +87,19 @@ export const SignTransactionForm: React.FC<{
       const accountData = await queries.cosmos.queryAccount
         .getQueryBech32Address(accountAddress)
         .waitResponse();
+      console.log("response from api", accountData);
       return accountData?.data;
     },
     enabled:
       !!accountAddress && isValidBech32Address(accountAddress, bech32Prefix),
   });
+
+  const pubKeyMultisigAccount =
+    accountData?.account?.pub_key?.key?.pubkeys ||
+    JSON.parse(multiSigPubKeys || "{}")?.public_keys?.map((pub: any) => ({
+      type: pub["@type"],
+      value: pub.key,
+    }));
 
   useEffect(() => {
     if (type === "multi") {
@@ -266,14 +286,12 @@ export const SignTransactionForm: React.FC<{
             const signature = JSON.parse(sig);
             return signature?.signatures[0];
           });
-          const pubKeys =
-            accountData?.account?.pub_key?.key?.pubkeys ||
-            JSON.parse(multiSigPubKeys || "{}")?.public_keys?.map(
-              (pub: any) => ({ type: pub["@type"], value: pub.key })
-            );
 
-          if (pubKeys && pubKeys?.length) {
-            signatures = orderMultisigSignatures(signatures, pubKeys);
+          if (pubKeyMultisigAccount && pubKeyMultisigAccount?.length) {
+            signatures = orderMultisigSignatures(
+              signatures,
+              pubKeyMultisigAccount
+            );
           }
           signatures = createSignaturesMap(bech32Prefix, singleSignatures);
         }
@@ -310,22 +328,16 @@ export const SignTransactionForm: React.FC<{
         return signature?.signatures[0];
       });
 
-      const pubKeys =
-        accountData?.account?.pub_key?.key?.pubkeys ||
-        JSON.parse(multiSigPubKeys || "{}")?.public_keys?.map((pub: any) => ({
-          type: pub["@type"],
-          value: pub.key,
-        }));
-      if (pubKeys && pubKeys?.length) {
-        signatures = orderMultisigSignatures(signatures, pubKeys);
+      if (pubKeyMultisigAccount && pubKeyMultisigAccount?.length) {
+        signatures = orderMultisigSignatures(signatures, pubKeyMultisigAccount);
       }
       const assembled = assembleMultisigTx(
         txRaw,
         threshold || 0,
         signatures,
         signatures?.[0]?.sequence || "0",
-        pubKeys
-          ? pubKeys?.map((item: any) => ({
+        pubKeyMultisigAccount
+          ? pubKeyMultisigAccount?.map((item: any) => ({
               "@type": item?.type,
               key: item?.value,
             }))
@@ -357,6 +369,25 @@ export const SignTransactionForm: React.FC<{
     }
   };
 
+  const handleThresholdChange = (e: any) => {
+    const value = e.target.value;
+    // allow clearing the input
+    if (value === "") {
+      setThreshold(undefined);
+      return;
+    }
+    // allow only positive integers
+    if (/^[1-9]\d*$/.test(value)) {
+      setThreshold(Number(value));
+    }
+  };
+
+  const handlePubkeysChange = (value: string) => {
+    const formatted = formatJson(value);
+    setThreshold(Number(JSON.parse(value).threshold || 0));
+    setMultiSigPubKeys(formatted);
+  };
+
   const multiSigAccountError =
     multisigAccount !== "" &&
     !isValidBech32Address(multisigAccount, bech32Prefix)
@@ -369,8 +400,7 @@ export const SignTransactionForm: React.FC<{
       : "";
 
   const hasMultiSigPubKey =
-    accountData?.account?.pub_key?.key?.pubkeys ||
-    JSON.parse(multiSigPubKeys || "{}")?.public_keys;
+    pubKeyMultisigAccount && pubKeyMultisigAccount.length > 0;
 
   return (
     <div className={style["container"]}>
@@ -426,10 +456,7 @@ export const SignTransactionForm: React.FC<{
       />
       <JsonUploadButton
         text="Upload Transaction"
-        onJsonLoaded={(data) => {
-          const formatted = formatJson(data);
-          onTxnSignDocChange(formatted);
-        }}
+        onJsonLoaded={(data) => onTxnSignDocChange(formatJson(data))}
         onError={(error) => showNotification(error, "danger")}
       />
       {type === "multi" && broadcastTxn && (
@@ -453,22 +480,12 @@ export const SignTransactionForm: React.FC<{
                   const formatted = formatJson(e.target.value);
                   setMultiSigPubKeys(formatted);
                 }}
-                onBlur={(e: any) => {
-                  const formatted = formatJson(e.target.value);
-                  setThreshold(
-                    Number(JSON.parse(e.target.value).threshold || 0)
-                  );
-                  setMultiSigPubKeys(formatted);
-                }}
+                onBlur={(e: any) => handlePubkeysChange(e.target.value)}
                 className={style["txnPayloadSignatureInput"]}
               />
               <JsonUploadButton
                 text="Upload Public Key"
-                onJsonLoaded={(data) => {
-                  const formatted = formatJson(data);
-                  setThreshold(Number(JSON.parse(data).threshold || 0));
-                  setMultiSigPubKeys(formatted);
-                }}
+                onJsonLoaded={(data) => handlePubkeysChange(data)}
                 onError={(error) => showNotification(error, "danger")}
               />
             </React.Fragment>
@@ -481,30 +498,19 @@ export const SignTransactionForm: React.FC<{
             readOnly={accountData?.account?.pub_key?.key?.threshold}
             formGroupClassName={style["formGroup"]}
             formFeedbackClassName={style["formFeedback"]}
-            onChange={(e) => {
-              const value = e.target.value;
-              // allow clearing the input
-              if (value === "") {
-                setThreshold(undefined);
-                return;
-              }
-              // allow only positive integers
-              if (/^[1-9]\d*$/.test(value)) {
-                setThreshold(Number(value));
-              }
-            }}
+            onChange={handleThresholdChange}
           />
           {multiSignatures.length > 0 && (
-            <React.Fragment>
-              <p style={{ marginBottom: 0 }} className={style["inputLabel"]}>
-                Signatures{" "}
-                {threshold && (
-                  <span>
-                    ({collectedSignaturesCount} / {threshold} collected )
-                  </span>
-                )}
-              </p>
-            </React.Fragment>
+            <p style={{ marginBottom: 0 }} className={style["inputLabel"]}>
+              Signatures{" "}
+              {threshold ? (
+                <span>
+                  ({collectedSignaturesCount} / {threshold} collected )
+                </span>
+              ) : (
+                ""
+              )}
+            </p>
           )}
           {multiSignatures.map((sig, index) => (
             <React.Fragment key={index}>
@@ -514,12 +520,10 @@ export const SignTransactionForm: React.FC<{
                 placeholder="Paste a signature"
                 value={sig}
                 onChange={(e) => {
-                  const formatted = formatJson(e.target.value);
-                  handleMultiSignatureChange(index, formatted);
+                  handleMultiSignatureChange(index, formatJson(e.target.value));
                 }}
                 onBlur={(e: any) => {
-                  const formatted = formatJson(e.target.value);
-                  handleMultiSignatureChange(index, formatted);
+                  handleMultiSignatureChange(index, formatJson(e.target.value));
                 }}
                 className={style["txnPayloadSignatureInput"]}
               />
@@ -544,16 +548,7 @@ export const SignTransactionForm: React.FC<{
             <ButtonV2
               variant="dark"
               text="Add Signature"
-              styleProps={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "40px",
-                width: "fit-content",
-                fontSize: "14px",
-                marginBottom: "12px",
-                fontWeight: 400,
-              }}
+              styleProps={buttonStyles}
               disabled={
                 multiSignatures.length !== collectedSignaturesCount ||
                 (Number(threshold || 0) > 0 &&
@@ -565,15 +560,7 @@ export const SignTransactionForm: React.FC<{
               <ButtonV2
                 variant="dark"
                 text="Assemble Transaction"
-                styleProps={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "40px",
-                  width: "fit-content",
-                  fontSize: "14px",
-                  fontWeight: 400,
-                }}
+                styleProps={buttonStyles}
                 disabled={
                   !allSignaturesCollected ||
                   txnPayload.trim() === "" ||
