@@ -72,3 +72,34 @@
 .radioItemLabel {
   font-size: 14px;
 }
+
+.accountInputFormGroup {
+  background-color: #f3f3f3;
+  border-radius: 10px;
+  padding: 8px 12px;
+
+  label {
+    margin-bottom: 0px !important;
+    color: rgba($font-dark, 0.8) !important;
+  }
+
+  input {
+    height: fit-content;
+    border: none !important;
+    color: rgba($font-dark, 0.8) !important;
+    background-color: #f3f3f3 !important;
+    padding: 6px;
+    padding-left: 0px !important;
+  }
+}
+
+.offlineSigningInputField {
+  display: flex;
+  margin-top: 8px;
+  column-gap: 6px;
+  align-items: center;
+
+  input {
+    width: 180px;
+  }
+}
