@@ -13,10 +13,11 @@ import style from "./styles.module.scss";
 import { MultiSigSteps, SignAction, SignDocData, SignManualTxn } from "./types";
 import {
   assembleMultisigTx,
+  buildSignedTxnPayload,
   convertProtoJsontoProtoMsgs,
+  convertToProtoJsonPubKey,
   createSignature,
   createSignaturesMap,
-  detectInputType,
   formatJson,
   isSignatureCollected,
   isValidBech32Address,
@@ -24,7 +25,6 @@ import {
   prepareSignDoc,
   protoMultisigToAmino,
   snakeToCamelDeep,
-  validateAminoSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
 
@@ -32,6 +32,7 @@ import { TransactionSection } from "./transaction-section";
 import { MultiSignaturesSection } from "./multi-signatures-section";
 import { buttonStyles } from ".";
 import { ConfirmMultisigBroadcast } from "./confirm-multi-broadcast";
+import { Pubkey, pubkeyToAddress } from "@cosmjs/amino";
 
 const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.Transaction,
@@ -60,6 +61,7 @@ export const MultiSignForm: React.FC<{
   const [multiSigStep, setMultiSigStep] = useState<MultiSigSteps>(
     MultiSigSteps.Transaction
   );
+  const [pubKeyError, setPubKeyError] = useState<string>("");
   const [offlineSigning, setOfflineSigning] = useState(false);
   const [accountInfo, setAccountInfo] = useState({
     accountNumber: "",
@@ -75,7 +77,7 @@ export const MultiSignForm: React.FC<{
   const accountAddress = multisigAccount;
 
   const { data: accountData } = useQuery({
-    queryKey: ["accountData", accountAddress],
+    queryKey: ["accountDataMultisig", accountAddress, offlineSigning],
     queryFn: async () => {
       const accountData = await queries.cosmos.queryAccount
         .getQueryBech32Address(accountAddress)
@@ -107,12 +109,37 @@ export const MultiSignForm: React.FC<{
   }, [multiSignatures, threshold]);
 
   const onSignSuccess = (signDocParams: any, result: any) => {
+    const parsedTxnPayload = JSON.parse(txnPayload);
+    const protoJsonPubKey = multiSigPubKeys
+      ? JSON.parse(multiSigPubKeys)
+      : convertToProtoJsonPubKey(accountData?.account?.pub_key);
+    const addresses = pubKeyMultisigAccount?.map((pk: Pubkey) =>
+      pubkeyToAddress(
+        { ...pk, type: "tendermint/PubKeySecp256k1" },
+        bech32Prefix
+      )
+    );
+    const signerIndex = addresses?.findIndex(
+      (addr: string) => addr === account.bech32Address
+    );
     navigate("/more/sign-manual-txn", {
       replace: true,
       state: {
         signed: true,
         txSignature: createSignature(result, signDocParams.sequence),
-        signatureName: `signature-${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
+        signedTxn: formatJson(
+          JSON.stringify(
+            buildSignedTxnPayload({
+              txnPayload: parsedTxnPayload,
+              signingMode: "amino",
+              sequence: signDocParams.sequence,
+              pubKey: protoJsonPubKey,
+              isMultisig: true,
+              signerIndex,
+            })
+          )
+        ),
+        downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
       },
     });
   };
@@ -242,12 +269,8 @@ export const MultiSignForm: React.FC<{
     const formatted = formatJson(value);
     try {
       const signDoc = JSON.parse(formatted);
-      const inputType = detectInputType(signDoc);
-      if (inputType === "amino") {
-        validateAminoSignDoc(signDoc, chainId, multisigAccount);
-      } else {
-        validateProtoJsonSignDoc(signDoc, multisigAccount);
-      }
+
+      validateProtoJsonSignDoc(signDoc, multisigAccount);
     } catch (err) {
       setPayloadError(err.message);
     }
@@ -342,38 +365,45 @@ export const MultiSignForm: React.FC<{
           txnPayload={txnPayload}
           onMultisigAccountChange={(value) => setMultiSigAccount(value)}
         />
-        {broadcastTxn && (
-          <div className={style["multiSignatureContainer"]}>
-            {((multiSigAccountError && !accountData?.account?.pub_key) ||
-              offlineSigning) && (
-              <React.Fragment>
-                <p style={{ marginBottom: 0 }} className={style["inputLabel"]}>
-                  Multisig Account Pubkey
-                </p>
-                <p
-                  style={{ marginBottom: "10px" }}
-                  className={style["inputLabel"]}
-                >
-                  *(Multisig public key not found on-chain. Paste or Upload it
-                  manually to proceed)
-                </p>
-                <TextArea
-                  placeholder="Paste your multisig account pubkey"
-                  value={multiSigPubKeys}
-                  onChange={(e) => {
+        <div className={style["multiSignatureContainer"]}>
+          {((multiSigAccountError && !accountData?.account?.pub_key) ||
+            offlineSigning) && (
+            <React.Fragment>
+              <p style={{ marginBottom: 0 }} className={style["inputLabel"]}>
+                Multisig Account Pubkey
+              </p>
+              <p
+                style={{ marginBottom: "10px" }}
+                className={style["inputLabel"]}
+              >
+                {!offlineSigning
+                  ? "*(Multisig public key not found on-chain. Paste or Upload it manually to proceed"
+                  : " Paste or Upload multisig account pubkey."}
+              </p>
+              <TextArea
+                placeholder="Paste your multisig account pubkey"
+                value={multiSigPubKeys}
+                onChange={(e) => {
+                  try {
+                    setPubKeyError("");
                     const formatted = formatJson(e.target.value);
                     setMultiSigPubKeys(formatted);
-                  }}
-                  onBlur={(e: any) => handlePubkeysChange(e.target.value)}
-                  className={style["txnPayloadSignatureInput"]}
-                />
-                <JsonUploadButton
-                  text="Upload Public Key"
-                  onJsonLoaded={(data) => handlePubkeysChange(data)}
-                  onError={(error) => showNotification(error, "danger")}
-                />
-              </React.Fragment>
-            )}
+                  } catch (err) {
+                    setPubKeyError(err.message);
+                  }
+                }}
+                error={pubKeyError}
+                onBlur={(e: any) => handlePubkeysChange(e.target.value)}
+                className={style["txnPayloadSignatureInput"]}
+              />
+              <JsonUploadButton
+                text="Upload Public Key"
+                onJsonLoaded={(data) => handlePubkeysChange(data)}
+                onError={(error) => showNotification(error, "danger")}
+              />
+            </React.Fragment>
+          )}
+          {broadcastTxn && (
             <Input
               label="Threshold (from multisig account)"
               type="text"
@@ -384,8 +414,8 @@ export const MultiSignForm: React.FC<{
               formFeedbackClassName={style["formFeedback"]}
               onChange={handleThresholdChange}
             />
-          </div>
-        )}
+          )}
+        </div>
         <Checkbox
           isChecked={broadcastTxn}
           setIsChecked={setBroadcastTxn}
@@ -463,6 +493,11 @@ export const MultiSignForm: React.FC<{
             payloadError !== "" ||
             txnPayload.trim() === "" ||
             account.broadcastInProgress ||
+            pubKeyError !== "" ||
+            (offlineSigning &&
+              (accountInfo.accountNumber === "" ||
+                accountInfo.sequence === "")) ||
+            multisigAccount === "" ||
             multiSigAccountError !== "" ||
             (multiSigStep === MultiSigSteps.Signatures &&
               broadcastTxn &&

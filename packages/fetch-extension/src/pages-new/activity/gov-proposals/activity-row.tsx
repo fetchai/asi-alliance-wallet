@@ -3,13 +3,7 @@ import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 import { StatusButton } from "@components-v2/status-button";
 import { useStore } from "../../../stores";
-import {
-  EXPLORER_URL,
-  GEMINI_EXPLORER_URL,
-  CHAIN_ID_DORADO,
-  CHAIN_ID_FETCHHUB,
-  CHAIN_ID_GEMINI,
-} from "../../../config.ui.var";
+import { explorerBaseURL } from "@utils/index";
 
 const cardStatus = (status: string) => {
   switch (status) {
@@ -60,16 +54,8 @@ export const ActivityRow = observer(({ node }: { node: any }) => {
   const proposal = queries.cosmos.queryGovernance.getProposal(proposalId || "");
   const chainId = current.chainId;
 
-  const explorerBaseURL = () => {
-    if (chainId === CHAIN_ID_GEMINI) {
-      return GEMINI_EXPLORER_URL;
-    } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
-      return `${EXPLORER_URL}/${chainId}`;
-    }
-  };
-
   const handleClick = () => {
-    const explorerURL = explorerBaseURL();
+    const explorerURL = explorerBaseURL(chainId);
     if (!explorerURL) {
       return;
     }

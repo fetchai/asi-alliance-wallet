@@ -18,9 +18,8 @@ import {
   CHAIN_ID_FETCHHUB,
   CHAIN_ID_DORADO,
   CHAIN_ID_GEMINI,
-  EXPLORER_URL,
-  GEMINI_EXPLORER_URL,
 } from "../../../../config.ui.var";
+import { explorerBaseURL } from "@utils/index";
 
 type TallyResult = {
   title: string;
@@ -42,14 +41,6 @@ export const ProposalDetail = observer(() => {
   const queries = queriesStore.get(chainStore.current.chainId);
   const proposal = queries.cosmos.queryGovernance.getProposal(id || "");
   const chainId = current.chainId;
-
-  const explorerBaseURL = () => {
-    if (chainId === CHAIN_ID_GEMINI) {
-      return GEMINI_EXPLORER_URL;
-    } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
-      return `${EXPLORER_URL}/${chainId}`;
-    }
-  };
 
   useEffect(() => {
     if (proposal) {
@@ -154,7 +145,7 @@ export const ProposalDetail = observer(() => {
               chainId
             ) && (
               <Link
-                to={`${explorerBaseURL()}/proposals/${id}`}
+                to={`${explorerBaseURL(chainId)}/proposals/${id}`}
                 target="_blank"
                 onClick={() => {
                   analyticsStore.logEvent(

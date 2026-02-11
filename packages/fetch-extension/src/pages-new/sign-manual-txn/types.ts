@@ -1,7 +1,21 @@
 import { SignMode } from "@keplr-wallet/background";
+import { PubKey } from "@keplr-wallet/types";
+
+type SigningMode = "direct" | "amino";
+
+export type PublicKey = { "@type": string; key: string };
+
+export type UpdateSignerInfoParams = {
+  signerInfos: ProtoUnsignedTx["auth_info"]["signer_infos"];
+  signingMode: SigningMode;
+  sequence: string;
+  pubKey: PubKey | ProtoMultisigPubkey;
+  isMultisig: boolean;
+  signerIndex?: number;
+};
 
 export type SingleSignature = {
-  public_key: { "@type": string; key: string };
+  public_key: PublicKey;
   data: {
     single: {
       mode: string;
@@ -14,15 +28,12 @@ export type SingleSignature = {
 export type ProtoMultisigPubkey = {
   "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey";
   threshold: number;
-  public_keys: Array<{
-    "@type": "/cosmos.crypto.secp256k1.PubKey";
-    key: string;
-  }>;
+  public_keys: Array<PublicKey>;
 };
 
 export type MultisigPubKey = {
   threshold: number;
-  pubKeys: { "@type": string; key: string }[];
+  pubKeys: Array<PublicKey>;
 };
 
 export type ProtoUnsignedTx = {
