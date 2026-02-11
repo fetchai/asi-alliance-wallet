@@ -275,7 +275,22 @@ const extensionConfig = () => {
       new ForkTsCheckerWebpackPlugin(),
       new CopyWebpackPlugin({
         patterns: [
-          { from: "src/public/assets", to: "assets" },
+          ...(() => {
+            if (isBuildManifestV2) {
+              return [
+                { from: "src/public/assets/icon/icon-16.png", to: "assets/icon-16.png" },
+                { from: "src/public/assets/icon/icon-48.png", to: "assets/icon-48.png" },
+                { from: "src/public/assets/icon/icon-128.png", to: "assets/icon-128.png" },
+              ];
+            }
+            return [
+              { from: "src/public/assets/icon/icon-16.png", to: "assets/icon/icon-16.png" },
+              { from: "src/public/assets/icon/icon-48.png", to: "assets/icon/icon-48.png" },
+              { from: "src/public/assets/icon/icon-128.png", to: "assets/icon/icon-128.png" },
+            ];
+          })(),
+          { from: "src/public/assets/logo-256.svg", to: "assets/logo-256.svg" },
+          { from: "src/public/assets/png/ASI-Logo-Icon-black.png", to: "assets/png/ASI-Logo-Icon-black.png" },
           ...(() => {
             if (isBuildManifestV2) {
               return [

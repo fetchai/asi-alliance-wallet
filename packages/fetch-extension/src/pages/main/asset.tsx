@@ -27,6 +27,12 @@ import Modal from "react-modal";
 import styleTxButton from "./tx-button.module.scss";
 import classNames from "classnames";
 
+const FIAT_ON_RAMP_ICONS: Record<string, string> = {
+  kado: require("../../public/assets/img/fiat-on-ramp/kado.svg"),
+  moonpay: require("../../public/assets/img/fiat-on-ramp/moonpay.svg"),
+  transak: require("../../public/assets/img/fiat-on-ramp/transak.svg"),
+};
+
 export const ProgressBar = ({
   width,
   data,
@@ -416,7 +422,7 @@ export const BuyModalContent: FunctionComponent<{
           >
             <div className={styleTxButton["serviceLogoContainer"]}>
               <img
-                src={require(`../../public/assets/img/fiat-on-ramp/${serviceInfo.serviceId}.svg`)}
+                src={FIAT_ON_RAMP_ICONS[serviceInfo.serviceId]}
               />
             </div>
             <div className={styleTxButton["serviceName"]}>

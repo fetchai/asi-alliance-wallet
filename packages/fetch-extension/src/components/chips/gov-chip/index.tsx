@@ -1,6 +1,19 @@
 import React, { FunctionComponent } from "react";
 import style from "./style.module.scss";
 
+const GOV_SVG_ICONS: Record<string, string> = {
+  "gov-abstain-white.svg": require("@assets/svg/gov-abstain-white.svg"),
+  "gov-abstain.svg": require("@assets/svg/gov-abstain.svg"),
+  "gov-clock.svg": require("@assets/svg/gov-clock.svg"),
+  "gov-cross-2-white.svg": require("@assets/svg/gov-cross-2-white.svg"),
+  "gov-cross.svg": require("@assets/svg/gov-cross.svg"),
+  "gov-no-veto-white.svg": require("@assets/svg/gov-no-veto-white.svg"),
+  "gov-share-blue.svg": require("@assets/svg/gov-share-blue.svg"),
+  "gov-share.svg": require("@assets/svg/gov-share.svg"),
+  "gov-tick-white.svg": require("@assets/svg/gov-tick-white.svg"),
+  "gov-tick.svg": require("@assets/svg/gov-tick.svg"),
+};
+
 interface Props {
   name: string;
   selectedIndex: number;
@@ -37,8 +50,8 @@ export const GovStatusChip: FunctionComponent<Props> = (props) => {
           className={filter ? style["contentInverter"] : style["govStatus"]}
           style={{ backgroundColor: background, color: color }}
         >
-          {icon && (
-            <img draggable={false} src={require("@assets/svg/" + icon)} />
+          {icon && GOV_SVG_ICONS[icon] && (
+            <img draggable={false} src={GOV_SVG_ICONS[icon]} />
           )}
           {name}
         </span>

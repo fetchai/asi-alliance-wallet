@@ -284,14 +284,12 @@ __metadata:
 
 "@asi-alliance/cardano@file:../cardano::locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores":
   version: 0.12.12
-  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=7e16df&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
+  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=5e4c23&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
   dependencies:
     "@blockfrost/blockfrost-js": ^5.5.0
     "@cardano-sdk/cardano-services-client": 0.26.28
     "@cardano-sdk/core": 0.46.10
     "@cardano-sdk/crypto": 0.4.4
-    "@cardano-sdk/hardware-ledger": 0.16.19
-    "@cardano-sdk/hardware-trezor": 0.7.29
     "@cardano-sdk/input-selection": 0.14.18
     "@cardano-sdk/key-management": 0.29.10
     "@cardano-sdk/tx-construction": 0.28.8
@@ -302,7 +300,6 @@ __metadata:
     "@keplr-wallet/crypto": "*"
     "@ledgerhq/devices": ^8.4.4
     "@stablelib/chacha20poly1305": 1.0.1
-    "@trezor/transport": ^1.1.18
     bignumber.js: ^9.1.2
     bip39: ^3.1.0
     bottleneck: ^2.19.5
@@ -311,7 +308,7 @@ __metadata:
     fuse.js: ^7.1.0
     lodash: ^4.17.21
     rxjs: ^7.8.2
-  checksum: 43afc446cbbe5be90d54da9b7057ba8620d94e7873cb3797069e974ed9420bb06f98ca738dbbe5fabd7688a189dd6fdb6016058a5d0f96d8d322dd09be3cfbce
+  checksum: 2d55f18b79ae82eec1ab86126b722839d43c90a61261192b140d8f824b98ca6b01a56a47797287929287c21bf4aaf9c52f6cecc00412562cdd0dac6cfa9e5d3e
   languageName: node
   linkType: hard
 
@@ -8015,28 +8012,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cardano-sdk/hardware-ledger@npm:0.16.19":
-  version: 0.16.19
-  resolution: "@cardano-sdk/hardware-ledger@npm:0.16.19"
-  dependencies:
-    "@cardano-foundation/ledgerjs-hw-app-cardano": ^7.1.4
-    "@cardano-sdk/core": ~0.46.10
-    "@cardano-sdk/crypto": ~0.4.4
-    "@cardano-sdk/dapp-connector": ~0.13.24
-    "@cardano-sdk/key-management": ~0.29.10
-    "@cardano-sdk/tx-construction": ~0.28.8
-    "@cardano-sdk/util": ~0.17.1
-    "@emurgo/cardano-message-signing-nodejs": ^1.0.1
-    "@ledgerhq/hw-transport": ^6.31.4
-    "@ledgerhq/hw-transport-node-hid-noevents": ^6.30.5
-    "@ledgerhq/hw-transport-webusb": ^6.29.4
-    node-hid: ^2.1.2
-    ts-custom-error: ^3.2.0
-    ts-log: ^2.2.4
-  checksum: 8a91d3f35e1e6f26a2d7a6d1c4a96ef77e0d74b4f7449ee738a49e68d995a2f9e8e8e2387470889517cde7516a8194e8b70da7632d2050975dc5e84864056ced
-  languageName: node
-  linkType: hard
-
 "@cardano-sdk/hardware-ledger@npm:~0.16.19":
   version: 0.16.21
   resolution: "@cardano-sdk/hardware-ledger@npm:0.16.21"
@@ -8059,7 +8034,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cardano-sdk/hardware-trezor@npm:0.7.29, @cardano-sdk/hardware-trezor@npm:~0.7.29":
+"@cardano-sdk/hardware-trezor@npm:~0.7.29":
   version: 0.7.29
   resolution: "@cardano-sdk/hardware-trezor@npm:0.7.29"
   dependencies:
@@ -12628,8 +12603,6 @@ __metadata:
     "@cardano-sdk/cardano-services-client": 0.26.28
     "@cardano-sdk/core": 0.46.10
     "@cardano-sdk/crypto": 0.4.4
-    "@cardano-sdk/hardware-ledger": 0.16.19
-    "@cardano-sdk/hardware-trezor": 0.7.29
     "@cardano-sdk/input-selection": 0.14.18
     "@cardano-sdk/key-management": 0.29.10
     "@cardano-sdk/tx-construction": 0.28.8
@@ -12642,7 +12615,6 @@ __metadata:
     "@keplr-wallet/crypto": "*"
     "@ledgerhq/devices": ^8.4.4
     "@stablelib/chacha20poly1305": 1.0.1
-    "@trezor/transport": ^1.1.18
     "@types/lodash": ^4.14.202
     "@types/webextension-polyfill": ^0.10.0
     bignumber.js: ^9.1.2
@@ -13317,7 +13289,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ledgerhq/devices@npm:8.6.1, @ledgerhq/devices@npm:^8.4.4":
+"@ledgerhq/devices@npm:8.6.1":
   version: 8.6.1
   resolution: "@ledgerhq/devices@npm:8.6.1"
   dependencies:
@@ -13353,6 +13325,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ledgerhq/devices@npm:^8.4.4":
+  version: 8.10.0
+  resolution: "@ledgerhq/devices@npm:8.10.0"
+  dependencies:
+    "@ledgerhq/errors": ^6.29.0
+    "@ledgerhq/logs": ^6.14.0
+    rxjs: 7.8.2
+    semver: 7.7.3
+  checksum: 10e5b7213f913281446f44ff40afe971518513fff70265017229223eb9693e018229b30fc925fcf11ab6fdd2f4a222c95a8f29ed068ceca9b0ed0d5d53b14842
+  languageName: node
+  linkType: hard
+
 "@ledgerhq/errors@npm:^6.10.0":
   version: 6.10.0
   resolution: "@ledgerhq/errors@npm:6.10.0"
@@ -13371,6 +13355,13 @@ __metadata:
   version: 6.26.0
   resolution: "@ledgerhq/errors@npm:6.26.0"
   checksum: 0ccd870d7bbeb5dfc58c767ee173d86e068039c6a86d8c717503575ac5a4425889aabfb8bf5072e91ab834ef4d29cd05c3adb8a4d862d766b465c21ba685a4e7
+  languageName: node
+  linkType: hard
+
+"@ledgerhq/errors@npm:^6.29.0":
+  version: 6.29.0
+  resolution: "@ledgerhq/errors@npm:6.29.0"
+  checksum: 423231fd475712eefa1a26e2b48534d6e96d360fe9600050955d5463935cd9ddabe826de395b3bfcbe38e0d03e283f1651fd815961d6230580a2248378a162f5
   languageName: node
   linkType: hard
 
@@ -13502,6 +13493,13 @@ __metadata:
   version: 6.13.0
   resolution: "@ledgerhq/logs@npm:6.13.0"
   checksum: b2b64af45630eb2851f49af505e46a378cd62edfa73b154867a8d86641a684a36c9fee12a5e9ca94fb8fb3d81b47462fdb369ba9f0261079db1c6a81d9c0f12b
+  languageName: node
+  linkType: hard
+
+"@ledgerhq/logs@npm:^6.14.0":
+  version: 6.14.0
+  resolution: "@ledgerhq/logs@npm:6.14.0"
+  checksum: 3ba0d28e93e8b1ab355ad95711fd00f2245b3f07204c5de6a0e7570887e9ec847bfaf51a3213e9952ba8a2a4db81084d7864067b9517a1afa0f3a4d869193471
   languageName: node
   linkType: hard
 
@@ -17506,13 +17504,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sinclair/typebox@npm:^0.33.7":
-  version: 0.33.22
-  resolution: "@sinclair/typebox@npm:0.33.22"
-  checksum: d87c623b2b853a2684edda8d8a9f842867a9e22d0120142b8c82d0c7fc97ac0e5d95027c2f14497ccce0bd101b706645d04acd602b04c0c706002f57f51302e3
-  languageName: node
-  linkType: hard
-
 "@sindresorhus/is@npm:^4.0.0":
   version: 4.6.0
   resolution: "@sindresorhus/is@npm:4.6.0"
@@ -20326,34 +20317,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@trezor/protobuf@npm:1.4.3":
-  version: 1.4.3
-  resolution: "@trezor/protobuf@npm:1.4.3"
-  dependencies:
-    "@trezor/schema-utils": 1.3.4
-    long: 5.2.5
-    protobufjs: 7.4.0
-  peerDependencies:
-    tslib: ^2.6.2
-  checksum: c3ca68998659ff5b1b80695c97d32f8d1b5a22ba8f11664f8c3aa5dc93659bea4ac4095b250218b6656a69572a4882bd5cdd97fa185205025640e907c50b2cf3
-  languageName: node
-  linkType: hard
-
 "@trezor/protocol@npm:1.2.0":
   version: 1.2.0
   resolution: "@trezor/protocol@npm:1.2.0"
   peerDependencies:
     tslib: ^2.6.2
   checksum: 4440973bc20cc3f58c489f7a90292591c8994bace7477205287b504947d0a1e4ea7bf9e029e6a6bdd438281a8d9ff7ea54567dc377b39b8eaa7028522d12adca
-  languageName: node
-  linkType: hard
-
-"@trezor/protocol@npm:1.2.9":
-  version: 1.2.9
-  resolution: "@trezor/protocol@npm:1.2.9"
-  peerDependencies:
-    tslib: ^2.6.2
-  checksum: 6f873c89e5cfaccf5da12de87662a1d3313bb7ee2f54453ac05b87feb67323ea6ebedaf9eae9561729bc46b457a85a4dac937c053bd519fa398d406947e4bdce
   languageName: node
   linkType: hard
 
@@ -20366,18 +20335,6 @@ __metadata:
   peerDependencies:
     tslib: ^2.6.2
   checksum: 1e5f0627fa87be591e4d6e78469764305e38af1abf5fa65058a0e018d97525244fe5b1f86db29ec905bfb2e8a37290dafb9ef2a874819424148112b18507b383
-  languageName: node
-  linkType: hard
-
-"@trezor/schema-utils@npm:1.3.4":
-  version: 1.3.4
-  resolution: "@trezor/schema-utils@npm:1.3.4"
-  dependencies:
-    "@sinclair/typebox": ^0.33.7
-    ts-mixer: ^6.0.3
-  peerDependencies:
-    tslib: ^2.6.2
-  checksum: e59a20acdfeb472a4235843141e2951136c88381777c688a5baf6a6364fe2ac494d8b80dabbbcba4aef685a00657d13b5f3ef8c949b62c5ab4c85237ae8abe0f
   languageName: node
   linkType: hard
 
@@ -20398,33 +20355,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@trezor/transport@npm:^1.1.18":
-  version: 1.5.3
-  resolution: "@trezor/transport@npm:1.5.3"
-  dependencies:
-    "@trezor/protobuf": 1.4.3
-    "@trezor/protocol": 1.2.9
-    "@trezor/type-utils": 1.1.9
-    "@trezor/utils": 9.4.3
-    cross-fetch: ^4.0.0
-    usb: ^2.15.0
-  peerDependencies:
-    tslib: ^2.6.2
-  checksum: 7614bccb050f21881c066d9c4d9f29a505ef064156cb51b2f7d3b05f8538eeb79de3d1fc28f680afc926ddd3d528bb06447d7a427d50b857521e24b39e9f7620
-  languageName: node
-  linkType: hard
-
 "@trezor/type-utils@npm:1.1.0":
   version: 1.1.0
   resolution: "@trezor/type-utils@npm:1.1.0"
   checksum: 382bac3c2a382d42fc5da3edfa0d8a955ca25a5adb165594af4ecaf2ff3a2090108ad53ee2ad75673dd9ebabd5bfcfe036564576a3c62926a44d99ba102d0583
-  languageName: node
-  linkType: hard
-
-"@trezor/type-utils@npm:1.1.9":
-  version: 1.1.9
-  resolution: "@trezor/type-utils@npm:1.1.9"
-  checksum: 1a76ef529361c1b2e3c5b4f64de5246dec3d9f2f4d36562e2febc44433477d872644dbe8e57a0125a2db86ce409208d847161e64a155e4a20ffa9e601b2f1a8e
   languageName: node
   linkType: hard
 
@@ -20436,17 +20370,6 @@ __metadata:
   peerDependencies:
     tslib: ^2.6.2
   checksum: 755c80193391c9f69a0fc0ef0147d7ca8d8c794cf6cf44ef91a022231075806b92364baca61dcb35c95c47a091359a10b72ca06e8d96c8f810178084ee25786c
-  languageName: node
-  linkType: hard
-
-"@trezor/utils@npm:9.4.3":
-  version: 9.4.3
-  resolution: "@trezor/utils@npm:9.4.3"
-  dependencies:
-    bignumber.js: ^9.3.1
-  peerDependencies:
-    tslib: ^2.6.2
-  checksum: c9784e586117532a5f0a454054a282b60b7517538f746b87fc57ba5d936a2181023e97f96d87ec57721ea2f42454bd7749e54328cdffb0a33632ccbe0ed6c818
   languageName: node
   linkType: hard
 
@@ -42606,13 +42529,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"long@npm:5.2.5":
-  version: 5.2.5
-  resolution: "long@npm:5.2.5"
-  checksum: e69605f84d24ded688b5654ff41352cbcf816f8201bc9a2cd89dfce38fab0563017ed15d39ec8007f1e09db908f034e8c5b386530fe689f9caa837bf35e75c42
-  languageName: node
-  linkType: hard
-
 "long@npm:^3.2.0":
   version: 3.2.0
   resolution: "long@npm:3.2.0"
@@ -50350,26 +50266,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs@npm:7.4.0":
-  version: 7.4.0
-  resolution: "protobufjs@npm:7.4.0"
-  dependencies:
-    "@protobufjs/aspromise": ^1.1.2
-    "@protobufjs/base64": ^1.1.2
-    "@protobufjs/codegen": ^2.0.4
-    "@protobufjs/eventemitter": ^1.1.0
-    "@protobufjs/fetch": ^1.1.0
-    "@protobufjs/float": ^1.0.2
-    "@protobufjs/inquire": ^1.1.0
-    "@protobufjs/path": ^1.1.2
-    "@protobufjs/pool": ^1.1.0
-    "@protobufjs/utf8": ^1.1.0
-    "@types/node": ">=13.7.0"
-    long: ^5.0.0
-  checksum: ba0e6b60541bbf818bb148e90f5eb68bd99004e29a6034ad9895a381cbd352be8dce5376e47ae21b2e05559f2505b4a5f4a3c8fa62402822c6ab4dcdfb89ffb3
-  languageName: node
-  linkType: hard
-
 "protobufjs@npm:^7.0.0":
   version: 7.2.5
   resolution: "protobufjs@npm:7.2.5"
@@ -54749,7 +54645,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rxjs@npm:*, rxjs@npm:^7.4.0, rxjs@npm:^7.8.1, rxjs@npm:^7.8.2":
+"rxjs@npm:*, rxjs@npm:7.8.2, rxjs@npm:^7.4.0, rxjs@npm:^7.8.1, rxjs@npm:^7.8.2":
   version: 7.8.2
   resolution: "rxjs@npm:7.8.2"
   dependencies:
@@ -55255,6 +55151,15 @@ __metadata:
   bin:
     semver: bin/semver.js
   checksum: 692f4900dadb43919614b0df9af23fe05743051cda0d1735b5e4d76f93c9e43a266fae73cfc928f5d1489f022c5c0e65dfd2900fcf5b1839c4e9a239729afa7b
+  languageName: node
+  linkType: hard
+
+"semver@npm:7.7.3":
+  version: 7.7.3
+  resolution: "semver@npm:7.7.3"
+  bin:
+    semver: bin/semver.js
+  checksum: f013a3ee4607857bcd3503b6ac1d80165f7f8ea94f5d55e2d3e33df82fce487aa3313b987abf9b39e0793c83c9fc67b76c36c067625141a9f6f704ae0ea18db2
   languageName: node
   linkType: hard
 
@@ -60133,7 +60038,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"usb@npm:^2.11.0, usb@npm:^2.15.0":
+"usb@npm:^2.11.0":
   version: 2.16.0
   resolution: "usb@npm:2.16.0"
   dependencies:
