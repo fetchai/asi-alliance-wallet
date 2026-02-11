@@ -5,6 +5,8 @@ import {
   CHAIN_ID_GEMINI,
   CHAIN_ID_LOCAL_TEST_NETWORK,
   CHAIN_ID_REMOTE_TEST_NETWORK,
+  EXPLORER_URL,
+  GEMINI_EXPLORER_URL,
 } from "../config.ui.var";
 import { formatAddress } from "./format";
 import { GroupEvent } from "./group-events";
@@ -173,3 +175,11 @@ export function toWssUrl(input: string): string {
 
   return `wss://${stripped}/websocket`;
 }
+
+export const explorerBaseURL = (chainId: string) => {
+  if (chainId === CHAIN_ID_GEMINI) {
+    return GEMINI_EXPLORER_URL;
+  } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
+    return `${EXPLORER_URL}/${chainId}`;
+  }
+};

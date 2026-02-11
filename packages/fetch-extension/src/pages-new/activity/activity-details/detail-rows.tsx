@@ -12,9 +12,8 @@ import {
   CHAIN_ID_DORADO,
   CHAIN_ID_FETCHHUB,
   CHAIN_ID_GEMINI,
-  EXPLORER_URL,
-  GEMINI_EXPLORER_URL,
 } from "../../../config.ui.var";
+import { explorerBaseURL } from "@utils/index";
 
 export const DetailRows = ({ details }: { details: any }) => {
   const currency: AppCurrency = {
@@ -31,16 +30,8 @@ export const DetailRows = ({ details }: { details: any }) => {
   const { chainStore, analyticsStore } = useStore();
   const chainId = chainStore.current.chainId;
 
-  const explorerBaseURL = () => {
-    if (chainId === CHAIN_ID_GEMINI) {
-      return GEMINI_EXPLORER_URL;
-    } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
-      return `${EXPLORER_URL}/${chainId}`;
-    }
-  };
-
   const handleClick = () => {
-    const explorerURL = explorerBaseURL();
+    const explorerURL = explorerBaseURL(chainId);
     if (!explorerURL) {
       return;
     }

@@ -12,14 +12,13 @@ import { SignAction, SignDocData, SignManualTxn } from "./types";
 import {
   CosmosMsgTypesAmino,
   CosmosMsgTypesProto,
+  buildSignedTxnPayload,
   convertAminoToProtoMsgs,
   convertProtoJsontoProtoMsgs,
   createSignature,
-  detectInputType,
   formatJson,
   isValidBech32Address,
   prepareSignDoc,
-  validateAminoSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
 
@@ -69,7 +68,17 @@ export const SingleSignForm: React.FC<{
       state: {
         signed: true,
         txSignature: createSignature(result, signDocParams.sequence),
-        signatureName: `signature-${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
+        signedTxn: formatJson(
+          JSON.stringify(
+            buildSignedTxnPayload({
+              txnPayload: JSON.parse(txnPayload),
+              signingMode: "amino",
+              sequence: signDocParams.sequence,
+              pubKey: result.signature.pub_key,
+            })
+          )
+        ),
+        downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
       },
     });
   };
@@ -168,12 +177,7 @@ export const SingleSignForm: React.FC<{
     const formatted = formatJson(value);
     try {
       const signDoc = JSON.parse(formatted);
-      const inputType = detectInputType(signDoc);
-      if (inputType === "amino") {
-        validateAminoSignDoc(signDoc, chainId, address);
-      } else {
-        validateProtoJsonSignDoc(signDoc, address);
-      }
+      validateProtoJsonSignDoc(signDoc, address);
     } catch (err) {
       setPayloadError(err.message);
     }
@@ -213,7 +217,9 @@ export const SingleSignForm: React.FC<{
         disabled={
           payloadError !== "" ||
           txnPayload.trim() === "" ||
-          account.broadcastInProgress
+          account.broadcastInProgress ||
+          (offlineSigning &&
+            (accountInfo.accountNumber === "" || accountInfo.sequence === ""))
         }
         text={
           broadcastTxn ? (

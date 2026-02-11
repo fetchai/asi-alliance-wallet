@@ -4,7 +4,12 @@ import React from "react";
 import { useLocation, useNavigate } from "react-router";
 import style from "./styles.module.scss";
 import { downloadJson } from "./utils";
-import { EXPLORER_URL } from "../../config.ui.var";
+import {
+  CHAIN_ID_DORADO,
+  CHAIN_ID_FETCHHUB,
+  CHAIN_ID_GEMINI,
+} from "../../config.ui.var";
+import { explorerBaseURL } from "@utils/index";
 
 const buttonStyles: React.CSSProperties = {
   width: "fit-content",
@@ -21,13 +26,57 @@ export const TransactionDetails: React.FC<{
 }> = ({ onCopy }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { txSignature, txHash, signatureName, broadcastType, chainId } =
-    location.state || {};
+  const {
+    txSignature,
+    txHash,
+    downloadFilename,
+    broadcastType,
+    chainId,
+    signedTxn,
+  } = location.state || {};
+
+  const renderCopyButton = (onCopy: () => void) => (
+    <ButtonV2
+      text=""
+      styleProps={buttonStyles}
+      variant="dark"
+      onClick={() => onCopy()}
+    >
+      Copy
+      <img
+        style={{ cursor: "pointer", marginLeft: "10px" }}
+        src={require("@assets/svg/wireframe/copyGrey.svg")}
+        alt="Copy"
+      />
+    </ButtonV2>
+  );
+
+  const renderDownloadButton = (onDownload: () => void) => (
+    <ButtonV2
+      text=""
+      styleProps={buttonStyles}
+      variant="dark"
+      onClick={onDownload}
+    >
+      Download
+      <img
+        style={{
+          cursor: "pointer",
+          marginLeft: "10px",
+          filter: "invert(1)",
+        }}
+        src={require("@assets/svg/wireframe/arrow-down.svg")}
+        alt="Download"
+      />
+    </ButtonV2>
+  );
+
   return (
     <Card
       heading="Transaction Details"
       style={{
         minHeight: "200px",
+        overflowY: "scroll",
       }}
       middleSectionStyle={{
         width: "100%",
@@ -43,14 +92,14 @@ export const TransactionDetails: React.FC<{
         <React.Fragment>
           <div>Signature</div>
           <div className={style["transactionDetailsRow"]}>
-            {!signatureName ? (
+            {!downloadFilename ? (
               txSignature
             ) : (
               <pre className={style["jsonPreview"]}>{txSignature}</pre>
             )}
             <div
               style={
-                !signatureName
+                !downloadFilename
                   ? { display: "inline" }
                   : {
                       display: "flex",
@@ -58,7 +107,7 @@ export const TransactionDetails: React.FC<{
                     }
               }
             >
-              {!signatureName ? (
+              {!downloadFilename ? (
                 <img
                   style={{
                     cursor: "pointer",
@@ -71,51 +120,48 @@ export const TransactionDetails: React.FC<{
                   alt=""
                 />
               ) : (
-                <ButtonV2
-                  text=""
-                  styleProps={buttonStyles}
-                  variant="dark"
-                  onClick={() =>
-                    onCopy(txSignature, "Transaction signature copied")
-                  }
-                >
-                  Copy
-                  <img
-                    style={{
-                      cursor: "pointer",
-                      marginLeft: "10px",
-                    }}
-                    src={require("@assets/svg/wireframe/copyGrey.svg")}
-                    alt=""
-                  />
-                </ButtonV2>
+                renderCopyButton(() =>
+                  onCopy(txSignature, "Transaction signature copied")
+                )
               )}
-              {signatureName && (
-                <ButtonV2
-                  text=""
-                  styleProps={buttonStyles}
-                  variant="dark"
-                  onClick={() =>
-                    downloadJson(
-                      JSON.parse(txSignature),
-                      `${signatureName}.json`
-                    )
-                  }
-                >
-                  Download
-                  <img
-                    style={{
-                      cursor: "pointer",
-                      marginLeft: "10px",
-                      filter: "invert(1)",
-                    }}
-                    src={require("@assets/svg/wireframe/arrow-down.svg")}
-                    alt=""
-                  />
-                </ButtonV2>
-              )}
+              {downloadFilename &&
+                renderDownloadButton(() =>
+                  downloadJson(
+                    JSON.parse(txSignature),
+                    `signature-${downloadFilename}.json`
+                  )
+                )}
             </div>
           </div>
+          {signedTxn && (
+            <React.Fragment>
+              <div>Transaction</div>
+              <div className={style["transactionDetailsRow"]}>
+                <pre
+                  className={style["jsonPreview"]}
+                  style={{ maxHeight: "350px", overflowY: "scroll" }}
+                >
+                  {signedTxn}
+                </pre>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-around",
+                  }}
+                >
+                  {renderCopyButton(() =>
+                    onCopy(signedTxn, "Signed transaction copied")
+                  )}
+                  {renderDownloadButton(() =>
+                    downloadJson(
+                      JSON.parse(signedTxn),
+                      `signed-transaction-${downloadFilename}.json`
+                    )
+                  )}
+                </div>
+              </div>
+            </React.Fragment>
+          )}
           {txHash && (
             <React.Fragment>
               <div>Hash</div>
@@ -145,7 +191,10 @@ export const TransactionDetails: React.FC<{
             width: "100%",
           }}
         >
-          {txHash && (
+          {txHash &&
+          [CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
+            chainId
+          ) ? (
             <ButtonV2
               styleProps={buttonStyles}
               variant="dark"
@@ -158,13 +207,17 @@ export const TransactionDetails: React.FC<{
                     },
                   });
                 } else {
-                  const url = `${EXPLORER_URL}/${chainId}/transactions/${txHash}/`;
-                  window.open(url, "_blank", "noopener,noreferrer");
+                  const url = `${explorerBaseURL(
+                    chainId
+                  )}/transactions/${txHash}/`;
+                  if (url) window.open(url, "_blank", "noopener,noreferrer");
                 }
               }}
             >
               Transaction Details
             </ButtonV2>
+          ) : (
+            ""
           )}
           <ButtonV2
             styleProps={buttonStyles}

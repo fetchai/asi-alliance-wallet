@@ -26,12 +26,173 @@ import {
   MultisigPubKey,
   ProtoMultisigPubkey,
   SignDocData,
+  UpdateSignerInfoParams,
 } from "./types";
 import { MsgExecuteContract } from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
 import { fromBech32 } from "@cosmjs/encoding";
 import { sortObjectByKey } from "@keplr-wallet/common";
-/* eslint-disable-next-line import/no-extraneous-dependencies */
+import { PubKey } from "@keplr-wallet/types";
+/* eslint-disable import/no-extraneous-dependencies */
 import Long from "long";
+
+export function makeCompactBitArray(bits: boolean[]) {
+  const byteLength = Math.ceil(bits.length / 8);
+  const bytes = new Uint8Array(byteLength);
+
+  for (let i = 0; i < bits.length; i++) {
+    if (bits[i]) {
+      const byteIndex = Math.floor(i / 8);
+      const bitIndex = i % 8;
+      bytes[byteIndex] |= 1 << (7 - bitIndex);
+    }
+  }
+
+  return {
+    extra_bits_stored: bits.length % 8 || 8,
+    elems: Buffer.from(bytes).toString("base64"),
+  };
+}
+
+export function convertToProtoJsonPubKey(pubkey: any) {
+  return {
+    "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey",
+    threshold: parseInt(pubkey.key.threshold),
+    public_keys: pubkey.key.pubkeys.map((pk: any) => ({
+      "@type": "/cosmos.crypto.secp256k1.PubKey",
+      value: pk.value,
+    })),
+  };
+}
+
+export function buildSignedTxnPayload({
+  txnPayload,
+  signingMode,
+  sequence,
+  pubKey,
+  isMultisig = false,
+  signerIndex,
+}: {
+  txnPayload: any;
+  signingMode: "amino" | "direct";
+  sequence: string;
+  pubKey: any;
+  isMultisig?: boolean;
+  signerIndex?: number;
+}) {
+  const updatedSignerInfos = updateSignerInfosForSigning({
+    signerInfos: txnPayload.auth_info?.signer_infos,
+    signingMode,
+    sequence,
+    pubKey,
+    isMultisig,
+    signerIndex,
+  });
+
+  return {
+    ...txnPayload,
+    auth_info: {
+      ...txnPayload.auth_info,
+      signer_infos: updatedSignerInfos,
+    },
+  };
+}
+
+const makeSignedElemsMultisig = (
+  pubKey: ProtoMultisigPubkey,
+  signerIndex: number | undefined,
+  signerInfo: any
+) => {
+  const multiPubKey = pubKey;
+  const totalSigners = multiPubKey.public_keys.length;
+
+  // Restore existing signed map or initialize new
+  const signedMap = new Array(totalSigners).fill(false);
+
+  if (signerInfo?.mode_info?.multi?.bitarray?.elems) {
+    const existingBytes = Buffer.from(
+      signerInfo.mode_info.multi.bitarray.elems,
+      "base64"
+    );
+    for (let i = 0; i < totalSigners; i++) {
+      const byteIndex = Math.floor(i / 8);
+      const bitIndex = i % 8;
+      if (existingBytes[byteIndex] & (1 << (7 - bitIndex))) {
+        signedMap[i] = true;
+      }
+    }
+  }
+
+  // Mark current signer
+  if (typeof signerIndex === "number") {
+    signedMap[signerIndex] = true;
+  }
+
+  // Generate compact bit array safely
+  const compact = makeCompactBitArray(signedMap);
+
+  return compact.elems;
+};
+
+export function updateSignerInfosForSigning({
+  signerInfos,
+  signingMode,
+  sequence,
+  pubKey,
+  isMultisig,
+  signerIndex,
+}: UpdateSignerInfoParams): UpdateSignerInfoParams["signerInfos"] {
+  // if signerInfos is empty, create a default one
+  if (!signerInfos || signerInfos.length === 0) {
+    signerInfos = [{} as UpdateSignerInfoParams["signerInfos"]];
+  }
+  const modeInfo = {
+    single: {
+      mode:
+        signingMode === "amino"
+          ? "SIGN_MODE_LEGACY_AMINO_JSON"
+          : "SIGN_MODE_DIRECT",
+    },
+  };
+
+  return signerInfos.map((signerInfo) => {
+    if (isMultisig) {
+      const signedElems = makeSignedElemsMultisig(
+        pubKey as ProtoMultisigPubkey,
+        signerIndex,
+        signerInfo
+      );
+
+      return {
+        ...signerInfo,
+        public_key: pubKey,
+        sequence,
+        mode_info: {
+          multi: {
+            bitarray: {
+              extra_bits_stored:
+                (pubKey as ProtoMultisigPubkey)?.public_keys?.length || 0,
+              elems: signedElems,
+            },
+            mode_infos: signerInfo?.mode_info?.multi?.mode_infos?.length
+              ? [...signerInfo.mode_info.multi.mode_infos, modeInfo]
+              : [modeInfo],
+          },
+        },
+      };
+    }
+
+    // single-sign
+    return {
+      ...signerInfo,
+      public_key: {
+        "@type": "/cosmos.crypto.secp256k1.PubKey",
+        key: (pubKey as PubKey).value,
+      },
+      sequence,
+      mode_info: modeInfo,
+    };
+  });
+}
 
 export const isValidBech32Address = (address: string, prefix: string) => {
   try {
@@ -183,8 +344,8 @@ export function assembleMultisigTx(
   }));
 
   const bitarray = {
-    extra_bits_stored: singleSignatures.length,
-    elems: "4A==",
+    extra_bits_stored: publicKeys?.length || singleSignatures?.length,
+    elems: "",
   };
 
   const multisigModeInfo = {
@@ -284,20 +445,20 @@ export function validateProtoJsonSignDoc(
 
     if (typeof msg["@type"] !== "string")
       throw new Error("message @type must be a string");
+  }
 
-    if (targetAddress) {
+  if (targetAddress) {
+    const hasMatchingSigner = doc.body.messages.some((msg: any) => {
       const actorAddress =
         msg.from_address || msg.delegator_address || msg.sender || msg.voter;
 
-      if (!actorAddress) {
-        throw new Error("message does not contain a supported signer address");
-      }
+      return actorAddress === targetAddress;
+    });
 
-      if (actorAddress !== targetAddress) {
-        throw new Error(
-          `message uses ${actorAddress}, expected signer address ${targetAddress}`
-        );
-      }
+    if (!hasMatchingSigner) {
+      throw new Error(
+        `no message signed by the signer address ${targetAddress}`
+      );
     }
   }
 
@@ -314,8 +475,11 @@ export function validateProtoJsonSignDoc(
   )
     throw new Error("fee.gas_limit must be a string");
 
-  if (doc.auth_info.signer_infos && doc.auth_info.signer_infos.length > 0) {
-    throw new Error("signer_infos must be empty for unsigned tx");
+  if (
+    !doc.auth_info.signer_infos &&
+    !Array.isArray(doc.auth_info.signer_infos)
+  ) {
+    throw new Error("signer_infos must be an array");
   }
 
   if (!Array.isArray(doc.signatures))
@@ -387,7 +551,7 @@ export function validateAminoSignDoc(
   );
 
   if (!hasValidSigner) {
-    throw new Error(`No msg signed by target address ${targetAccountAddress}`);
+    throw new Error(`No msg signed by signer address ${targetAccountAddress}`);
   }
 }
 

@@ -1,6 +1,6 @@
 import { Input } from "@components-v2/form";
 import { TextArea } from "@components/form";
-import React from "react";
+import React, { useEffect } from "react";
 import { JsonUploadButton } from "./json-upload-button";
 import style from "./styles.module.scss";
 import { formatJson } from "./utils";
@@ -53,9 +53,19 @@ export const TransactionSection: React.FC<TransactionSectionProps> = ({
   onTxnSignDocChange,
   showNotification,
 }) => {
+  useEffect(() => {
+    if (broadcastTxn) {
+      setOfflineSigning(false);
+      setAccountInfo({
+        accountNumber: "",
+        sequence: "",
+      });
+    }
+  }, [broadcastTxn]);
+
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (value === "" || /^[0-9]*$/.test(value)) {
+    if (value === "" || /^\d+$/.test(value)) {
       setAccountInfo((prev) => ({
         ...prev,
         [name]: value,
