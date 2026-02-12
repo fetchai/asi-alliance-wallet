@@ -2,7 +2,7 @@ import React from "react";
 import { useStore } from "../../../stores";
 import { useNavigate } from "react-router";
 import { DenomHelper } from "@keplr-wallet/common";
-import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import { Hash } from "@keplr-wallet/crypto";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { useLanguage } from "../../../languages";
@@ -71,8 +71,8 @@ export const Tokens = observer(() => {
 
       return a.currency.coinDenom < b.currency.coinDenom ? -1 : 1;
     });
-  const convertToUsd = (currency: any) => {
-    const value = priceStore.calculatePrice(currency, fiatCurrency);
+  const convertToUsd = (balance: CoinPretty) => {
+    const value = priceStore.calculatePrice(balance, fiatCurrency);
     const inUsd = value && value.shrink(true).maxDecimals(6).toString();
     return inUsd;
   };
@@ -131,15 +131,7 @@ export const Tokens = observer(() => {
         };
         const tokenInfo = token.balance.currency;
 
-        const amountInNumber =
-          parseFloat(token.balance.maxDecimals(6).hideDenom(false).toString()) *
-          10 ** token.currency.coinDecimals;
-
-        const inputValue = new CoinPretty(
-          tokenInfo,
-          new Int(tokenInfo ? amountInNumber : 0)
-        );
-        const tokenInUsd = convertToUsd(inputValue);
+        const tokenInUsd = convertToUsd(token.balance);
         const tokenString = encodeURIComponent(JSON.stringify(tokenInfo));
         const tokenBalance = {
           balance: token.balance.maxDecimals(6).hideDenom(false).toString(),
