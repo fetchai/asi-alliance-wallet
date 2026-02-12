@@ -1,20 +1,11 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { TextArea } from "@components/form";
-import React, { Dispatch, SetStateAction } from "react";
+import React from "react";
 import { JsonUploadButton } from "./json-upload-button";
 import { buttonStyles } from ".";
 import style from "./styles.module.scss";
 import { formatJson, isSignatureCollected } from "./utils";
-
-interface MultiSignaturesProps {
-  multiSignatures: string[];
-  signaturesCollected: boolean;
-  threshold: number | undefined;
-  assembleFinalMultiSigTxn: () => void;
-  pubKeyMultisigAccount?: any[];
-  setMultiSignatures: Dispatch<SetStateAction<string[]>>;
-  showNotification: (message: string, type: any) => void;
-}
+import { MultiSignaturesProps } from "./types";
 
 export const MultiSignaturesSection: React.FC<MultiSignaturesProps> = ({
   threshold,
@@ -88,14 +79,7 @@ export const MultiSignaturesSection: React.FC<MultiSignaturesProps> = ({
             />
           </React.Fragment>
         ))}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-start",
-            width: "100%",
-            columnGap: "10px",
-          }}
-        >
+        <div className={style["signatureFooter"]}>
           <ButtonV2
             variant="dark"
             text="Add Signature"

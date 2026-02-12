@@ -7,33 +7,7 @@ import { formatJson } from "./utils";
 import classNames from "classnames";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
 import { Input as RSInput, Label as RSLabel } from "reactstrap";
-
-interface TransactionSectionProps {
-  type?: "single" | "multi";
-  broadcastTxn: boolean;
-  offlineSigning: boolean;
-  setOfflineSigning: React.Dispatch<React.SetStateAction<boolean>>;
-  chainId: string;
-  address: string;
-  accountName: string;
-  multisigAccount?: string;
-  multiSigAccountError?: string;
-  onMultisigAccountChange?: (e: any) => void;
-  txnPayload: string;
-  payloadError: string;
-  accountInfo: {
-    accountNumber: string;
-    sequence: string;
-  };
-  setAccountInfo: React.Dispatch<
-    React.SetStateAction<{
-      accountNumber: string;
-      sequence: string;
-    }>
-  >;
-  onTxnSignDocChange: (value: string) => void;
-  showNotification: (message: string, type?: any) => void;
-}
+import { TransactionSectionProps } from "./types";
 
 export const TransactionSection: React.FC<TransactionSectionProps> = ({
   type = "single",
@@ -108,13 +82,7 @@ export const TransactionSection: React.FC<TransactionSectionProps> = ({
             label="Offline Signing (Provide sequence and account number manually)"
           />
           {offlineSigning && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                width: "fit-content",
-              }}
-            >
+            <div className={style["offlineSigningInputSection"]}>
               <div className={style["offlineSigningInputField"]}>
                 <RSLabel for="accountNumber" className="w-50">
                   Account Number
