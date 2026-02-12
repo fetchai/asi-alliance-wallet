@@ -21,6 +21,7 @@ import {
   prepareSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
+import { buttonStyles } from ".";
 
 export const SingleSignForm: React.FC<{
   signManualTxn: SignManualTxn;
@@ -48,12 +49,11 @@ export const SingleSignForm: React.FC<{
   const accountAddress = address;
 
   const { data: accountData } = useQuery({
-    queryKey: ["accountData", accountAddress],
+    queryKey: ["accountData", accountAddress, offlineSigning],
     queryFn: async () => {
       const accountData = await queries.cosmos.queryAccount
         .getQueryBech32Address(accountAddress)
         .waitResponse();
-      console.log("response from api", accountData);
       return accountData?.data;
     },
     enabled:
@@ -207,12 +207,10 @@ export const SingleSignForm: React.FC<{
       <ButtonV2
         variant="dark"
         styleProps={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          ...buttonStyles,
+          width: "100%",
           height: "48px",
-          fontSize: "14px",
-          fontWeight: 400,
+          marginBottom: 0,
         }}
         disabled={
           payloadError !== "" ||

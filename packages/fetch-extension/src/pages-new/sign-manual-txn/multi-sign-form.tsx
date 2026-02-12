@@ -33,6 +33,7 @@ import { MultiSignaturesSection } from "./multi-signatures-section";
 import { buttonStyles } from ".";
 import { ConfirmMultisigBroadcast } from "./confirm-multi-broadcast";
 import { Pubkey, pubkeyToAddress } from "@cosmjs/amino";
+import classNames from "classnames";
 
 const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.Transaction,
@@ -77,7 +78,7 @@ export const MultiSignForm: React.FC<{
   const accountAddress = multisigAccount;
 
   const { data: accountData } = useQuery({
-    queryKey: ["accountDataMultisig", accountAddress, offlineSigning],
+    queryKey: ["accountData", accountAddress, offlineSigning],
     queryFn: async () => {
       const accountData = await queries.cosmos.queryAccount
         .getQueryBech32Address(accountAddress)
@@ -211,7 +212,6 @@ export const MultiSignForm: React.FC<{
           pubKeys,
           protoMsgs,
           txRaw,
-          "unsigned",
           signatures,
           multisigAccount
         );
@@ -253,7 +253,8 @@ export const MultiSignForm: React.FC<{
               "@type": item?.type,
               key: item?.value,
             }))
-          : null
+          : null,
+        bech32Prefix
       );
       setTxnPayload(JSON.stringify(assembled, null, 2));
       setMultiSigTransactionAssembled(true);
@@ -269,7 +270,6 @@ export const MultiSignForm: React.FC<{
     const formatted = formatJson(value);
     try {
       const signDoc = JSON.parse(formatted);
-
       validateProtoJsonSignDoc(signDoc, multisigAccount);
     } catch (err) {
       setPayloadError(err.message);
@@ -453,20 +453,12 @@ export const MultiSignForm: React.FC<{
     <div className={style["container"]}>
       {renderMultisigSteps()}
       <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          ...(multiSigStep !== MultiSigSteps.Transaction
-            ? {
-                width: "98%",
-                position: "fixed",
-                bottom: "16px",
-                left: "50%",
-                transform: "translateX(-50%)",
-              }
-            : { width: "100%" }),
-        }}
+        className={classNames(
+          style["multisigFooter"],
+          multiSigStep !== MultiSigSteps.Transaction
+            ? style["fixedFooter"]
+            : style["fullWidth"]
+        )}
       >
         {multiSigStep !== MultiSigSteps.Transaction && (
           <ButtonV2

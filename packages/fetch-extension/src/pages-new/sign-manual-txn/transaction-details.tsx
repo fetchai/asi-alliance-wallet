@@ -192,9 +192,10 @@ export const TransactionDetails: React.FC<{
           }}
         >
           {txHash &&
-          [CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
+          ([CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
             chainId
-          ) ? (
+          ) ||
+            broadcastType === "single") ? (
             <ButtonV2
               styleProps={buttonStyles}
               variant="dark"

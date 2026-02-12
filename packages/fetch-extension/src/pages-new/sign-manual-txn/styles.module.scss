@@ -103,3 +103,34 @@
     width: 180px;
   }
 }
+
+.multisigFooter {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  &.fixedFooter {
+    width: 98%;
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  &.fullWidth {
+    width: 100%;
+  }
+}
+
+.signatureFooter {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  column-gap: 10px;
+}
+
+.offlineSigningInputSection {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+}

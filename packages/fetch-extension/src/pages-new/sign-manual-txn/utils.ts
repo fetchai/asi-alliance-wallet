@@ -48,7 +48,8 @@ export function makeCompactBitArray(bits: boolean[]) {
   }
 
   return {
-    extra_bits_stored: bits.length % 8 || 8,
+    cextraBitsStored:
+      bits.length === 0 ? 0 : bits.length % 8 === 0 ? 8 : bits.length % 8,
     elems: Buffer.from(bytes).toString("base64"),
   };
 }
@@ -102,17 +103,15 @@ const makeSignedElemsMultisig = (
   signerIndex: number | undefined,
   signerInfo: any
 ) => {
+  const elems = signerInfo?.mode_info?.multi?.bitarray?.elems?.trim();
   const multiPubKey = pubKey;
   const totalSigners = multiPubKey.public_keys.length;
 
   // Restore existing signed map or initialize new
   const signedMap = new Array(totalSigners).fill(false);
 
-  if (signerInfo?.mode_info?.multi?.bitarray?.elems) {
-    const existingBytes = Buffer.from(
-      signerInfo.mode_info.multi.bitarray.elems,
-      "base64"
-    );
+  if (elems) {
+    const existingBytes = Buffer.from(elems, "base64");
     for (let i = 0; i < totalSigners; i++) {
       const byteIndex = Math.floor(i / 8);
       const bitIndex = i % 8;
@@ -132,6 +131,44 @@ const makeSignedElemsMultisig = (
 
   return compact.elems;
 };
+
+export function buildMultisigModeInfos(
+  elemsBase64: string,
+  extraBitsStored: number,
+  signingMode: "amino" | "direct"
+) {
+  const elems = elemsBase64?.trim();
+
+  if (!elems) {
+    return [];
+  }
+
+  const bytes = Buffer.from(elems, "base64");
+
+  const modeInfos: any[] = [];
+
+  bytes.forEach((byte, byteIndex) => {
+    const isLastByte = byteIndex === bytes.length - 1;
+    const bitsToRead = isLastByte && extraBitsStored > 0 ? extraBitsStored : 8;
+
+    for (let i = 0; i < bitsToRead; i++) {
+      const bit = (byte >> (7 - i)) & 1;
+
+      if (bit === 1) {
+        modeInfos.push({
+          single: {
+            mode:
+              signingMode === "amino"
+                ? "SIGN_MODE_LEGACY_AMINO_JSON"
+                : "SIGN_MODE_DIRECT",
+          },
+        });
+      }
+    }
+  });
+
+  return modeInfos;
+}
 
 export function updateSignerInfosForSigning({
   signerInfos,
@@ -161,6 +198,8 @@ export function updateSignerInfosForSigning({
         signerIndex,
         signerInfo
       );
+      const extraBitsStored =
+        (pubKey as ProtoMultisigPubkey)?.public_keys?.length || 0;
 
       return {
         ...signerInfo,
@@ -169,13 +208,14 @@ export function updateSignerInfosForSigning({
         mode_info: {
           multi: {
             bitarray: {
-              extra_bits_stored:
-                (pubKey as ProtoMultisigPubkey)?.public_keys?.length || 0,
+              extra_bits_stored: extraBitsStored,
               elems: signedElems,
             },
-            mode_infos: signerInfo?.mode_info?.multi?.mode_infos?.length
-              ? [...signerInfo.mode_info.multi.mode_infos, modeInfo]
-              : [modeInfo],
+            mode_infos: buildMultisigModeInfos(
+              signedElems,
+              extraBitsStored,
+              "amino"
+            ),
           },
         },
       };
@@ -317,7 +357,8 @@ export function assembleMultisigTx(
   threshold: number,
   singleSignatures: SingleSignature[],
   sequence: string,
-  publicKeys?: MultisigPubKey["pubKeys"]
+  publicKeys?: MultisigPubKey["pubKeys"],
+  addressPrefix?: string
 ) {
   if (
     !unsignedTx ||
@@ -343,9 +384,27 @@ export function assembleMultisigTx(
     single: { mode: sig.data.single.mode },
   }));
 
+  const pubKeyAddresses = multisigPubKey?.pubKeys?.map((pk) =>
+    pubkeyToAddress(
+      { value: pk.key, type: "tendermint/PubKeySecp256k1" },
+      addressPrefix || ""
+    )
+  );
+
+  const signedAddressSet = new Set(
+    singleSignatures.map((sig) =>
+      pubkeyToAddress(
+        { value: sig.public_key?.key, type: "tendermint/PubKeySecp256k1" },
+        addressPrefix || ""
+      )
+    )
+  );
+
+  const bitArray = pubKeyAddresses.map((addr) => signedAddressSet.has(addr));
+
   const bitarray = {
     extra_bits_stored: publicKeys?.length || singleSignatures?.length,
-    elems: "",
+    elems: makeCompactBitArray(bitArray).elems,
   };
 
   const multisigModeInfo = {

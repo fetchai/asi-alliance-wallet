@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { buttonStyles } from ".";
 
 export const JsonUploadButton = ({
   text,
@@ -50,18 +51,12 @@ export const JsonUploadButton = ({
         onChange={handleFileChange}
         hidden
       />
-
       <ButtonV2
         text=""
         styleProps={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          ...buttonStyles,
           height: "35px",
           margin: "0px 0px 12px",
-          width: "fit-content",
-          fontSize: "14px",
-          fontWeight: 400,
         }}
         variant="dark"
         onClick={handleButtonClick}
