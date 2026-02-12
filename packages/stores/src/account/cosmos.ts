@@ -60,7 +60,6 @@ import { simpleFetch } from "@keplr-wallet/simple-fetch";
 import { ActivityStore } from "src/activity";
 import { CosmosTxTracer } from "./cosmos-tx-tracer";
 import { makeMultisignedTx } from "@cosmjs/stargate";
-import { LegacyAminoPubKey } from "cosmjs-types/cosmos/crypto/multisig/keys";
 /* eslint-disable import/no-extraneous-dependencies */
 import { MultisigThresholdPubkey } from "@cosmjs/amino";
 import { pubkeyToAddress } from "@cosmjs/amino";
@@ -834,8 +833,6 @@ export class CosmosAccountImpl {
    * @param multisigPubKey - The multisig threshold public key (LegacyAminoPubKey)
    * @param msgs - Transaction messages (proto or amino-compatible)
    * @param signDoc - Unsigned or signed transaction JSON payload
-   * @param type - Whether the transaction is "unsigned" (assemble from signatures)
-   *               or "signed" (already contains multisig signing info)
    * @param signatures - Map of signer address to signature bytes (used for unsigned flow)
    * @param multisigAddress - Bech32 multisig account address for the current chain
    * @param mode - Broadcast mode: "block", "sync", or "async"
@@ -852,7 +849,6 @@ export class CosmosAccountImpl {
     multisigPubKey: MultisigThresholdPubkey,
     msgs: ProtoMsgsOrWithAminoMsgs["protoMsgs"],
     signDoc: TxRawJSON,
-    type: "signed" | "unsigned" = "signed",
     signatures: Map<string, Uint8Array> = new Map<string, Uint8Array>([]),
     multisigAddress: string,
     mode: "block" | "async" | "sync" = "sync"
@@ -890,82 +886,18 @@ export class CosmosAccountImpl {
     }).finish();
 
     const stdFee = protoFeeToStdFee(signDoc.auth_info.fee);
-    let multisignedTx: any;
-    let bitarray: any;
-    let authInfoBytes: any;
 
     // Create the multisigned tx
-    if (type === "unsigned") {
-      multisignedTx = makeMultisignedTx(
-        multisigPubKey,
-        parseInt(sequence),
-        stdFee,
-        bodyBytes,
-        signatures
-      );
-      authInfoBytes = multisignedTx.authInfoBytes;
-    } else {
-      multisignedTx = signDoc;
-      const rawBitarray =
-        signDoc.auth_info.signerInfos[0].modeInfo?.multi?.bitarray;
+    const multisignedTx = makeMultisignedTx(
+      multisigPubKey,
+      parseInt(sequence),
+      stdFee,
+      bodyBytes,
+      signatures
+    );
+    const authInfoBytes = multisignedTx.authInfoBytes;
 
-      let elems: Buffer | undefined;
-
-      if (typeof rawBitarray?.elems === "string") {
-        // base64 to Buffer
-        elems = Buffer.from(rawBitarray.elems, "base64");
-      } else if (rawBitarray?.elems instanceof Uint8Array) {
-        // Uint8Array to  Buffer
-        elems = Buffer.from(rawBitarray.elems);
-      }
-
-      bitarray = {
-        extraBitsStored: rawBitarray?.extraBitsStored,
-        elems: elems ?? [],
-      };
-
-      // Build authInfoBytes
-      authInfoBytes = AuthInfo.encode({
-        signerInfos: [
-          {
-            publicKey: {
-              typeUrl: "/cosmos.crypto.multisig.LegacyAminoPubKey",
-              value: LegacyAminoPubKey.encode({
-                threshold: parseInt(multisigPubKey.value.threshold),
-                publicKeys: multisigPubKey.value.pubkeys.map((pk) => ({
-                  typeUrl: "/cosmos.crypto.secp256k1.PubKey",
-                  value: Uint8Array.from(Buffer.from(pk.value, "base64")),
-                })),
-              }).finish(),
-            },
-            modeInfo: {
-              single: undefined,
-              multi: {
-                bitarray: bitarray,
-                modeInfos: multisigPubKey.value.pubkeys.map(() => ({
-                  multi: undefined,
-                  single: {
-                    mode: SignMode.SIGN_MODE_LEGACY_AMINO_JSON,
-                  },
-                })),
-              },
-            },
-            sequence,
-          },
-        ],
-        fee: Fee.fromPartial({
-          amount: stdFee.amount as Coin[],
-          gasLimit: stdFee.gas,
-          payer: stdFee.payer,
-          granter: stdFee.granter,
-        }),
-      }).finish();
-    }
-
-    const signatureBytes =
-      type === "signed"
-        ? [Uint8Array.from(Buffer.from(multisignedTx.signatures[0], "base64"))]
-        : multisignedTx.signatures;
+    const signatureBytes = multisignedTx.signatures;
 
     const txRaw = TxRaw.encode({
       bodyBytes,
@@ -975,13 +907,16 @@ export class CosmosAccountImpl {
 
     this.base.setBroadcastInProgress(true);
 
-    const txHash = await keplr.sendTx(
-      this.chainId,
-      txRaw,
-      mode as BroadcastMode
-    );
-
-    this.base.setBroadcastInProgress(false);
+    const txHash = await keplr
+      .sendTx(this.chainId, txRaw, mode as BroadcastMode)
+      .then((res) => {
+        this.base.setBroadcastInProgress(false);
+        return res;
+      })
+      .catch((err) => {
+        this.base.setBroadcastInProgress(false);
+        throw err;
+      });
 
     return {
       txHash: Buffer.from(txHash).toString("hex").toLocaleUpperCase(),

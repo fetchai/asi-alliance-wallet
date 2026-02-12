@@ -1,5 +1,6 @@
 import { SignMode } from "@keplr-wallet/background";
 import { PubKey } from "@keplr-wallet/types";
+import { Dispatch, SetStateAction } from "react";
 
 type SigningMode = "direct" | "amino";
 
@@ -96,3 +97,40 @@ export type SignManualTxn = (
 ) => Promise<void>;
 
 export type TxnType = SignMode.Amino | SignMode.Direct;
+
+export interface TransactionSectionProps {
+  type?: "single" | "multi";
+  broadcastTxn: boolean;
+  offlineSigning: boolean;
+  setOfflineSigning: React.Dispatch<React.SetStateAction<boolean>>;
+  chainId: string;
+  address: string;
+  accountName: string;
+  multisigAccount?: string;
+  multiSigAccountError?: string;
+  onMultisigAccountChange?: (e: any) => void;
+  txnPayload: string;
+  payloadError: string;
+  accountInfo: {
+    accountNumber: string;
+    sequence: string;
+  };
+  setAccountInfo: React.Dispatch<
+    React.SetStateAction<{
+      accountNumber: string;
+      sequence: string;
+    }>
+  >;
+  onTxnSignDocChange: (value: string) => void;
+  showNotification: (message: string, type?: any) => void;
+}
+
+export interface MultiSignaturesProps {
+  multiSignatures: string[];
+  signaturesCollected: boolean;
+  threshold: number | undefined;
+  assembleFinalMultiSigTxn: () => void;
+  pubKeyMultisigAccount?: any[];
+  setMultiSignatures: Dispatch<SetStateAction<string[]>>;
+  showNotification: (message: string, type: any) => void;
+}
