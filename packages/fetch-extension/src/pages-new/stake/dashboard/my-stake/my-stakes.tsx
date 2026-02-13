@@ -24,6 +24,7 @@ import { TXNTYPE } from "../../../../config";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useLanguage } from "../../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { MyUnbondingValidators } from "./my-unbonding-balances";
 
 export const MyStakes = observer(
   ({
@@ -354,6 +355,7 @@ export const MyStakes = observer(
             <MyValidator />
           </div>
         </div>
+        <MyUnbondingValidators />
       </div>
     );
   }
