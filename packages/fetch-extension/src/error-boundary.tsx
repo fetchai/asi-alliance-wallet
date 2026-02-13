@@ -39,6 +39,10 @@ export class ErrorBoundary extends Component<
   }
 }
 
+// Reset is intentionally limited to these four prefixes to avoid wiping
+// user-critical data (selected chain, UI config, prices, etc.). If update
+// conflicts persist after an extension upgrade, consider adding more
+// prefixes (weigh loss of user settings).
 const CACHE_KEY_PREFIXES = [
   "store_queries/",
   "store_activity_config/",
@@ -79,9 +83,8 @@ const ErrorBoundaryView: FunctionComponent = observer(() => {
 
           try {
             await resetCacheData();
-
             window.location.reload();
-          } finally {
+          } catch (e) {
             setIsLoading(false);
           }
         }}

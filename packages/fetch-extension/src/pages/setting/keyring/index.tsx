@@ -17,6 +17,7 @@ import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
+import { isCardanoChain, walletSupportsCardano } from "../../../utils";
 
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
@@ -142,12 +143,10 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
 
                         // Check if current chain is Cardano and new wallet doesn't support it
                         const isCardanoSupportedWallet =
-                          keyStore.type === "mnemonic" &&
-                          keyStore.meta?.["mnemonicLength"] === "24";
-                        const isCurrentChainCardano =
-                          chainStore.current.chainId === "cardano-preview" ||
-                          chainStore.current.chainId === "cardano-mainnet" ||
-                          chainStore.current.chainId === "cardano-preprod";
+                          walletSupportsCardano(keyStore);
+                        const isCurrentChainCardano = isCardanoChain(
+                          chainStore.current
+                        );
 
                         // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
                         if (

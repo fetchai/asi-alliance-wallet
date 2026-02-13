@@ -54,6 +54,19 @@ export type MultiKeyStoreInfoWithSelectedElem = MultiKeyStoreInfoElem & {
 };
 export type MultiKeyStoreInfoWithSelected = MultiKeyStoreInfoWithSelectedElem[];
 
+/** True if the key store is a 24-word mnemonic (Cardano-capable). */
+export function walletSupportsCardano(
+  ks:
+    | { type?: string; meta?: Record<string, unknown> }
+    | null
+    | undefined
+): boolean {
+  return (
+    ks?.type === "mnemonic" &&
+    String(ks.meta?.["mnemonicLength"]) === "24"
+  );
+}
+
 const KeyStoreKey = "key-store";
 const KeyMultiStoreKey = "key-multi-store";
 const ErrUndefinedLedgerKeeper = new Error("Ledger keeper is not defined");

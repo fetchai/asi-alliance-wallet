@@ -27,6 +27,7 @@ import Modal from "react-modal";
 import styleTxButton from "./tx-button.module.scss";
 import classNames from "classnames";
 
+// When adding new fiat-on-ramp icons to content/config, add the key and require() here.
 const FIAT_ON_RAMP_ICONS: Record<string, string> = {
   kado: require("../../public/assets/img/fiat-on-ramp/kado.svg"),
   moonpay: require("../../public/assets/img/fiat-on-ramp/moonpay.svg"),
@@ -421,9 +422,12 @@ export const BuyModalContent: FunctionComponent<{
             onClick={(e) => !serviceInfo.buyUrl && e.preventDefault()}
           >
             <div className={styleTxButton["serviceLogoContainer"]}>
-              <img
-                src={FIAT_ON_RAMP_ICONS[serviceInfo.serviceId]}
-              />
+              {FIAT_ON_RAMP_ICONS[serviceInfo.serviceId] && (
+                <img
+                  src={FIAT_ON_RAMP_ICONS[serviceInfo.serviceId]}
+                  alt=""
+                />
+              )}
             </div>
             <div className={styleTxButton["serviceName"]}>
               {serviceInfo.serviceName}

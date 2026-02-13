@@ -123,3 +123,13 @@ export function isFeatureAvailable(chainId: string): boolean {
     CHAIN_ID_GEMINI,
   ].includes(chainId);
 }
+
+/** True when the chain has the Cardano feature (cardano-preview, cardano-preprod, cardano-mainnet, etc.). Must match background: chain.features?.includes("cardano"). */
+export function isCardanoChain(
+  chain: { features?: string[] } | null | undefined
+): boolean {
+  return chain?.features?.includes("cardano") ?? false;
+}
+
+/** Re-exported from @keplr-wallet/background (single source of truth for Cardano wallet support). */
+export { walletSupportsCardano } from "@keplr-wallet/background";

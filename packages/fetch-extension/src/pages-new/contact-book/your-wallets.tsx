@@ -17,6 +17,7 @@ import {
   mergePartialCacheData,
   normalizeCacheData,
 } from "../../utils/cache-validation";
+import { isCardanoChain, walletSupportsCardano } from "../../utils";
 import { NoResults } from "@components-v2/no-results";
 
 interface YourWalletProps {
@@ -76,21 +77,14 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
           Object.values(existingCache).some((addr) => Boolean(addr));
         setAddressesById(existingCache);
 
-        const isCurrentChainCardano =
-          chainId === "cardano-preview" ||
-          chainId === "cardano-preprod" ||
-          chainId === "cardano-mainnet";
+        const isCurrentChainCardano = isCardanoChain(
+          chainStore.getChain(chainId)
+        );
 
         const requiredWalletIds: string[] = isCurrentChainCardano
           ? keyRingStore.multiKeyStoreInfo
-              .map((ks) => ({
-                id: ks.meta?.["__id__"] || "",
-                supported:
-                  ks.type === "mnemonic" &&
-                  `${ks.meta?.["mnemonicLength"]}` === "24",
-              }))
-              .filter((w) => w.supported)
-              .map((w) => w.id)
+              .filter((ks) => walletSupportsCardano(ks))
+              .map((ks) => ks.meta?.["__id__"] || "")
           : currentWalletIds;
 
         const shouldSyncFromBackend =
@@ -156,19 +150,13 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [walletIdsKey, chainId]);
 
-    const isCardanoChain =
-      chainId === "cardano-preview" ||
-      chainId === "cardano-preprod" ||
-      chainId === "cardano-mainnet";
+    const isCurrentChainCardano = isCardanoChain(chainStore.current);
 
     const keyRingList = keyRingStore.multiKeyStoreInfo
       .filter((keyStore) => !keyStore.selected)
       .filter((keyStore) => {
-        if (!isCardanoChain) return true;
-        return (
-          keyStore.type === "mnemonic" &&
-          `${keyStore.meta?.["mnemonicLength"]}` === "24"
-        );
+        if (!isCurrentChainCardano) return true;
+        return walletSupportsCardano(keyStore);
       });
 
     return (

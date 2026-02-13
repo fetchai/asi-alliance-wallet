@@ -82,6 +82,7 @@ import {
   mergePartialCacheData,
   normalizeCacheData,
 } from "../utils/cache-validation";
+import { isCardanoChain, walletSupportsCardano } from "../utils";
 
 export class RootStore {
   public readonly uiConfigStore: UIConfigStore;
@@ -402,21 +403,13 @@ export class RootStore {
 
         if (currentWalletIds.length === 0) return;
 
-        const isCurrentChainCardano =
-          currentChainId === "cardano-preview" ||
-          currentChainId === "cardano-preprod" ||
-          currentChainId === "cardano-mainnet";
+        const currentChain = this.chainStore.getChain(currentChainId);
+        const isCurrentChainCardano = isCardanoChain(currentChain);
 
         const requiredWalletIds: string[] = isCurrentChainCardano
           ? this.keyRingStore.multiKeyStoreInfo
-              .map((ks) => ({
-                id: ks.meta?.["__id__"] || "",
-                supported:
-                  ks.type === "mnemonic" &&
-                  `${ks.meta?.["mnemonicLength"]}` === "24",
-              }))
-              .filter((w) => w.supported)
-              .map((w) => w.id)
+              .filter((ks) => walletSupportsCardano(ks))
+              .map((ks) => ks.meta?.["__id__"] || "")
           : currentWalletIds;
 
         const syncKey = `${currentChainId}|${currentWalletIds.join(

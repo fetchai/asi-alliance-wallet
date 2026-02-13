@@ -1,4 +1,6 @@
 import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
+import { walletSupportsCardano } from "./keyring";
+import type { KeyStoreMetaKnown } from "./types";
 import {
   CreateMnemonicKeyMsg,
   CreatePrivateKeyMsg,
@@ -771,9 +773,11 @@ const handleListAccountsMsg: (
     const isCardano = chainInfo.features?.includes("cardano");
 
     const walletInfos = service.getKeyRing().getMultiKeyStoreInfo();
-    const walletIds = walletInfos.map((w) => (w.meta as any)?.["__id__"] || "");
+    const walletIds = walletInfos.map(
+      (w) => (w.meta as KeyStoreMetaKnown)?.["__id__"] || ""
+    );
     const walletNames = walletInfos.map((w) => {
-      const meta = w.meta as any;
+      const meta = w.meta as KeyStoreMetaKnown;
       if (!meta) return "Unnamed Account";
       try {
         const nameByChain = meta["nameByChain"]
@@ -793,12 +797,9 @@ const handleListAccountsMsg: (
           const cache = await service.getKeyRing().loadCardanoChainCache(chainId);
 
           const supportedFlags = walletInfos.map((w) => {
-            const meta = w.meta as any;
+            const meta = w.meta as KeyStoreMetaKnown;
             if (meta?.["cardano"] === "true") return true;
-            if (w.type === "mnemonic") {
-              return `${meta?.["mnemonicLength"]}` === "24";
-            }
-            return false;
+            return walletSupportsCardano(w);
           });
 
           const hasAll = walletIds.every((id, idx) => {

@@ -3,6 +3,7 @@ import style from "./style.module.scss";
 
 const WIREFRAME_IMAGES: Record<string, string> = {
   "activity-recieve.svg": require("@assets/svg/wireframe/activity-recieve.svg"),
+  "activity-receive.svg": require("@assets/svg/wireframe/activity-recieve.svg"),
   "activity-send.svg": require("@assets/svg/wireframe/activity-send.svg"),
   "activity-stake.svg": require("@assets/svg/wireframe/activity-stake.svg"),
   "alert.svg": require("@assets/svg/wireframe/alert.svg"),
@@ -152,7 +153,7 @@ const WIREFRAME_IMAGES: Record<string, string> = {
 
 export interface Props {
   title: string;
-  image: any;
+  image?: keyof typeof WIREFRAME_IMAGES | null;
   onClick: () => void;
   disabled?: boolean;
 }

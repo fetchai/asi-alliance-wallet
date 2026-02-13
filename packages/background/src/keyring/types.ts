@@ -1,5 +1,14 @@
 import { RNG, KeyCurve } from "@keplr-wallet/crypto";
 
+/** Known meta fields used in keyring handler/service. KeyStore.meta may contain more. */
+export interface KeyStoreMetaKnown {
+  mnemonicLength?: string;
+  __id__?: string;
+  name?: string;
+  nameByChain?: string;
+  cardano?: string;
+}
+
 export interface KeyStore {
   version: "1.2";
   type: "mnemonic" | "privateKey" | "ledger" | "keystone";

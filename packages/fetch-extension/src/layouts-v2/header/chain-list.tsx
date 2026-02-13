@@ -5,6 +5,7 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { useConfirm } from "@components/confirm";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { formatAddress } from "@utils/format";
+import { walletSupportsCardano } from "@utils/index";
 import classnames from "classnames";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useState, useMemo } from "react";
@@ -72,10 +73,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
       const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find(
         (item: any) => item.selected
       );
-      return (
-        selectedKeyStore?.type === "mnemonic" &&
-        selectedKeyStore?.meta?.["mnemonicLength"] === "24"
-      );
+      return walletSupportsCardano(selectedKeyStore);
     }, [keyRingStore.multiKeyStoreInfo]);
 
     const cardanoChainList = chainStore.chainInfosInUI.filter(

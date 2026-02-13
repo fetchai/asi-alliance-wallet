@@ -7,6 +7,7 @@ import { markDeliveryAsRejected } from "@utils/fetch-notification";
 import { useStore } from "../../stores";
 import { NotificationSetup, NotyphiNotification } from "@notificationTypes";
 
+// When adding new notification images to content/config, add the key and require() here.
 const NOTIFICATION_IMAGES: Record<string, string> = {
   "no-notification-icon.svg": require("@assets/svg/no-notification-icon.svg"),
   "turn-off-notification-icon.svg": require("@assets/svg/turn-off-notification-icon.svg"),

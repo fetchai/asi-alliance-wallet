@@ -11,6 +11,7 @@ import { useNavigate } from "react-router";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
 import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
+import { isCardanoChain, walletSupportsCardano } from "../../utils";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import {
@@ -83,21 +84,14 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
           Object.values(existingCache).some((addr) => Boolean(addr));
         setAddressesById(existingCache);
 
-        const isCurrentChainCardano =
-          currentChainId === "cardano-preview" ||
-          currentChainId === "cardano-preprod" ||
-          currentChainId === "cardano-mainnet";
+        const isCurrentChainCardano = isCardanoChain(
+          chainStore.getChain(currentChainId)
+        );
 
         const requiredWalletIds: string[] = isCurrentChainCardano
           ? keyRingStore.multiKeyStoreInfo
-              .map((ks) => ({
-                id: ks.meta?.["__id__"] || "",
-                supported:
-                  ks.type === "mnemonic" &&
-                  `${ks.meta?.["mnemonicLength"]}` === "24",
-              }))
-              .filter((w) => w.supported)
-              .map((w) => w.id)
+              .filter((ks) => walletSupportsCardano(ks))
+              .map((ks) => ks.meta?.["__id__"] || "")
           : currentWalletIds;
 
         const shouldSyncFromBackend =
@@ -285,13 +279,9 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
               intl.formatMessage({
                 id: "setting.keyring.unnamed-account",
               });
-            const isCardanoNetwork =
-              chainStore.current.chainId === "cardano-preview" ||
-              chainStore.current.chainId === "cardano-preprod" ||
-              chainStore.current.chainId === "cardano-mainnet";
+            const isCardanoNetwork = isCardanoChain(chainStore.current);
             const isCardanoSupportedWallet =
-              keyStore.type === "mnemonic" &&
-              `${keyStore.meta?.["mnemonicLength"]}` === "24";
+              walletSupportsCardano(keyStore);
             const walletId = keyStore.meta?.["__id__"] || "";
             const hasAddressForWallet = Boolean(addressesById[walletId]);
             const isClickable =
@@ -360,11 +350,6 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                     return formatAddress(addressesById[walletId]);
                   }
 
-                  const isCardanoNetwork =
-                    chainStore.current.chainId === "cardano-preview" ||
-                    chainStore.current.chainId === "cardano-preprod" ||
-                    chainStore.current.chainId === "cardano-mainnet";
-
                   if (isCardanoNetwork && !isCardanoSupportedWallet) {
                     return "Not supported on Cardano";
                   }
@@ -401,12 +386,10 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
 
                           // Check if current chain is Cardano and new wallet doesn't support it
                           const isCardanoSupportedWallet =
-                            keyStore.type === "mnemonic" &&
-                            keyStore.meta?.["mnemonicLength"] === "24";
-                          const isCurrentChainCardano =
-                            chainStore.current.chainId === "cardano-preview" ||
-                            chainStore.current.chainId === "cardano-mainnet" ||
-                            chainStore.current.chainId === "cardano-preprod";
+                            walletSupportsCardano(keyStore);
+                          const isCurrentChainCardano = isCardanoChain(
+                            chainStore.current
+                          );
 
                           // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
                           if (

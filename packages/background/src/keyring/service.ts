@@ -3,7 +3,7 @@ import {
   KeyRingStatus,
   MultiKeyStoreInfoWithSelected,
 } from "./keyring";
-import { Key } from "./types";
+import { Key, KeyStoreMetaKnown } from "./types";
 import { CardanoService } from "../cardano/service";
 
 import {
@@ -52,6 +52,7 @@ import { trimAminoSignDoc } from "./amino-sign-doc";
 import { KeystoneService } from "../keystone";
 import { RequestICNSAdr36SignaturesMsg, SwitchAccountMsg } from "./messages";
 import { getDefaultFallbackChainId } from "./default-chain";
+import { walletSupportsCardano } from "./keyring";
 import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
@@ -220,15 +221,10 @@ export class KeyRingService {
   private async correctChainForCardanoSupport(): Promise<void> {
     try {
       const currentList = this.keyRing.getMultiKeyStoreInfo();
-      const selectedIdx = currentList.findIndex((w) => (w as any).selected);
+      const selectedIdx = currentList.findIndex((w) => w.selected);
       const ks =
         selectedIdx >= 0 ? currentList[selectedIdx] : currentList[0];
-      let supportsCardano = false;
-      if (ks) {
-        const isMnemonic = (ks as any).type === "mnemonic";
-        const len = (ks.meta as any)?.["mnemonicLength"];
-        supportsCardano = isMnemonic && `${len}` === "24";
-      }
+      const supportsCardano = walletSupportsCardano(ks);
 
       const selectedChainId = await this.chainsService.getSelectedChain();
       const chainInfo = await this.chainsService.getChainInfo(selectedChainId);
@@ -236,11 +232,9 @@ export class KeyRingService {
         chainInfo.features?.includes("cardano") ?? false;
       if (!isCardanoChain || supportsCardano) return;
 
-      const fallbackIdx = currentList.findIndex((w) => {
-        const type = (w as any).type;
-        const len = (w.meta as any)?.["mnemonicLength"];
-        return type === "mnemonic" && `${len}` === "24";
-      });
+      const fallbackIdx = currentList.findIndex((w) =>
+        walletSupportsCardano(w)
+      );
       if (fallbackIdx >= 0) {
         try {
           await this.changeKeyStoreFromMultiKeyStore(fallbackIdx);
@@ -442,11 +436,7 @@ export class KeyRingService {
 
     const ks = this.keyRing.getCurrentKeyStore();
 
-    if (
-      ks &&
-      ks.type === "mnemonic" &&
-      `${ks.meta?.["mnemonicLength"]}` === "24"
-    ) {
+    if (ks && walletSupportsCardano(ks)) {
       try {
         let currentChainId: string | undefined;
         try {
@@ -540,7 +530,7 @@ export class KeyRingService {
   }
 
   private async initializeCardanoService(ks: any, chainId?: string): Promise<void> {
-    if (ks.type !== "mnemonic" || `${ks.meta?.["mnemonicLength"]}` !== "24") {
+    if (!walletSupportsCardano(ks)) {
       throw new Error("Cardano requires 24-word mnemonic");
     }
 try {
@@ -1396,11 +1386,13 @@ Salt: ${salt}`;
 
     const chainInfo = await this.chainsService.getChainInfo(chainId);
     const walletInfos = this.keyRing.getMultiKeyStoreInfo();
-    const walletIds = walletInfos.map((w) => (w.meta as any)?.["__id__"] || "");
-    const walletNames = walletInfos.map(
-      (w) => (w.meta as any)?.["name"] || "Unnamed Account"
+    const walletIds = walletInfos.map(
+      (w) => (w.meta as KeyStoreMetaKnown)?.["__id__"] || ""
     );
-    const selectedIndex = walletInfos.findIndex((w) => (w as any).selected);
+    const walletNames = walletInfos.map(
+      (w) => (w.meta as KeyStoreMetaKnown)?.["name"] || "Unnamed Account"
+    );
+    const selectedIndex = walletInfos.findIndex((w) => w.selected);
     const activeWalletId =
       selectedIndex >= 0 ? walletIds[selectedIndex] : walletIds[0] || "";
 

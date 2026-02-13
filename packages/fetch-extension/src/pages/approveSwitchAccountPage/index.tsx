@@ -14,6 +14,7 @@ import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
+import { isCardanoChain, walletSupportsCardano } from "../../utils";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -284,11 +285,10 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                       // Check if current chain is Cardano and new wallet doesn't support it
                       const newKeyStore = keyRingStore.multiKeyStoreInfo[addressIndex];
                       const isCardanoSupportedWallet =
-                        newKeyStore.type === "mnemonic" && newKeyStore.meta?.["mnemonicLength"] === "24";
-                      const isCurrentChainCardano = 
-                        chainStore.current.chainId === "cardano-preview" ||
-                        chainStore.current.chainId === "cardano-mainnet" ||
-                        chainStore.current.chainId === "cardano-preprod";
+                        walletSupportsCardano(newKeyStore);
+                      const isCurrentChainCardano = isCardanoChain(
+                        chainStore.current
+                      );
                       
                       // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
                       if (isCurrentChainCardano && !isCardanoSupportedWallet) {
