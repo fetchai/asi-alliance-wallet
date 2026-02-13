@@ -51,6 +51,7 @@ import { Buffer } from "buffer/";
 import { trimAminoSignDoc } from "./amino-sign-doc";
 import { KeystoneService } from "../keystone";
 import { RequestICNSAdr36SignaturesMsg, SwitchAccountMsg } from "./messages";
+import { getDefaultFallbackChainId } from "./default-chain";
 import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
@@ -211,6 +212,75 @@ export class KeyRingService {
     return this.keyRing.status;
   }
 
+  /**
+   * If current chain is Cardano and the selected wallet does not support Cardano
+   * (e.g. 12-word mnemonic), switch to a Cardano-capable wallet if any, otherwise
+   * switch the chain to the first non-Cardano chain so the UI does not show account load errors.
+   */
+  private async correctChainForCardanoSupport(): Promise<void> {
+    try {
+      const currentList = this.keyRing.getMultiKeyStoreInfo();
+      const selectedIdx = currentList.findIndex((w) => (w as any).selected);
+      const ks =
+        selectedIdx >= 0 ? currentList[selectedIdx] : currentList[0];
+      let supportsCardano = false;
+      if (ks) {
+        const isMnemonic = (ks as any).type === "mnemonic";
+        const len = (ks.meta as any)?.["mnemonicLength"];
+        supportsCardano = isMnemonic && `${len}` === "24";
+      }
+
+      const selectedChainId = await this.chainsService.getSelectedChain();
+      const chainInfo = await this.chainsService.getChainInfo(selectedChainId);
+      const isCardanoChain =
+        chainInfo.features?.includes("cardano") ?? false;
+      if (!isCardanoChain || supportsCardano) return;
+
+      const fallbackIdx = currentList.findIndex((w) => {
+        const type = (w as any).type;
+        const len = (w.meta as any)?.["mnemonicLength"];
+        return type === "mnemonic" && `${len}` === "24";
+      });
+      if (fallbackIdx >= 0) {
+        try {
+          await this.changeKeyStoreFromMultiKeyStore(fallbackIdx);
+        } catch (e: any) {
+          console.warn(
+            "Failed to switch to Cardano-supported wallet:",
+            e?.message
+          );
+          await this.switchChainToDefaultNonCardano();
+        }
+      } else {
+        await this.switchChainToDefaultNonCardano();
+      }
+    } catch (e: any) {
+      console.warn("Chain correction for Cardano support failed:", e?.message);
+    }
+  }
+
+  /**
+   * Switch to the default fallback chain (see getDefaultFallbackChainId) so
+   * the selected wallet can load when leaving a Cardano network.
+   */
+  private async switchChainToDefaultNonCardano(): Promise<void> {
+    const chainInfos = await this.chainsService.getChainInfos();
+    const fallbackChainId = getDefaultFallbackChainId(chainInfos);
+    if (!fallbackChainId) return;
+
+    const { ExtensionKVStore } = await import("@keplr-wallet/common");
+    const kvStore = new ExtensionKVStore("store_chain_config");
+    await kvStore.set("extension_last_view_chain_id", fallbackChainId);
+    try {
+      await this.chainsService.setSelectedChain(fallbackChainId);
+    } catch (e) {
+      console.error(
+        `[KeyRingService] Failed to set fallback chain:`,
+        e
+      );
+    }
+  }
+
   async deleteKeyRing(
     index: number,
     password: string
@@ -225,71 +295,7 @@ export class KeyRingService {
       keyStoreChanged = result.keyStoreChanged;
 
       if (keyStoreChanged) {
-        try {
-          const currentList = this.keyRing.getMultiKeyStoreInfo();
-          const selectedIdx = currentList.findIndex((w) => (w as any).selected);
-          const ks =
-            selectedIdx >= 0 ? currentList[selectedIdx] : currentList[0];
-          let supportsCardano = false;
-          if (ks) {
-            const isMnemonic = (ks as any).type === "mnemonic";
-            const len = (ks.meta as any)?.["mnemonicLength"];
-            supportsCardano = isMnemonic && `${len}` === "24";
-          }
-
-          const selectedChainId = await this.chainsService.getSelectedChain();
-          const chainInfo = await this.chainsService.getChainInfo(
-            selectedChainId
-          );
-          const isCardanoChain =
-            chainInfo.features?.includes("cardano") ?? false;
-          if (isCardanoChain && !supportsCardano) {
-            const fallbackIdx = currentList.findIndex((w) => {
-              const type = (w as any).type;
-              const len = (w.meta as any)?.["mnemonicLength"];
-              return type === "mnemonic" && `${len}` === "24";
-            });
-            if (fallbackIdx >= 0) {
-              try {
-                await this.changeKeyStoreFromMultiKeyStore(fallbackIdx);
-              } catch (e: any) {
-                console.warn(
-                  "Failed to switch to Cardano-supported wallet after deletion:",
-                  e?.message
-                );
-                const { ExtensionKVStore } = await import(
-                  "@keplr-wallet/common"
-                );
-                const kvStore = new ExtensionKVStore("store_chain_config");
-                await kvStore.set("extension_last_view_chain_id", "fetchhub-4");
-                try {
-                  await this.chainsService.setSelectedChain("fetchhub-4");
-                } catch (e) {
-                  console.error(
-                    `[KeyRingService] Failed to set fallback chain:`,
-                    e
-                  );
-                  // Continue execution - fallback chain setting failure is not critical
-                }
-              }
-            } else {
-              const { ExtensionKVStore } = await import("@keplr-wallet/common");
-              const kvStore = new ExtensionKVStore("store_chain_config");
-              await kvStore.set("extension_last_view_chain_id", "fetchhub-4");
-              try {
-                await this.chainsService.setSelectedChain("fetchhub-4");
-              } catch (e) {
-                console.error(
-                  `[KeyRingService] Failed to set fallback chain:`,
-                  e
-                );
-                // Continue execution - fallback chain setting failure is not critical
-              }
-            }
-          }
-        } catch (e: any) {
-          console.warn("Post-deletion chain correction failed:", e?.message);
-        }
+        await this.correctChainForCardanoSupport();
       }
 
       return {
@@ -364,6 +370,7 @@ export class KeyRingService {
       bip44HDPath,
       "secp256k1"
     );
+    await this.correctChainForCardanoSupport();
     return keyStoreInfo;
   }
 
@@ -1239,7 +1246,7 @@ Salt: ${salt}`;
     try {
       const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
       this.cardanoService.reset();
-
+      await this.correctChainForCardanoSupport();
       return result;
     } finally {
       this.interactionService.dispatchEvent(
