@@ -156,9 +156,20 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [walletIdsKey, chainId]);
 
-    const keyRingList = keyRingStore.multiKeyStoreInfo.filter(
-      (keyStore) => !keyStore.selected
-    );
+    const isCardanoChain =
+      chainId === "cardano-preview" ||
+      chainId === "cardano-preprod" ||
+      chainId === "cardano-mainnet";
+
+    const keyRingList = keyRingStore.multiKeyStoreInfo
+      .filter((keyStore) => !keyStore.selected)
+      .filter((keyStore) => {
+        if (!isCardanoChain) return true;
+        return (
+          keyStore.type === "mnemonic" &&
+          `${keyStore.meta?.["mnemonicLength"]}` === "24"
+        );
+      });
 
     return (
       <div className={style["container"]}>
