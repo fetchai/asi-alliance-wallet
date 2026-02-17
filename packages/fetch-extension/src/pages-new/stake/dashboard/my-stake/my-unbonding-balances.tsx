@@ -1,16 +1,19 @@
 import { GlassCard } from "@components-v2/glass-card";
-import React, { useMemo } from "react";
-import styles from "./style.module.scss";
-import { observer } from "mobx-react-lite";
 import { Staking } from "@keplr-wallet/stores";
-import { useStore } from "../../../../stores";
 import { formatDistanceToNow } from "date-fns";
+import { observer } from "mobx-react-lite";
+import React, { useMemo } from "react";
+import { useLanguage } from "../../../../languages";
+import { useStore } from "../../../../stores";
+import styles from "./style.module.scss";
 
 export const MyUnbondingValidators = observer(() => {
-  const { chainStore, accountStore, queriesStore } = useStore();
+  const { chainStore, accountStore, queriesStore, priceStore } = useStore();
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
+  const language = useLanguage();
+  const fiatCurrency = language.fiatCurrency;
 
   const queryUnbonding =
     queries.cosmos.queryUnbondingDelegations.getQueryBech32Address(
@@ -97,6 +100,10 @@ export const MyUnbondingValidators = observer(() => {
                   new Date(entry.completionTime),
                   { addSuffix: true }
                 );
+                const amountFiatCurrency = priceStore.calculatePrice(
+                  entry?.balance?.maxDecimals(5).trim(true).shrink(true),
+                  fiatCurrency
+                );
 
                 return (
                   <GlassCard
@@ -129,6 +136,24 @@ export const MyUnbondingValidators = observer(() => {
                                 .toString()}
                             </span>
                           </div>
+                          {amountFiatCurrency && (
+                            <div className={styles["right-col"]}>
+                              <span className={styles["amount"]}>
+                                {amountFiatCurrency
+                                  .shrink(true)
+                                  .maxDecimals(6)
+                                  .trim(true)
+                                  .toString()}
+                              </span>
+                              <span
+                                className={styles["validator-currency"]}
+                                style={{ color: "var(--font-secondary)" }}
+                              >
+                                {" "}
+                                {fiatCurrency.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div

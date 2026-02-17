@@ -61,10 +61,11 @@ export const Dashboard = observer(() => {
   );
 
   const stakableReward = rewards.stakableReward;
-  const stakedSum = delegated.add(unbonding);
+  const stakedSum = delegated;
   const stakableBal = stakable.toString();
   const stakedBal = stakedSum.toString();
   const rewardsBal = stakableReward.toString();
+  const unbondingBal = unbonding.toString();
 
   const { numericPart: stakableBalNumber, denomPart: stakableDenom } =
     separateNumericAndDenom(stakableBal);
@@ -72,6 +73,8 @@ export const Dashboard = observer(() => {
     separateNumericAndDenom(stakedBal);
   const { numericPart: rewardsBalNumber, denomPart: rewardDenom } =
     separateNumericAndDenom(rewardsBal);
+  const { numericPart: unbondingBalNumber, denomPart: unbondingDenom } =
+    separateNumericAndDenom(unbondingBal);
 
   const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
     accountInfo.bech32Address
@@ -130,6 +133,7 @@ export const Dashboard = observer(() => {
   const stakableBalInUI = parseFloat(stakableBalNumber);
   const stakedBalInUI = parseFloat(stakedBalNumber);
   const rewardsBalInUI = parseFloat(rewardsBalNumber);
+  const unbondingBalInUI = parseFloat(unbondingBalNumber);
   const vestingBalInUI =
     isVesting && !isVestingExpired(vestingEndTimeStamp)
       ? parseFloat(vestingBalance().toString())
@@ -140,6 +144,7 @@ export const Dashboard = observer(() => {
   const stakablePercentage = total ? (spendableNumber / total) * 100 : 0;
   const stakedPercentage = total ? (stakedBalInUI / total) * 100 : 0;
   const rewardsPercentage = total ? (rewardsBalInUI / total) * 100 : 0;
+  const unbondingPercentage = total ? (unbondingBalInUI / total) * 100 : 0;
   const vestingPercentage =
     isVesting && !isVestingExpired(vestingEndTimeStamp)
       ? (Number(vestingBalance()) / total) * 100
@@ -154,19 +159,33 @@ export const Dashboard = observer(() => {
   const rewardsInFiatCurrency = priceStore
     .calculatePrice(stakableReward, fiatCurrency)
     ?.toString();
+  const unbondingInFiatCurrency = priceStore
+    .calculatePrice(unbonding, fiatCurrency)
+    ?.toString();
 
   const isLoaded =
     accountInfo.walletStatus === WalletStatus.Loaded &&
     accountInfo.bech32Address &&
     !rewards.isFetching;
 
+  const labels = ["Balance", "Staked", "Rewards", "Vesting"];
+  const data = [spendableNumber, stakedBalInUI, rewardsBalInUI, vestingBalInUI];
+  const backgroundColor = ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"];
+
+  // add unbonding if available
+  if (unbondingBalInUI > 0) {
+    labels.push("Unbonding");
+    data.push(unbondingBalInUI);
+    backgroundColor.push("#F4B400");
+  }
+
   const doughnutData = {
-    labels: ["Balance", "Staked", "Rewards", "vesting"],
+    labels,
     datasets: [
       {
-        data: [spendableNumber, stakedBalInUI, rewardsBalInUI, vestingBalInUI],
-        backgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
-        hoverBackgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
+        data,
+        backgroundColor,
+        hoverBackgroundColor: backgroundColor,
         borderColor: "transparent",
       },
     ],
@@ -340,6 +359,51 @@ export const Dashboard = observer(() => {
                     </div>
                   ) : (
                     <Skeleton height="17.5px" />
+                  )}
+                </div>
+              </div>
+            )}
+            {unbondingBalInUI > 0 && (
+              <div className={style["legend"]}>
+                <img
+                  src={
+                    unbondingInFiatCurrency !== undefined &&
+                    unbondingInFiatCurrency > "$0"
+                      ? require("@assets/svg/wireframe/legend-yellow-long.svg")
+                      : require("@assets/svg/wireframe/legend-yellow.svg")
+                  }
+                  alt=""
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "3px",
+                  }}
+                >
+                  <div className={style["label"]}>Unbonding</div>
+                  {isLoaded ? (
+                    <div className={style["value"]}>
+                      {Number(unbondingBalInUI.toFixed(2)).toLocaleString(
+                        "en-US"
+                      )}{" "}
+                      {` ${unbondingDenom} `}
+                      <span className={style["label"]}>
+                        ({unbondingPercentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  ) : (
+                    <Skeleton height="17.5px" />
+                  )}
+                  {isLoaded ? (
+                    unbondingInFiatCurrency !== undefined &&
+                    unbondingInFiatCurrency > "$0" ? (
+                      <div className={style["amountInUSD"]}>
+                        {unbondingInFiatCurrency}
+                      </div>
+                    ) : null
+                  ) : (
+                    <Skeleton height="21px" />
                   )}
                 </div>
               </div>
