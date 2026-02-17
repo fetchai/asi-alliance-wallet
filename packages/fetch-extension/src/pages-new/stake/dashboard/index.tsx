@@ -14,6 +14,7 @@ import { VestingType, WalletStatus } from "@keplr-wallet/stores";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { useLanguage } from "../../../languages";
 import { clearDecimals } from "../../sign/decimals";
+import { MyUnbondingValidators } from "./my-stake/my-unbonding-balances";
 
 export const Dashboard = observer(() => {
   const { chainStore, accountStore, queriesStore, priceStore } = useStore();
@@ -198,12 +199,18 @@ export const Dashboard = observer(() => {
       },
     },
   };
+
+  const hasDelegations = delegations && delegations.length > 0;
+  const hasUnbonding = parseFloat(unbondingBalNumber) > 0;
+  const hasStakableOrRewards =
+    parseFloat(stakableBalNumber) > 0 ||
+    parseFloat(stakedBalNumber) > 0 ||
+    parseFloat(rewardsBalNumber) > 0 ||
+    parseFloat(unbondingBalNumber) > 0;
+
   return (
     <div className={style["dashboard"]}>
-      {(!isLoaded ||
-        parseFloat(stakableBalNumber) > 0 ||
-        parseFloat(stakedBalNumber) > 0 ||
-        parseFloat(rewardsBalNumber) > 0) && (
+      {(!isLoaded || hasStakableOrRewards) && (
         <div className={style["stake-container"]}>
           <div className={style["legends"]}>
             <div className={style["legend"]}>
@@ -414,24 +421,24 @@ export const Dashboard = observer(() => {
           </div>
         </div>
       )}
-      {isLoaded &&
-        (delegations && delegations.length > 0 ? (
-          <MyStakes rewards={rewards} accountInfo={accountInfo} />
-        ) : (
-          <div
-            style={{
-              paddingTop: !(
-                parseFloat(stakableBalNumber) > 0 ||
-                parseFloat(stakedBalNumber) > 0 ||
-                parseFloat(rewardsBalNumber) > 0
-              )
-                ? "85px"
-                : 0,
-            }}
-          >
-            <EmptyStake />
-          </div>
-        ))}
+      {isLoaded && (hasDelegations || hasUnbonding) ? (
+        <React.Fragment>
+          {delegations && delegations.length > 0 && (
+            <MyStakes rewards={rewards} accountInfo={accountInfo} />
+          )}
+          {hasUnbonding && (
+            <MyUnbondingValidators hasDelegations={hasDelegations} />
+          )}
+        </React.Fragment>
+      ) : (
+        <div
+          style={{
+            paddingTop: !hasStakableOrRewards ? "85px" : 0,
+          }}
+        >
+          <EmptyStake />
+        </div>
+      )}
     </div>
   );
 });

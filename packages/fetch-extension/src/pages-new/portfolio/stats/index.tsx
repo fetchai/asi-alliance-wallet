@@ -549,7 +549,7 @@ export const Stats = observer(
           }}
           text="Claim rewards"
           disabled={
-            rewardsBal === "0.000000000000000000 FET" ||
+            parseFloat(rewardsBalNumber) === 0 ||
             activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
           }
         >
@@ -601,7 +601,7 @@ export const Stats = observer(
               }}
               text="Claim my rewards"
               disabled={
-                rewardsBal === "0.000000000000000000 FET" ||
+                parseFloat(rewardsBalNumber) === 0 ||
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
                 isWithdrawingRewards
               }

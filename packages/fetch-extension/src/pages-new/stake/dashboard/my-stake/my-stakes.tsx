@@ -24,7 +24,6 @@ import { TXNTYPE } from "../../../../config";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useLanguage } from "../../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
-import { MyUnbondingValidators } from "./my-unbonding-balances";
 
 export const MyStakes = observer(
   ({
@@ -327,35 +326,7 @@ export const MyStakes = observer(
           </div>
         </GlassCard>
 
-        <div
-          className={style["my-validators-container"]}
-          style={{
-            marginTop: "24px",
-          }}
-        >
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            <div
-              style={{
-                color: "var(--font-dark)",
-                fontSize: "16px",
-                fontWeight: 400,
-              }}
-            >
-              Staked balances
-            </div>
-            <div className={style["stake-count"]}>{delegations.length}</div>
-          </div>
-
-          <div
-            className={style["my-validators-container"]}
-            style={{
-              paddingBottom: "30px",
-            }}
-          >
-            <MyValidator />
-          </div>
-        </div>
-        <MyUnbondingValidators />
+        <MyValidator />
       </div>
     );
   }
