@@ -123,6 +123,7 @@ import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
 import { BuySellTokenPage } from "./pages-new/more/token/moonpay";
 import { AddCosmosChain } from "./pages/setting/addCosmosChain";
 import { useAccountChangeMonitoring } from "./use-account-change-monitoring";
+import { ChangePassword } from "./pages-new/more/security-privacy/change-password";
 
 const queryClient = new QueryClient();
 
@@ -334,6 +335,10 @@ ReactDOM.render(
                           <Route
                             path="/more/token/manage"
                             element={<ManageTokenPage />}
+                          />
+                          <Route
+                            path="/more/security-privacy/change-password"
+                            element={<ChangePassword />}
                           />
                           <Route
                             path="/setting/endpoints"
