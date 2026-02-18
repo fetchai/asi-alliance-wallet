@@ -957,6 +957,10 @@ Salt: ${salt}`;
     return this.keyRing.checkPassword(password);
   }
 
+  async updatePassword(oldPassword: string, newPassword: string) {
+    return await this.keyRing.updatePassword(oldPassword, newPassword);
+  }
+
   getMultiKeyStoreInfo(): MultiKeyStoreInfoWithSelected {
     return this.keyRing.getMultiKeyStoreInfo();
   }
