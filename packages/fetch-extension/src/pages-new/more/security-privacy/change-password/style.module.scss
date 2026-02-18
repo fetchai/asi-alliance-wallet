@@ -1,0 +1,17 @@
+@import "../../../../styles/var";
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  label {
+    color: $font-secondary;
+    margin-top: 0px !important;
+  }
+
+  input:read-only {
+    background: rgba(255, 255, 255, 0.1);
+    color: $font-dark;
+  }
+}

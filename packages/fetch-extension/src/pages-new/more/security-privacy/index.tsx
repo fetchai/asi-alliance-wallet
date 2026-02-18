@@ -59,6 +59,26 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
           }}
         />
         <Card
+          leftImage={require("@assets/svg/wireframe/change-password.svg")}
+          style={{
+            marginBottom: "8px",
+            padding: "18px",
+          }}
+          leftImageStyle={{ background: "transparent" }}
+          heading={
+            "Change Password"
+            //   intl.formatMessage({
+            //   id: "setting.permissions.get-chain-infos",
+            // })
+          }
+          onClick={() => {
+            navigate("/more/security-privacy/change-password");
+            analyticsStore.logEvent("change_password_click", {
+              pageName: "Security & Privacy",
+            });
+          }}
+        />
+        <Card
           style={{
             marginBottom: "8px",
             height: "78px",
