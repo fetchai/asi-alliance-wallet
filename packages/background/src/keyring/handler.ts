@@ -41,6 +41,7 @@ import {
   RestoreWalletMsg,
   GetKeyMsgFetchSigning,
   RefreshAccountList,
+  UpdatePasswordMsg,
 } from "./messages";
 import { KeyRingService } from "./service";
 import { Bech32Address } from "@keplr-wallet/cosmos";
@@ -145,6 +146,8 @@ export const getHandler: (service: KeyRingService) => Handler = (
         );
       case CheckPasswordMsg:
         return handleCheckPasswordMsg(service)(env, msg as CheckPasswordMsg);
+      case UpdatePasswordMsg:
+        return handleUpdatePasswordMsg(service)(env, msg as UpdatePasswordMsg);
       case ExportKeyRingDatasMsg:
         return handleExportKeyRingDatasMsg(service)(
           env,
@@ -572,6 +575,14 @@ const handleCheckPasswordMsg: (
 ) => InternalHandler<CheckPasswordMsg> = (service) => {
   return (_, msg) => {
     return service.checkPassword(msg.password);
+  };
+};
+
+const handleUpdatePasswordMsg: (
+  service: KeyRingService
+) => InternalHandler<UpdatePasswordMsg> = (service) => {
+  return async (_, msg) => {
+    return await service.updatePassword(msg.newPassword, msg.newPassword);
   };
 };
 
