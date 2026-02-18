@@ -12124,6 +12124,7 @@ __metadata:
     "@types/secp256k1": ^4.0.1
     "@types/sha.js": ^2.4.0
     "@types/styled-components": ^5.1.26
+    "@types/zxcvbn": ^4
     "@walletconnect/client": ^1.6.4
     "@web3auth/auth-adapter": ^9.7.0
     "@web3auth/base": ^9.7.0
@@ -12208,6 +12209,7 @@ __metadata:
     webpack: ^5.74.0
     webpack-bundle-analyzer: ^4.5.0
     webpack-cli: ^5.0.1
+    zxcvbn: ^4.4.2
   peerDependencies:
     "@ledgerhq/hw-app-eth": ^6
     "@ledgerhq/hw-transport": ^6
@@ -20602,6 +20604,13 @@ __metadata:
   dependencies:
     "@types/yargs-parser": "*"
   checksum: 5f3ac4dc4f6e211c1627340160fbe2fd247ceba002190da6cf9155af1798450501d628c9165a183f30a224fc68fa5e700490d740ff4c73e2cdef95bc4e8ba7bf
+  languageName: node
+  linkType: hard
+
+"@types/zxcvbn@npm:^4":
+  version: 4.4.5
+  resolution: "@types/zxcvbn@npm:4.4.5"
+  checksum: 6cef28a9d2c13838edce31b33eb11d6aaadb3fb1d3e90f51c2f2a7280be7c0c32c7a62f5cab05297f742f4c8c8fd07d9d8d6095a3255a6a9f280a5eee6b360b4
   languageName: node
   linkType: hard
 
@@ -58787,5 +58796,12 @@ __metadata:
   bin:
     zx: zx.mjs
   checksum: fa65468115571d6580888323c6016c62c0574ea6f2620a6e351682d71de42ee2b472f482fc32b9154b1117c8dd3975e2a6650f57de866f434e6840f4bcaa1f37
+  languageName: node
+  linkType: hard
+
+"zxcvbn@npm:^4.4.2":
+  version: 4.4.2
+  resolution: "zxcvbn@npm:4.4.2"
+  checksum: 76ab32c066082ac73491b7cd7f93ad0595c59b6d45ae80a0745e9e1661237388beb2f0c2ba0ae3dc330ca3ecdb87edcb7a21e0c09137ab81d5b32e584cda1e5d
   languageName: node
   linkType: hard
