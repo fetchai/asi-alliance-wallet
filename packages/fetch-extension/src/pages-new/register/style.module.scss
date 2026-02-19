@@ -252,6 +252,13 @@ html[data-register-page="true"] #app .container {
   display: flex;
   flex-direction: column;
   width: 100%;
+
+  input {
+    &::placeholder {
+      color: $font-secondary !important;
+    }
+    margin-bottom: 0px !important;
+  }
 }
 
 .buttons {

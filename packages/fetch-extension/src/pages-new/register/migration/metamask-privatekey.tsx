@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState } from "react";
+import React, { FunctionComponent, useState, useEffect } from "react";
 import { BackButton } from "../index";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Input, TextArea } from "@components/form";
@@ -10,15 +10,16 @@ import { parseEthPrivateKey } from "@fetchai/eth-migration";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { PasswordInput } from "@components-v2/form";
-import { PasswordValidationChecklist } from "../password-checklist";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
+import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RefreshAccountList } from "@keplr-wallet/background";
+import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
+import { Checkbox } from "@components-v2/checkbox/checkbox";
 
 interface FormData {
   name: string;
@@ -41,27 +42,21 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
   onBack: () => void;
 }> = observer(({ registerConfig, onBack }) => {
   const intl = useIntl();
-  const [password, setPassword] = useState("");
-  const [passwordChecklistError, setPasswordChecklistError] = useState(
-    // initially sets the password error as true for create mode
-    registerConfig.mode === "create" ? true : false
-  );
   const { keyRingStore } = useStore();
 
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [accountNameValidationError, setAccountNameValidationError] =
-    useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [passwordCheckbox, setPasswordCheckbox] = useState(false);
+  const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
   const accountList = keyRingStore.multiKeyStoreInfo;
   const defaultAccountName = getNextDefaultAccountName(accountList);
-  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
     setValue,
-    getValues,
+    formState: { errors },
+    trigger,
+    watch,
   } = useForm<FormData>({
     defaultValues: {
       name: defaultAccountName,
@@ -70,7 +65,25 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
       password: "",
       confirmPassword: "",
     },
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
+
+  const { name, password, ethAddress, confirmPassword, ethPrivateKey } =
+    watch();
+
+  useEffect(() => {
+    if (confirmPassword) {
+      trigger("confirmPassword");
+    }
+  }, [password, trigger]);
+
+  const areInputsEmpty =
+    name === "" ||
+    ethPrivateKey === "" ||
+    ethAddress === "" ||
+    (registerConfig.mode === "create" &&
+      (password === "" || confirmPassword === ""));
 
   return (
     <div className={style["migrateContainer"]}>
@@ -85,7 +98,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
           const privateKey = Buffer.from(
             data.ethPrivateKey.trim().replace("0x", ""),
             "hex"
-          );
+          ) as Uint8Array;
 
           // attempt to parse the private key information
           const parsedKey = parseEthPrivateKey(privateKey);
@@ -128,46 +141,25 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
             required: intl.formatMessage({
               id: "register.name.error.required",
             }),
-          })}
-          onChange={(e) => {
-            setErrorMessage("");
-            const trimmedValue = e.target.value.trimStart();
-            setValue(e.target.name as keyof FormData, trimmedValue);
-            setNewAccountName(trimmedValue);
-            const { isValid, isValidFormat, containsLetterOrNumber } =
-              validateWalletName(
-                trimmedValue,
+            validate: (value: string) =>
+              validateAccountName(
+                value,
                 keyRingStore?.multiKeyStoreInfo,
                 registerConfig.mode
-              );
-            const isEmpty = trimmedValue === "";
-            if (!isValid || isEmpty) {
-              setErrorMessage(
-                !isValidFormat
-                  ? "Only letters, numbers and basic symbols (_-.@#()) are allowed."
-                  : isEmpty
-                  ? "Account name cannot be empty"
-                  : !containsLetterOrNumber
-                  ? "Account name must contain at least one letter or number."
-                  : "Account name already exists, please try different name"
-              );
-            }
-            setAccountNameValidationError(!isValid || isEmpty);
+              ),
+          })}
+          error={errors.name && errors.name.message}
+          onChange={(e: any) => {
+            const trimmedValue = e.target.value.trimStart();
+            setValue(e.target.name, trimmedValue, { shouldValidate: true });
           }}
-          error={
-            accountNameValidationError
-              ? errorMessage
-              : errors.name && errors.name.message
-          }
           maxLength={20}
         />
         <div
           className={classNames(
             style["label"],
             "mb-1 text-xs",
-            newAccountName === defaultAccountName ||
-              accountNameValidationError ||
-              (errors.name && errors.name.message)
+            name === defaultAccountName || (errors.name && errors.name.message)
               ? "invisible"
               : "visible"
           )}
@@ -177,7 +169,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
         <SelectNetwork
           className="mb-3"
           selectedNetworks={selectedNetworks}
-          disabled={newAccountName === defaultAccountName}
+          disabled={name === defaultAccountName}
           onMultiSelectChange={(values) => {
             setSelectedNetworks(values);
           }}
@@ -232,13 +224,15 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                 }
 
                 // parse the private key
-                const parsedKey = parseEthPrivateKey(privateKeyData);
+                const parsedKey = parseEthPrivateKey(
+                  privateKeyData as Uint8Array
+                );
                 if (parsedKey === undefined) {
                   return "Invalid ETH private key";
                 }
 
                 // check that the parsed private key matches
-                if (parsedKey.ethAddress !== getValues()["ethAddress"]) {
+                if (parsedKey.ethAddress !== ethAddress) {
                   return "The key provided doesn't match the supplied ETH addres";
                 }
               }
@@ -253,6 +247,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                 required: intl.formatMessage({
                   id: "register.create.input.password.error.required",
                 }),
+                setValueAs: (value: string) => value.trim(),
                 validate: (password: string): string | undefined => {
                   if (password.length < 8) {
                     return intl.formatMessage({
@@ -261,11 +256,11 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                   }
                 },
               })}
+              placeholder="Enter Password (min 8 characters)"
               error={errors.password && errors.password.message}
               labelStyle={{
                 marginTop: "0px",
               }}
-              onChange={(e: any) => setPassword(e.target.value)}
             />
             <PasswordInput
               passwordLabel="Confirm Password"
@@ -273,25 +268,35 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                 required: intl.formatMessage({
                   id: "register.create.input.confirm-password.error.required",
                 }),
+                setValueAs: (value: string) => value.trim(),
                 validate: (confirmPassword: string): string | undefined => {
-                  if (confirmPassword !== getValues()["password"]) {
+                  if (confirmPassword !== password) {
                     return intl.formatMessage({
                       id: "register.create.input.confirm-password.error.unmatched",
                     });
                   }
                 },
               })}
+              placeholder="Confirm Password"
               labelStyle={{
                 marginTop: "0px",
               }}
               error={errors.confirmPassword && errors.confirmPassword.message}
             />
-            <div className="mt-4 space-y-1 text-sm">
-              <PasswordValidationChecklist
+            <div className="pt-2 space-y-1 text-sm">
+              <PasswordStrengthMeter
                 password={password}
-                onStatusChange={(status) => setPasswordChecklistError(!status)}
+                onStrengthChange={(score) => setPasswordStrengthScore(score)}
               />
             </div>
+            {passwordStrengthScore < 3 && password.length >= 8 && (
+              <Checkbox
+                isChecked={passwordCheckbox}
+                className="py-2"
+                setIsChecked={setPasswordCheckbox}
+                label="I understand this password is not strong and still want to continue."
+              />
+            )}
           </React.Fragment>
         )}
         <ButtonV2
@@ -306,10 +311,16 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
           }
           disabled={
             registerConfig.isLoading ||
-            passwordChecklistError ||
-            accountNameValidationError ||
-            (selectedNetworks.length === 0 &&
-              newAccountName !== defaultAccountName)
+            (registerConfig.mode === "create" &&
+              (Boolean(
+                errors?.confirmPassword?.message || errors?.password?.message
+              ) ||
+                (password !== "" &&
+                  passwordStrengthScore < 3 &&
+                  !passwordCheckbox))) ||
+            areInputsEmpty ||
+            Boolean(errors?.name?.message) ||
+            (selectedNetworks.length === 0 && name !== defaultAccountName)
           }
         />
       </Form>
