@@ -15,6 +15,7 @@ import { Skeleton } from "@components-v2/skeleton-loader";
 import { useLanguage } from "../../../languages";
 import { clearDecimals } from "../../sign/decimals";
 import { MyUnbondingValidators } from "./my-stake/my-unbonding-balances";
+import { Dec } from "@keplr-wallet/unit";
 
 export const Dashboard = observer(() => {
   const { chainStore, accountStore, queriesStore, priceStore } = useStore();
@@ -200,7 +201,11 @@ export const Dashboard = observer(() => {
     },
   };
 
-  const hasDelegations = delegations && delegations.length > 0;
+  const hasDelegations =
+    delegations &&
+    delegations.filter((del) => new Dec(del.balance.amount).gt(new Dec(0)))
+      .length > 0;
+
   const hasUnbonding = parseFloat(unbondingBalNumber) > 0;
   const hasStakableOrRewards =
     parseFloat(stakableBalNumber) > 0 ||
@@ -423,7 +428,7 @@ export const Dashboard = observer(() => {
       )}
       {isLoaded && (hasDelegations || hasUnbonding) ? (
         <React.Fragment>
-          {delegations && delegations.length > 0 && (
+          {hasDelegations && (
             <MyStakes rewards={rewards} accountInfo={accountInfo} />
           )}
           {hasUnbonding && (

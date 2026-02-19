@@ -475,6 +475,13 @@ const DelegateReward: FunctionComponent = observer(() => {
           .getQueryBech32Address(account.bech32Address)
           .getStakableRewardOf(val.operator_address);
 
+        const parsedRewards =
+          parseFloat(rewards?.hideDenom(true).toString()) || 0;
+        const displayAmount =
+          parsedRewards > 0.00001
+            ? rewards.maxDecimals(4).trim(true).shrink(true).toString()
+            : `< 0.00001 ${rewards?.denom}`;
+
         return parseFloat(rewards.toString().split(" ")[0]) > 0 ? (
           <div
             key={del.delegation.validator_address}
@@ -492,9 +499,7 @@ const DelegateReward: FunctionComponent = observer(() => {
               <div className={style["reward-title"]}>
                 {val.description.moniker?.trim()}
               </div>
-              <div className={style["reward-amount"]}>
-                {rewards.maxDecimals(4).trim(true).shrink(true).toString()}
-              </div>
+              <div className={style["reward-amount"]}>{displayAmount}</div>
             </div>
             <ButtonV2
               variant="light"

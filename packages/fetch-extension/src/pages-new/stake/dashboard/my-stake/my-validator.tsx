@@ -114,6 +114,14 @@ export const MyValidator = observer(() => {
               val?.commission.commission_rates.rate || "0"
             );
             const APR = ARR.mul(new Dec(1 - validatorCom));
+
+            const parsedStake =
+              parseFloat(amount?.hideDenom(true).toString()) || 0;
+            const displayAmount =
+              parsedStake > 0.00001
+                ? amount.maxDecimals(4).trim(true).shrink(true).toString()
+                : `< 0.00001 ${amount?.denom}`;
+
             return (
               <GlassCard
                 styleProps={{
@@ -149,11 +157,7 @@ export const MyValidator = observer(() => {
                             className={styles["validator-currency"]}
                             style={{ color: "var(--font-secondary)" }}
                           >
-                            {amount
-                              .maxDecimals(4)
-                              .trim(true)
-                              .shrink(true)
-                              .toString()}
+                            {displayAmount}
                           </span>
                         </div>
                       </div>
