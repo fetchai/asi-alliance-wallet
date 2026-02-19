@@ -114,6 +114,36 @@ export const getNextDefaultAccountName = (
   return `${prefix}-${lastNum + 1}`;
 };
 
+export const validateAccountName = (
+  value: string,
+  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  mode: RegisterMode
+): string | undefined => {
+  const trimmedValue = value.trimStart();
+  const isEmpty = trimmedValue === "";
+  const { isValid, isValidFormat, containsLetterOrNumber } = validateWalletName(
+    trimmedValue,
+    multiKeyStoreInfo,
+    mode
+  );
+
+  if (!isValid || isEmpty) {
+    if (!isValidFormat) {
+      return "Only letters, numbers and basic symbols (_-.@#()) are allowed.";
+    }
+
+    if (isEmpty) {
+      return "Account name cannot be empty";
+    }
+
+    if (!containsLetterOrNumber) {
+      return "Account name must contain at least one letter or number.";
+    }
+
+    return "Account name already exists, please try different name";
+  }
+};
+
 export function isFeatureAvailable(chainId: string): boolean {
   return [
     CHAIN_ID_FETCHHUB,
