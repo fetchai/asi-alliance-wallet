@@ -318,6 +318,8 @@ export const Stats = observer(
       accountInfo.bech32Address &&
       !rewards.isFetching;
 
+    const value = parseFloat(rewardsBalNumber || 0);
+
     return (
       <div className={style["card"]}>
         <div className={style["heading"]}>STAKING</div>
@@ -576,18 +578,20 @@ export const Stats = observer(
                 Claim rewards
               </div>
               <div className={style["claim-rewards-dropdown-subtitle"]}>
-                Transaction has been broadcasted to blockchain and pending
-                confirmation
+                Total rewards available to claim
               </div>
             </div>
 
             <div className={style["claim-rewards-reward"]}>
               <div className={style["label"]}>You’ve earned</div>
               <div className={style["value"]}>
-                {Number(parseFloat(rewardsBalNumber).toFixed(2)).toLocaleString(
-                  "en-US"
-                )}{" "}
-                {` ${rewardDenom} `}
+                {value === 0
+                  ? `0 ${rewardDenom}`
+                  : value < 0.00001
+                  ? `< 0.00001 ${rewardDenom}`
+                  : `${Number(value.toFixed(4)).toLocaleString(
+                      "en-US"
+                    )} ${rewardDenom}`}
               </div>
             </div>
 

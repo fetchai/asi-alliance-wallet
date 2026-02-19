@@ -106,6 +106,17 @@ export const MyUnbondingValidators = observer(
                     fiatCurrency
                   );
 
+                  const amount =
+                    parseFloat(
+                      entry.balance.hideDenom(true).toString() || "0"
+                    ) > 0.00001
+                      ? entry.balance
+                          .maxDecimals(4)
+                          .trim(true)
+                          .shrink(true)
+                          .toString()
+                      : `< 0.00001 ${entry?.balance?.denom || ""}`;
+
                   return (
                     <GlassCard
                       key={`${ubd.validatorAddress}-${entry.completionTime}`}
@@ -130,11 +141,7 @@ export const MyUnbondingValidators = observer(
                                 className={styles["validator-currency"]}
                                 style={{ color: "var(--font-secondary)" }}
                               >
-                                {entry.balance
-                                  .maxDecimals(4)
-                                  .trim(true)
-                                  .shrink(true)
-                                  .toString()}
+                                {amount}
                               </span>
                             </div>
                             {amountFiatCurrency && (

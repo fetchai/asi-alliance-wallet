@@ -128,7 +128,11 @@ export const StakeDetails = observer(
                     parseFloat(
                       rewards[0]?.maxDecimals(4).toString().split(" ")[0]
                     ) < 0.00001 ? (
-                      <span style={{ color: "var(--font-dark)" }}>0</span>
+                      <span style={{ color: "var(--font-dark)" }}>
+                        {parseFloat(rewards[0]?.hideDenom(true).toString()) > 0
+                          ? `< 0.00001 ${rewards[0]?.denom}`
+                          : 0}
+                      </span>
                     ) : (
                       rewards[0]?.maxDecimals(4).toString()
                     )}
