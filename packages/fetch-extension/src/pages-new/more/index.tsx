@@ -108,7 +108,7 @@ export const MorePage: FunctionComponent = () => {
             display: "flex",
             alignItems: "center",
           }}
-          heading={<div>Switch to Side Panel</div>}
+          heading={<div>Switch To Side Panel</div>}
           subheading={"Open ASI Wallet in a sidebar on your screen"}
           rightContent={
             <SidePanelToggle
@@ -123,7 +123,7 @@ export const MorePage: FunctionComponent = () => {
         leftImageStyle={{ background: "transparent" }}
         style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/security.svg")}
-        heading={"Security & privacy"}
+        heading={"Security & Privacy"}
         onClick={() => {
           navigate("/more/security-privacy");
           analyticsStore.logEvent("security_and_privacy_click", {

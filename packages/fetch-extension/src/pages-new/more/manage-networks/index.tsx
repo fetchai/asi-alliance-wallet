@@ -58,7 +58,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                   navigate("/setting/addCosmosChain");
                 }}
                 gradientText={""}
-                text="Add custom Cosmos network"
+                text="Add Custom Cosmos Network"
               />
             }
             emptyContent={<NoResults styles={{ height: "250px" }} />}
@@ -116,7 +116,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                   navigate("/setting/addEvmChain");
                 }}
                 gradientText={""}
-                text={"Add custom EVM network"}
+                text={"Add Custom EVM Network"}
               />
             }
             emptyContent={<NoResults styles={{ height: "290px" }} />}

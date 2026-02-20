@@ -6,11 +6,19 @@ import React, { useMemo } from "react";
 import { useLanguage } from "../../../../languages";
 import { useStore } from "../../../../stores";
 import styles from "./style.module.scss";
+import { ButtonV2 } from "@components-v2/buttons/button";
+import { useNavigate } from "react-router";
 
 export const MyUnbondingValidators = observer(
   ({ hasDelegations }: { hasDelegations: boolean }) => {
-    const { chainStore, accountStore, queriesStore, priceStore } = useStore();
-
+    const {
+      chainStore,
+      accountStore,
+      queriesStore,
+      priceStore,
+      analyticsStore,
+    } = useStore();
+    const navigate = useNavigate();
     const account = accountStore.getAccount(chainStore.current.chainId);
     const queries = queriesStore.get(chainStore.current.chainId);
     const language = useLanguage();
@@ -60,12 +68,27 @@ export const MyUnbondingValidators = observer(
     }
 
     return (
-      <div
-        className={styles["my-validators-container"]}
-        style={{
-          paddingTop: hasDelegations ? "0px" : "30px",
-        }}
-      >
+      <div className={styles["my-validators-container"]}>
+        {!hasDelegations && (
+          <ButtonV2
+            variant="light"
+            text="Stake more"
+            onClick={() => {
+              analyticsStore.logEvent("stake_click", {
+                chainId: chainStore.current.chainId,
+                chainName: chainStore.current.chainName,
+                pageName: "Stake",
+              });
+              navigate("/validator/validator-list");
+            }}
+            styleProps={{
+              height: "44px",
+              marginTop: "32px",
+              marginBottom: "32px",
+              backgroundColor: "#B1FCAB",
+            }}
+          />
+        )}
         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           <div
             style={{

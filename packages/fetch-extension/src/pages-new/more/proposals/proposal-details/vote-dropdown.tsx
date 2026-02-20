@@ -14,7 +14,7 @@ interface VoteDropdownProps {
   proposal: ObservableQueryProposal | undefined;
 }
 
-const voteArr = ["Unspecified", "Yes", "No", "NoWithVeto", "Abstain"];
+const voteArr = ["Unspecified", "Yes", "No", "No With Veto", "Abstain"];
 
 export const VoteDropdown = ({ proposal }: VoteDropdownProps) => {
   const navigate = useNavigate();
