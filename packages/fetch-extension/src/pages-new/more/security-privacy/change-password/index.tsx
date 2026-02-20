@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PasswordInput } from "@components-v2/form";
 import style from "./style.module.scss";
 import { useIntl } from "react-intl";
@@ -6,12 +6,13 @@ import { Form } from "reactstrap";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { useNavigate } from "react-router";
 import { observer } from "mobx-react-lite";
-import { PasswordValidationChecklist } from "../../../register/password-checklist";
 import { useForm } from "react-hook-form";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useNotification } from "@components/notification";
 import { useStore } from "../../../../stores";
 import { useLoadingIndicator } from "@components/loading-indicator";
+import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
+import { Checkbox } from "@components-v2/checkbox/checkbox";
 
 interface FormData {
   newPassword: string;
@@ -32,12 +33,12 @@ const defaultValues = {
 };
 
 export const ChangePassword = observer(() => {
-  const [passwordChecklistError, setPasswordChecklistError] = useState(false);
   const { isLoading, setIsLoading } = useLoadingIndicator();
   const {
     register,
     handleSubmit,
     watch,
+    trigger,
     reset,
     setError,
     formState: { errors },
@@ -51,10 +52,23 @@ export const ChangePassword = observer(() => {
   const { keyRingStore } = useStore();
   const notification = useNotification();
   const { newPassword, currentPassword, confirmPassword } = watch();
+  const [passwordCheckbox, setPasswordCheckbox] = useState(false);
+  const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
 
-  const handleChangePassword = async (data: FormData) => {
+  useEffect(() => {
+    if (newPassword) {
+      trigger("newPassword");
+    }
+  }, [currentPassword, trigger]);
+
+  useEffect(() => {
+    if (confirmPassword) {
+      trigger("confirmPassword");
+    }
+  }, [newPassword, trigger]);
+
+  const handleChangePassword = async (_data: FormData) => {
     try {
-      const { newPassword, currentPassword } = data;
       const passwordValid = await keyRingStore.checkPassword(currentPassword);
       if (!passwordValid) {
         setError("currentPassword", {
@@ -63,32 +77,6 @@ export const ChangePassword = observer(() => {
         });
         return;
       }
-      // if (currentPassword === newPassword) {
-      //   notification.push({
-      //     type: "danger",
-      //     placement: "top-center",
-      //     duration: 5,
-      //     content: "New password is same as the current password",
-      //     canDelete: true,
-      //     transition: {
-      //       duration: 0.25,
-      //     },
-      //   });
-      //   return;
-      // }
-      // if (newPassword !== confirmPassword) {
-      //   notification.push({
-      //     type: "danger",
-      //     placement: "top-center",
-      //     duration: 5,
-      //     content: "Confirm password does not matches the new password",
-      //     canDelete: true,
-      //     transition: {
-      //       duration: 0.25,
-      //     },
-      //   });
-      //   return;
-      // }
       setIsLoading("change-password", true);
       await keyRingStore.updatePassword(currentPassword, newPassword);
       notification.push({
@@ -151,6 +139,7 @@ export const ChangePassword = observer(() => {
               }
             },
           })}
+          placeholder="Current Password"
           error={errors.currentPassword && errors.currentPassword.message}
         />
         <PasswordInput
@@ -174,6 +163,7 @@ export const ChangePassword = observer(() => {
               }
             },
           })}
+          placeholder="New Password (min 8 characters)"
           error={errors.newPassword && errors.newPassword.message}
         />
         <PasswordInput
@@ -194,22 +184,31 @@ export const ChangePassword = observer(() => {
               }
             },
           })}
+          placeholder="Confirm Password"
           error={errors.confirmPassword && errors.confirmPassword.message}
         />
-        <div className="mt-4 space-y-1 text-sm">
-          <PasswordValidationChecklist
+        <div className="pt-2 space-y-1 text-sm">
+          <PasswordStrengthMeter
             password={newPassword}
-            onStatusChange={(status) => setPasswordChecklistError(!status)}
+            onStrengthChange={(score) => setPasswordStrengthScore(score)}
           />
         </div>
+        {passwordStrengthScore < 3 && newPassword.length >= 8 && (
+          <Checkbox
+            isChecked={passwordCheckbox}
+            className="py-2"
+            setIsChecked={setPasswordCheckbox}
+            label="I understand this password is not strong and still want to continue."
+          />
+        )}
         <ButtonV2
           variant="dark"
           disabled={
             !newPassword ||
             !currentPassword ||
             !confirmPassword ||
+            (!passwordCheckbox && passwordStrengthScore < 3) ||
             passwordFields.some((field) => !!errors?.[field]?.message) ||
-            !!passwordChecklistError ||
             isLoading("change-password")
           }
           text="Change"

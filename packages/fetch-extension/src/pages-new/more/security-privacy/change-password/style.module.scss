@@ -10,6 +10,12 @@
     margin-top: 0px !important;
   }
 
+  input {
+    &::placeholder {
+      color: $font-secondary !important;
+    }
+  }
+
   input:read-only {
     background: rgba(255, 255, 255, 0.1);
     color: $font-dark;

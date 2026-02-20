@@ -582,7 +582,7 @@ const handleUpdatePasswordMsg: (
   service: KeyRingService
 ) => InternalHandler<UpdatePasswordMsg> = (service) => {
   return async (_, msg) => {
-    return await service.updatePassword(msg.newPassword, msg.newPassword);
+    return await service.updatePassword(msg.oldPassword, msg.newPassword);
   };
 };
 
