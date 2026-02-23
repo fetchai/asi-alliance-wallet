@@ -587,9 +587,9 @@ export const Stats = observer(
               <div className={style["value"]}>
                 {value === 0
                   ? `0 ${rewardDenom}`
-                  : value < 0.00001
-                  ? `< 0.00001 ${rewardDenom}`
-                  : `${Number(value.toFixed(4)).toLocaleString(
+                  : value < 0.000001
+                  ? `< 0.000001 ${rewardDenom}`
+                  : `${Number(parseFloat(value.toFixed(6))).toLocaleString(
                       "en-US"
                     )} ${rewardDenom}`}
               </div>

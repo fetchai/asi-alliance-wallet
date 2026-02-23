@@ -478,9 +478,9 @@ const DelegateReward: FunctionComponent = observer(() => {
         const parsedRewards =
           parseFloat(rewards?.hideDenom(true).toString()) || 0;
         const displayAmount =
-          parsedRewards > 0.00001
-            ? rewards.maxDecimals(4).trim(true).shrink(true).toString()
-            : `< 0.00001 ${rewards?.denom}`;
+          parsedRewards >= 0.000001
+            ? rewards.maxDecimals(6).trim(true).shrink(true).toString()
+            : `< 0.000001 ${rewards?.denom}`;
 
         return parseFloat(rewards.toString().split(" ")[0]) > 0 ? (
           <div

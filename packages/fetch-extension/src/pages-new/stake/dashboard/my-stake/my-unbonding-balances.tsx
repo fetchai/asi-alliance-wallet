@@ -132,13 +132,13 @@ export const MyUnbondingValidators = observer(
                   const amount =
                     parseFloat(
                       entry.balance.hideDenom(true).toString() || "0"
-                    ) > 0.00001
+                    ) >= 0.000001
                       ? entry.balance
-                          .maxDecimals(4)
+                          .maxDecimals(6)
                           .trim(true)
                           .shrink(true)
                           .toString()
-                      : `< 0.00001 ${entry?.balance?.denom || ""}`;
+                      : `< 0.000001 ${entry?.balance?.denom || ""}`;
 
                   return (
                     <GlassCard

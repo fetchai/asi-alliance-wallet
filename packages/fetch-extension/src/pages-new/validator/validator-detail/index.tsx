@@ -43,10 +43,10 @@ export const ValidatorDetails = observer(
     const parsedStake = parseFloat(amount?.hideDenom(true).toString() || "0");
 
     function isStake() {
-      return amount && parsedStake > 0.00001;
+      return amount && parsedStake >= 0.000001;
     }
 
-    const hasLowStake = amount && parsedStake > 0 && parsedStake <= 0.00001;
+    const hasLowStake = amount && parsedStake > 0 && parsedStake < 0.000001;
 
     return (
       <div

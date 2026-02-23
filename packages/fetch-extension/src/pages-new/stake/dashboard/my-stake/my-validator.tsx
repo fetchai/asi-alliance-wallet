@@ -118,9 +118,9 @@ export const MyValidator = observer(() => {
             const parsedStake =
               parseFloat(amount?.hideDenom(true).toString()) || 0;
             const displayAmount =
-              parsedStake > 0.00001
-                ? amount.maxDecimals(4).trim(true).shrink(true).toString()
-                : `< 0.00001 ${amount?.denom}`;
+              parsedStake >= 0.000001
+                ? amount.maxDecimals(6).trim(true).shrink(true).toString()
+                : `< 0.000001 ${amount?.denom}`;
 
             return (
               <GlassCard
