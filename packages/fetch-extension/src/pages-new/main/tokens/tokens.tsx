@@ -73,7 +73,9 @@ export const Tokens = observer(() => {
       {tokens.map((token) => {
         const error = token.error;
         const validSelector = Buffer.from(
-          Hash.sha256(Buffer.from(token.balance.currency.coinMinimalDenom))
+          Hash.sha256(
+            Buffer.from(token.balance.currency.coinMinimalDenom) as Uint8Array
+          )
         )
           .toString("hex")
           .replace(/\d+/g, "")
@@ -111,7 +113,7 @@ export const Tokens = observer(() => {
 
         const inputValue = new CoinPretty(
           tokenInfo,
-          new Int(tokenInfo ? amountInNumber : 0)
+          new Int(tokenInfo ? parseInt(amountInNumber?.toString() || "0") : 0)
         );
         const tokenInUsd = convertToUsd(inputValue);
         const tokenString = encodeURIComponent(JSON.stringify(tokenInfo));

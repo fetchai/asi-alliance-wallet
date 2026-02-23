@@ -223,7 +223,7 @@ export const Unstake = observer(() => {
               })}
             </div>
             <div className={style["current-stake-value"]}>
-              {stakedAmount.maxDecimals(4).trim(true).toString()}
+              {stakedAmount.maxDecimals(6).trim(true).shrink(true).toString()}
             </div>
           </div>
 

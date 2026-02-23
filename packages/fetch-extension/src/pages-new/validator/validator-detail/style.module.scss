@@ -76,3 +76,22 @@
     padding-right: 25px !important;
   }
 }
+
+.alert {
+  display: flex;
+  padding: 12px;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
+  border: transparent;
+  border-radius: 12px;
+  background: $bg-grey-dark;
+  box-shadow: none;
+  backdrop-filter: blur(15px);
+}
+
+.low-stake-message p {
+  font-size: 14px;
+  color: $font-dark;
+  margin-bottom: 0px !important;
+}

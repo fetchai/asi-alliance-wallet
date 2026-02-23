@@ -15,7 +15,7 @@ const options = [
   {
     icon: require("@assets/svg/wireframe/arrow-down.svg"),
     value: "/cosmos.bank.v1beta1.MsgSend",
-    label: "Funds transfers",
+    label: "Funds Transfers",
   },
   {
     icon: require("@assets/svg/wireframe/stake.svg"),
@@ -46,7 +46,7 @@ const options = [
   {
     icon: require("@assets/svg/wireframe/arrow-down-up-across-line.svg"),
     value: "/ibc.applications.transfer.v1.MsgTransfer",
-    label: "IBC transfers",
+    label: "IBC Transfers",
   },
 ];
 

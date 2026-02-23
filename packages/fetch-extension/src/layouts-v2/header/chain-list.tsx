@@ -69,7 +69,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
         component: (
           <div>
             <NotificationOption
-              name="Show testnet"
+              name="Show Testnet"
               isChecked={chainStore.showTestnet}
               handleOnChange={() =>
                 chainStore.toggleShowTestnet(!chainStore.showTestnet)
@@ -102,7 +102,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     });
                     navigate("/manage-networks");
                   }}
-                  text={"Manage networks"}
+                  text={"Manage Networks"}
                 />
               }
               renderResult={(chainInfo, index) => (
@@ -275,7 +275,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
         component: (
           <div>
             <NotificationOption
-              name="Show testnet"
+              name="Show Testnet"
               isChecked={chainStore.showTestnet}
               handleOnChange={() =>
                 chainStore.toggleShowTestnet(!chainStore.showTestnet)
@@ -306,7 +306,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     });
                     navigate("/manage-networks");
                   }}
-                  text={"Manage networks"}
+                  text={"Manage Networks"}
                 />
               }
               renderResult={(chainInfo, index) => (
