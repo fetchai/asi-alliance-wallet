@@ -131,19 +131,21 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      <Card
-        leftImageStyle={{ background: "transparent", height: "16px" }}
-        style={{ marginBottom: "8px" }}
-        leftImage={require("@assets/svg/wireframe/ibc-transfer-v2.svg")}
-        heading={"IBC Transfer"}
-        onClick={(e: any) => {
-          e.preventDefault();
-          analyticsStore.logEvent("ibc_transfer_click", {
-            pageName: "More",
-          });
-          navigate("/ibc-transfer");
-        }}
-      />
+      {!currentChain.features?.includes("evm") && (
+        <Card
+          leftImageStyle={{ background: "transparent", height: "16px" }}
+          style={{ marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/ibc-transfer-v2.svg")}
+          heading={"IBC Transfer"}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("ibc_transfer_click", {
+              pageName: "More",
+            });
+            navigate("/ibc-transfer");
+          }}
+        />
+      )}
       {currentChain?.raw?.type !== "testnet" &&
       moonpaySupportedTokens?.length > 0 &&
       !currentChain.beta &&
