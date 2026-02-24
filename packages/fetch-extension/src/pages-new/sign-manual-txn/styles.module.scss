@@ -44,10 +44,18 @@
   max-height: 100px;
 }
 
+.formGroupPubkeyInput {
+  margin-bottom: 10px !important;
+}
+
 .inputLabel {
   color: $font-secondary;
   font-weight: 500;
   font-size: 14px;
+
+  & [data-arrow] {
+    display: none;
+  }
 }
 
 .transactionDetailsRow {
@@ -133,4 +141,21 @@
   display: flex;
   flex-direction: column;
   width: fit-content;
+}
+
+.exampleToggle {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: $bg-green-dark;
+  cursor: pointer;
+}
+
+.jsonExample {
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  font-family: monospace;
+  font-size: 12px;
+  overflow-x: auto;
 }

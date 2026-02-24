@@ -34,6 +34,7 @@ import { buttonStyles } from ".";
 import { ConfirmMultisigBroadcast } from "./confirm-multi-broadcast";
 import { Pubkey, pubkeyToAddress } from "@cosmjs/amino";
 import classNames from "classnames";
+import { ToolTip } from "@components/tooltip";
 
 const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.Transaction,
@@ -63,6 +64,7 @@ export const MultiSignForm: React.FC<{
     MultiSigSteps.Transaction
   );
   const [pubKeyError, setPubKeyError] = useState<string>("");
+  const [showExample, setShowExample] = useState(false);
   const [offlineSigning, setOfflineSigning] = useState(false);
   const [accountInfo, setAccountInfo] = useState({
     accountNumber: "",
@@ -369,8 +371,39 @@ export const MultiSignForm: React.FC<{
           {((multiSigAccountError && !accountData?.account?.pub_key) ||
             offlineSigning) && (
             <React.Fragment>
-              <p style={{ marginBottom: 0 }} className={style["inputLabel"]}>
-                Multisig Account Pubkey
+              <p
+                style={{
+                  marginBottom: 0,
+                  display: "flex",
+                  columnGap: "4px",
+                  alignItems: "center",
+                }}
+                className={style["inputLabel"]}
+              >
+                Multisig Account Public Key
+                <ToolTip
+                  trigger="hover"
+                  options={{
+                    placement: "top-end",
+                  }}
+                  childrenStyle={{ display: "flex" }}
+                  tooltip={
+                    <div style={{ minWidth: "fit-content", maxWidth: "300px" }}>
+                      Your complete multisig public key JSON
+                      (LegacyAminoPubKey), including <b>threshold</b> and&nbsp;
+                      <b>public_keys</b>.
+                    </div>
+                  }
+                >
+                  <img
+                    src={require("@assets/svg/circle-info.svg")}
+                    style={{
+                      cursor: "pointer",
+                      width: "18px",
+                      height: "18px",
+                    }}
+                  />
+                </ToolTip>
               </p>
               <p
                 style={{ marginBottom: "10px" }}
@@ -392,10 +425,34 @@ export const MultiSignForm: React.FC<{
                     setPubKeyError(err.message);
                   }
                 }}
+                formGroupClassName={style["formGroupPubkeyInput"]}
                 error={pubKeyError}
                 onBlur={(e: any) => handlePubkeysChange(e.target.value)}
                 className={style["txnPayloadSignatureInput"]}
               />
+              <div
+                className={style["exampleToggle"]}
+                onClick={() => setShowExample(!showExample)}
+              >
+                {showExample ? "Hide example" : "Need an example?"}
+              </div>
+
+              {showExample && (
+                <pre className={style["jsonExample"]}>
+                  {formatJson(
+                    JSON.stringify({
+                      "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey",
+                      threshold: 2,
+                      public_keys: [
+                        {
+                          "@type": "/cosmos.crypto.secp256k1.PubKey",
+                          key: "...",
+                        },
+                      ],
+                    })
+                  )}
+                </pre>
+              )}
               <JsonUploadButton
                 text="Upload Public Key"
                 onJsonLoaded={(data) => handlePubkeysChange(data)}
