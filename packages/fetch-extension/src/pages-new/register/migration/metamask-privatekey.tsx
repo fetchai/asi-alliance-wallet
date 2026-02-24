@@ -232,7 +232,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                 }
 
                 // check that the parsed private key matches
-                if (parsedKey.ethAddress !== ethAddress) {
+                if (ethAddress && parsedKey.ethAddress !== ethAddress) {
                   return "The key provided doesn't match the supplied ETH addres";
                 }
               }

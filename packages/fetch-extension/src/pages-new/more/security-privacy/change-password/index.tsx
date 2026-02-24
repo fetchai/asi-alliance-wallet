@@ -73,7 +73,7 @@ export const ChangePassword = observer(() => {
       if (!passwordValid) {
         setError("currentPassword", {
           type: "manual",
-          message: "Invalid Password",
+          message: "Current Password is incorrect",
         });
         return;
       }
@@ -83,7 +83,7 @@ export const ChangePassword = observer(() => {
         type: "success",
         placement: "top-center",
         duration: 5,
-        content: "Password changed successfully",
+        content: "Password Changed Successfully",
         canDelete: true,
         transition: {
           duration: 0.25,
@@ -211,7 +211,7 @@ export const ChangePassword = observer(() => {
             passwordFields.some((field) => !!errors?.[field]?.message) ||
             isLoading("change-password")
           }
-          text="Change"
+          text="Change Password"
           type="submit"
           styleProps={{ marginBottom: "20px", height: "56px" }}
         />
