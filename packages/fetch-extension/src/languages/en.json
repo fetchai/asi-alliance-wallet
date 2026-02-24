@@ -205,7 +205,7 @@
   "register.create.toggle.word24": "24 words",
   "register.create.input.password": "New Password (minimum 8 characters)",
   "register.create.input.password.error.required": "Password is required",
-  "register.create.input.password.error.too-short": "Too short password",
+  "register.create.input.password.error.too-short": "Too short password (minimum 8 characters)",
   "register.create.input.confirm-password": "Confirm password",
   "register.create.input.confirm-password.error.required": "Confirm password is required",
   "register.create.input.confirm-password.error.unmatched": "Password should match",

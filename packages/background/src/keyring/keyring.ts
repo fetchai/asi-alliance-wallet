@@ -1345,6 +1345,61 @@ export class KeyRing {
     return this.password === password;
   }
 
+  async updatePassword(oldPassword: string, newPassword: string) {
+    if (!this.password) {
+      throw new Error("Keyring is locked");
+    }
+
+    if (this.password !== oldPassword) {
+      throw new Error("Invalid password");
+    }
+
+    if (oldPassword === newPassword) {
+      throw new Error("New password must be different");
+    }
+
+    const newMultiKeyStore: KeyStore[] = [];
+
+    for (const keyStore of this.multiKeyStore) {
+      if (keyStore.type) {
+        const decrypted = await Crypto.decrypt(
+          this.crypto,
+          keyStore,
+          oldPassword
+        );
+        const originalPayload = Buffer.from(decrypted).toString();
+
+        const reEncrypted = await Crypto.encrypt(
+          this.crypto,
+          keyStore.crypto.kdf,
+          keyStore.type,
+          keyStore.curve,
+          originalPayload,
+          newPassword,
+          keyStore.meta as Record<string, string>,
+          keyStore.bip44HDPath
+        );
+
+        if (
+          this.keyStore &&
+          KeyRing.getKeyStoreId(reEncrypted) ===
+            KeyRing.getKeyStoreId(this.keyStore)
+        ) {
+          this.keyStore = reEncrypted;
+        }
+
+        newMultiKeyStore.push(reEncrypted);
+      }
+    }
+
+    // Replace entire keystore array
+    this.multiKeyStore = newMultiKeyStore;
+    this.password = newPassword;
+
+    await this.save();
+    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+  }
+
   async exportKeyRingDatas(password: string): Promise<ExportKeyRingData[]> {
     if (!this.password) {
       throw new Error("Keyring is locked");

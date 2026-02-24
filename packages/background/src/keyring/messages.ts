@@ -1086,6 +1086,37 @@ export class CheckPasswordMsg extends Message<boolean> {
   }
 }
 
+export class UpdatePasswordMsg extends Message<void> {
+  public static type() {
+    return "update-keyring-password";
+  }
+
+  constructor(
+    public readonly oldPassword: string,
+    public readonly newPassword: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.oldPassword) {
+      throw new Error("password not set");
+    }
+
+    if (!this.newPassword) {
+      throw new Error("new password not set");
+    }
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return UpdatePasswordMsg.type();
+  }
+}
+
 export class ExportKeyRingDatasMsg extends Message<ExportKeyRingData[]> {
   public static type() {
     return "export-keyring-datas";

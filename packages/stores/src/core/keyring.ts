@@ -16,6 +16,7 @@ import {
   LockKeyRingMsg,
   MultiKeyStoreInfoWithSelected,
   RestoreKeyRingMsg,
+  UpdatePasswordMsg,
   SetKeyStoreCoinTypeMsg,
   ShowKeyRingMsg,
   UnlockKeyRingMsg,
@@ -450,6 +451,17 @@ export class KeyRingStore {
     if (selectedIndex === index) {
       this.dispatchKeyStoreChangeEvent();
     }
+  }
+
+  @flow
+  *updatePassword(oldPassword: string, newPassword: string) {
+    const isValidPassword: boolean = yield this.checkPassword(oldPassword);
+    if (!isValidPassword) {
+      throw new Error("Invalid password");
+    }
+    const msg = new UpdatePasswordMsg(oldPassword, newPassword);
+    yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    this.dispatchKeyStoreChangeEvent();
   }
 
   async checkPassword(password: string): Promise<boolean> {
