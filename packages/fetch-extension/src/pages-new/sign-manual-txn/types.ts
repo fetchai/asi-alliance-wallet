@@ -1,10 +1,28 @@
 import { SignMode } from "@keplr-wallet/background";
 import { PubKey } from "@keplr-wallet/types";
 import { Dispatch, SetStateAction } from "react";
+import {
+  AccountSetBase,
+  CosmosAccount,
+  CosmwasmAccount,
+  SecretAccount,
+  EthereumAccount,
+} from "@keplr-wallet/stores";
 
 type SigningMode = "direct" | "amino";
 
 export type PublicKey = { "@type": string; key: string };
+
+export interface SignerFormProps {
+  chainId: string;
+  account: AccountSetBase &
+    CosmosAccount &
+    CosmwasmAccount &
+    SecretAccount &
+    EthereumAccount;
+  signManualTxn: SignManualTxn;
+  showNotification: (message: string, type?: any) => void;
+}
 
 export type UpdateSignerInfoParams = {
   signerInfos: ProtoUnsignedTx["auth_info"]["signer_infos"];

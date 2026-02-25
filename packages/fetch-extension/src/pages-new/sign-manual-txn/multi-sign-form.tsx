@@ -3,14 +3,18 @@ import { Checkbox } from "@components-v2/checkbox/checkbox";
 import { Input } from "@components-v2/form";
 import { TextArea } from "@components/form";
 import { SignMode } from "@keplr-wallet/background";
-import { useQuery } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
 import { JsonUploadButton } from "./json-upload-button";
 import style from "./styles.module.scss";
-import { MultiSigSteps, SignAction, SignDocData, SignManualTxn } from "./types";
+import {
+  MultiSigSteps,
+  SignAction,
+  SignDocData,
+  SignerFormProps,
+} from "./types";
 import {
   assembleMultisigTx,
   buildSignedTxnPayload,
@@ -27,7 +31,6 @@ import {
   snakeToCamelDeep,
   validateProtoJsonSignDoc,
 } from "./utils";
-
 import { TransactionSection } from "./transaction-section";
 import { MultiSignaturesSection } from "./multi-signatures-section";
 import { buttonStyles } from ".";
@@ -35,6 +38,7 @@ import { ConfirmMultisigBroadcast } from "./confirm-multi-broadcast";
 import { Pubkey, pubkeyToAddress } from "@cosmjs/amino";
 import classNames from "classnames";
 import { ToolTip } from "@components/tooltip";
+import { useAccountQuery } from "./use-account-query";
 
 const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.Transaction,
@@ -42,532 +46,526 @@ const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.ReviewAndBroadcast,
 ];
 
-export const MultiSignForm: React.FC<{
-  signManualTxn: SignManualTxn;
-  showNotification: (message: string, type?: any) => void;
-}> = observer(({ signManualTxn, showNotification }) => {
-  const navigate = useNavigate();
+export const MultiSignForm: React.FC<SignerFormProps> = observer(
+  ({ chainId, account, signManualTxn, showNotification }) => {
+    const navigate = useNavigate();
+    const { chainStore } = useStore();
 
-  const { chainStore, accountStore, queriesStore } = useStore();
-
-  const [txnPayload, setTxnPayload] = useState("");
-  const [multiSigPubKeys, setMultiSigPubKeys] = useState("");
-  const [broadcastTxn, setBroadcastTxn] = useState(false);
-  const [payloadError, setPayloadError] = useState("");
-  const [multiSignatures, setMultiSignatures] = useState<string[]>([""]);
-  const [multisigAccount, setMultiSigAccount] = useState<string>("");
-  const [allSignaturesCollected, setAllSignaturesCollected] = useState(false);
-  const [multiSigTransactionAssembled, setMultiSigTransactionAssembled] =
-    useState(false);
-  const [threshold, setThreshold] = useState<number | undefined>(0);
-  const [multiSigStep, setMultiSigStep] = useState<MultiSigSteps>(
-    MultiSigSteps.Transaction
-  );
-  const [pubKeyError, setPubKeyError] = useState<string>("");
-  const [showExample, setShowExample] = useState(false);
-  const [offlineSigning, setOfflineSigning] = useState(false);
-  const [accountInfo, setAccountInfo] = useState({
-    accountNumber: "",
-    sequence: "",
-  });
-
-  const chainId = chainStore.current.chainId;
-  const account = accountStore.getAccount(chainId);
-  const queries = queriesStore.get(chainId);
-  const bech32Prefix = chainStore.current.bech32Config.bech32PrefixAccAddr;
-  const address = account.bech32Address;
-  const accountName = account.name;
-  const accountAddress = multisigAccount;
-
-  const { data: accountData } = useQuery({
-    queryKey: ["accountData", accountAddress, offlineSigning],
-    queryFn: async () => {
-      const accountData = await queries.cosmos.queryAccount
-        .getQueryBech32Address(accountAddress)
-        .waitResponse();
-      return accountData?.data;
-    },
-    enabled:
-      !!accountAddress &&
-      isValidBech32Address(accountAddress, bech32Prefix) &&
-      !offlineSigning,
-  });
-
-  const pubKeyMultisigAccount =
-    accountData?.account?.pub_key?.key?.pubkeys ||
-    JSON.parse(multiSigPubKeys || "{}")?.public_keys?.map((pub: any) => ({
-      type: pub["@type"],
-      value: pub.key,
-    }));
-
-  useEffect(() => {
-    setThreshold(Number(accountData?.account?.pub_key?.key?.threshold || 0));
-  }, [accountData]);
-
-  useEffect(() => {
-    if (!threshold) return setAllSignaturesCollected(false);
-
-    const collectedCount = multiSignatures.filter(isSignatureCollected).length;
-    setAllSignaturesCollected(collectedCount >= threshold);
-  }, [multiSignatures, threshold]);
-
-  const onSignSuccess = (signDocParams: any, result: any) => {
-    const parsedTxnPayload = JSON.parse(txnPayload);
-    const protoJsonPubKey = multiSigPubKeys
-      ? JSON.parse(multiSigPubKeys)
-      : convertToProtoJsonPubKey(accountData?.account?.pub_key);
-    const addresses = pubKeyMultisigAccount?.map((pk: Pubkey) =>
-      pubkeyToAddress(
-        { ...pk, type: "tendermint/PubKeySecp256k1" },
-        bech32Prefix
-      )
+    const [txnPayload, setTxnPayload] = useState("");
+    const [multiSigPubKeys, setMultiSigPubKeys] = useState("");
+    const [broadcastTxn, setBroadcastTxn] = useState(false);
+    const [payloadError, setPayloadError] = useState("");
+    const [multiSignatures, setMultiSignatures] = useState<string[]>([""]);
+    const [multisigAccount, setMultiSigAccount] = useState<string>("");
+    const [allSignaturesCollected, setAllSignaturesCollected] = useState(false);
+    const [multiSigTransactionAssembled, setMultiSigTransactionAssembled] =
+      useState(false);
+    const [threshold, setThreshold] = useState<number | undefined>(0);
+    const [multiSigStep, setMultiSigStep] = useState<MultiSigSteps>(
+      MultiSigSteps.Transaction
     );
-    const signerIndex = addresses?.findIndex(
-      (addr: string) => addr === account.bech32Address
-    );
-    navigate("/more/sign-manual-txn", {
-      replace: true,
-      state: {
-        signed: true,
-        txSignature: createSignature(result, signDocParams.sequence),
-        signedTxn: formatJson(
-          JSON.stringify(
-            buildSignedTxnPayload({
-              txnPayload: parsedTxnPayload,
-              signingMode: "amino",
-              sequence: signDocParams.sequence,
-              pubKey: protoJsonPubKey,
-              isMultisig: true,
-              signerIndex,
-            })
-          )
-        ),
-        downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
-      },
+    const [pubKeyError, setPubKeyError] = useState<string>("");
+    const [showExample, setShowExample] = useState(false);
+    const [offlineSigning, setOfflineSigning] = useState(false);
+    const [accountInfo, setAccountInfo] = useState({
+      accountNumber: "",
+      sequence: "",
     });
-  };
 
-  const handleSubmit = async () => {
-    const accountDetails =
-      offlineSigning && !broadcastTxn
-        ? {
-            sequence: accountInfo.sequence || "0",
-            account_number: accountInfo.accountNumber || "0",
-          }
-        : {
-            sequence: accountData?.account?.sequence || "0",
-            account_number: accountData?.account?.account_number || "0",
-          };
-    const signDocData = await prepareSignDoc(
-      txnPayload,
-      accountDetails,
-      chainId
-    );
-    const userAction = broadcastTxn
-      ? SignAction.SIGN_AND_BROADCAST
-      : SignAction.SIGN;
+    const bech32Prefix = chainStore.current.bech32Config.bech32PrefixAccAddr;
+    const address = account.bech32Address;
+    const accountName = account.name;
+    const accountAddress = multisigAccount;
 
-    handleSubmitMulti(userAction, signDocData);
-  };
+    const { data: accountData } = useAccountQuery(accountAddress, {
+      enabled: !offlineSigning,
+    });
 
-  const handleSubmitMulti = async (
-    userAction: SignAction,
-    signDocData: SignDocData
-  ) => {
-    try {
-      const { payloadObj, signDocParams, signDoc } = signDocData;
-      if (userAction === SignAction.SIGN) {
-        await signManualTxn(
-          SignMode.Amino,
-          signDoc,
-          signDocParams,
-          onSignSuccess
-        );
-      } else {
-        const protoMsgs = convertProtoJsontoProtoMsgs(payloadObj.body.messages);
-        const pubKeys = protoMultisigToAmino(
-          payloadObj.auth_info.signer_infos[0].public_key
-        );
-        const txRaw = {
-          body: snakeToCamelDeep(payloadObj.body),
-          auth_info: snakeToCamelDeep(payloadObj.auth_info),
-          signatures: payloadObj.signatures,
-        };
+    const pubKeyMultisigAccount =
+      accountData?.account?.pub_key?.key?.pubkeys ||
+      JSON.parse(multiSigPubKeys || "{}")?.public_keys?.map((pub: any) => ({
+        type: pub["@type"],
+        value: pub.key,
+      }));
 
-        let signatures: any = new Map();
+    useEffect(() => {
+      setThreshold(Number(accountData?.account?.pub_key?.key?.threshold || 0));
+    }, [accountData]);
 
-        if (multiSignatures.length) {
-          const singleSignatures = multiSignatures.map((sig) => {
-            const signature = JSON.parse(sig);
-            return signature?.signatures[0];
-          });
+    useEffect(() => {
+      if (!threshold) return setAllSignaturesCollected(false);
 
-          if (pubKeyMultisigAccount && pubKeyMultisigAccount?.length) {
-            signatures = orderMultisigSignatures(
-              signatures,
-              pubKeyMultisigAccount
-            );
-          }
-          signatures = createSignaturesMap(bech32Prefix, singleSignatures);
-        }
-        const tx = await account.cosmos.broadcastMultisigMsgs(
-          pubKeys,
-          protoMsgs,
-          txRaw,
-          signatures,
-          multisigAccount
-        );
-        showNotification("Transaction Broadcated", "success");
-        navigate("/more/sign-manual-txn", {
-          replace: true,
-          state: {
-            signed: true,
-            broadcastType: "multi",
-            chainId: chainId,
-            txSignature: tx.signature,
-            txHash: tx.txHash,
-          },
-        });
-      }
-    } catch (err) {
-      showNotification(err?.message || "Something went wrong", "danger");
-    }
-  };
+      const collectedCount =
+        multiSignatures.filter(isSignatureCollected).length;
+      setAllSignaturesCollected(collectedCount >= threshold);
+    }, [multiSignatures, threshold]);
 
-  const assembleFinalMultiSigTxn = () => {
-    try {
-      const txRaw = JSON.parse(txnPayload);
-      let signatures = multiSignatures.map((sig) => {
-        const signature = JSON.parse(sig);
-        return signature?.signatures[0];
-      });
-
-      if (pubKeyMultisigAccount && pubKeyMultisigAccount?.length) {
-        signatures = orderMultisigSignatures(signatures, pubKeyMultisigAccount);
-      }
-      const assembled = assembleMultisigTx(
-        txRaw,
-        threshold || 0,
-        signatures,
-        signatures?.[0]?.sequence || "0",
-        pubKeyMultisigAccount
-          ? pubKeyMultisigAccount?.map((item: any) => ({
-              "@type": item?.type,
-              key: item?.value,
-            }))
-          : null,
-        bech32Prefix
+    const onSignSuccess = (signDocParams: any, result: any) => {
+      const parsedTxnPayload = JSON.parse(txnPayload);
+      const protoJsonPubKey = multiSigPubKeys
+        ? JSON.parse(multiSigPubKeys)
+        : convertToProtoJsonPubKey(accountData?.account?.pub_key);
+      const addresses = pubKeyMultisigAccount?.map((pk: Pubkey) =>
+        pubkeyToAddress(
+          { ...pk, type: "tendermint/PubKeySecp256k1" },
+          bech32Prefix
+        )
       );
-      setTxnPayload(JSON.stringify(assembled, null, 2));
-      setMultiSigTransactionAssembled(true);
-    } catch (err) {
-      showNotification(err?.message || "Something went wrong", "danger");
-      setMultiSigTransactionAssembled(false);
-    }
-  };
+      const signerIndex = addresses?.findIndex(
+        (addr: string) => addr === account.bech32Address
+      );
+      navigate("/more/sign-manual-txn", {
+        replace: true,
+        state: {
+          signed: true,
+          txSignature: createSignature(result, signDocParams.sequence),
+          signedTxn: formatJson(
+            JSON.stringify(
+              buildSignedTxnPayload({
+                txnPayload: parsedTxnPayload,
+                signingMode: "amino",
+                sequence: signDocParams.sequence,
+                pubKey: protoJsonPubKey,
+                isMultisig: true,
+                signerIndex,
+              })
+            )
+          ),
+          downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
+        },
+      });
+    };
 
-  const onTxnSignDocChange = (value: string) => {
-    setTxnPayload(value);
-    setPayloadError("");
-    const formatted = formatJson(value);
-    try {
-      const signDoc = JSON.parse(formatted);
-      validateProtoJsonSignDoc(signDoc, multisigAccount);
-    } catch (err) {
-      setPayloadError(err.message);
-    }
-  };
+    const handleSubmit = async () => {
+      const accountDetails = {
+        sequence:
+          (offlineSigning
+            ? accountInfo.sequence
+            : accountData?.account?.sequence) || "0",
+        account_number:
+          (offlineSigning
+            ? accountInfo.accountNumber
+            : accountData?.account?.account_number) || "0",
+      };
+      const signDocData = await prepareSignDoc(
+        txnPayload,
+        accountDetails,
+        chainId
+      );
+      const userAction = broadcastTxn
+        ? SignAction.SIGN_AND_BROADCAST
+        : SignAction.SIGN;
 
-  const handleThresholdChange = (e: any) => {
-    const value = e.target.value;
-    // allow clearing the input
-    if (value === "") {
-      setThreshold(undefined);
-      return;
-    }
-    // allow only positive integers
-    if (/^[1-9]\d*$/.test(value)) {
-      setThreshold(Number(value));
-    }
-  };
+      handleSubmitMulti(userAction, signDocData);
+    };
 
-  const handlePubkeysChange = (value: string) => {
-    const formatted = formatJson(value);
-    setThreshold(Number(JSON.parse(value).threshold || 0));
-    setMultiSigPubKeys(formatted);
-  };
+    const handleSubmitMulti = async (
+      userAction: SignAction,
+      signDocData: SignDocData
+    ) => {
+      try {
+        const { payloadObj, signDocParams, signDoc } = signDocData;
+        if (userAction === SignAction.SIGN) {
+          await signManualTxn(
+            SignMode.Amino,
+            signDoc,
+            signDocParams,
+            onSignSuccess
+          );
+        } else {
+          const protoMsgs = convertProtoJsontoProtoMsgs(
+            payloadObj.body.messages
+          );
+          const pubKeys = protoMultisigToAmino(
+            payloadObj.auth_info.signer_infos[0].public_key
+          );
+          const txRaw = {
+            body: snakeToCamelDeep(payloadObj.body),
+            auth_info: snakeToCamelDeep(payloadObj.auth_info),
+            signatures: payloadObj.signatures,
+          };
 
-  const multiSigAccountError =
-    multisigAccount !== "" &&
-    !offlineSigning &&
-    !isValidBech32Address(multisigAccount, bech32Prefix)
-      ? "Please enter a valid bech32 address"
-      : multisigAccount !== "" &&
-        broadcastTxn &&
-        isValidBech32Address(multisigAccount, bech32Prefix) &&
-        !accountData?.account
-      ? "Multisig account not found on-chain yet. Please upload the multisig public key."
-      : "";
+          let signatures: any = new Map();
 
-  const renderMultisigSteps = () => {
-    switch (multiSigStep) {
-      case MultiSigSteps.Transaction:
-        return renderTransactionStep();
-      case MultiSigSteps.Signatures:
-        return renderSignaturesStep();
-      case MultiSigSteps.ReviewAndBroadcast:
-        return renderBroadcastStep();
-      default:
-        return null;
-    }
-  };
+          if (multiSignatures.length) {
+            const singleSignatures = multiSignatures.map((sig) => {
+              const signature = JSON.parse(sig);
+              return signature?.signatures[0];
+            });
 
-  const renderBroadcastStep = () => {
-    return <ConfirmMultisigBroadcast txnPayload={txnPayload} />;
-  };
-
-  const renderSignaturesStep = () => {
-    return (
-      <MultiSignaturesSection
-        assembleFinalMultiSigTxn={assembleFinalMultiSigTxn}
-        multiSignatures={multiSignatures}
-        setMultiSignatures={setMultiSignatures}
-        showNotification={showNotification}
-        signaturesCollected={
-          !(
-            !allSignaturesCollected ||
-            txnPayload.trim() === "" ||
-            payloadError !== ""
-          )
+            if (pubKeyMultisigAccount && pubKeyMultisigAccount?.length) {
+              signatures = orderMultisigSignatures(
+                signatures,
+                pubKeyMultisigAccount
+              );
+            }
+            signatures = createSignaturesMap(bech32Prefix, singleSignatures);
+          }
+          const tx = await account.cosmos.broadcastMultisigMsgs(
+            pubKeys,
+            protoMsgs,
+            txRaw,
+            signatures,
+            multisigAccount
+          );
+          showNotification("Transaction Broadcated", "success");
+          navigate("/more/sign-manual-txn", {
+            replace: true,
+            state: {
+              signed: true,
+              broadcastType: "multi",
+              chainId: chainId,
+              txSignature: tx.signature,
+              txHash: tx.txHash,
+            },
+          });
         }
-        threshold={threshold}
-        pubKeyMultisigAccount={pubKeyMultisigAccount}
-      />
-    );
-  };
+      } catch (err) {
+        showNotification(err?.message || "Something went wrong", "danger");
+      }
+    };
 
-  const renderTransactionStep = () => {
-    return (
-      <div>
-        <TransactionSection
-          chainId={chainId}
-          address={address}
-          accountName={accountName}
-          broadcastTxn={broadcastTxn}
-          offlineSigning={offlineSigning}
-          setOfflineSigning={setOfflineSigning}
-          accountInfo={accountInfo}
-          setAccountInfo={setAccountInfo}
-          type="multi"
-          onTxnSignDocChange={onTxnSignDocChange}
-          multisigAccount={multisigAccount}
-          multiSigAccountError={multiSigAccountError}
-          payloadError={payloadError}
+    const assembleFinalMultiSigTxn = () => {
+      try {
+        const txRaw = JSON.parse(txnPayload);
+        let signatures = multiSignatures.map((sig) => {
+          const signature = JSON.parse(sig);
+          return signature?.signatures[0];
+        });
+
+        if (pubKeyMultisigAccount && pubKeyMultisigAccount?.length) {
+          signatures = orderMultisigSignatures(
+            signatures,
+            pubKeyMultisigAccount
+          );
+        }
+        const assembled = assembleMultisigTx(
+          txRaw,
+          threshold || 0,
+          signatures,
+          signatures?.[0]?.sequence || "0",
+          pubKeyMultisigAccount
+            ? pubKeyMultisigAccount?.map((item: any) => ({
+                "@type": item?.type,
+                key: item?.value,
+              }))
+            : null,
+          bech32Prefix
+        );
+        setTxnPayload(JSON.stringify(assembled, null, 2));
+        setMultiSigTransactionAssembled(true);
+      } catch (err) {
+        showNotification(err?.message || "Something went wrong", "danger");
+        setMultiSigTransactionAssembled(false);
+      }
+    };
+
+    const onTxnSignDocChange = (value: string) => {
+      setTxnPayload(value);
+      setPayloadError("");
+      const formatted = formatJson(value);
+      try {
+        const signDoc = JSON.parse(formatted);
+        validateProtoJsonSignDoc(signDoc, multisigAccount);
+      } catch (err) {
+        setPayloadError(err.message);
+      }
+    };
+
+    const handleThresholdChange = (e: any) => {
+      const value = e.target.value;
+      // allow clearing the input
+      if (value === "") {
+        setThreshold(undefined);
+        return;
+      }
+      // allow only positive integers
+      if (/^[1-9]\d*$/.test(value)) {
+        setThreshold(Number(value));
+      }
+    };
+
+    const handlePubkeysChange = (value: string) => {
+      const formatted = formatJson(value);
+      setThreshold(Number(JSON.parse(value).threshold || 0));
+      setMultiSigPubKeys(formatted);
+    };
+
+    const multiSigAccountError =
+      multisigAccount !== "" &&
+      !offlineSigning &&
+      !isValidBech32Address(multisigAccount, bech32Prefix)
+        ? "Please enter a valid bech32 address"
+        : multisigAccount !== "" &&
+          broadcastTxn &&
+          isValidBech32Address(multisigAccount, bech32Prefix) &&
+          !accountData?.account
+        ? "Multisig account not found on-chain yet. Please upload the multisig public key."
+        : "";
+
+    const renderMultisigSteps = () => {
+      switch (multiSigStep) {
+        case MultiSigSteps.Transaction:
+          return renderTransactionStep();
+        case MultiSigSteps.Signatures:
+          return renderSignaturesStep();
+        case MultiSigSteps.ReviewAndBroadcast:
+          return renderBroadcastStep();
+        default:
+          return null;
+      }
+    };
+
+    const renderBroadcastStep = () => {
+      return <ConfirmMultisigBroadcast txnPayload={txnPayload} />;
+    };
+
+    const renderSignaturesStep = () => {
+      return (
+        <MultiSignaturesSection
+          assembleFinalMultiSigTxn={assembleFinalMultiSigTxn}
+          multiSignatures={multiSignatures}
+          setMultiSignatures={setMultiSignatures}
           showNotification={showNotification}
-          txnPayload={txnPayload}
-          onMultisigAccountChange={(value) => setMultiSigAccount(value)}
+          signaturesCollected={
+            !(
+              !allSignaturesCollected ||
+              txnPayload.trim() === "" ||
+              payloadError !== ""
+            )
+          }
+          threshold={threshold}
+          pubKeyMultisigAccount={pubKeyMultisigAccount}
         />
-        <div className={style["multiSignatureContainer"]}>
-          {((multiSigAccountError && !accountData?.account?.pub_key) ||
-            offlineSigning) && (
-            <React.Fragment>
-              <p
-                style={{
-                  marginBottom: 0,
-                  display: "flex",
-                  columnGap: "4px",
-                  alignItems: "center",
-                }}
-                className={style["inputLabel"]}
-              >
-                Multisig Account Public Key
-                <ToolTip
-                  trigger="hover"
-                  options={{
-                    placement: "top-end",
-                  }}
-                  childrenStyle={{ display: "flex" }}
-                  tooltip={
-                    <div style={{ minWidth: "fit-content", maxWidth: "300px" }}>
-                      Your complete multisig public key JSON
-                      (LegacyAminoPubKey), including <b>threshold</b> and&nbsp;
-                      <b>public_keys</b>.
-                    </div>
-                  }
-                >
-                  <img
-                    src={require("@assets/svg/circle-info.svg")}
-                    style={{
-                      cursor: "pointer",
-                      width: "18px",
-                      height: "18px",
-                    }}
-                  />
-                </ToolTip>
-              </p>
-              <p
-                style={{ marginBottom: "10px" }}
-                className={style["inputLabel"]}
-              >
-                {!offlineSigning
-                  ? "*(Multisig public key not found on-chain. Paste or Upload it manually to proceed"
-                  : " Paste or Upload multisig account pubkey."}
-              </p>
-              <TextArea
-                placeholder="Paste your multisig account pubkey"
-                value={multiSigPubKeys}
-                onChange={(e) => {
-                  try {
-                    setPubKeyError("");
-                    const formatted = formatJson(e.target.value);
-                    setMultiSigPubKeys(formatted);
-                  } catch (err) {
-                    setPubKeyError(err.message);
-                  }
-                }}
-                formGroupClassName={style["formGroupPubkeyInput"]}
-                error={pubKeyError}
-                onBlur={(e: any) => handlePubkeysChange(e.target.value)}
-                className={style["txnPayloadSignatureInput"]}
-              />
-              <div
-                className={style["exampleToggle"]}
-                onClick={() => setShowExample(!showExample)}
-              >
-                {showExample ? "Hide example" : "Need an example?"}
-              </div>
+      );
+    };
 
-              {showExample && (
-                <pre className={style["jsonExample"]}>
-                  {formatJson(
-                    JSON.stringify({
-                      "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey",
-                      threshold: 2,
-                      public_keys: [
-                        {
-                          "@type": "/cosmos.crypto.secp256k1.PubKey",
-                          key: "...",
-                        },
-                      ],
-                    })
-                  )}
-                </pre>
-              )}
-              <JsonUploadButton
-                text="Upload Public Key"
-                onJsonLoaded={(data) => handlePubkeysChange(data)}
-                onError={(error) => showNotification(error, "danger")}
+    const renderTransactionStep = () => {
+      return (
+        <div>
+          <TransactionSection
+            chainId={chainId}
+            address={address}
+            accountName={accountName}
+            broadcastTxn={broadcastTxn}
+            offlineSigning={offlineSigning}
+            setOfflineSigning={setOfflineSigning}
+            accountInfo={accountInfo}
+            setAccountInfo={setAccountInfo}
+            type="multi"
+            onTxnSignDocChange={onTxnSignDocChange}
+            multisigAccount={multisigAccount}
+            multiSigAccountError={multiSigAccountError}
+            payloadError={payloadError}
+            showNotification={showNotification}
+            txnPayload={txnPayload}
+            onMultisigAccountChange={(value) => setMultiSigAccount(value)}
+          />
+          <div className={style["multiSignatureContainer"]}>
+            {((multiSigAccountError && !accountData?.account?.pub_key) ||
+              offlineSigning) && (
+              <React.Fragment>
+                <p
+                  style={{
+                    marginBottom: 0,
+                    display: "flex",
+                    columnGap: "4px",
+                    alignItems: "center",
+                  }}
+                  className={style["inputLabel"]}
+                >
+                  Multisig Public Key (JSON)
+                  <ToolTip
+                    trigger="hover"
+                    options={{
+                      placement: "top-end",
+                    }}
+                    childrenStyle={{ display: "flex" }}
+                    tooltip={
+                      <div
+                        style={{ minWidth: "fit-content", maxWidth: "300px" }}
+                      >
+                        Your complete multisig public key JSON
+                        (LegacyAminoPubKey), including <b>threshold</b>{" "}
+                        and&nbsp;
+                        <b>public_keys</b>.
+                      </div>
+                    }
+                  >
+                    <img
+                      src={require("@assets/svg/circle-info.svg")}
+                      style={{
+                        cursor: "pointer",
+                        width: "18px",
+                        height: "18px",
+                      }}
+                    />
+                  </ToolTip>
+                </p>
+                <p
+                  style={{ marginBottom: "10px" }}
+                  className={style["inputLabel"]}
+                >
+                  {!offlineSigning
+                    ? "*(Multisig public key not found on-chain. Paste or Upload it manually to proceed"
+                    : ""}
+                </p>
+                <TextArea
+                  placeholder="Paste your multisig account pubkey"
+                  value={multiSigPubKeys}
+                  onChange={(e) => {
+                    try {
+                      setPubKeyError("");
+                      const formatted = formatJson(e.target.value);
+                      setMultiSigPubKeys(formatted);
+                    } catch (err) {
+                      setPubKeyError(err.message);
+                    }
+                  }}
+                  formGroupClassName={style["formGroupPubkeyInput"]}
+                  error={pubKeyError}
+                  onBlur={(e: any) => handlePubkeysChange(e.target.value)}
+                  className={style["txnPayloadSignatureInput"]}
+                />
+                <div
+                  className={style["exampleToggle"]}
+                  onClick={() => setShowExample(!showExample)}
+                >
+                  {showExample ? "Hide example" : "Need an example?"}
+                </div>
+
+                {showExample && (
+                  <pre className={style["jsonExample"]}>
+                    {formatJson(
+                      JSON.stringify({
+                        "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey",
+                        threshold: 2,
+                        public_keys: [
+                          {
+                            "@type": "/cosmos.crypto.secp256k1.PubKey",
+                            key: "...",
+                          },
+                        ],
+                      })
+                    )}
+                  </pre>
+                )}
+                <JsonUploadButton
+                  text="Upload Public Key"
+                  onJsonLoaded={(data) => handlePubkeysChange(data)}
+                  onError={(error) => showNotification(error, "danger")}
+                />
+              </React.Fragment>
+            )}
+            {broadcastTxn && (
+              <Input
+                label="Threshold (from multisig account)"
+                type="text"
+                name="threshold"
+                value={threshold}
+                readOnly={accountData?.account?.pub_key?.key?.threshold}
+                formGroupClassName={style["formGroup"]}
+                formFeedbackClassName={style["formFeedback"]}
+                onChange={handleThresholdChange}
               />
-            </React.Fragment>
+            )}
+          </div>
+          <Checkbox
+            isChecked={broadcastTxn}
+            setIsChecked={setBroadcastTxn}
+            label="Assemble Signatures and Broadcast Transaction"
+          />
+        </div>
+      );
+    };
+
+    const buttonText = () => {
+      return broadcastTxn ? (
+        <React.Fragment>
+          {multiSigStep === MultiSigSteps.ReviewAndBroadcast
+            ? "Broadcast Multisig Transaction"
+            : multiSigStep === MultiSigSteps.Signatures
+            ? "Verify & Broadcast"
+            : "Add Cosigner Signatures"}
+          {account.broadcastInProgress && (
+            <i className="fa fa-spinner fa-spin fa-fw" />
           )}
-          {broadcastTxn && (
-            <Input
-              label="Threshold (from multisig account)"
-              type="text"
-              name="threshold"
-              value={threshold}
-              readOnly={accountData?.account?.pub_key?.key?.threshold}
-              formGroupClassName={style["formGroup"]}
-              formFeedbackClassName={style["formFeedback"]}
-              onChange={handleThresholdChange}
+        </React.Fragment>
+      ) : (
+        "Sign Transaction"
+      );
+    };
+
+    const moveStep = (direction: 1 | -1) => {
+      setMultiSigStep((prev) => {
+        const index = MULTISIG_STEPS_ORDER.indexOf(prev);
+        return MULTISIG_STEPS_ORDER[index + direction] ?? prev;
+      });
+    };
+
+    return (
+      <div className={style["container"]}>
+        {renderMultisigSteps()}
+        <div
+          className={classNames(
+            style["multisigFooter"],
+            multiSigStep !== MultiSigSteps.Transaction
+              ? style["fixedFooter"]
+              : style["fullWidth"]
+          )}
+        >
+          {multiSigStep !== MultiSigSteps.Transaction && (
+            <ButtonV2
+              text="Previous"
+              variant="light"
+              onClick={() => moveStep(-1)}
+              styleProps={{
+                ...buttonStyles,
+                height: "48px",
+                width: "100%",
+                marginBottom: 0,
+              }}
             />
           )}
-        </div>
-        <Checkbox
-          isChecked={broadcastTxn}
-          setIsChecked={setBroadcastTxn}
-          label="Assemble Signatures and Broadcast Transaction"
-        />
-      </div>
-    );
-  };
-
-  const buttonText = () => {
-    return broadcastTxn ? (
-      <React.Fragment>
-        {multiSigStep === MultiSigSteps.ReviewAndBroadcast
-          ? "Broadcast Multisig Transaction"
-          : multiSigStep === MultiSigSteps.Signatures
-          ? "Verify & Broadcast"
-          : "Add Cosigner Signatures"}
-        {account.broadcastInProgress && (
-          <i className="fa fa-spinner fa-spin fa-fw" />
-        )}
-      </React.Fragment>
-    ) : (
-      "Sign Transaction"
-    );
-  };
-
-  const moveStep = (direction: 1 | -1) => {
-    setMultiSigStep((prev) => {
-      const index = MULTISIG_STEPS_ORDER.indexOf(prev);
-      return MULTISIG_STEPS_ORDER[index + direction] ?? prev;
-    });
-  };
-
-  return (
-    <div className={style["container"]}>
-      {renderMultisigSteps()}
-      <div
-        className={classNames(
-          style["multisigFooter"],
-          multiSigStep !== MultiSigSteps.Transaction
-            ? style["fixedFooter"]
-            : style["fullWidth"]
-        )}
-      >
-        {multiSigStep !== MultiSigSteps.Transaction && (
           <ButtonV2
-            text="Previous"
-            variant="light"
-            onClick={() => moveStep(-1)}
+            variant="dark"
             styleProps={{
               ...buttonStyles,
               height: "48px",
               width: "100%",
               marginBottom: 0,
             }}
-          />
-        )}
-        <ButtonV2
-          variant="dark"
-          styleProps={{
-            ...buttonStyles,
-            height: "48px",
-            width: "100%",
-            marginBottom: 0,
-          }}
-          disabled={
-            payloadError !== "" ||
-            txnPayload.trim() === "" ||
-            account.broadcastInProgress ||
-            pubKeyError !== "" ||
-            (offlineSigning &&
-              (accountInfo.accountNumber === "" ||
-                accountInfo.sequence === "")) ||
-            multisigAccount === "" ||
-            multiSigAccountError !== "" ||
-            (multiSigStep === MultiSigSteps.Signatures &&
-              broadcastTxn &&
-              (multiSignatures.length < (threshold || 0) ||
-                !allSignaturesCollected ||
-                !multiSigTransactionAssembled))
-          }
-          text={buttonText()}
-          dataLoading={account.broadcastInProgress}
-          onClick={async () => {
-            if (
-              multiSigStep === MultiSigSteps.ReviewAndBroadcast ||
-              !broadcastTxn
-            ) {
-              await handleSubmit();
-            } else {
-              moveStep(1);
+            disabled={
+              payloadError !== "" ||
+              txnPayload.trim() === "" ||
+              account.broadcastInProgress ||
+              pubKeyError !== "" ||
+              (offlineSigning &&
+                (accountInfo.accountNumber === "" ||
+                  accountInfo.sequence === "")) ||
+              multisigAccount === "" ||
+              multiSigAccountError !== "" ||
+              (multiSigStep === MultiSigSteps.Signatures &&
+                broadcastTxn &&
+                (multiSignatures.length < (threshold || 0) ||
+                  !allSignaturesCollected ||
+                  !multiSigTransactionAssembled))
             }
-          }}
-        />
+            text={buttonText()}
+            dataLoading={account.broadcastInProgress}
+            onClick={async () => {
+              if (
+                multiSigStep === MultiSigSteps.ReviewAndBroadcast ||
+                !broadcastTxn
+              ) {
+                await handleSubmit();
+              } else {
+                moveStep(1);
+              }
+            }}
+          />
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);

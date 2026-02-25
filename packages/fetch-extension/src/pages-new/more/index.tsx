@@ -209,7 +209,7 @@ export const MorePage: FunctionComponent = () => {
               pageName: "More",
             });
           }}
-          heading="Sign/Broadcast Manual Transaction"
+          heading="Manual Sign & Broadcast"
           subheading={
             !isRunningInSidePanel()
               ? "Open side panel to upload and sign/broadcast transactions"

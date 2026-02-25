@@ -78,7 +78,6 @@ export const SignManualTxn = observer(() => {
       );
       onSignSuccess(signDocParams, result);
     } catch (err) {
-      console.log("error", err);
       showNotification(err?.message || "Something went wrong", "danger");
     }
   };
@@ -114,6 +113,8 @@ export const SignManualTxn = observer(() => {
         <SingleSignForm
           signManualTxn={signManualTxn}
           showNotification={showNotification}
+          chainId={chainId}
+          account={account}
         />
       ),
     },
@@ -123,6 +124,8 @@ export const SignManualTxn = observer(() => {
         <MultiSignForm
           signManualTxn={signManualTxn}
           showNotification={showNotification}
+          chainId={chainId}
+          account={account}
         />
       ),
     },
@@ -137,7 +140,7 @@ export const SignManualTxn = observer(() => {
       headerTitleClass={style["header-title"]}
       alternativeTitle={
         !signed
-          ? "Sign/Broadcast Manual Transaction"
+          ? "Manual Sign & Broadcast"
           : signType === SignAction.SIGN
           ? "Signed Transaction"
           : "Transaction Details"
