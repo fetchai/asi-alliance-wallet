@@ -41,21 +41,29 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
       enabled: !offlineSigning,
     });
 
+    const createSignedTxn = (sequence: any, txnPayload: any, pubKey: any) => {
+      return formatJson(
+        JSON.stringify(
+          buildSignedTxnPayload({
+            txnPayload: JSON.parse(txnPayload),
+            signingMode: "amino",
+            sequence: sequence,
+            pubKey,
+          })
+        )
+      );
+    };
+
     const onSignSuccess = (signDocParams: any, result: any) => {
       navigate("/more/sign-manual-txn", {
         replace: true,
         state: {
           signed: true,
           txSignature: createSignature(result, signDocParams.sequence),
-          signedTxn: formatJson(
-            JSON.stringify(
-              buildSignedTxnPayload({
-                txnPayload: JSON.parse(txnPayload),
-                signingMode: "amino",
-                sequence: signDocParams.sequence,
-                pubKey: result.signature.pub_key,
-              })
-            )
+          signedTxn: createSignedTxn(
+            signDocParams?.sequence,
+            txnPayload,
+            result.signature.pub_key
           ),
           downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
         },
@@ -102,6 +110,12 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
           },
           {
             onFulfill: (tx) => {
+              console.log(
+                "Transaction fulfilled:",
+                tx,
+                signDocParams,
+                accountData
+              );
               navigate("/more/sign-manual-txn", {
                 replace: true,
                 state: {
@@ -109,6 +123,12 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
                   broadcastType: "single",
                   txSignature: tx.signature,
                   txHash: tx.hash,
+                  signedTxn: createSignedTxn(
+                    signDocParams?.sequence,
+                    txnPayload,
+                    accountData?.account?.pub_key
+                  ),
+                  downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
                 },
               });
             },
@@ -116,6 +136,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
               showNotification("Transaction broadcasted");
             },
             onBroadcastFailed: (_error) => {
+              console.log("Broadcast failed:", _error);
               showNotification("Transaction Failed", "danger");
               navigate("/more/sign-manual-txn", {
                 replace: true,

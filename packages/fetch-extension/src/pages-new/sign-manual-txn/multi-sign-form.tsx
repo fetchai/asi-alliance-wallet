@@ -100,8 +100,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       setAllSignaturesCollected(collectedCount >= threshold);
     }, [multiSignatures, threshold]);
 
-    const onSignSuccess = (signDocParams: any, result: any) => {
-      const parsedTxnPayload = JSON.parse(txnPayload);
+    const createSignedTxn = (sequence: any, parsedTxnPayload: any) => {
       const protoJsonPubKey = multiSigPubKeys
         ? JSON.parse(multiSigPubKeys)
         : convertToProtoJsonPubKey(accountData?.account?.pub_key);
@@ -114,23 +113,29 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       const signerIndex = addresses?.findIndex(
         (addr: string) => addr === account.bech32Address
       );
+
+      return formatJson(
+        JSON.stringify(
+          buildSignedTxnPayload({
+            txnPayload: parsedTxnPayload,
+            signingMode: "amino",
+            sequence: sequence,
+            pubKey: protoJsonPubKey,
+            isMultisig: true,
+            signerIndex,
+          })
+        )
+      );
+    };
+
+    const onSignSuccess = (signDocParams: any, result: any) => {
+      const parsedTxnPayload = JSON.parse(txnPayload);
       navigate("/more/sign-manual-txn", {
         replace: true,
         state: {
           signed: true,
           txSignature: createSignature(result, signDocParams.sequence),
-          signedTxn: formatJson(
-            JSON.stringify(
-              buildSignedTxnPayload({
-                txnPayload: parsedTxnPayload,
-                signingMode: "amino",
-                sequence: signDocParams.sequence,
-                pubKey: protoJsonPubKey,
-                isMultisig: true,
-                signerIndex,
-              })
-            )
-          ),
+          signedTxn: createSignedTxn(signDocParams?.sequence, parsedTxnPayload),
           downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
         },
       });
@@ -216,6 +221,10 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
               broadcastType: "multi",
               chainId: chainId,
               txSignature: tx.signature,
+              signedTxn: createSignedTxn(
+                signDocParams?.sequence,
+                JSON.parse(txnPayload)
+              ),
               txHash: tx.txHash,
             },
           });

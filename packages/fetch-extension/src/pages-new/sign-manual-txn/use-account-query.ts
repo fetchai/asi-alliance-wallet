@@ -18,7 +18,7 @@ export const useAccountQuery = (
   const enabled =
     !!address &&
     isValidBech32Address(address, bech32Prefix) &&
-    options?.enabled !== false;
+    options?.enabled;
 
   return useQuery({
     queryKey: ["account", chainId, address, enabled],

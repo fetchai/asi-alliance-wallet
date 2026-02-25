@@ -60,7 +60,7 @@ export function convertToProtoJsonPubKey(pubkey: any) {
     threshold: parseInt(pubkey.key.threshold),
     public_keys: pubkey.key.pubkeys.map((pk: any) => ({
       "@type": "/cosmos.crypto.secp256k1.PubKey",
-      value: pk.value,
+      key: pk.value,
     })),
   };
 }

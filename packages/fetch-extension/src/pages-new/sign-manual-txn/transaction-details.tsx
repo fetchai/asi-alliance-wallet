@@ -133,6 +133,25 @@ export const TransactionDetails: React.FC<{
                 )}
             </div>
           </div>
+          {txHash && (
+            <React.Fragment>
+              <div>Hash</div>
+              <div className={style["transactionDetailsRow"]}>
+                {txHash.toUpperCase()}
+                <img
+                  style={{
+                    cursor: "pointer",
+                    marginLeft: "10px",
+                  }}
+                  src={require("@assets/svg/wireframe/copyGrey.svg")}
+                  alt=""
+                  onClick={() =>
+                    onCopy(txHash.toUpperCase(), "Transaction hash copied")
+                  }
+                />
+              </div>
+            </React.Fragment>
+          )}
           {signedTxn && (
             <React.Fragment>
               <div>Transaction</div>
@@ -159,25 +178,6 @@ export const TransactionDetails: React.FC<{
                     )
                   )}
                 </div>
-              </div>
-            </React.Fragment>
-          )}
-          {txHash && (
-            <React.Fragment>
-              <div>Hash</div>
-              <div className={style["transactionDetailsRow"]}>
-                {txHash.toUpperCase()}
-                <img
-                  style={{
-                    cursor: "pointer",
-                    marginLeft: "10px",
-                  }}
-                  src={require("@assets/svg/wireframe/copyGrey.svg")}
-                  alt=""
-                  onClick={() =>
-                    onCopy(txHash.toUpperCase(), "Transaction hash copied")
-                  }
-                />
               </div>
             </React.Fragment>
           )}
