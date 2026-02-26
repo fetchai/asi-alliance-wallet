@@ -13,6 +13,7 @@ export const TransactionSection: React.FC<TransactionSectionProps> = ({
   type = "single",
   chainId,
   address,
+  setTxnFileName,
   broadcastTxn,
   accountInfo,
   setAccountInfo,
@@ -149,7 +150,10 @@ export const TransactionSection: React.FC<TransactionSectionProps> = ({
       />
       <JsonUploadButton
         text="Upload Transaction"
-        onJsonLoaded={(data) => onTxnSignDocChange(formatJson(data))}
+        onJsonLoaded={(data, fileName) => {
+          setTxnFileName(fileName);
+          onTxnSignDocChange(formatJson(data));
+        }}
         onError={(error) => showNotification(error, "danger")}
       />
     </React.Fragment>

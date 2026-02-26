@@ -210,11 +210,7 @@ export const MorePage: FunctionComponent = () => {
             });
           }}
           heading="Manual Sign & Broadcast"
-          subheading={
-            !isRunningInSidePanel()
-              ? "Open side panel to upload and sign/broadcast transactions"
-              : ""
-          }
+          subheading={!isRunningInSidePanel() ? "Opens in side panel" : ""}
         />
       )}
       <Card

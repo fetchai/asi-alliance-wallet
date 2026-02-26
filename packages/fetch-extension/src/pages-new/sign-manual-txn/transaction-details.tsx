@@ -29,7 +29,8 @@ export const TransactionDetails: React.FC<{
   const {
     txSignature,
     txHash,
-    downloadFilename,
+    signatureFileName,
+    txnFileName,
     broadcastType,
     chainId,
     signedTxn,
@@ -92,14 +93,14 @@ export const TransactionDetails: React.FC<{
         <React.Fragment>
           <div>Signature</div>
           <div className={style["transactionDetailsRow"]}>
-            {!downloadFilename ? (
+            {!signatureFileName ? (
               txSignature
             ) : (
               <pre className={style["jsonPreview"]}>{txSignature}</pre>
             )}
             <div
               style={
-                !downloadFilename
+                !signatureFileName || !txnFileName
                   ? { display: "inline" }
                   : {
                       display: "flex",
@@ -107,7 +108,7 @@ export const TransactionDetails: React.FC<{
                     }
               }
             >
-              {!downloadFilename ? (
+              {!signatureFileName ? (
                 <img
                   style={{
                     cursor: "pointer",
@@ -124,12 +125,9 @@ export const TransactionDetails: React.FC<{
                   onCopy(txSignature, "Transaction signature copied")
                 )
               )}
-              {downloadFilename &&
+              {signatureFileName &&
                 renderDownloadButton(() =>
-                  downloadJson(
-                    JSON.parse(txSignature),
-                    `signature-${downloadFilename}.json`
-                  )
+                  downloadJson(JSON.parse(txSignature), signatureFileName)
                 )}
             </div>
           </div>
@@ -172,10 +170,7 @@ export const TransactionDetails: React.FC<{
                     onCopy(signedTxn, "Signed transaction copied")
                   )}
                   {renderDownloadButton(() =>
-                    downloadJson(
-                      JSON.parse(signedTxn),
-                      `signed-transaction-${downloadFilename}.json`
-                    )
+                    downloadJson(JSON.parse(signedTxn), txnFileName)
                   )}
                 </div>
               </div>
@@ -226,7 +221,7 @@ export const TransactionDetails: React.FC<{
             text=""
             onClick={() => navigate("/more/sign-manual-txn", { state: {} })}
           >
-            Sign New Transaction
+            New Transaction
             <img
               style={{
                 cursor: "pointer",

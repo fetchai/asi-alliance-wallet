@@ -46,7 +46,8 @@ export const SignManualTxn = observer(() => {
     signType: TxnType,
     signDoc: any,
     signDocParams: any,
-    onSignSuccess: (signDocParams: any, result: any) => void
+    onSignSuccess: (signDocParams: any, result: any, fileNames: any) => void,
+    fileNames: any
   ) => {
     try {
       let msg: any;
@@ -76,7 +77,7 @@ export const SignManualTxn = observer(() => {
         BACKGROUND_PORT,
         msg
       );
-      onSignSuccess(signDocParams, result);
+      onSignSuccess(signDocParams, result, fileNames);
     } catch (err) {
       showNotification(err?.message || "Something went wrong", "danger");
     }

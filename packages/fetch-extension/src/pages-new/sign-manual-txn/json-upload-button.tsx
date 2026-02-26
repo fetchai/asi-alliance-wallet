@@ -8,7 +8,7 @@ export const JsonUploadButton = ({
   onError,
 }: {
   text: string;
-  onJsonLoaded: (data: any) => void;
+  onJsonLoaded: (data: any, fileName: string) => void;
   onError: (error: string) => void;
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -29,8 +29,8 @@ export const JsonUploadButton = ({
 
     reader.onload = () => {
       try {
-        const jsonStringified = reader.result;
-        onJsonLoaded(jsonStringified);
+        const jsonStringified = reader.result as string;
+        onJsonLoaded(jsonStringified, file.name);
       } catch (err) {
         onError("Failed to read JSON file");
       }

@@ -27,6 +27,8 @@ import {
   ProtoMultisigPubkey,
   SignDocData,
   UpdateSignerInfoParams,
+  BaseTxnFileParams,
+  GetTxnDocFileNameParams,
 } from "./types";
 import { MsgExecuteContract } from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
 import { fromBech32 } from "@cosmjs/encoding";
@@ -64,6 +66,59 @@ export function convertToProtoJsonPubKey(pubkey: any) {
     })),
   };
 }
+
+function getProcessedFileName(filename: string) {
+  const regex = /^([0-9]+)\.((.*)\.)?contents\.json$/;
+
+  if (regex.test(filename)) {
+    // Remove ".contents.json"
+    return filename.replace(/\.contents\.json$/, "");
+  }
+
+  // Otherwise remove just ".json"
+  return filename.replace(/\.json$/, "");
+}
+
+export const getTxnDocFileName = ({
+  accountNumber,
+  sequence,
+  accountName,
+  fileName,
+  type,
+}: GetTxnDocFileNameParams) => {
+  const fileType =
+    type === "transaction" ? "tx.json" : `${accountName}.sig.json`;
+  const processedFileName = fileName ? getProcessedFileName(fileName) : "";
+
+  return processedFileName
+    ? `${processedFileName}.${fileType}`
+    : `${accountNumber}.${sequence}.${fileType}`;
+};
+
+export const getTxnAndSignatureFileNames = ({
+  accountName,
+  accountNumber,
+  sequence,
+  fileName,
+}: BaseTxnFileParams) => {
+  const baseParams = {
+    accountName,
+    accountNumber,
+    sequence,
+    fileName,
+  };
+
+  return {
+    signature: getTxnDocFileName({
+      ...baseParams,
+      type: "signature",
+    }),
+    transaction: getTxnDocFileName({
+      ...baseParams,
+      type: "transaction",
+    }),
+  };
+};
 
 export function buildSignedTxnPayload({
   txnPayload,

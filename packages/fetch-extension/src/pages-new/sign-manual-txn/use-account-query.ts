@@ -21,13 +21,14 @@ export const useAccountQuery = (
     options?.enabled;
 
   return useQuery({
-    queryKey: ["account", chainId, address, enabled],
+    queryKey: ["account", chainId, address],
     queryFn: async () => {
       const accountData = await queries.cosmos.queryAccount
         .getQueryBech32Address(address)
-        .waitResponse();
+        .waitFreshResponse();
       return accountData?.data;
     },
     enabled,
+    staleTime: 0,
   });
 };

@@ -15,6 +15,7 @@ import {
   convertProtoJsontoProtoMsgs,
   createSignature,
   formatJson,
+  getTxnAndSignatureFileNames,
   prepareSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
@@ -24,7 +25,7 @@ import { useAccountQuery } from "./use-account-query";
 export const SingleSignForm: React.FC<SignerFormProps> = observer(
   ({ chainId, account, signManualTxn, showNotification }) => {
     const navigate = useNavigate();
-
+    const [txnFileName, setTxnFileName] = useState("");
     const [txnPayload, setTxnPayload] = useState("");
     const [broadcastTxn, setBroadcastTxn] = useState(false);
     const [payloadError, setPayloadError] = useState("");
@@ -54,7 +55,18 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
       );
     };
 
-    const onSignSuccess = (signDocParams: any, result: any) => {
+    const accountDetails = {
+      sequence:
+        (offlineSigning
+          ? accountInfo.sequence
+          : accountData?.account?.sequence) || "0",
+      account_number:
+        (offlineSigning
+          ? accountInfo.accountNumber
+          : accountData?.account?.account_number) || "0",
+    };
+
+    const onSignSuccess = (signDocParams: any, result: any, fileNames: any) => {
       navigate("/more/sign-manual-txn", {
         replace: true,
         state: {
@@ -65,7 +77,8 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
             txnPayload,
             result.signature.pub_key
           ),
-          downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
+          signatureFileName: fileNames.signature,
+          txnFileName: fileNames.transaction,
         },
       });
     };
@@ -74,6 +87,13 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
       userAction: SignAction,
       signDocData: SignDocData
     ) => {
+      const fileNames = getTxnAndSignatureFileNames({
+        accountName: accountName || address,
+        sequence: accountDetails.sequence,
+        accountNumber: accountDetails.account_number,
+        fileName: txnFileName,
+      });
+
       const { payloadObj, signDocParams, signDoc, signDocType } = signDocData;
 
       if (userAction === SignAction.SIGN) {
@@ -81,7 +101,8 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
           SignMode.Amino,
           signDoc,
           signDocParams,
-          onSignSuccess
+          onSignSuccess,
+          fileNames
         );
       } else {
         const aminoMsgs = signDoc.msgs;
@@ -110,12 +131,6 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
           },
           {
             onFulfill: (tx) => {
-              console.log(
-                "Transaction fulfilled:",
-                tx,
-                signDocParams,
-                accountData
-              );
               navigate("/more/sign-manual-txn", {
                 replace: true,
                 state: {
@@ -128,7 +143,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
                     txnPayload,
                     accountData?.account?.pub_key
                   ),
-                  downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
+                  txnFileName: fileNames.transaction,
                 },
               });
             },
@@ -149,17 +164,6 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
     };
 
     const handleSubmit = async () => {
-      const accountDetails = {
-        sequence:
-          (offlineSigning
-            ? accountInfo.sequence
-            : accountData?.account?.sequence) || "0",
-        account_number:
-          (offlineSigning
-            ? accountInfo.accountNumber
-            : accountData?.account?.account_number) || "0",
-      };
-
       const signDocData = await prepareSignDoc(
         txnPayload,
         accountDetails,
@@ -189,6 +193,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
         <TransactionSection
           chainId={chainId}
           address={address}
+          setTxnFileName={setTxnFileName}
           accountName={accountName}
           broadcastTxn={broadcastTxn}
           offlineSigning={offlineSigning}

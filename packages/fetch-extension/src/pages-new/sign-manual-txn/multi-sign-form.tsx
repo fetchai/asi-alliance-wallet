@@ -23,6 +23,7 @@ import {
   createSignature,
   createSignaturesMap,
   formatJson,
+  getTxnAndSignatureFileNames,
   isSignatureCollected,
   isValidBech32Address,
   orderMultisigSignatures,
@@ -50,7 +51,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
   ({ chainId, account, signManualTxn, showNotification }) => {
     const navigate = useNavigate();
     const { chainStore } = useStore();
-
+    const [txnFileName, setTxnFileName] = useState("");
     const [txnPayload, setTxnPayload] = useState("");
     const [multiSigPubKeys, setMultiSigPubKeys] = useState("");
     const [broadcastTxn, setBroadcastTxn] = useState(false);
@@ -87,6 +88,17 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
         type: pub["@type"],
         value: pub.key,
       }));
+
+    const accountDetails = {
+      sequence:
+        (offlineSigning
+          ? accountInfo.sequence
+          : accountData?.account?.sequence) || "0",
+      account_number:
+        (offlineSigning
+          ? accountInfo.accountNumber
+          : accountData?.account?.account_number) || "0",
+    };
 
     useEffect(() => {
       setThreshold(Number(accountData?.account?.pub_key?.key?.threshold || 0));
@@ -128,7 +140,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       );
     };
 
-    const onSignSuccess = (signDocParams: any, result: any) => {
+    const onSignSuccess = (signDocParams: any, result: any, fileNames: any) => {
       const parsedTxnPayload = JSON.parse(txnPayload);
       navigate("/more/sign-manual-txn", {
         replace: true,
@@ -136,7 +148,8 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
           signed: true,
           txSignature: createSignature(result, signDocParams.sequence),
           signedTxn: createSignedTxn(signDocParams?.sequence, parsedTxnPayload),
-          downloadFilename: `${account.bech32Address}-${chainId}-${signDocParams.sequence}`,
+          signatureFileName: fileNames.signature,
+          txnFileName: fileNames.transaction,
         },
       });
     };
@@ -169,13 +182,21 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       signDocData: SignDocData
     ) => {
       try {
+        const fileNames = getTxnAndSignatureFileNames({
+          accountName: accountName || address,
+          sequence: accountDetails.sequence,
+          accountNumber: accountDetails.account_number,
+          fileName: txnFileName,
+        });
+
         const { payloadObj, signDocParams, signDoc } = signDocData;
         if (userAction === SignAction.SIGN) {
           await signManualTxn(
             SignMode.Amino,
             signDoc,
             signDocParams,
-            onSignSuccess
+            onSignSuccess,
+            fileNames
           );
         } else {
           const protoMsgs = convertProtoJsontoProtoMsgs(
@@ -225,6 +246,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
                 signDocParams?.sequence,
                 JSON.parse(txnPayload)
               ),
+              txnFileName: fileNames.transaction,
               txHash: tx.txHash,
             },
           });
@@ -358,6 +380,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             accountName={accountName}
             broadcastTxn={broadcastTxn}
             offlineSigning={offlineSigning}
+            setTxnFileName={setTxnFileName}
             setOfflineSigning={setOfflineSigning}
             accountInfo={accountInfo}
             setAccountInfo={setAccountInfo}

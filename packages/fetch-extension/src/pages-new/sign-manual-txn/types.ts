@@ -13,6 +13,19 @@ type SigningMode = "direct" | "amino";
 
 export type PublicKey = { "@type": string; key: string };
 
+export type TxnDocType = "signature" | "transaction";
+
+export interface BaseTxnFileParams {
+  accountName: string;
+  accountNumber: string;
+  sequence: string;
+  fileName?: string;
+}
+
+export type GetTxnDocFileNameParams = BaseTxnFileParams & {
+  type: TxnDocType;
+};
+
 export interface SignerFormProps {
   chainId: string;
   account: AccountSetBase &
@@ -111,7 +124,12 @@ export type SignManualTxn = (
   signType: TxnType,
   signDoc: unknown,
   signDocParams: unknown,
-  onSignSuccess: (signDocParams: unknown, result: unknown) => void
+  onSignSuccess: (
+    signDocParams: unknown,
+    result: unknown,
+    fileNames: any
+  ) => void,
+  fileNames: any
 ) => Promise<void>;
 
 export type TxnType = SignMode.Amino | SignMode.Direct;
@@ -120,6 +138,7 @@ export interface TransactionSectionProps {
   type?: "single" | "multi";
   broadcastTxn: boolean;
   offlineSigning: boolean;
+  setTxnFileName: React.Dispatch<React.SetStateAction<string>>;
   setOfflineSigning: React.Dispatch<React.SetStateAction<boolean>>;
   chainId: string;
   address: string;
