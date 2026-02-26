@@ -15,6 +15,25 @@ export type PublicKey = { "@type": string; key: string };
 
 export type TxnDocType = "signature" | "transaction";
 
+export interface MultisigPublicKeySectionProps {
+  multiSigAccountError: boolean;
+  offlineSigning: boolean;
+  broadcastTxn: boolean;
+  accountPubKey?: {
+    key?: {
+      threshold?: number;
+    };
+  };
+  multiSigPubKeys: string;
+  pubKeyError?: string;
+  threshold: number | undefined;
+  handlePubkeysChange: (value: string) => void;
+  handleThresholdChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setMultiSigPubKeys: (value: string) => void;
+  setPubKeyError: (value: string) => void;
+  showNotification: (message: string, type: "danger" | "success") => void;
+}
+
 export interface BaseTxnFileParams {
   accountName: string;
   accountNumber: string;

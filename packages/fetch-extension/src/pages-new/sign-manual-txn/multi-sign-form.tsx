@@ -1,13 +1,10 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
-import { Input } from "@components-v2/form";
-import { TextArea } from "@components/form";
 import { SignMode } from "@keplr-wallet/background";
 import { observer } from "mobx-react-lite";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
-import { JsonUploadButton } from "./json-upload-button";
 import style from "./styles.module.scss";
 import {
   MultiSigSteps,
@@ -38,8 +35,8 @@ import { buttonStyles } from ".";
 import { ConfirmMultisigBroadcast } from "./confirm-multi-broadcast";
 import { Pubkey, pubkeyToAddress } from "@cosmjs/amino";
 import classNames from "classnames";
-import { ToolTip } from "@components/tooltip";
 import { useAccountQuery } from "./use-account-query";
+import { MultisigPublicKeySection } from "./multisig-pubkey-section";
 
 const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.Transaction,
@@ -66,7 +63,6 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       MultiSigSteps.Transaction
     );
     const [pubKeyError, setPubKeyError] = useState<string>("");
-    const [showExample, setShowExample] = useState(false);
     const [offlineSigning, setOfflineSigning] = useState(false);
     const [accountInfo, setAccountInfo] = useState({
       accountNumber: "",
@@ -393,115 +389,20 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             txnPayload={txnPayload}
             onMultisigAccountChange={(value) => setMultiSigAccount(value)}
           />
-          <div className={style["multiSignatureContainer"]}>
-            {((multiSigAccountError && !accountData?.account?.pub_key) ||
-              offlineSigning) && (
-              <React.Fragment>
-                <p
-                  style={{
-                    marginBottom: 0,
-                    display: "flex",
-                    columnGap: "4px",
-                    alignItems: "center",
-                  }}
-                  className={style["inputLabel"]}
-                >
-                  Multisig Public Key (JSON)
-                  <ToolTip
-                    trigger="hover"
-                    options={{
-                      placement: "top-end",
-                    }}
-                    childrenStyle={{ display: "flex" }}
-                    tooltip={
-                      <div
-                        style={{ minWidth: "fit-content", maxWidth: "300px" }}
-                      >
-                        Your complete multisig public key JSON
-                        (LegacyAminoPubKey), including <b>threshold</b>{" "}
-                        and&nbsp;
-                        <b>public_keys</b>.
-                      </div>
-                    }
-                  >
-                    <img
-                      src={require("@assets/svg/circle-info.svg")}
-                      style={{
-                        cursor: "pointer",
-                        width: "18px",
-                        height: "18px",
-                      }}
-                    />
-                  </ToolTip>
-                </p>
-                <p
-                  style={{ marginBottom: "10px" }}
-                  className={style["inputLabel"]}
-                >
-                  {!offlineSigning
-                    ? "*(Multisig public key not found on-chain. Paste or Upload it manually to proceed"
-                    : ""}
-                </p>
-                <TextArea
-                  placeholder="Paste your multisig account pubkey"
-                  value={multiSigPubKeys}
-                  onChange={(e) => {
-                    try {
-                      setPubKeyError("");
-                      const formatted = formatJson(e.target.value);
-                      setMultiSigPubKeys(formatted);
-                    } catch (err) {
-                      setPubKeyError(err.message);
-                    }
-                  }}
-                  formGroupClassName={style["formGroupPubkeyInput"]}
-                  error={pubKeyError}
-                  onBlur={(e: any) => handlePubkeysChange(e.target.value)}
-                  className={style["txnPayloadSignatureInput"]}
-                />
-                <div
-                  className={style["exampleToggle"]}
-                  onClick={() => setShowExample(!showExample)}
-                >
-                  {showExample ? "Hide example" : "Need an example?"}
-                </div>
-
-                {showExample && (
-                  <pre className={style["jsonExample"]}>
-                    {formatJson(
-                      JSON.stringify({
-                        "@type": "/cosmos.crypto.multisig.LegacyAminoPubKey",
-                        threshold: 2,
-                        public_keys: [
-                          {
-                            "@type": "/cosmos.crypto.secp256k1.PubKey",
-                            key: "...",
-                          },
-                        ],
-                      })
-                    )}
-                  </pre>
-                )}
-                <JsonUploadButton
-                  text="Upload Public Key"
-                  onJsonLoaded={(data) => handlePubkeysChange(data)}
-                  onError={(error) => showNotification(error, "danger")}
-                />
-              </React.Fragment>
-            )}
-            {broadcastTxn && (
-              <Input
-                label="Threshold (from multisig account)"
-                type="text"
-                name="threshold"
-                value={threshold}
-                readOnly={accountData?.account?.pub_key?.key?.threshold}
-                formGroupClassName={style["formGroup"]}
-                formFeedbackClassName={style["formFeedback"]}
-                onChange={handleThresholdChange}
-              />
-            )}
-          </div>
+          <MultisigPublicKeySection
+            broadcastTxn={broadcastTxn}
+            offlineSigning={offlineSigning}
+            accountPubKey={accountData?.account?.pub_key}
+            multiSigPubKeys={multiSigPubKeys}
+            multiSigAccountError={Boolean(multiSigAccountError)}
+            pubKeyError={pubKeyError}
+            threshold={threshold}
+            handlePubkeysChange={handlePubkeysChange}
+            handleThresholdChange={handleThresholdChange}
+            setMultiSigPubKeys={setMultiSigPubKeys}
+            setPubKeyError={setPubKeyError}
+            showNotification={showNotification}
+          />
           <Checkbox
             isChecked={broadcastTxn}
             setIsChecked={setBroadcastTxn}
