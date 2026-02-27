@@ -1,0 +1,161 @@
+@import "../../styles/var";
+
+.header-title {
+  min-width: 235px !important;
+  width: inherit !important;
+}
+
+:global {
+  .headerSection {
+    margin-left: 68px !important;
+    padding-right: 25px !important;
+  }
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  label {
+    color: $font-secondary;
+  }
+  input:read-only {
+    color: $font-dark;
+  }
+}
+
+.formFeedback {
+  margin-top: 0px !important;
+  position: relative !important;
+  font-size: 14px !important;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.txnPayloadInput {
+  min-height: 200px;
+  max-height: 200px;
+}
+
+.txnPayloadSignatureInput {
+  min-height: 100px;
+  max-height: 100px;
+}
+
+.formGroupPubkeyInput {
+  margin-bottom: 10px !important;
+}
+
+.inputLabel {
+  color: $font-secondary;
+  font-weight: 500;
+  font-size: 14px;
+
+  & [data-arrow] {
+    display: none;
+  }
+}
+
+.transactionDetailsRow {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  background-color: white;
+  padding: 10px;
+  border-radius: 10px;
+  color: black;
+}
+
+.jsonPreview {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  color: $font-dark;
+}
+
+.radioItemLabel {
+  font-size: 14px;
+}
+
+.accountInputFormGroup {
+  background-color: #f3f3f3;
+  border-radius: 10px;
+  padding: 8px 12px;
+
+  label {
+    margin-bottom: 0px !important;
+    color: rgba($font-dark, 0.8) !important;
+  }
+
+  input {
+    height: fit-content;
+    border: none !important;
+    color: rgba($font-dark, 0.8) !important;
+    background-color: #f3f3f3 !important;
+    padding: 6px;
+    padding-left: 0px !important;
+  }
+}
+
+.offlineSigningInputField {
+  display: flex;
+  margin-top: 8px;
+  column-gap: 6px;
+  align-items: center;
+
+  input {
+    width: 180px;
+  }
+}
+
+.multisigFooter {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  &.fixedFooter {
+    width: 98%;
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  &.fullWidth {
+    width: 100%;
+  }
+}
+
+.signatureFooter {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  column-gap: 10px;
+}
+
+.offlineSigningInputSection {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+}
+
+.exampleToggle {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: $bg-green-dark;
+  cursor: pointer;
+}
+
+.jsonExample {
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  font-family: monospace;
+  font-size: 12px;
+  overflow-x: auto;
+}
