@@ -26,7 +26,7 @@ export const useAccountQuery = (
       const accountData = await queries.cosmos.queryAccount
         .getQueryBech32Address(address)
         .waitFreshResponse();
-      return accountData?.data;
+      return accountData?.data ? accountData.data : null;
     },
     enabled,
     staleTime: 0,
