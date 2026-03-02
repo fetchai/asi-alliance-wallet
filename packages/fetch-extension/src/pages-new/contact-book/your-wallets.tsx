@@ -6,6 +6,7 @@ import { formatAddress } from "@utils/format";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
 import { useStore } from "../../stores";
+import { useNotification } from "@components/notification";
 import style from "./style.module.scss";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { ListAccountsMsg } from "@keplr-wallet/background";
@@ -33,6 +34,7 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
     );
     const [isLoadingAddresses, setIsLoadingAddresses] = useState<boolean>(true);
     const intl = useIntl();
+    const notification = useNotification();
     const { chainStore, keyRingStore } = useStore();
 
     const chainId = chainStore.current.chainId;
@@ -99,12 +101,26 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
         setIsLoadingAddresses(!hasAnyCachedAddress);
         const requester = new InExtensionMessageRequester();
         const msg = new ListAccountsMsg();
-        const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
+        const result = await requester.sendMessage(BACKGROUND_PORT, msg);
 
         if (abortSignal?.aborted) {
           return;
         }
 
+        if (result.error) {
+          notification.push({
+            placement: "top-center",
+            type: "danger",
+            duration: 4,
+            content: result.error,
+            canDelete: true,
+            transition: { duration: 0.25 },
+          });
+          setIsLoadingAddresses(false);
+          return;
+        }
+
+        const { accounts } = result;
         const snapshotWalletIds = [...currentWalletIds];
         const fetchedById: Record<string, string> = {};
         snapshotWalletIds.forEach((walletId, idx) => {

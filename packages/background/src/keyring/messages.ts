@@ -1279,7 +1279,13 @@ export class SwitchAccountMsg extends Message<void> {
   }
 }
 
-export class ListAccountsMsg extends Message<Account[]> {
+/** ListAccountsResult must stay in sync with packages/provider/src/types/msgs.ts when changing the contract. */
+export type ListAccountsResult = {
+  accounts: Account[];
+  error?: string;
+};
+
+export class ListAccountsMsg extends Message<ListAccountsResult> {
   public static type() {
     return "list-account-msg";
   }

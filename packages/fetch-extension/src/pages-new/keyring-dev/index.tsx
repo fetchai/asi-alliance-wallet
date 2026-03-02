@@ -8,6 +8,7 @@ import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { Card } from "@components-v2/card";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
+import { useNotification } from "@components/notification";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
 import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
@@ -38,6 +39,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
   ({ navigateTo, onItemSelect, setIsOptionsOpen, setIsSelectWalletOpen }) => {
     const intl = useIntl();
     const navigate = useNavigate();
+    const notification = useNotification();
     const {
       chainStore,
       accountStore,
@@ -103,8 +105,23 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
           const requester = new InExtensionMessageRequester();
 
           const msg = new ListAccountsMsg();
-          const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
+          const result = await requester.sendMessage(BACKGROUND_PORT, msg);
 
+          if (result.error) {
+            notification.push({
+              placement: "top-center",
+              type: "danger",
+              duration: 4,
+              content: result.error,
+              canDelete: true,
+              transition: { duration: 0.25 },
+            });
+            isLoadingRef.current = false;
+            setIsLoadingAddresses(false);
+            return;
+          }
+
+          const { accounts } = result;
           const isEvm = chainStore.current.features?.includes("evm") ?? false;
           const snapshotWalletIds = [...currentWalletIds];
 

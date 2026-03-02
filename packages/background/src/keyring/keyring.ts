@@ -111,6 +111,12 @@ export class KeyRing {
 
   private password: string = "";
 
+  /**
+   * Run cache migration once per unlock session to avoid delay on every wallet switch.
+   * Session = from unlock() until lock(); migration runs at most once per session.
+   */
+  private cacheMigrationDoneThisSession = false;
+
   constructor(
     private readonly embedChainInfos: ChainInfo[],
     private readonly kvStore: KVStore,
@@ -649,6 +655,7 @@ export class KeyRing {
     if (this.status !== KeyRingStatus.UNLOCKED) {
       throw new Error("Key ring is not unlocked");
     }
+    this.cacheMigrationDoneThisSession = false;
     this.clearCaches();
     this.password = "";
 
@@ -722,11 +729,14 @@ export class KeyRing {
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
     this.calculateMnemonicLengthInBackground(password);
 
-    try {
-      await this.migrateCacheToEncrypted();
-    } catch (e: unknown) {
-      console.error(`[KeyRing] Cache migration failed:`, e);
-      // Continue execution - migration failure doesn't break core functionality
+    if (!this.cacheMigrationDoneThisSession) {
+      try {
+        await this.migrateCacheToEncrypted();
+        this.cacheMigrationDoneThisSession = true;
+      } catch (e: unknown) {
+        console.error(`[KeyRing] Cache migration failed:`, e);
+        // Continue execution - migration failure doesn't break core functionality
+      }
     }
 
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});

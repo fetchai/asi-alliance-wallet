@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
 import style from "./style.module.scss";
@@ -9,6 +9,7 @@ import { observer } from "mobx-react-lite";
 import classNames from "classnames";
 import { useStore } from "../../stores";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
+import { useNotification } from "@components/notification";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
@@ -28,46 +29,86 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
     } = useStore();
 
     const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
-    const [addressIndex, setAddressIndex] = useState<number>();
+    const [addressIndex, setAddressIndex] = useState<number | undefined>(
+      undefined
+    );
+    const [hasLoadError, setHasLoadError] = useState(false);
     const navigate = useNavigate();
+    const notification = useNotification();
+    const notificationRef = useRef(notification);
+    notificationRef.current = notification;
 
     const interactionInfo = useInteractionInfo(() => {
       accountSwitchStore.rejectAll();
     });
 
     useEffect(() => {
-      const findAndSetAddressIndex = async () => {
-        if (accountSwitchStore.waitingSuggestedAccount) {
-          // TODO: update event properties then change chainId below
-          const requester = new InExtensionMessageRequester();
-          const msg = new ListAccountsMsg();
-          const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
+      const abortController = new AbortController();
+      const signal = abortController.signal;
 
-          const isEvm = chainStore.current.features?.includes("evm") ?? false;
-          const addresses = accounts.map((account) => {
-            if (isEvm) {
-              return account.EVMAddress;
-            }
+      setHasLoadError(false);
+      setAddressIndex(undefined);
+      setIsLoadingPlaceholder(true);
 
-            return account.bech32Address;
-          });
-
-          const index = addresses.findIndex((a) => {
-            return (
-              accountSwitchStore.waitingSuggestedAccount &&
-              a === accountSwitchStore.waitingSuggestedAccount.data.address
-            );
-          });
-
-          setAddressIndex(index);
-          analyticsStore.logEvent("Account switch suggested", {
-            chainId: accountSwitchStore.waitingSuggestedAccount.data.address,
-          });
-          setIsLoadingPlaceholder(false);
+      const findAndSetAddressIndex = async (abortSignal: AbortSignal) => {
+        if (!accountSwitchStore.waitingSuggestedAccount) {
+          return;
         }
+        // TODO: update event properties then change chainId below
+        const requester = new InExtensionMessageRequester();
+        const msg = new ListAccountsMsg();
+        const result = await requester.sendMessage(BACKGROUND_PORT, msg);
+
+        if (abortSignal.aborted) {
+          return;
+        }
+
+        if (result.error) {
+          notificationRef.current.push({
+            placement: "top-center",
+            type: "danger",
+            duration: 4,
+            content: result.error,
+            canDelete: true,
+            transition: { duration: 0.25 },
+          });
+          setHasLoadError(true);
+          setIsLoadingPlaceholder(false);
+          return;
+        }
+
+        const { accounts } = result;
+        const isEvm = chainStore.current.features?.includes("evm") ?? false;
+        const addresses = accounts.map((account) => {
+          if (isEvm) {
+            return account.EVMAddress;
+          }
+
+          return account.bech32Address;
+        });
+
+        const index = addresses.findIndex((a) => {
+          return (
+            accountSwitchStore.waitingSuggestedAccount &&
+            a === accountSwitchStore.waitingSuggestedAccount.data.address
+          );
+        });
+
+        if (abortSignal.aborted) {
+          return;
+        }
+        setAddressIndex(index);
+          analyticsStore.logEvent("Account switch suggested", {
+            chainId: chainStore.current.chainId,
+          });
+        setIsLoadingPlaceholder(false);
       };
 
-      findAndSetAddressIndex();
+      findAndSetAddressIndex(signal);
+
+      return () => {
+        abortController.abort();
+      };
     }, [
       keyRingStore,
       chainStore,
@@ -269,6 +310,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                 }}
                 disabled={
                   !accountSwitchStore.waitingSuggestedAccount ||
+                  hasLoadError ||
                   addressIndex === -1
                 }
                 dataLoading={accountSwitchStore.isLoading}
@@ -277,7 +319,11 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
 
                   const address =
                     accountSwitchStore.waitingSuggestedAccount?.data.address;
-                  if (address !== undefined && addressIndex !== undefined) {
+                  if (
+                    address !== undefined &&
+                    addressIndex !== undefined &&
+                    addressIndex >= 0
+                  ) {
                     try {
                       accountSwitchStore.approve(address);
                       keyRingStore.changeKeyRing(addressIndex);

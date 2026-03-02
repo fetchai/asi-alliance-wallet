@@ -772,6 +772,23 @@ const handleListAccountsMsg: (
     const isEVM = chainInfo.features?.includes("evm");
     const isCardano = chainInfo.features?.includes("cardano");
 
+    // First ListAccounts for a new Cardano chain may block here until restore/init completes,
+    // because network-changed is dispatched before onNetworkSwitch handlers finish.
+    if (isCardano) {
+      try {
+        await service.ensureCardanoServiceReady(chainId);
+      } catch (error) {
+        console.error(
+          "[KeyRingService] ensureCardanoServiceReady failed in ListAccountsMsg:",
+          error
+        );
+        return {
+          accounts: [],
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+
     const walletInfos = service.getKeyRing().getMultiKeyStoreInfo();
     const walletIds = walletInfos.map(
       (w) => (w.meta as KeyStoreMetaKnown)?.["__id__"] || ""
@@ -880,7 +897,7 @@ const handleListAccountsMsg: (
 
     const cachedAccounts = await tryBuildFromCache();
     if (cachedAccounts) {
-      return cachedAccounts;
+      return { accounts: cachedAccounts };
     }
 
     const keys = await service.getKeys(chainId);
@@ -928,7 +945,7 @@ const handleListAccountsMsg: (
         .join(", ")
     );
 
-    return returnData;
+    return { accounts: returnData };
   };
 };
 

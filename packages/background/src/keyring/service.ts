@@ -110,6 +110,11 @@ export class KeyRingService {
     this.keyRing.removeAllKeyStoreCoinType(chainId);
   };
 
+  /**
+   * Runs in background after setSelectedChain (fire-and-forget).
+   * First ListAccounts/getKey for the new chain may wait for restore or cache fill in background;
+   * ensureCardanoServiceReady restores when needed so correctness is preserved.
+   */
   protected readonly onNetworkSwitch = async (
     _oldChainId: string | undefined,
     newChainId: string
@@ -119,15 +124,10 @@ export class KeyRingService {
         return;
       }
 
-      try {
-        this.interactionService.dispatchEvent(WEBPAGE_PORT, "network-changed", {
-          seq: Date.now(),
-        });
-      } catch (e) {
-        console.error(
-          `[KeyRingService] Failed to dispatch network-changed event:`,
-          e
-        );
+      const targetChainId = newChainId;
+      const currentChainId = await this.chainsService.getSelectedChain();
+      if (currentChainId !== targetChainId) {
+        return;
       }
 
       const chainInfo = await this.chainsService.getChainInfo(newChainId);
@@ -135,18 +135,14 @@ export class KeyRingService {
       const isEvm = chainInfo.features?.includes("evm") ?? false;
 
       if (isCardano) {
-        const ks = this.keyRing.getCurrentKeyStore();
-        if (ks) {
-          try {
-            await this.cardanoService.restoreFromKeyStore(
-              ks,
-              this.keyRing.currentPassword,
-              this.crypto,
-              newChainId
-            );
-          } catch (error) {
-            console.error("[KeyRingService] Failed to rebind CardanoService:", error);
-          }
+        const stillCurrent = await this.chainsService.getSelectedChain();
+        if (stillCurrent !== targetChainId) {
+          return;
+        }
+        try {
+          await this.ensureCardanoServiceReady(newChainId);
+        } catch (error) {
+          console.error("[KeyRingService] Failed to rebind CardanoService:", error);
         }
       }
 
@@ -486,23 +482,45 @@ export class KeyRingService {
   }
 
   private cardanoServiceInitPromise: Promise<void> | null = null;
+  /** Deduplicates restore-by-chainId so parallel ListAccountsMsg for the same chain share one promise. */
+  private cardanoRestoreByChainId: Map<string, Promise<void>> = new Map();
 
   public async ensureCardanoServiceReady(chainId?: string): Promise<void> {
-    // If service is initialized but not ready, try to restore with chainId
+    // If service is initialized but not ready, try to restore with chainId.
+    // Restore errors are logged and do not reject; init errors reject.
     if (this.cardanoService.isInitialized() && !this.cardanoService.isReady() && chainId) {
-      const ks = this.keyRing.getCurrentKeyStore();
-      if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
-        try {
-          await this.cardanoService.restoreFromKeyStore(
-            ks,
-            this.keyRing.currentPassword,
-            this.crypto,
-            chainId
-          );
-        } catch (error) {
-          console.error("[KeyRingService] Failed to restore CardanoService:", error);
-        }
+      // Deduplication: get then create then set in the same sync turn; no await/then between get and set
+      // so concurrent callers always see the same promise.
+      const existing = this.cardanoRestoreByChainId.get(chainId);
+      if (existing) {
+        return existing;
       }
+      const promise = new Promise<void>((resolve, reject) => {
+        (async () => {
+          try {
+            const ks = this.keyRing.getCurrentKeyStore();
+            if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
+              try {
+                await this.cardanoService.restoreFromKeyStore(
+                  ks,
+                  this.keyRing.currentPassword,
+                  this.crypto,
+                  chainId
+                );
+              } catch (error) {
+                console.error("[KeyRingService] Failed to restore CardanoService:", error);
+              }
+            }
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        })();
+      });
+      // Set must run in the same sync turn after creating the promise.
+      this.cardanoRestoreByChainId.set(chainId, promise);
+      promise.finally(() => this.cardanoRestoreByChainId.delete(chainId));
+      return promise;
     }
 
     if (!this.cardanoService.isInitialized()) {
@@ -1236,6 +1254,7 @@ Salt: ${salt}`;
     try {
       const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
       this.cardanoService.reset();
+      this.cardanoRestoreByChainId.clear();
       await this.correctChainForCardanoSupport();
       return result;
     } finally {
