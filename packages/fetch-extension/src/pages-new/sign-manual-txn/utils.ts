@@ -51,7 +51,15 @@ export function getMultisigAccountError({
     return "Please enter a valid bech32 address.";
   }
 
-  if (!accountData?.account?.pub_key && !multiSigPubKeys) {
+  const pubKey: any = accountData?.account?.pub_key;
+
+  if (pubKey) {
+    if (pubKey["@type"] !== "/cosmos.crypto.multisig.LegacyAminoPubKey") {
+      return "The provided address is not a multisig account.";
+    }
+  }
+
+  if (!pubKey && !multiSigPubKeys) {
     return "Multisig public key not found on-chain yet. Please provide the multisig public key manually.";
   }
 

@@ -29,6 +29,7 @@ export interface MultisigAccountErrorParams {
 
 export interface MultisigPublicKeySectionProps {
   multiSigAccountError: boolean;
+  multisigAccount: string;
   offlineSigning: boolean;
   broadcastTxn: boolean;
   accountPubKey?: {

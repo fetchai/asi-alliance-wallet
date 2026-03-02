@@ -388,6 +388,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
           <MultisigPublicKeySection
             broadcastTxn={broadcastTxn}
             offlineSigning={offlineSigning}
+            multisigAccount={multisigAccount}
             accountPubKey={accountData?.account?.pub_key}
             multiSigPubKeys={multiSigPubKeys}
             multiSigAccountError={Boolean(multiSigAccountError)}
