@@ -15,6 +15,18 @@ export type PublicKey = { "@type": string; key: string };
 
 export type TxnDocType = "signature" | "transaction";
 
+export interface MultisigAccountErrorParams {
+  multisigAccount: string;
+  offlineSigning: boolean;
+  bech32Prefix: string;
+  multiSigPubKeys: string;
+  accountData?: {
+    account?: {
+      pub_key?: unknown;
+    };
+  } | null;
+}
+
 export interface MultisigPublicKeySectionProps {
   multiSigAccountError: boolean;
   offlineSigning: boolean;

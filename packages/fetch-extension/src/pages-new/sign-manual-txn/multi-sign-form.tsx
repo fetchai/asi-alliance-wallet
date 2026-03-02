@@ -20,9 +20,9 @@ import {
   createSignature,
   createSignaturesMap,
   formatJson,
+  getMultisigAccountError,
   getTxnAndSignatureFileNames,
   isSignatureCollected,
-  isValidBech32Address,
   orderMultisigSignatures,
   prepareSignDoc,
   protoMultisigToAmino,
@@ -318,17 +318,13 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       setMultiSigPubKeys(formatted);
     };
 
-    const multiSigAccountError =
-      multisigAccount !== "" &&
-      !offlineSigning &&
-      !isValidBech32Address(multisigAccount, bech32Prefix)
-        ? "Please enter a valid bech32 address"
-        : multisigAccount !== "" &&
-          broadcastTxn &&
-          isValidBech32Address(multisigAccount, bech32Prefix) &&
-          !accountData?.account
-        ? "Multisig account not found on-chain yet. Please upload the multisig public key."
-        : "";
+    const multiSigAccountError = getMultisigAccountError({
+      multisigAccount,
+      offlineSigning,
+      bech32Prefix,
+      accountData,
+      multiSigPubKeys,
+    });
 
     const renderMultisigSteps = () => {
       switch (multiSigStep) {

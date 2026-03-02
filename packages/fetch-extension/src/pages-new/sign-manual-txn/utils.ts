@@ -29,6 +29,7 @@ import {
   UpdateSignerInfoParams,
   BaseTxnFileParams,
   GetTxnDocFileNameParams,
+  MultisigAccountErrorParams,
 } from "./types";
 import { MsgExecuteContract } from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
 import { fromBech32 } from "@cosmjs/encoding";
@@ -36,6 +37,26 @@ import { sortObjectByKey } from "@keplr-wallet/common";
 import { PubKey } from "@keplr-wallet/types";
 /* eslint-disable import/no-extraneous-dependencies */
 import Long from "long";
+
+export function getMultisigAccountError({
+  multisigAccount,
+  offlineSigning,
+  bech32Prefix,
+  accountData,
+  multiSigPubKeys,
+}: MultisigAccountErrorParams): string {
+  if (!multisigAccount || offlineSigning) return "";
+
+  if (!isValidBech32Address(multisigAccount, bech32Prefix)) {
+    return "Please enter a valid bech32 address.";
+  }
+
+  if (!accountData?.account?.pub_key && !multiSigPubKeys) {
+    return "Multisig public key not found on-chain yet. Please provide the multisig public key manually.";
+  }
+
+  return "";
+}
 
 export function makeCompactBitArray(bits: boolean[]) {
   const byteLength = Math.ceil(bits.length / 8);

@@ -26,7 +26,7 @@ export const MultisigPublicKeySection: React.FC<
   const [showExample, setShowExample] = useState(false);
 
   const shouldShowPubKeyInput =
-    (multiSigAccountError && !accountPubKey) || offlineSigning;
+    multiSigAccountError || !accountPubKey || offlineSigning;
 
   return (
     <div className={styles["multiSignatureContainer"]}>
