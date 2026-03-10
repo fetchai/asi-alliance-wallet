@@ -152,6 +152,13 @@ export const Tokens = observer(() => {
                 <ToolTip
                   trigger="hover"
                   tooltip={tokenInfo.coinDenom.toUpperCase()}
+                  childrenStyle={{
+                    display: "inline-block",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
                 >
                   {formatTokenName(tokenInfo.coinDenom.toUpperCase())}
                 </ToolTip>
@@ -266,7 +273,17 @@ export const Tokens = observer(() => {
                     : tokenInfo.coinDenom[0].toUpperCase()
                 }
                 heading={
-                  <ToolTip trigger="hover" tooltip={tokenInfo.coinDenom}>
+                  <ToolTip
+                    trigger="hover"
+                    tooltip={tokenInfo.coinDenom}
+                    childrenStyle={{
+                      display: "inline-block",
+                      maxWidth: "100%",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {formatTokenName(tokenInfo.coinDenom)}
                   </ToolTip>
                 }
