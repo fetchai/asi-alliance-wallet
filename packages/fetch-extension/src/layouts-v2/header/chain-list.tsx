@@ -79,6 +79,12 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const cardanoChainList = chainStore.chainInfosInUI.filter(
       (chainInfo: any) => chainInfo.features?.includes("cardano")
     );
+    const cardanoMainList = cardanoChainList.filter(
+      (chainInfo: any) => chainInfo.raw.type !== "testnet"
+    );
+    const cardanoList = chainStore.showTestnet
+      ? cardanoChainList
+      : cardanoMainList;
 
     const tabs = [
       {
@@ -403,7 +409,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
               <SearchBar
                 searchTerm={cardanoSearchTerm}
                 onSearchTermChange={setCardanoSearchTerm}
-                valuesArray={cardanoChainList}
+                valuesArray={cardanoList}
                 itemsStyleProp={{ height: "100%" }}
                 filterFunction={getFilteredChainValues}
                 emptyContent={<NoResults styles={{ height: "200px" }} />}
