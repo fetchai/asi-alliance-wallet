@@ -406,93 +406,107 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
         component: (
           <div>
             {isCardanoSupportedWallet ? (
-              <SearchBar
-                searchTerm={cardanoSearchTerm}
-                onSearchTermChange={setCardanoSearchTerm}
-                valuesArray={cardanoList}
-                itemsStyleProp={{ height: "100%" }}
-                filterFunction={getFilteredChainValues}
-                emptyContent={<NoResults styles={{ height: "200px" }} />}
-                midElement={
-                  <ButtonV2
-                    styleProps={{
-                      height: "48px",
-                      marginTop: "0px",
-                      fontSize: "14px",
-                    }}
-                    onClick={(e: any) => {
-                      e.preventDefault();
-                      analyticsStore.logEvent("manage_networks_click", {
-                        pageName: "Home",
-                      });
-                      navigate("/manage-networks");
-                    }}
-                    text={"Manage networks"}
-                  />
-                }
-                renderResult={(chainInfo, index) => (
-                  <Card
-                    key={index}
-                    leftImage={
-                      chainInfo.raw.chainSymbolImageUrl !== undefined
-                        ? chainInfo.raw.chainSymbolImageUrl
-                        : chainInfo.raw.chainName
-                        ? chainInfo.raw.chainName[0].toUpperCase()
-                        : ""
-                    }
-                    heading={chainInfo.raw.chainName}
-                    isActive={
-                      chainInfo.raw.chainId === chainStore.current.chainId
-                    }
-                    rightContent={
-                      clickedChain === chainInfo.raw.chainId
-                        ? require("@assets/svg/wireframe/check.svg")
-                        : ""
-                    }
-                    onClick={() => {
-                      setClickedChain(chainInfo.raw.chainId);
-                      let properties = {};
-                      if (
-                        chainInfo.raw.chainId !== chainStore.current.chainId
-                      ) {
-                        properties = {
-                          chainId: chainStore.current.chainId,
-                          chainName: chainStore.current.chainName,
-                          toChainId: chainInfo.raw.chainId,
-                          toChainName: chainInfo.raw.chainName,
-                        };
+              <>
+                <NotificationOption
+                  name="Show testnet"
+                  isChecked={chainStore.showTestnet}
+                  handleOnChange={() =>
+                    chainStore.toggleShowTestnet(!chainStore.showTestnet)
+                  }
+                  cardStyles={{
+                    background: "transparent",
+                    padding: "0px",
+                    marginBottom: "24px",
+                  }}
+                />
+                <SearchBar
+                  searchTerm={cardanoSearchTerm}
+                  onSearchTermChange={setCardanoSearchTerm}
+                  valuesArray={cardanoList}
+                  itemsStyleProp={{ height: "100%" }}
+                  filterFunction={getFilteredChainValues}
+                  emptyContent={<NoResults styles={{ height: "200px" }} />}
+                  midElement={
+                    <ButtonV2
+                      styleProps={{
+                        height: "48px",
+                        marginTop: "0px",
+                        fontSize: "14px",
+                      }}
+                      onClick={(e: any) => {
+                        e.preventDefault();
+                        analyticsStore.logEvent("manage_networks_click", {
+                          pageName: "Home",
+                        });
+                        navigate("/manage-networks");
+                      }}
+                      text={"Manage networks"}
+                    />
+                  }
+                  renderResult={(chainInfo, index) => (
+                    <Card
+                      key={index}
+                      leftImage={
+                        chainInfo.raw.chainSymbolImageUrl !== undefined
+                          ? chainInfo.raw.chainSymbolImageUrl
+                          : chainInfo.raw.chainName
+                          ? chainInfo.raw.chainName[0].toUpperCase()
+                          : ""
                       }
-                      chainStore.selectChain(chainInfo.raw.chainId);
-                      chainStore.saveLastViewChainId();
-                      chatStore.userDetailsStore.resetUser();
-                      proposalStore.resetProposals();
-                      chatStore.messagesStore.resetChatList();
-                      chatStore.messagesStore.setIsChatSubscriptionActive(
-                        false
-                      );
-                      messageAndGroupListenerUnsubscribe();
-
-                      if (Object.values(properties).length > 0) {
-                        analyticsStore.logEvent(
-                          "chain_change_click",
-                          properties
+                      heading={chainInfo.raw.chainName}
+                      isActive={
+                        chainInfo.raw.chainId === chainStore.current.chainId
+                      }
+                      rightContent={
+                        clickedChain === chainInfo.raw.chainId
+                          ? require("@assets/svg/wireframe/check.svg")
+                          : ""
+                      }
+                      onClick={() => {
+                        setClickedChain(chainInfo.raw.chainId);
+                        let properties = {};
+                        if (
+                          chainInfo.raw.chainId !== chainStore.current.chainId
+                        ) {
+                          properties = {
+                            chainId: chainStore.current.chainId,
+                            chainName: chainStore.current.chainName,
+                            toChainId: chainInfo.raw.chainId,
+                            toChainName: chainInfo.raw.chainName,
+                          };
+                        }
+                        chainStore.selectChain(chainInfo.raw.chainId);
+                        chainStore.saveLastViewChainId();
+                        chatStore.userDetailsStore.resetUser();
+                        proposalStore.resetProposals();
+                        chatStore.messagesStore.resetChatList();
+                        chatStore.messagesStore.setIsChatSubscriptionActive(
+                          false
                         );
+                        messageAndGroupListenerUnsubscribe();
+
+                        if (Object.values(properties).length > 0) {
+                          analyticsStore.logEvent(
+                            "chain_change_click",
+                            properties
+                          );
+                        }
+                        if (setIsSelectNetOpen) {
+                          setIsSelectNetOpen(false);
+                        }
+                      }}
+                      subheading={
+                        showAddress
+                          ? formatAddress(
+                              accountStore.getAccount(chainInfo.raw.chainId)
+                                .bech32Address
+                            )
+                          : null
                       }
-                      if (setIsSelectNetOpen) {
-                        setIsSelectNetOpen(false);
-                      }
-                    }}
-                    subheading={
-                      showAddress
-                        ? formatAddress(
-                            accountStore.getAccount(chainInfo.raw.chainId)
-                              .bech32Address
-                          )
-                        : null
-                    }
-                  />
-                )}
-              />
+                    />
+                  )}
+                />
+              </>
             ) : (
               <div className={style["unsupported-message"]}>
                 <div className={style["message-text"]}>
