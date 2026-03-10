@@ -28,6 +28,9 @@ export interface CardanoTxHistoryItem {
   amount: string; // lovelace (absolute, no sign)
   fee?: string; // lovelace
   assets?: CardanoTxHistoryAsset[]; // native asset transfers in this tx
+  timestamp?: number; // Unix ms, derived from slot using per-network genesis constants
+  fromAddresses?: string[]; // non-own input addresses (sender side)
+  toAddresses?: string[]; // non-own output addresses (receiver side)
 }
 
 export interface CardanoTxHistoryResponse {

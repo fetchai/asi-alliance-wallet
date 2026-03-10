@@ -724,7 +724,8 @@ export class CardanoService {
         const items = await this.transformHydratedTxsToItems(
           loaded.transactions,
           wallet,
-          chainHistoryProvider
+          chainHistoryProvider,
+          chainKey
         );
         controller.hasRealEmission = true;
         const next = { items, mightHaveMore: loaded.mightHaveMore };
@@ -767,10 +768,38 @@ export class CardanoService {
     };
   }
 
+  // Cardano genesis constants used to convert absolute slot → wall-clock Unix ms.
+  // Byron: 20s/slot. Shelley and later: 1s/slot.
+  // Testnet genesis times sourced from https://book.world.dev.cardano.org/environments.html
+  private static slotToTimestampMs(slot: number, chainKey: string): number | undefined {
+    switch (chainKey) {
+      case "cardano-mainnet": {
+        // Byron genesis: 2017-09-23T21:44:51Z = 1506203091s
+        // Shelley transition: slot 4492800 → unix 1596059091s (1506203091 + 4492800 * 20)
+        const SHELLEY_SLOT = 4_492_800;
+        const SHELLEY_UNIX_S = 1_596_059_091;
+        const BYRON_GENESIS_S = 1_506_203_091;
+        if (slot >= SHELLEY_SLOT) {
+          return (SHELLEY_UNIX_S + (slot - SHELLEY_SLOT)) * 1000;
+        }
+        return (BYRON_GENESIS_S + slot * 20) * 1000;
+      }
+      case "cardano-preview":
+        // Genesis: 2022-09-14T00:00:00Z = 1663113600s, 1s/slot
+        return (1_663_113_600 + slot) * 1000;
+      case "cardano-preprod":
+        // Genesis: 2022-04-01T00:00:00Z = 1648771200s, 1s/slot
+        return (1_648_771_200 + slot) * 1000;
+      default:
+        return undefined;
+    }
+  }
+
   private async transformHydratedTxsToItems(
     txs: any[],
     wallet: WalletForPendingHistory,
-    chainHistoryProvider: any
+    chainHistoryProvider: any,
+    chainKey: string
   ): Promise<CardanoTxHistoryItem[]> {
     const walletAddresses = await getWalletAddressSet(wallet);
 
@@ -807,6 +836,7 @@ export class CardanoService {
       const outputs = getOutputs(tx);
       let ownedOutputsCoins = BigInt(0);
       const ownedOutputAssets = new Map<string, bigint>();
+      const nonOwnOutputAddrs: string[] = [];
 
       for (const out of outputs) {
         const addr = String(out?.address ?? "");
@@ -815,11 +845,14 @@ export class CardanoService {
           for (const [assetId, qty] of getAssetsFromValue(out?.value)) {
             ownedOutputAssets.set(assetId, (ownedOutputAssets.get(assetId) ?? BigInt(0)) + qty);
           }
+        } else if (addr) {
+          nonOwnOutputAddrs.push(addr);
         }
       }
 
       let ownedInputsCoins = BigInt(0);
       const ownedInputAssets = new Map<string, bigint>();
+      const nonOwnInputAddrs: string[] = [];
       try {
         const inputs = getInputs(tx);
         const missingInputs: any[] = [];
@@ -835,6 +868,8 @@ export class CardanoService {
               for (const [assetId, qty] of getAssetsFromValue(input.value)) {
                 ownedInputAssets.set(assetId, (ownedInputAssets.get(assetId) ?? BigInt(0)) + qty);
               }
+            } else {
+              nonOwnInputAddrs.push(addr);
             }
           } else {
             missingInputs.push(input);
@@ -850,6 +885,8 @@ export class CardanoService {
               for (const [assetId, qty] of getAssetsFromValue(input?.value)) {
                 ownedInputAssets.set(assetId, (ownedInputAssets.get(assetId) ?? BigInt(0)) + qty);
               }
+            } else if (addr) {
+              nonOwnInputAddrs.push(addr);
             }
           }
         }
@@ -877,6 +914,12 @@ export class CardanoService {
         amount = BigInt(0);
       }
 
+      // Deduplicate counterparty addresses and assign based on direction.
+      const uniqueNonOwnOutputAddrs = [...new Set(nonOwnOutputAddrs)];
+      const uniqueNonOwnInputAddrs = [...new Set(nonOwnInputAddrs)];
+      const fromAddresses = direction === "sent" || direction === "self" ? undefined : (uniqueNonOwnInputAddrs.length > 0 ? uniqueNonOwnInputAddrs : undefined);
+      const toAddresses = direction === "received" || direction === "self" ? undefined : (uniqueNonOwnOutputAddrs.length > 0 ? uniqueNonOwnOutputAddrs : undefined);
+
       // Compute per-asset net transfers
       const assetTransfers: CardanoTxHistoryAsset[] = [];
       const allAssetIds = new Set([...ownedOutputAssets.keys(), ...ownedInputAssets.keys()]);
@@ -902,15 +945,20 @@ export class CardanoService {
         });
       }
 
+      const slot = tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : undefined;
+
       items.push({
         id: txId,
         blockNo: tx?.blockHeader?.blockNo != null ? Number(tx.blockHeader.blockNo) : undefined,
-        slot: tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : undefined,
+        slot,
         status: tx?.blockHeader?.blockNo != null || tx?.blockHeader?.slot != null ? "confirmed" : "pending",
         direction,
         amount: amount.toString(),
         fee: fee.toString(),
         assets: assetTransfers.length > 0 ? assetTransfers : undefined,
+        timestamp: slot != null ? CardanoService.slotToTimestampMs(slot, chainKey) : undefined,
+        fromAddresses,
+        toAddresses,
       });
     }
 

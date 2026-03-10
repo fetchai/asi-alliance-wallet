@@ -3284,6 +3284,10 @@ export const CardanoChainInfos: ChainInfo[] = [
     features: ["cardano"],
     chainSymbolImageUrl:
       "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    txExplorer: {
+      name: "Cardanoscan",
+      txUrl: "https://cardanoscan.io/transaction/{txHash}",
+    },
   },
   // Cardano Testnet (Preview)
   {
@@ -3339,6 +3343,10 @@ export const CardanoChainInfos: ChainInfo[] = [
     chainSymbolImageUrl:
       "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
     type: "testnet",
+    txExplorer: {
+      name: "Cardanoscan",
+      txUrl: "https://preview.cardanoscan.io/transaction/{txHash}",
+    },
   },
   // Cardano Testnet (Preprod)
   {
@@ -3394,6 +3402,10 @@ export const CardanoChainInfos: ChainInfo[] = [
     chainSymbolImageUrl:
       "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
     type: "testnet",
+    txExplorer: {
+      name: "Cardanoscan",
+      txUrl: "https://preprod.cardanoscan.io/transaction/{txHash}",
+    },
   },
 ];
 
