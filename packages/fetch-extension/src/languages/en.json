@@ -318,6 +318,7 @@
   "send.button.speedup": "Speed up",
   "send.button.cancel": "Cancel",
   "send.self-send-warning": "You are sending to your own address. Only fees will be deducted.",
+  "cardano.status.offline": "Internet connection lost. Check your network and try again.",
   "ibc.transfer.next": "Next",
   "ibc.transfer.submit": "Review transaction",
 

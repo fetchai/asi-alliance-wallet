@@ -12,6 +12,7 @@ import { TransxStatus } from "@components-v2/transx-status";
 import { TXNTYPE } from "../../config";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
 import { useNotification } from "@components/notification";
+import { useNetwork } from "../../hooks";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
@@ -62,6 +63,8 @@ const isSelfSendRecipient = ({
 type CardanoPasswordConfirmModalProps = {
   isOpen: boolean;
   isSyncing: boolean;
+  /** When set, shown instead of syncing message (e.g. offline). Lace-style: offline vs syncing. */
+  statusMessage?: string;
   feeText: string;
   isWalletLocked: boolean;
   networkName: string;
@@ -180,9 +183,9 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               </div>
             </div>
           ) : null}
-          {props.isSyncing ? (
+          {(props.isSyncing || props.statusMessage) ? (
             <div style={{ marginTop: "10px", color: "#b8860b", fontWeight: 600 }}>
-              Syncing wallet… Please wait
+              {props.statusMessage ?? "Syncing wallet… Please wait"}
             </div>
           ) : null}
         </div>
@@ -195,7 +198,7 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               setPasswordError("Password is required");
               return;
             }
-            if (props.isSyncing) {
+            if (props.isSyncing || props.statusMessage) {
               return;
             }
 
@@ -213,7 +216,7 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               } else if (message.includes("password is required")) {
                 setPasswordError("Password is required");
               } else if (message.includes("wallet is syncing")) {
-                setPasswordError("Wallet is syncing. Please wait.");
+                setPasswordError(props.statusMessage ?? "Wallet is syncing. Please wait.");
               } else if (message.includes("please unlock wallet first")) {
                 setPasswordError("Wallet is locked. Please unlock and try again.");
               } else {
@@ -264,11 +267,11 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               text={
                 isLoading
                   ? "Confirming..."
-                  : props.isSyncing
+                  : props.isSyncing || props.statusMessage
                     ? "Syncing wallet..."
                     : "Confirm"
               }
-              disabled={isLoading || !password || props.isSyncing}
+              disabled={isLoading || !password || props.isSyncing || !!props.statusMessage}
               styleProps={{ flex: 1, height: "44px" }}
             />
           </div>
@@ -315,6 +318,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const { isFromPhase1 } = location.state || {};
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
+    const { isOnline } = useNetwork();
     const [isCardanoSyncing, setIsCardanoSyncing] = useState(false);
     const [cardanoDraft, setCardanoDraft] = useState<{
       draftId: string;
@@ -339,6 +343,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       return value && value.shrink(true).maxDecimals(6).toString();
     };
     const intl = useIntl();
+    const cardanoOfflineMessage = intl.formatMessage({ id: "cardano.status.offline" });
+    const cardanoStatusMessage =
+      !isOnline
+        ? cardanoOfflineMessage
+        : isCardanoSyncing
+          ? "Syncing wallet… Please wait"
+          : undefined;
 
     useEffect(() => {
       if (isFromPhase1 !== undefined) setFromPhase1(isFromPhase1);
@@ -894,7 +905,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             })}
           </div>
         )}
-        {isCardanoSyncing && (
+        {(isCardanoSyncing || !isOnline) && isCardano && (
           <div
             style={{
               textAlign: "center",
@@ -907,14 +918,29 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
               color: "#ffc107",
             }}
           >
-            <i className="fas fa-sync fa-spin" style={{ marginRight: "8px" }} />
-            Syncing Cardano wallet... Please wait
+            {!isOnline ? (
+              <>
+                <i className="fas fa-wifi" style={{ marginRight: "8px" }} />
+                {cardanoOfflineMessage}
+              </>
+            ) : (
+              <>
+                <i className="fas fa-sync fa-spin" style={{ marginRight: "8px" }} />
+                Syncing Cardano wallet... Please wait
+              </>
+            )}
           </div>
         )}
         <ButtonV2
           variant="dark"
           type="button"
-          text={isCardanoSyncing ? "Syncing wallet..." : "Review Transaction"}
+          text={
+            isCardano && (isCardanoSyncing || !isOnline)
+              ? !isOnline
+                ? cardanoOfflineMessage
+                : "Syncing wallet..."
+              : "Review Transaction"
+          }
           styleProps={{
             width: "94%",
             padding: "12px",
@@ -930,7 +956,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             if (
               accountInfo.isReadyToSendMsgs &&
               txStateIsValid &&
-              !isCardanoSyncing
+              !isCardanoSyncing &&
+              isOnline
             ) {
               if (shouldRequireCardanoPassword) {
                 setIsCardanoPasswordConfirmOpen(true);
@@ -984,7 +1011,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           disabled={
             !accountInfo.isReadyToSendMsgs ||
             !txStateIsValid ||
-            isCardanoSyncing
+            isCardanoSyncing ||
+            (isCardano && !isOnline)
           }
           btnBgEnabled={true}
         >
@@ -996,6 +1024,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         <CardanoPasswordConfirmModal
           isOpen={isCardanoPasswordConfirmOpen && shouldRequireCardanoPassword}
           isSyncing={isCardanoSyncing}
+          statusMessage={cardanoStatusMessage}
           feeText={feeText}
           isWalletLocked={keyRingStore.status === KeyRingStatus.LOCKED}
           networkName={chainStore.current.chainName}

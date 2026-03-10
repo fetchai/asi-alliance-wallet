@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useIntl } from "react-intl";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
+import { useNetwork } from "../../../hooks";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import {
@@ -33,7 +35,12 @@ const directionLabel = (d: CardanoTxHistoryItem["direction"]) => {
 export const CardanoTransactionsTab = observer(() => {
   const navigate = useNavigate();
   const { chainStore } = useStore();
+  const { isOnline } = useNetwork();
+  const intl = useIntl();
   const chainId = chainStore.current.chainId;
+  const syncingOrOfflineLabel = !isOnline
+    ? intl.formatMessage({ id: "cardano.status.offline" })
+    : "Wallet is syncing. Please wait...";
   const denom = chainStore.current.stakeCurrency.coinDenom;
 
   const [items, setItems] = useState<CardanoTxHistoryItem[]>([]);
@@ -196,7 +203,7 @@ export const CardanoTransactionsTab = observer(() => {
   const shouldShowSyncing = isSyncingDueToTimeout || (!hasFetchedHistory && isSyncing);
 
   if (isLoading && isSyncingDueToTimeout) {
-    return <NoActivity label="Wallet is syncing. Please wait..." />;
+    return <NoActivity label={syncingOrOfflineLabel} />;
   }
 
   if (isLoading) {
@@ -208,7 +215,7 @@ export const CardanoTransactionsTab = observer(() => {
   }
 
   if (shouldShowSyncing && !items.length) {
-    return <NoActivity label="Wallet is syncing. Please wait..." />;
+    return <NoActivity label={syncingOrOfflineLabel} />;
   }
 
   if (!items.length) {
