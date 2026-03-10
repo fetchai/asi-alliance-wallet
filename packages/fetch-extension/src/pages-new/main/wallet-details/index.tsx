@@ -290,7 +290,7 @@ export const WalletDetailsView = observer(
                     display: "flex",
                     columnGap: "10px",
                     flexDirection: "column",
-                    width: "85%",
+                    width: "78%",
                   }
             }
           >
