@@ -423,6 +423,11 @@ export const RecoverMnemonicPage: FunctionComponent<{
             <div className={styleRecoverMnemonic["tabsContainer"]}>
               <TabsPanel tabs={tabs} setActiveTab={setActiveTab} />
             </div>
+            {activeTab === NewMnemonicStep.WORDS12 && (
+              <div className={style["cardanoHint"]}>
+                <FormattedMessage id="register.cardano.hint.24words" />
+              </div>
+            )}
             <div
               className={classnames(
                 style["title"],

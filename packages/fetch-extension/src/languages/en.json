@@ -203,6 +203,7 @@
   "register.create.title": "Mnemonic Seed",
   "register.create.toggle.word12": "12 words",
   "register.create.toggle.word24": "24 words",
+  "register.cardano.hint.24words": "For Cardano network access, a 24-word seed phrase is required.",
   "register.create.input.password": "New Password (minimum 8 characters)",
   "register.create.input.password.error.required": "Password is required",
   "register.create.input.password.error.too-short": "Too short password",

@@ -299,6 +299,12 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                 }}
               />
 
+              {activeTab !== NewMnemonicStep.WORDS24 && (
+                <div className={style["cardanoHint"]}>
+                  <FormattedMessage id="register.cardano.hint.24words" />
+                </div>
+              )}
+
               <div className={style["newMnemonicContainer"]}>
                 <div className={style["newMnemonic"]}>
                   {newMnemonicConfig.mnemonic}
