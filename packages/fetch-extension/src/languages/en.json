@@ -101,6 +101,9 @@
   "setting.export-to-mobile.qr-code-view.session-expired": "Session expired",
   "setting.export-to-mobile.qr-code-view.session-expired-cta": "Scan again",
   "setting.export-to-mobile.qr-code-view.expired": "Expired",
+  "setting.export-to-mobile.qr-code-view.message": "Scan this QR code on ASI Mobile Wallet to export your accounts.",
+  "setting.export-to-mobile.qr-code-view.warning-title": "Only scan on ASI Mobile Wallet",
+  "setting.export-to-mobile.qr-code-view.warning-description": "Scan only inside ASI Mobile Wallet. Do not use other QR scanner apps or copy the QR content - this can expose your session and lead to loss of funds.",
 
   "setting.chat": "Chat",
 

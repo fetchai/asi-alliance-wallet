@@ -412,7 +412,7 @@ const QRCodeView: FunctionComponent<{
           })()}
         />
         <div className={style["message"]}>
-          Scan this QR code on ASI Mobile Wallet to export your accounts.
+          <FormattedMessage id="setting.export-to-mobile.qr-code-view.message" />
         </div>
         <Alert className={style["alert"]}>
           <img src={require("@assets/svg/wireframe/alert.svg")} alt="" />
@@ -423,10 +423,11 @@ const QRCodeView: FunctionComponent<{
               gap: "6px",
             }}
           >
-            <div className={style["text"]}>Only scan on ASI Mobile Wallet</div>
+            <div className={style["text"]}>
+              <FormattedMessage id="setting.export-to-mobile.qr-code-view.warning-title" />
+            </div>
             <p className={style["lightText"]}>
-              Scanning the QR code outside of ASI Mobile Wallet can lead to loss
-              of funds
+              <FormattedMessage id="setting.export-to-mobile.qr-code-view.warning-description" />
             </p>
           </div>
         </Alert>
