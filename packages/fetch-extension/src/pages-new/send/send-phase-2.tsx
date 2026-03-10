@@ -34,6 +34,31 @@ type CardanoSignOptions = KeplrSignOptions & {
   cardano?: { spendingPassword?: string };
 };
 
+const isSelfSendRecipient = ({
+  recipient,
+  isEvm,
+  bech32Address,
+  ethereumHexAddress,
+}: {
+  recipient: string;
+  isEvm: boolean;
+  bech32Address?: string | null;
+  ethereumHexAddress?: string | null;
+}): boolean => {
+  if (recipient.length === 0) {
+    return false;
+  }
+
+  if (isEvm) {
+    return (
+      ethereumHexAddress != null &&
+      recipient.toLowerCase() === ethereumHexAddress.trim().toLowerCase()
+    );
+  }
+
+  return bech32Address != null && recipient === bech32Address.trim();
+};
+
 type CardanoPasswordConfirmModalProps = {
   isOpen: boolean;
   isSyncing: boolean;
@@ -387,6 +412,18 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           : undefined
         : sendConfigs.gasConfig.error ?? sendConfigs.feeConfig.error);
     const txStateIsValid = sendConfigError == null;
+
+    const recipient = sendConfigs.recipientConfig.recipient?.trim() ?? "";
+    const hasNoRecipientError = sendConfigs.recipientConfig.error == null;
+    const isSelfSend =
+      recipient.length > 0 &&
+      hasNoRecipientError &&
+      isSelfSendRecipient({
+        recipient,
+        isEvm,
+        bech32Address: accountInfo.bech32Address,
+        ethereumHexAddress: accountInfo.ethereumHexAddress,
+      });
 
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
 
@@ -830,6 +867,31 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
               style={{ marginRight: "8px" }}
             />
             {sendConfigError.message}
+          </div>
+        )}
+        {isSelfSend && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "12px",
+              marginTop: "12px",
+              marginBottom: "8px",
+              background: "rgba(255, 193, 7, 0.15)",
+              border: "1px solid rgba(255, 193, 7, 0.4)",
+              borderRadius: "8px",
+              fontSize: "14px",
+              color: "var(--font-secondary, #737676)",
+            }}
+          >
+            <i
+              className="fas fa-info-circle"
+              style={{ marginRight: "8px" }}
+            />
+            {intl.formatMessage({
+              id: "send.self-send-warning",
+              defaultMessage:
+                "You are sending to your own address. Only fees will be deducted.",
+            })}
           </div>
         )}
         {isCardanoSyncing && (

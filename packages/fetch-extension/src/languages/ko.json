@@ -235,6 +235,7 @@
   "send.input.gas": "가스",
   "send.input-button.balance": "잔고",
   "send.button.send": "보내기",
+  "send.self-send-warning": "자신의 주소로 보내고 있습니다. 수수료만 차감됩니다.",
 
   "ibc.transfer.next": "다음",
   "ibc.transfer.submit": "보내기",

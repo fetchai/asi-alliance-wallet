@@ -317,6 +317,7 @@
   "send.button.send": "Send",
   "send.button.speedup": "Speed up",
   "send.button.cancel": "Cancel",
+  "send.self-send-warning": "You are sending to your own address. Only fees will be deducted.",
   "ibc.transfer.next": "Next",
   "ibc.transfer.submit": "Review transaction",
 
