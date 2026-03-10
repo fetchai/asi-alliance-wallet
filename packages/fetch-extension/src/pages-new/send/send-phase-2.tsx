@@ -223,6 +223,17 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
 
           <div style={{ display: "flex", gap: "8px" }}>
             <ButtonV2
+              variant="light"
+              type="button"
+              text="Cancel"
+              styleProps={{ flex: 1, height: "44px" }}
+              disabled={isLoading}
+              onClick={() => {
+                if (isLoading) return;
+                props.onCancel();
+              }}
+            />
+            <ButtonV2
               variant="dark"
               type="submit"
               text={
@@ -234,17 +245,6 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               }
               disabled={isLoading || !password || props.isSyncing}
               styleProps={{ flex: 1, height: "44px" }}
-            />
-            <ButtonV2
-              variant="light"
-              type="button"
-              text="Cancel"
-              styleProps={{ flex: 1, height: "44px" }}
-              disabled={isLoading}
-              onClick={() => {
-                if (isLoading) return;
-                props.onCancel();
-              }}
             />
           </div>
         </form>
