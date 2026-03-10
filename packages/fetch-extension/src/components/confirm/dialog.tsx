@@ -52,7 +52,7 @@ export const ConfirmDialog: FunctionComponent<{
             text={no ? no : <FormattedMessage id="confirm.no" />}
             styleProps={{
               padding: "10px",
-              height: "40px",
+              minHeight: "40px",
               fontSize: "0.9rem",
             }}
             onClick={onClose}
@@ -63,7 +63,7 @@ export const ConfirmDialog: FunctionComponent<{
           text={yes ? yes : <FormattedMessage id="confirm.yes" />}
           styleProps={{
             padding: "10px",
-            height: "40px",
+            minHeight: "40px",
             fontSize: "0.9rem",
           }}
           onClick={useCallback(

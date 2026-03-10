@@ -231,14 +231,12 @@ const QRCodeView: FunctionComponent<{
 
       confirm
         .confirm({
-          paragraph: intl.formatMessage(
-            {
-              id: "setting.export-to-mobile.qr-code-view.session-expired",
-            },
-            {
-              forceYes: true,
-            }
-          ),
+          paragraph: intl.formatMessage({
+            id: "setting.export-to-mobile.qr-code-view.session-expired",
+          }),
+          yes: intl.formatMessage({
+            id: "setting.export-to-mobile.qr-code-view.session-expired-cta",
+          }),
           hideNoButton: true,
         })
         .then(() => {
