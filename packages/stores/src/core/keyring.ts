@@ -241,6 +241,7 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
 
     this.dispatchWalletStatusChangeEvent();
+    this.dispatchKeyStoreChangeEvent();
 
     if (result.address && result.balance) {
       return {
@@ -268,6 +269,7 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
 
     this.dispatchWalletStatusChangeEvent();
+    this.dispatchKeyStoreChangeEvent();
   }
 
   @flow
@@ -288,6 +290,7 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
 
     this.dispatchWalletStatusChangeEvent();
+    this.dispatchKeyStoreChangeEvent();
   }
 
   @flow
@@ -315,6 +318,7 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = result.multiKeyStoreInfo;
 
     this.dispatchWalletStatusChangeEvent();
+    this.dispatchKeyStoreChangeEvent();
   }
 
   @flow
@@ -328,6 +332,8 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = (yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     )).multiKeyStoreInfo;
+    this.dispatchKeyStoreChangeEvent();
+    this.selectablesMap.forEach((selectables) => selectables.refresh());
   }
 
   @flow
@@ -340,6 +346,8 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = (yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     )).multiKeyStoreInfo;
+    this.dispatchKeyStoreChangeEvent();
+    this.selectablesMap.forEach((selectables) => selectables.refresh());
   }
 
   @flow
@@ -352,6 +360,8 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = (yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     )).multiKeyStoreInfo;
+    this.dispatchKeyStoreChangeEvent();
+    this.selectablesMap.forEach((selectables) => selectables.refresh());
   }
 
   @flow
@@ -365,6 +375,8 @@ export class KeyRingStore {
     this._multiKeyStoreInfo = (yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     )).multiKeyStoreInfo;
+    this.dispatchKeyStoreChangeEvent();
+    this.selectablesMap.forEach((selectables) => selectables.refresh());
   }
 
   @flow

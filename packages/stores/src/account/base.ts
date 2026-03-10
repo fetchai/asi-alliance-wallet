@@ -1,4 +1,11 @@
-import { action, computed, flow, makeObservable, observable } from "mobx";
+import {
+  action,
+  computed,
+  flow,
+  makeObservable,
+  observable,
+  runInAction,
+} from "mobx";
 import {
   AppCurrency,
   Keplr,
@@ -68,6 +75,8 @@ export class AccountSetBase {
   protected _txInProgress: string = "";
 
   protected _pubKey: Uint8Array;
+
+  protected initSequence = 0;
 
   protected hasInited = false;
 
@@ -181,10 +190,21 @@ export class AccountSetBase {
     await keplr.experimentalSuggestChain(chainInfo.raw);
   }
 
-  private readonly handleInit = () => this.init();
+  private readonly handleInit = () => {
+    runInAction(() => {
+      if (this._walletStatus === WalletStatus.NotExist) {
+        this._walletStatus = WalletStatus.NotInit;
+      }
+      this._rejectionReason = undefined;
+    });
+    this.init();
+  };
 
   @flow
   public *init(): Generator<any, void, any> {
+    const currentInitSequence = ++this.initSequence;
+    const isCurrentInit = () => currentInitSequence === this.initSequence;
+
     // If wallet status is not exist, there is no need to try to init because it always fails.
     if (this.walletStatus === WalletStatus.NotExist) {
       return;
@@ -204,6 +224,9 @@ export class AccountSetBase {
     this._walletStatus = WalletStatus.Loading;
 
     const keplr = yield* toGenerator(this.getKeplr());
+    if (!isCurrentInit()) {
+      return;
+    }
     if (!keplr) {
       this._walletStatus = WalletStatus.NotExist;
       return;
@@ -213,7 +236,13 @@ export class AccountSetBase {
 
     try {
       yield this.enable(keplr, this.chainId);
+      if (!isCurrentInit()) {
+        return;
+      }
     } catch (e) {
+      if (!isCurrentInit()) {
+        return;
+      }
       console.log(e);
       this._walletStatus = WalletStatus.Rejected;
       this._rejectionReason = e;
@@ -222,6 +251,9 @@ export class AccountSetBase {
 
     try {
       const key = yield* toGenerator(keplr.getKey(this.chainId));
+      if (!isCurrentInit()) {
+        return;
+      }
       this._bech32Address = key.bech32Address;
       this._isNanoLedger = key.isNanoLedger;
       this._isKeystone = key.isKeystone;
@@ -235,12 +267,18 @@ export class AccountSetBase {
               `extension_txn_nonce-${this.bech32Address}-${this.chainId}`
             )
           )) || 0;
+        if (!isCurrentInit()) {
+          return;
+        }
         this._customSequence = new Int(savedTxnNonce);
       }
 
       // Set the wallet status as loaded after getting all necessary infos.
       this._walletStatus = WalletStatus.Loaded;
     } catch (e) {
+      if (!isCurrentInit()) {
+        return;
+      }
       console.log(e);
       
       if (e.message && (

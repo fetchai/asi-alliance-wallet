@@ -285,6 +285,8 @@ export class KeyRingService {
       keyStoreChanged = result.keyStoreChanged;
 
       if (keyStoreChanged) {
+        this.cardanoService.reset();
+        this.cardanoRestoreByChainId.clear();
         await this.correctChainForCardanoSupport();
       }
 
@@ -531,12 +533,12 @@ export class KeyRingService {
       const ks = this.keyRing.getCurrentKeyStore();
 
       if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
-        this.cardanoServiceInitPromise = this.initializeCardanoService(ks, chainId);
+        const promise = this.initializeCardanoService(ks, chainId);
+        this.cardanoServiceInitPromise = promise;
         try {
-          await this.cardanoServiceInitPromise;
+          await promise;
         } catch (error) {
           console.error("[KeyRingService] Failed to initialize CardanoService:", error);
-          this.cardanoServiceInitPromise = null;
           throw error;
         } finally {
           this.cardanoServiceInitPromise = null;
