@@ -190,7 +190,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
       if (inputElement) {
         resize(inputElement);
       }
-    }, [inputInFiatCurrency, isToggleClicked]);
+    }, [inputInFiatCurrency, isToggleClicked, amountConfig.amount]);
 
     const currency =
       priceStore.supportedVsCurrencies[fiatCurrency]?.currency?.toUpperCase();
