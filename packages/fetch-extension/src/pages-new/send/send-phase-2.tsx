@@ -812,6 +812,26 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             />
           )}
         </div>
+        {!txStateIsValid && sendConfigError && !isBuildingCardanoDraft && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "12px",
+              marginBottom: "8px",
+              background: "rgba(220, 53, 69, 0.1)",
+              border: "1px solid rgba(220, 53, 69, 0.3)",
+              borderRadius: "8px",
+              fontSize: "14px",
+              color: "#dc3545",
+            }}
+          >
+            <i
+              className="fas fa-exclamation-circle"
+              style={{ marginRight: "8px" }}
+            />
+            {sendConfigError.message}
+          </div>
+        )}
         {isCardanoSyncing && (
           <div
             style={{

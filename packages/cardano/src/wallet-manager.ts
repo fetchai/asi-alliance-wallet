@@ -464,6 +464,19 @@ export class CardanoWalletManager {
 
     const util = createWalletUtil(this.wallet);
     const minimumCoinQuantities = await util.validateOutputs(partialTxProps.outputs);
+
+    // For ADA-only transfers, if the requested amount is below the protocol minimum
+    // output value, surface it immediately with the calculated minimum (no hardcoded constant).
+    if (!sdkAssets) {
+      const outputEntry = partialTxProps.outputs ? [...partialTxProps.outputs][0] : undefined;
+      const validation = outputEntry ? minimumCoinQuantities.get(outputEntry) : undefined;
+      if (validation && validation.coinMissing > BigInt(0)) {
+        throw new Error(
+          `Amount too small: minimum output value is ${validation.minimumCoin} lovelace (protocol minimum for this output). Please send at least ${validation.minimumCoin} lovelace.`
+        );
+      }
+    }
+
     const outputsWithMissingCoins = setMissingCoins(minimumCoinQuantities, partialTxProps.outputs);
 
     if (!outputsWithMissingCoins.outputs) {
