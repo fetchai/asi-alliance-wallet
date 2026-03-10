@@ -12,6 +12,7 @@ import {
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
   LoadMoreCardanoTxHistoryMsg,
+  GetMaxSpendableAdaMsg,
 } from "./messages";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
@@ -77,6 +78,8 @@ export const getHandler: (
         return handleGetCardanoTxHistoryMsg(service, keyRingService)(env, msg as GetCardanoTxHistoryMsg);
       case LoadMoreCardanoTxHistoryMsg.type():
         return handleLoadMoreCardanoTxHistoryMsg(service, keyRingService)(env, msg as LoadMoreCardanoTxHistoryMsg);
+      case GetMaxSpendableAdaMsg.type():
+        return handleGetMaxSpendableAdaMsg(service, keyRingService)(env, msg as GetMaxSpendableAdaMsg);
       default:
         console.error("[Cardano Handler] Unknown message type:", msgType);
         throw new Error(`Unknown msg type: ${msgType}`);
@@ -498,6 +501,30 @@ const handleLoadMoreCardanoTxHistoryMsg: (
       pageSize: msg.pageSize,
       chainId: msg.chainId,
       walletId,
+    });
+  };
+};
+
+/** Internal-only: compute max spendable ADA via real coin-selection fee estimation. */
+const handleGetMaxSpendableAdaMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<GetMaxSpendableAdaMsg> = (service, keyRingService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    await keyRingService.ensureCardanoServiceReady(msg.chainId);
+
+    if (!service.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    return service.getMaxSpendableAda({
+      sender: msg.sender,
+      recipient: msg.recipient,
+      memo: msg.memo,
     });
   };
 };

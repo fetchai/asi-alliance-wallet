@@ -465,6 +465,46 @@ export class GetCardanoTxHistoryMsg extends Message<CardanoTxHistoryResponse> {
 }
 
 /**
+ * Internal-only: compute the maximum spendable ADA amount (lovelace string) using real
+ * coin-selection fee estimation. Mirrors lace's useMaxAda / calculateMaxAda algorithm.
+ */
+export class GetMaxSpendableAdaMsg extends Message<string> {
+  public static type() {
+    return "cardano-get-max-spendable-ada";
+  }
+
+  constructor(
+    public readonly chainId: string,
+    public readonly sender: string,
+    public readonly recipient?: string,
+    public readonly memo?: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.chainId) {
+      throw new Error("chainId is empty");
+    }
+    if (!this.sender) {
+      throw new Error("sender is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetMaxSpendableAdaMsg.type();
+  }
+}
+
+/**
  * Message for loading more Cardano tx history items (ADA-only MVP).
  * Internal-only.
  */

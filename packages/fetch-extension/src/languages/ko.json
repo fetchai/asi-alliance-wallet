@@ -226,6 +226,7 @@
 
   "send.input.recipient": "받는 주소",
   "send.input.recipient.error.invalid": "잘못된 주소입니다",
+  "error.failed-to-compute-max-ada": "최대 ADA 금액 계산에 실패했습니다",
   "send.input.amount": "수량",
   "send.input.amount.error.insufficient": "자산이 부족합니다",
   "send.input.memo": "메모 (선택사항)",

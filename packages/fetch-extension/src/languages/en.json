@@ -306,6 +306,7 @@
 
   "send.input.recipient": "Recipient",
   "send.input.recipient.error.invalid": "Invalid address",
+  "error.failed-to-compute-max-ada": "Failed to compute max ADA amount",
   "send.input.amount": "Amount",
   "send.input.amount.error.insufficient": "Insufficient asset",
   "send.input.memo": "Memo (Optional)",

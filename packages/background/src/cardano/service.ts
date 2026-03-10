@@ -249,6 +249,94 @@ export class CardanoService {
     }
   }
 
+  /**
+   * Returns true if the error indicates coin selection exhausted (insufficient UTxO).
+   * Other errors (e.g. network) are rethrown so the UI can fallback.
+   */
+  private static isInsufficientFundsError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : String(err ?? "");
+    return (
+      msg.toLowerCase().includes("insufficient") ||
+      msg.includes("UTxO Balance Insufficient")
+    );
+  }
+
+  /**
+   * Compute the maximum ADA amount (lovelace string) the wallet can send.
+   * Mirrors lace's useMaxAda / calculateMaxAda algorithm
+   * Constants match lace's UTXO_DEPLETED_ADA_BUFFER (1 ADA) and ADA_BUFFER_LIMIT (10 ADA).
+   */
+  async getMaxSpendableAda(params: {
+    /**
+     * The wallet's own address, used only as the probe destination when no
+     * recipient is provided (self-send estimation). Balance is always taken
+     * from the active wallet context; this parameter does not identify which
+     * wallet to query.
+     */
+    sender: string;
+    recipient?: string;
+    memo?: string;
+  }): Promise<string> {
+    if (!this.isReady()) {
+      throw new Error("Cardano service not ready. Please unlock wallet first.");
+    }
+
+    const balanceRaw = await this.getBalance();
+    const balance: bigint = balanceRaw?.utxo?.available?.coins ?? BigInt(0);
+    if (balance <= BigInt(0)) return "0";
+
+    const to = params.recipient || params.sender;
+
+    // lace: UTXO_DEPLETED_ADA_BUFFER = 1_000_000; ADA_BUFFER_LIMIT = UTXO_DEPLETED_ADA_BUFFER * 10
+    const STEP = BigInt(1_000_000);
+    const MAX_BUFFER = BigInt(10_000_000);
+
+    // Phase 1 — probe
+    const probeAmount = balance - STEP;
+    if (probeAmount <= BigInt(0)) return "0";
+
+    let probeFee: bigint;
+    let probeMinAdaForTokens: bigint;
+    try {
+      const result = await this.estimateSendAda({
+        to,
+        amount: probeAmount.toString(),
+        memo: params.memo,
+      });
+      probeFee = BigInt(result.fee);
+      // minAdaForTokens: ADA locked in token change outputs — mirrors lace's minimumCoins subtraction
+      probeMinAdaForTokens = result.minAdaForTokens
+        ? BigInt(result.minAdaForTokens)
+        : BigInt(0);
+    } catch (err) {
+      if (!CardanoService.isInsufficientFundsError(err)) throw err;
+      return "0";
+    }
+
+    // Phase 2 — initial estimate (mirrors lace's spendableBalance = balance − fee − minimumCoins)
+    const maxAdaAmount = balance - probeFee - probeMinAdaForTokens;
+    if (maxAdaAmount <= BigInt(0)) return "0";
+
+    // Phase 3 — refinement loop (mirrors calculateMaxAda)
+    for (let buf = BigInt(0); buf <= MAX_BUFFER; buf += STEP) {
+      const amountToTry = maxAdaAmount - buf;
+      if (amountToTry <= BigInt(0)) return "0";
+      try {
+        await this.estimateSendAda({
+          to,
+          amount: amountToTry.toString(),
+          memo: params.memo,
+        });
+        return amountToTry.toString();
+      } catch (err) {
+        if (!CardanoService.isInsufficientFundsError(err)) throw err;
+        // coin selection exhausted at this amount; retry with 1 ADA less
+      }
+    }
+
+    return "0";
+  }
+
   private readonly sendAdaTxDrafts: Map<
     string,
     {

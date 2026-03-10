@@ -12,6 +12,7 @@ import {
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
   LoadMoreCardanoTxHistoryMsg,
+  GetMaxSpendableAdaMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
@@ -37,6 +38,7 @@ export function init(
   router.registerMessage(GetCardanoSyncStatusMsg);
   router.registerMessage(GetCardanoTxHistoryMsg);
   router.registerMessage(LoadMoreCardanoTxHistoryMsg);
+  router.registerMessage(GetMaxSpendableAdaMsg);
 
   router.addHandler(ROUTE, getHandler(service, keyRingService, permissionService));
 }
