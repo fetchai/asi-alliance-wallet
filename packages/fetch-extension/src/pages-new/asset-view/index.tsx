@@ -241,7 +241,7 @@ export const AssetView = observer(() => {
         <div>
           <div className={style["balance-field"]}>
             <div className={style["balance"]}>
-              {Number(totalNumber).toLocaleString("en-US")}{" "}
+              {totalNumber}{" "}
               <div className={style["denom"]}>{totalDenom}</div>
             </div>
             <div className={style["inUsd"]}>
