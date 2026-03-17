@@ -1101,14 +1101,28 @@ export const downloadJson = async (data: unknown, filename: string) => {
   const url = URL.createObjectURL(blob);
 
   try {
-    await browser.downloads.download({
+    const downloadId = await browser.downloads.download({
       url,
       filename,
       conflictAction: "uniquify",
       saveAs: true,
     });
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    const listener = (delta: any) => {
+      if (delta.id === downloadId && delta.state) {
+        if (
+          delta.state.current === "complete" ||
+          delta.state.current === "interrupted"
+        ) {
+          browser.downloads.onChanged.removeListener(listener);
+          URL.revokeObjectURL(url);
+        }
+      }
+    };
+
+    browser.downloads.onChanged.addListener(listener);
+  } catch {
+    URL.revokeObjectURL(url);
   }
 };
 
