@@ -1094,17 +1094,36 @@ export const snakeToCamelDeep = <T>(input: T): T => {
   return input;
 };
 
-export const downloadJson = (data: unknown, filename: string) => {
+export const downloadJson = async (data: unknown, filename: string) => {
   const json = JSON.stringify(data, null, 2);
+
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
+  try {
+    const downloadId = await browser.downloads.download({
+      url,
+      filename,
+      conflictAction: "uniquify",
+      saveAs: true,
+    });
 
-  URL.revokeObjectURL(url);
+    const listener = (delta: any) => {
+      if (delta.id === downloadId && delta.state) {
+        if (
+          delta.state.current === "complete" ||
+          delta.state.current === "interrupted"
+        ) {
+          browser.downloads.onChanged.removeListener(listener);
+          URL.revokeObjectURL(url);
+        }
+      }
+    };
+
+    browser.downloads.onChanged.addListener(listener);
+  } catch {
+    URL.revokeObjectURL(url);
+  }
 };
 
 export function detectInputType(doc: any): InputDocType {

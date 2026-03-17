@@ -9,6 +9,7 @@
     "48": "assets/icon-48.png",
     "128": "assets/icon-128.png"
   },
+
   "browser_action": {
     "default_popup": "popup-loading.html",
     "default_title": "ASI Alliance Wallet"
@@ -17,7 +18,14 @@
     "page": "background.html",
     "persistent": true
   },
-  "permissions": ["storage", "notifications", "identity", "idle", "alarms"],
+  "permissions": [
+    "storage",
+    "notifications",
+    "identity",
+    "idle",
+    "alarms",
+    "downloads"
+  ],
   "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; object-src 'self'",
   "content_scripts": [
     {
