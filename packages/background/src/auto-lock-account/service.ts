@@ -1,6 +1,7 @@
 import { KVStore } from "@keplr-wallet/common";
-import { KeyRingService, KeyRingStatus } from "../keyring";
+import { KeyRingService } from "../keyring";
 import { action, autorun, makeObservable, observable, runInAction } from "mobx";
+
 export class AutoLockAccountService {
   // Unit: ms
   // Zero means disabled
@@ -92,12 +93,12 @@ export class AutoLockAccountService {
 
   private lock() {
     if (this.keyRingIsUnlocked) {
-      this.keyRingService.lock();
+      this.keyRingService.lockKeyRing();
     }
   }
 
   get keyRingIsUnlocked(): boolean {
-    return this.keyRingService.keyRingStatus === KeyRingStatus.UNLOCKED;
+    return this.keyRingService.keyRingStatus === "unlocked";
   }
 
   public getAutoLockDuration(): number {

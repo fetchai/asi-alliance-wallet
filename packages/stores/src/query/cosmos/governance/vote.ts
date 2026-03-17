@@ -1,12 +1,9 @@
-import { KVStore } from "@keplr-wallet/common";
-import {
-  ChainGetter,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
+import { ObservableQueryMap, ObservableQueryTendermint } from "../../../common";
 import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
 import { QueryVoteResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
 import { VoteOption } from "cosmjs-types/cosmos/gov/v1beta1/gov";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<QueryVoteResponse> {
   protected proposalId: string;
@@ -15,7 +12,7 @@ export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<
   protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     proposalsId: string,
@@ -71,7 +68,7 @@ export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<
 
 export class ObservableQueryProposalVote extends ObservableQueryMap<QueryVoteResponse> {
   constructor(
-    protected readonly kvStore: KVStore,
+    protected readonly kvStore: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {

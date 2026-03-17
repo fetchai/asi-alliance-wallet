@@ -1,15 +1,15 @@
-import { KVStore } from "@keplr-wallet/common";
 import {
-  ChainGetter,
   ObservableQueryTendermint,
   ObservableQueryMap,
   camelToSnake,
   decodeAccount,
 } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { AuthAccount } from "./types";
 import { computed, makeObservable } from "mobx";
 import { BaseAccount } from "@keplr-wallet/cosmos";
 import { AuthExtension, setupAuthExtension } from "@cosmjs/stargate";
+import { QuerySharedContext } from "../../../common";
 
 interface PubKey {
   "@type": string;
@@ -50,14 +50,14 @@ export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthA
   protected readonly chainGetter: ChainGetter;
   protected readonly chainId: string;
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly bech32Address: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as AuthExtension;
@@ -108,15 +108,6 @@ export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthA
   }
 
   @computed
-  get isVestingAccount(): boolean {
-    if (!this.response) {
-      return false;
-    }
-
-    return !!this.response.data?.account.base_vesting_account;
-  }
-
-  @computed
   get vestingAccount(): VestingAccount {
     if (!this.response) {
       return {};
@@ -128,13 +119,13 @@ export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthA
 
 export class ObservableQueryAccount extends ObservableQueryMap<AuthAccount> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((bech32Address) => {
       return new ObservableQueryAccountInner(
-        kvStore,
+        sharedContext,
         chainId,
         chainGetter,
         bech32Address

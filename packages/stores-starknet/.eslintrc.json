@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "src/*",
+          "@keplr-wallet/stores-starknet",
+          "@keplr-wallet/stores-starknet/*"
+        ]
+      }
+    ]
+  }
+}

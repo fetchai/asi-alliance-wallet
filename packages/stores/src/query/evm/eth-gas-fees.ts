@@ -1,20 +1,17 @@
-import { KVStore } from "@keplr-wallet/common";
-import Axios from "axios";
 import { computed, makeObservable } from "mobx";
-import { ObservableQuery, QueryError } from "../../common";
+import { ObservableQuery, QueryError, QuerySharedContext } from "../../common";
 import { EthGasFeeInfo, EtherscanGasFeeResponse } from "./types";
 
 export class ObservableQueryGasFees extends ObservableQuery<EtherscanGasFeeResponse> {
-  constructor(kvStore: KVStore) {
-    const instance = Axios.create({
-      ...{
-        baseURL: "https://api.etherscan.io",
-      },
-    });
-
-    super(kvStore, instance, "/api?module=gastracker&action=gasoracle", {
-      fetchingInterval: 30000, // 30 seconds
-    });
+  constructor(kvStore: QuerySharedContext) {
+    super(
+      kvStore,
+      "https://api.etherscan.io",
+      "/api?module=gastracker&action=gasoracle",
+      {
+        fetchingInterval: 30000, // 30 seconds
+      }
+    );
 
     makeObservable(this);
   }

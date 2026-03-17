@@ -33,7 +33,7 @@ import {
   RestoreWalletMsg,
   GetKeyMsgFetchSigning,
   DisableAccessMsg,
-} from "../types";
+} from "../types/msgs";
 import deepmerge from "deepmerge";
 
 import { BACKGROUND_PORT, MessageRequester } from "@keplr-wallet/router";

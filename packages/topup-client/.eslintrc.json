@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "src/*",
+          "@keplr-wallet/topup-client",
+          "@keplr-wallet/topup-client/*"
+        ]
+      }
+    ]
+  }
+}

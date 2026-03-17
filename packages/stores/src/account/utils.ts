@@ -1,7 +1,7 @@
 import { EthermintChainIdHelper } from "@keplr-wallet/cosmos";
 import { Fee } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import { StdFee } from "@keplr-wallet/types";
-import { ActivityStore } from "src/activity";
+import { ActivityStore } from "../activity";
 import { Node, ProposalNode } from "./cosmos";
 import { ProtoMsgsOrWithAminoMsgs } from "./types";
 

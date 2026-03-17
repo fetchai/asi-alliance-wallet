@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "src/*",
+          "@keplr-wallet/chain-validator",
+          "@keplr-wallet/chain-validator/*"
+        ]
+      }
+    ]
+  }
+}

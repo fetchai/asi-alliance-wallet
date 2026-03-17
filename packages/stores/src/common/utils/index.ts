@@ -44,8 +44,32 @@ import {
 } from "cosmjs-types/cosmos/vesting/v1beta1/vesting";
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import { decodePubkey } from "@cosmjs/proto-signing";
+import { IChainInfoImpl } from "../../chain";
 
 export class StoreUtils {
+  public static toCoinPretties(
+    chainInfo: IChainInfoImpl,
+    balances: CoinPrimitive[]
+  ): CoinPretty[] {
+    const result: CoinPretty[] = [];
+    for (const bal of balances) {
+      const currency = chainInfo.findCurrency(bal.denom);
+      if (currency) {
+        const amount = new Dec(bal.amount);
+        if (amount.truncate().gt(new Int(0))) {
+          result.push(new CoinPretty(currency, amount));
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * @deprecated
+   * @param currenciesMap
+   * @param bals
+   */
   public static getBalancesFromCurrencies(
     currenciesMap: {
       [denom: string]: Currency;

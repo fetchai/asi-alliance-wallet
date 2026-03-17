@@ -1,16 +1,16 @@
-import { KVStore } from "@keplr-wallet/common";
 import {
   camelToSnake,
-  ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Int, Dec } from "@keplr-wallet/unit";
 import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 import { QueryDelegatorDelegationsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
 import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
 import { Delegation, Delegations } from "./types";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Delegations> {
   protected bech32Address: string;
@@ -19,14 +19,14 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
   protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as StakingExtension;
@@ -54,19 +54,31 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
   }
 
   @computed
-  get total(): CoinPretty {
+  get total(): CoinPretty | undefined {
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
+
+    if (!stakeCurrency) {
+      return;
+    }
+
     if (
       !this.response ||
       !this.response.data ||
       !this.response.data.delegation_responses
     ) {
+      return;
+    }
+
+    if (!this.response) {
       return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
     }
 
     let totalBalance = new Int(0);
     for (const delegation of this.response.data.delegation_responses) {
-      totalBalance = totalBalance.add(new Int(delegation.balance.amount));
+      const amount = new Int(delegation.balance.amount);
+      if (amount.gt(new Int(0))) {
+        totalBalance = totalBalance.add(amount);
+      }
     }
 
     return new CoinPretty(stakeCurrency, totalBalance);
@@ -87,16 +99,23 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
 
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
+    if (!stakeCurrency) {
+      return [];
+    }
+
     const result = [];
 
     for (const delegation of this.response.data.delegation_responses) {
-      result.push({
-        validatorAddress: delegation.delegation.validator_address,
-        balance: new CoinPretty(
-          stakeCurrency,
-          new Int(delegation.balance.amount)
-        ),
-      });
+      const balance = new CoinPretty(
+        stakeCurrency,
+        new Int(delegation.balance.amount)
+      );
+      if (balance.toDec().gt(new Dec(0))) {
+        result.push({
+          validatorAddress: delegation.delegation.validator_address,
+          balance,
+        });
+      }
     }
 
     return result;
@@ -112,16 +131,22 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
       return [];
     }
 
-    return this.response.data.delegation_responses;
+    return this.response.data.delegation_responses.filter((del) => {
+      return new Int(del.balance.amount).gt(new Int(0));
+    });
   }
 
   readonly getDelegationTo = computedFn(
-    (validatorAddress: string): CoinPretty => {
+    (validatorAddress: string): CoinPretty | undefined => {
       const delegations = this.delegations;
 
       const stakeCurrency = this.chainGetter.getChain(
         this.chainId
       ).stakeCurrency;
+
+      if (!stakeCurrency) {
+        return;
+      }
 
       if (!this.response || !this.response.data) {
         return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
@@ -143,15 +168,15 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
 
 export class ObservableQueryDelegations extends ObservableQueryMap<Delegations> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((bech32Address: string) => {
       return new ObservableQueryDelegationsInner(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         bech32Address
       );
     });

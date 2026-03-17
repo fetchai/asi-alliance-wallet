@@ -24,19 +24,32 @@ export class DenomHelper {
         .toUpperCase()
     );
   }
+  static normalizeDenom(denom: string): string {
+    const denomHelper = new DenomHelper(denom);
+
+    switch (denomHelper.type) {
+      case "erc20":
+        return `erc20:${denomHelper.contractAddress.toLowerCase()}`;
+      default:
+        return denomHelper.denom;
+    }
+  }
 
   protected readonly _type: string;
   protected readonly _contractAddress: string;
 
   constructor(protected readonly _denom: string) {
-    // Remember that the coin's actual denom should start with "type:contractAddress:denom" if it is for the token based on contract.
-    const split = this.denom.split(/(\w+):(\w+):(.+)/).filter(Boolean);
-    if (split.length !== 1 && split.length !== 3) {
-      throw new Error(`Invalid denom: ${this.denom}`);
+    // Remember that the coin's actual denom should start with "type:contractAddress" or "type:contractAddress:symbol" if it is for the token based on contract.
+    let split = this.denom.split(/^(\w+):(\w+)$/).filter(Boolean);
+    if (split.length !== 2) {
+      split = this.denom.split(/^(\w+):(\w+):(.+)$/).filter(Boolean);
+      if (split.length !== 1 && split.length !== 3) {
+        throw new Error(`Invalid denom: ${this.denom}`);
+      }
     }
 
-    this._type = split.length === 3 ? split[0] : "";
-    this._contractAddress = split.length === 3 ? split[1] : "";
+    this._type = split.length >= 2 ? split[0] : "";
+    this._contractAddress = split.length >= 2 ? split[1] : "";
   }
 
   get denom(): string {

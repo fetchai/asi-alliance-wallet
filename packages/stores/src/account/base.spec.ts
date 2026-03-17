@@ -1,7 +1,6 @@
 import { AccountSetBase, WalletStatus } from "./base";
 import { ChainStore } from "../chain";
 import { AppCurrency, ChainInfo } from "@keplr-wallet/types";
-import { MockKeplr } from "@keplr-wallet/provider-mock";
 import { KVStore } from "@keplr-wallet/common";
 
 class MockKVStore implements KVStore {
@@ -58,15 +57,6 @@ describe("Test Account set base", () => {
       {
         suggestChain: false,
         autoInit: true,
-        getKeplr: async () => {
-          return new MockKeplr(
-            async () => {
-              return new Uint8Array(0);
-            },
-            chainInfos,
-            "curious kitchen brief change imitate open close knock cause romance trim offer"
-          );
-        },
       },
       accountBaseKVStore
     );
@@ -117,15 +107,6 @@ describe("Test Account set base", () => {
       {
         suggestChain: false,
         autoInit: false,
-        getKeplr: async () => {
-          return new MockKeplr(
-            async () => {
-              return new Uint8Array(0);
-            },
-            chainInfos,
-            "curious kitchen brief change imitate open close knock cause romance trim offer"
-          );
-        },
       },
       accountBaseKVStore
     );

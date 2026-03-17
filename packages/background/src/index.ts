@@ -1,210 +1,440 @@
 import { MessageRequester, Router } from "@keplr-wallet/router";
 
-import * as PersistentMemory from "./persistent-memory/internal";
+import * as KeyRingLegacy from "./keyring/legacy";
+
 import * as Chains from "./chains/internal";
-import * as Ledger from "./ledger/internal";
-import * as Keystone from "./keystone/internal";
-import * as KeyRing from "./keyring/internal";
+import * as ChainsUI from "./chains-ui/internal";
+import * as ChainsUpdate from "./chains-update/internal";
 import * as SecretWasm from "./secret-wasm/internal";
 import * as BackgroundTx from "./tx/internal";
-import * as Updater from "./updater/internal";
-import * as Tokens from "./tokens/internal";
+import * as BackgroundTxEthereum from "./tx-ethereum/internal";
+import * as TokenCW20 from "./token-cw20/internal";
+import * as TokenERC20 from "./token-erc20/internal";
 import * as Interaction from "./interaction/internal";
 import * as Permission from "./permission/internal";
 import * as PhishingList from "./phishing-list/internal";
 import * as AutoLocker from "./auto-lock-account/internal";
 import * as Analytics from "./analytics/internal";
-import * as Messaging from "./messaging/internal";
-import * as AddressBook from "./address-book/internal";
+import * as Vault from "./vault/internal";
+import * as KeyRingV2 from "./keyring/internal";
+import * as KeyRingMnemonic from "./keyring-mnemonic/internal";
+import * as KeyRingLedger from "./keyring-ledger/internal";
+import * as KeyRingKeystone from "./keyring-keystone/internal";
+import * as KeyRingPrivateKey from "./keyring-private-key/internal";
+import * as KeyRingCosmos from "./keyring-cosmos/internal";
+import * as KeyRingEthereum from "./keyring-ethereum/internal";
+import * as KeyRingStarknet from "./keyring-starknet/internal";
+import * as KeyRingBitcoin from "./keyring-bitcoin/internal";
+import * as PermissionInteractive from "./permission-interactive/internal";
+import * as TokenScan from "./token-scan/internal";
+import * as RecentSendHistory from "./recent-send-history/internal";
 import * as SidePanel from "./side-panel/internal";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainInfo } from "@keplr-wallet/types";
-import { CommonCrypto } from "./keyring";
-import { Notification } from "./tx";
-import { LedgerOptions } from "./ledger/options";
+import * as Settings from "./settings/internal";
+import * as ManageViewAssetToken from "./manage-view-asset-token/internal";
+import * as BackgroundTxExecutor from "./tx-executor/internal";
 
-export * from "./persistent-memory";
 export * from "./chains";
-export * from "./ledger";
-export * from "./keystone";
-export * from "./keyring";
+export * from "./chains-ui";
+export * from "./chains-update";
 export * from "./secret-wasm";
 export * from "./tx";
-export * from "./updater";
-export * from "./tokens";
+export * from "./token-cw20";
+export * from "./token-erc20";
 export * from "./interaction";
 export * from "./permission";
 export * from "./phishing-list";
 export * from "./auto-lock-account";
 export * from "./analytics";
-export * from "./address-book";
+export * from "./permission-interactive";
+export * from "./keyring";
+export * from "./vault";
+export * from "./keyring-cosmos";
+export * from "./keyring-ethereum";
+export * from "./keyring-starknet";
+export * from "./keyring-keystone";
+export * from "./keyring-bitcoin";
+export * from "./token-scan";
+export * from "./recent-send-history";
 export * from "./side-panel";
+export * from "./settings";
+export * from "./manage-view-asset-token";
+export * from "./tx-ethereum";
+export * from "./tx-executor";
+
+import { KVStore } from "@keplr-wallet/common";
+import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
+import { Notification } from "./tx";
+import { ChainInfoWithCoreTypes } from "./chains";
 
 export function init(
   router: Router,
   storeCreator: (prefix: string) => KVStore,
   // Message requester to the content script.
   eventMsgRequester: MessageRequester,
-  embedChainInfos: ChainInfo[],
+  extensionMessageRequesterToUI: MessageRequester | undefined,
+  embedChainInfos: (ChainInfo | ModularChainInfo)[],
   // The origins that are able to pass any permission.
   privilegedOrigins: string[],
   analyticsPrivilegedOrigins: string[],
+  msgPrivilegedOrigins: string[],
+  msgPrivilegedCosmwasmContractMap: Record<string, Record<string, string[]>>,
+  suggestChainPrivilegedOrigins: string[],
   communityChainInfoRepo: {
     readonly organizationName: string;
     readonly repoName: string;
     readonly branchName: string;
+    readonly alternativeURL?: string;
   },
-  commonCrypto: CommonCrypto,
   notification: Notification,
   addDeviceLockedListener: (callback: () => void) => void,
-  ledgerOptions: Partial<LedgerOptions> = {},
-  experimentalOptions: Partial<{
-    suggestChain: Partial<{
-      // Chains registered as suggest chains are managed in memory.
-      // In other words, it disappears when the app is closed.
-      // General operation should be fine. This is a temporary solution for the mobile app.
-      useMemoryKVStore: boolean;
-    }>;
-  }> = {}
-) {
+  blocklistPageURL: string,
+  keyRingMigrations: {
+    commonCrypto: KeyRingLegacy.CommonCrypto;
+    readonly getDisabledChainIdentifiers: () => Promise<string[]>;
+  },
+  analyticsOptions: {
+    platform: string;
+    mobileOS: string;
+  },
+  disableUpdateLoop: boolean,
+  tokenContractListURL: string,
+  chainsAfterInitFn?: (
+    service: Chains.ChainsService,
+    lastEmbedChainInfos: ChainInfoWithCoreTypes[]
+  ) => void | Promise<void>,
+  vaultAfterInitFn?: (service: Vault.VaultService) => void | Promise<void>
+): {
+  initFn: () => Promise<void>;
+  keyRingService: KeyRingV2.KeyRingService;
+  analyticsService: Analytics.AnalyticsService;
+  phishingListService: PhishingList.PhishingListService;
+} {
+  const analyticsService = new Analytics.AnalyticsService(
+    storeCreator("background.analytics"),
+    analyticsPrivilegedOrigins,
+    analyticsOptions
+  );
+
+  const sidePanelService = new SidePanel.SidePanelService(
+    storeCreator("side-panel"),
+    analyticsService
+  );
+
   const interactionService = new Interaction.InteractionService(
     eventMsgRequester,
-    commonCrypto.rng
+    sidePanelService,
+    extensionMessageRequesterToUI
   );
 
   const chainsService = new Chains.ChainsService(
-    storeCreator("chains"),
-    embedChainInfos,
+    storeCreator("chains-v2"),
     {
-      useMemoryKVStoreForSuggestChain:
-        experimentalOptions.suggestChain?.useMemoryKVStore,
-    }
+      kvStore: storeCreator("chains"),
+      updaterKVStore: storeCreator("updator"),
+    },
+    embedChainInfos,
+    suggestChainPrivilegedOrigins,
+    communityChainInfoRepo,
+    analyticsService,
+    interactionService,
+    chainsAfterInitFn
   );
-
-  const tokensService = new Tokens.TokensService(storeCreator("tokens"));
-
-  const persistentMemoryService =
-    new PersistentMemory.PersistentMemoryService();
 
   const permissionService = new Permission.PermissionService(
     storeCreator("permission"),
-    privilegedOrigins
+    privilegedOrigins,
+    interactionService,
+    chainsService
   );
 
-  const addressBookService = new AddressBook.AddressBookService(
-    storeCreator("address-book"),
+  const tokenCW20Service = new TokenCW20.TokenCW20Service(
+    storeCreator("tokens"),
     chainsService,
-    permissionService
+    interactionService,
+    tokenContractListURL
+  );
+
+  const tokenERC20Service = new TokenERC20.TokenERC20Service(
+    storeCreator("tokens-erc20"),
+    chainsService,
+    interactionService
   );
 
   const backgroundTxService = new BackgroundTx.BackgroundTxService(
+    chainsService,
     notification
   );
 
-  const phishingListService = new PhishingList.PhishingListService({
-    blockListUrl:
-      "https://raw.githubusercontent.com/chainapsis/phishing-block-list/main/block-list.txt",
-    twitterListUrl:
-      "https://raw.githubusercontent.com/chainapsis/phishing-block-list/main/twitter-scammer-list.txt",
-    fetchingIntervalMs: 3 * 3600 * 1000, // 3 hours
-    retryIntervalMs: 10 * 60 * 1000, // 10 mins,
-    allowTimeoutMs: 10 * 60 * 1000, // 10 mins,
-  });
+  const backgroundTxEthereumService =
+    new BackgroundTxEthereum.BackgroundTxEthereumService(
+      chainsService,
+      notification
+    );
 
-  const analyticsService = new Analytics.AnalyticsService(
-    storeCreator("background.analytics"),
-    commonCrypto.rng,
-    analyticsPrivilegedOrigins
+  const phishingListService = new PhishingList.PhishingListService(
+    {
+      blockListUrl:
+        "https://raw.githubusercontent.com/chainapsis/phishing-block-list/main/block-list.txt",
+      twitterListUrl:
+        "https://raw.githubusercontent.com/chainapsis/phishing-block-list/main/twitter-scammer-list.txt",
+      fetchingIntervalMs: 3 * 3600 * 1000, // 3 hours
+      retryIntervalMs: 10 * 60 * 1000, // 10 mins,
+      allowTimeoutMs: 10 * 60 * 1000, // 10 mins,,
+    },
+    blocklistPageURL
   );
 
-  const keyRingService = new KeyRing.KeyRingService(
-    storeCreator("keyring"),
-    embedChainInfos,
-    commonCrypto
+  const vaultService = new Vault.VaultService(storeCreator("vault"));
+
+  const chainsUIService = new ChainsUI.ChainsUIService(
+    storeCreator("chains-ui"),
+    chainsService,
+    vaultService
+  );
+
+  const keyRingV2Service = new KeyRingV2.KeyRingService(
+    storeCreator("keyring-v2"),
+    {
+      kvStore: storeCreator("keyring"),
+      commonCrypto: keyRingMigrations.commonCrypto,
+      getDisabledChainIdentifiers:
+        keyRingMigrations.getDisabledChainIdentifiers,
+      chainsUIService,
+    },
+    eventMsgRequester,
+    chainsService,
+    chainsUIService,
+    interactionService,
+    vaultService,
+    analyticsService,
+    permissionService,
+    [
+      new KeyRingMnemonic.KeyRingMnemonicService(vaultService),
+      new KeyRingLedger.KeyRingLedgerService(),
+      new KeyRingPrivateKey.KeyRingPrivateKeyService(vaultService),
+      new KeyRingKeystone.KeyRingKeystoneService(),
+    ]
+  );
+  const keyRingCosmosService = new KeyRingCosmos.KeyRingCosmosService(
+    chainsService,
+    keyRingV2Service,
+    interactionService,
+    chainsUIService,
+    analyticsService,
+    backgroundTxService,
+    msgPrivilegedOrigins,
+    msgPrivilegedCosmwasmContractMap
+  );
+
+  const keyRingStarknetService = new KeyRingStarknet.KeyRingStarknetService(
+    chainsService,
+    vaultService,
+    keyRingV2Service,
+    permissionService,
+    tokenERC20Service,
+    interactionService,
+    backgroundTxService
+  );
+
+  const keyRingBitcoinService = new KeyRingBitcoin.KeyRingBitcoinService(
+    storeCreator("keyring-bitcoin"),
+    chainsService,
+    vaultService,
+    keyRingV2Service,
+    interactionService,
+    permissionService,
+    backgroundTxService,
+    analyticsService
   );
 
   const autoLockAccountService = new AutoLocker.AutoLockAccountService(
     storeCreator("auto-lock-account"),
-    keyRingService,
+    keyRingV2Service,
     addDeviceLockedListener
   );
+  const permissionInteractiveService =
+    new PermissionInteractive.PermissionInteractiveService(
+      storeCreator("permission-interactive"),
+      permissionService,
+      keyRingV2Service,
+      chainsService
+    );
 
-  const chainUpdaterService = new Updater.ChainUpdaterService(
-    storeCreator("updator"),
-    communityChainInfoRepo
+  const keyRingEthereumService = new KeyRingEthereum.KeyRingEthereumService(
+    chainsService,
+    keyRingV2Service,
+    keyRingCosmosService,
+    interactionService,
+    analyticsService,
+    permissionService,
+    permissionInteractiveService,
+    backgroundTxEthereumService,
+    tokenERC20Service
+  );
+  const chainsUpdateService = new ChainsUpdate.ChainsUpdateService(
+    storeCreator("chains-update"),
+    chainsService,
+    chainsUIService,
+    disableUpdateLoop
   );
 
   const secretWasmService = new SecretWasm.SecretWasmService(
-    storeCreator("secretwasm")
+    storeCreator("secretwasm"),
+    chainsService,
+    keyRingCosmosService
   );
 
-  const ledgerService = new Ledger.LedgerService(
-    storeCreator("ledger"),
-    ledgerOptions
+  const tokenScanService = new TokenScan.TokenScanService(
+    storeCreator("token-scan"),
+    eventMsgRequester,
+    chainsService,
+    chainsUIService,
+    vaultService,
+    keyRingV2Service,
+    keyRingCosmosService,
+    keyRingStarknetService,
+    keyRingBitcoinService
   );
 
-  const keystoneService = new Keystone.KeystoneService(
-    storeCreator("keystone")
+  const txExecutableMQ =
+    BackgroundTxExecutor.createSingleChannelEventBus<BackgroundTxExecutor.TxExecutionEvent>();
+
+  const recentSendHistoryService =
+    new RecentSendHistory.RecentSendHistoryService(
+      storeCreator("recent-send-history"),
+      chainsService,
+      backgroundTxService,
+      analyticsService,
+      notification,
+      txExecutableMQ.publisher
+    );
+
+  const settingsService = new Settings.SettingsService(
+    storeCreator("settings")
   );
 
-  const sidePanelService = new SidePanel.SidePanelService(
-    storeCreator("side-panel")
-  );
+  const manageViewAssetTokenService =
+    new ManageViewAssetToken.ManageViewAssetTokenService(
+      storeCreator("manage-view-asset-token"),
+      keyRingV2Service,
+      vaultService,
+      chainsUIService,
+      chainsService
+    );
 
-  const messagingService = new Messaging.MessagingService();
+  const backgroundTxExecutorService =
+    new BackgroundTxExecutor.BackgroundTxExecutorService(
+      storeCreator("background-tx-executor"),
+      chainsService,
+      keyRingCosmosService,
+      keyRingEthereumService,
+      backgroundTxService,
+      backgroundTxEthereumService,
+      analyticsService,
+      recentSendHistoryService,
+      txExecutableMQ.subscriber
+    );
 
   Interaction.init(router, interactionService);
-  PersistentMemory.init(router, persistentMemoryService);
   Permission.init(router, permissionService);
-  Chains.init(router, chainsService);
-  AddressBook.init(router, addressBookService);
-  BackgroundTx.init(router, backgroundTxService);
+  Chains.init(
+    router,
+    chainsService,
+    permissionService,
+    permissionInteractiveService
+  );
+  BackgroundTx.init(router, backgroundTxService, permissionInteractiveService);
+  BackgroundTxEthereum.init(
+    router,
+    backgroundTxEthereumService,
+    permissionInteractiveService,
+    recentSendHistoryService
+  );
   PhishingList.init(router, phishingListService);
   AutoLocker.init(router, autoLockAccountService);
   Analytics.init(router, analyticsService);
-  KeyRing.init(router, keyRingService);
-  SecretWasm.init(router, secretWasmService);
-  Updater.init(router, chainUpdaterService);
-  Tokens.init(router, tokensService);
-  Ledger.init(router, ledgerService);
-  Messaging.init(router, messagingService);
+  KeyRingV2.init(router, keyRingV2Service);
+  KeyRingCosmos.init(
+    router,
+    keyRingCosmosService,
+    permissionInteractiveService
+  );
+  KeyRingEthereum.init(
+    router,
+    keyRingEthereumService,
+    permissionInteractiveService
+  );
+  KeyRingStarknet.init(
+    router,
+    keyRingStarknetService,
+    permissionInteractiveService
+  );
+  KeyRingBitcoin.init(
+    router,
+    keyRingBitcoinService,
+    permissionInteractiveService
+  );
+  PermissionInteractive.init(router, permissionInteractiveService);
+  ChainsUI.init(router, chainsUIService);
+  ChainsUpdate.init(router, chainsUpdateService);
+  TokenCW20.init(
+    router,
+    tokenCW20Service,
+    permissionInteractiveService,
+    keyRingCosmosService
+  );
+  TokenERC20.init(router, tokenERC20Service, permissionInteractiveService);
+  SecretWasm.init(router, secretWasmService, permissionInteractiveService);
+  TokenScan.init(router, tokenScanService);
+  RecentSendHistory.init(router, recentSendHistoryService);
   SidePanel.init(router, sidePanelService);
+  Settings.init(router, settingsService);
+  ManageViewAssetToken.init(router, manageViewAssetTokenService);
+  BackgroundTxExecutor.init(router, backgroundTxExecutorService);
 
   return {
     initFn: async () => {
-      persistentMemoryService.init();
-      permissionService.init(interactionService, chainsService, keyRingService);
-      chainUpdaterService.init(chainsService);
-      tokensService.init(
-        interactionService,
-        permissionService,
-        chainsService,
-        keyRingService
-      );
-      chainsService.init(
-        chainUpdaterService,
-        interactionService,
-        permissionService
-      );
-      ledgerService.init(interactionService);
-      keystoneService.init(interactionService);
-      keyRingService.init(
-        interactionService,
-        chainsService,
-        permissionService,
-        ledgerService,
-        keystoneService,
-        analyticsService
-      );
-      secretWasmService.init(chainsService, keyRingService, permissionService);
-      backgroundTxService.init(chainsService, permissionService);
-      phishingListService.init();
-      // No need to wait because user can't interact with app right after launch.
-      await autoLockAccountService.init();
-      // No need to wait because user can't interact with app right after launch.
       await analyticsService.init();
-      await messagingService.init(keyRingService);
       await sidePanelService.init();
+      await interactionService.init();
+
+      await chainsService.init();
+      await vaultService.init();
+      await chainsUIService.init();
+      await chainsUpdateService.init();
+      await keyRingV2Service.init();
+      await keyRingCosmosService.init();
+      await keyRingEthereumService.init();
+      await keyRingStarknetService.init();
+      await keyRingBitcoinService.init();
+      await permissionService.init();
+      await tokenCW20Service.init();
+      await tokenERC20Service.init();
+
+      await backgroundTxService.init();
+      await backgroundTxEthereumService.init();
+      await phishingListService.init();
+      await autoLockAccountService.init();
+      await permissionInteractiveService.init();
+
+      await secretWasmService.init();
+
+      await tokenScanService.init();
+
+      await recentSendHistoryService.init();
+      await settingsService.init();
+
+      if (vaultAfterInitFn) {
+        await vaultAfterInitFn(vaultService);
+      }
+      await chainsService.afterInit();
+
+      await manageViewAssetTokenService.init();
+
+      await backgroundTxExecutorService.init();
     },
+    keyRingService: keyRingV2Service,
+    analyticsService: analyticsService,
+    phishingListService: phishingListService,
   };
 }

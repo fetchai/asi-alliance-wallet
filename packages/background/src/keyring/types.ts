@@ -1,8 +1,13 @@
-import { RNG } from "@keplr-wallet/crypto";
+import { PlainObject, Vault } from "../vault";
+import {
+  PubKeyBitcoinCompatible,
+  PubKeySecp256k1,
+  PubKeyStarknet,
+} from "@keplr-wallet/crypto";
+import { ModularChainInfo, SignPsbtOptions } from "@keplr-wallet/types";
+import { Psbt, Network as BitcoinNetwork } from "bitcoinjs-lib";
 
-export type CoinTypeForChain = {
-  [identifier: string]: number;
-};
+export type KeyRingStatus = "empty" | "locked" | "unlocked";
 
 export type BIP44HDPath = {
   account: number;
@@ -10,32 +15,83 @@ export type BIP44HDPath = {
   addressIndex: number;
 };
 
-export interface CommonCrypto {
-  rng: RNG;
-  scrypt: (text: string, params: ScryptParams) => Promise<Uint8Array>;
+export type ExtendedKey = {
+  type: "pkh" | "wpkh" | "tr";
+  masterFingerprint: string;
+  xpub: string;
+  derivationPath: string; // `m/purpose'/coinType'/account'` or `purpose'/coinType'/account'`
+};
+
+export interface KeyInfo {
+  readonly id: string;
+  readonly name: string;
+  readonly type: string;
+  readonly isSelected: boolean;
+  readonly insensitive: PlainObject;
 }
 
-export interface ScryptParams {
-  dklen: number;
-  salt: string;
-  n: number;
-  r: number;
-  p: number;
+export interface KeyRing {
+  supportedKeyRingType(): string;
+  createKeyRingVault(...args: any[]): Promise<{
+    insensitive: PlainObject;
+    sensitive: PlainObject;
+  }>;
+  getPubKey(
+    vault: Vault,
+    purpose: number,
+    coinType: number,
+    modularChainInfo: ModularChainInfo
+  ): PubKeySecp256k1 | Promise<PubKeySecp256k1>;
+  // This method should only be implemented for Ledger keyring.
+  getPubKeyStarknet?(
+    vault: Vault,
+    modularChainInfo: ModularChainInfo
+  ): PubKeyStarknet | Promise<PubKeyStarknet>;
+  getPubKeyBitcoin?(
+    vault: Vault,
+    purpose: number,
+    coinType: number,
+    network: BitcoinNetwork,
+    modularChainInfo: ModularChainInfo
+  ): PubKeyBitcoinCompatible | Promise<PubKeyBitcoinCompatible>;
+  sign(
+    vault: Vault,
+    purpose: number,
+    coinType: number,
+    data: Uint8Array,
+    digestMethod: "sha256" | "keccak256" | "hash256" | "noop",
+    modularChainInfo: ModularChainInfo
+  ):
+    | {
+        readonly r: Uint8Array;
+        readonly s: Uint8Array;
+        readonly v: number | null;
+      }
+    | Promise<{
+        readonly r: Uint8Array;
+        readonly s: Uint8Array;
+        readonly v: number | null;
+      }>;
+  signPsbt?(
+    vault: Vault,
+    purpose: number,
+    coinType: number,
+    psbt: Psbt,
+    inputsToSign: {
+      index: number;
+      address: string;
+      hdPath?: string;
+      tapLeafHashesToSign?: Buffer[];
+    }[],
+    network: BitcoinNetwork,
+    modularChainInfo: ModularChainInfo,
+    options?: SignPsbtOptions
+  ): Promise<Psbt>;
 }
 
-export interface ExportKeyRingData {
-  type: "mnemonic" | "privateKey";
-  // If the type is private key, the key is encoded as hex.
-  key: string;
-  coinTypeForChain: CoinTypeForChain;
-  bip44HDPath: BIP44HDPath;
-  meta: {
-    [key: string]: string;
-  };
-}
-
-export enum SignMode {
-  Amino = "amino",
-  Direct = "direct",
-  Message = "message",
+export interface ExportedKeyRingVault {
+  type: "mnemonic" | "private-key";
+  id: string;
+  insensitive: PlainObject;
+  sensitive: string;
 }

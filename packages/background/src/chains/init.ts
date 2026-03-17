@@ -1,29 +1,45 @@
 import { Router } from "@keplr-wallet/router";
 import {
-  GetChainInfosMsg,
+  PingMsg,
+  GetChainInfosWithCoreTypesMsg,
   SuggestChainInfoMsg,
   RemoveSuggestedChainInfoMsg,
   GetChainInfosWithoutEndpointsMsg,
-  ListNetworksMsg,
-  GetNetworkMsg,
-  SwitchNetworkByChainIdMsg,
-  AddNetworkAndSwitchMsg,
-  SetSelectedChainMsg,
+  SetChainEndpointsMsg,
+  ClearChainEndpointsMsg,
+  GetChainOriginalEndpointsMsg,
+  ClearAllSuggestedChainInfosMsg,
+  ClearAllChainEndpointsMsg,
+  GetChainInfoWithoutEndpointsMsg,
+  NeedSuggestChainInfoInteractionMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
 import { ChainsService } from "./service";
+import { PermissionService } from "../permission";
+import { PermissionInteractiveService } from "../permission-interactive";
 
-export function init(router: Router, service: ChainsService): void {
-  router.registerMessage(GetChainInfosMsg);
+export function init(
+  router: Router,
+  chainService: ChainsService,
+  permissionService: PermissionService,
+  permissionInteractiveService: PermissionInteractiveService
+): void {
+  router.registerMessage(PingMsg);
+  router.registerMessage(GetChainInfosWithCoreTypesMsg);
   router.registerMessage(GetChainInfosWithoutEndpointsMsg);
+  router.registerMessage(GetChainInfoWithoutEndpointsMsg);
   router.registerMessage(SuggestChainInfoMsg);
-  router.registerMessage(SetSelectedChainMsg);
+  router.registerMessage(NeedSuggestChainInfoInteractionMsg);
   router.registerMessage(RemoveSuggestedChainInfoMsg);
-  router.registerMessage(GetNetworkMsg);
-  router.registerMessage(ListNetworksMsg);
-  router.registerMessage(SwitchNetworkByChainIdMsg);
-  router.registerMessage(AddNetworkAndSwitchMsg);
+  router.registerMessage(SetChainEndpointsMsg);
+  router.registerMessage(ClearChainEndpointsMsg);
+  router.registerMessage(GetChainOriginalEndpointsMsg);
+  router.registerMessage(ClearAllSuggestedChainInfosMsg);
+  router.registerMessage(ClearAllChainEndpointsMsg);
 
-  router.addHandler(ROUTE, getHandler(service));
+  router.addHandler(
+    ROUTE,
+    getHandler(chainService, permissionService, permissionInteractiveService)
+  );
 }

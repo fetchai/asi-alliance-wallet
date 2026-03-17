@@ -1,5 +1,5 @@
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQueryTendermint } from "../../../common";
+import { ObservableQueryTendermint, QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { computed, makeObservable } from "mobx";
 import { CoinPretty, Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { ObservableQueryGovernance } from "./proposals";
@@ -12,7 +12,7 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
   protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly _raw: Proposal,
@@ -121,19 +121,19 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
     if (this.proposalStatus !== ProposalStatus.VOTING_PERIOD) {
       return {
         yes: new IntPretty(new Int(this.raw.final_tally_result.yes))
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         no: new IntPretty(new Int(this.raw.final_tally_result.no))
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         abstain: new IntPretty(new Int(this.raw.final_tally_result.abstain))
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         noWithVeto: new IntPretty(
           new Int(this.raw.final_tally_result.no_with_veto)
         )
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
       };
     }
 
@@ -141,36 +141,36 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
       return {
         yes: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         no: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         abstain: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         noWithVeto: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
       };
     }
 
     return {
       yes: new IntPretty(new Int(this.response.data.tally.yes))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
       no: new IntPretty(new Int(this.response.data.tally.no))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
       abstain: new IntPretty(new Int(this.response.data.tally.abstain))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
       noWithVeto: new IntPretty(new Int(this.response.data.tally.noWithVeto))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
     };
   }
 
@@ -184,7 +184,10 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
 
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
-    return new CoinPretty(stakeCurrency, tallySum);
+    return new CoinPretty(
+      stakeCurrency || this.chainGetter.getChain(this.chainId).currencies[0],
+      tallySum
+    );
   }
 
   @computed

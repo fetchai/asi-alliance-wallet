@@ -1,13 +1,9 @@
 import { QueriesSetBase } from "../queries";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../common";
+import { QuerySharedContext } from "../../common";
+import { ChainGetter } from "../../chain";
 import { ObservableQueryAccount } from "./account";
 import {
-  ObservableQueryInflation,
-  ObservableQueryMintingInfation,
-  ObservableQuerySupplyTotal,
-} from "./supply";
-import {
+  ObservableQueryBabylonBtcDelegationReward,
   ObservableQueryDelegations,
   ObservableQueryRewards,
   ObservableQueryStakingParams,
@@ -16,14 +12,15 @@ import {
   ObservableQueryValidators,
 } from "./staking";
 import {
-  ObservableQueryGovernance,
-  ObservableQueryProposalVote,
-} from "./governance";
-import {
   ObservableQueryDenomTrace,
   ObservableQueryIBCChannel,
   ObservableQueryIBCClientState,
 } from "./ibc";
+import {
+  ObservableQueryInflation,
+  ObservableQueryMintingInfation,
+  ObservableQuerySupplyTotal,
+} from "./supply";
 import { ObservableQuerySifchainLiquidityAPY } from "./supply/sifchain";
 import {
   ObservableQueryCosmosBalanceRegistry,
@@ -34,7 +31,6 @@ import { DeepReadonly } from "utility-types";
 import {
   ObservableQueryOsmosisEpochProvisions,
   ObservableQueryOsmosisEpochs,
-  ObservableQueryOsmosisMintParmas,
 } from "./supply/osmosis";
 import { ObservableQueryDistributionParams } from "./distribution";
 import { ObservableQueryRPCStatus } from "./status";
@@ -43,7 +39,16 @@ import {
   ObservableQueryStrideEpochProvisions,
   ObservableQueryStrideMintParams,
 } from "./supply/stride";
+import { ObservableQueryFeeMarketGasPrices } from "./feemarket";
+import { ObservableQueryEvmFeeMarketBaseFee } from "./evm/feemarket";
 import { ObservableQueryAuthZGranter } from "./authz";
+import { ObservableQueryIBCClientStateV2 } from "./ibc/client-state-v2";
+import { ObservableQueryInitiaUnbondingDelegations } from "./staking/initia-unbonding-delegations";
+import { ObservableQueryInitiaDelegations } from "./staking/initia-delegations";
+import { ObservableQueryInitiaValidators } from "./staking/initia-validators";
+import { ObservableQueryGovernance } from "./governance/proposals";
+import { ObservableQueryProposalVote } from "./governance";
+import { ObservableQueryOsmosisMintParmas } from "./supply/osmosis";
 
 export interface CosmosQueries {
   cosmos: CosmosQueriesImpl;
@@ -52,20 +57,20 @@ export interface CosmosQueries {
 export const CosmosQueries = {
   use(): (
     queriesSetBase: QueriesSetBase,
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter
   ) => CosmosQueries {
     return (
       queriesSetBase: QueriesSetBase,
-      kvStore: KVStore,
+      sharedContext: QuerySharedContext,
       chainId: string,
       chainGetter: ChainGetter
     ) => {
       return {
         cosmos: new CosmosQueriesImpl(
           queriesSetBase,
-          kvStore,
+          sharedContext,
           chainId,
           chainGetter
         ),
@@ -87,84 +92,114 @@ export class CosmosQueriesImpl {
   public readonly queryInflation: DeepReadonly<ObservableQueryInflation>;
   public readonly queryRewards: DeepReadonly<ObservableQueryRewards>;
   public readonly queryDelegations: DeepReadonly<ObservableQueryDelegations>;
+  public readonly queryInitiaDelegations: DeepReadonly<ObservableQueryInitiaDelegations>;
   public readonly queryUnbondingDelegations: DeepReadonly<ObservableQueryUnbondingDelegations>;
+  public readonly queryInitiaUnbondingDelegations: DeepReadonly<ObservableQueryInitiaUnbondingDelegations>;
   public readonly queryValidators: DeepReadonly<ObservableQueryValidators>;
+  public readonly queryBabylonBtcDelegationReward: DeepReadonly<ObservableQueryBabylonBtcDelegationReward>;
+  public readonly queryInitiaValidators: DeepReadonly<ObservableQueryInitiaValidators>;
   public readonly queryGovernance: DeepReadonly<ObservableQueryGovernance>;
   public readonly queryProposalVote: DeepReadonly<ObservableQueryProposalVote>;
 
   public readonly queryIBCClientState: DeepReadonly<ObservableQueryIBCClientState>;
+  public readonly queryIBCClientStateV2: DeepReadonly<ObservableQueryIBCClientStateV2>;
   public readonly queryIBCChannel: DeepReadonly<ObservableQueryIBCChannel>;
   public readonly queryIBCDenomTrace: DeepReadonly<ObservableQueryDenomTrace>;
 
   public readonly querySifchainAPY: DeepReadonly<ObservableQuerySifchainLiquidityAPY>;
   public readonly queryAuthZGranter: DeepReadonly<ObservableQueryAuthZGranter>;
 
+  public readonly queryFeeMarketGasPrices: DeepReadonly<ObservableQueryFeeMarketGasPrices>;
+  public readonly queryEvmFeeMarketBaseFee: DeepReadonly<ObservableQueryEvmFeeMarketBaseFee>;
+
   constructor(
     base: QueriesSetBase,
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter
   ) {
     this.queryRPCStatus = new ObservableQueryRPCStatus(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
 
     this.querySifchainAPY = new ObservableQuerySifchainLiquidityAPY(
-      kvStore,
+      sharedContext,
       chainId
     );
 
     base.queryBalances.addBalanceRegistry(
-      new ObservableQueryCosmosBalanceRegistry(kvStore)
+      new ObservableQueryCosmosBalanceRegistry(sharedContext)
     );
 
     this.queryAccount = new ObservableQueryAccount(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
     this.querySpendableBalances = new ObservableQuerySpendableBalances(
-      kvStore,
-      chainId,
-      chainGetter
-    );
-    this.queryMint = new ObservableQueryMintingInfation(
-      kvStore,
-      chainId,
-      chainGetter
-    );
-    this.queryPool = new ObservableQueryStakingPool(
-      kvStore,
-      chainId,
-      chainGetter
-    );
-    this.queryStakingParams = new ObservableQueryStakingParams(
-      kvStore,
-      chainId,
-      chainGetter
-    );
-    this.querySupplyTotal = new ObservableQuerySupplyTotal(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
 
-    const osmosisMintParams = new ObservableQueryOsmosisMintParmas(
-      kvStore,
+    base.queryBalances.addBalanceRegistry(
+      new ObservableQueryCosmosBalanceRegistry(sharedContext)
+    );
+
+    this.queryAccount = new ObservableQueryAccount(
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+    this.querySpendableBalances = new ObservableQuerySpendableBalances(
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+    this.queryMint = new ObservableQueryMintingInfation(
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+    this.queryPool = new ObservableQueryStakingPool(
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+    this.queryStakingParams = new ObservableQueryStakingParams(
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+
+    this.querySupplyTotal = new ObservableQuerySupplyTotal(
+      sharedContext,
       chainId,
       chainGetter
     );
 
     this.queryDistributionParams = new ObservableQueryDistributionParams(
-      kvStore,
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+
+    this.queryDistributionParams = new ObservableQueryDistributionParams(
+      sharedContext,
       chainId,
       chainGetter
     );
 
     const queryStrideMintParams = new ObservableQueryStrideMintParams(
-      kvStore,
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+
+    const osmosisMintParams = new ObservableQueryOsmosisMintParmas(
+      sharedContext,
       chainId,
       chainGetter
     );
@@ -175,70 +210,120 @@ export class CosmosQueriesImpl {
       this.queryMint,
       this.queryPool,
       this.querySupplyTotal,
-      new ObservableQueryIrisMintingInfation(kvStore, chainId, chainGetter),
+      new ObservableQueryIrisMintingInfation(
+        sharedContext,
+        chainId,
+        chainGetter
+      ),
       this.querySifchainAPY,
-      new ObservableQueryOsmosisEpochs(kvStore, chainId, chainGetter),
+      new ObservableQueryOsmosisEpochs(sharedContext, chainId, chainGetter),
       new ObservableQueryOsmosisEpochProvisions(
-        kvStore,
+        sharedContext,
         chainId,
         chainGetter,
         osmosisMintParams
       ),
       osmosisMintParams,
-      new ObservableQueryJunoAnnualProvisions(kvStore, chainId, chainGetter),
+      new ObservableQueryJunoAnnualProvisions(
+        sharedContext,
+        chainId,
+        chainGetter
+      ),
       this.queryDistributionParams,
-      new ObservableQueryStrideEpochProvisions(kvStore, chainId, chainGetter),
+      new ObservableQueryStrideEpochProvisions(
+        sharedContext,
+        chainId,
+        chainGetter
+      ),
       queryStrideMintParams
     );
     this.queryRewards = new ObservableQueryRewards(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
     this.queryDelegations = new ObservableQueryDelegations(
-      kvStore,
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+    this.queryInitiaDelegations = new ObservableQueryInitiaDelegations(
+      sharedContext,
       chainId,
       chainGetter
     );
     this.queryUnbondingDelegations = new ObservableQueryUnbondingDelegations(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
+    this.queryInitiaUnbondingDelegations =
+      new ObservableQueryInitiaUnbondingDelegations(
+        sharedContext,
+        chainId,
+        chainGetter
+      );
     this.queryValidators = new ObservableQueryValidators(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
     this.queryGovernance = new ObservableQueryGovernance(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter,
       this.queryPool
     );
     this.queryProposalVote = new ObservableQueryProposalVote(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
+    this.queryBabylonBtcDelegationReward =
+      new ObservableQueryBabylonBtcDelegationReward(
+        sharedContext,
+        chainId,
+        chainGetter
+      );
 
+    this.queryInitiaValidators = new ObservableQueryInitiaValidators(
+      sharedContext,
+      chainId,
+      chainGetter
+    );
     this.queryIBCClientState = new ObservableQueryIBCClientState(
-      kvStore,
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+    this.queryIBCClientStateV2 = new ObservableQueryIBCClientStateV2(
+      sharedContext,
       chainId,
       chainGetter
     );
     this.queryIBCChannel = new ObservableQueryIBCChannel(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
     this.queryIBCDenomTrace = new ObservableQueryDenomTrace(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter
     );
     this.queryAuthZGranter = new ObservableQueryAuthZGranter(
-      kvStore,
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+
+    this.queryFeeMarketGasPrices = new ObservableQueryFeeMarketGasPrices(
+      sharedContext,
+      chainId,
+      chainGetter
+    );
+    this.queryEvmFeeMarketBaseFee = new ObservableQueryEvmFeeMarketBaseFee(
+      sharedContext,
       chainId,
       chainGetter
     );

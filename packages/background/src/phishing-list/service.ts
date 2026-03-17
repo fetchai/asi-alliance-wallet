@@ -1,7 +1,12 @@
-import { SimpleFetchResponse, simpleFetch } from "@keplr-wallet/simple-fetch";
 import { parseDomain } from "./utils";
+import { simpleFetch, SimpleFetchResponse } from "@keplr-wallet/simple-fetch";
 
 class IntervalFetcher<R> {
+  // If blocked urls is "scam1.com", "scam2.service.com",
+  // "scam1.com" and "**.scam1.com" should be blocked.
+  // and "scam2.service.com" and "**.scam2.service.com" should be blocked.
+  // and "service.com" should be allowed.
+  // urls which blocked.
   protected _hasInited: boolean = false;
   protected _hasStopped: boolean = false;
   protected timeoutId?: NodeJS.Timeout;
@@ -44,7 +49,7 @@ class IntervalFetcher<R> {
 
     let failed = false;
     try {
-      const res = await simpleFetch<R>(this.opts.url);
+      const res = await simpleFetch<R>(this.opts.url, "");
 
       this.handler(res);
 
@@ -66,11 +71,6 @@ class IntervalFetcher<R> {
 }
 
 export class PhishingListService {
-  // If blocked urls is "scam1.com", "scam2.service.com",
-  // "scam1.com" and "**.scam1.com" should be blocked.
-  // and "scam2.service.com" and "**.scam2.service.com" should be blocked.
-  // and "service.com" should be allowed.
-  // urls which blocked.
   protected urlMap: Map<string, boolean> = new Map();
   protected readonly allowedUrlMap: Map<string, number> = new Map();
 
@@ -86,7 +86,8 @@ export class PhishingListService {
       readonly fetchingIntervalMs: number;
       readonly retryIntervalMs: number;
       readonly allowTimeoutMs: number;
-    }
+    },
+    public readonly blocklistPageURL: string
   ) {
     this.urlFetcher = new IntervalFetcher(
       {
@@ -142,7 +143,7 @@ export class PhishingListService {
     }
   }
 
-  init() {
+  async init(): Promise<void> {
     this.urlFetcher.start();
     if (this.twitterFetcher) {
       this.twitterFetcher.start();

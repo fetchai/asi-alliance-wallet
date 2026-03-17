@@ -1,109 +1,197 @@
-import CryptoJS from "crypto-js";
-import { ec } from "elliptic";
-
+import { secp256k1 } from "@noble/curves/secp256k1";
+import * as utils from "@noble/curves/abstract/utils";
+import { sha256 } from "@noble/hashes/sha2";
+import { ripemd160 } from "@noble/hashes/ripemd160";
 import { Buffer } from "buffer/";
+import { Buffer as NodeBuffer } from "buffer";
 import { Hash } from "./hash";
+import { ECPairInterface, ECPairFactory } from "ecpair";
+import { Network as BitcoinNetwork, payments } from "bitcoinjs-lib";
+import * as ecc from "./ecc-adapter";
+import * as bitcoin from "bitcoinjs-lib";
+import { fromBase58 } from "bip32";
 
-export const KeyCurves: Record<KeyCurve, KeyCurve> = {
-  secp256k1: "secp256k1",
+let _starknetHash: {
+  calculateContractAddressFromHash(
+    salt: string | number | bigint,
+    classHash: string | number | bigint,
+    constructorCalldata: string[],
+    deployerAddress: string | number | bigint
+  ): string;
+} | null = null;
+const getStarknetHash = (): {
+  calculateContractAddressFromHash(
+    salt: string | number | bigint,
+    classHash: string | number | bigint,
+    constructorCalldata: string[],
+    deployerAddress: string | number | bigint
+  ): string;
+} => {
+  if (_starknetHash) {
+    return _starknetHash;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { hash: starknetHash } = require("starknet");
+    _starknetHash = starknetHash;
+    return starknetHash;
+  } catch (e) {
+    throw new Error("Starknet library not found");
+  }
 };
 
-export type KeyCurve = "secp256k1";
-
-export interface PublicKey {
-  toBytes(): Uint8Array;
-
-  getAddress(): Uint8Array;
-
-  verify(message: Uint8Array, signature: Uint8Array): boolean;
-}
-
-export interface SecretKey {
-  readonly curve: KeyCurve;
-
-  toBytes(): Uint8Array;
-
-  sign(message: Uint8Array): Uint8Array;
-
-  signDigest32(digest: Uint8Array): Uint8Array;
-
-  getPubKey(): PublicKey;
-}
-
-export class PrivKeySecp256k1 implements SecretKey {
-  readonly curve: KeyCurve = "secp256k1";
-
+bitcoin.initEccLib(ecc);
+export class PrivKeySecp256k1 {
   static generateRandomKey(): PrivKeySecp256k1 {
-    const secp256k1 = new ec("secp256k1");
-
-    return new PrivKeySecp256k1(
-      Buffer.from(secp256k1.genKeyPair().getPrivate().toArray())
-    );
+    return new PrivKeySecp256k1(secp256k1.utils.randomPrivateKey());
   }
 
-  constructor(protected readonly privKey: Uint8Array) {}
+  constructor(
+    protected readonly privKey: Uint8Array,
+    protected readonly masterFingerprint?: string,
+    protected readonly path?: string
+  ) {}
 
   toBytes(): Uint8Array {
     return new Uint8Array(this.privKey);
   }
 
+  toKeyPair(): ECPairInterface {
+    return ECPairFactory(ecc).fromPrivateKey(NodeBuffer.from(this.privKey));
+  }
+
   getPubKey(): PubKeySecp256k1 {
-    const secp256k1 = new ec("secp256k1");
+    return new PubKeySecp256k1(secp256k1.getPublicKey(this.privKey, true));
+  }
 
-    const key = secp256k1.keyFromPrivate(this.privKey);
+  getBitcoinPubKey(network?: BitcoinNetwork): PubKeyBitcoinCompatible {
+    const pubKey = secp256k1.getPublicKey(this.toBytes(), false);
 
-    return new PubKeySecp256k1(
-      new Uint8Array(key.getPublic().encodeCompressed("array"))
+    return new PubKeyBitcoinCompatible(
+      pubKey,
+      network,
+      this.masterFingerprint,
+      this.path
     );
   }
 
-  /**
-   * @deprecated Use `signDigest32(Hash.sha256(data))` instead.
-   * @param msg
-   */
-  sign(msg: Uint8Array): Uint8Array {
-    return this.signDigest32(Hash.sha256(msg));
-  }
-
-  signDigest32(digest: Uint8Array): Uint8Array {
+  signDigest32(digest: Uint8Array): {
+    readonly r: Uint8Array;
+    readonly s: Uint8Array;
+    readonly v: number | null;
+  } {
     if (digest.length !== 32) {
       throw new Error(`Invalid length of digest to sign: ${digest.length}`);
     }
 
-    const secp256k1 = new ec("secp256k1");
-    const key = secp256k1.keyFromPrivate(this.privKey);
-
-    const signature = key.sign(digest, {
-      canonical: true,
+    const signature = secp256k1.sign(digest, this.privKey, {
+      lowS: true,
     });
 
-    return new Uint8Array(
-      signature.r.toArray("be", 32).concat(signature.s.toArray("be", 32))
-    );
+    return {
+      r: utils.numberToBytesBE(signature.r, 32),
+      s: utils.numberToBytesBE(signature.s, 32),
+      v: signature.recovery,
+    };
+  }
+}
+
+export class PubKeyStarknet {
+  constructor(protected readonly pubKey: Uint8Array) {
+    if (pubKey.length !== 64) {
+      throw new Error(`Invalid length of public key: ${pubKey.length}`);
+    }
+  }
+
+  toBytes(): Uint8Array {
+    return new Uint8Array(this.pubKey);
+  }
+
+  getStarknetPubKey(): Uint8Array {
+    return this.pubKey.slice(0, 32);
+  }
+
+  getStarknetAddress(salt: Uint8Array, classHash: Uint8Array): Uint8Array {
+    const starknetPubKey = this.getStarknetPubKey();
+
+    let calculated = getStarknetHash()
+      .calculateContractAddressFromHash(
+        "0x" + Buffer.from(salt).toString("hex"),
+        "0x" + Buffer.from(classHash).toString("hex"),
+        ["0x" + Buffer.from(starknetPubKey).toString("hex")],
+        "0x00"
+      )
+      .replace("0x", "");
+
+    const padZero = 64 - calculated.length;
+    if (padZero > 0) {
+      calculated = "0".repeat(padZero) + calculated;
+    } else if (padZero < 0) {
+      throw new Error("Invalid length of calculated address");
+    }
+
+    return new Uint8Array(Buffer.from(calculated, "hex"));
+  }
+
+  getStarknetAddressParams(): {
+    readonly xLow: Uint8Array;
+    readonly xHigh: Uint8Array;
+    readonly yLow: Uint8Array;
+    readonly yHigh: Uint8Array;
+  } {
+    return {
+      xLow: this.pubKey.slice(16, 32),
+      xHigh: this.pubKey.slice(0, 16),
+      yLow: this.pubKey.slice(48, 64),
+      yHigh: this.pubKey.slice(32, 48),
+    };
   }
 }
 
 export class PubKeySecp256k1 {
-  constructor(protected readonly pubKey: Uint8Array) {}
-
-  toBytes(uncompressed?: boolean): Uint8Array {
-    if (uncompressed) {
-      const keyPair = this.toKeyPair();
-      return new Uint8Array(
-        Buffer.from(keyPair.getPublic().encode("hex", false), "hex")
-      );
+  constructor(protected readonly pubKey: Uint8Array) {
+    if (pubKey.length !== 33 && pubKey.length !== 65) {
+      throw new Error(`Invalid length of public key: ${pubKey.length}`);
     }
-    return new Uint8Array(this.pubKey);
   }
 
-  // Cosmos address
-  getAddress(): Uint8Array {
-    let hash = CryptoJS.SHA256(
-      CryptoJS.lib.WordArray.create(this.pubKey as any)
-    ).toString();
-    hash = CryptoJS.RIPEMD160(CryptoJS.enc.Hex.parse(hash)).toString();
+  toBytes(uncompressed?: boolean): Uint8Array {
+    if (uncompressed && this.pubKey.length === 65) {
+      return this.pubKey;
+    }
+    if (!uncompressed && this.pubKey.length === 33) {
+      return this.pubKey;
+    }
 
-    return new Uint8Array(Buffer.from(hash, "hex"));
+    if (uncompressed) {
+      return secp256k1.ProjectivePoint.fromHex(
+        Buffer.from(this.pubKey).toString("hex")
+      ).toRawBytes(false);
+    } else {
+      return secp256k1.ProjectivePoint.fromHex(
+        Buffer.from(this.pubKey).toString("hex")
+      ).toRawBytes(true);
+    }
+  }
+
+  toBitcoinPubKey(network?: BitcoinNetwork): PubKeyBitcoinCompatible {
+    return new PubKeyBitcoinCompatible(
+      this.toBytes(false),
+      network,
+      undefined,
+      undefined
+    );
+  }
+
+  /**
+   * @deprecated Use `getCosmosAddress()` instead.
+   */
+  getAddress(): Uint8Array {
+    return this.getCosmosAddress();
+  }
+
+  getCosmosAddress(): Uint8Array {
+    return ripemd160(sha256(this.toBytes(false)));
   }
 
   getEthAddress(): Uint8Array {
@@ -114,21 +202,54 @@ export class PubKeySecp256k1 {
     return Hash.keccak256(this.toBytes(true).slice(1)).slice(-20);
   }
 
-  toKeyPair(): ec.KeyPair {
-    const secp256k1 = new ec("secp256k1");
+  getStarknetAddress(salt: Uint8Array, classHash: Uint8Array): Uint8Array {
+    const pubBytes = this.toBytes(true).slice(1);
+    const xLow = pubBytes.slice(16, 32);
+    const xHigh = pubBytes.slice(0, 16);
+    const yLow = pubBytes.slice(48, 64);
+    const yHigh = pubBytes.slice(32, 48);
 
-    return secp256k1.keyFromPublic(
-      Buffer.from(this.pubKey).toString("hex"),
-      "hex"
-    );
+    let calculated = getStarknetHash()
+      .calculateContractAddressFromHash(
+        "0x" + Buffer.from(salt).toString("hex"),
+        "0x" + Buffer.from(classHash).toString("hex"),
+        [
+          "0x" + Buffer.from(xLow).toString("hex"),
+          "0x" + Buffer.from(xHigh).toString("hex"),
+          "0x" + Buffer.from(yLow).toString("hex"),
+          "0x" + Buffer.from(yHigh).toString("hex"),
+        ],
+        "0x00"
+      )
+      .replace("0x", "");
+
+    const padZero = 64 - calculated.length;
+    if (padZero > 0) {
+      calculated = "0".repeat(padZero) + calculated;
+    } else if (padZero < 0) {
+      throw new Error("Invalid length of calculated address");
+    }
+
+    return new Uint8Array(Buffer.from(calculated, "hex"));
   }
 
-  /**
-   * @deprecated Use `verifyDigest32(Hash.sha256(data))` instead.
-   * @param msg
-   */
-  verify(msg: Uint8Array, signature: Uint8Array): boolean {
-    return this.verifyDigest32(Hash.sha256(msg), signature);
+  getStarknetAddressParams(): {
+    readonly xLow: Uint8Array;
+    readonly xHigh: Uint8Array;
+    readonly yLow: Uint8Array;
+    readonly yHigh: Uint8Array;
+  } {
+    const pubBytes = this.toBytes(true).slice(1);
+    return {
+      xLow: pubBytes.slice(16, 32),
+      xHigh: pubBytes.slice(0, 16),
+      yLow: pubBytes.slice(48, 64),
+      yHigh: pubBytes.slice(32, 48),
+    };
+  }
+
+  getStarknetPubKey(): Uint8Array {
+    return this.pubKey.slice(1);
   }
 
   verifyDigest32(digest: Uint8Array, signature: Uint8Array): boolean {
@@ -140,18 +261,158 @@ export class PubKeySecp256k1 {
       throw new Error(`Invalid length of signature: ${signature.length}`);
     }
 
-    const secp256k1 = new ec("secp256k1");
-
     const r = signature.slice(0, 32);
-    const s = signature.slice(32);
+    // const s = signature.slice(32);
 
-    return secp256k1.verify(
-      digest,
-      {
-        r: Buffer.from(r).toString("hex"),
-        s: Buffer.from(s).toString("hex"),
-      },
-      this.toKeyPair()
+    return secp256k1.verify(r, digest, this.pubKey);
+  }
+}
+
+export class PubKeyBitcoinCompatible {
+  constructor(
+    protected readonly pubKey: Uint8Array,
+    protected readonly network?: BitcoinNetwork,
+    protected readonly masterFingerprint?: string,
+    protected readonly path?: string
+  ) {}
+
+  toBytes(uncompressed?: boolean): Uint8Array {
+    if (uncompressed && this.pubKey.length === 65) {
+      return this.pubKey;
+    }
+    if (!uncompressed && this.pubKey.length === 33) {
+      return this.pubKey;
+    }
+
+    if (uncompressed) {
+      return secp256k1.ProjectivePoint.fromHex(
+        Buffer.from(this.pubKey).toString("hex")
+      ).toRawBytes(false);
+    } else {
+      return secp256k1.ProjectivePoint.fromHex(
+        Buffer.from(this.pubKey).toString("hex")
+      ).toRawBytes(true);
+    }
+  }
+
+  getMasterFingerprint(): string | undefined {
+    return this.masterFingerprint;
+  }
+
+  getPath(): string | undefined {
+    return this.path;
+  }
+
+  getBitcoinAddress(
+    paymentType?: "legacy" | "native-segwit" | "taproot",
+    network?: BitcoinNetwork
+  ): string | undefined {
+    const pubKey = this.toBytes(false);
+    const currentNetwork = network ?? this.network;
+
+    const getLegacyAddress = () => {
+      return payments.p2pkh({
+        pubkey: NodeBuffer.from(pubKey),
+        network: currentNetwork,
+      }).address;
+    };
+
+    const getNativeSegwitAddress = () => {
+      return payments.p2wpkh({
+        pubkey: NodeBuffer.from(pubKey),
+        network: currentNetwork,
+      }).address;
+    };
+
+    const getTaprootAddress = () => {
+      return payments.p2tr({
+        internalPubkey: toXOnly(NodeBuffer.from(pubKey)),
+        network: currentNetwork,
+      }).address;
+    };
+
+    switch (paymentType) {
+      case "legacy":
+        return getLegacyAddress();
+      case "native-segwit":
+        return getNativeSegwitAddress();
+      case "taproot":
+        return getTaprootAddress();
+      default:
+        const path = this.getPath();
+        if (path) {
+          const segments = path.split("/").filter(Boolean);
+          // Check if this is a BIP44 compatible path (m/purpose'/coinType'/account')
+          const purposeIndex = segments[0] === "m" ? 1 : 0;
+
+          if (segments.length >= purposeIndex + 3) {
+            const purposeSegment = segments[purposeIndex];
+            const purpose = parseInt(
+              purposeSegment.endsWith("'")
+                ? purposeSegment.slice(0, -1)
+                : purposeSegment
+            );
+
+            // Determine payment type based on purpose
+            if (purpose === 44) {
+              return getLegacyAddress();
+            } else if (purpose === 84) {
+              return getNativeSegwitAddress();
+            } else if (purpose === 86) {
+              return getTaprootAddress();
+            }
+          }
+        }
+    }
+  }
+
+  static fromExtendedKey(
+    xpub: string,
+    basePath: string,
+    masterFingerprint?: string,
+    additionalPath?: string,
+    network?: BitcoinNetwork
+  ): PubKeyBitcoinCompatible {
+    const root = fromBase58(xpub, network);
+
+    const depth = root.depth;
+    const hdPathSegments = basePath.split("/").filter(Boolean);
+    const purposeIndex = hdPathSegments[0] === "m" ? 1 : 0;
+
+    if (depth !== hdPathSegments.length - purposeIndex) {
+      throw new Error("Invalid depth with base path");
+    }
+
+    if (additionalPath) {
+      const additionalPathSegments = additionalPath.split("/").filter(Boolean);
+      if (additionalPathSegments[0] === "m") {
+        throw new Error("Additional path should not include m");
+      }
+
+      const child = root.derivePath(additionalPath);
+      return new PubKeyBitcoinCompatible(
+        child.publicKey as Uint8Array,
+        network,
+        masterFingerprint,
+        purposeIndex === 0
+          ? `m/${basePath}/${additionalPath}`
+          : `${basePath}/${additionalPath}`
+      );
+    }
+
+    return new PubKeyBitcoinCompatible(
+      root.publicKey as Uint8Array,
+      network,
+      masterFingerprint,
+      purposeIndex === 0 ? `m/${basePath}` : basePath
     );
   }
 }
+
+/**
+ * Converts a public key to an X-only public key.
+ * @param pubKey The public key to convert.
+ * @returns The X-only public key.
+ */
+export const toXOnly = (pubKey: NodeBuffer) =>
+  pubKey.length === 32 ? pubKey : pubKey.slice(1, 33);

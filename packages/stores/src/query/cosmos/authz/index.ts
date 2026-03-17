@@ -1,11 +1,11 @@
-import { KVStore } from "@keplr-wallet/common";
 import {
   camelToSnake,
-  ChainGetter,
   decodeGrantAuthorization,
   ObservableQueryMap,
   ObservableQueryTendermint,
+  QuerySharedContext,
 } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { Granter } from "./types";
 import { setupAuthzExtension } from "@cosmjs/stargate";
 import { AuthzExtension } from "@cosmjs/stargate/build/modules/authz/queries";
@@ -13,14 +13,14 @@ import { QueryGranterGrantsResponse } from "cosmjs-types/cosmos/authz/v1beta1/qu
 
 export class ObservableQueryAuthZGranterInner extends ObservableQueryTendermint<Granter> {
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly granter: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as AuthzExtension;
@@ -47,10 +47,14 @@ export class ObservableQueryAuthZGranterInner extends ObservableQueryTendermint<
 }
 
 export class ObservableQueryAuthZGranter extends ObservableQueryMap<Granter> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     super((granter) => {
       return new ObservableQueryAuthZGranterInner(
-        kvStore,
+        sharedContext,
         chainId,
         chainGetter,
         granter

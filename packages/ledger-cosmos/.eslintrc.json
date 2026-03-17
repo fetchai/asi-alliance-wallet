@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "src/*",
+          "@keplr-wallet/ledger-cosmos",
+          "@keplr-wallet/ledger-cosmos/*"
+        ]
+      }
+    ]
+  }
+}

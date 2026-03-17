@@ -1,8 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import { Comet38Client, CometClient } from "@cosmjs/tendermint-rpc";
 import { QueryClient } from "@cosmjs/stargate";
-import { KVStore } from "@keplr-wallet/common";
-import { ObservableQuery, QueryResponse } from ".";
+import { ObservableQuery, QuerySharedContext } from ".";
 
 type TendermintExtension<P> = (base: QueryClient) => P;
 
@@ -11,7 +10,7 @@ export class ObservableQueryTendermint<T, E = unknown> extends ObservableQuery<
   E
 > {
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     protected readonly rpc: string,
     protected readonly queryFn: (client: QueryClient) => Promise<T>,
     protected readonly extension: TendermintExtension<Record<string, any>>, // extension passed dynamically
@@ -23,7 +22,7 @@ export class ObservableQueryTendermint<T, E = unknown> extends ObservableQuery<
   protected override async fetchResponse(
     _abortController: AbortController
   ): Promise<{
-    response: QueryResponse<T>;
+    data: T;
     headers: any;
   }> {
     try {
@@ -44,12 +43,7 @@ export class ObservableQueryTendermint<T, E = unknown> extends ObservableQuery<
 
       return {
         headers: {},
-        response: {
-          data: result,
-          status: 200,
-          staled: false,
-          timestamp: Date.now(),
-        },
+        data: result as T,
       };
     } catch (err: any) {
       throw new Error(err?.message || "Tendermint RPC error");

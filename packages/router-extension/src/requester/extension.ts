@@ -1,8 +1,9 @@
 import {
   MessageRequester,
   Message,
+  KeplrError,
   JSONUint8Array,
-  WalletError,
+  EthereumProviderRpcError,
 } from "@keplr-wallet/router";
 import { getKeplrExtensionRouterId } from "../utils";
 
@@ -38,16 +39,18 @@ export class InExtensionMessageRequester implements MessageRequester {
       if (typeof result.error === "string") {
         throw new Error(result.error);
       } else {
-        if ("module" in result.error) {
-          if (typeof result.error.module === "string") {
-            throw new WalletError(
-              result.error.module,
-              result.error.code,
-              result.error.message
-            );
-          }
+        if (typeof result.error.module === "string") {
+          throw new KeplrError(
+            result.error.module,
+            result.error.code,
+            result.error.message
+          );
         } else {
-          throw new Error(result.error.message);
+          throw new EthereumProviderRpcError(
+            result.error.code,
+            result.error.message,
+            result.error.data
+          );
         }
       }
     }
@@ -87,16 +90,18 @@ export class InExtensionMessageRequester implements MessageRequester {
       if (typeof result.error === "string") {
         throw new Error(result.error);
       } else {
-        if ("module" in result.error) {
-          if (typeof result.error.module === "string") {
-            throw new WalletError(
-              result.error.module,
-              result.error.code,
-              result.error.message
-            );
-          }
+        if (typeof result.error.module === "string") {
+          throw new KeplrError(
+            result.error.module,
+            result.error.code,
+            result.error.message
+          );
         } else {
-          throw new Error(result.error.message);
+          throw new EthereumProviderRpcError(
+            result.error.code,
+            result.error.message,
+            result.error.data
+          );
         }
       }
     }

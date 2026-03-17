@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "src/*",
+          "@keplr-wallet/background",
+          "@keplr-wallet/background/*"
+        ]
+      }
+    ]
+  }
+}

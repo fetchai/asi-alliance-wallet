@@ -1,10 +1,8 @@
 import { AccountSetBaseSuper, WalletStatus } from "./base";
-import { EvmQueries, IQueriesStore, QueriesSetBase } from "../query";
-import {
-  ChainGetter,
-  erc20MetadataInterface,
-  nativeFetBridgeInterface,
-} from "../common";
+import { IQueriesStore, QueriesSetBase } from "../query";
+import { EvmQueries } from "../query/evm";
+import { erc20MetadataInterface, nativeFetBridgeInterface } from "../common";
+import { ChainGetter } from "../chain";
 import { DenomHelper, LocalKVStore } from "@keplr-wallet/common";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
 import {

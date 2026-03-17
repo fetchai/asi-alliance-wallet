@@ -7,7 +7,6 @@ import { simpleFetch } from "@keplr-wallet/simple-fetch";
 export const SupportedChainFeatures = [
   "stargate",
   "cosmwasm",
-  "evm",
   "wasmd_0.24+",
   "secretwasm",
   "ibc-transfer",
@@ -20,6 +19,19 @@ export const SupportedChainFeatures = [
   "osmosis-txfees",
   "terra-classic-fee",
   "ibc-go-v7-hot-fix",
+  "ibc-pfm",
+  "authz-msg-revoke-fixed",
+  "osmosis-base-fee-beta",
+  "feemarket",
+  "evm-feemarket",
+  "op-stack-l1-data-fee",
+  "force-enable-evm-ledger",
+  "ibc-v2",
+  "evm-ledger-sign-plain-json",
+  "initia-dynamicfee",
+  "eth-secp256k1-initia",
+  "eth-secp256k1-cosmos",
+  "/cosmos.evm.types.v1.ExtensionOptionsWeb3Tx",
 ];
 
 /**
@@ -117,6 +129,46 @@ export const RecognizableChainFeaturesMethod: {
       return result.status === 400;
     },
   },
+  {
+    feature: "feemarket",
+    fetch: async (_features, _rpc, rest) => {
+      const result = await simpleFetch<{
+        params: {
+          enabled: boolean;
+        };
+      }>(rest, "/feemarket/v1/params");
+
+      return result.data.params.enabled;
+    },
+  },
+  {
+    feature: "ibc-v2",
+    fetch: async (features, _rpc, rest) => {
+      if (!features.includes("ibc-go")) {
+        return false;
+      }
+      const result = await simpleFetch<{
+        code: number;
+        message: string;
+        details: string[];
+      }>(rest, "/ibc/apps/transfer/v1/denoms/test", {
+        validateStatus: (status) => {
+          return status === 400;
+        },
+      });
+
+      if (
+        result.status === 400 &&
+        result.data?.message &&
+        typeof result.data.message === "string" &&
+        result.data.message.includes("invalid denom trace hash")
+      ) {
+        return true;
+      }
+
+      return false;
+    },
+  },
 ];
 
 /**
@@ -156,11 +208,6 @@ export async function checkChainFeatures(
 ): Promise<string[]> {
   const newFeatures: string[] = [];
   const features = chainInfo.features?.slice() ?? [];
-
-  // avoid checking for evm networks
-  if (features.includes("evm")) {
-    return newFeatures;
-  }
 
   for (const method of RecognizableChainFeaturesMethod) {
     if (features.includes(method.feature)) {

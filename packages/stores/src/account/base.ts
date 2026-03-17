@@ -5,7 +5,7 @@ import {
   KeplrSignOptions,
   StdFee,
 } from "@keplr-wallet/types";
-import { ChainGetter } from "../common";
+import { ChainGetter } from "../chain";
 import { KVStore, DenomHelper, toGenerator } from "@keplr-wallet/common";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { MakeTxResponse } from "./types";
@@ -31,7 +31,7 @@ export interface AccountSetOpts {
     chainInfo: ReturnType<ChainGetter["getChain"]>
   ) => Promise<void>;
   readonly autoInit: boolean;
-  readonly getKeplr: () => Promise<Keplr | undefined>;
+  readonly getKeplr?: () => Promise<Keplr | undefined>;
 }
 
 export class AccountSetBase {
@@ -112,8 +112,8 @@ export class AccountSetBase {
     }
   }
 
-  getKeplr(): Promise<Keplr | undefined> {
-    return this.opts.getKeplr();
+  async getKeplr(): Promise<Keplr | undefined> {
+    return await this?.opts?.getKeplr?.();
   }
 
   registerSendTokenFn(
@@ -162,7 +162,7 @@ export class AccountSetBase {
     keplr: Keplr,
     chainInfo: ReturnType<ChainGetter["getChain"]>
   ): Promise<void> {
-    await keplr.experimentalSuggestChain(chainInfo.raw);
+    await keplr.experimentalSuggestChain(chainInfo.embedded);
   }
 
   private readonly handleInit = () => this.init();
@@ -408,7 +408,7 @@ export class AccountSetBase {
 
     return Bech32Address.fromBech32(
       this.bech32Address,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixAccAddr
     ).toHex(true);
   }
 

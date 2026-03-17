@@ -1,6 +1,9 @@
-import { ChainGetter, ObservableQueryTendermint } from "../../../../common";
+import {
+  ObservableQueryTendermint,
+  QuerySharedContext,
+} from "../../../../common";
 import { AnnualProvisions } from "./types";
-import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../../chain";
 import { computed, makeObservable } from "mobx";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import { MintExtension, setupMintExtension } from "@cosmjs/stargate";
@@ -9,7 +12,11 @@ export class ObservableQueryJunoAnnualProvisions extends ObservableQueryTendermi
   protected readonly chainId: string;
   protected readonly chainGetter: ChainGetter;
 
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
@@ -34,6 +41,10 @@ export class ObservableQueryJunoAnnualProvisions extends ObservableQueryTendermi
     }
 
     const chainInfo = this.chainGetter.getChain(this.chainId);
+
+    if (!chainInfo.stakeCurrency) {
+      return;
+    }
 
     return new CoinPretty(
       chainInfo.stakeCurrency,

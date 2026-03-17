@@ -9,6 +9,19 @@ export function makeURL(baseURL: string, url: string): string {
     "/" +
     removeFirstSlashIfIs(url);
 
+  url =
+    url +
+    (() => {
+      if (Array.from(baseURLInstance.searchParams.keys()).length > 0) {
+        if (url.includes("?")) {
+          return "&" + baseURLInstance.searchParams.toString();
+        } else {
+          return "?" + baseURLInstance.searchParams.toString();
+        }
+      }
+      return "";
+    })();
+
   return removeLastSlashIfIs(baseURL + "/" + removeFirstSlashIfIs(url));
 }
 
@@ -68,18 +81,25 @@ export async function simpleFetch<R>(
     ...otherOptions,
   });
 
+  const isGETMethod = (otherOptions?.method || "GET").toUpperCase() === "GET";
+
   let data: R;
 
-  const contentType = fetched.headers.get("content-type") || "";
-  if (contentType.startsWith("application/json")) {
-    data = await fetched.json();
+  if (fetched.status === 204) {
+    // 204 No Content
+    data = undefined as any;
   } else {
-    const r = await fetched.text();
-    const trim = r.trim();
-    if (trim.startsWith("{") && trim.endsWith("}")) {
-      data = JSON.parse(trim);
+    const contentType = fetched.headers.get("content-type") || "";
+    if (contentType.startsWith("application/json")) {
+      data = await fetched.json();
     } else {
-      data = r as any;
+      const r = await fetched.text();
+      const trim = r.trim();
+      if (trim.startsWith("{") && trim.endsWith("}")) {
+        data = JSON.parse(trim);
+      } else {
+        data = r as any;
+      }
     }
   }
 
@@ -87,12 +107,13 @@ export async function simpleFetch<R>(
     url: actualURL,
     data,
     headers: fetched.headers,
-    status: fetched.status,
+    // GET이면서 204인 경우는 404로 처리
+    status: isGETMethod && fetched.status === 204 ? 404 : fetched.status,
     statusText: fetched.statusText,
   };
 
   const validateStatusFn = options?.validateStatus || defaultValidateStatusFn;
-  if (!validateStatusFn(fetched.status)) {
+  if (!validateStatusFn(res.status)) {
     throw new SimpleFetchError(baseURL, url, res);
   }
 
@@ -100,5 +121,5 @@ export async function simpleFetch<R>(
 }
 
 function defaultValidateStatusFn(status: number): boolean {
-  return status === 200;
+  return status >= 200 && status < 300;
 }

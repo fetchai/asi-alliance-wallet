@@ -1,15 +1,15 @@
 import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
-import { KVStore } from "@keplr-wallet/common";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Int, Dec } from "@keplr-wallet/unit";
 import { QueryDelegatorUnbondingDelegationsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
 import { computed, makeObservable } from "mobx";
 import {
   camelToSnake,
-  ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
 import { UnbondingDelegation, UnbondingDelegations } from "./types";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTendermint<UnbondingDelegations> {
   protected bech32Address: string;
@@ -17,14 +17,14 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
   protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as StakingExtension;
@@ -45,6 +45,9 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
   }
 
   protected override canFetch(): boolean {
+    if (!this.chainGetter.getChain(this.chainId).stakeCurrency) {
+      return false;
+    }
     /* If bech32 address is empty, it will always fail, so don't need to fetch it.
     also avoid fetching the endpoint for evm networks*/
     const chainInfo = this.chainGetter.getChain(this.chainId);
@@ -54,7 +57,7 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
   }
 
   @computed
-  get total(): CoinPretty {
+  get total(): CoinPretty | undefined {
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     if (
@@ -62,17 +65,27 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
       !this.response.data ||
       !this.response.data.unbonding_responses
     ) {
-      return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
-    }
-
-    let totalBalance = new Int(0);
-    for (const unbondingDelegation of this.response.data.unbonding_responses) {
-      for (const entry of unbondingDelegation.entries) {
-        totalBalance = totalBalance.add(new Int(entry.balance));
+      if (!stakeCurrency) {
+        return;
       }
-    }
 
-    return new CoinPretty(stakeCurrency, totalBalance);
+      if (!this.response) {
+        return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
+      }
+
+      let totalBalance = new Int(0);
+      for (const unbondingDelegation of this.response.data
+        .unbonding_responses) {
+        for (const entry of unbondingDelegation.entries) {
+          const amount = new Int(entry.balance);
+          if (amount.gt(new Int(0))) {
+            totalBalance = totalBalance.add(amount);
+          }
+        }
+      }
+
+      return new CoinPretty(stakeCurrency, totalBalance);
+    }
   }
 
   @computed
@@ -88,21 +101,30 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
 
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
+    if (!stakeCurrency) {
+      return [];
+    }
+
     const result = [];
     for (const unbonding of unbondings) {
       const entries = [];
       for (const entry of unbonding.entries) {
-        entries.push({
-          creationHeight: new Int(entry.creation_height),
-          completionTime: entry.completion_time,
-          balance: new CoinPretty(stakeCurrency, new Int(entry.balance)),
-        });
+        const balance = new CoinPretty(stakeCurrency, new Int(entry.balance));
+        if (balance.toDec().gt(new Dec(0))) {
+          entries.push({
+            creationHeight: new Int(entry.creation_height),
+            completionTime: entry.completion_time,
+            balance,
+          });
+        }
       }
 
-      result.push({
-        validatorAddress: unbonding.validator_address,
-        entries,
-      });
+      if (entries.length > 0) {
+        result.push({
+          validatorAddress: unbonding.validator_address,
+          entries,
+        });
+      }
     }
 
     return result;
@@ -118,21 +140,33 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
       return [];
     }
 
-    return this.response.data.unbonding_responses;
+    const res: UnbondingDelegation[] = [];
+
+    for (const unbonding of this.response.data.unbonding_responses) {
+      const u = {
+        ...unbonding,
+      };
+      u.entries = u.entries.filter((entry) => {
+        return new Int(entry.balance).gt(new Int(0));
+      });
+      res.push(u);
+    }
+
+    return res;
   }
 }
 
 export class ObservableQueryUnbondingDelegations extends ObservableQueryMap<UnbondingDelegations> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((bech32Address: string) => {
       return new ObservableQueryUnbondingDelegationsInner(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         bech32Address
       );
     });

@@ -1,8 +1,7 @@
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
 import { ObservableChainQueryRPC } from "../../chain-rpc-query";
 import { Int } from "@keplr-wallet/unit";
-import { convertToEpoch } from "./utils";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 type RPCStatusResult = {
   node_info: {
@@ -51,14 +50,12 @@ export class ObservableQueryRPCStatus extends ObservableChainQueryRPC<
     }
   | RPCStatusResult
 > {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
-    super(kvStore, chainId, chainGetter, "/status");
-  }
-
-  protected override canFetch(): boolean {
-    // avoid fetching the endpoint for evm networks
-    const chainInfo = this.chainGetter.getChain(this.chainId);
-    return !chainInfo?.features?.includes("evm");
+  constructor(
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
+    super(sharedContext, chainId, chainGetter, "/status");
   }
 
   get network(): string | undefined {
@@ -83,19 +80,5 @@ export class ObservableQueryRPCStatus extends ObservableChainQueryRPC<
     }
 
     return new Int(this.response.data.sync_info.latest_block_height);
-  }
-
-  get latestBlockTime(): number | undefined {
-    if (!this.response) {
-      return undefined;
-    }
-
-    if ("result" in this.response.data) {
-      const time = this.response.data?.result?.sync_info?.latest_block_time;
-      return time ? convertToEpoch(time) : undefined;
-    }
-
-    const time = this.response.data?.sync_info?.latest_block_time;
-    return time ? convertToEpoch(time) : undefined;
   }
 }
