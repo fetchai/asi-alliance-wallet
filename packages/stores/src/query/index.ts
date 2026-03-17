@@ -8,5 +8,7 @@ export * from "./cosmwasm";
 export * from "./secret-wasm";
 export * from "./osmosis";
 export * from "./icns";
+export * from "./evm";
+export * from "./fns";
 export * from "./noble";
 export * from "./babylon";

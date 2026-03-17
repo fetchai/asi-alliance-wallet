@@ -381,7 +381,7 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
     // For legacy support
     // Fallback gas price step to legacy chain info which includes gas price step field in root,
     // if there is no gas price step in fee currency.
-    const chainInfoWithGasPriceStep = (this.chainInfo.raw ?? {}) as {
+    const chainInfoWithGasPriceStep = (this.chainInfo.embedded ?? {}) as {
       gasPriceStep?: {
         low: number;
         average: number;

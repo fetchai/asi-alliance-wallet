@@ -384,6 +384,24 @@ export class InteractionStore implements InteractionForegroundHandler {
     }
   }
 
+  @flow
+  *approve(_type: string, id: string, result: unknown) {
+    this.removeData(id);
+    yield this.msgRequester.sendMessage(
+      BACKGROUND_PORT,
+      new ApproveInteractionMsg(id, result)
+    );
+  }
+
+  @flow
+  *reject(_type: string, id: string) {
+    this.removeData(id);
+    yield this.msgRequester.sendMessage(
+      BACKGROUND_PORT,
+      new RejectInteractionMsg(id)
+    );
+  }
+
   @action
   protected markAsObsolete(id: string, approved: boolean = false) {
     if (this.getData(id)) {

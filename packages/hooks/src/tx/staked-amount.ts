@@ -113,6 +113,10 @@ export class StakedAmountConfig extends TxChainSetter implements IAmountConfig {
         .cosmos!.queryDelegations.getQueryBech32Address(this.sender)
         .getDelegationTo(this.validatorAddress);
 
+      if (result == null) {
+        return "0";
+      }
+
       if (result.toDec().lte(new Dec(0))) {
         return "0";
       }
@@ -157,11 +161,11 @@ export class StakedAmountConfig extends TxChainSetter implements IAmountConfig {
 
   @computed
   get sendCurrency(): AppCurrency {
-    return this.chainInfo.stakeCurrency;
+    return this.chainInfo.stakeCurrency || this.chainInfo.currencies[0];
   }
 
   get sendableCurrencies(): AppCurrency[] {
-    return [this.chainInfo.stakeCurrency];
+    return [this.chainInfo.stakeCurrency || this.chainInfo.currencies[0]];
   }
 
   @computed
@@ -197,8 +201,8 @@ export class StakedAmountConfig extends TxChainSetter implements IAmountConfig {
       .get(this.chainId)
       .cosmos!.queryDelegations.getQueryBech32Address(this.sender)
       .getDelegationTo(this.validatorAddress);
-    const balanceDec = balance.toDec();
-    if (dec.gt(balanceDec)) {
+    const balanceDec = balance?.toDec();
+    if (balanceDec && dec.gt(balanceDec)) {
       return new InsufficientAmountError("Insufficient amount");
     }
 

@@ -1,7 +1,8 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { AddressBookEntry } from "@fetchai/wallet-types";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainsService } from "src/chains";
-import { PermissionService } from "src/permission";
+import { ChainsService } from "../chains";
+import { PermissionService } from "../permission";
 
 export class AddressBookService {
   protected addressBook: AddressBookEntry[] = [];
@@ -23,7 +24,7 @@ export class AddressBookService {
     const chainInfo = await this.chainService.getChainInfo(
       await this.chainService.getSelectedChain()
     );
-    const addressBook = await this.kvStore.get(`${chainInfo.chainName}`);
+    const addressBook = await this.kvStore.get(`${chainInfo?.chainName}`);
     return addressBook as AddressBookEntry[];
   }
 
@@ -32,7 +33,7 @@ export class AddressBookService {
       await this.chainService.getSelectedChain()
     );
     const addressBook: AddressBookEntry[] | undefined =
-      (await this.kvStore.get(`${chainInfo.chainName}`)) ?? [];
+      (await this.kvStore.get(`${chainInfo?.chainName}`)) ?? [];
 
     const entryExists = addressBook.find((a) => {
       return a.address === entry.address;
@@ -40,7 +41,7 @@ export class AddressBookService {
 
     if (!entryExists) {
       addressBook.push(entry);
-      await this.kvStore.set(`${chainInfo.chainName}`, addressBook);
+      await this.kvStore.set(`${chainInfo?.chainName}`, addressBook);
     }
   }
 
@@ -49,7 +50,7 @@ export class AddressBookService {
       await this.chainService.getSelectedChain()
     );
     const addressBook: AddressBookEntry[] | undefined =
-      (await this.kvStore.get(`${chainInfo.chainName}`)) ?? [];
+      (await this.kvStore.get(`${chainInfo?.chainName}`)) ?? [];
 
     const updatedAddressBook = addressBook.map((_entry) => {
       if (_entry.address === entry.address || _entry.name === entry.name) {
@@ -59,7 +60,7 @@ export class AddressBookService {
       }
     });
 
-    await this.kvStore.set(`${chainInfo.chainName}`, updatedAddressBook);
+    await this.kvStore.set(`${chainInfo?.chainName}`, updatedAddressBook);
   }
 
   public async deleteEntry(address: string) {
@@ -67,12 +68,12 @@ export class AddressBookService {
       await this.chainService.getSelectedChain()
     );
     const addressBook: AddressBookEntry[] | undefined =
-      (await this.kvStore.get(`${chainInfo.chainName}`)) ?? [];
+      (await this.kvStore.get(`${chainInfo?.chainName}`)) ?? [];
 
     const updatedAddressBook = addressBook.filter((entry) => {
       return entry.address !== address;
     });
 
-    await this.kvStore.set(`${chainInfo.chainName}`, updatedAddressBook);
+    await this.kvStore.set(`${chainInfo?.chainName}`, updatedAddressBook);
   }
 }

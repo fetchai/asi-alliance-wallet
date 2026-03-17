@@ -54,11 +54,11 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
   }
 
   @computed
-  get total(): CoinPretty | undefined {
-    const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
+  get total(): CoinPretty {
+    const chainInfo = this.chainGetter.getChain(this.chainId);
 
-    if (!stakeCurrency) {
-      return;
+    if (!chainInfo?.stakeCurrency) {
+      return new CoinPretty(chainInfo?.currencies[0], new Int(0)).ready(false);
     }
 
     if (
@@ -66,11 +66,7 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
       !this.response.data ||
       !this.response.data.delegation_responses
     ) {
-      return;
-    }
-
-    if (!this.response) {
-      return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
+      return new CoinPretty(chainInfo.stakeCurrency, new Int(0)).ready(false);
     }
 
     let totalBalance = new Int(0);
@@ -81,7 +77,7 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
       }
     }
 
-    return new CoinPretty(stakeCurrency, totalBalance);
+    return new CoinPretty(chainInfo.stakeCurrency, totalBalance);
   }
 
   @computed

@@ -2,6 +2,7 @@ import { ObservableChainQueryRPC } from "../../chain-rpc-query";
 import { Int } from "@keplr-wallet/unit";
 import { QuerySharedContext } from "../../../common";
 import { ChainGetter } from "../../../chain";
+import { convertToEpoch } from "./utils";
 
 type RPCStatusResult = {
   node_info: {
@@ -80,5 +81,19 @@ export class ObservableQueryRPCStatus extends ObservableChainQueryRPC<
     }
 
     return new Int(this.response.data.sync_info.latest_block_height);
+  }
+
+  get latestBlockTime(): number | undefined {
+    if (!this.response) {
+      return undefined;
+    }
+
+    if ("result" in this.response.data) {
+      const time = this.response.data?.result?.sync_info?.latest_block_time;
+      return time ? convertToEpoch(time) : undefined;
+    }
+
+    const time = this.response.data?.sync_info?.latest_block_time;
+    return time ? convertToEpoch(time) : undefined;
   }
 }

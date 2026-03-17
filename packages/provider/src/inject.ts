@@ -414,7 +414,7 @@ export class InjectedKeplr implements IKeplr, KeplrCoreTypes {
           if (method === "bitcoin") {
             const bitcoinProviderMethod = message.bitcoinProviderMethod;
 
-            if (bitcoinProviderMethod?.startsWith("protected")) {
+            if (bitcoinProviderMethod?.startsWith?.("protected")) {
               throw new Error("Rejected");
             }
 

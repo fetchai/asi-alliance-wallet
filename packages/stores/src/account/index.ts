@@ -9,3 +9,4 @@ export * from "./utils";
 export * from "./context";
 export * from "./noble";
 export * from "./babylon";
+export * from "./ethereum";

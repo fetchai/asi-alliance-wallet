@@ -93,7 +93,7 @@ export const EIP712MessageValidator = Joi.object<{
 });
 
 export const domainHash = (message: {
-  types: Record<string, { name: string; type: string }[]>;
+  types: Record<string, any>;
   domain: Record<string, any>;
 }): string =>
   TypedDataEncoder.hashStruct(
@@ -104,9 +104,9 @@ export const domainHash = (message: {
 
 // Seems that there is no way to set primary type and the first type becomes primary type.
 export const messageHash = (message: {
-  types: Record<string, { name: string; type: string }[]>;
+  types: Record<string, any>;
   primaryType: string;
-  message: Record<string, unknown>;
+  message: Record<string, any>;
 }): string =>
   TypedDataEncoder.from(
     (() => {

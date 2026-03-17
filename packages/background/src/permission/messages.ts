@@ -2,34 +2,6 @@ import { KeplrError, Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 import { AllPermissionDataPerOrigin } from "./types";
 
-export class DisableAccessMsg extends Message<void> {
-  public static type() {
-    return "disable-access";
-  }
-
-  constructor(public readonly chainIds: string[]) {
-    super();
-  }
-
-  validateBasic(): void {
-    if (!this.chainIds) {
-      throw new Error("chain id not set");
-    }
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  override approveExternal(): boolean {
-    return true;
-  }
-
-  type(): string {
-    return DisableAccessMsg.type();
-  }
-}
-
 export class GetPermissionOriginsMsg extends Message<string[]> {
   public static type() {
     return "get-permission-origins";

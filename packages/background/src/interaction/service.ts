@@ -92,6 +92,9 @@ export class InteractionService {
     const interactionWaitingData = await this.addDataToMap(
       type,
       env.isInternalMsg,
+      env.sender.tab?.id,
+      await this.getWindowIdFromEnvOrCurrentWindowId(env),
+      "",
       data
     );
 

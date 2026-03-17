@@ -4,6 +4,8 @@ import { sha256 } from "@noble/hashes/sha2";
 import { ripemd160 } from "@noble/hashes/ripemd160";
 import { Buffer } from "buffer/";
 import { Buffer as NodeBuffer } from "buffer";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { ec } from "elliptic";
 import { Hash } from "./hash";
 import { ECPairInterface, ECPairFactory } from "ecpair";
 import { Network as BitcoinNetwork, payments } from "bitcoinjs-lib";
@@ -72,6 +74,23 @@ export class PrivKeySecp256k1 {
       network,
       this.masterFingerprint,
       this.path
+    );
+  }
+
+  /**
+   * @deprecated Use `signDigest32(Hash.sha256(data))` instead.
+   * @param msg
+   */
+  sign(msg: Uint8Array): Uint8Array {
+    const secp256k1 = new ec("secp256k1");
+    const key = secp256k1.keyFromPrivate(this.privKey);
+
+    const signature = key.sign(Hash.sha256(msg), {
+      canonical: true,
+    });
+
+    return new Uint8Array(
+      signature.r.toArray("be", 32).concat(signature.s.toArray("be", 32))
     );
   }
 

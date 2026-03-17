@@ -21,3 +21,11 @@ export interface Account {
   xfp?: string;
   note?: string;
 }
+
+export const TYPE_KEYSTONE_GET_PUBKEY = "keystone-get-pubkey";
+export const TYPE_KEYSTONE_SIGN = "keystone-sign";
+
+export enum LedgerApp {
+  Cosmos = "cosmos",
+  Ethereum = "ethereum",
+}

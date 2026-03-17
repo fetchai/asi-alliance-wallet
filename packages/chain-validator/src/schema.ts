@@ -29,7 +29,9 @@ export const CurrencySchema = Joi.object<
   type: Joi.forbidden(),
 });
 
-export const CW20CurrencySchema = (CurrencySchema as ObjectSchema<CW20Currency>)
+export const CW20CurrencySchema = (
+  CurrencySchema as unknown as ObjectSchema<CW20Currency>
+)
   .keys({
     type: Joi.string().equal("cw20").required(),
     contractAddress: Joi.string().required(),
@@ -51,7 +53,7 @@ export const CW20CurrencySchema = (CurrencySchema as ObjectSchema<CW20Currency>)
   });
 
 export const Secret20CurrencySchema = (
-  CurrencySchema as ObjectSchema<Secret20Currency>
+  CurrencySchema as unknown as ObjectSchema<Secret20Currency>
 )
   .keys({
     type: Joi.string().equal("secret20").required(),
@@ -75,7 +77,7 @@ export const Secret20CurrencySchema = (
   });
 
 export const ERC20CurrencySchema = (
-  CurrencySchema as ObjectSchema<ERC20Currency>
+  CurrencySchema as unknown as ObjectSchema<ERC20Currency>
 )
   .keys({
     type: Joi.string().equal("erc20").required(),

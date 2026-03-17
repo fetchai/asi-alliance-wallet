@@ -3,12 +3,12 @@ import { action, autorun, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 import { Channel } from "./types";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
-import { IChainStore } from "@keplr-wallet/stores";
+import { HasMapStore, IChainStore } from "@keplr-wallet/stores";
 
 /**
  * IBCChannelStore saves the IBC channel infomations to the storage.
  */
-export class IBCChannelStore {
+export class IBCChannelStoreInner {
   // Key: chainIdentifier, second key: ${portId}/${channelId}
   @observable
   protected channelMap: Map<string, Map<string, Channel>> = new Map();
@@ -20,6 +20,7 @@ export class IBCChannelStore {
 
   constructor(
     protected readonly kvStore: KVStore,
+    protected readonly _chainId: string,
     protected readonly chainStore: IChainStore & {
       waitUntilInitialized?: () => Promise<void>;
     }
@@ -180,5 +181,25 @@ export class IBCChannelStore {
     }
     const inner = this.channelMap.get(chainIdentifier)!;
     inner.set(`${channel.portId}/${channel.channelId}`, channel);
+  }
+}
+
+/**
+ * IBCChannelStore saves the IBC channel infomations to the storage.
+ */
+export class IBCChannelStore extends HasMapStore<IBCChannelStoreInner> {
+  constructor(
+    protected readonly kvStore: KVStore,
+    protected readonly chainStore: IChainStore & {
+      waitUntilInitialized?: () => Promise<void>;
+    }
+  ) {
+    super((chainId: string) => {
+      return new IBCChannelStoreInner(kvStore, chainId, chainStore);
+    });
+  }
+
+  override get(chainId: string): IBCChannelStoreInner {
+    return super.get(chainId);
   }
 }

@@ -13,7 +13,7 @@ import { QueriesStore } from "./internal";
 
 export class DelegateAmountConfig extends AmountConfig {
   override get sendableCurrencies(): AppCurrency[] {
-    return [this.chainInfo.stakeCurrency];
+    return [this?.chainInfo?.stakeCurrency || this?.chainInfo?.currencies[0]];
   }
 }
 
@@ -123,7 +123,7 @@ export const useDelegateTxConfig = (
 
   const recipientConfig = useRecipientConfig(chainGetter, chainId);
   recipientConfig.setBech32Prefix(
-    chainGetter.getChain(chainId).bech32Config.bech32PrefixValAddr
+    chainGetter.getChain(chainId)?.bech32Config?.bech32PrefixValAddr || ""
   );
 
   return {

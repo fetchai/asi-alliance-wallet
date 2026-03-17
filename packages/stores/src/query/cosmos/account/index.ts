@@ -108,6 +108,15 @@ export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthA
   }
 
   @computed
+  get isVestingAccount(): boolean {
+    if (!this.response) {
+      return false;
+    }
+
+    return !!this.response.data?.account.base_vesting_account;
+  }
+
+  @computed
   get vestingAccount(): VestingAccount {
     if (!this.response) {
       return {};

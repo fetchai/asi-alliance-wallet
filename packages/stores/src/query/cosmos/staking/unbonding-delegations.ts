@@ -57,35 +57,32 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
   }
 
   @computed
-  get total(): CoinPretty | undefined {
-    const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
+  get total(): CoinPretty {
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+
+    if (!chainInfo?.stakeCurrency) {
+      return new CoinPretty(chainInfo?.currencies[0], new Int(0)).ready(false);
+    }
 
     if (
       !this.response ||
       !this.response.data ||
       !this.response.data.unbonding_responses
     ) {
-      if (!stakeCurrency) {
-        return;
-      }
+      return new CoinPretty(chainInfo.stakeCurrency, new Int(0)).ready(false);
+    }
 
-      if (!this.response) {
-        return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
-      }
-
-      let totalBalance = new Int(0);
-      for (const unbondingDelegation of this.response.data
-        .unbonding_responses) {
-        for (const entry of unbondingDelegation.entries) {
-          const amount = new Int(entry.balance);
-          if (amount.gt(new Int(0))) {
-            totalBalance = totalBalance.add(amount);
-          }
+    let totalBalance = new Int(0);
+    for (const unbondingDelegation of this.response.data.unbonding_responses) {
+      for (const entry of unbondingDelegation.entries) {
+        const amount = new Int(entry.balance);
+        if (amount.gt(new Int(0))) {
+          totalBalance = totalBalance.add(amount);
         }
       }
-
-      return new CoinPretty(stakeCurrency, totalBalance);
     }
+
+    return new CoinPretty(chainInfo.stakeCurrency, totalBalance);
   }
 
   @computed

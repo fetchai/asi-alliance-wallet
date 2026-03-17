@@ -1,5 +1,6 @@
 import React, { FunctionComponent, useState } from "react";
-import { KeyRingStore } from "@keplr-wallet/stores";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { KeyRingStore } from "@keplr-wallet/stores-core";
 import { action, computed, flow, makeObservable, observable } from "mobx";
 import { Mnemonic, RNG } from "@keplr-wallet/crypto";
 import { BIP44HDPath } from "@keplr-wallet/background";
@@ -53,7 +54,7 @@ export class RegisterConfig {
 
   @computed
   get mode(): RegisterMode {
-    return this.keyRingStore.multiKeyStoreInfo.length === 0 ? "create" : "add";
+    return this.keyRingStore.keyInfos.length === 0 ? "create" : "add";
   }
 
   get isLoading(): boolean {
@@ -115,13 +116,13 @@ export class RegisterConfig {
 
   @action
   protected getNextDefaultAccountName(prefix = "account"): string {
-    const items = this.keyRingStore.multiKeyStoreInfo;
+    const items = this.keyRingStore.keyInfos;
     if (items.length === 0) {
       return `${prefix}-1`;
     }
     // if any account is deleted in between
     // we still want to increment the account number based on the last account
-    const lastName = items[items.length - 1]?.meta?.["name"] || "";
+    const lastName = items[items.length - 1]?.name || "";
     const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
     const lastNum = match ? Number(match[1]) : 0;
 
@@ -154,23 +155,26 @@ export class RegisterConfig {
 
     try {
       if (this.mode === "create") {
-        yield this.keyRingStore.createMnemonicKey(
+        yield this.keyRingStore.newMnemonicKey(
           mnemonic,
+          bip44HDPath,
           password,
+          defaultName,
           {
             name: defaultName,
             ...meta,
-          },
-          bip44HDPath
+          }
         );
       } else {
-        yield this.keyRingStore.addMnemonicKey(
+        yield this.keyRingStore.newMnemonicKey(
           mnemonic,
+          bip44HDPath,
+          password,
+          defaultName,
           {
             name: defaultName,
             ...meta,
-          },
-          bip44HDPath
+          }
         );
       }
       this._isFinalized = true;
@@ -181,36 +185,37 @@ export class RegisterConfig {
 
   // Create or add the keystone account.
   // If the mode is "add", password will be ignored.
-  @flow
-  *createKeystone(name: string, password: string, bip44HDPath: BIP44HDPath) {
-    this._isLoading = true;
-    try {
-      if (this.mode === "create") {
-        yield this.keyRingStore.createKeystoneKey(
-          password,
-          {
-            name,
-          },
-          bip44HDPath
-        );
-      } else {
-        yield this.keyRingStore.addKeystoneKey(
-          {
-            name,
-          },
-          bip44HDPath
-        );
-      }
-      this._isFinalized = true;
-    } finally {
-      this._isLoading = false;
-    }
-  }
+  // @flow
+  // *createKeystone(name: string, password: string, bip44HDPath: BIP44HDPath) {
+  //   this._isLoading = true;
+  //   try {
+  //     if (this.mode === "create") {
+  //       yield this.keyRingStore.newKeystoneKey(
+  //         password,
+  //         {
+  //           name,
+  //         },
+  //         bip44HDPath
+  //       );
+  //     } else {
+  //       yield this.keyRingStore.newKeystoneKey(
+  //         {
+  //           name,
+  //         },
+  //         bip44HDPath
+  //       );
+  //     }
+  //     this._isFinalized = true;
+  //   } finally {
+  //     this._isLoading = false;
+  //   }
+  // }
 
   // Create or add the ledger account.
   // If the mode is "add", password will be ignored.
   @flow
   *createLedger(
+    pubkey: Uint8Array,
     name: string,
     password: string,
     bip44HDPath: BIP44HDPath,
@@ -232,23 +237,28 @@ export class RegisterConfig {
 
     try {
       if (this.mode === "create") {
-        yield this.keyRingStore.createLedgerKey(
-          password,
-          {
-            name: defaultName,
-            ...meta,
-          },
+        yield this.keyRingStore.newLedgerKey(
+          pubkey,
+          cosmosLikeApp,
           bip44HDPath,
-          cosmosLikeApp
+          // {
+          //   name: defaultName,
+          //   ...meta,
+          // },
+          defaultName,
+          password
         );
       } else {
-        yield this.keyRingStore.addLedgerKey(
-          {
-            name: defaultName,
-            ...meta,
-          },
+        yield this.keyRingStore.newLedgerKey(
+          pubkey,
+          cosmosLikeApp,
           bip44HDPath,
-          cosmosLikeApp
+          // {
+          //   name: defaultName,
+          //   ...meta,
+          // },
+          defaultName,
+          password
         );
       }
       this._isFinalized = true;
@@ -282,15 +292,25 @@ export class RegisterConfig {
 
     try {
       if (this.mode === "create") {
-        yield this.keyRingStore.createPrivateKey(privateKey, password, {
-          name: defaultName,
-          ...meta,
-        });
+        yield this.keyRingStore.newPrivateKeyKey(
+          privateKey,
+          {
+            name: defaultName,
+            ...meta,
+          },
+          defaultName,
+          password
+        );
       } else {
-        yield this.keyRingStore.addPrivateKey(privateKey, {
-          name: defaultName,
-          ...meta,
-        });
+        yield this.keyRingStore.newPrivateKeyKey(
+          privateKey,
+          {
+            name: defaultName,
+            ...meta,
+          },
+          defaultName,
+          password
+        );
       }
       this._isFinalized = true;
     } finally {
@@ -334,7 +354,7 @@ export const useRegisterConfig = (
   keyRingStore: KeyRingStore,
   initialOptions: RegisterOption[],
   rng: RNG = (array) => {
-    return Promise.resolve(crypto.getRandomValues(array));
+    return Promise.resolve(crypto.getRandomValues(array as Uint8Array)) as any;
   }
 ) => {
   const [txConfig] = useState(

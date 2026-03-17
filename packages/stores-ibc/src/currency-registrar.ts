@@ -7,6 +7,8 @@ import {
   CosmwasmQueries,
   IQueriesStore,
   SecretQueries,
+  ChainInfoImpl,
+  QueriesSetBase,
 } from "@keplr-wallet/stores";
 import { DenomHelper, KVStore } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
@@ -55,7 +57,7 @@ type CacheTokenInfo =
  * this will try to get the denom info by traversing the paths, and register the currency with the decimal and denom info.
  * But, if failed to traverse the paths, this will register the currency with 0 decimal and the minimal denom even though it is not suitable for human.
  */
-export class IBCCurrencyRegistrar {
+export class IBCCurrencyRegistrarInner {
   static defaultCoinDenomGenerator(
     denomTrace: {
       denom: string;
@@ -68,8 +70,8 @@ export class IBCCurrencyRegistrar {
         clientChainId?: string;
       }[];
     },
-    _: ChainInfo | undefined,
-    counterpartyChainInfo: ChainInfo | undefined,
+    _: IChainInfoImpl<ChainInfo> | undefined,
+    counterpartyChainInfo: IChainInfoImpl<ChainInfo> | undefined,
     originCurrency: AppCurrency | undefined
   ): string {
     if (originCurrency) {
@@ -129,10 +131,10 @@ export class IBCCurrencyRegistrar {
           clientChainId?: string;
         }[];
       },
-      originChainInfo: IChainInfoImpl | undefined,
-      counterpartyChainInfo: IChainInfoImpl | undefined,
+      originChainInfo: IChainInfoImpl<ChainInfo> | undefined,
+      counterpartyChainInfo: IChainInfoImpl<ChainInfo> | undefined,
       originCurrency: AppCurrency | undefined
-    ) => string = IBCCurrencyRegistrar.defaultCoinDenomGenerator,
+    ) => string = IBCCurrencyRegistrarInner.defaultCoinDenomGenerator,
     protected readonly cw20BaseURL: string = "",
     protected readonly cw20URI: string = ""
   ) {
@@ -1199,5 +1201,87 @@ export class IBCCurrencyRegistrar {
     const dbKey = `cache-ibc-denom-trace-paths-v3`;
     const obj = Object.fromEntries(this.cacheDenomTracePaths);
     this.kvStore.set<Record<string, CacheIBCDenomData>>(dbKey, obj);
+  }
+}
+
+/**
+ * IBCCurrencyRegsitrar gets the native balances that exist on the chain itself (ex. atom, scrt...)
+ * And, IBCCurrencyRegsitrar registers the currencies from IBC to the chain info.
+ * In cosmos-sdk, the denomination of IBC token has the form of "ibc/{hash}".
+ * And, its paths can be found by getting the denom trace from the node.
+ * If the native balance querier's response have the token that is form of IBC token,
+ * this will try to get the denom info by traversing the paths, and register the currency with the decimal and denom info.
+ * But, if failed to traverse the paths, this will register the currency with 0 decimal and the minimal denom even though it is not suitable for human.
+ */
+export class IBCCurrencyRegistrar<C extends ChainInfo = ChainInfo> {
+  @observable.shallow
+  protected map: Map<string, IBCCurrencyRegistrarInner> = new Map();
+
+  static defaultCoinDenomGenerator(
+    denomTrace: {
+      denom: string;
+      paths: {
+        portId: string;
+        channelId: string;
+      }[];
+    },
+    _: ChainInfoImpl | undefined,
+    counterpartyChainInfo: ChainInfoImpl | undefined,
+    originCurrency: AppCurrency | undefined
+  ): string {
+    if (originCurrency) {
+      return `${originCurrency.coinDenom} (${
+        counterpartyChainInfo ? counterpartyChainInfo.chainName : "Unknown"
+      }/${denomTrace.paths[0].channelId})`;
+    } else {
+      return `${denomTrace.denom} (${
+        counterpartyChainInfo ? counterpartyChainInfo.chainName : "Unknown"
+      }/${denomTrace.paths[0].channelId})`;
+    }
+  }
+
+  constructor(
+    protected readonly kvStore: KVStore,
+    protected readonly cacheDuration: number = 24 * 3600 * 1000, // 1 days
+    protected readonly failedCacheDuration: number = 24 * 3600 * 1000, // 1 days
+    protected readonly chainStore: ChainStore<C>,
+    protected readonly accountStore: {
+      hasAccount(chainId: string): boolean;
+      getAccount(chainId: string): {
+        bech32Address: string;
+      };
+    },
+    protected readonly queriesStore: IQueriesStore<
+      CosmosQueries &
+        Partial<CosmwasmQueries> &
+        Partial<SecretQueries> &
+        Partial<EthereumQueries>
+    >,
+    protected readonly cosmwasmQueriesStore:
+      | {
+          get(chainId: string): QueriesSetBase & CosmwasmQueries;
+        }
+      | undefined
+  ) {}
+
+  protected get(chainInfoInner: ChainInfoImpl): IBCCurrencyRegistrarInner {
+    if (!this.map.has(chainInfoInner.chainId)) {
+      runInAction(() => {
+        this.map.set(
+          chainInfoInner.chainId,
+          new IBCCurrencyRegistrarInner(
+            this.kvStore,
+            this.cacheDuration,
+            this.failedCacheDuration,
+            this.chainStore,
+            this.accountStore,
+            this.queriesStore
+          )
+        );
+      });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.map.get(chainInfoInner.chainId)!;
   }
 }
