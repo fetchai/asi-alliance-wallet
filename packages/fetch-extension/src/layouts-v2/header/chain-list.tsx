@@ -53,11 +53,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     );
 
     const cosmosMainList = mainChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const evmMainList = evmChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;
@@ -109,14 +109,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 <Card
                   key={index}
                   leftImage={
-                    chainInfo.raw.chainSymbolImageUrl !== undefined
-                      ? chainInfo.raw.chainSymbolImageUrl
+                    chainInfo.embedded.chainSymbolImageUrl !== undefined
+                      ? chainInfo.embedded.chainSymbolImageUrl
                       : chainInfo.chainName
                       ? chainInfo.chainName[0].toUpperCase()
                       : ""
                   }
                   leftImageStyle={{
-                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                       ? "#dddfdf"
                       : "transparent",
                   }}
@@ -174,14 +174,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   <Card
                     key={chainInfo.chainId}
                     leftImage={
-                      chainInfo.raw.chainSymbolImageUrl !== undefined
-                        ? chainInfo.raw.chainSymbolImageUrl
+                      chainInfo.embedded.chainSymbolImageUrl !== undefined
+                        ? chainInfo.embedded.chainSymbolImageUrl
                         : chainInfo.chainName
                         ? chainInfo.chainName[0].toUpperCase()
                         : ""
                     }
                     leftImageStyle={{
-                      backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                      backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                         ? "#dddfdf"
                         : "transparent",
                     }}
@@ -313,14 +313,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 <Card
                   key={index}
                   leftImage={
-                    chainInfo.raw.chainSymbolImageUrl !== undefined
-                      ? chainInfo.raw.chainSymbolImageUrl
+                    chainInfo.embedded.chainSymbolImageUrl !== undefined
+                      ? chainInfo.embedded.chainSymbolImageUrl
                       : chainInfo.chainName
                       ? chainInfo.chainName[0].toUpperCase()
                       : ""
                   }
                   leftImageStyle={{
-                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                       ? "#dddfdf"
                       : "transparent",
                   }}

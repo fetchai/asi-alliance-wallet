@@ -44,17 +44,17 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
 
       if (keyStore.type === "privateKey") {
         if (
-          keyStore.meta &&
-          keyStore.meta?.["email"] &&
-          keyStore.meta?.["socialType"] === "apple"
+          keyStore.insensitive &&
+          keyStore.insensitive?.["email"] &&
+          keyStore.insensitive?.["socialType"] === "apple"
         ) {
           return require("@assets/svg/wireframe/apple-logo.svg");
         }
 
         if (
-          keyStore.meta &&
-          keyStore.meta?.["email"] &&
-          keyStore.meta?.["socialType"] === "google"
+          keyStore.insensitive &&
+          keyStore.insensitive?.["email"] &&
+          keyStore.insensitive?.["socialType"] === "google"
         ) {
           return require("@assets/svg/wireframe/google-logo.svg");
         }
@@ -62,31 +62,33 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
       return;
     };
 
+    console.log({ keyRingStore: keyRingStore.keyInfos });
+
     return (
       <div>
-        {keyRingStore.multiKeyStoreInfo.map((keyStore, i) => {
-          const bip44HDPath = keyStore.bip44HDPath
-            ? keyStore.bip44HDPath
+        {keyRingStore.keyInfos.map((keyStore, i) => {
+          const bip44HDPath: any = keyStore.insensitive["bip44HDPath"]
+            ? keyStore.insensitive["bip44HDPath"]
             : {
                 account: 0,
                 change: 0,
                 addressIndex: 0,
               };
-          let paragraph = keyStore.meta?.["email"]
-            ? keyStore.meta["email"]
+          let paragraph = keyStore.insensitive?.["email"]
+            ? keyStore.insensitive["email"]
             : undefined;
           if (keyStore.type === "keystone") {
             paragraph = "Keystone";
           } else if (keyStore.type === "ledger") {
             const coinType = (() => {
               if (
-                keyStore.meta &&
-                keyStore.meta["__ledger__cosmos_app_like__"] &&
-                keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
+                keyStore.insensitive &&
+                keyStore.insensitive["__ledger__cosmos_app_like__"] &&
+                keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
               ) {
                 return (
                   AppCoinType[
-                    keyStore.meta["__ledger__cosmos_app_like__"] as App
+                    keyStore.insensitive["__ledger__cosmos_app_like__"] as App
                   ] || 118
                 );
               }
@@ -101,22 +103,24 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
             }`;
 
             if (
-              keyStore.meta &&
-              keyStore.meta["__ledger__cosmos_app_like__"] &&
-              keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
+              keyStore.insensitive &&
+              keyStore.insensitive["__ledger__cosmos_app_like__"] &&
+              keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
             ) {
-              paragraph += ` (${keyStore.meta["__ledger__cosmos_app_like__"]})`;
+              paragraph += ` (${keyStore.insensitive["__ledger__cosmos_app_like__"]})`;
             }
           }
           console.log(paragraph);
 
-          const nameByChain = keyStore.meta?.["nameByChain"]
-            ? JSON.parse(keyStore.meta["nameByChain"])
+          const keyRingMeta = keyStore.insensitive["keyRingMeta"] as any;
+
+          const nameByChain = keyRingMeta?.nameByChain
+            ? JSON.parse(keyRingMeta?.nameByChain)
             : {};
 
           const accountName =
             nameByChain?.[chainId] ||
-            keyStore.meta?.["name"] ||
+            keyStore.name ||
             intl.formatMessage({
               id: "setting.keyring.unnamed-account",
             });
@@ -139,7 +143,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 </React.Fragment>
               }
               rightContent={
-                keyStore.selected ? (
+                keyStore.isSelected ? (
                   <div style={{ display: "flex", columnGap: "12px" }}>
                     <img
                       style={{
@@ -168,22 +172,22 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 )
               }
               subheading={
-                keyStore.selected
+                keyStore.isSelected
                   ? formatAddress(accountInfo.bech32Address)
                   : ""
               }
               style={{
-                padding: keyStore.selected ? "18px 18px" : "18px 16px",
+                padding: keyStore.isSelected ? "18px 18px" : "18px 16px",
               }}
-              isActive={keyStore.selected}
+              isActive={keyStore.isSelected}
               onClick={
-                keyStore.selected
+                keyStore.isSelected
                   ? undefined
                   : async (e: any) => {
                       e.preventDefault();
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
-                        await keyRingStore.changeKeyRing(i);
+                        await keyRingStore.selectKeyRing(keyStore.id);
                         analyticsStore.logEvent("change_wallet_click");
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();

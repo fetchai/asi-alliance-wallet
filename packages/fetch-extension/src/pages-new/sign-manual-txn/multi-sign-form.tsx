@@ -69,7 +69,8 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       sequence: "",
     });
 
-    const bech32Prefix = chainStore.current.bech32Config.bech32PrefixAccAddr;
+    const bech32Prefix =
+      chainStore.current.bech32Config?.bech32PrefixAccAddr || "";
     const address = account.bech32Address;
     const accountName = account.name;
     const accountAddress = multisigAccount;

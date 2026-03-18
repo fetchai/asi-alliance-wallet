@@ -95,3 +95,9 @@ export interface ExportedKeyRingVault {
   insensitive: PlainObject;
   sensitive: string;
 }
+
+export enum SignMode {
+  Amino = "amino",
+  Direct = "direct",
+  Message = "message",
+}

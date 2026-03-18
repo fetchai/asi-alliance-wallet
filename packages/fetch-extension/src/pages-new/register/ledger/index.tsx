@@ -59,7 +59,7 @@ export const ImportLedgerPage: FunctionComponent<{
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [passwordCheckbox, setPasswordCheckbox] = useState(false);
   const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
-  const accountList = keyRingStore.multiKeyStoreInfo;
+  const accountList = keyRingStore.keyInfos;
   const defaultAccountName = getNextDefaultAccountName(accountList);
 
   const {

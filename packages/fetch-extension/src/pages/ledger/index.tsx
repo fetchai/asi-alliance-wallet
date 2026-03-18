@@ -25,7 +25,7 @@ import { useNavigate } from "react-router";
 import { BackButton } from "../../pages-new/register";
 import classnames from "classnames";
 import { useUSBDevices } from "@utils/ledger";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { ErrCodeAppNotInitialised } from "@keplr-wallet/background/build/ledger/types";
 
 export const LedgerSetupView: FunctionComponent<{

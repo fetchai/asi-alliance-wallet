@@ -32,6 +32,7 @@ import {
   ExportKeyRingVaultsMsg,
   SearchKeyRingsMsg,
   SwitchAccountMsg,
+  RefreshAccountList,
 } from "./messages";
 import { KeyRingService } from "./service";
 
@@ -137,6 +138,11 @@ export const getHandler: (service: KeyRingService) => Handler = (
         );
       case SearchKeyRingsMsg:
         return handleSearchKeyRingsMsg(service)(env, msg as SearchKeyRingsMsg);
+      case RefreshAccountList:
+        return handleRefreshAccountListMsg(service)(
+          env,
+          msg as RefreshAccountList
+        );
       default:
         throw new KeplrError("keyring", 221, "Unknown msg type");
     }
@@ -333,11 +339,21 @@ const handleChangeKeyRingNameMsg: (
   service: KeyRingService
 ) => InternalHandler<ChangeKeyRingNameMsg> = (service) => {
   return (_env, msg) => {
-    service.changeKeyRingName(msg.vaultId, msg.name);
+    service.changeKeyRingName(msg.vaultId, msg.name, msg?.nameByChain);
     return {
       status: service.keyRingStatus,
       keyInfos: service.getKeyInfos(),
     };
+  };
+};
+
+// RefreshAccountList does not need to do anything in the background
+const handleRefreshAccountListMsg: (
+  service: KeyRingService
+) => InternalHandler<RefreshAccountList> = (_service) => {
+  return async (_env, _msg) => {
+    console.log("inside refresh accountList", { _env, _msg });
+    return { refresh: true };
   };
 };
 

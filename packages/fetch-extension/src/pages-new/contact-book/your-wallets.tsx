@@ -56,8 +56,8 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
       const requester = new InExtensionMessageRequester();
       const msg = new ListAccountsMsg();
       const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
-      const selectedAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
-        (value) => value.selected
+      const selectedAccountIndex = keyRingStore.keyInfos.findIndex(
+        (value) => value.isSelected
       );
 
       const isEvm = chainStore.current.features?.includes("evm") ?? false;
@@ -78,8 +78,8 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
       accountsAddress();
     }, []);
 
-    const keyRingList = keyRingStore.multiKeyStoreInfo.filter(
-      (keyStore) => !keyStore.selected
+    const keyRingList = keyRingStore.keyInfos.filter(
+      (keyStore) => !keyStore.isSelected
     );
 
     return (

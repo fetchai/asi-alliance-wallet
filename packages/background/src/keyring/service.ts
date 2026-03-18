@@ -141,7 +141,7 @@ export class KeyRingService {
   }
 
   async ensureUnlockInteractive(env: Env): Promise<void> {
-    if (this.vaultService.isLocked) {
+    if (this.vaultService.isLocked && this.keyRingStatus === "locked") {
       await this.interactionService.waitApproveV2(
         env,
         "/unlock",
@@ -728,7 +728,6 @@ export class KeyRingService {
 
     const keyRing = this.getKeyRing("mnemonic");
     const vaultData = await keyRing.createKeyRingVault(mnemonic, bip44Path);
-
     // Finalize coin type if only one coin type exists.
     const coinTypes: Record<string, number | undefined> = {};
     const chainInfos = this.chainsService.getChainInfos();
@@ -1017,7 +1016,7 @@ export class KeyRingService {
   }
 
   @action
-  changeKeyRingName(vaultId: string, name: string) {
+  changeKeyRingName(vaultId: string, name: string, nameByChain?: string) {
     if (this.vaultService.isLocked) {
       throw new Error("KeyRing is locked");
     }
@@ -1027,8 +1026,14 @@ export class KeyRingService {
       throw new Error("Vault is null");
     }
 
+    const keyRingMeta = {
+      ...(vault.insensitive["keyRingMeta"] as any),
+      nameByChain,
+    };
+
     this.vaultService.setAndMergeInsensitiveToVault("keyRing", vaultId, {
       keyRingName: name,
+      keyRingMeta,
     });
 
     if (this.selectedVaultId === vault.id) {

@@ -11,11 +11,11 @@ import { Button, Popover, PopoverBody } from "reactstrap";
 import style from "./style.module.scss";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { PageButton } from "../page-button";
-import { MultiKeyStoreInfoWithSelectedElem } from "@keplr-wallet/background";
 import { FormattedMessage, useIntl } from "react-intl";
 import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
+import { KeyInfo } from "@keplr-wallet/background";
 
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
@@ -66,29 +66,29 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
             </Button>
           </div>
         </div>
-        {keyRingStore.multiKeyStoreInfo.map((keyStore, i) => {
-          const bip44HDPath = keyStore.bip44HDPath
-            ? keyStore.bip44HDPath
+        {keyRingStore.keyInfos.map((keyStore, i) => {
+          const bip44HDPath = keyStore.insensitive["bip44HDPath"]
+            ? keyStore.insensitive["bip44HDPath"]
             : {
                 account: 0,
                 change: 0,
                 addressIndex: 0,
               };
-          let paragraph = keyStore.meta?.["email"]
-            ? keyStore.meta["email"]
+          let paragraph = keyStore.insensitive["email"]
+            ? keyStore.insensitive["email"]
             : undefined;
           if (keyStore.type === "keystone") {
             paragraph = "Keystone";
           } else if (keyStore.type === "ledger") {
             const coinType = (() => {
               if (
-                keyStore.meta &&
-                keyStore.meta["__ledger__cosmos_app_like__"] &&
-                keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
+                keyStore.insensitive &&
+                keyStore.insensitive["__ledger__cosmos_app_like__"] &&
+                keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
               ) {
                 return (
                   AppCoinType[
-                    keyStore.meta["__ledger__cosmos_app_like__"] as App
+                    keyStore.insensitive["__ledger__cosmos_app_like__"] as App
                   ] || 118
                 );
               }
@@ -96,18 +96,20 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
               return 118;
             })();
 
-            paragraph = `Ledger - m/44'/${coinType}'/${bip44HDPath.account}'${
+            paragraph = `Ledger - m/44'/${coinType}'/${
+              bip44HDPath["account"]
+            }'${
               bip44HDPath.change !== 0 || bip44HDPath.addressIndex !== 0
                 ? `/${bip44HDPath.change}/${bip44HDPath.addressIndex}`
                 : ""
             }`;
 
             if (
-              keyStore.meta &&
-              keyStore.meta["__ledger__cosmos_app_like__"] &&
-              keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
+              keyStore.insensitive &&
+              keyStore.insensitive["__ledger__cosmos_app_like__"] &&
+              keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
             ) {
-              paragraph += ` (${keyStore.meta["__ledger__cosmos_app_like__"]})`;
+              paragraph += ` (${keyStore.insensitive["__ledger__cosmos_app_like__"]})`;
             }
           }
 
@@ -115,13 +117,13 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
             <PageButton
               key={i.toString()}
               title={`${
-                keyStore.meta?.["name"]
-                  ? keyStore.meta["name"]
+                keyStore.insensitive?.["name"]
+                  ? keyStore.insensitive["name"]
                   : intl.formatMessage({
                       id: "setting.keyring.unnamed-account",
                     })
               } ${
-                keyStore.selected
+                keyStore.isSelected
                   ? intl.formatMessage({
                       id: "setting.keyring.selected-account",
                     })
@@ -129,13 +131,13 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
               }`}
               paragraph={paragraph}
               onClick={
-                keyStore.selected
+                keyStore.isSelected
                   ? undefined
                   : async (e) => {
                       e.preventDefault();
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
-                        await keyRingStore.changeKeyRing(i);
+                        await keyRingStore.selectKeyRing(keyStore.id);
                         analyticsStore.logEvent("select_account_click");
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();
@@ -152,7 +154,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                       }
                     }
               }
-              style={keyStore.selected ? { cursor: "default" } : undefined}
+              style={keyStore.isSelected ? { cursor: "default" } : undefined}
               icons={[
                 <KeyRingToolsIcon key="tools" index={i} keyStore={keyStore} />,
               ]}
@@ -166,7 +168,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
 
 const KeyRingToolsIcon: FunctionComponent<{
   index: number;
-  keyStore: MultiKeyStoreInfoWithSelectedElem;
+  keyStore: KeyInfo;
 }> = ({ index, keyStore }) => {
   const { analyticsStore } = useStore();
   const [isOpen, setIsOpen] = useState<boolean>(false);

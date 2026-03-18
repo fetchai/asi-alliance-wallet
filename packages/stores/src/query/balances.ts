@@ -107,13 +107,18 @@ export class ObservableQueryBalancesImplMap {
   }
 
   @computed
-  get stakable(): IObservableQueryBalanceImpl | undefined {
+  get stakable(): IObservableQueryBalanceImpl {
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    if (!chainInfo.stakeCurrency) {
-      return undefined;
+
+    const balance = this.getBalanceInner(
+      chainInfo.stakeCurrency || chainInfo.currencies[0]
+    );
+
+    if (!balance) {
+      throw new Error("Failed to get stakable balance");
     }
 
-    return this.getBalanceInner(chainInfo.stakeCurrency);
+    return balance;
   }
 
   /**

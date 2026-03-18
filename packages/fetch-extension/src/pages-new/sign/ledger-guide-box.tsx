@@ -3,7 +3,7 @@ import "./ledger-guide-box.module.scss";
 import style from "./ledger-guide-box.module.scss";
 import classnames from "classnames";
 import { ErrFailedInit } from "@keplr-wallet/background/src/ledger/types";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 
 export interface LedgerGuideBoxProps {
   ledgerError: WalletError;

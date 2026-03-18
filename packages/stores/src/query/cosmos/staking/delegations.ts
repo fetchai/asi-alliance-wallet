@@ -133,15 +133,14 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
   }
 
   readonly getDelegationTo = computedFn(
-    (validatorAddress: string): CoinPretty | undefined => {
+    (validatorAddress: string): CoinPretty => {
       const delegations = this.delegations;
 
-      const stakeCurrency = this.chainGetter.getChain(
-        this.chainId
-      ).stakeCurrency;
+      const chainInfo = this.chainGetter.getChain(this.chainId);
+      const stakeCurrency = chainInfo.stakeCurrency;
 
       if (!stakeCurrency) {
-        return;
+        return new CoinPretty(chainInfo.currencies[0], new Int(0)).ready(false);
       }
 
       if (!this.response || !this.response.data) {

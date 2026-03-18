@@ -1,5 +1,6 @@
 import React, {
   FunctionComponent,
+  PropsWithChildren,
   useCallback,
   useContext,
   useRef,
@@ -65,7 +66,7 @@ const background = {
   },
 };
 
-export interface Props {
+export interface Props extends PropsWithChildren {
   isOpen: boolean;
 }
 
@@ -81,7 +82,7 @@ export const Menu: FunctionComponent<Props> = ({ isOpen, children }) => {
   return (
     <React.Fragment>
       <AnimatePresence>
-        {isOpen ? (
+        {isOpen && (
           <motion.div
             className={style["background"]}
             animate={isOpen ? "open" : "closed"}
@@ -90,7 +91,7 @@ export const Menu: FunctionComponent<Props> = ({ isOpen, children }) => {
             initial={{ opacity: 0 }}
             onClick={menuOnClick}
           />
-        ) : null}
+        )}
       </AnimatePresence>
       <motion.nav
         className={style["menuNav"]}

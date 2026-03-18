@@ -32,11 +32,11 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     );
 
     const cosmosMainList = mainChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const evmMainList = evmChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;

@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, PropsWithChildren } from "react";
 
 import { Variants } from "framer-motion";
 
@@ -70,63 +70,64 @@ export const useNotification = () => {
   return store;
 };
 
-export const NotificationProvider: FunctionComponent = observer((props) => {
-  const { children } = props;
+export const NotificationProvider: FunctionComponent<PropsWithChildren> =
+  observer((props) => {
+    const { children } = props;
 
-  const notificationStore = useNotificationStore();
+    const notificationStore = useNotificationStore();
 
-  const push = (property: NotificationProperty): string | undefined => {
-    if (!property.id) {
-      const arr = new Uint8Array(8);
-      crypto.getRandomValues(arr);
-      property.id = Buffer.from(arr).toString("hex");
-    }
+    const push = (property: NotificationProperty): string | undefined => {
+      if (!property.id) {
+        const arr = new Uint8Array(8);
+        crypto.getRandomValues(arr);
+        property.id = Buffer.from(arr).toString("hex");
+      }
 
-    if (property.placement === "top-left") {
-      notificationStore.pushTopLeftProperty(property);
-    } else if (property.placement === "top-center") {
-      notificationStore.pushTopCenterProperty(property);
-    } else if (property.placement === "top-right") {
-      notificationStore.pushTopRightProperty(property);
-    } else {
-      throw new Error("Invalid placement for notification");
-    }
+      if (property.placement === "top-left") {
+        notificationStore.pushTopLeftProperty(property);
+      } else if (property.placement === "top-center") {
+        notificationStore.pushTopCenterProperty(property);
+      } else if (property.placement === "top-right") {
+        notificationStore.pushTopRightProperty(property);
+      } else {
+        throw new Error("Invalid placement for notification");
+      }
 
-    return property.id;
-  };
+      return property.id;
+    };
 
-  const remove = (id: string) => {
-    notificationStore.removeTopLeftProperty(id);
-    notificationStore.removeTopCenterProperty(id);
-    notificationStore.removeTopRightProperty(id);
-  };
+    const remove = (id: string) => {
+      notificationStore.removeTopLeftProperty(id);
+      notificationStore.removeTopCenterProperty(id);
+      notificationStore.removeTopRightProperty(id);
+    };
 
-  return (
-    <NotificationContext.Provider
-      value={{
-        push,
-        remove,
-      }}
-    >
-      {children}
-      <NotificationContainer
-        id="notification-top-left"
-        properties={notificationStore.topLeftProperties.slice().reverse()}
-        initial={{ x: "-100%", opacity: 0 }}
-        variants={topLeftVariants}
-      />
-      <NotificationContainer
-        id="notification-top-center"
-        properties={notificationStore.topCenterProperties.slice().reverse()}
-        initial={{ y: "-100%", opacity: 0 }}
-        variants={topCenterVariants}
-      />
-      <NotificationContainer
-        id="notification-top-right"
-        properties={notificationStore.topRightProperties.slice().reverse()}
-        initial={{ x: "100%", opacity: 0 }}
-        variants={topRightVariants}
-      />
-    </NotificationContext.Provider>
-  );
-});
+    return (
+      <NotificationContext.Provider
+        value={{
+          push,
+          remove,
+        }}
+      >
+        {children}
+        <NotificationContainer
+          id="notification-top-left"
+          properties={notificationStore.topLeftProperties.slice().reverse()}
+          initial={{ x: "-100%", opacity: 0 }}
+          variants={topLeftVariants}
+        />
+        <NotificationContainer
+          id="notification-top-center"
+          properties={notificationStore.topCenterProperties.slice().reverse()}
+          initial={{ y: "-100%", opacity: 0 }}
+          variants={topCenterVariants}
+        />
+        <NotificationContainer
+          id="notification-top-right"
+          properties={notificationStore.topRightProperties.slice().reverse()}
+          initial={{ x: "100%", opacity: 0 }}
+          variants={topRightVariants}
+        />
+      </NotificationContext.Provider>
+    );
+  });

@@ -1,6 +1,6 @@
 import classnames from "classnames";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, PropsWithChildren } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { useConfirm } from "@components/confirm";
@@ -9,9 +9,11 @@ import { useStore } from "../../stores";
 import style from "./chain-list.module.scss";
 import { ChainInfoWithCoreTypes } from "@keplr-wallet/background";
 
-const ChainElement: FunctionComponent<{
-  chainInfo: ChainInfoWithCoreTypes;
-}> = observer(({ chainInfo }) => {
+const ChainElement: FunctionComponent<
+  PropsWithChildren<{
+    chainInfo: ChainInfoWithCoreTypes;
+  }>
+> = observer(({ chainInfo }) => {
   const { chainStore, analyticsStore, chatStore, proposalStore } = useStore();
   const navigate = useNavigate();
   const intl = useIntl();
@@ -48,7 +50,7 @@ const ChainElement: FunctionComponent<{
       }}
     >
       {chainInfo.chainName}
-      {!chainInfo.embeded &&
+      {!chainInfo.embedded &&
       chainStore.current.chainId !== chainInfo.chainId ? (
         <div className={style["removeBtn"]}>
           <i
@@ -79,7 +81,7 @@ const ChainElement: FunctionComponent<{
   );
 });
 
-const Divider: FunctionComponent = (props) => {
+const Divider: FunctionComponent<PropsWithChildren> = (props) => {
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <hr
@@ -128,7 +130,7 @@ export const ChainList: FunctionComponent = observer(() => {
     <div className={style["chainListContainer"]}>
       {evmChainList.length > 0 ? <Divider> Evm </Divider> : null}
       {evmChainList.map((chainInfo) => (
-        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />
+        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.embedded} />
       ))}
       <Divider />
       <a
@@ -147,11 +149,11 @@ export const ChainList: FunctionComponent = observer(() => {
       </a>
       <Divider> Cosmos </Divider>
       {mainChainList.map((chainInfo) => (
-        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />
+        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.embedded} />
       ))}
       {/* {betaChainList.length > 0 ? <Divider>Beta support</Divider> : null}
       {betaChainList.map((chainInfo) => (
-        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />
+        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.embedded} />
       ))} */}
 
       {/* <Divider /> */}

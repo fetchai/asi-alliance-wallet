@@ -18,7 +18,7 @@ const LOCAL_TEST_NETWORK_CONFIG: ChainInfo = {
     coinType: 118,
   },
   bech32Config: Bech32Address.defaultBech32Config("fetch"),
-  type: "testnet",
+  isTestnet: true,
   currencies: [
     {
       coinDenom: "stake",
@@ -62,7 +62,7 @@ const REMOTE_TEST_NETWORK_CONFIG: ChainInfo = {
     coinType: 118,
   },
   bech32Config: Bech32Address.defaultBech32Config("fetch"),
-  type: "testnet",
+  isTestnet: true,
   currencies: [
     {
       coinDenom: "stake",
@@ -279,7 +279,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       coinDecimals: 18,
       coinGeckoId: "ethereum",
     },
-    type: "testnet",
+    isTestnet: true,
     hideInUI: true,
     bip44: {
       coinType: 60,
@@ -462,7 +462,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
         ? "https://wallet.keplr.app/chains/osmosis"
         : "http://localhost:8080/chains/osmosis",
     bip44: { coinType: 118 },
-    type: "testnet",
+    isTestnet: true,
     bech32Config: Bech32Address.defaultBech32Config("osmo"),
     currencies: [
       {
@@ -3076,7 +3076,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       bech32PrefixConsPub: "axelarvalconspub",
     },
     bip44: { coinType: 118 },
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "AXL",
@@ -3112,7 +3112,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       coinType: 118,
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "TESTFET",
@@ -3160,7 +3160,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       coinType: 118,
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "TESTFET",
@@ -3203,7 +3203,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
   //     coinDecimals: 18,
   //     coinGeckoId: "fetch-ai",
   //   },
-  //   type: "testnet",
+  //   isTestnet: true,
   //   bip44: {
   //     coinType: 118,
   //   },

@@ -51,7 +51,7 @@ export class PermissionInteractiveService {
           });
 
           await browser.tabs.create({
-            url: "/register.html#",
+            url: "/popup.html#/register",
           });
         }
         throw new Error("Users need to create their accounts first");

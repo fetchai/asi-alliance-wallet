@@ -277,7 +277,7 @@ export const AssetView: FunctionComponent = observer(() => {
     return (
       <EmptyState
         chainName={current.chainName}
-        denom={chainStore.current.stakeCurrency.coinDenom}
+        denom={chainStore.current?.stakeCurrency?.coinDenom || ""}
         chainId={chainStore.current.chainId}
       />
     );

@@ -83,30 +83,32 @@ export const DestinationChainSelector: FunctionComponent<{
             });
           }}
         />
-        {ibcChannelInfo.getTransferChannels().map((channel) => {
-          if (!chainStore.hasChain(channel.counterpartyChainId)) {
-            return undefined;
-          }
+        {ibcChannelInfo
+          .getTransferChannels(chainStore.current.chainId)
+          .map((channel) => {
+            if (!chainStore.hasChain(channel.counterpartyChainId)) {
+              return undefined;
+            }
 
-          const chainInfo = chainStore.getChain(channel.counterpartyChainId);
+            const chainInfo = chainStore.getChain(channel.counterpartyChainId);
 
-          if (chainInfo) {
-            return (
-              <Card
-                heading={chainInfo.chainName}
-                key={chainInfo.chainId}
-                onClick={(e: any) => {
-                  e.preventDefault();
-                  ibcChannelConfig.setChannel(channel);
-                  setIsSelectorOpen(false);
-                }}
-                subheading={
-                  <div className={style["channel"]}>{channel.channelId}</div>
-                }
-              />
-            );
-          }
-        })}
+            if (chainInfo) {
+              return (
+                <Card
+                  heading={chainInfo.chainName}
+                  key={chainInfo.chainId}
+                  onClick={(e: any) => {
+                    e.preventDefault();
+                    ibcChannelConfig.setChannel(channel);
+                    setIsSelectorOpen(false);
+                  }}
+                  subheading={
+                    <div className={style["channel"]}>{channel.channelId}</div>
+                  }
+                />
+              );
+            }
+          })}
       </Dropdown>
     </React.Fragment>
   );

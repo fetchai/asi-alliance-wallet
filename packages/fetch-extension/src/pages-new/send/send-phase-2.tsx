@@ -362,7 +362,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                         isEVM: isEvm,
                       };
                       navigateOnTxnEvents(txnNavigationOptions);
-                      if (keyRingStore.keyRingType === "ledger") {
+                      if (keyRingStore.selectedKeyInfo?.type === "ledger") {
                         navigate("/send");
                       }
                     },

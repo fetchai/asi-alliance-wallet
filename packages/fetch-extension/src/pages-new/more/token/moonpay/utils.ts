@@ -1,4 +1,4 @@
-import { ChainInfoInner } from "@keplr-wallet/stores";
+import { IChainInfoImpl as ChainInfoInner } from "@keplr-wallet/stores";
 import axios from "axios";
 
 export const signMoonPayUrl = async (urlToSign: string): Promise<string> => {

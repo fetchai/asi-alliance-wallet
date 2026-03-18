@@ -42,9 +42,9 @@ export const MainPage: FunctionComponent = observer(() => {
   useEffect(() => {
     analyticsStore.logEvent("home_tab_click");
     analyticsStore.setUserProperties({
-      totalAccounts: keyRingStore.multiKeyStoreInfo.length,
+      totalAccounts: keyRingStore.keyInfos.length,
     });
-  }, [analyticsStore, keyRingStore.multiKeyStoreInfo.length]);
+  }, [analyticsStore, keyRingStore.keyInfos.length]);
 
   const confirm = useConfirm();
 
@@ -76,7 +76,7 @@ export const MainPage: FunctionComponent = observer(() => {
 
   /// Fetching wallet config info
   useEffect(() => {
-    if (keyRingStore.keyRingType === "ledger") {
+    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       return;
     }
     getJWT(chainStore.current.chainId, AUTH_SERVER).then((res) => {
@@ -91,7 +91,7 @@ export const MainPage: FunctionComponent = observer(() => {
     chainStore,
     chainStore.current.chainId,
     accountInfo.bech32Address,
-    keyRingStore.keyRingType,
+    keyRingStore.selectedKeyInfo?.type,
   ]);
 
   // hides the loader after current chain is switched

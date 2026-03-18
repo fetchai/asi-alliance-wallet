@@ -40,11 +40,11 @@ export const LockPage: FunctionComponent = observer(() => {
     },
   });
 
-  const { keyRingStore, analyticsStore } = useStore();
+  const { keyRingStore, analyticsStore, interactionStore } = useStore();
   const [loading, setLoading] = useState(false);
 
   const interactionInfo = useInteractionInfo(() => {
-    keyRingStore.rejectAll();
+    interactionStore.rejectAll("unlock");
   });
 
   return (

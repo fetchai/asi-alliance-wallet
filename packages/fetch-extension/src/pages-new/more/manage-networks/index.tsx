@@ -66,14 +66,14 @@ export const ManageNetworks: FunctionComponent = observer(() => {
               <Card
                 key={index}
                 leftImage={
-                  chainInfo.raw.chainSymbolImageUrl !== undefined
-                    ? chainInfo.raw.chainSymbolImageUrl
+                  chainInfo.embedded.chainSymbolImageUrl !== undefined
+                    ? chainInfo.embedded.chainSymbolImageUrl
                     : chainInfo.chainName
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
                 leftImageStyle={{
-                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                  backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                     ? "#dddfdf"
                     : "transparent",
                 }}
@@ -124,14 +124,14 @@ export const ManageNetworks: FunctionComponent = observer(() => {
               <Card
                 key={index}
                 leftImage={
-                  chainInfo.raw.chainSymbolImageUrl !== undefined
-                    ? chainInfo.raw.chainSymbolImageUrl
+                  chainInfo.embedded.chainSymbolImageUrl !== undefined
+                    ? chainInfo.embedded.chainSymbolImageUrl
                     : chainInfo.chainName
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
                 leftImageStyle={{
-                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                  backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                     ? "#dddfdf"
                     : "transparent",
                 }}

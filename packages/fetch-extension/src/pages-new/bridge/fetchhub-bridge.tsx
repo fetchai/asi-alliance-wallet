@@ -200,7 +200,7 @@ export const FetchhubBridge: FunctionComponent<{
           recipientConfig={nativeBridgeConfig.recipientConfig}
           value={""}
         />
-        {keyRingStore.keyRingType !== "ledger" && (
+        {keyRingStore.selectedKeyInfo?.type !== "ledger" && (
           <div
             className={style["addressSelector"]}
             onClick={(e) => {

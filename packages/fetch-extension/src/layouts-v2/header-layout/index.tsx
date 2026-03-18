@@ -1,4 +1,9 @@
-import React, { CSSProperties, FunctionComponent, useState } from "react";
+import React, {
+  CSSProperties,
+  FunctionComponent,
+  PropsWithChildren,
+  useState,
+} from "react";
 
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { BottomNav } from "../bottom-nav";
@@ -14,7 +19,9 @@ export interface Props extends HeaderProps {
   showTopMenu?: boolean;
 }
 
-export const HeaderLayout: FunctionComponent<Props> = (props) => {
+export const HeaderLayout: FunctionComponent<PropsWithChildren<Props>> = (
+  props
+) => {
   const { children } = props;
 
   const [isMenuOpen, setMenuOpen] = useState(false);

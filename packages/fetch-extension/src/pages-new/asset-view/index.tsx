@@ -66,7 +66,7 @@ export const AssetView = observer(() => {
 
   const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
     accountInfo.bech32Address
-  ).isVestingAccount;
+  ).vestingAccount;
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);

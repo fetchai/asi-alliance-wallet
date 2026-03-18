@@ -54,6 +54,7 @@ import type {
   InvocationsSignerDetails,
   ProviderInterface,
 } from "starknet";
+import { FetchBrowserWallet } from "@fetchai/wallet-types";
 
 export interface ProxyRequest {
   type: string;
@@ -93,8 +94,16 @@ export function defineUnwritablePropertyIfPossible(
   }
 }
 
-export function injectKeplrToWindow(keplr: IKeplr): void {
+export function injectKeplrToWindow(
+  keplr: IKeplr,
+  fetchBrowserWallet: FetchBrowserWallet
+): void {
   defineUnwritablePropertyIfPossible(window, "keplr", keplr);
+  defineUnwritablePropertyIfPossible(
+    window,
+    "fetchBrowserWallet",
+    fetchBrowserWallet
+  );
   defineUnwritablePropertyIfPossible(
     window,
     "getOfflineSigner",
@@ -115,7 +124,6 @@ export function injectKeplrToWindow(keplr: IKeplr): void {
     "getEnigmaUtils",
     keplr.getEnigmaUtils
   );
-
   defineUnwritablePropertyIfPossible(window, "starknet_keplr", keplr.starknet);
 
   defineUnwritablePropertyIfPossible(window, "bitcoin_keplr", keplr.bitcoin);

@@ -59,7 +59,10 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
       return balanceQuery.getBalanceFromCurrency(hasUSDC);
     }
 
-    return balanceStakableQuery.balance;
+    return (
+      balanceStakableQuery?.balance ||
+      new CoinPretty(current.currencies[0], new Int(0))
+    );
   })();
 
   const delegated = queries.cosmos.queryDelegations
@@ -179,7 +182,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
         <div className={style["balance-field"]}>
           <div className={style["balance"]}>
             {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === 0 ||
+            keyRingStore.status === "empty" ||
             rewards.isFetching ? (
               <Skeleton height="37.5px" width="100px" />
             ) : (
@@ -191,7 +194,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
           </div>
           <div className={style["inUsd"]}>
             {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === 0 ||
+            keyRingStore.status === "empty" ||
             rewards.isFetching ? (
               <Skeleton height="21px" width="100px" />
             ) : totalPrice ? (

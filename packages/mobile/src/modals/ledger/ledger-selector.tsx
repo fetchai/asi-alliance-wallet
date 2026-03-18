@@ -5,7 +5,7 @@ import { BluetoothMode } from ".";
 import { ViewStyle } from "react-native";
 import { BlurButton } from "components/new/button/blur-button";
 import TransportBLE from "@ledgerhq/react-native-hw-transport-ble";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 import {
   ErrCodeAppNotInitialised,
   ErrCodeDeviceLocked,

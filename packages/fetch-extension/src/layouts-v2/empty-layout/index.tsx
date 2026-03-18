@@ -1,10 +1,14 @@
-import React, { CSSProperties, FunctionComponent } from "react";
+import React, {
+  CSSProperties,
+  FunctionComponent,
+  PropsWithChildren,
+} from "react";
 
 import style from "./style.module.scss";
 
 import classnames from "classnames";
 
-interface Props {
+interface Props extends PropsWithChildren {
   className?: string;
   style?: CSSProperties;
 }

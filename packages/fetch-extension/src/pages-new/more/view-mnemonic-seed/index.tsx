@@ -231,7 +231,7 @@ export const ExportPage: FunctionComponent = observer(() => {
                 try {
                   setKeyRing(
                     await flowResult(
-                      keyRingStore.showKeyRing(parseInt(index), data.password)
+                      keyRingStore.showKeyRing(index, data.password)
                     )
                   );
                 } catch (e) {

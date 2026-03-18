@@ -8,10 +8,12 @@ import { useForm } from "react-hook-form";
 import { useStore } from "../../../stores";
 import { observer } from "mobx-react-lite";
 import styleName from "./name.module.scss";
-import { KeyRingStatus } from "@keplr-wallet/background";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import classNames from "classnames";
 import { validateWalletName } from "@utils/index";
+import { useInteractionInfo } from "@hooks/interaction";
+import { InteractionWaitingData } from "@keplr-wallet/background";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 interface FormData {
   name: string;
@@ -23,11 +25,20 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
 
   const intl = useIntl();
 
-  const { keyRingStore, chainStore } = useStore();
+  const { keyRingStore, chainStore, interactionStore } = useStore();
 
   const chainId = chainStore.current.chainId;
   const chainName = chainStore.current.chainName;
-  const waitingNameData = keyRingStore.waitingNameData?.data;
+  const handleRejectChangeKeyRingName = () =>
+    interactionStore.rejectAll("change-keyring-name");
+
+  const interactionData: InteractionWaitingData | undefined =
+    interactionStore.getAllData("change-keyring-name")[0];
+
+  const interactionInfo = useInteractionInfo({
+    onWindowClose: handleRejectChangeKeyRingName,
+    onUnmount: handleRejectChangeKeyRingName,
+  });
 
   const {
     register,
@@ -42,10 +53,13 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   });
 
   useEffect(() => {
-    if (waitingNameData?.defaultName) {
-      setValue("name", waitingNameData.defaultName);
+    if (interactionData?.data) {
+      const defaultName = (interactionData.data as any).defaultName;
+      if (defaultName) {
+        setValue("name", defaultName);
+      }
     }
-  }, [waitingNameData, setValue]);
+  }, [interactionData?.data, setValue]);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -60,11 +74,12 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   };
 
   const keyStore = useMemo(() => {
-    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
-  }, [keyRingStore.multiKeyStoreInfo, index]);
+    return keyRingStore.selectedKeyInfo;
+  }, [keyRingStore.selectedKeyInfo, index]);
 
-  const isKeyStoreReady = keyRingStore.status === KeyRingStatus.UNLOCKED;
-  const accountName = getNameByChain(keyStore?.meta) || keyStore.meta?.["name"];
+  const keyRingMeta = keyStore?.insensitive["keyRingMeta"] as any;
+  const isKeyStoreReady = keyRingStore.status === "unlocked";
+  const accountName = getNameByChain(keyRingMeta) || keyStore?.name;
 
   useEffect(() => {
     if (parseInt(index).toString() !== index) {
@@ -75,6 +90,10 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   if (isKeyStoreReady && keyStore == null) {
     return null;
   }
+
+  const notEditable =
+    interactionData?.data != null &&
+    (interactionData.data as any).editable === false;
 
   return (
     <HeaderLayout
@@ -96,30 +115,45 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           setLoading(true);
           try {
             // Close the popup by external change name message
-            if (waitingNameData != null) {
-              await keyRingStore.approveChangeName(data.name);
-              window.close();
-              return;
+            // Close the popup by external change name messag
+            if (index) {
+              const trimmedName = data.name.trim();
+              if (
+                interactionInfo.interaction &&
+                !interactionInfo.interactionInternal
+              ) {
+                await interactionStore.approveWithProceedNextV2(
+                  interactionStore
+                    .getAllData("change-keyring-name")
+                    .map((data) => data.id),
+                  trimmedName,
+                  (proceedNext) => {
+                    if (!proceedNext) {
+                      handleExternalInteractionWithNoProceedNext();
+                    }
+                  }
+                );
+              } else {
+                const nameByChain = keyRingMeta?.nameByChain
+                  ? JSON.parse(keyRingMeta?.nameByChain)
+                  : {};
+
+                const updatedAccountNames = {
+                  ...nameByChain,
+                  [chainId]: data.name?.trim(),
+                };
+
+                // Make sure that name is changed
+                // keep the default name, just update nameByChain
+                await keyRingStore.changeKeyRingName(
+                  index,
+                  keyStore?.name || "",
+                  updatedAccountNames
+                );
+
+                navigate("/");
+              }
             }
-
-            const nameByChain = keyStore.meta?.["nameByChain"]
-              ? JSON.parse(keyStore.meta?.["nameByChain"])
-              : {};
-
-            const updatedAccountNames = {
-              ...nameByChain,
-              [chainId]: data.name?.trim(),
-            };
-
-            // Make sure that name is changed
-            // keep the default name, just update nameByChain
-            await keyRingStore.updateNameKeyRing(
-              parseInt(index),
-              keyStore.meta?.["name"] || "",
-              updatedAccountNames
-            );
-
-            navigate("/");
           } catch (e) {
             console.log("Fail to decrypt: " + e.message);
             setError("name", {
@@ -172,7 +206,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
             setValue(e.target.name as keyof FormData, trimmedValue);
             setNewAccountName(trimmedValue);
             const { isValid, isValidFormat, containsLetterOrNumber } =
-              validateWalletName(trimmedValue, keyRingStore?.multiKeyStoreInfo);
+              validateWalletName(trimmedValue, keyRingStore?.keyInfos);
             const isEmpty = trimmedValue === "";
             if (!isValid || isEmpty) {
               setErrorMessage(
@@ -205,7 +239,7 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
               name.
             </div>
           }
-          readOnly={waitingNameData !== undefined && !waitingNameData?.editable}
+          readOnly={notEditable}
         />
 
         <div style={{ flex: 1 }} />

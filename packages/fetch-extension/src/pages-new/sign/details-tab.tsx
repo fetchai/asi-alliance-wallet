@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, PropsWithChildren } from "react";
 
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
@@ -179,7 +179,10 @@ export const DetailsTab: FunctionComponent<{
                   const feeOrZero =
                     feeConfig.fee ??
                     (() => {
-                      if (chainStore.current.feeCurrencies.length === 0) {
+                      if (
+                        chainStore.current.feeCurrencies.length === 0 &&
+                        chainStore.current?.stakeCurrency
+                      ) {
                         return new CoinPretty(
                           chainStore.current.stakeCurrency,
                           "0"
@@ -261,9 +264,11 @@ export const DetailsTab: FunctionComponent<{
   }
 );
 
-export const MsgRender: FunctionComponent<{
-  title: string;
-}> = ({ title, children }) => {
+export const MsgRender: FunctionComponent<
+  PropsWithChildren<{
+    title: string;
+  }>
+> = ({ title, children }) => {
   return (
     <div className={styleDetailsTab["msg"]}>
       <div className={styleDetailsTab["contentContainer"]}>

@@ -330,7 +330,7 @@ export const AddEvmChain: FunctionComponent = () => {
           label="Explorer Url"
           type="text"
           name="explorerUrl"
-          value={newChainInfo.explorerUrl}
+          value={newChainInfo?.explorerUrl ?? ""}
           onChange={handleChange}
         />
         <ButtonV2

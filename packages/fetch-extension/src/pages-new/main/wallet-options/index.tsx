@@ -12,11 +12,11 @@ export const WalletOptions = observer(() => {
   const { keyRingStore, analyticsStore } = useStore();
 
   useEffect(() => {
-    const firstAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
+    const firstAccountIndex = keyRingStore.keyInfos.findIndex(
       (value) => value.selected
     );
     setAccountIndex(firstAccountIndex);
-  }, [keyRingStore.multiKeyStoreInfo]);
+  }, [keyRingStore.keyInfos]);
 
   return (
     <div className={style["container"]}>

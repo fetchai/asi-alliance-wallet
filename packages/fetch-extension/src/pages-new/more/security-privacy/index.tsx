@@ -14,11 +14,11 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
   const intl = useIntl();
 
   useEffect(() => {
-    const firstAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
-      (value) => value.selected
+    const firstAccountIndex = keyRingStore.keyInfos.findIndex(
+      (value) => value.isSelected
     );
     setAccountIndex(firstAccountIndex);
-  }, [keyRingStore.multiKeyStoreInfo]);
+  }, [keyRingStore.keyInfos]);
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -45,13 +45,13 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
           leftImageStyle={{ background: "transparent" }}
           leftImage={require("@assets/svg/wireframe/key.svg")}
           heading={`View ${
-            keyRingStore.keyRingType === "mnemonic"
+            keyRingStore.selectedKeyInfo?.type === "mnemonic"
               ? "mnemonic seed"
               : "Private key"
           }`}
           onClick={() => {
             navigate(`/more/export/${accountIndex}`, {
-              state: { type: keyRingStore.keyRingType },
+              state: { type: keyRingStore.selectedKeyInfo?.type },
             });
             analyticsStore.logEvent("view_mnemonic_seed_click", {
               pageName: "Security & Privacy",

@@ -1,7 +1,7 @@
 import { Address } from "@components/address";
 import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
 import {
   formatAddress,
@@ -55,7 +55,7 @@ export const WalletDetailsView = observer(
     const [currentTxnType, setCurrentTxnType] = useState<string>("");
 
     useEffect(() => {
-      if (keyRingStore.keyRingType === "ledger") {
+      if (keyRingStore.selectedKeyInfo?.type === "ledger") {
         setChatTooltip("Coming soon for ledger");
         setChatDisabled(true);
         return;
@@ -84,7 +84,7 @@ export const WalletDetailsView = observer(
       hasFET,
       enabledChainIds,
       config.requiredNative,
-      keyRingStore.keyRingType,
+      keyRingStore.selectedKeyInfo?.type,
       current.chainId,
     ]);
     const navigate = useNavigate();

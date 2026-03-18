@@ -33,7 +33,10 @@ import {
 import { LedgerBox, LedgerGuideBoxProps } from "./ledger-guide-box";
 import { useUSBDevices } from "@utils/ledger";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { BACKGROUND_PORT, WalletError } from "@keplr-wallet/router";
+import {
+  BACKGROUND_PORT,
+  KeplrError as WalletError,
+} from "@keplr-wallet/router";
 import {
   ErrFailedInit,
   ErrFailedUnknown,
@@ -329,7 +332,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                 </div>
               ) : null}
               <div className={style["buttons"]}>
-                {keyRingStore.keyRingType === "ledger" &&
+                {keyRingStore.selectedKeyInfo?.type === "ledger" &&
                 approveButtonClicked ? (
                   <ButtonV2
                     variant="dark"
@@ -384,7 +387,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                         setApproveButtonClicked(true);
 
                         if (
-                          keyRingStore.keyRingType === "ledger" &&
+                          keyRingStore.selectedKeyInfo?.type === "ledger" &&
                           !ledgerInitStore.isInitNeeded
                         ) {
                           if (
@@ -405,7 +408,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                           }
                         }
 
-                        if (keyRingStore.keyRingType === "ledger") {
+                        if (keyRingStore.selectedKeyInfo?.type === "ledger") {
                           setLedgerInfo({
                             isWarning: false,
                             title: "Sign on Ledger",

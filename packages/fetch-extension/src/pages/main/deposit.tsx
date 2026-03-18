@@ -73,7 +73,7 @@ export const DepositView: FunctionComponent = observer(() => {
             )}
           >
             <FormattedMessage id="main.account.button.deposit" />{" "}
-            {chainStore.current.stakeCurrency.coinDenom.toUpperCase()}
+            {chainStore.current.stakeCurrency?.coinDenom?.toUpperCase()}
           </p>
           <p
             className={classnames(
@@ -164,7 +164,7 @@ export const DepositView: FunctionComponent = observer(() => {
                 )}
               >
                 <FormattedMessage id="main.account.button.buy" />{" "}
-                {chainStore.current.stakeCurrency.coinDenom.toUpperCase()}
+                {chainStore.current.stakeCurrency?.coinDenom?.toUpperCase()}
               </p>
               <p
                 className={classnames(

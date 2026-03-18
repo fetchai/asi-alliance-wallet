@@ -62,7 +62,7 @@ const NotificationTab = () => {
   const [isComingSoon, setIsComingSoon] = useState<boolean>(true);
 
   useEffect(() => {
-    if (keyRingStore.keyRingType === "ledger") {
+    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       setIsComingSoon(true);
     } else {
       setIsComingSoon(
@@ -117,7 +117,7 @@ const ChatTab = () => {
   const [chatDisabled, setChatDisabled] = useState(false);
 
   useEffect(() => {
-    if (keyRingStore.keyRingType === "ledger") {
+    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       setChatTooltip("Coming soon for ledger");
       setChatDisabled(true);
       return;
@@ -141,7 +141,7 @@ const ChatTab = () => {
     hasFET,
     enabledChainIds,
     config.requiredNative,
-    keyRingStore.keyRingType,
+    keyRingStore.selectedKeyInfo?.type,
     current.chainId,
   ]);
 
@@ -164,7 +164,7 @@ const ActivityTab = () => {
   const [activityDisabled, setActivityDisabled] = useState(false);
   const isEvm = current.features?.includes("evm") ?? false;
   useEffect(() => {
-    if (keyRingStore.keyRingType === "ledger") {
+    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       setActivityTooltip("Coming soon for ledger");
       setActivityDisabled(true);
       return;
@@ -176,7 +176,7 @@ const ActivityTab = () => {
       setActivityTooltip("");
       setActivityDisabled(false);
     }
-  }, [current.chainId, keyRingStore.keyRingType]);
+  }, [current.chainId, keyRingStore.selectedKeyInfo?.type]);
 
   return (
     <Tab

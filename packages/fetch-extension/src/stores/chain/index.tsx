@@ -1,7 +1,7 @@
 import { observable, action, computed, makeObservable, flow } from "mobx";
 
 import {
-  ChainInfoInner,
+  IChainInfoImpl,
   ChainStore as BaseChainStore,
   DeferInitialQueryController,
   ObservableQuery,
@@ -10,16 +10,15 @@ import {
 import { ChainInfo } from "@keplr-wallet/types";
 import {
   ChainInfoWithCoreTypes,
-  GetChainInfosMsg,
+  GetChainInfosWithCoreTypesMsg,
   RemoveSuggestedChainInfoMsg,
-  TryUpdateChainMsg,
   SetChainEndpointsMsg,
-  ResetChainEndpointsMsg,
+  ClearChainEndpointsMsg,
   SuggestChainInfoMsg,
   SetSelectedChainMsg,
+  TryUpdateAllChainInfosMsg,
 } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
-
 import { MessageRequester } from "@keplr-wallet/router";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
@@ -178,7 +177,7 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   }
 
   @computed
-  get current(): ChainInfoInner<ChainInfoWithCoreTypes> {
+  get current(): IChainInfoImpl<ChainInfoWithCoreTypes> {
     if (this.hasChain(this._selectedChainId)) {
       return this.getChain(this._selectedChainId);
     }
@@ -257,11 +256,11 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   @flow
   protected *getChainInfosFromBackground() {
-    const msg = new GetChainInfosMsg();
+    const msg = new GetChainInfosWithCoreTypesMsg();
     const result = yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     );
-    this.setChainInfos(result.chainInfos);
+    this.setEmbeddedChainInfos(result.chainInfos);
   }
 
   @flow
@@ -271,7 +270,7 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     );
 
-    this.setChainInfos(chainInfos);
+    this.setEmbeddedChainInfos(chainInfos.modularChainInfos);
   }
 
   @flow
@@ -283,12 +282,12 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   }
 
   @flow
-  *tryUpdateChain(chainId: string) {
-    const msg = new TryUpdateChainMsg(chainId);
+  *tryUpdateChain(_chainId: string) {
+    const msg = new TryUpdateAllChainInfosMsg();
     const result = yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     );
-    if (result.updated) {
+    if (result) {
       yield this.getChainInfosFromBackground();
     }
   }
@@ -299,24 +298,24 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     rpc: string | undefined,
     rest: string | undefined
   ) {
-    const msg = new SetChainEndpointsMsg(chainId, rpc, rest);
+    const msg = new SetChainEndpointsMsg(chainId, rpc, rest, undefined);
     const newChainInfos = yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     );
 
-    this.setChainInfos(newChainInfos);
+    this.setEmbeddedChainInfos(newChainInfos.chainInfos);
 
     ObservableQuery.refreshAllObserved();
   }
 
   @flow
   *resetChainEndpoints(chainId: string) {
-    const msg = new ResetChainEndpointsMsg(chainId);
+    const msg = new ClearChainEndpointsMsg(chainId);
     const newChainInfos = yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     );
 
-    this.setChainInfos(newChainInfos);
+    this.setEmbeddedChainInfos(newChainInfos.chainInfos);
 
     ObservableQuery.refreshAllObserved();
   }

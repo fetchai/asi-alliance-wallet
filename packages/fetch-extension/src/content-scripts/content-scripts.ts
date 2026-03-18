@@ -24,7 +24,7 @@ const coreFetchWallet = new ExtensionCoreFetchWallet(
   messageRequester
 );
 
-InjectedKeplr.startProxy(coreKeplr);
+InjectedKeplr.startProxy(coreKeplr, undefined);
 startFetchWalletProxy(coreFetchWallet);
 
 const router = new ExtensionRouter(ContentScriptEnv.produceEnv);

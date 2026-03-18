@@ -52,8 +52,8 @@ export const DeleteWallet: FunctionComponent = () => {
   }, [index]);
 
   const keyStore = useMemo(() => {
-    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
-  }, [keyRingStore.multiKeyStoreInfo, index]);
+    return keyRingStore.selectedKeyInfo;
+  }, [keyRingStore.selectedKeyInfo, index]);
 
   const onBackUpMnemonicButtonClick = useCallback(
     (e: MouseEvent) => {
@@ -109,7 +109,7 @@ export const DeleteWallet: FunctionComponent = () => {
           />
 
           <div>
-            {keyStore.type === "mnemonic" && (
+            {keyStore?.type === "mnemonic" && (
               <Alert className={style["alert"]}>
                 <div>
                   <div className={style["textContainer"]}>
@@ -125,7 +125,7 @@ export const DeleteWallet: FunctionComponent = () => {
                 </div>
               </Alert>
             )}
-            {keyStore.type === "mnemonic" && (
+            {keyStore?.type === "mnemonic" && (
               <ButtonV2
                 styleProps={{
                   height: "56px",
@@ -210,10 +210,7 @@ export const DeleteWallet: FunctionComponent = () => {
                 setLoading(true);
                 try {
                   // Make sure that password is valid and keyring is cleared.
-                  await keyRingStore.deleteKeyRing(
-                    parseInt(index),
-                    data.password
-                  );
+                  await keyRingStore.deleteKeyRing(index, data.password);
                   analyticsStore.logEvent("delete_account_click", {
                     action: "Remove",
                   });

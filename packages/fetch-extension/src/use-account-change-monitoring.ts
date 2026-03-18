@@ -29,12 +29,12 @@ export const useAccountChangeMonitoring = () => {
   useEffect(() => {
     if (!isPopupOrSidepanel) return; // don't set listener in normal tabs
 
-    const messageHandler = (message: any) => {
+    const messageHandler = async (message: any) => {
       const RefreshAccountListMsg = new RefreshAccountList().type();
       if (RefreshAccountListMsg === message.type) {
-        keyRingStore.refreshMultiKeyStoreInfo();
+        await keyRingStore.refreshKeyRingStatus();
         window.location.hash = "/"; // navigate to home on account change
-        return true;
+        return { refresh: true };
       }
     };
 

@@ -219,7 +219,6 @@ export class KeyRingStore {
     );
     this._status = result.status;
     this._keyInfos = result.keyInfos;
-
     this.eventDispatcher.dispatchEvent("keplr_keystorechange");
 
     return result.vaultId;
@@ -358,8 +357,21 @@ export class KeyRingStore {
   }
 
   @flow
-  *changeKeyRingName(vaultId: string, name: string) {
-    const msg = new ChangeKeyRingNameMsg(vaultId, name);
+  *changeKeyRingName(
+    vaultId: string,
+    name: string,
+    nameByChain?: Record<string, string>
+  ) {
+    let nameByChainStr: string | undefined;
+
+    if (nameByChain) {
+      try {
+        nameByChainStr = JSON.stringify(nameByChain);
+      } catch {
+        nameByChainStr = undefined;
+      }
+    }
+    const msg = new ChangeKeyRingNameMsg(vaultId, name, nameByChainStr);
     const result = yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)
     );

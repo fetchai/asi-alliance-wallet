@@ -153,13 +153,22 @@ export class RegisterConfig {
       });
     }
 
+    console.log("inside createMnemoic registerConfig", {
+      mode: this.mode,
+      mnemonic,
+      bip44HDPath,
+      password,
+      defaultName,
+      name: defaultName,
+      meta,
+    });
     try {
       if (this.mode === "create") {
         yield this.keyRingStore.newMnemonicKey(
           mnemonic,
           bip44HDPath,
-          password,
           defaultName,
+          password,
           {
             name: defaultName,
             ...meta,
@@ -169,8 +178,8 @@ export class RegisterConfig {
         yield this.keyRingStore.newMnemonicKey(
           mnemonic,
           bip44HDPath,
-          password,
           defaultName,
+          password,
           {
             name: defaultName,
             ...meta,
