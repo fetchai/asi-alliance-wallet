@@ -7817,6 +7817,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@bufbuild/protobuf@npm:^1.2.0":
+  version: 1.10.1
+  resolution: "@bufbuild/protobuf@npm:1.10.1"
+  checksum: 403838ad278d504e33e72ec0f64ce1bac9f5025ee6396253382e821a1fe0c371a58ffe45a0e8f23306205b6890c5f83e85828168a35dae118915cd4c3d091177
+  languageName: node
+  linkType: hard
+
 "@cnakazawa/watch@npm:^1.0.3":
   version: 1.0.4
   resolution: "@cnakazawa/watch@npm:1.0.4"
@@ -9108,7 +9115,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethereumjs/util@npm:^8.1.0":
+"@ethereumjs/util@npm:^8.0.0, @ethereumjs/util@npm:^8.1.0":
   version: 8.1.0
   resolution: "@ethereumjs/util@npm:8.1.0"
   dependencies:
@@ -12688,7 +12695,10 @@ __metadata:
     "@keplr-wallet/stores-ibc": "workspace:^"
     "@keplr-wallet/types": 0.13.11
     "@keplr-wallet/unit": 0.13.11
-    "@keystonehq/animated-qr": ^0.4.5
+    "@keystonehq/animated-qr": ^0.8.6
+    "@keystonehq/hw-app-base": 0.1.1
+    "@keystonehq/hw-transport-webusb": 0.4.0
+    "@keystonehq/keystone-sdk": ^0.2.3
     "@ledgerhq/devices": ^6.20.0
     "@metamask/jazzicon": ^2.0.0
     "@react-spring/web": ^9.6.1
@@ -13391,11 +13401,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keystonehq/animated-qr@npm:^0.4.5":
-  version: 0.4.6
-  resolution: "@keystonehq/animated-qr@npm:0.4.6"
+"@keystonehq/animated-qr@npm:^0.8.6":
+  version: 0.8.6
+  resolution: "@keystonehq/animated-qr@npm:0.8.6"
   dependencies:
-    "@keystonehq/ur-decoder": ^0.8.6
+    "@keystonehq/ur-decoder": ^0.12.2
     "@ngraveio/bc-ur": ^1.1.6
     "@zxing/browser": ^0.1.1
     "@zxing/library": ^0.19.1
@@ -13403,7 +13413,7 @@ __metadata:
   peerDependencies:
     react: ">= 16.8"
     react-dom: ">= 16.8"
-  checksum: 3596e7b14b84eef8f8e7ee722a3713411a5af9f400a11c3bc0d33d97b790afc958f8ff4de7c28f3962af38164c13fa00fc1ba5ec49ccc23a403671367c15b690
+  checksum: 30d04a4540bdf720f7f1aee95403a28e6dceade8a92ae7621d9ed10763d3f49a236f81803c1d8dcca2e6bb86978df0a7ad880658fe7b84f1d8b3ef2ce93fab59
   languageName: node
   linkType: hard
 
@@ -13420,6 +13430,37 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@keystonehq/bc-ur-registry-aptos@npm:^0.3.2":
+  version: 0.3.2
+  resolution: "@keystonehq/bc-ur-registry-aptos@npm:0.3.2"
+  dependencies:
+    "@keystonehq/bc-ur-registry": 0.5.4
+    bs58check: ^2.1.2
+    uuid: ^8.3.2
+  checksum: 25e9b2becda5851707ee9fbdbac72a3aee81a23033899e312668f36c53a5d9a1d84b1febea0613cd988d108621d5647164b4804fdf022203cd49d961d4cf749b
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry-arweave@npm:^0.4.0":
+  version: 0.4.0
+  resolution: "@keystonehq/bc-ur-registry-arweave@npm:0.4.0"
+  dependencies:
+    "@keystonehq/bc-ur-registry": 0.5.4
+    uuid: ^8.3.2
+  checksum: 064977661024e79205eee24f0bafac2651a888c20515689d9465dc8c38fc25f974d44ebac4ce129a1cbd67da27fd50198ebe9e65dcba19b5c190076e2300b73e
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry-cardano@npm:^0.3.0":
+  version: 0.3.9
+  resolution: "@keystonehq/bc-ur-registry-cardano@npm:0.3.9"
+  dependencies:
+    "@keystonehq/bc-ur-registry": ^0.6.4
+    uuid: ^8.3.2
+  checksum: 185e9d92af543124e6ea30965ef45d51b9564e8bf88eb358a1af271d8f7b6e13fc0a81445320fbdb53f0bd8676312032d62c34a5a1bcf8fc763f3a4768b03f69
+  languageName: node
+  linkType: hard
+
 "@keystonehq/bc-ur-registry-cosmos@npm:^0.1.1":
   version: 0.1.1
   resolution: "@keystonehq/bc-ur-registry-cosmos@npm:0.1.1"
@@ -13428,6 +13469,17 @@ __metadata:
     bs58check: ^2.1.2
     uuid: ^8.3.2
   checksum: 2a6f1d970c1d2bae8bd5ec990547367486c28eae1467b20696e0f07216bf59ab99ea361aa5cc9045ef83fe26dc42318da6ba2031d705d2e969f3b72625c48c36
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry-cosmos@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@keystonehq/bc-ur-registry-cosmos@npm:0.2.2"
+  dependencies:
+    "@keystonehq/bc-ur-registry": 0.5.4
+    bs58check: ^2.1.2
+    uuid: ^8.3.2
+  checksum: d1185b9e3b36d9241640f45a37683d72185334e51c7afaa51ed61f24aa5d7c60df0317c3bcfe6c86c9981f8c873924d489dab3e85e9a527bd57a7a9719084fa7
   languageName: node
   linkType: hard
 
@@ -13440,6 +13492,18 @@ __metadata:
     hdkey: ^2.0.1
     uuid: ^8.3.2
   checksum: ec46d6393f70f111657bfbb4641e5d6f246a7bbdb9bb6fb2cafef13d8138a8d84a7c8f003874c05cb83c2013031d7be6fb2749bcfc8d7833d6a2e6511a8650e4
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry-eth@npm:^0.15.2":
+  version: 0.15.2
+  resolution: "@keystonehq/bc-ur-registry-eth@npm:0.15.2"
+  dependencies:
+    "@ethereumjs/util": ^8.0.0
+    "@keystonehq/bc-ur-registry": 0.5.4
+    hdkey: ^2.0.1
+    uuid: ^8.3.2
+  checksum: 8541040c3eea59aa39d6a9b9f17acfe505956b01ffa977e54c51c14f45b6b8af4ca3dd594866934dd06939fbd752a3d5b1ba46e017df86362c2c67de52005860
   languageName: node
   linkType: hard
 
@@ -13466,6 +13530,47 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@keystonehq/bc-ur-registry-keystone@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "@keystonehq/bc-ur-registry-keystone@npm:0.1.0"
+  dependencies:
+    "@keystonehq/bc-ur-registry": 0.5.4
+  checksum: 9a4d2372396c574945e04a18a583b37a1d38edff02d62c23e44e803ea0826d772768886dbaf83843a58473e9acd84c2e5f684f764837a65652e57ee6b150b8d3
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry-near@npm:^0.8.0":
+  version: 0.8.0
+  resolution: "@keystonehq/bc-ur-registry-near@npm:0.8.0"
+  dependencies:
+    "@keystonehq/bc-ur-registry": 0.5.4
+    bs58check: ^2.1.2
+    uuid: ^8.3.2
+  checksum: 7254b6c2ffbfc015df2c2ac8aa4c39b20497fcd0f2544756d31ee8e708e330f2a297bc46de7293d5d8a02e91c360625db6a93554e2bed818031f831ac4fd1f7b
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry-sol@npm:^0.6.2":
+  version: 0.6.2
+  resolution: "@keystonehq/bc-ur-registry-sol@npm:0.6.2"
+  dependencies:
+    "@keystonehq/bc-ur-registry": 0.5.4
+    bs58check: ^2.1.2
+    uuid: ^8.3.2
+  checksum: f0113dea76904b4f4328610764fb67fa2dc5fdb83c3b88517fa71fe05c224310e073a8f7565c4310e8643fce2ea9d75083bb71ed3f36a6d6d96632dab62f553d
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry-sui@npm:^0.3.0":
+  version: 0.3.1
+  resolution: "@keystonehq/bc-ur-registry-sui@npm:0.3.1"
+  dependencies:
+    "@keystonehq/bc-ur-registry": ^0.6.4
+    uuid: ^9.0.0
+  checksum: 809f1c7ccb6e2017d9892e9b537b854a3e6b3d7147bf9ee8d177be7c8f4c754e48056258ab9012490544ac1994f56db2ad20b1fb83e9d5f392176eaf572da8f7
+  languageName: node
+  linkType: hard
+
 "@keystonehq/bc-ur-registry@npm:0.5.4":
   version: 0.5.4
   resolution: "@keystonehq/bc-ur-registry@npm:0.5.4"
@@ -13474,6 +13579,17 @@ __metadata:
     bs58check: ^2.1.2
     tslib: ^2.3.0
   checksum: d8e4b8c4cd2a7b21fad2e24895f7b32937b64f93d0f1540833be9dcb36062a44c8fc21204502f046c0e771370ba7ff6ce2356438028229813b4f15b2ecb714c6
+  languageName: node
+  linkType: hard
+
+"@keystonehq/bc-ur-registry@npm:0.7.0":
+  version: 0.7.0
+  resolution: "@keystonehq/bc-ur-registry@npm:0.7.0"
+  dependencies:
+    "@ngraveio/bc-ur": ^1.1.5
+    bs58check: ^2.1.2
+    tslib: ^2.3.0
+  checksum: d6017e8fda67fc01e28aa1c047b20cce8f07b026f110a5771920879fbd658b845f529b054d1dce2fbabadcfd8da47a2160ab50c73f0bd56678aab4d83899ffcc
   languageName: node
   linkType: hard
 
@@ -13545,6 +13661,61 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@keystonehq/hw-app-base@npm:0.1.1":
+  version: 0.1.1
+  resolution: "@keystonehq/hw-app-base@npm:0.1.1"
+  dependencies:
+    "@keystonehq/bc-ur-registry": 0.7.0
+    "@keystonehq/hw-transport-error": ^0.0.2
+    "@keystonehq/hw-transport-webusb": ^0.4.0-beta.0
+    "@ngraveio/bc-ur": ^1.1.6
+    uuid: ^8.3.2
+  checksum: 8f8b51f473d8f0998e0124dd73cfa2c212952e1e814369137e4788e2985a2fdd0f1d84e48ddafd70132e60c06ef2276a3637324c265a40eae9369b8d525a0fe7
+  languageName: node
+  linkType: hard
+
+"@keystonehq/hw-transport-error@npm:^0.0.2":
+  version: 0.0.2
+  resolution: "@keystonehq/hw-transport-error@npm:0.0.2"
+  checksum: 681c3344fdd5e59b63ee522a4539fff926c0c050dc645070dfaa4ac73b5c913312667aa491ec2174252e553d83f4c7e90e2dad2a80e9cbcdb4fa40e86565ccf2
+  languageName: node
+  linkType: hard
+
+"@keystonehq/hw-transport-webusb@npm:0.4.0, @keystonehq/hw-transport-webusb@npm:^0.4.0-beta.0":
+  version: 0.4.0
+  resolution: "@keystonehq/hw-transport-webusb@npm:0.4.0"
+  dependencies:
+    "@keystonehq/hw-transport-error": ^0.0.2
+    buffer: ^6.0.3
+  checksum: 7c56d7b9b73596306be50aae6b5661905a88fb018385b6074c0f18a04efbf5871f7fe93b957c6fe8f966f7c829ff085df444c9fbd23967c0ef2df4a7f9f7e4ae
+  languageName: node
+  linkType: hard
+
+"@keystonehq/keystone-sdk@npm:^0.2.3":
+  version: 0.2.6
+  resolution: "@keystonehq/keystone-sdk@npm:0.2.6"
+  dependencies:
+    "@bufbuild/protobuf": ^1.2.0
+    "@keystonehq/bc-ur-registry": ^0.6.4
+    "@keystonehq/bc-ur-registry-aptos": ^0.3.2
+    "@keystonehq/bc-ur-registry-arweave": ^0.4.0
+    "@keystonehq/bc-ur-registry-cardano": ^0.3.0
+    "@keystonehq/bc-ur-registry-cosmos": ^0.2.2
+    "@keystonehq/bc-ur-registry-eth": ^0.15.2
+    "@keystonehq/bc-ur-registry-evm": ^0.5.2
+    "@keystonehq/bc-ur-registry-keystone": ^0.1.0
+    "@keystonehq/bc-ur-registry-near": ^0.8.0
+    "@keystonehq/bc-ur-registry-sol": ^0.6.2
+    "@keystonehq/bc-ur-registry-sui": ^0.3.0
+    "@ngraveio/bc-ur": ^1.1.6
+    bs58check: ^3.0.1
+    pako: ^2.1.0
+    ripple-binary-codec: ^1.4.3
+    uuid: ^9.0.0
+  checksum: c0669262b4265ced83e74fa5f3876973d3c940bdc09fb605494242e69d3e28c926a3ff8dd2090cb99b7318a141dc08f65e16ae99ff31f2fa70f4a32cf090dece
+  languageName: node
+  linkType: hard
+
 "@keystonehq/sdk@npm:^0.15.2":
   version: 0.15.2
   resolution: "@keystonehq/sdk@npm:0.15.2"
@@ -13577,13 +13748,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@keystonehq/ur-decoder@npm:^0.8.6":
-  version: 0.8.6
-  resolution: "@keystonehq/ur-decoder@npm:0.8.6"
+"@keystonehq/ur-decoder@npm:^0.12.2":
+  version: 0.12.2
+  resolution: "@keystonehq/ur-decoder@npm:0.12.2"
   dependencies:
     "@keystonehq/bc-ur-registry-eth": ^0.6.12
     "@ngraveio/bc-ur": ^1.1.6
-  checksum: 76e0ae5928119f4d6ba8a79206b6664383a24c822b4bea4b38279bfd8d1ddc166f315e0ab2437d767a8a45d1147cab6f860f6f6523c6694f176349531ebbac78
+  checksum: 0904492775842dc01035bcf5fc1355918548c3e1ab9f0be677a55301d72bb87fea0377ee866bfa401568b99572114ac10b72d4b2d6cbc22a87a9d3eea2df9c37
   languageName: node
   linkType: hard
 
@@ -25427,6 +25598,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"base-x@npm:^3.0.9":
+  version: 3.0.11
+  resolution: "base-x@npm:3.0.11"
+  dependencies:
+    safe-buffer: ^5.0.1
+  checksum: c2e3c443fd07cb9b9d3e179a9e9c581daa31881005841fe8d6a834e534505890fedf03465ccf14512da60e3f7be00fe66167806b159ba076d2c03952ae7460c4
+  languageName: node
+  linkType: hard
+
 "base-x@npm:^4.0.0":
   version: 4.0.0
   resolution: "base-x@npm:4.0.0"
@@ -29814,6 +29994,13 @@ __metadata:
   version: 1.2.0
   resolution: "decamelize@npm:1.2.0"
   checksum: ad8c51a7e7e0720c70ec2eeb1163b66da03e7616d7b98c9ef43cce2416395e84c1e9548dd94f5f6ffecfee9f8b94251fc57121a8b021f2ff2469b2bae247b8aa
+  languageName: node
+  linkType: hard
+
+"decimal.js@npm:^10.2.0":
+  version: 10.6.0
+  resolution: "decimal.js@npm:10.6.0"
+  checksum: 9302b990cd6f4da1c7602200002e40e15d15660374432963421d3cd6d81cc6e27e0a488356b030fee64650947e32e78bdbea245d596dadfeeeb02e146d485999
   languageName: node
   linkType: hard
 
@@ -46992,7 +47179,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pako@npm:^2.0.4":
+"pako@npm:^2.0.4, pako@npm:^2.1.0":
   version: 2.1.0
   resolution: "pako@npm:2.1.0"
   checksum: 71666548644c9a4d056bcaba849ca6fd7242c6cf1af0646d3346f3079a1c7f4a66ffec6f7369ee0dc88f61926c10d6ab05da3e1fca44b83551839e89edd75a3e
@@ -53486,6 +53673,30 @@ __metadata:
     hash-base: ^3.0.0
     inherits: ^2.0.1
   checksum: 006accc40578ee2beae382757c4ce2908a826b27e2b079efdcd2959ee544ddf210b7b5d7d5e80467807604244e7388427330f5c6d4cd61e6edaddc5773ccc393
+  languageName: node
+  linkType: hard
+
+"ripple-address-codec@npm:^4.3.1":
+  version: 4.3.1
+  resolution: "ripple-address-codec@npm:4.3.1"
+  dependencies:
+    base-x: ^3.0.9
+    create-hash: ^1.1.2
+  checksum: 2961fa9ffd508137a8fbf52cc75cd34e76245f515d0f0595f3abb3a29a8df0014518c816d2db45fd6dbab433595f345a048781753fedfddeeb4a47f2d5e9c39e
+  languageName: node
+  linkType: hard
+
+"ripple-binary-codec@npm:^1.4.3":
+  version: 1.11.0
+  resolution: "ripple-binary-codec@npm:1.11.0"
+  dependencies:
+    assert: ^2.0.0
+    big-integer: ^1.6.48
+    buffer: 6.0.3
+    create-hash: ^1.2.0
+    decimal.js: ^10.2.0
+    ripple-address-codec: ^4.3.1
+  checksum: 901f6da22bb31860e8c149974c55c72ba5a7d50d635b7efa9be81ce35cea6576a3b0c59b480069141829d73c558721ab17f34df801d4d68af8f3ae4ed0bbd42c
   languageName: node
   linkType: hard
 

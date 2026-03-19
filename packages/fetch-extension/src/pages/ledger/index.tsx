@@ -1,11 +1,13 @@
 import React, {
   ChangeEvent,
   FunctionComponent,
+  PropsWithChildren,
   useEffect,
   useState,
 } from "react";
 
 import {
+  BIP44HDPath,
   Ledger,
   LedgerApp,
   LedgerWebHIDIniter,
@@ -29,10 +31,11 @@ import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { ErrCodeAppNotInitialised } from "@keplr-wallet/background/build/ledger/types";
 
 export const LedgerSetupView: FunctionComponent<{
+  bip44HDPath: BIP44HDPath;
   onBackPress?: () => void;
-  onInitSucceed: () => void;
-}> = observer(({ onBackPress, onInitSucceed }) => {
-  const { ledgerInitStore } = useStore();
+  onInitSucceed: (ppubkey: Uint8Array) => void;
+}> = observer(({ bip44HDPath, onBackPress, onInitSucceed }) => {
+  const { ledgerInitStore, uiConfigStore } = useStore();
 
   const intl = useIntl();
   const navigate = useNavigate();
@@ -44,13 +47,13 @@ export const LedgerSetupView: FunctionComponent<{
   const toggleWebHIDFlag = async (e: ChangeEvent) => {
     e.preventDefault();
 
-    if (!ledgerInitStore.isWebHID && !(await Ledger.isWebHIDSupported())) {
+    if (!uiConfigStore.useWebHIDLedger && !window.navigator.hid) {
       setShowWebHIDWarning(true);
       return;
     }
     setShowWebHIDWarning(false);
 
-    await ledgerInitStore.setWebHID(!ledgerInitStore.isWebHID);
+    uiConfigStore.setUseWebHIDLedger(!uiConfigStore.useWebHIDLedger);
   };
 
   useEffect(() => {
@@ -85,13 +88,13 @@ export const LedgerSetupView: FunctionComponent<{
     setTryInitializing(true);
 
     let initErrorOn: WalletError | undefined;
-
+    let pubkey: any;
     try {
-      if (!(await testUSBDevices(ledgerInitStore.isWebHID))) {
+      if (!(await testUSBDevices(uiConfigStore.useWebHIDLedger))) {
         throw new Error("There is no device selected");
       }
 
-      const transportIniter = ledgerInitStore.isWebHID
+      const transportIniter = uiConfigStore.useWebHIDLedger
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
@@ -119,7 +122,7 @@ export const LedgerSetupView: FunctionComponent<{
       let tempSuccess = false;
       for (let i = 0; i < 5; i++) {
         // Test again to ensure usb permission after interaction.
-        if (await testUSBDevices(ledgerInitStore.isWebHID)) {
+        if (await testUSBDevices(uiConfigStore.useWebHIDLedger)) {
           tempSuccess = true;
           break;
         }
@@ -131,16 +134,20 @@ export const LedgerSetupView: FunctionComponent<{
       }
 
       const ledger = await Ledger.init(
-        ledgerInitStore.isWebHID ? LedgerWebHIDIniter : LedgerWebUSBIniter,
+        uiConfigStore.useWebHIDLedger ? LedgerWebHIDIniter : LedgerWebUSBIniter,
         undefined,
         // requestedLedgerApp should be set if ledger init needed.
         ledgerInitStore.requestedLedgerApp!,
         ledgerInitStore.cosmosLikeApp || "Cosmos"
       );
+      pubkey = await ledger.getPublicKey(
+        ledgerInitStore.requestedLedgerApp || LedgerApp.Cosmos,
+        bip44HDPath
+      );
       await ledger.close();
       // Unfortunately, closing ledger blocks the writing to Ledger on background process.
       // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
-      if (!ledgerInitStore.isWebHID) {
+      if (!uiConfigStore.useWebHIDLedger) {
         delay(1000);
       } else {
         delay(500);
@@ -156,7 +163,7 @@ export const LedgerSetupView: FunctionComponent<{
     setTryInitializing(false);
 
     if (initErrorOn === undefined) {
-      onInitSucceed();
+      onInitSucceed(pubkey);
       await ledgerInitStore.resume();
     }
   };
@@ -250,7 +257,7 @@ export const LedgerSetupView: FunctionComponent<{
             className={`custom-control-input ${style["ledgerCheckbox"]}`}
             id="use-webhid"
             type="checkbox"
-            checked={ledgerInitStore.isWebHID}
+            checked={uiConfigStore.useWebHIDLedger}
             onChange={toggleWebHIDFlag}
           />
           <label
@@ -326,13 +333,15 @@ export const LedgerSetupView: FunctionComponent<{
   );
 });
 
-const Instruction: FunctionComponent<{
-  icon: React.ReactElement;
-  title: string;
-  paragraph: string;
-  pass: boolean;
-  selected: boolean;
-}> = ({ icon, title, paragraph, children, pass, selected }) => {
+const Instruction: FunctionComponent<
+  PropsWithChildren<{
+    icon: React.ReactElement;
+    title: string;
+    paragraph: string;
+    pass: boolean;
+    selected: boolean;
+  }>
+> = ({ icon, title, paragraph, children, pass, selected }) => {
   return (
     <div
       className={classnames(style["instruction"], {

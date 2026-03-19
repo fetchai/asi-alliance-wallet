@@ -183,9 +183,10 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
                       analyticsStore.logEvent("token_delete_click", {
                         action: confirm ? "Yes" : "No",
                       });
-                      await tokensStore
-                        .getTokensOf(chainStore.current.chainId)
-                        .removeToken(cosmwasmToken);
+                      await tokensStore.removeToken(
+                        chainStore.current.chainId,
+                        { currency: cosmwasmToken }
+                      );
                     }
                   }}
                 />

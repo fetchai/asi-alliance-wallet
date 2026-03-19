@@ -67,7 +67,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
           </div>
         </div>
         {keyRingStore.keyInfos.map((keyStore, i) => {
-          const bip44HDPath = keyStore.insensitive["bip44HDPath"]
+          const bip44HDPath: any = keyStore.insensitive["bip44HDPath"]
             ? keyStore.insensitive["bip44HDPath"]
             : {
                 account: 0,
@@ -129,7 +129,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                     })
                   : ""
               }`}
-              paragraph={paragraph}
+              paragraph={paragraph as string}
               onClick={
                 keyStore.isSelected
                   ? undefined

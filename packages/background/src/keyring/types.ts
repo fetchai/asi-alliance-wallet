@@ -101,3 +101,5 @@ export enum SignMode {
   Direct = "direct",
   Message = "message",
 }
+
+export * from "./legacy/types";

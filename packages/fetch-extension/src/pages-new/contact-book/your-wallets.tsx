@@ -8,7 +8,7 @@ import { useIntl } from "react-intl";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { ListAccountsMsg } from "@keplr-wallet/background";
+import { GetCosmosKeysForEachVaultSettledMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { NoResults } from "@components-v2/no-results";
@@ -54,23 +54,31 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
 
     const accountsAddress = async () => {
       const requester = new InExtensionMessageRequester();
-      const msg = new ListAccountsMsg();
-      const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
+      const msg = new GetCosmosKeysForEachVaultSettledMsg(
+        chainId,
+        keyRingStore?.keyInfos.map((item) => item.id)
+      );
+      const settledResponse: any = await requester.sendMessage(
+        BACKGROUND_PORT,
+        msg
+      );
+      const accounts = settledResponse.map((item: any) => item.value);
       const selectedAccountIndex = keyRingStore.keyInfos.findIndex(
         (value) => value.isSelected
       );
 
       const isEvm = chainStore.current.features?.includes("evm") ?? false;
       const addresses = accounts
-        .map((account) => {
+        .filter((account: any) => account.vaultId !== selectedAccountIndex)
+        .map((account: any) => {
           if (isEvm) {
-            return account.EVMAddress;
+            return account.ethereumHexAddress;
           }
 
           return account.bech32Address;
-        })
-        .filter((_, index) => index !== selectedAccountIndex);
+        });
 
+      console.log("accounts", { accounts, addresses });
       setAddresses(addresses);
     };
 
@@ -92,13 +100,15 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
           emptyContent={<NoResults />}
           disabled={keyRingList?.length === 0}
           renderResult={(keyStore, i) => {
-            const nameByChain = keyStore.meta?.["nameByChain"]
-              ? JSON.parse(keyStore.meta["nameByChain"])
+            const nameByChain = keyStore.insensitive?.keyRingMeta?.[
+              "nameByChain"
+            ]
+              ? JSON.parse(keyStore.insensitive?.keyRingMeta?.["nameByChain"])
               : {};
 
             const accountName =
               nameByChain?.[chainId] ||
-              keyStore.meta?.["name"] ||
+              keyStore.name ||
               intl.formatMessage({
                 id: "setting.keyring.unnamed-account",
               });

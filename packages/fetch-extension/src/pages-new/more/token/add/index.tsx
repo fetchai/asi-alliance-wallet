@@ -21,6 +21,7 @@ import { useNotification } from "@components/notification";
 import { isAddress } from "@ethersproject/address";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { TXNTYPE } from "../../../../config";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 interface FormData {
   contractAddress: string;
@@ -40,7 +41,6 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     tokensStore,
     analyticsStore,
   } = useStore();
-  const tokensOf = tokensStore.getTokensOf(chainStore.current.chainId);
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
@@ -185,9 +185,35 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                 interactionInfo.interaction &&
                 tokensStore.waitingSuggestedToken
               ) {
-                await tokensStore.approveSuggestedToken(currency);
+                await tokensStore.approveSuggestedTokenWithProceedNext(
+                  tokensStore.waitingSuggestedToken.id,
+                  currency,
+                  (proceedNext) => {
+                    if (!proceedNext) {
+                      if (
+                        interactionInfo.interaction &&
+                        !interactionInfo.interactionInternal
+                      ) {
+                        handleExternalInteractionWithNoProceedNext();
+                      }
+                    }
+
+                    if (
+                      interactionInfo.interaction &&
+                      !interactionInfo.interactionInternal &&
+                      isSecret20
+                    ) {
+                      // TODO: secret20의 경우는 서명 페이지로 페이지 자체가 넘어가기 때문에 proceedNext를 처리할 수가 없다.
+                      //       나중에 뭔가 해결법이 생기면 다시 생각해본다...
+                      window.close();
+                    }
+                  }
+                );
               } else {
-                await tokensOf.addToken(currency);
+                await tokensStore.addToken(
+                  chainStore.current.chainId,
+                  currency
+                );
                 analyticsStore.logEvent("save_click", {
                   pageName: "Add a Token",
                 });
@@ -255,9 +281,35 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                   interactionInfo.interaction &&
                   tokensStore.waitingSuggestedToken
                 ) {
-                  await tokensStore.approveSuggestedToken(currency);
+                  await tokensStore.approveSuggestedTokenWithProceedNext(
+                    tokensStore.waitingSuggestedToken.id,
+                    currency,
+                    (proceedNext) => {
+                      if (!proceedNext) {
+                        if (
+                          interactionInfo.interaction &&
+                          !interactionInfo.interactionInternal
+                        ) {
+                          handleExternalInteractionWithNoProceedNext();
+                        }
+                      }
+
+                      if (
+                        interactionInfo.interaction &&
+                        !interactionInfo.interactionInternal &&
+                        isSecret20
+                      ) {
+                        // TODO: secret20의 경우는 서명 페이지로 페이지 자체가 넘어가기 때문에 proceedNext를 처리할 수가 없다.
+                        //       나중에 뭔가 해결법이 생기면 다시 생각해본다...
+                        window.close();
+                      }
+                    }
+                  );
                 } else {
-                  await tokensOf.addToken(currency);
+                  await tokensStore.addToken(
+                    chainStore.current.chainId,
+                    currency
+                  );
                 }
               }
             }
@@ -295,7 +347,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
 
                 Bech32Address.validate(
                   value,
-                  chainStore.current.bech32Config.bech32PrefixAccAddr
+                  chainStore.current.bech32Config?.bech32PrefixAccAddr
                 );
               } catch {
                 return "Invalid address";

@@ -34,6 +34,7 @@ import * as ManageViewAssetToken from "./manage-view-asset-token/internal";
 import * as BackgroundTxExecutor from "./tx-executor/internal";
 
 export * from "./chains";
+export * from "./ledger";
 export * from "./chains-ui";
 export * from "./chains-update";
 export * from "./secret-wasm";

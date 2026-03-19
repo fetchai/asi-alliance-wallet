@@ -12,7 +12,7 @@ import { SwitchUser } from "@components/switch-user";
 import { useStore } from "../../stores";
 import { AccountView } from "./account";
 import { AssetView } from "./asset";
-import { BIP44SelectModal } from "./bip44-select-modal";
+// import { BIP44SelectModal } from "./bip44-select-modal";
 import { VestingInfo } from "./vesting-info";
 import { LedgerAppModal } from "./ledger-app-modal";
 import { EvmosDashboardView } from "./evmos-dashboard";
@@ -144,7 +144,7 @@ export const MainPage: FunctionComponent = observer(() => {
       menuRenderer={<Menu />}
       rightRenderer={<SwitchUser />}
     >
-      <BIP44SelectModal />
+      {/* <BIP44SelectModal /> */}
       <ChatDisclaimer />
       <LedgerAppModal />
       <Card className={classnames(style["card"], "shadow")}>

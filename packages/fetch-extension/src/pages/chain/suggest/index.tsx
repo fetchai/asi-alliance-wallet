@@ -12,10 +12,19 @@ import classNames from "classnames";
 import { GithubIcon, InformationCircleOutline } from "@components/icon";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useLoadingIndicator } from "@components/loading-indicator";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+import { ChainInfo } from "@keplr-wallet/types";
 
 export const ChainSuggestedPage: FunctionComponent = observer(() => {
-  const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
-    useStore();
+  const {
+    chainSuggestStore,
+    analyticsStore,
+    uiConfigStore,
+    chainStore,
+    keyRingStore,
+    permissionStore,
+  } = useStore();
   const [updateFromRepoDisabled, setUpdateFromRepoDisabled] = useState(false);
   const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
   const navigate = useNavigate();
@@ -25,6 +34,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
     chainSuggestStore.rejectAll();
   });
 
+  const waitingData = chainSuggestStore.waitingSuggestedChainInfo;
   const communityChainInfo = chainSuggestStore.waitingSuggestedChainInfo
     ? chainSuggestStore.getCommunityChainInfo(
         chainSuggestStore.waitingSuggestedChainInfo.data.chainInfo.chainId
@@ -43,6 +53,10 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
       });
     }
   }, [analyticsStore, chainSuggestStore.waitingSuggestedChainInfo]);
+
+  const isLoading = waitingData
+    ? permissionStore.isObsoleteInteractionApproved(waitingData.id)
+    : false;
 
   useEffect(() => {
     setTimeout(() => {
@@ -355,19 +369,32 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                 fontSize: "0.9rem",
               }}
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              dataLoading={chainSuggestStore.isLoading}
+              dataLoading={isLoading}
               onClick={async (e: any) => {
                 e.preventDefault();
-
-                await chainSuggestStore.reject();
-                if (
-                  interactionInfo.interaction &&
-                  !interactionInfo.interactionInternal
-                ) {
-                  analyticsStore.logEvent("reject_click");
-                  window.close();
-                } else {
-                  navigate("/");
+                if (waitingData && waitingData.id) {
+                  await chainSuggestStore.rejectWithProceedNext(
+                    waitingData.id,
+                    async (proceedNext) => {
+                      if (!proceedNext) {
+                        if (
+                          interactionInfo.interaction &&
+                          !interactionInfo.interactionInternal
+                        ) {
+                          handleExternalInteractionWithNoProceedNext();
+                        } else if (
+                          interactionInfo.interaction &&
+                          interactionInfo.interactionInternal
+                        ) {
+                          window.history.length > 1
+                            ? navigate(-1)
+                            : navigate("/");
+                        } else {
+                          navigate("/", { replace: true });
+                        }
+                      }
+                    }
+                  );
                 }
               }}
               text={<FormattedMessage id="chain.suggested.button.reject" />}
@@ -380,34 +407,63 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                 fontSize: "0.9rem",
               }}
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              dataLoading={chainSuggestStore.isLoading}
+              dataLoading={isLoading}
               onClick={async (e: any) => {
                 e.preventDefault();
+                if (waitingData) {
+                  const chainInfo =
+                    communityChainInfo && !updateFromRepoDisabled
+                      ? communityChainInfo?.chainInfo
+                      : waitingData.data.chainInfo;
 
-                const chainInfo = updateFromRepoDisabled
-                  ? chainSuggestStore.waitingSuggestedChainInfo?.data.chainInfo
-                  : communityChainInfo?.chainInfo ||
-                    chainSuggestStore.waitingSuggestedChainInfo?.data.chainInfo;
+                  const ids = new Set([waitingData.id]);
+                  for (const data of chainSuggestStore.waitingSuggestedChainInfos) {
+                    if (
+                      data.data.chainInfo.chainId ===
+                        waitingData.data.chainInfo.chainId &&
+                      data.data.origin === waitingData.data.origin
+                    ) {
+                      ids.add(data.id);
+                    }
+                  }
+                  await chainSuggestStore.approveWithProceedNext(
+                    Array.from(ids),
+                    {
+                      ...chainInfo,
+                      updateFromRepoDisabled,
+                    } as ChainInfo,
+                    async (proceedNext) => {
+                      loadingIndicator.setIsLoading(
+                        "chain-suggest-switch",
+                        true
+                      );
+                      await keyRingStore.refreshKeyRingStatus();
+                      await chainStore.updateChainInfosFromBackground();
+                      await chainStore.updateEnabledChainIdentifiersFromBackground();
+                      if (chainInfo) {
+                        chainStore.selectChain(chainInfo?.chainId);
+                      }
+                      chainStore.saveLastViewChainId();
+                      analyticsStore.logEvent("approve_click");
 
-                if (chainInfo) {
-                  await chainSuggestStore.approve({
-                    ...chainInfo,
-                    updateFromRepoDisabled,
-                  });
-                  loadingIndicator.setIsLoading("chain-suggest-switch", true);
-                  chainStore.selectChain(chainInfo.chainId);
-                  chainStore.saveLastViewChainId();
-                  analyticsStore.logEvent("approve_click");
-                }
+                      dispatchGlobalEventExceptSelf(
+                        "keplr_suggested_chain_added"
+                      );
 
-                if (
-                  interactionInfo.interaction &&
-                  !interactionInfo.interactionInternal
-                ) {
-                  loadingIndicator.setIsLoading("chain-suggest-switch", false);
-                  window.close();
-                } else {
-                  navigate("/");
+                      if (!proceedNext) {
+                        if (
+                          interactionInfo.interaction &&
+                          !interactionInfo.interactionInternal
+                        ) {
+                          loadingIndicator.setIsLoading(
+                            "chain-suggest-switch",
+                            false
+                          );
+                          handleExternalInteractionWithNoProceedNext();
+                        }
+                      }
+                    }
+                  );
                 }
               }}
               text={<FormattedMessage id="chain.suggested.button.approve" />}

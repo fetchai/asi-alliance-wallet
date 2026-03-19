@@ -8,12 +8,14 @@ import { ChainIdHelper } from "@keplr-wallet/cosmos";
 
 export interface UIConfigOptions {
   isDeveloperMode: boolean;
+  useWebHIDLedger: boolean;
 }
 
 export class UIConfigStore {
   @observable.deep
   protected options: UIConfigOptions = {
     isDeveloperMode: false,
+    useWebHIDLedger: false,
   };
 
   protected _isBeta: boolean;
@@ -114,6 +116,19 @@ export class UIConfigStore {
 
   get isDeveloper(): boolean {
     return this.options.isDeveloperMode;
+  }
+
+  get useWebHIDLedger(): boolean {
+    if (!window.navigator.hid) {
+      return false;
+    }
+
+    return this.options.useWebHIDLedger;
+  }
+
+  @action
+  setUseWebHIDLedger(value: boolean) {
+    this.options.useWebHIDLedger = value;
   }
 
   @action

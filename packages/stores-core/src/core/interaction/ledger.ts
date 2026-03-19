@@ -1,298 +1,271 @@
-// import { InteractionStore } from "./interaction";
-// import { computed, flow, makeObservable, observable } from "mobx";
-// import { BACKGROUND_PORT, MessageRequester } from "@keplr-wallet/router";
-// import {
-//   LedgerApp,
-//   LedgerGetWebHIDFlagMsg,
-//   LedgerSetWebHIDFlagMsg,
-//   TryLedgerInitMsg,
-// } from "@keplr-wallet/background";
-// import { toGenerator } from "@keplr-wallet/common";
+import { InteractionStore } from "./interaction";
+import { computed, flow, makeObservable, observable } from "mobx";
+import { BACKGROUND_PORT, MessageRequester } from "@keplr-wallet/router";
+import { LedgerApp, TryLedgerInitMsg } from "@keplr-wallet/background";
 
-// export type LedgerInitDataType =
-//   | {
-//       event: "get-pubkey";
-//       success: boolean;
-//     }
-//   | {
-//       event: "sign-txn-guide";
-//       isShow: boolean;
-//     }
-//   | {
-//       event: "sign";
-//       success: boolean;
-//     }
-//   | {
-//       // Should interact to resume the ledger initing on the background.
-//       event: "init-failed";
-//       ledgerApp: LedgerApp;
-//       cosmosLikeApp?: string;
-//     }
-//   | {
-//       event: "init-aborted";
-//     };
+export type LedgerInitDataType =
+  | {
+      event: "get-pubkey";
+      success: boolean;
+    }
+  | {
+      event: "sign-txn-guide";
+      isShow: boolean;
+    }
+  | {
+      event: "sign";
+      success: boolean;
+    }
+  | {
+      // Should interact to resume the ledger initing on the background.
+      event: "init-failed";
+      ledgerApp: LedgerApp;
+      cosmosLikeApp?: string;
+    }
+  | {
+      event: "init-aborted";
+    };
 
-// export class LedgerInitStore {
-//   @observable
-//   protected _isLoading: boolean = false;
+export class LedgerInitStore {
+  @observable
+  protected _isLoading: boolean = false;
 
-//   @observable
-//   protected _isWebHID: boolean = false;
+  @observable
+  protected _isWebHID: boolean = false;
 
-//   constructor(
-//     protected readonly interactionStore: InteractionStore,
-//     protected readonly msgRequester: MessageRequester
-//   ) {
-//     makeObservable(this);
+  constructor(
+    protected readonly interactionStore: InteractionStore,
+    protected readonly msgRequester: MessageRequester
+  ) {
+    makeObservable(this);
+  }
 
-//     this.fetchIsWebHID();
-//   }
+  @flow
+  *tryLedgerInit(ledgerApp: LedgerApp, cosmosLikeApp: string) {
+    yield this.msgRequester.sendMessage(
+      BACKGROUND_PORT,
+      new TryLedgerInitMsg(ledgerApp, cosmosLikeApp)
+    );
+  }
 
-//   @flow
-//   *tryLedgerInit(ledgerApp: LedgerApp, cosmosLikeApp: string) {
-//     yield this.msgRequester.sendMessage(
-//       BACKGROUND_PORT,
-//       new TryLedgerInitMsg(ledgerApp, cosmosLikeApp)
-//     );
-//   }
+  get isWebHID(): boolean {
+    return this._isWebHID;
+  }
 
-//   @flow
-//   *fetchIsWebHID() {
-//     this._isWebHID = yield* toGenerator(
-//       this.msgRequester.sendMessage(
-//         BACKGROUND_PORT,
-//         new LedgerGetWebHIDFlagMsg()
-//       )
-//     );
-//   }
+  @computed
+  get isGetPubKeySucceeded(): boolean {
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//   @flow
-//   *setWebHID(flag: boolean) {
-//     yield this.msgRequester.sendMessage(
-//       BACKGROUND_PORT,
-//       new LedgerSetWebHIDFlagMsg(flag)
-//     );
-//     yield this.fetchIsWebHID();
-//   }
+    for (const data of datas) {
+      if (data.data.event === "get-pubkey" && data.data.success) {
+        return true;
+      }
+    }
 
-//   get isWebHID(): boolean {
-//     return this._isWebHID;
-//   }
+    return false;
+  }
 
-//   @computed
-//   get isGetPubKeySucceeded(): boolean {
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+  @computed
+  get isSignCompleted(): boolean {
+    return this.isSignSucceeded || this.isSignRejected;
+  }
 
-//     for (const data of datas) {
-//       if (data.data.event === "get-pubkey" && data.data.success) {
-//         return true;
-//       }
-//     }
+  @computed
+  get isShowSignTxnGuide(): boolean {
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-sign");
 
-//     return false;
-//   }
+    if (datas.length > 0) {
+      const data = datas[datas.length - 1];
+      if (data.data.event === "sign-txn-guide" && data.data.isShow) {
+        return true;
+      }
+    }
 
-//   @computed
-//   get isSignCompleted(): boolean {
-//     return this.isSignSucceeded || this.isSignRejected;
-//   }
+    return false;
+  }
 
-//   @computed
-//   get isShowSignTxnGuide(): boolean {
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-sign");
+  @computed
+  get isSignSucceeded(): boolean {
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//     if (datas.length > 0) {
-//       const data = datas[datas.length - 1];
-//       if (data.data.event === "sign-txn-guide" && data.data.isShow) {
-//         return true;
-//       }
-//     }
+    for (const data of datas) {
+      if (data.data.event === "sign" && data.data.success) {
+        return true;
+      }
+    }
 
-//     return false;
-//   }
+    return false;
+  }
 
-//   @computed
-//   get isSignSucceeded(): boolean {
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+  @computed
+  get isSignRejected(): boolean {
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//     for (const data of datas) {
-//       if (data.data.event === "sign" && data.data.success) {
-//         return true;
-//       }
-//     }
+    for (const data of datas) {
+      if (data.data.event === "sign" && !data.data.success) {
+        return true;
+      }
+    }
 
-//     return false;
-//   }
+    return false;
+  }
 
-//   @computed
-//   get isSignRejected(): boolean {
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+  @computed
+  get isInitAborted(): boolean {
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//     for (const data of datas) {
-//       if (data.data.event === "sign" && !data.data.success) {
-//         return true;
-//       }
-//     }
+    for (const data of datas) {
+      if (data.data.event === "init-aborted") {
+        return true;
+      }
+    }
 
-//     return false;
-//   }
+    return false;
+  }
 
-//   @computed
-//   get isInitAborted(): boolean {
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+  @computed
+  get isInitNeeded(): boolean {
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//     for (const data of datas) {
-//       if (data.data.event === "init-aborted") {
-//         return true;
-//       }
-//     }
+    for (const data of datas) {
+      if (data.data.event === "init-failed") {
+        return true;
+      }
+    }
 
-//     return false;
-//   }
+    return false;
+  }
 
-//   @computed
-//   get isInitNeeded(): boolean {
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+  // Return the requested ledger app if init needed
+  @computed
+  get requestedLedgerApp(): LedgerApp | undefined {
+    if (!this.isInitNeeded) {
+      return;
+    }
 
-//     for (const data of datas) {
-//       if (data.data.event === "init-failed") {
-//         return true;
-//       }
-//     }
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//     return false;
-//   }
+    for (const data of datas) {
+      if (data.data.event === "init-failed") {
+        return data.data.ledgerApp;
+      }
+    }
 
-//   // Return the requested ledger app if init needed
-//   @computed
-//   get requestedLedgerApp(): LedgerApp | undefined {
-//     if (!this.isInitNeeded) {
-//       return;
-//     }
+    return;
+  }
 
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+  @computed
+  get cosmosLikeApp(): string | undefined {
+    if (!this.isInitNeeded) {
+      return;
+    }
 
-//     for (const data of datas) {
-//       if (data.data.event === "init-failed") {
-//         return data.data.ledgerApp;
-//       }
-//     }
+    const datas =
+      this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//     return;
-//   }
+    for (const data of datas) {
+      if (data.data.event === "init-failed") {
+        return data.data.cosmosLikeApp;
+      }
+    }
 
-//   @computed
-//   get cosmosLikeApp(): string | undefined {
-//     if (!this.isInitNeeded) {
-//       return;
-//     }
+    return;
+  }
 
-//     const datas =
-//       this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+  @flow
+  *resume(...initArgs: any[]) {
+    this._isLoading = true;
 
-//     for (const data of datas) {
-//       if (data.data.event === "init-failed") {
-//         return data.data.cosmosLikeApp;
-//       }
-//     }
+    try {
+      const datas =
+        this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//     return;
-//   }
+      for (const data of datas) {
+        if (data.data.event === "init-failed") {
+          // Approve resuming the initing ledger.
+          yield this.interactionStore.approve("ledger-init", data.id, {
+            initArgs,
+          });
+          break;
+        }
+      }
+    } finally {
+      this._isLoading = false;
+    }
+  }
 
-//   @flow
-//   *resume(...initArgs: any[]) {
-//     this._isLoading = true;
+  @flow
+  *resumeAll(...initArgs: any[]) {
+    this._isLoading = true;
 
-//     try {
-//       const datas =
-//         this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+    try {
+      const datas =
+        this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//       for (const data of datas) {
-//         if (data.data.event === "init-failed") {
-//           // Approve resuming the initing ledger.
-//           yield this.interactionStore.approve("ledger-init", data.id, {
-//             initArgs,
-//           });
-//           break;
-//         }
-//       }
-//     } finally {
-//       this._isLoading = false;
-//     }
-//   }
+      for (const data of datas) {
+        if (data.data.event === "init-failed") {
+          // Approve resuming the initing ledger.
+          yield this.interactionStore.approve("ledger-init", data.id, {
+            initArgs,
+          });
+        }
+      }
+    } finally {
+      this._isLoading = false;
+    }
+  }
 
-//   @flow
-//   *resumeAll(...initArgs: any[]) {
-//     this._isLoading = true;
+  @flow
+  *abort() {
+    this._isLoading = true;
 
-//     try {
-//       const datas =
-//         this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+    try {
+      const datas =
+        this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//       for (const data of datas) {
-//         if (data.data.event === "init-failed") {
-//           // Approve resuming the initing ledger.
-//           yield this.interactionStore.approve("ledger-init", data.id, {
-//             initArgs,
-//           });
-//         }
-//       }
-//     } finally {
-//       this._isLoading = false;
-//     }
-//   }
+      for (const data of datas) {
+        if (data.data.event === "init-failed") {
+          // Approve resuming the initing ledger.
+          yield this.interactionStore.approve("ledger-init", data.id, {
+            abort: true,
+          });
+          break;
+        }
+      }
+    } finally {
+      this._isLoading = false;
+    }
+  }
 
-//   @flow
-//   *abort() {
-//     this._isLoading = true;
+  @flow
+  *abortAll() {
+    this._isLoading = true;
 
-//     try {
-//       const datas =
-//         this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
+    try {
+      const datas =
+        this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
 
-//       for (const data of datas) {
-//         if (data.data.event === "init-failed") {
-//           // Approve resuming the initing ledger.
-//           yield this.interactionStore.approve("ledger-init", data.id, {
-//             abort: true,
-//           });
-//           break;
-//         }
-//       }
-//     } finally {
-//       this._isLoading = false;
-//     }
-//   }
+      for (const data of datas) {
+        if (data.data.event === "init-failed") {
+          // Approve resuming the initing ledger.
+          yield this.interactionStore.approve("ledger-init", data.id, {
+            abort: true,
+          });
+        }
+      }
+    } finally {
+      this._isLoading = false;
+    }
+  }
 
-//   @flow
-//   *abortAll() {
-//     this._isLoading = true;
-
-//     try {
-//       const datas =
-//         this.interactionStore.getAllData<LedgerInitDataType>("ledger-init");
-
-//       for (const data of datas) {
-//         if (data.data.event === "init-failed") {
-//           // Approve resuming the initing ledger.
-//           yield this.interactionStore.approve("ledger-init", data.id, {
-//             abort: true,
-//           });
-//         }
-//       }
-//     } finally {
-//       this._isLoading = false;
-//     }
-//   }
-
-//   get isLoading(): boolean {
-//     return this._isLoading;
-//   }
-// }
+  get isLoading(): boolean {
+    return this._isLoading;
+  }
+}

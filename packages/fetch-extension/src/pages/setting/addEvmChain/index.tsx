@@ -55,7 +55,6 @@ export const AddEvmChain: FunctionComponent = () => {
       },
     ],
     features: ["evm"],
-    explorerUrl: "",
   };
   const [newChainInfo, setNewChainInfo] = useState(initialState);
 
@@ -148,10 +147,6 @@ export const AddEvmChain: FunctionComponent = () => {
           chainId: chainId.toString(),
           chainName: chainData.name,
           bech32Config: Bech32Address.defaultBech32Config(symbol.toLowerCase()),
-          explorerUrl:
-            chainData.explorers && chainData.explorers.length > 0
-              ? chainData.explorers[0].url
-              : undefined,
         });
       } else {
         setInfo(
@@ -324,7 +319,7 @@ export const AddEvmChain: FunctionComponent = () => {
           onChange={handleChange}
           required
         />
-        <Input
+        {/* <Input
           formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Explorer Url"
@@ -332,7 +327,7 @@ export const AddEvmChain: FunctionComponent = () => {
           name="explorerUrl"
           value={newChainInfo?.explorerUrl ?? ""}
           onChange={handleChange}
-        />
+        /> */}
         <ButtonV2
           variant="dark"
           styleProps={{

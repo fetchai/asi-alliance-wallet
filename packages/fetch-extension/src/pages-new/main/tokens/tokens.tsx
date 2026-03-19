@@ -198,8 +198,7 @@ export const Tokens = observer(() => {
                       });
                       return;
                     }
-                    const tokenOf = tokensStore.getTokensOf(current.chainId);
-                    await tokenOf.addToken({
+                    await tokensStore.addToken(current.chainId, {
                       ...token.balance.currency,
                       viewingKey,
                     });

@@ -13,7 +13,7 @@ export const WalletOptions = observer(() => {
 
   useEffect(() => {
     const firstAccountIndex = keyRingStore.keyInfos.findIndex(
-      (value) => value.selected
+      (value) => value.isSelected
     );
     setAccountIndex(firstAccountIndex);
   }, [keyRingStore.keyInfos]);

@@ -8,3 +8,4 @@ export * from "./starknet-sign-tx";
 export * from "./starknet-sign-message";
 export * from "./bitcoin-sign-tx";
 export * from "./bitcoin-sign-message";
+export * from "./ledger";

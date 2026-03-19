@@ -147,7 +147,7 @@ export const MorePage: FunctionComponent = () => {
           }}
         />
       )}
-      {currentChain?.raw?.type !== "testnet" &&
+      {!currentChain?.isTestnet &&
       moonpaySupportedTokens?.length > 0 &&
       !currentChain.beta &&
       isAddressWhitelisted ? (

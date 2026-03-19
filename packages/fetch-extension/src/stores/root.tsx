@@ -47,6 +47,8 @@ import {
   ChainSwitchStore,
   PermissionStore,
   PermissionManagerStore,
+  ChainsUIForegroundStore,
+  LedgerInitStore,
 } from "@keplr-wallet/stores-core";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {
@@ -99,6 +101,7 @@ getSidePanelWindowId();
 export class RootStore {
   public readonly uiConfigStore: UIConfigStore;
   public readonly chainStore: ChainStore;
+  public readonly chainsUIForegroundStore: ChainsUIForegroundStore;
   public readonly keyRingStore: KeyRingStore;
   public readonly ibcChannelStore: IBCChannelStore;
   public readonly chatStore: ChatStore;
@@ -111,7 +114,7 @@ export class RootStore {
   public readonly permissionStore: PermissionStore;
   public readonly generalPermissionStore: PermissionManagerStore;
   public readonly signInteractionStore: SignInteractionStore;
-  // public readonly ledgerInitStore: LedgerInitStore;
+  public readonly ledgerInitStore: LedgerInitStore;
   public readonly keystoneStore: KeystoneStore;
   public readonly chainSuggestStore: ChainSuggestStore;
   public readonly chainSwitchStore: ChainSwitchStore;
@@ -305,15 +308,6 @@ export class RootStore {
     ObservableQuery.experimentalDeferInitialQueryController =
       new DeferInitialQueryController();
 
-    this.chainStore = new ChainStore(
-      new ExtensionKVStore("store_chain_config"),
-      EmbedChainInfos,
-      new InExtensionMessageRequester(),
-      ObservableQuery.experimentalDeferInitialQueryController
-    );
-
-    // this.transactionStore = new
-
     this.keyRingStore = new KeyRingStore(
       {
         dispatchEvent: (type: string) => {
@@ -322,6 +316,28 @@ export class RootStore {
       },
       new InExtensionMessageRequester()
     );
+
+    this.chainStore = new ChainStore(
+      new ExtensionKVStore("store_chains"),
+      EmbedChainInfos,
+      new InExtensionMessageRequester(),
+      this.keyRingStore,
+      // register 페이지에서는 enable되지 않은 체인도 쉽게 등장(?)하기 때문에
+      // 모든 체인에 대한 정보 업데이트를 시도해야함
+      window.location.pathname === "/register.html",
+      ObservableQuery.experimentalDeferInitialQueryController
+    );
+
+    this.chainsUIForegroundStore = new ChainsUIForegroundStore(
+      router,
+      (vaultId) => {
+        if (this.keyRingStore.selectedKeyInfo?.id === vaultId) {
+          this.chainStore.updateEnabledChainIdentifiersFromBackground();
+        }
+      }
+    );
+
+    // this.transactionStore = new
 
     this.ibcChannelStore = new IBCChannelStore(
       new ExtensionKVStore("store_ibc_channel"),
@@ -334,10 +350,10 @@ export class RootStore {
       new InExtensionMessageRequester()
     );
     this.signInteractionStore = new SignInteractionStore(this.interactionStore);
-    // this.ledgerInitStore = new LedgerInitStore(
-    //   this.interactionStore,
-    //   new InExtensionMessageRequester()
-    // );
+    this.ledgerInitStore = new LedgerInitStore(
+      this.interactionStore,
+      new InExtensionMessageRequester()
+    );
     this.keystoneStore = new KeystoneStore(this.interactionStore);
     this.chainSuggestStore = new ChainSuggestStore(
       this.interactionStore,

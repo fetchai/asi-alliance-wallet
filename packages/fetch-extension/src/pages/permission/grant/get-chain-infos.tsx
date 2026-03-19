@@ -1,26 +1,40 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { useInteractionInfo } from "@keplr-wallet/hooks";
+import { useInteractionInfo } from "@hooks/interaction";
 import { EmptyLayout } from "@layouts/empty-layout";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useStore } from "../../../stores";
 import style from "./style.module.scss";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
+import { useNavigate } from "react-router";
 
 export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
   observer(() => {
-    const { generalPermissionStore } = useStore();
+    const { permissionStore } = useStore();
+    const navigate = useNavigate();
+    const data = permissionStore?.waitingGlobalPermissionData;
 
-    const ineractionInfo = useInteractionInfo(() => {
-      generalPermissionStore.rejectAllGlobalPermission();
+    const interactionInfo = useInteractionInfo({
+      onUnmount: async () => {
+        if (data) {
+          await permissionStore.rejectPermissionWithProceedNext(
+            data.id,
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            () => {}
+          );
+        }
+      },
     });
 
-    const waitingPermissions =
-      generalPermissionStore.getWaitingGlobalPermissions("get-chain-infos");
+    if (!data) {
+      return null;
+    }
+    const waitingPermissions = data;
 
     const host = useMemo(() => {
-      if (waitingPermissions.length > 0) {
-        return waitingPermissions[0].data.origins
+      if (waitingPermissions) {
+        return waitingPermissions.data.origins
           .map((origin) => {
             return new URL(origin).host;
           })
@@ -29,6 +43,8 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
         return "";
       }
     }, [waitingPermissions]);
+
+    const isLoading = permissionStore.isObsoleteInteractionApproved(data.id);
 
     return (
       <EmptyLayout style={{ height: "100%", paddingTop: "80px" }}>
@@ -65,26 +81,30 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
               text=""
               onClick={async (e: any) => {
                 e.preventDefault();
-
-                if (waitingPermissions.length > 0) {
-                  await generalPermissionStore.rejectGlobalPermission(
-                    waitingPermissions[0].id
-                  );
-                  if (
-                    generalPermissionStore.getWaitingGlobalPermissions(
-                      "get-chain-infos"
-                    ).length === 0
-                  ) {
-                    if (
-                      ineractionInfo.interaction &&
-                      !ineractionInfo.interactionInternal
-                    ) {
-                      window.close();
+                await permissionStore.rejectPermissionWithProceedNext(
+                  data.id,
+                  (proceedNext) => {
+                    if (!proceedNext) {
+                      if (
+                        interactionInfo.interaction &&
+                        !interactionInfo.interactionInternal
+                      ) {
+                        handleExternalInteractionWithNoProceedNext();
+                      } else if (
+                        interactionInfo.interaction &&
+                        interactionInfo.interactionInternal
+                      ) {
+                        window.history.length > 1
+                          ? navigate(-1)
+                          : navigate("/");
+                      } else {
+                        navigate("/", { replace: true });
+                      }
                     }
                   }
-                }
+                );
               }}
-              dataLoading={generalPermissionStore.isLoading}
+              dataLoading={isLoading}
             >
               <FormattedMessage id="access.button.reject" />
             </ButtonV2>
@@ -93,27 +113,22 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
               variant="dark"
               onClick={async (e: any) => {
                 e.preventDefault();
-
-                if (waitingPermissions.length > 0) {
-                  await generalPermissionStore.approveGlobalPermission(
-                    waitingPermissions[0].id
-                  );
-                  if (
-                    generalPermissionStore.getWaitingGlobalPermissions(
-                      "get-chain-infos"
-                    ).length === 0
-                  ) {
-                    if (
-                      ineractionInfo.interaction &&
-                      !ineractionInfo.interactionInternal
-                    ) {
-                      window.close();
+                await permissionStore.approveGlobalPermissionWithProceedNext(
+                  data.id,
+                  (proceedNext) => {
+                    if (!proceedNext) {
+                      if (
+                        interactionInfo.interaction &&
+                        !interactionInfo.interactionInternal
+                      ) {
+                        handleExternalInteractionWithNoProceedNext();
+                      }
                     }
                   }
-                }
+                );
               }}
-              disabled={waitingPermissions.length === 0}
-              dataLoading={generalPermissionStore.isLoading}
+              disabled={!waitingPermissions}
+              dataLoading={isLoading}
             >
               <FormattedMessage id="access.button.approve" />
             </ButtonV2>

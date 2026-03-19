@@ -18,6 +18,7 @@ import {
   CheckPasswordMsg,
   ComputeNotFinalizedKeyAddressesMsg,
   DeleteKeyRingMsg,
+  ExportKeyRingDataMsg,
   ExtendedKey,
   FinalizeKeyCoinTypeMsg,
   GetKeyRingStatusMsg,
@@ -35,7 +36,10 @@ import {
   ShowSensitiveKeyRingDataMsg,
   UnlockKeyRingMsg,
 } from "@keplr-wallet/background";
-import type { MultiAccounts } from "@keplr-wallet/background";
+import type {
+  ExportKeyRingData,
+  MultiAccounts,
+} from "@keplr-wallet/background";
 import { ChainInfo } from "@keplr-wallet/types";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 
@@ -393,6 +397,13 @@ export class KeyRingStore {
     if (result.wasSelected && result.status === "unlocked") {
       this.eventDispatcher.dispatchEvent("keplr_keystorechange");
     }
+  }
+
+  async exportKeyRingDatas(password: string): Promise<ExportKeyRingData[]> {
+    return await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new ExportKeyRingDataMsg(password)
+    );
   }
 
   async changeUserPassword(

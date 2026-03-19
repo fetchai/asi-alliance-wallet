@@ -14,7 +14,6 @@ import {
   NotificationStoreProvider,
   useNotification,
 } from "@components/notification";
-import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 import {
   Ledger,
   LedgerApp,
@@ -38,11 +37,12 @@ import { ErrorBoundary } from "../../error-boundary";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { DropdownContextProvider } from "@components-v2/dropdown/dropdown-context";
 import { ChatStoreProvider } from "@components/chat/store";
+import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 
 export const LedgerGrantPage: FunctionComponent = observer(() => {
   const intl = useIntl();
   const notification = useNotification();
-  const { ledgerInitStore } = useStore();
+  const { uiConfigStore } = useStore();
   const [status, setStatus] = useState<"select" | "failed" | "success">(
     "select"
   );
@@ -59,11 +59,10 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
     setIsLoading({ cosmosLikeApp, loading: true });
 
     try {
-      const transportIniter = ledgerInitStore.isWebHID
+      const transportIniter = uiConfigStore.useWebHIDLedger
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
-
       try {
         await CosmosApp.openApp(transport, cosmosLikeApp);
       } catch (e) {
@@ -82,7 +81,6 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
         } finally {
           await ledger?.close();
         }
-
         setStatus("success");
       }
     } catch (e) {
@@ -97,13 +95,13 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
   const toggleWebHIDFlag = async (e: ChangeEvent) => {
     e.preventDefault();
 
-    if (!ledgerInitStore.isWebHID && !(await Ledger.isWebHIDSupported())) {
+    if (!uiConfigStore.useWebHIDLedger && !window.navigator.hid) {
       setShowWebHIDWarning(true);
       return;
     }
     setShowWebHIDWarning(false);
 
-    await ledgerInitStore.setWebHID(!ledgerInitStore.isWebHID);
+    uiConfigStore.setUseWebHIDLedger(!uiConfigStore.useWebHIDLedger);
   };
   return (
     <div className={classnames(style["container"])}>
@@ -177,7 +175,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
                         className={`custom-control-input ${style["ledgerCheckbox"]}`}
                         id="use-webhid"
                         type="checkbox"
-                        checked={ledgerInitStore.isWebHID}
+                        checked={uiConfigStore.useWebHIDLedger}
                         onChange={toggleWebHIDFlag}
                         disabled={isLoading.loading}
                       />

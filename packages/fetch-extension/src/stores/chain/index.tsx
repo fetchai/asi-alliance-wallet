@@ -1,4 +1,12 @@
-import { observable, action, computed, makeObservable, flow } from "mobx";
+import {
+  observable,
+  action,
+  computed,
+  makeObservable,
+  flow,
+  autorun,
+  runInAction,
+} from "mobx";
 
 import {
   IChainInfoImpl,
@@ -7,7 +15,7 @@ import {
   ObservableQuery,
 } from "@keplr-wallet/stores";
 
-import { ChainInfo } from "@keplr-wallet/types";
+import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
 import {
   ChainInfoWithCoreTypes,
   GetChainInfosWithCoreTypesMsg,
@@ -17,15 +25,35 @@ import {
   SuggestChainInfoMsg,
   SetSelectedChainMsg,
   TryUpdateAllChainInfosMsg,
+  GetEnabledChainIdentifiersMsg,
+  GetTokenScansMsg,
+  RevalidateTokenScansMsg,
+  TokenScan,
 } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { MessageRequester } from "@keplr-wallet/router";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { KeyRingStore } from "@keplr-wallet/stores-core";
 
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
+  @observable.ref
+  protected _enabledChainIdentifiers: string[] = [];
+
+  @observable.ref
+  protected _tokenScans: TokenScan[] = [];
+  @observable.ref
+  protected _tokenScansWithoutDismissed: TokenScan[] = [];
+
+  @observable
+  protected _lastTokenScanRevalidateTimestamp: Map<string, number> = new Map();
+
   @observable
   protected _selectedChainId: string;
+
+  @observable
+  protected _lastSyncedEnabledChainsVaultId: string = "";
 
   @observable
   protected _isInitializing: boolean = false;
@@ -41,8 +69,10 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   constructor(
     protected readonly kvStore: KVStore,
-    embedChainInfos: ChainInfo[],
+    protected readonly embedChainInfos: (ModularChainInfo | ChainInfo)[],
     protected readonly requester: MessageRequester,
+    protected readonly keyRingStore: KeyRingStore,
+    protected readonly updateAllChainInfo: boolean,
     protected readonly deferInitialQueryController: DeferInitialQueryController
   ) {
     super(
@@ -61,6 +91,11 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     this.chainInfoInUIConfig = {
       disabledChains: [],
     };
+
+    // Should be enabled at least one chain.
+    this._enabledChainIdentifiers = [
+      ChainIdHelper.parse(embedChainInfos[0].chainId).identifier,
+    ];
 
     makeObservable(this);
 
@@ -318,5 +353,79 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     this.setEmbeddedChainInfos(newChainInfos.chainInfos);
 
     ObservableQuery.refreshAllObserved();
+  }
+
+  @flow
+  *updateChainInfosFromBackground() {
+    const msg = new GetChainInfosWithCoreTypesMsg();
+    const result = yield* toGenerator(
+      this.requester.sendMessage(BACKGROUND_PORT, msg)
+    );
+    this.setEmbeddedChainInfosV2({
+      chainInfos: result.chainInfos,
+      modulrChainInfos: result.modulrChainInfos,
+    });
+  }
+
+  @flow
+  *updateEnabledChainIdentifiersFromBackground() {
+    if (!this.keyRingStore.selectedKeyInfo) {
+      this._lastSyncedEnabledChainsVaultId = "";
+      return;
+    }
+
+    const id = this.keyRingStore.selectedKeyInfo.id;
+    const msg = new GetEnabledChainIdentifiersMsg(id);
+    this._enabledChainIdentifiers = yield* toGenerator(
+      this.requester.sendMessage(BACKGROUND_PORT, msg)
+    );
+
+    const getTokenScansResult = yield* toGenerator(
+      this.requester.sendMessage(BACKGROUND_PORT, new GetTokenScansMsg(id))
+    );
+
+    if (this.keyRingStore.selectedKeyInfo?.id === getTokenScansResult.vaultId) {
+      this._tokenScans = getTokenScansResult.tokenScans;
+      this._tokenScansWithoutDismissed =
+        getTokenScansResult.tokenScansWithoutDismissed;
+    }
+
+    (async () => {
+      await new Promise<void>((resolve) => {
+        const disposal = autorun(() => {
+          if (this.keyRingStore.status === "unlocked") {
+            resolve();
+
+            if (disposal) {
+              disposal();
+            }
+          }
+        });
+      });
+
+      const lastTimestamp = this._lastTokenScanRevalidateTimestamp.get(id);
+      if (
+        lastTimestamp == null ||
+        Date.now() - lastTimestamp > 5 * 60 * 60 * 1000
+      ) {
+        runInAction(() => {
+          this._lastTokenScanRevalidateTimestamp.set(id, Date.now());
+        });
+
+        const res = await this.requester.sendMessage(
+          BACKGROUND_PORT,
+          new RevalidateTokenScansMsg(id)
+        );
+
+        if (res.vaultId === this.keyRingStore.selectedKeyInfo?.id) {
+          runInAction(() => {
+            this._tokenScans = res.tokenScans;
+            this._tokenScansWithoutDismissed = res.tokenScansWithoutDismissed;
+          });
+        }
+      }
+    })();
+
+    this._lastSyncedEnabledChainsVaultId = id;
   }
 }

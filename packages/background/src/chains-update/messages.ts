@@ -1,6 +1,6 @@
 import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
-import { LedgerApp } from "../keyring-keystone";
+import { LedgerApp } from "../ledger";
 
 export class TryUpdateAllChainInfosMsg extends Message<boolean> {
   public static type() {

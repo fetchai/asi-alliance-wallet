@@ -1,4 +1,4 @@
-import { ChainInfoWithRepoUpdateOptions } from "@keplr-wallet/background";
+import { ChainInfoWithCoreTypes as ChainInfoWithRepoUpdateOptions } from "@keplr-wallet/background";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { ChainInfo } from "@keplr-wallet/types";
 
@@ -159,7 +159,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     // rest: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
     chainId: "1",
     chainName: "Ethereum",
-    explorerUrl: "https://etherscan.io",
     stakeCurrency: {
       coinDenom: "ETH",
       coinMinimalDenom: "eth",
@@ -215,7 +214,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     rest: "https://bsc-dataseed.binance.org/",
     chainId: "56",
     chainName: "Binance Smart Chain",
-    explorerUrl: "https://bscscan.com",
     hideInUI: true,
     stakeCurrency: {
       coinDenom: "BNB",
@@ -317,7 +315,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       },
     ],
     features: ["evm"],
-    explorerUrl: "https://goerli.etherscan.io",
   },
   {
     rpc: "https://cosmos-rpc.publicnode.com:443",
@@ -367,10 +364,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/cosmos/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
@@ -435,10 +428,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     ],
     // chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/osmosis.svg"),
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/osmosis/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
@@ -1911,10 +1900,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["cosmwasm", "ibc-transfer", "ibc-go", "wasmd_0.24+"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/juno/images/juno.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/juno/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
@@ -1966,10 +1951,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/stargaze/images/stars.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/stargaze/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
