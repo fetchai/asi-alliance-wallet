@@ -3,7 +3,7 @@ import React, { FunctionComponent, useState } from "react";
 import { KeyRingStore } from "@keplr-wallet/stores-core";
 import { action, computed, flow, makeObservable, observable } from "mobx";
 import { Mnemonic, RNG } from "@keplr-wallet/crypto";
-import { BIP44HDPath } from "@keplr-wallet/background";
+import { BIP44HDPath, MultiAccounts } from "@keplr-wallet/background";
 
 export type RegisterMode = "create" | "add";
 
@@ -194,31 +194,24 @@ export class RegisterConfig {
 
   // Create or add the keystone account.
   // If the mode is "add", password will be ignored.
-  // @flow
-  // *createKeystone(name: string, password: string, bip44HDPath: BIP44HDPath) {
-  //   this._isLoading = true;
-  //   try {
-  //     if (this.mode === "create") {
-  //       yield this.keyRingStore.newKeystoneKey(
-  //         password,
-  //         {
-  //           name,
-  //         },
-  //         bip44HDPath
-  //       );
-  //     } else {
-  //       yield this.keyRingStore.newKeystoneKey(
-  //         {
-  //           name,
-  //         },
-  //         bip44HDPath
-  //       );
-  //     }
-  //     this._isFinalized = true;
-  //   } finally {
-  //     this._isLoading = false;
-  //   }
-  // }
+  @flow
+  *createKeystone(
+    name: string,
+    password: string,
+    multiAccounts: MultiAccounts
+  ) {
+    this._isLoading = true;
+    try {
+      if (this.mode === "create") {
+        yield this.keyRingStore.newKeystoneKey(multiAccounts, name, password);
+      } else {
+        yield this.keyRingStore.newKeystoneKey(multiAccounts, name, password);
+      }
+      this._isFinalized = true;
+    } finally {
+      this._isLoading = false;
+    }
+  }
 
   // Create or add the ledger account.
   // If the mode is "add", password will be ignored.

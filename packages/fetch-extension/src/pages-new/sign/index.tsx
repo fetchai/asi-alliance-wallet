@@ -12,7 +12,6 @@ import { useNavigate } from "react-router";
 import { observer } from "mobx-react-lite";
 import {
   useFeeConfig,
-  useInteractionInfo,
   useMemoConfig,
   useSignDocAmountConfig,
   useSignDocHelper,
@@ -42,6 +41,9 @@ import {
   ErrFailedUnknown,
 } from "@keplr-wallet/background/src/ledger/types";
 import { ErrModuleLedgerSign } from "@keplr-wallet/background/build/ledger/types";
+import { useInteractionInfo } from "@hooks/interaction";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
+import { delay } from "lodash";
 
 export const SignPageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -61,7 +63,9 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const [isADR36WithString, setIsADR36WithString] = useState<
     boolean | undefined
   >();
-  const [ethSignType, setEthSignType] = useState<EthSignType | undefined>();
+  const [ethSignType /*, setEthSignType*/] = useState<
+    EthSignType | undefined
+  >();
   const [approveButtonClicked, setApproveButtonClicked] = useState(false);
   const { testUSBDevices } = useUSBDevices();
   const [ledgerInfo, setLedgerInfo] = useState<
@@ -97,12 +101,12 @@ export const SignPageV2: FunctionComponent = observer(() => {
       const data = signInteractionStore.waitingData;
       chainStore.selectChain(data.data.chainId);
       if (data.data.signDocWrapper.isADR36SignDoc) {
-        setIsADR36WithString(data.data.isADR36WithString);
+        setIsADR36WithString(data.data.signDocWrapper.isADR36SignDoc);
       }
-      if (data.data.ethSignType) {
-        setEthSignType(data.data.ethSignType);
-      }
-      setOrigin(data.data.msgOrigin);
+      // if (data.data.signDocWrapper.et) {
+      //   setEthSignType(data.data.ethSignType);
+      // }
+      setOrigin(data.data.origin);
       if (
         !data.data.signDocWrapper.isADR36SignDoc &&
         data.data.chainId !== data.data.signDocWrapper.chainId
@@ -169,19 +173,19 @@ export const SignPageV2: FunctionComponent = observer(() => {
     signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo ===
       true || isProcessing;
 
-  const interactionInfo = useInteractionInfo(
-    () => {
-      if (needSetIsProcessing) {
-        setIsProcessing(true);
+  const interactionInfo = useInteractionInfo({
+    onUnmount: async () => {
+      if (signInteractionStore?.waitingData) {
+        if (needSetIsProcessing) {
+          setIsProcessing(true);
+        }
+        signInteractionStore.rejectWithProceedNext(
+          signInteractionStore.waitingData?.id,
+          () => {}
+        );
       }
-
-      signInteractionStore.rejectAll();
     },
-    {
-      enableScroll: true,
-    }
-  );
-
+  });
   const currentChainId = chainStore.current.chainId;
   const currentChainIdentifier = useMemo(
     () => ChainIdHelper.parse(currentChainId).identifier,
@@ -361,9 +365,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                       height: "56px",
                     }}
                     disabled={
-                      approveIsDisabled ||
-                      signInteractionStore.isLoading ||
-                      accountInfo.broadcastInProgress
+                      approveIsDisabled || accountInfo.broadcastInProgress
                     }
                     btnBgEnabled={true}
                     text={
@@ -374,13 +376,11 @@ export const SignPageV2: FunctionComponent = observer(() => {
                             ? "Transaction in progress"
                             : "Previous transaction in progress"}
                         </span>
-                      ) : signInteractionStore.isLoading ? (
-                        <i className="fas fa-spinner fa-spin ml-2" />
                       ) : (
                         "Approve transaction"
                       )
                     }
-                    data-loading={signInteractionStore.isLoading}
+                    dataLoading={accountInfo.broadcastInProgress}
                     onClick={async (e: any) => {
                       try {
                         e.preventDefault();
@@ -425,16 +425,37 @@ export const SignPageV2: FunctionComponent = observer(() => {
                         }
 
                         if (signDocHelper.signDocWrapper) {
-                          await signInteractionStore.approveAndWaitEnd(
-                            signDocHelper.signDocWrapper
-                          );
-                        }
-
-                        if (
-                          interactionInfo.interaction &&
-                          !interactionInfo.interactionInternal
-                        ) {
-                          window.close();
+                          const interactionData =
+                            signInteractionStore.waitingData;
+                          if (interactionData) {
+                            await signInteractionStore.approveWithProceedNext(
+                              interactionData.id,
+                              signDocHelper.signDocWrapper,
+                              undefined,
+                              async (proceedNext) => {
+                                if (!proceedNext) {
+                                  if (
+                                    interactionInfo.interaction &&
+                                    !interactionInfo.interactionInternal
+                                  ) {
+                                    handleExternalInteractionWithNoProceedNext();
+                                  }
+                                }
+                                if (
+                                  interactionInfo.interaction &&
+                                  interactionInfo.interactionInternal
+                                ) {
+                                  delay(
+                                    () => navigate("/", { replace: true }),
+                                    500
+                                  );
+                                }
+                              },
+                              {
+                                preDelay: 500,
+                              }
+                            );
+                          }
                         }
                       } catch (e) {
                         setApproveButtonClicked(false);

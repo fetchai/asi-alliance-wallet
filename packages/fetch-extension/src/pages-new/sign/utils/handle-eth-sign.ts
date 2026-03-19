@@ -34,7 +34,7 @@ import {
   getPathFromPubKey,
   ErrModuleKeystoneSign,
   ErrKeystoneUSBCommunication,
-} from "./keystone";
+} from "@utils/keystone";
 import KeystoneSDK, { UR, utils } from "@keystonehq/keystone-sdk";
 import { EthermintChainIdHelper } from "@keplr-wallet/cosmos";
 import {

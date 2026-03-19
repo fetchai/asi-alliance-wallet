@@ -69,7 +69,10 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
 
       const isEvm = chainStore.current.features?.includes("evm") ?? false;
       const addresses = accounts
-        .filter((account: any) => account.vaultId !== selectedAccountIndex)
+        .filter(
+          (account: any) =>
+            account.vaultId !== keyRingStore.keyInfos[selectedAccountIndex].id
+        )
         .map((account: any) => {
           if (isEvm) {
             return account.ethereumHexAddress;
@@ -78,7 +81,6 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
           return account.bech32Address;
         });
 
-      console.log("accounts", { accounts, addresses });
       setAddresses(addresses);
     };
 

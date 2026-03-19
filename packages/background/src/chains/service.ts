@@ -1,9 +1,16 @@
 import {
+  checkChainFeatures,
+  validateBasicChainInfoType,
+} from "@keplr-wallet/chain-validator";
+import {
   DenomHelper,
   KVStore,
   PrefixKVStore,
   sortedJsonByKeyStringify,
 } from "@keplr-wallet/common";
+import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { Env, WEBPAGE_PORT } from "@keplr-wallet/router";
+import { simpleFetch } from "@keplr-wallet/simple-fetch";
 import {
   BitcoinChainInfo,
   ChainInfo,
@@ -21,21 +28,13 @@ import {
   runInAction,
   toJS,
 } from "mobx";
-import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { computedFn } from "mobx-utils";
-import {
-  checkChainFeatures,
-  validateBasicChainInfoType,
-} from "@keplr-wallet/chain-validator";
-import { simpleFetch } from "@keplr-wallet/simple-fetch";
+import { AnalyticsService } from "../analytics";
 import { InteractionService } from "../interaction";
-import { Env } from "@keplr-wallet/router";
+import { getBasicAccessPermissionType, PermissionService } from "../permission";
+import { runIfOnlyAppStart } from "../utils";
 import { SuggestChainInfoMsg, SwitchNetworkByChainIdMsg } from "./messages";
 import { ChainInfoWithCoreTypes, ChainInfoWithSuggestedOptions } from "./types";
-import { AnalyticsService } from "../analytics";
-import { runIfOnlyAppStart } from "../utils";
-import { WEBPAGE_PORT } from "@keplr-wallet/router";
-import { getBasicAccessPermissionType, PermissionService } from "../permission";
 
 type ChainRemovedHandler = (chainInfo: ChainInfo) => void;
 type ChainSuggestedHandler = (

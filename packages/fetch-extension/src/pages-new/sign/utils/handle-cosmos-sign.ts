@@ -27,7 +27,7 @@ import {
   KeystoneKeys,
   KeystoneUR,
   getPathFromPubKey,
-} from "./keystone";
+} from "@utils/keystone";
 import {
   createKeystoneTransport,
   handleKeystoneUSBError,

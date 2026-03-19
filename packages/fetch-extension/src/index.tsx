@@ -358,7 +358,10 @@ const App = observer(() => {
                               element={<SecurityPrivacyPage />}
                             />
                             {/* <Route path="/sign" element={<SignPage />} /> */}
-                            <Route path="/sign" element={<SignPageV2 />} />
+                            <Route
+                              path="/sign-cosmos"
+                              element={<SignPageV2 />}
+                            />
 
                             <Route
                               path="/icns/adr36-signatures"
