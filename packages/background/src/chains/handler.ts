@@ -21,6 +21,7 @@ import {
   PingMsg,
   SwitchNetworkByChainIdMsg,
   SetSelectedChainMsg,
+  GetNetworkMsg,
 } from "./messages";
 import { ChainInfo } from "@keplr-wallet/types";
 import { getBasicAccessPermissionType, PermissionService } from "../permission";
@@ -107,6 +108,8 @@ export const getHandler: (
           env,
           msg as ClearAllChainEndpointsMsg
         );
+      case GetNetworkMsg:
+        return handleGetNetworkMsg(chainsService)(env, msg as GetNetworkMsg);
       default:
         throw new KeplrError("chains", 110, "Unknown msg type");
     }
@@ -298,5 +301,15 @@ const handleClearAllChainEndpointsMsg: (
 ) => InternalHandler<ClearAllChainEndpointsMsg> = (service) => {
   return () => {
     return service.clearAllEndpoints();
+  };
+};
+
+const handleGetNetworkMsg: (
+  service: ChainsService
+) => InternalHandler<GetNetworkMsg> = (service) => {
+  return async () => {
+    const chainId = await service.getSelectedChain();
+    const chainInfo = await service.getChainInfoWithCoreTypes(chainId);
+    return chainInfo;
   };
 };

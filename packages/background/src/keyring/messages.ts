@@ -39,28 +39,6 @@ export class GetIsLockedMsg extends Message<boolean> {
   }
 }
 
-export class RefreshAccountList extends Message<{ refresh: boolean }> {
-  public static type() {
-    return "refresh-accounts-list";
-  }
-
-  constructor() {
-    super();
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  type(): string {
-    return RefreshAccountList.type();
-  }
-}
-
 export class GetKeyRingStatusMsg extends Message<{
   status: KeyRingStatus;
   keyInfos: KeyInfo[];

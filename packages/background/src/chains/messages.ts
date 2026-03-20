@@ -97,6 +97,10 @@ export class GetChainInfosWithCoreTypesMsg extends Message<{
     // noop
   }
 
+  override approveExternal(): boolean {
+    return true;
+  }
+
   route(): string {
     return ROUTE;
   }
@@ -393,5 +397,31 @@ export class ClearAllChainEndpointsMsg extends Message<void> {
 
   type(): string {
     return ClearAllChainEndpointsMsg.type();
+  }
+}
+
+export class GetNetworkMsg extends Message<ChainInfoWithCoreTypes | undefined> {
+  public static type() {
+    return "current-network-msg";
+  }
+
+  constructor() {
+    super();
+  }
+
+  override approveExternal(): boolean {
+    return true;
+  }
+
+  validateBasic(): void {
+    //noop
+  }
+
+  route(): string {
+    return "chains";
+  }
+
+  type(): string {
+    return GetNetworkMsg.type();
   }
 }

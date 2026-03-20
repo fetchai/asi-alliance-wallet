@@ -3,6 +3,7 @@ import {
   AddressBookEntry,
   NetworkConfig,
   WalletStatus,
+  ChainInfoWithCoreTypes,
 } from "@fetchai/wallet-types";
 import { Message } from "@keplr-wallet/router";
 import {
@@ -14,6 +15,7 @@ import {
   StdSignature,
   StdSignDoc,
   ChainInfoWithoutEndpoints,
+  ModularChainInfo,
 } from "@keplr-wallet/types";
 
 export class EnableAccessMsg extends Message<void> {
@@ -894,7 +896,7 @@ export class GetAccountMsg extends Message<Account | null> {
   }
 }
 
-export class GetNetworkMsg extends Message<NetworkConfig> {
+export class GetNetworkMsg extends Message<ChainInfoWithCoreTypes | undefined> {
   public static type() {
     return "current-network-msg";
   }
@@ -913,6 +915,55 @@ export class GetNetworkMsg extends Message<NetworkConfig> {
 
   type(): string {
     return GetNetworkMsg.type();
+  }
+}
+
+export class LockKeyRingMsg extends Message<{
+  status: "empty" | "locked" | "unlocked";
+}> {
+  public static type() {
+    return "lock-keyring";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return "keyring-v2";
+  }
+
+  type(): string {
+    return LockKeyRingMsg.type();
+  }
+}
+
+export class GetChainInfosWithCoreTypesMsg extends Message<{
+  chainInfos: ChainInfoWithCoreTypes[];
+  modulrChainInfos: ModularChainInfo[];
+}> {
+  public static type() {
+    return "get-chain-infos-with-core-types";
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  override approveExternal(): boolean {
+    return true;
+  }
+
+  route(): string {
+    return "chains";
+  }
+
+  type(): string {
+    return GetChainInfosWithCoreTypesMsg.type();
   }
 }
 

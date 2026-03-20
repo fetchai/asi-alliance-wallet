@@ -37,9 +37,6 @@ import classNames from "classnames";
 import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
 import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { RefreshAccountList } from "@keplr-wallet/background";
 import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const TypeNewMnemonic = "new-mnemonic";
@@ -724,10 +721,6 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 dispatchGlobalEventExceptSelf(
                   "keplr_new_key_created",
                   keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
-                );
-                await new InExtensionMessageRequester().sendMessage(
-                  BACKGROUND_PORT,
-                  new RefreshAccountList()
                 );
               }
               analyticsStore.setUserProperties({

@@ -27,9 +27,6 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
       },
     });
 
-    if (!data) {
-      return null;
-    }
     const waitingPermissions = data;
 
     const host = useMemo(() => {
@@ -44,7 +41,9 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
       }
     }, [waitingPermissions]);
 
-    const isLoading = permissionStore.isObsoleteInteractionApproved(data.id);
+    const isLoading = data
+      ? permissionStore.isObsoleteInteractionApproved(data.id)
+      : true;
 
     return (
       <EmptyLayout style={{ height: "100%", paddingTop: "80px" }}>
@@ -81,28 +80,30 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
               text=""
               onClick={async (e: any) => {
                 e.preventDefault();
-                await permissionStore.rejectPermissionWithProceedNext(
-                  data.id,
-                  (proceedNext) => {
-                    if (!proceedNext) {
-                      if (
-                        interactionInfo.interaction &&
-                        !interactionInfo.interactionInternal
-                      ) {
-                        handleExternalInteractionWithNoProceedNext();
-                      } else if (
-                        interactionInfo.interaction &&
-                        interactionInfo.interactionInternal
-                      ) {
-                        window.history.length > 1
-                          ? navigate(-1)
-                          : navigate("/");
-                      } else {
-                        navigate("/", { replace: true });
+                if (data) {
+                  await permissionStore.rejectPermissionWithProceedNext(
+                    data.id,
+                    (proceedNext) => {
+                      if (!proceedNext) {
+                        if (
+                          interactionInfo.interaction &&
+                          !interactionInfo.interactionInternal
+                        ) {
+                          handleExternalInteractionWithNoProceedNext();
+                        } else if (
+                          interactionInfo.interaction &&
+                          interactionInfo.interactionInternal
+                        ) {
+                          window.history.length > 1
+                            ? navigate(-1)
+                            : navigate("/");
+                        } else {
+                          navigate("/", { replace: true });
+                        }
                       }
                     }
-                  }
-                );
+                  );
+                }
               }}
               dataLoading={isLoading}
             >
@@ -113,19 +114,21 @@ export const GrantGlobalPermissionGetChainInfosPage: FunctionComponent =
               variant="dark"
               onClick={async (e: any) => {
                 e.preventDefault();
-                await permissionStore.approveGlobalPermissionWithProceedNext(
-                  data.id,
-                  (proceedNext) => {
-                    if (!proceedNext) {
-                      if (
-                        interactionInfo.interaction &&
-                        !interactionInfo.interactionInternal
-                      ) {
-                        handleExternalInteractionWithNoProceedNext();
+                if (data) {
+                  await permissionStore.approveGlobalPermissionWithProceedNext(
+                    data.id,
+                    (proceedNext) => {
+                      if (!proceedNext) {
+                        if (
+                          interactionInfo.interaction &&
+                          !interactionInfo.interactionInternal
+                        ) {
+                          handleExternalInteractionWithNoProceedNext();
+                        }
                       }
                     }
-                  }
-                );
+                  );
+                }
               }}
               disabled={!waitingPermissions}
               dataLoading={isLoading}

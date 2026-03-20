@@ -8,6 +8,7 @@ import {
   SigningApi,
   WalletApi,
   WalletStatus,
+  ChainInfoWithCoreTypes,
 } from "@fetchai/wallet-types";
 import {
   AminoSignResponse,
@@ -114,7 +115,7 @@ export class InjectedFetchAccount implements AccountsApi {
 export class InjectedFetchNetworks implements NetworksApi {
   constructor(protected readonly proxy: Proxy) {}
 
-  async getNetwork(): Promise<NetworkConfig> {
+  async getNetwork(): Promise<ChainInfoWithCoreTypes | undefined> {
     return await this.requestViaProxy("getNetwork", []);
   }
 
@@ -126,7 +127,7 @@ export class InjectedFetchNetworks implements NetworksApi {
     return await this.requestViaProxy("switchToNetworkByChainId", [chainId]);
   }
 
-  async listNetworks(): Promise<NetworkConfig[]> {
+  async listNetworks(): Promise<ChainInfoWithCoreTypes[]> {
     return await this.requestViaProxy("listNetworks", []);
   }
 

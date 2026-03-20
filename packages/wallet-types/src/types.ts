@@ -8,6 +8,7 @@ import {
   DirectSignResponse,
   StdSignature,
   EthSignType,
+  ChainInfo,
 } from "@keplr-wallet/types";
 import { PublicKey } from "./public-keys";
 import { NetworkConfig } from "./network-info";
@@ -18,6 +19,14 @@ export enum WalletStatus {
   LOCKED,
   UNLOCKED,
 }
+
+export type ChainInfoWithSuggestedOptions = ChainInfo & {
+  readonly updateFromRepoDisabled?: boolean;
+};
+
+export type ChainInfoWithCoreTypes = ChainInfoWithSuggestedOptions & {
+  readonly embedded?: boolean;
+};
 
 /**
  * The representation of the Account
@@ -93,7 +102,7 @@ export interface NetworksApi {
    *
    * @throws An error if the wallet is locked or if the dApp does not have permission to the networks API
    */
-  getNetwork(): Promise<NetworkConfig>;
+  getNetwork(): Promise<ChainInfoWithCoreTypes | undefined>;
 
   /**
    * Switch a specified network
@@ -116,7 +125,7 @@ export interface NetworksApi {
    *
    * @throws An error if the dApp does not have permission to the networks API
    */
-  listNetworks(): Promise<NetworkConfig[]>;
+  listNetworks(): Promise<ChainInfoWithCoreTypes[]>;
 }
 
 /**

@@ -27,7 +27,6 @@ import {
   SearchKeyRingsMsg,
   AppendLedgerExtendedKeysMsg,
   SwitchAccountMsg,
-  RefreshAccountList,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
@@ -59,7 +58,6 @@ export function init(router: Router, service: KeyRingService): void {
   router.registerMessage(ExportKeyRingVaultsMsg);
   router.registerMessage(SwitchAccountMsg);
   router.registerMessage(SearchKeyRingsMsg);
-  router.registerMessage(RefreshAccountList);
 
   router.addHandler(ROUTE, getHandler(service));
 }

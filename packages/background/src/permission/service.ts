@@ -293,7 +293,7 @@ export class PermissionService {
 
     await this.interactionService.waitApproveV2(
       env,
-      "/permission",
+      "/access",
       INTERACTION_TYPE_PERMISSION,
       permissionData,
       (newChainId?: string) => {
@@ -348,7 +348,7 @@ export class PermissionService {
 
     await this.interactionService.waitApproveV2(
       env,
-      "/permission",
+      "/permissions/grant/get-chain-infos",
       INTERACTION_TYPE_GLOBAL_PERMISSION,
       permissionData,
       () => {

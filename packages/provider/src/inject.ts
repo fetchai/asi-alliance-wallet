@@ -138,7 +138,6 @@ export function injectKeplrToWindow(
 export class InjectedKeplr implements IKeplr, KeplrCoreTypes {
   static startProxy(
     keplr: IKeplr & KeplrCoreTypes,
-    metaId: string | undefined,
     eventListener: {
       addMessageListener: (fn: (e: any) => void) => void;
       removeMessageListener: (fn: (e: any) => void) => void;
@@ -153,16 +152,12 @@ export class InjectedKeplr implements IKeplr, KeplrCoreTypes {
     },
     parseMessage?: (message: any) => any
   ): () => void {
-    const proxyRequestType = `proxy-request${metaId ? `-${metaId}` : ""}`;
+    const proxyRequestType = "fetchai:proxy-request-v1";
     const fn = async (e: any) => {
       const message: ProxyRequest = parseMessage
         ? parseMessage(e.data)
         : e.data;
-      if (
-        !message ||
-        // "proxy-request"는 legacy support를 위한 것임.
-        (message.type !== proxyRequestType && message.type !== "proxy-request")
-      ) {
+      if (!message || message.type !== proxyRequestType) {
         return;
       }
 
@@ -498,9 +493,6 @@ export class InjectedKeplr implements IKeplr, KeplrCoreTypes {
         return value.toString(16);
       })
       .join("");
-    // const proxyRequestType = `proxy-request${
-    //   this.metaId ? `-${this.metaId}` : ""
-    // }`;
 
     const proxyMessage: ProxyRequest = {
       type: "fetchai:proxy-request-v1",

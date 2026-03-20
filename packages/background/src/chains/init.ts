@@ -14,6 +14,7 @@ import {
   NeedSuggestChainInfoInteractionMsg,
   SwitchNetworkByChainIdMsg,
   SetSelectedChainMsg,
+  GetNetworkMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
@@ -41,6 +42,7 @@ export function init(
   router.registerMessage(ClearAllChainEndpointsMsg);
   router.registerMessage(SwitchNetworkByChainIdMsg);
   router.registerMessage(SetSelectedChainMsg);
+  router.registerMessage(GetNetworkMsg);
   router.addHandler(
     ROUTE,
     getHandler(chainService, permissionService, permissionInteractiveService)
