@@ -141,7 +141,7 @@ export class KeyRingService {
   }
 
   async ensureUnlockInteractive(env: Env): Promise<void> {
-    if (this.vaultService.isLocked && this.keyRingStatus === "locked") {
+    if (this.vaultService.isLocked) {
       await this.interactionService.waitApproveV2(
         env,
         "/unlock",

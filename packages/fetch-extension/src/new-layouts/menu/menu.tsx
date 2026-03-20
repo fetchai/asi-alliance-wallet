@@ -81,7 +81,7 @@ export const Menu: FunctionComponent<Props> = ({ isOpen, children }) => {
 
   return (
     <React.Fragment>
-      <AnimatePresence>
+      <AnimatePresence {...({} as any)}>
         {isOpen && (
           <motion.div
             className={style["background"]}

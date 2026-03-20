@@ -12,6 +12,7 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 interface SetKeyRingProps {
   navigateTo?: any;
@@ -188,6 +189,7 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
                         await keyRingStore.selectKeyRing(keyStore.id);
+                        dispatchGlobalEventExceptSelf("keplr_keyring_changed");
                         analyticsStore.logEvent("change_wallet_click");
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();

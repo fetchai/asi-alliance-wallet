@@ -80,7 +80,7 @@ export const Menu: FunctionComponent<Props> = ({ isOpen, children }) => {
 
   return (
     <React.Fragment>
-      <AnimatePresence>
+      <AnimatePresence {...({} as any)}>
         {isOpen ? (
           <motion.div
             key="menu-backdrop"

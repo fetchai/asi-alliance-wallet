@@ -445,10 +445,13 @@ export const SignPageV2: FunctionComponent = observer(() => {
                                   interactionInfo.interaction &&
                                   interactionInfo.interactionInternal
                                 ) {
-                                  delay(
-                                    () => navigate("/", { replace: true }),
-                                    500
-                                  );
+                                  delay(() => {
+                                    if (window.history.length > 1) {
+                                      navigate(-1);
+                                    } else {
+                                      navigate("/", { replace: true });
+                                    }
+                                  }, 500);
                                 }
                               },
                               {

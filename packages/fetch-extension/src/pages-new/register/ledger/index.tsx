@@ -25,6 +25,7 @@ import {
   LedgerWebUSBIniter,
 } from "@keplr-wallet/background";
 import delay from "delay";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -136,6 +137,10 @@ export const ImportLedgerPage: FunctionComponent<{
         registerType: "ledger",
         accountType: "ledger",
       });
+      dispatchGlobalEventExceptSelf(
+        "keplr_new_key_created",
+        keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+      );
       setShowLedgerSetup(false);
     } catch (e) {
       setShowLedgerSetup(true);

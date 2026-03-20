@@ -20,6 +20,7 @@ import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
 // import { RefreshAccountList } from "@keplr-wallet/background";
 import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 interface FormData {
   name: string;
@@ -122,6 +123,10 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
             selectedNetworks
           );
           await keyRingStore.selectKeyRing(
+            keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+          );
+          dispatchGlobalEventExceptSelf(
+            "keplr_new_key_created",
             keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
           );
           // await new InExtensionMessageRequester().sendMessage(
