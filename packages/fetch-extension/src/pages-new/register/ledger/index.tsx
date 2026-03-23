@@ -62,8 +62,7 @@ export const ImportLedgerPage: FunctionComponent<{
   const notification = useNotification();
   const bip44Option = useBIP44Option(118);
   const [isShowLedgerSetup, setShowLedgerSetup] = useState<boolean>(false);
-  const { analyticsStore, keyRingStore, ledgerInitStore, uiConfigStore } =
-    useStore();
+  const { analyticsStore, keyRingStore, ledgerInitStore } = useStore();
 
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [passwordCheckbox, setPasswordCheckbox] = useState(false);
@@ -100,7 +99,7 @@ export const ImportLedgerPage: FunctionComponent<{
   const ensureUSBPermission = async () => {
     const anyNavigator = navigator as any;
     let protocol: any;
-    if (uiConfigStore.useWebHIDLedger) {
+    if (ledgerInitStore.isWebHID) {
       protocol = anyNavigator.hid;
     } else {
       protocol = anyNavigator.usb;
@@ -195,7 +194,7 @@ export const ImportLedgerPage: FunctionComponent<{
               try {
                 await ensureUSBPermission();
                 const ledger = await Ledger.init(
-                  uiConfigStore.useWebHIDLedger
+                  ledgerInitStore.isWebHID
                     ? LedgerWebHIDIniter
                     : LedgerWebUSBIniter,
                   undefined,
@@ -210,7 +209,7 @@ export const ImportLedgerPage: FunctionComponent<{
                 await ledger.close();
                 // Unfortunately, closing ledger blocks the writing to Ledger on background process.
                 // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
-                if (!uiConfigStore.useWebHIDLedger) {
+                if (!ledgerInitStore.isWebHID) {
                   delay(1000);
                 } else {
                   delay(500);

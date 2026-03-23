@@ -35,7 +35,7 @@ export const LedgerSetupView: FunctionComponent<{
   onBackPress?: () => void;
   onInitSucceed: (ppubkey: Uint8Array) => void;
 }> = observer(({ bip44HDPath, onBackPress, onInitSucceed }) => {
-  const { ledgerInitStore, uiConfigStore } = useStore();
+  const { ledgerInitStore } = useStore();
 
   const intl = useIntl();
   const navigate = useNavigate();
@@ -47,13 +47,13 @@ export const LedgerSetupView: FunctionComponent<{
   const toggleWebHIDFlag = async (e: ChangeEvent) => {
     e.preventDefault();
 
-    if (!uiConfigStore.useWebHIDLedger && !window.navigator.hid) {
+    if (!ledgerInitStore.isWebHID && !window.navigator.hid) {
       setShowWebHIDWarning(true);
       return;
     }
     setShowWebHIDWarning(false);
 
-    uiConfigStore.setUseWebHIDLedger(!uiConfigStore.useWebHIDLedger);
+    await ledgerInitStore.setWebHID(!ledgerInitStore.isWebHID);
   };
 
   useEffect(() => {
@@ -90,11 +90,11 @@ export const LedgerSetupView: FunctionComponent<{
     let initErrorOn: WalletError | undefined;
     let pubkey: any;
     try {
-      if (!(await testUSBDevices(uiConfigStore.useWebHIDLedger))) {
+      if (!(await testUSBDevices(ledgerInitStore.isWebHID))) {
         throw new Error("There is no device selected");
       }
 
-      const transportIniter = uiConfigStore.useWebHIDLedger
+      const transportIniter = ledgerInitStore.isWebHID
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
@@ -122,7 +122,7 @@ export const LedgerSetupView: FunctionComponent<{
       let tempSuccess = false;
       for (let i = 0; i < 5; i++) {
         // Test again to ensure usb permission after interaction.
-        if (await testUSBDevices(uiConfigStore.useWebHIDLedger)) {
+        if (await testUSBDevices(ledgerInitStore.isWebHID)) {
           tempSuccess = true;
           break;
         }
@@ -134,7 +134,7 @@ export const LedgerSetupView: FunctionComponent<{
       }
 
       const ledger = await Ledger.init(
-        uiConfigStore.useWebHIDLedger ? LedgerWebHIDIniter : LedgerWebUSBIniter,
+        ledgerInitStore.isWebHID ? LedgerWebHIDIniter : LedgerWebUSBIniter,
         undefined,
         // requestedLedgerApp should be set if ledger init needed.
         ledgerInitStore.requestedLedgerApp!,
@@ -147,7 +147,7 @@ export const LedgerSetupView: FunctionComponent<{
       await ledger.close();
       // Unfortunately, closing ledger blocks the writing to Ledger on background process.
       // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
-      if (!uiConfigStore.useWebHIDLedger) {
+      if (!ledgerInitStore.isWebHID) {
         delay(1000);
       } else {
         delay(500);
@@ -257,7 +257,7 @@ export const LedgerSetupView: FunctionComponent<{
             className={`custom-control-input ${style["ledgerCheckbox"]}`}
             id="use-webhid"
             type="checkbox"
-            checked={uiConfigStore.useWebHIDLedger}
+            checked={ledgerInitStore.isWebHID}
             onChange={toggleWebHIDFlag}
           />
           <label

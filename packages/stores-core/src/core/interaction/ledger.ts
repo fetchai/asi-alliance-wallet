@@ -1,7 +1,14 @@
 import { InteractionStore } from "./interaction";
 import { computed, flow, makeObservable, observable } from "mobx";
 import { BACKGROUND_PORT, MessageRequester } from "@keplr-wallet/router";
-import { LedgerApp, TryLedgerInitMsg } from "@keplr-wallet/background";
+import {
+  LedgerApp,
+  LedgerGetWebHIDFlagMsg,
+  LedgerSetWebHIDFlagMsg,
+  TryLedgerInitMsg,
+} from "@keplr-wallet/background";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { toGenerator } from "@keplr-wallet/mobx-utils";
 
 export type LedgerInitDataType =
   | {
@@ -48,8 +55,30 @@ export class LedgerInitStore {
     );
   }
 
+  @flow
+  *fetchIsWebHID() {
+    this._isWebHID = yield* toGenerator(
+      this.msgRequester.sendMessage(
+        BACKGROUND_PORT,
+        new LedgerGetWebHIDFlagMsg()
+      )
+    );
+  }
+
   get isWebHID(): boolean {
+    if (!window.navigator.hid) {
+      return false;
+    }
     return this._isWebHID;
+  }
+
+  @flow
+  *setWebHID(flag: boolean) {
+    yield this.msgRequester.sendMessage(
+      BACKGROUND_PORT,
+      new LedgerSetWebHIDFlagMsg(flag)
+    );
+    yield this.fetchIsWebHID();
   }
 
   @computed

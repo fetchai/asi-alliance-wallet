@@ -42,7 +42,7 @@ import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 export const LedgerGrantPage: FunctionComponent = observer(() => {
   const intl = useIntl();
   const notification = useNotification();
-  const { uiConfigStore } = useStore();
+  const { ledgerInitStore } = useStore();
   const [status, setStatus] = useState<"select" | "failed" | "success">(
     "select"
   );
@@ -59,7 +59,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
     setIsLoading({ cosmosLikeApp, loading: true });
 
     try {
-      const transportIniter = uiConfigStore.useWebHIDLedger
+      const transportIniter = ledgerInitStore.isWebHID
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
@@ -95,13 +95,13 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
   const toggleWebHIDFlag = async (e: ChangeEvent) => {
     e.preventDefault();
 
-    if (!uiConfigStore.useWebHIDLedger && !window.navigator.hid) {
+    if (!ledgerInitStore.isWebHID && !window.navigator.hid) {
       setShowWebHIDWarning(true);
       return;
     }
     setShowWebHIDWarning(false);
 
-    uiConfigStore.setUseWebHIDLedger(!uiConfigStore.useWebHIDLedger);
+    await ledgerInitStore.setWebHID(!ledgerInitStore.isWebHID);
   };
   return (
     <div className={classnames(style["container"])}>
@@ -175,7 +175,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
                         className={`custom-control-input ${style["ledgerCheckbox"]}`}
                         id="use-webhid"
                         type="checkbox"
-                        checked={uiConfigStore.useWebHIDLedger}
+                        checked={ledgerInitStore.isWebHID}
                         onChange={toggleWebHIDFlag}
                         disabled={isLoading.loading}
                       />

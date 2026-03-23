@@ -5,7 +5,7 @@ import { ErrorBoundary } from "./error-boundary";
 
 require("setimmediate");
 // Shim ------------
-import React, { FunctionComponent, useEffect } from "react";
+import React, { FunctionComponent, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 
 import { AppIntlProvider } from "./languages";
@@ -119,9 +119,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
 import { BuySellTokenPage } from "./pages-new/more/token/moonpay";
 import { AddCosmosChain } from "./pages/setting/addCosmosChain";
-// import { useAccountChangeMonitoring } from "./use-account-change-monitoring";
 import { ChangePassword } from "./pages-new/more/security-privacy/change-password";
 import { SignManualTxn } from "./pages-new/sign-manual-txn";
+import { WalletStatus } from "@keplr-wallet/stores";
 
 const queryClient = new QueryClient();
 
@@ -161,8 +161,34 @@ Modal.defaultStyles = {
   },
 };
 
-const StateRenderer: FunctionComponent = observer(() => {
-  const { keyRingStore } = useStore();
+const StateRenderer: FunctionComponent<{
+  initAccountsOnce: React.MutableRefObject<boolean>;
+}> = observer(({ initAccountsOnce }) => {
+  const { keyRingStore, accountStore, chainStore } = useStore();
+
+  useEffect(() => {
+    if (keyRingStore.status === "unlocked" && !initAccountsOnce.current) {
+      initAccountsOnce.current = true;
+
+      // XXX: Below logic not observe state changes on account store and it's inner state.
+      //      This is intended because this logic is only for the first time and avoid global re-rendering.
+      // Start init for registered chains so that users can see account address more quickly.
+      for (const modularChainInfo of chainStore.modularChainInfos) {
+        const account = accountStore.getAccount(modularChainInfo.chainId);
+        // Because {autoInit: true} is given as the option on account store,
+        // initialization for the account starts at this time just by using getAccount().
+        // However, run safe check on current status and init if status is not inited.
+        if (account.walletStatus === WalletStatus.NotInit) {
+          account.init();
+        }
+      }
+    }
+  }, [
+    keyRingStore.status,
+    chainStore.modularChainInfos,
+    accountStore,
+    initAccountsOnce,
+  ]);
 
   useEffect(() => {
     // Notify to auto lock service to start activation check whenever the keyring is unlocked.
@@ -221,6 +247,7 @@ const AutoLockMonitor: FunctionComponent = observer(() => {
 // });
 
 const App = observer(() => {
+  const initAccountsOnce = useRef(false);
   return (
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
@@ -234,12 +261,18 @@ const App = observer(() => {
                 <ConfirmProvider>
                   <ErrorBoundary>
                     <AutoLockMonitor />
-                    {/* <AccountChangeMonitor /> */}
                     <HashRouter>
                       <DropdownContextProvider>
                         <ChatStoreProvider>
                           <Routes>
-                            <Route path="/" element={<StateRenderer />} />
+                            <Route
+                              path="/"
+                              element={
+                                <StateRenderer
+                                  initAccountsOnce={initAccountsOnce}
+                                />
+                              }
+                            />
                             <Route path="/unlock" element={<LockPage />} />
                             <Route path="/access" element={<AccessPage />} />
                             <Route
@@ -521,7 +554,14 @@ const App = observer(() => {
                               path="/validator/:validator_address/unstake"
                               element={<Unstake />}
                             />
-                            <Route path="*" element={<StateRenderer />} />
+                            <Route
+                              path="*"
+                              element={
+                                <StateRenderer
+                                  initAccountsOnce={initAccountsOnce}
+                                />
+                              }
+                            />
                           </Routes>
                         </ChatStoreProvider>
                       </DropdownContextProvider>

@@ -25,7 +25,6 @@ import {
   QueriesStore,
   SecretAccount,
   SecretQueries,
-  WalletStatus,
   ICNSQueries,
   FNSQueries,
   EthereumAccount,
@@ -414,6 +413,7 @@ export class RootStore {
       this.activityStore,
       this.tokenGraphStore,
       this.accountBaseStore,
+      getKeplrFromWindow,
       () => {
         return {
           suggestChain: false,
@@ -543,27 +543,6 @@ export class RootStore {
         queriesStore: this.queriesStore,
       })
     );
-
-    if (!window.location.href.includes("#/unlock")) {
-      // Start init for registered chains so that users can see account address more quickly.
-      for (const chainInfo of this.chainStore.chainInfos) {
-        const account = this.accountStore.getAccount(chainInfo.chainId);
-        // Because {autoInit: true} is given as the default option above,
-        // initialization for the account starts at this time just by using getAccount().
-        // However, run safe check on current status and init if status is not inited.
-        if (account.walletStatus === WalletStatus.NotInit) {
-          account.init();
-        }
-      }
-    } else {
-      // When the unlock request sent from external webpage,
-      // it will open the extension popup below the uri "/unlock".
-      // But, in this case, if the prefetching option is true, it will redirect
-      // the page to the "/unlock" with **interactionInternal=true**
-      // because prefetching will request the unlock from the internal.
-      // To prevent this problem, just check the first uri is "#/unlcok" and
-      // if it is "#/unlock", don't use the prefetching option.
-    }
 
     this.priceStore = new CoinGeckoPriceStore(
       new ExtensionKVStore("store_prices"),

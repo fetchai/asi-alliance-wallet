@@ -3,6 +3,7 @@ import { MessageRequester, Router } from "@keplr-wallet/router";
 import * as KeyRingLegacy from "./keyring/legacy";
 
 import * as Chains from "./chains/internal";
+import * as Ledger from "./ledger/internal";
 import * as ChainsUI from "./chains-ui/internal";
 import * as ChainsUpdate from "./chains-update/internal";
 import * as SecretWasm from "./secret-wasm/internal";
@@ -36,6 +37,7 @@ import * as BackgroundTxExecutor from "./tx-executor/internal";
 export * from "./chains";
 export * from "./ledger";
 export * from "./chains-ui";
+export * from "./ledger";
 export * from "./chains-update";
 export * from "./secret-wasm";
 export * from "./tx";
@@ -66,6 +68,7 @@ import { KVStore } from "@keplr-wallet/common";
 import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
 import { Notification } from "./tx";
 import { ChainInfoWithCoreTypes } from "./chains";
+import { LedgerOptions } from "./ledger/options";
 
 export function init(
   router: Router,
@@ -103,7 +106,8 @@ export function init(
     service: Chains.ChainsService,
     lastEmbedChainInfos: ChainInfoWithCoreTypes[]
   ) => void | Promise<void>,
-  vaultAfterInitFn?: (service: Vault.VaultService) => void | Promise<void>
+  vaultAfterInitFn?: (service: Vault.VaultService) => void | Promise<void>,
+  ledgerOptions: Partial<LedgerOptions> = {}
 ): {
   initFn: () => Promise<void>;
   keyRingService: KeyRingV2.KeyRingService;
@@ -285,6 +289,11 @@ export function init(
     keyRingCosmosService
   );
 
+  const ledgerService = new Ledger.LedgerService(
+    storeCreator("ledger"),
+    ledgerOptions
+  );
+
   const tokenScanService = new TokenScan.TokenScanService(
     storeCreator("token-scan"),
     eventMsgRequester,
@@ -390,6 +399,7 @@ export function init(
   RecentSendHistory.init(router, recentSendHistoryService);
   SidePanel.init(router, sidePanelService);
   Settings.init(router, settingsService);
+  Ledger.init(router, ledgerService);
   ManageViewAssetToken.init(router, manageViewAssetTokenService);
   BackgroundTxExecutor.init(router, backgroundTxExecutorService);
 
@@ -400,6 +410,7 @@ export function init(
       await interactionService.init();
 
       await chainsService.init();
+      await ledgerService.init(interactionService);
       await vaultService.init();
       await chainsUIService.init();
       await chainsUpdateService.init();
