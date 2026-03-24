@@ -41,7 +41,6 @@ export const LockPage: FunctionComponent = observer(() => {
   });
 
   const { keyRingStore, analyticsStore, interactionStore } = useStore();
-  const [loading, setLoading] = useState(false);
 
   const [isStartWithMigrating] = useState(() => keyRingStore.isMigrating);
   useEffect(() => {
@@ -196,7 +195,7 @@ export const LockPage: FunctionComponent = observer(() => {
       <Form
         className={style["formContainer"]}
         onSubmit={handleSubmit(async (data) => {
-          setLoading(true);
+          setIsLoading(true);
           try {
             // await keyRingStore.unlock(data.password);
             if (isMigrationSecondPhase) {
@@ -236,7 +235,7 @@ export const LockPage: FunctionComponent = observer(() => {
                 id: "lock.input.password.error.invalid",
               }),
             });
-            setLoading(false);
+            setIsLoading(false);
           }
         })}
       >
@@ -264,6 +263,7 @@ export const LockPage: FunctionComponent = observer(() => {
               // 그러므로 keyRingStore.isMigrating 처리에 우선권이 있어야한다는 점을 주의해야한다.
               return (
                 <Button
+                  className={style["sign-in"]}
                   type="button"
                   block
                   disabled={keyRingStore.isMigrating}
@@ -307,7 +307,7 @@ export const LockPage: FunctionComponent = observer(() => {
                   })()
                 }
               >
-                {loading ? (
+                {isLoading ? (
                   <i className="fas fa-spinner fa-spin ml-2 mr-2" />
                 ) : (
                   <div>Sign in</div>

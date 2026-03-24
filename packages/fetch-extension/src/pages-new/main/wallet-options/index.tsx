@@ -6,16 +6,16 @@ import { observer } from "mobx-react-lite";
 import { Card } from "@components-v2/card";
 
 export const WalletOptions = observer(() => {
-  const [accountIndex, setAccountIndex] = useState<number>(0);
+  const [accountIndex, setAccountIndex] = useState<string>("");
 
   const navigate = useNavigate();
   const { keyRingStore, analyticsStore } = useStore();
 
   useEffect(() => {
-    const firstAccountIndex = keyRingStore.keyInfos.findIndex(
+    const firstAccountIndex = keyRingStore.keyInfos.find(
       (value) => value.isSelected
     );
-    setAccountIndex(firstAccountIndex);
+    setAccountIndex(firstAccountIndex?.id || "");
   }, [keyRingStore.keyInfos]);
 
   return (

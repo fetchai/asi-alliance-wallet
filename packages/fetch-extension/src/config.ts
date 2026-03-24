@@ -1,8 +1,7 @@
-import { ChainInfoWithCoreTypes as ChainInfoWithRepoUpdateOptions } from "@keplr-wallet/background";
 import { Bech32Address } from "@keplr-wallet/cosmos";
-import { ChainInfo } from "@keplr-wallet/types";
+import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
 
-const LOCAL_TEST_NETWORK_CONFIG: ChainInfo = {
+const LOCAL_TEST_NETWORK_CONFIG: ChainInfo | ModularChainInfo = {
   rpc: "http://localhost:26657",
   rest: "http://localhost:1317",
   chainId: "test-local",
@@ -90,12 +89,12 @@ const REMOTE_TEST_NETWORK_CONFIG: ChainInfo = {
   chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
 };
 
-const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
+const EmbedChainInfos: (ChainInfo | ModularChainInfo)[] = [
   {
     rpc: "https://rpc-fetchhub.fetch-ai.com",
     rest: "https://rest-fetchhub.fetch-ai.com",
     chainId: "fetchhub-4",
-    chainName: "fetch",
+    chainName: "Fetchhub",
     stakeCurrency: {
       coinDenom: "FET",
       coinMinimalDenom: "afet",
@@ -168,6 +167,11 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     bip44: {
       coinType: 60,
     },
+    evm: {
+      chainId: 1,
+      rpc: "https://evm-1.keplr.app",
+      websocket: "wss://evm-1.keplr.app/websocket",
+    },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
       {
@@ -210,6 +214,180 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
   },
   {
+    chainId:
+      "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f:taproot",
+    chainName: "Bitcoin",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/mainnet.png",
+    linkedChainKey:
+      "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+    bitcoin: {
+      chainId:
+        "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      rpc: "",
+      rest: "https://api-indexer-bitcoin.keplr.app",
+      bip44: {
+        coinType: 0,
+        purpose: 86,
+      },
+      currencies: [
+        {
+          coinDenom: "BTC",
+          coinMinimalDenom: "sats",
+          coinDecimals: 8,
+          coinGeckoId: "bitcoin",
+          coinImageUrl:
+            "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/mainnet.png",
+        },
+      ],
+    },
+  },
+  {
+    chainId:
+      "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f:native-segwit",
+    chainName: "Bitcoin",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/mainnet.png",
+    linkedChainKey:
+      "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+    bitcoin: {
+      chainId:
+        "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      rpc: "",
+      rest: "https://api-indexer-bitcoin.keplr.app",
+      bip44: {
+        coinType: 0,
+        purpose: 84,
+      },
+      currencies: [
+        {
+          coinDenom: "BTC",
+          coinMinimalDenom: "sats",
+          coinDecimals: 8,
+          coinGeckoId: "bitcoin",
+          coinImageUrl:
+            "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/mainnet.png",
+        },
+      ],
+    },
+  },
+  {
+    chainId:
+      "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943:taproot",
+    chainName: "Bitcoin Testnet",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/testnet.png",
+    linkedChainKey:
+      "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
+    bitcoin: {
+      chainId:
+        "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
+      rpc: "",
+      rest: "https://blockstream.info/testnet/api",
+      bip44: {
+        coinType: 1,
+        purpose: 86,
+      },
+      currencies: [
+        {
+          coinDenom: "tBTC",
+          coinMinimalDenom: "sats-testnet",
+          coinDecimals: 8,
+          coinImageUrl:
+            "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/testnet.png",
+        },
+      ],
+    },
+    isTestnet: true,
+  },
+  {
+    chainId:
+      "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943:native-segwit",
+    chainName: "Bitcoin Testnet",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/testnet.png",
+    linkedChainKey:
+      "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
+    bitcoin: {
+      chainId:
+        "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
+      rpc: "",
+      rest: "https://blockstream.info/testnet/api",
+      bip44: {
+        coinType: 1,
+        purpose: 84,
+      },
+      currencies: [
+        {
+          coinDenom: "tBTC",
+          coinMinimalDenom: "sats-testnet",
+          coinDecimals: 8,
+          coinImageUrl:
+            "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/testnet.png",
+        },
+      ],
+    },
+    isTestnet: true,
+  },
+  {
+    chainId:
+      "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6:taproot",
+    chainName: "Bitcoin Signet",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/signet.png",
+    linkedChainKey:
+      "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+    bitcoin: {
+      chainId:
+        "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+      rpc: "",
+      rest: "https://explorer.bc-2.jp/api",
+      bip44: {
+        coinType: 1,
+        purpose: 86,
+      },
+      currencies: [
+        {
+          coinDenom: "sBTC",
+          coinMinimalDenom: "sats-signet",
+          coinDecimals: 8,
+          coinImageUrl:
+            "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/signet.png",
+        },
+      ],
+    },
+    isTestnet: true,
+  },
+  {
+    chainId:
+      "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6:native-segwit",
+    chainName: "Bitcoin Signet",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/signet.png",
+    linkedChainKey:
+      "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+    bitcoin: {
+      chainId:
+        "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+      rpc: "",
+      rest: "https://explorer.bc-2.jp/api",
+      bip44: {
+        coinType: 1,
+        purpose: 84,
+      },
+      currencies: [
+        {
+          coinDenom: "sBTC",
+          coinMinimalDenom: "sats-signet",
+          coinDecimals: 8,
+          coinImageUrl:
+            "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/bitcoin/signet.png",
+        },
+      ],
+    },
+    isTestnet: true,
+  },
+  {
     rpc: "https://bsc-dataseed.binance.org",
     rest: "https://bsc-dataseed.binance.org/",
     chainId: "56",
@@ -225,6 +403,10 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     },
     bip44: {
       coinType: 60,
+    },
+    evm: {
+      chainId: 56,
+      rpc: "https://bsc-dataseed.binance.org",
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
@@ -281,6 +463,10 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     hideInUI: true,
     bip44: {
       coinType: 60,
+    },
+    evm: {
+      chainId: 5,
+      rpc: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
@@ -364,7 +550,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://osmosis-rpc.publicnode.com:443",
@@ -428,7 +613,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     ],
     // chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/osmosis.svg"),
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc.osmotest5.osmosis.zone",
@@ -596,7 +780,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/akash/images/akt.png",
     features: ["ibc-transfer"],
-    updateFromRepoDisabled: true,
   },
   // {
   //   rpc: "https://rpc-mars.keplr.app",
@@ -1294,7 +1477,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/shentu/images/ctk.png",
     features: ["ibc-transfer", "ibc-go"],
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-iris.keplr.app",
@@ -1526,7 +1708,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/sentinel/images/dvpn.png",
     features: ["ibc-transfer"],
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-ixo.keplr.app",
@@ -1900,7 +2081,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["cosmwasm", "ibc-transfer", "ibc-go", "wasmd_0.24+"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/juno/images/juno.png",
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://stargaze-rpc.publicnode.com:443",
@@ -1951,7 +2131,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/stargaze/images/stars.png",
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-axelar.keplr.app",
@@ -2164,7 +2343,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/sommelier/images/somm.png",
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-umee.keplr.app",
@@ -2406,7 +2584,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/stride/images/strd.png",
     features: ["ibc-transfer", "ibc-go"],
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-evmos.keplr.app",
@@ -2599,7 +2776,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     ],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/kava/images/kava.png",
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-quicksilver.keplr.app",
@@ -2716,7 +2892,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra2/images/luna.png",
     features: [],
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://terra-classic-rpc.publicnode.com:443",
@@ -2788,7 +2963,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra/images/luna.png",
     features: ["terra-classic-fee"],
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-quasar.keplr.app",
@@ -2924,7 +3098,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/noble/images/stake.png",
     features: [],
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://omniflix-rpc.publicnode.com:443",
@@ -2979,7 +3152,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/omniflixhub/images/flix.png",
     features: [],
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc.kyve.network",
@@ -3034,7 +3206,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: [],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/kyve/images/kyve.png",
-    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://axelartest-rpc.quickapi.com:443",

@@ -146,8 +146,21 @@ export class KeyRingCosmosService {
 
     const bech32Address = new Bech32Address(address);
 
+    let nameByChain;
+
+    try {
+      const keyInfo = this.keyRingService.getKeyInfo(vaultId)?.insensitive[
+        "keyRingMeta"
+      ] as Record<string, string>;
+      nameByChain = keyInfo?.["nameByChain"]
+        ? JSON.parse(keyInfo?.["nameByChain"])
+        : {};
+    } catch {
+      nameByChain = {};
+    }
+
     return {
-      name: this.keyRingService.getKeyRingName(vaultId),
+      name: nameByChain[chainId] ?? this.keyRingService.getKeyRingName(vaultId),
       algo: isEthermintLike ? "ethsecp256k1" : "secp256k1",
       pubKey: pubKey.toBytes(),
       address,

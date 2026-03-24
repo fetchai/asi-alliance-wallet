@@ -46,10 +46,10 @@ export const DeleteWallet: FunctionComponent = () => {
   });
 
   useEffect(() => {
-    if (parseInt(index).toString() !== index) {
-      throw new Error("Invalid index");
+    if (!keyRingStore.keyInfos.find((item) => item.id === index)) {
+      throw new Error("Invalid account id");
     }
-  }, [index]);
+  }, [index, keyRingStore]);
 
   const keyStore = useMemo(() => {
     return keyRingStore.selectedKeyInfo;

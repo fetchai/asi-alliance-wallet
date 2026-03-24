@@ -15,8 +15,8 @@ export const getFilteredWallets = (values: any[], searchTerm: string) => {
 };
 
 export const getFilteredChainValues = (values: any[], searchTerm: string) => {
-  const filteredValues = values.filter((value) =>
-    value._chainInfo.chainName.toLowerCase().includes(searchTerm)
+  const filteredValues = values?.filter((value: any) =>
+    value?.chainName?.toLowerCase().includes(searchTerm)
   );
 
   return filteredValues;

@@ -82,10 +82,10 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   const accountName = getNameByChain(keyRingMeta) || keyStore?.name;
 
   useEffect(() => {
-    if (parseInt(index).toString() !== index) {
+    if (keyStore?.id !== index) {
       throw new Error("Invalid keyring index, check the url");
     }
-  }, [index]);
+  }, [index, keyStore]);
 
   if (isKeyStoreReady && keyStore == null) {
     return null;
