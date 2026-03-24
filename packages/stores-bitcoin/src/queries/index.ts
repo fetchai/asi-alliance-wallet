@@ -1,4 +1,8 @@
-import { ChainGetter, QuerySharedContext } from "@keplr-wallet/stores";
+import {
+  ChainGetter,
+  QueriesSetBase,
+  QuerySharedContext,
+} from "@keplr-wallet/stores";
 import { DeepReadonly } from "utility-types";
 import {
   ObservableQueryBitcoinBalance,
@@ -6,13 +10,45 @@ import {
   ObservableQueryBitcoinUTXOs,
   ObservableQueryBitcoinTx,
   ObservableQueryBitcoinAddressTxs,
+  ObservableQueryBitcoinBalanceRegistry,
 } from "./indexer";
+
+export interface BitcoinQueries {
+  bitcoin: BitcoinQueriesStoreImpl;
+}
+
+export const BitcoinQueries = {
+  use(): (
+    queriesSetBase: QueriesSetBase,
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) => BitcoinQueries {
+    return (
+      queriesSetBase: QueriesSetBase,
+      kvStore: QuerySharedContext,
+      chainId: string,
+      chainGetter: ChainGetter
+    ) => {
+      return {
+        bitcoin: new BitcoinQueriesStoreImpl(
+          queriesSetBase,
+          kvStore,
+          chainId,
+          chainGetter
+        ),
+      };
+    };
+  },
+};
 
 export class BitcoinQueriesStore {
   protected map: Map<string, BitcoinQueriesStoreImpl> = new Map();
 
   constructor(
+    protected readonly base: QueriesSetBase,
     protected readonly sharedContext: QuerySharedContext,
+    protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {}
 
@@ -23,6 +59,7 @@ export class BitcoinQueriesStore {
     }
 
     const store = new BitcoinQueriesStoreImpl(
+      this.base,
       this.sharedContext,
       chainId,
       this.chainGetter
@@ -41,10 +78,14 @@ class BitcoinQueriesStoreImpl {
   public readonly queryBitcoinFeeEstimates: DeepReadonly<ObservableQueryBitcoinFeeEstimates>;
 
   constructor(
+    protected readonly base: QueriesSetBase,
     protected readonly sharedContext: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {
+    base.queryBalances.addBalanceRegistry(
+      new ObservableQueryBitcoinBalanceRegistry(sharedContext)
+    );
     this.queryBitcoinBalance = new ObservableQueryBitcoinBalance(sharedContext);
     this.queryBitcoinUTXOs = new ObservableQueryBitcoinUTXOs(sharedContext);
     this.queryBitcoinTx = new ObservableQueryBitcoinTx(sharedContext);

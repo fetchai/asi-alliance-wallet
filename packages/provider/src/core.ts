@@ -1345,7 +1345,7 @@ export class Keplr implements IKeplr, KeplrCoreTypes {
     // extension 상에서 content script에서 keplr provider proxy를 시작하기 전에 window에 밑의 field를 알아서 주입하는 방식으로 처리한다.
     if (
       typeof window !== "undefined" &&
-      (window as any).__keplr_content_script === true
+      (window as any).__fetch_wallet_content_script === true
     ) {
       isInContentScript = true;
     }

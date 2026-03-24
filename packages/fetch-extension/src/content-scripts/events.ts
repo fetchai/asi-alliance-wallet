@@ -1,6 +1,6 @@
 import { Message, Router } from "@keplr-wallet/router";
 
-class PushEventDataMsg extends Message<void> {
+class PushEventDataMsg<D = unknown> extends Message<void> {
   public static type() {
     return "push-event-data";
   }
@@ -8,7 +8,7 @@ class PushEventDataMsg extends Message<void> {
   constructor(
     public readonly data: {
       type: string;
-      data: unknown;
+      data: D;
     }
   ) {
     super();
@@ -45,6 +45,23 @@ export function initEvents(router: Router) {
 
         if ((msg as PushEventDataMsg).data.type === "network-changed") {
           window.dispatchEvent(new Event("fetchwallet_networkchange"));
+        }
+        if (
+          (msg as PushEventDataMsg).data.type === "keplr_bitcoinChainChanged"
+        ) {
+          return window.dispatchEvent(
+            new CustomEvent("keplr_bitcoinChainChanged", {
+              detail: {
+                ...(
+                  msg as PushEventDataMsg<{
+                    origin: string;
+                    bitcoinChainId: string;
+                    network: string;
+                  }>
+                ).data.data,
+              },
+            })
+          );
         }
 
         return;

@@ -241,6 +241,7 @@ const EmbedChainInfos: (ChainInfo | ModularChainInfo)[] = [
         },
       ],
     },
+    hideInUI: false,
   },
   {
     chainId:
@@ -2585,61 +2586,61 @@ const EmbedChainInfos: (ChainInfo | ModularChainInfo)[] = [
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/stride/images/strd.png",
     features: ["ibc-transfer", "ibc-go"],
   },
-  {
-    rpc: "https://rpc-evmos.keplr.app",
-    rest: "https://lcd-evmos.keplr.app",
-    chainId: "evmos_9001-2",
-    chainName: "Evmos",
-    hideInUI: true,
-    stakeCurrency: {
-      coinDenom: "EVMOS",
-      coinMinimalDenom: "aevmos",
-      coinDecimals: 18,
-      coinGeckoId: "evmos",
-      coinImageUrl:
-        "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-    },
-    walletUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/evmos"
-        : "http://localhost:8080/chains/evmos",
-    walletUrlForStaking:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/evmos"
-        : "http://localhost:8080/chains/evmos",
-    bip44: {
-      coinType: 60,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("evmos"),
-    currencies: [
-      {
-        coinDenom: "EVMOS",
-        coinMinimalDenom: "aevmos",
-        coinDecimals: 18,
-        coinGeckoId: "evmos",
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "EVMOS",
-        coinMinimalDenom: "aevmos",
-        coinDecimals: 18,
-        coinGeckoId: "evmos",
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-        gasPriceStep: {
-          low: 25000000000,
-          average: 25000000000,
-          high: 40000000000,
-        },
-      },
-    ],
-    chainSymbolImageUrl:
-      "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-    features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
-  },
+  // {
+  //   rpc: "https://rpc-evmos.keplr.app",
+  //   rest: "https://lcd-evmos.keplr.app",
+  //   chainId: "evmos_9001-2",
+  //   chainName: "Evmos",
+  //   hideInUI: true,
+  //   stakeCurrency: {
+  //     coinDenom: "EVMOS",
+  //     coinMinimalDenom: "aevmos",
+  //     coinDecimals: 18,
+  //     coinGeckoId: "evmos",
+  //     coinImageUrl:
+  //       "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //   },
+  //   walletUrl:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/evmos"
+  //       : "http://localhost:8080/chains/evmos",
+  //   walletUrlForStaking:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/evmos"
+  //       : "http://localhost:8080/chains/evmos",
+  //   bip44: {
+  //     coinType: 60,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("evmos"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "EVMOS",
+  //       coinMinimalDenom: "aevmos",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "evmos",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "EVMOS",
+  //       coinMinimalDenom: "aevmos",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "evmos",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //       gasPriceStep: {
+  //         low: 25000000000,
+  //         average: 25000000000,
+  //         high: 40000000000,
+  //       },
+  //     },
+  //   ],
+  //   chainSymbolImageUrl:
+  //     "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //   features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
+  // },
   {
     rpc: "https://rpc-injective.keplr.app",
     rest: "https://lcd-injective.keplr.app",

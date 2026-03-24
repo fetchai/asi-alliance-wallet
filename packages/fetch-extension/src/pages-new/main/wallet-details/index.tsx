@@ -21,6 +21,7 @@ import { txType } from "./constants";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { fetchProposalNodes } from "../../activity/utils";
 import { ResponsiveAddressView } from "./address-view";
+import { AddressFloatingMenu } from "@components-v2/address-modal";
 
 export const WalletDetailsView = observer(
   ({
@@ -53,6 +54,59 @@ export const WalletDetailsView = observer(
     const outerDivRefEvm = useRef<HTMLDivElement>(null);
 
     const [currentTxnType, setCurrentTxnType] = useState<string>("");
+    const [open, setOpen] = useState(false);
+
+    const addresses: any[] = (() => {
+      if (keyRingStore.status === "unlocked") {
+        return chainStore.modularChainInfos.map((modularChainInfo) => {
+          const accountInfo = accountStore.getAccount(modularChainInfo.chainId);
+          const bech32Address = (() => {
+            if (!("cosmos" in modularChainInfo)) {
+              return undefined;
+            }
+
+            if (
+              modularChainInfo.chainId.startsWith("eip155") ||
+              modularChainInfo.chainId === "1"
+            ) {
+              return undefined;
+            }
+
+            return accountInfo.bech32Address;
+          })();
+          const ethereumAddress = (() => {
+            if (!("cosmos" in modularChainInfo)) {
+              return undefined;
+            }
+
+            if (modularChainInfo.chainId.startsWith("injective")) {
+              return undefined;
+            }
+
+            return accountInfo.hasEthereumHexAddress
+              ? accountInfo.ethereumHexAddress
+              : undefined;
+          })();
+
+          const bitcoinAddress = (() => {
+            if (!("bitcoin" in modularChainInfo)) {
+              return undefined;
+            }
+
+            return accountInfo.bitcoinAddress;
+          })();
+
+          return {
+            modularChainInfo,
+            bech32Address,
+            ethereumAddress,
+            bitcoinAddress,
+          };
+        });
+      } else {
+        return [];
+      }
+    })();
 
     useEffect(() => {
       if (keyRingStore.selectedKeyInfo?.type === "ledger") {
@@ -344,10 +398,11 @@ export const WalletDetailsView = observer(
                           </span>
                         </span>
                       </Address>
-                      <img
-                        style={{ cursor: "pointer" }}
-                        src={require("@assets/svg/wireframe/copyGrey.svg")}
-                        alt=""
+                      <AddressFloatingMenu
+                        isOpen={open}
+                        toggle={() => setOpen((prev) => !prev)}
+                        addresses={addresses}
+                        onCopy={(address: string) => copyAddress(address)}
                       />
                     </div>
                   ) : (
@@ -356,55 +411,59 @@ export const WalletDetailsView = observer(
                 </React.Fragment>
               )}
               {accountInfo.walletStatus !== WalletStatus.Rejected &&
-                (isEvm || accountInfo.hasEthereumHexAddress) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                      gap: "6px",
-                    }}
-                    ref={outerDivRefEvm}
-                    onClick={() => copyAddress(accountInfo.ethereumHexAddress)}
+              isEvm &&
+              accountInfo.hasEthereumHexAddress ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    gap: "6px",
+                  }}
+                  ref={outerDivRefEvm}
+                  onClick={() => copyAddress(accountInfo.ethereumHexAddress)}
+                >
+                  <Address
+                    isRaw={true}
+                    placement="bottom-end"
+                    tooltipAddress={accountInfo.ethereumHexAddress}
+                    childrenStyle={{ opacity: 1 }}
                   >
-                    <Address
-                      isRaw={true}
-                      placement="bottom-end"
-                      tooltipAddress={accountInfo.ethereumHexAddress}
-                      childrenStyle={{ opacity: 1 }}
-                    >
-                      <span style={{ display: "flex" }}>
-                        {accountInfo.walletStatus === WalletStatus.Loaded &&
-                        accountInfo.ethereumHexAddress ? (
-                          accountInfo.ethereumHexAddress.length === 42 ? (
-                            <React.Fragment>
-                              {accountInfo.ethereumHexAddress.slice(0, 2)}
-                              <span className={style["wallet-address-text"]}>
-                                <ResponsiveAddressView
-                                  containerRef={outerDivRefEvm}
-                                  address={accountInfo.ethereumHexAddress.slice(
-                                    2
-                                  )}
-                                />
-                              </span>
-                            </React.Fragment>
-                          ) : (
-                            <React.Fragment>
-                              {accountInfo.ethereumHexAddress}
-                            </React.Fragment>
-                          )
+                    <span style={{ display: "flex" }}>
+                      {accountInfo.walletStatus === WalletStatus.Loaded &&
+                      accountInfo.ethereumHexAddress ? (
+                        accountInfo.ethereumHexAddress.length === 42 ? (
+                          <React.Fragment>
+                            {accountInfo.ethereumHexAddress.slice(0, 2)}
+                            <span className={style["wallet-address-text"]}>
+                              <ResponsiveAddressView
+                                containerRef={outerDivRefEvm}
+                                address={accountInfo.ethereumHexAddress.slice(
+                                  2
+                                )}
+                              />
+                            </span>
+                          </React.Fragment>
                         ) : (
-                          "..."
-                        )}
-                      </span>
-                    </Address>
-                    <img
-                      style={{ cursor: "pointer" }}
-                      src={require("@assets/svg/wireframe/copy.svg")}
-                      alt=""
-                    />
-                  </div>
-                )}
+                          <React.Fragment>
+                            {accountInfo.ethereumHexAddress}
+                          </React.Fragment>
+                        )
+                      ) : (
+                        "..."
+                      )}
+                    </span>
+                  </Address>
+                  <AddressFloatingMenu
+                    isOpen={open}
+                    toggle={() => setOpen((prev) => !prev)}
+                    addresses={addresses}
+                    onCopy={(address: string) => copyAddress(address)}
+                  />
+                </div>
+              ) : (
+                <React.Fragment />
+              )}
             </div>
           </div>
           <Button

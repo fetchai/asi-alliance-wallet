@@ -55,6 +55,10 @@ import {
   IBCCurrencyRegistrar,
 } from "@keplr-wallet/stores-ibc";
 import {
+  BitcoinAccountStore,
+  BitcoinQueries,
+} from "@keplr-wallet/stores-bitcoin";
+import {
   KeplrETCQueries,
   GravityBridgeCurrencyRegistrar,
   AxelarEVMBridgeCurrencyRegistrar,
@@ -107,6 +111,7 @@ export class RootStore {
   public readonly proposalStore: ProposalStore;
   public readonly activityStore: ActivityStore;
   public readonly tokenGraphStore: TokenGraphStore;
+  public readonly bitcoinAccountStore: BitcoinAccountStore;
   public readonly accountBaseStore: ExtensionKVStore;
 
   public readonly interactionStore: InteractionStore;
@@ -129,7 +134,8 @@ export class RootStore {
       KeplrETCQueries,
       ICNSQueries,
       FNSQueries,
-      EvmQueries
+      EvmQueries,
+      BitcoinQueries
     ]
   >;
   public readonly accountStore: AccountStore<
@@ -383,9 +389,9 @@ export class RootStore {
       }),
       ICNSQueries.use(),
       FNSQueries.use(),
-      EvmQueries.use()
+      EvmQueries.use(),
+      BitcoinQueries.use()
     );
-
     this.activityStore = new ActivityStore(
       new ExtensionKVStore("store_activity_config"),
       this.chainStore
@@ -395,15 +401,6 @@ export class RootStore {
       new ExtensionKVStore("store_token_graph_config"),
       this.chainStore
     );
-
-    // this.chainsUIForegroundStore = new ChainsUI(
-    //   router,
-    //   (vaultId) => {
-    //     if (this.keyRingStore.selectedKeyInfo?.id === vaultId) {
-    //       this.chainStore.updateEnabledChainIdentifiersFromBackground();
-    //     }
-    //   }
-    // );
 
     this.accountBaseStore = new ExtensionKVStore("store_account_config");
 
@@ -542,6 +539,11 @@ export class RootStore {
       EthereumAccount.use({
         queriesStore: this.queriesStore,
       })
+    );
+
+    this.bitcoinAccountStore = new BitcoinAccountStore(
+      this.chainStore,
+      getKeplrFromWindow
     );
 
     this.priceStore = new CoinGeckoPriceStore(

@@ -1,4 +1,5 @@
 import {
+  BalanceRegistry,
   ChainGetter,
   IObservableQueryBalanceImpl,
   QuerySharedContext,
@@ -98,5 +99,33 @@ export class ObservableQueryBitcoinBalance {
     );
     this.map.set(key, impl);
     return impl;
+  }
+}
+
+export class ObservableQueryBitcoinBalanceRegistry implements BalanceRegistry {
+  protected readonly queryBitcoinBalance: ObservableQueryBitcoinBalance;
+
+  constructor(protected readonly sharedContext: QuerySharedContext) {
+    this.queryBitcoinBalance = new ObservableQueryBitcoinBalance(sharedContext);
+  }
+
+  getBalanceImpl(
+    chainId: string,
+    chainGetter: ChainGetter,
+    address: string,
+    minimalDenom: string
+  ) {
+    const modularChainInfo = chainGetter.getModularChain(chainId);
+
+    if (!("bitcoin" in modularChainInfo)) {
+      return;
+    }
+
+    return this.queryBitcoinBalance.getBalance(
+      chainId,
+      chainGetter,
+      address,
+      minimalDenom
+    );
   }
 }
