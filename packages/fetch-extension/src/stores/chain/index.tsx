@@ -16,13 +16,7 @@ import {
   ObservableQuery,
 } from "@keplr-wallet/stores";
 
-import {
-  ChainInfo,
-  ModularChainInfo,
-  AppCurrency,
-  BitcoinChainInfo,
-  StarknetChainInfo,
-} from "@keplr-wallet/types";
+import { ChainInfo, ModularChainInfo, AppCurrency } from "@keplr-wallet/types";
 import {
   ChainInfoWithCoreTypes,
   GetChainInfosWithCoreTypesMsg,
@@ -49,7 +43,7 @@ import {
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { MessageRequester } from "@keplr-wallet/router";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
-import { Bech32Address, ChainIdHelper } from "@keplr-wallet/cosmos";
+import { ChainIdHelper } from "@keplr-wallet/cosmos";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { KeyRingStore } from "@keplr-wallet/stores-core";
 
@@ -869,37 +863,6 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   toggleShowTestnet(value: boolean) {
     this._showTestnet = value;
     this.saveLastViewShowTestnet();
-  }
-
-  protected toChainInfoWithCoreTypes(
-    modular: ModularChainInfo
-  ): ChainInfoWithCoreTypes {
-    let miscChainInfo: any;
-
-    if ("bitcoin" in modular) {
-      miscChainInfo = modular.bitcoin as BitcoinChainInfo;
-    }
-
-    if ("starknet" in modular) {
-      miscChainInfo = modular.starknet as StarknetChainInfo;
-    }
-
-    return {
-      chainId: modular.chainId,
-      chainName: modular.chainName,
-      rpc: miscChainInfo.rpc,
-      rest: miscChainInfo?.rest || "",
-      bip44: miscChainInfo?.bip44 || "",
-
-      currencies: miscChainInfo.currencies,
-      feeCurrencies: miscChainInfo.currencies,
-      stakeCurrency: {} as any,
-      features: [],
-      chainSymbolImageUrl: modular.chainSymbolImageUrl,
-
-      bech32Config: Bech32Address.defaultBech32Config(""),
-      embedded: true,
-    };
   }
 
   @computed

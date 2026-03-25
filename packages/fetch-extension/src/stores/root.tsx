@@ -54,10 +54,7 @@ import {
   IBCChannelStore,
   IBCCurrencyRegistrar,
 } from "@keplr-wallet/stores-ibc";
-import {
-  BitcoinAccountStore,
-  BitcoinQueries,
-} from "@keplr-wallet/stores-bitcoin";
+import { BitcoinAccountStore } from "@keplr-wallet/stores-bitcoin";
 import {
   KeplrETCQueries,
   GravityBridgeCurrencyRegistrar,
@@ -134,8 +131,7 @@ export class RootStore {
       KeplrETCQueries,
       ICNSQueries,
       FNSQueries,
-      EvmQueries,
-      BitcoinQueries
+      EvmQueries
     ]
   >;
   public readonly accountStore: AccountStore<
@@ -389,8 +385,7 @@ export class RootStore {
       }),
       ICNSQueries.use(),
       FNSQueries.use(),
-      EvmQueries.use(),
-      BitcoinQueries.use()
+      EvmQueries.use()
     );
     this.activityStore = new ActivityStore(
       new ExtensionKVStore("store_activity_config"),

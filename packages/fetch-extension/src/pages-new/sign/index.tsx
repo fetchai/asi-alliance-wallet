@@ -43,10 +43,16 @@ import {
 import { ErrModuleLedgerSign } from "@keplr-wallet/background/build/ledger/types";
 import { useInteractionInfo } from "@hooks/interaction";
 import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
-import { delay } from "lodash";
+import { useUnmount } from "@hooks/use-unmount";
 
 export const SignPageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
+
+  useInteractionInfo({
+    onWindowClose: () => {
+      signInteractionStore.rejectAll();
+    },
+  });
 
   const {
     chainStore,
@@ -96,6 +102,22 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const signDocHelper = useSignDocHelper(feeConfig, memoConfig);
   amountConfig.setSignDocHelper(signDocHelper);
 
+  const [unmountPromise] = useState(() => {
+    let resolver: () => void;
+    const promise = new Promise<void>((resolve) => {
+      resolver = resolve;
+    });
+
+    return {
+      promise,
+      resolver: resolver!,
+    };
+  });
+
+  useUnmount(() => {
+    unmountPromise.resolver();
+  });
+
   useEffect(() => {
     if (signInteractionStore.waitingData) {
       const data = signInteractionStore.waitingData;
@@ -103,7 +125,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
       if (data.data.signDocWrapper.isADR36SignDoc) {
         setIsADR36WithString(data.data.signDocWrapper.isADR36SignDoc);
       }
-      // if (data.data.signDocWrapper.et) {
+      // if (data.data.signOptions.) {
       //   setEthSignType(data.data.ethSignType);
       // }
       setOrigin(data.data.origin);
@@ -445,17 +467,11 @@ export const SignPageV2: FunctionComponent = observer(() => {
                                   interactionInfo.interaction &&
                                   interactionInfo.interactionInternal
                                 ) {
-                                  delay(() => {
-                                    if (window.history.length > 1) {
-                                      navigate(-1);
-                                    } else {
-                                      navigate("/", { replace: true });
-                                    }
-                                  }, 500);
+                                  await unmountPromise.promise;
                                 }
                               },
                               {
-                                preDelay: 500,
+                                preDelay: 200,
                               }
                             );
                           }
