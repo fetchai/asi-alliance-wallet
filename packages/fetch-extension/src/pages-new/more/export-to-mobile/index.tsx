@@ -189,7 +189,7 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
             height: "56px",
           }}
           variant="dark"
-          dataLoading={true}
+          dataLoading={loading}
           disabled={loading}
         />
       </Form>
