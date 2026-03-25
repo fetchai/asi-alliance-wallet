@@ -23,12 +23,17 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     onSelectAll,
   }) => {
     const { chainStore } = useStore();
-    const mainChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    const mainChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        !chainInfo.beta &&
+        !chainInfo.features?.includes("eth-key-sign") &&
+        chainStore.isEnabledChain(chainInfo.chainId)
     );
 
-    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
-      chainInfo.features?.includes("evm")
+    const evmChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        chainInfo.features?.includes("eth-key-sign") &&
+        chainStore.isEnabledChain(chainInfo.chainId)
     );
 
     const cosmosMainList = mainChainList.filter(

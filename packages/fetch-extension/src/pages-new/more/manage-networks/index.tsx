@@ -24,14 +24,29 @@ export const ManageNetworks: FunctionComponent = observer(() => {
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
   const mainChainList = chainStore.chainInfos.filter(
-    (chainInfo) => !chainInfo.features?.includes("evm")
+    (chainInfo) => !chainInfo.features?.includes("eth-key-sign")
   );
 
   const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
-    chainInfo.features?.includes("evm")
+    chainInfo.features?.includes("eth-key-sign")
   );
 
-  const disabledChainList = chainStore.disabledChainInfosInUI;
+  const isChainEnabled = (chainId: string) => {
+    return (
+      chainStore.isEnabledChain(chainId) && chainStore.hasModularChain(chainId)
+    );
+  };
+
+  const onToggleChain = async (chainId: string) => {
+    const isEnabled = isChainEnabled(chainId);
+    if (isEnabled) {
+      await chainStore.disableChainInfoInUI(chainId);
+    } else {
+      await chainStore.enableChainInfoInUI(chainId);
+    }
+    await chainStore.updateChainInfosFromBackground();
+    await chainStore.updateEnabledChainIdentifiersFromBackground();
+  };
 
   const tabs = [
     {
@@ -80,9 +95,9 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
-                    checked={!disabledChainList.includes(chainInfo)}
-                    onChange={() => {
-                      chainStore.toggleChainInfoInUI(chainInfo.chainId);
+                    checked={chainStore.isEnabledChain(chainInfo.chainId)}
+                    onChange={async () => {
+                      await onToggleChain(chainInfo.chainId);
                     }}
                   />
                 }
@@ -138,9 +153,9 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
-                    checked={!disabledChainList.includes(chainInfo)}
-                    onChange={() => {
-                      chainStore.toggleChainInfoInUI(chainInfo.chainId);
+                    checked={chainStore.isEnabledChain(chainInfo.chainId)}
+                    onChange={async () => {
+                      await onToggleChain(chainInfo.chainId);
                     }}
                   />
                 }

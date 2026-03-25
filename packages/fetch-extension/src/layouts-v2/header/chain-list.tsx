@@ -39,16 +39,20 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const navigate = useNavigate();
     const confirm = useConfirm();
     const loadingIndicator = useLoadingIndicator();
-
-    const mainChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    const mainChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        !chainInfo.beta &&
+        !chainInfo.features?.includes("eth-key-sign") &&
+        chainStore.isEnabledChain(chainInfo.chainId)
     );
 
-    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
-      chainInfo.features?.includes("evm")
+    const evmChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        chainInfo.features?.includes("eth-key-sign") &&
+        chainStore.isEnabledChain(chainInfo.chainId)
     );
 
-    const betaChainList = chainStore.chainInfosInUI.filter(
+    const betaChainList = chainStore.chainInfosInListUI.filter(
       (chainInfo) => chainInfo.beta
     );
 

@@ -196,6 +196,8 @@ const StateRenderer: FunctionComponent<{
       const msg = new StartAutoLockMonitoringMsg();
       const requester = new InExtensionMessageRequester();
       requester.sendMessage(BACKGROUND_PORT, msg);
+      chainStore.updateChainInfosFromBackground();
+      chainStore.updateEnabledChainIdentifiersFromBackground();
     }
   }, [keyRingStore.status]);
 

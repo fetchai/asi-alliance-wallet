@@ -58,51 +58,60 @@ export const WalletDetailsView = observer(
 
     const addresses: any[] = (() => {
       if (keyRingStore.status === "unlocked") {
-        return chainStore.modularChainInfos.map((modularChainInfo) => {
-          const accountInfo = accountStore.getAccount(modularChainInfo.chainId);
-          const bech32Address = (() => {
-            if (!("cosmos" in modularChainInfo)) {
-              return undefined;
+        return chainStore.modularChainInfos
+          .filter((item) => {
+            if (item.isTestnet && chainStore.isEnabledChain(item.chainId)) {
+              return chainStore.showTestnet;
             }
+            return chainStore.isEnabledChain(item.chainId);
+          })
+          .map((modularChainInfo) => {
+            const accountInfo = accountStore.getAccount(
+              modularChainInfo.chainId
+            );
+            const bech32Address = (() => {
+              if (!("cosmos" in modularChainInfo)) {
+                return undefined;
+              }
 
-            if (
-              modularChainInfo.chainId.startsWith("eip155") ||
-              modularChainInfo.chainId === "1"
-            ) {
-              return undefined;
-            }
+              if (
+                modularChainInfo.chainId.startsWith("eip155") ||
+                modularChainInfo.chainId === "1"
+              ) {
+                return undefined;
+              }
 
-            return accountInfo.bech32Address;
-          })();
-          const ethereumAddress = (() => {
-            if (!("cosmos" in modularChainInfo)) {
-              return undefined;
-            }
+              return accountInfo.bech32Address;
+            })();
+            const ethereumAddress = (() => {
+              if (!("cosmos" in modularChainInfo)) {
+                return undefined;
+              }
 
-            if (modularChainInfo.chainId.startsWith("injective")) {
-              return undefined;
-            }
+              if (modularChainInfo.chainId.startsWith("injective")) {
+                return undefined;
+              }
 
-            return accountInfo.hasEthereumHexAddress
-              ? accountInfo.ethereumHexAddress
-              : undefined;
-          })();
+              return accountInfo.hasEthereumHexAddress
+                ? accountInfo.ethereumHexAddress
+                : undefined;
+            })();
 
-          const bitcoinAddress = (() => {
-            if (!("bitcoin" in modularChainInfo)) {
-              return undefined;
-            }
+            const bitcoinAddress = (() => {
+              if (!("bitcoin" in modularChainInfo)) {
+                return undefined;
+              }
 
-            return accountInfo.bitcoinAddress;
-          })();
+              return accountInfo.bitcoinAddress;
+            })();
 
-          return {
-            modularChainInfo,
-            bech32Address,
-            ethereumAddress,
-            bitcoinAddress,
-          };
-        });
+            return {
+              modularChainInfo,
+              bech32Address,
+              ethereumAddress,
+              bitcoinAddress,
+            };
+          });
       } else {
         return [];
       }
@@ -159,7 +168,8 @@ export const WalletDetailsView = observer(
       }
     })();
 
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isEvm =
+      chainStore.current.features?.includes("eth-key-sign") ?? false;
 
     const intl = useIntl();
     const notification = useNotification();

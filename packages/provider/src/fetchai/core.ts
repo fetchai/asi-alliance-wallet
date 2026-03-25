@@ -8,6 +8,7 @@ import {
   DirectSignResponse,
   OfflineDirectSigner,
   EthSignType,
+  Key,
 } from "@keplr-wallet/types";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import {
@@ -15,12 +16,9 @@ import {
   StatusMsg,
   UnlockWalletMsg,
   SwitchAccountMsg,
-  ListAccountsMsg,
   GetNetworkMsg,
-  CurrentAccountMsg,
   AddNetworkAndSwitchMsg,
   SwitchNetworkByChainIdMsg,
-  GetAccountMsg,
   ListEntriesMsg,
   AddEntryMsg,
   UpdateEntryMsg,
@@ -94,13 +92,19 @@ export class FetchWalletApi implements WalletApi {
 }
 
 export class FetchAccount implements AccountsApi {
-  constructor(protected readonly requester: MessageRequester) {}
+  constructor(
+    protected readonly requester: MessageRequester,
+    public keplr: Keplr
+  ) {}
 
   async currentAccount(): Promise<Account> {
-    return await this.requester.sendMessage(
+    const network = await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new CurrentAccountMsg()
+      new GetNetworkMsg()
     );
+    const chainId = network?.chainId || "";
+    const key = await this.keplr.getKey(chainId);
+    return { ...key, EVMAddress: key.ethereumHexAddress };
   }
 
   async switchAccount(address: string): Promise<void> {
@@ -111,17 +115,30 @@ export class FetchAccount implements AccountsApi {
   }
 
   async listAccounts(): Promise<Account[]> {
-    return await this.requester.sendMessage(
+    const network = await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new ListAccountsMsg()
+      new GetNetworkMsg()
     );
+    const chainId = network?.chainId || "";
+    if (!chainId) {
+      return [];
+    }
+
+    const accountsResponse: any = await this.keplr.getKeysSettled([chainId]);
+    const accounts: Key[] = accountsResponse.map((item: any) => item.value);
+    const accountsTransformed = accounts.map((item) => ({
+      ...item,
+      EVMAddress: item.ethereumHexAddress,
+    }));
+    return accountsTransformed;
   }
 
   async getAccount(address: string): Promise<Account | null> {
-    return await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new GetAccountMsg(address)
+    const accounts = await this.listAccounts();
+    const foundAccount = accounts?.find(
+      (item) => item.bech32Address === address || item.EVMAddress === address
     );
+    return foundAccount ? foundAccount : null;
   }
 }
 
@@ -349,7 +366,7 @@ export class ExtensionCoreFetchWallet implements FetchBrowserWallet {
     this.version = version;
     this.wallet = new FetchWalletApi(
       new FetchNetworks(_requester),
-      new FetchAccount(_requester),
+      new FetchAccount(_requester, this.keplr),
       new FetchSigning(_requester, this.keplr),
       new FetchAddressBook(_requester),
       _requester,

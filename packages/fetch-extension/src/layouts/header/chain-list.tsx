@@ -119,11 +119,12 @@ export const ChainList: FunctionComponent = observer(() => {
   const navigate = useNavigate();
 
   const mainChainList = chainStore.chainInfosInUI.filter(
-    (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    (chainInfo) =>
+      !chainInfo.beta && !chainInfo.features?.includes("eth-key-sign")
   );
 
   const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
-    chainInfo.features?.includes("evm")
+    chainInfo.features?.includes("eth-key-sign")
   );
 
   return (

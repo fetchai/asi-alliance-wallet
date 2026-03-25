@@ -48,6 +48,7 @@ import {
   PermissionManagerStore,
   ChainsUIForegroundStore,
   LedgerInitStore,
+  SignEthereumInteractionStore,
 } from "@keplr-wallet/stores-core";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {
@@ -115,6 +116,7 @@ export class RootStore {
   public readonly permissionStore: PermissionStore;
   public readonly generalPermissionStore: PermissionManagerStore;
   public readonly signInteractionStore: SignInteractionStore;
+  public readonly signEthereumInteractionStore: SignEthereumInteractionStore;
   public readonly ledgerInitStore: LedgerInitStore;
   public readonly keystoneStore: KeystoneStore;
   public readonly chainSuggestStore: ChainSuggestStore;
@@ -351,6 +353,9 @@ export class RootStore {
       new InExtensionMessageRequester()
     );
     this.signInteractionStore = new SignInteractionStore(this.interactionStore);
+    this.signEthereumInteractionStore = new SignEthereumInteractionStore(
+      this.interactionStore
+    );
     this.ledgerInitStore = new LedgerInitStore(
       this.interactionStore,
       new InExtensionMessageRequester()

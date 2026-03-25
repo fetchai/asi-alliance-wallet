@@ -12,20 +12,6 @@ import {
 import classNames from "classnames";
 import style from "./style.module.scss";
 
-const ALLOWED_CHAINS = [
-  "fetchhub-4",
-  "cosmoshub-4",
-  "1",
-  "osmosis-1",
-  "injective-1",
-  "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f:taproot",
-  "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f:native-segwit",
-  "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943:taproot",
-  "bip122:000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943:native-segwit",
-  "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6:taproot",
-  "bip122:00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6:native-segwit",
-];
-
 type AddressItem = {
   modularChainInfo: ModularChainInfo;
   bech32Address?: string;
@@ -82,27 +68,23 @@ export const AddressFloatingMenu: React.FC<Props> = observer(
     };
 
     const flattenedAddresses: AddressItem[] = useMemo(() => {
-      const result =
-        addresses
-          ?.map((address) => {
-            if (address.ethereumAddress && address.bech32Address) {
-              return [
-                {
-                  modularChainInfo: address.modularChainInfo,
-                  bech32Address: address.bech32Address,
-                },
-                {
-                  ...address,
-                },
-              ];
-            }
+      const result = addresses
+        ?.map((address) => {
+          if (address.ethereumAddress && address.bech32Address) {
+            return [
+              {
+                modularChainInfo: address.modularChainInfo,
+                bech32Address: address.bech32Address,
+              },
+              {
+                ...address,
+              },
+            ];
+          }
 
-            return address;
-          })
-          .flat()
-          .filter((value) =>
-            ALLOWED_CHAINS.includes(value.modularChainInfo.chainId)
-          ) ?? [];
+          return address;
+        })
+        .flat();
 
       const map = new Map<string, AddressItem>();
 
@@ -154,15 +136,31 @@ export const AddressFloatingMenu: React.FC<Props> = observer(
                 )}
               >
                 <div className="d-flex align-items-center">
-                  <img
-                    style={{
-                      height: "18px",
-                      width: "18px",
-                      borderRadius: "50%",
-                      marginRight: "8px",
-                    }}
-                    src={item?.modularChainInfo?.chainSymbolImageUrl}
-                  />
+                  {item?.modularChainInfo?.chainSymbolImageUrl ? (
+                    <img
+                      style={{
+                        height: "18px",
+                        width: "18px",
+                        borderRadius: "50%",
+                        marginRight: "8px",
+                      }}
+                      src={item?.modularChainInfo?.chainSymbolImageUrl}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        height: "20px",
+                        width: "20px",
+                        borderRadius: "50%",
+                        textAlign: "center",
+                        fontSize: "12px",
+                        marginRight: "8px",
+                        background: "#dddfdf",
+                      }}
+                    >
+                      {item?.modularChainInfo?.chainName?.toUpperCase()[0]}
+                    </span>
+                  )}
                   <div>
                     <div
                       className="d-flex align-items-center"

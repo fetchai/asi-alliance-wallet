@@ -74,10 +74,18 @@ export class ChainsUIService {
         return this.chainsService.hasModularChainInfo(chainIdentifier);
       });
       if (chainIdentifiers.length === 0) {
+        const chainInfos = this.chainsService
+          .getChainInfos()
+          .filter((item) => !item.hideInUI);
         // Should be enabled at least one chain.
         return [
-          ChainIdHelper.parse(this.chainsService.getChainInfos()[0].chainId)
-            .identifier,
+          ...chainInfos
+            .filter((chainInfo) =>
+              this.chainsService.hasChainInfo(chainInfo.chainId)
+            )
+            .map(
+              (chainInfo) => ChainIdHelper.parse(chainInfo.chainId).identifier
+            ),
         ];
       } else {
         return chainIdentifiers;

@@ -63,17 +63,6 @@ export type RequiredCurrencyTokenScan = Omit<
   })[];
 };
 
-const ENABLED_DEFAULT_CHAINIDs = [
-  "fetchhub-4",
-  "cosmoshub-4",
-  "osmosis-1",
-  "axelar-dojo-1",
-  "injective-1",
-  "akashnet-2",
-  "1",
-  "bip122:000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f:taproot",
-];
-
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @observable.ref
   protected _enabledChainIdentifiers: string[] = [];
@@ -131,9 +120,7 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
     // Should be enabled at least one chain.
     this._enabledChainIdentifiers = [
-      ...ENABLED_DEFAULT_CHAINIDs.map(
-        (chainId) => ChainIdHelper.parse(chainId).identifier
-      ),
+      ChainIdHelper.parse(embedChainInfos[0].chainId).identifier,
     ];
 
     makeObservable(this);
