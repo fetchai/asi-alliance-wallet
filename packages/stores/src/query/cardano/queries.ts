@@ -94,15 +94,30 @@ export class CardanoQueriesImpl {
   }
 
   /**
+   * Forces re-discovery by re-fetching native token list for the given address.
+   * This is needed for cases when new tokens arrive after the initial discovery.
+   */
+  refreshTokenBalancesForAddress(address: string): void {
+    if (!address) return;
+
+    const chainId = this.chainId;
+    const tokenBalanceQuery = this.getOrCreateTokenBalanceQuery(chainId, address);
+    this.fetchAndRegisterTokens(tokenBalanceQuery, chainId, { forceRefresh: true });
+  }
+
+  /**
    * Fetches address assets and metadata, then registers new token currencies.
    * On error we log (and could plug in a central error reporter if available); no currencies are registered.
    */
   private async fetchAndRegisterTokens(
     tokenBalanceQuery: ObservableQueryCardanoTokenBalance,
-    chainId: string
+    chainId: string,
+    options?: { forceRefresh?: boolean }
   ): Promise<void> {
     try {
-      const tokenResponse = await tokenBalanceQuery.waitResponse();
+      const tokenResponse = options?.forceRefresh
+        ? await tokenBalanceQuery.waitFreshResponse()
+        : await tokenBalanceQuery.waitResponse();
       if (!tokenResponse?.data) return;
 
       const assets = tokenBalanceQuery.assets;

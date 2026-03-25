@@ -36,6 +36,16 @@ export const Tokens = observer(() => {
   const loadingIndicator = useLoadingIndicator();
   const isCardano = current.features?.includes("cardano") ?? false;
 
+  React.useEffect(() => {
+    if (!isCardano) return;
+    if (!accountInfo.bech32Address) return;
+
+    // Re-discover native Cardano tokens (including newly received ASI) on Portfolio open.
+    queriesStore.get(current.chainId).cardano.refreshTokenBalancesForAddress(
+      accountInfo.bech32Address
+    );
+  }, [accountInfo.bech32Address, current.chainId, isCardano, queriesStore]);
+
   // Token discovery is auto-triggered by ObservableQueryCardanoBalanceRegistry
   // when the ADA balance is first queried for this address (no manual trigger needed).
 
