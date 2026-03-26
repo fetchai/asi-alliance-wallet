@@ -901,9 +901,6 @@ const handleListAccountsMsg: (
     }
 
     const keys = await service.getKeys(chainId);
-    console.log(
-      `[ListAccountsMsg] Retrieved ${keys.length} keys for ${chainId}`
-    );
 
     const returnData: Account[] = [];
 
@@ -937,13 +934,6 @@ const handleListAccountsMsg: (
           : "",
       });
     });
-
-    console.log(
-      `[ListAccountsMsg] Returning ${returnData.length} accounts:`,
-      returnData
-        .map((a) => `${a.name}: ${a.bech32Address || a.EVMAddress}`)
-        .join(", ")
-    );
 
     return { accounts: returnData };
   };
