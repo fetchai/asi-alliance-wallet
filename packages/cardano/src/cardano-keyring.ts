@@ -3,6 +3,7 @@ import { makeObservable, observable } from "mobx";
 import { KeyCurve } from "@keplr-wallet/crypto";
 import { getCardanoNetworkFromChainId, getCardanoChainIdFromNetwork } from './utils/network';
 import { logApiKeyStatus } from './adapters/env-adapter';
+import type { CardanoNetwork } from './utils/network';
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
@@ -46,6 +47,10 @@ export class CardanoKeyRing {
   private keyAgent: any | undefined;
   @observable
   private walletManager: CardanoWalletManager | undefined;
+  private mnemonicWords: string[] | undefined;
+  private accountIndex = 0;
+  private passphrase: Uint8Array = new Uint8Array();
+  private currentNetwork: CardanoNetwork | undefined;
 
   constructor() {
     makeObservable(this);
@@ -55,7 +60,7 @@ export class CardanoKeyRing {
 
   public async getMetaFromMnemonic(
     mnemonic: string,
-    password: string,
+    _password: string,
     chainId?: string
   ): Promise<Record<string, string>> {
     const mnemonicWords = mnemonic.trim().split(/\s+/);
@@ -71,13 +76,13 @@ export class CardanoKeyRing {
 
     const bip32Ed25519 = await SodiumBip32Ed25519.create();
 
-    const keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
+    await InMemoryKeyAgent.fromBip39MnemonicWords(
       {
         mnemonicWords,
         accountIndex: 0,
         purpose: CARDANO_PURPOSE,
         chainId: cardanoChainId,
-        getPassphrase: async () => Buffer.from(password, "utf8"),
+        getPassphrase: async () => new Uint8Array(),
       },
       { bip32Ed25519, logger: console }
     );
@@ -113,40 +118,18 @@ export class CardanoKeyRing {
     if (mnemonicWords.length !== 24) {
       throw new Error("Cardano requires 24-word mnemonic");
     }
-
-    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
-    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
     
     const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
-    const cardanoChainId = await getCardanoChainIdFromNetwork(network);
+    this.mnemonicWords = mnemonicWords;
+    this.accountIndex = accountIndex;
+    // Keep Cardano derivation independent from extension unlock password.
+    this.passphrase = new Uint8Array();
+    this.currentNetwork = network;
 
-    const bip32Ed25519 = await SodiumBip32Ed25519.create();
-    this.keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
-      {
-        mnemonicWords,
-        accountIndex,
-        purpose: CARDANO_PURPOSE,
-        chainId: cardanoChainId,
-        getPassphrase: async () => Buffer.from(password, 'utf8'),
-      },
-      { bip32Ed25519, logger: console }
-    );
+    await this.rebuildAgentsForNetwork(network);
     
     logApiKeyStatus(network);
     
-    // Try to create walletManager for transaction operations
-    try {
-      this.walletManager = await CardanoWalletManager.create({
-        mnemonicWords,
-        network,
-        accountIndex
-      });
-      // DO NOT extract keyAgent from walletManager - use separate keyAgent instances
-      // WalletManager has its own keyAgent for transactions, this.keyAgent is for address derivation
-    } catch (error) {
-      console.error("[CardanoKeyRing] Failed to create CardanoWalletManager:", error);
-      this.walletManager = undefined;
-    }
   }
 
   public async getKey(chainId?: string): Promise<Key> {
@@ -178,40 +161,53 @@ export class CardanoKeyRing {
   private async updateNetworkIfNeeded(chainId: string): Promise<void> {
     try {
       const network = getCardanoNetworkFromChainId(chainId);
-      const targetChainId = await getCardanoChainIdFromNetwork(network);
-      
-      if (this.keyAgent && this.keyAgent.chainId && 
-          this.keyAgent.chainId.networkMagic === targetChainId.networkMagic) {
+      if (this.currentNetwork === network) {
         return;
       }
-      const serializedData = this.keyAgent?.serializableData;
-      if (!serializedData) {
-        console.warn("No serialized data available for network switch");
-        return;
-      }
-
-      const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
-      const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
-      
-      const bip32Ed25519 = await SodiumBip32Ed25519.create();
-      this.keyAgent = new InMemoryKeyAgent(
-        {
-          ...serializedData,
-          chainId: targetChainId,
-          getPassphrase: async () => Buffer.from('', 'utf8'),
-        },
-        { bip32Ed25519, logger: console }
-      );
-      
-      if (this.walletManager) {
-        if (this.walletManager.dispose) {
-          this.walletManager.dispose();
-        }
-        this.walletManager = undefined;
-      }
+      await this.rebuildAgentsForNetwork(network);
     } catch (error) {
       console.error("Failed to update network:", error);
     }
+  }
+
+  private async rebuildAgentsForNetwork(network: CardanoNetwork): Promise<void> {
+    if (!this.mnemonicWords) {
+      throw new Error("Cardano mnemonic is not available for agent rebuild");
+    }
+
+    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
+    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
+    const cardanoChainId = await getCardanoChainIdFromNetwork(network);
+    const bip32Ed25519 = await SodiumBip32Ed25519.create();
+
+    this.keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
+      {
+        mnemonicWords: this.mnemonicWords,
+        accountIndex: this.accountIndex,
+        purpose: CARDANO_PURPOSE,
+        chainId: cardanoChainId,
+        getPassphrase: async () => this.passphrase,
+      },
+      { bip32Ed25519, logger: console }
+    );
+
+    if (this.walletManager?.dispose) {
+      this.walletManager.dispose();
+    }
+
+    try {
+      this.walletManager = await CardanoWalletManager.create({
+        mnemonicWords: this.mnemonicWords,
+        network,
+        accountIndex: this.accountIndex,
+        passphrase: this.passphrase,
+      });
+    } catch (error) {
+      console.error("[CardanoKeyRing] Failed to create CardanoWalletManager:", error);
+      this.walletManager = undefined;
+    }
+
+    this.currentNetwork = network;
   }
 
 

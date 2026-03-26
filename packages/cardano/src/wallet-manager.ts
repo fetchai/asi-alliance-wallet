@@ -54,10 +54,16 @@ export class CardanoWalletManager {
     }
   }
 
-  static async create({ mnemonicWords, network, accountIndex = 0 }: {
+  static async create({
+    mnemonicWords,
+    network,
+    accountIndex = 0,
+    passphrase = new Uint8Array(),
+  }: {
     mnemonicWords: string[];
     network: CardanoNetwork;
     accountIndex?: number;
+    passphrase?: Uint8Array;
   }): Promise<CardanoWalletManager> {
     // Create key agent
     const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
@@ -76,7 +82,7 @@ export class CardanoWalletManager {
           : network === 'sanchonet'
             ? Cardano.ChainIds.Sanchonet
             : Cardano.ChainIds.Preview,
-      getPassphrase: async () => new Uint8Array()
+      getPassphrase: async () => passphrase
     }, { bip32Ed25519, logger: console });
 
     // Check if Blockfrost is available
