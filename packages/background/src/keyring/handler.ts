@@ -53,6 +53,10 @@ import { ExtensionKVStore } from "@keplr-wallet/common";
 import { Account, WalletStatus } from "@fetchai/wallet-types";
 import { formatErrorForLog } from "../logging/safe-error";
 
+const isCardanoAddressCapableAlgo = (algo: string): boolean => {
+  return algo === "ed25519" || algo === "cardano_address_only";
+};
+
 export const getHandler: (service: KeyRingService) => Handler = (
   service: KeyRingService
 ) => {
@@ -719,14 +723,22 @@ const handleCurrentAccountMsg: (
 
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
-    const bech32Add = new Bech32Address(key.address).toBech32(
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    );
+    const isCardano = chainInfo.features?.includes("cardano");
+    const bech32Add = isCardano
+      ? (isCardanoAddressCapableAlgo(key.algo)
+          ? Buffer.from(key.address).toString("utf8")
+          : "")
+      : new Bech32Address(key.address).toBech32(
+          chainInfo.bech32Config.bech32PrefixAccAddr
+        );
 
-    const hexadd = Bech32Address.fromBech32(
-      bech32Add,
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    ).toHex(true);
+    const hexadd =
+      isEVM && bech32Add
+        ? Bech32Address.fromBech32(
+            bech32Add,
+            chainInfo.bech32Config.bech32PrefixAccAddr
+          ).toHex(true)
+        : "";
 
     const acc: Account = {
       name: service.getKeyStoreMeta("name"),
@@ -847,7 +859,7 @@ const handleListAccountsMsg: (
 
             return {
               name: walletNames[idx],
-              algo: isSupported ? "ed25519" : "cardano_unsupported",
+              algo: isSupported ? "cardano_address_only" : "cardano_unsupported",
               pubKey: pubKeyBytes,
               address: addressBytes,
               bech32Address: address,
@@ -912,7 +924,7 @@ const handleListAccountsMsg: (
     keys.forEach((key, _idx) => {
       let bech32Add: string;
       if (isCardano) {
-        if (key.algo === "ed25519") {
+        if (isCardanoAddressCapableAlgo(key.algo)) {
           bech32Add = Buffer.from(key.address).toString("utf8");
         } else {
           bech32Add = "";
@@ -1051,15 +1063,23 @@ const handleGetAccountMsg: (
 
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
+    const isCardano = chainInfo.features?.includes("cardano");
     let foundAccount: Account | null = null;
     keys.forEach((key) => {
-      const bech32Add = new Bech32Address(key.address).toBech32(
-        chainInfo.bech32Config.bech32PrefixAccAddr
-      );
-      const hexAdd = Bech32Address.fromBech32(
-        bech32Add,
-        chainInfo.bech32Config.bech32PrefixAccAddr
-      ).toHex(true);
+      const bech32Add = isCardano
+        ? (isCardanoAddressCapableAlgo(key.algo)
+            ? Buffer.from(key.address).toString("utf8")
+            : "")
+        : new Bech32Address(key.address).toBech32(
+            chainInfo.bech32Config.bech32PrefixAccAddr
+          );
+      const hexAdd =
+        isEVM && bech32Add
+          ? Bech32Address.fromBech32(
+              bech32Add,
+              chainInfo.bech32Config.bech32PrefixAccAddr
+            ).toHex(true)
+          : "";
       if (msg.address === bech32Add || msg.address === hexAdd) {
         foundAccount = {
           name: key.name,
@@ -1098,14 +1118,22 @@ const handleGetKeyMsgFetchSigning: (
 
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
-    const bech32Add = new Bech32Address(key.address).toBech32(
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    );
+    const isCardano = chainInfo.features?.includes("cardano");
+    const bech32Add = isCardano
+      ? (isCardanoAddressCapableAlgo(key.algo)
+          ? Buffer.from(key.address).toString("utf8")
+          : "")
+      : new Bech32Address(key.address).toBech32(
+          chainInfo.bech32Config.bech32PrefixAccAddr
+        );
 
-    const hexadd = Bech32Address.fromBech32(
-      bech32Add,
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    ).toHex(true);
+    const hexadd =
+      isEVM && bech32Add
+        ? Bech32Address.fromBech32(
+            bech32Add,
+            chainInfo.bech32Config.bech32PrefixAccAddr
+          ).toHex(true)
+        : "";
 
     const acc: Account = {
       name: service.getKeyStoreMeta("name"),

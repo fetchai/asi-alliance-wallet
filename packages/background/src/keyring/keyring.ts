@@ -874,7 +874,8 @@ export class KeyRing {
         const existingCache = await this.loadCardanoChainCache(chainId);
         const activeAddr = Buffer.from(activeKey.address).toString("utf8");
         const activePub =
-          activeKey.algo === "ed25519"
+          (activeKey.algo === "ed25519" ||
+            activeKey.algo === "cardano_address_only")
             ? Buffer.from(activeKey.pubKey).toString("utf8")
             : "";
 

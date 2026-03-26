@@ -152,8 +152,9 @@ export class CardanoKeyRing {
       const addrObj = await this.keyAgent.deriveAddress({ index: 0, type: 0 }, 0);
       
       return {
-        algo: "ed25519",
-        // Do not expose reward/stake account as pubKey. Keep shared Key.pubKey semantics strict.
+        // Cardano account/address is available, but shared crypto pubKey bytes are not guaranteed here.
+        // Keep this separate from generic ed25519 key semantics.
+        algo: "cardano_address_only",
         pubKey: new Uint8Array(),
         address: Buffer.from(addrObj.address, "utf8"),
         isNanoLedger: false,

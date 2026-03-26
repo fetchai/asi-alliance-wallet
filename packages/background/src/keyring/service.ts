@@ -57,6 +57,10 @@ import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
 
 export class KeyRingService {
+  private static isCardanoAddressCapableAlgo(algo: string): boolean {
+    return algo === "ed25519" || algo === "cardano_address_only";
+  }
+
   private static sanitizeCardanoMeta(
     meta: Record<string, string>
   ): Record<string, string> {
@@ -1458,7 +1462,7 @@ Salt: ${salt}`;
 
     const displayAddresses = keys.map((key) => {
       if (flags.isCardano) {
-        return key.algo === "ed25519"
+        return KeyRingService.isCardanoAddressCapableAlgo(key.algo)
           ? Buffer.from(key.address).toString("utf8")
           : "";
       }
@@ -1479,7 +1483,7 @@ Salt: ${salt}`;
           const key = keys[idx];
           const addr = key ? displayAddresses[idx] || "" : "";
           const pub =
-            key && key.algo === "ed25519"
+            key && KeyRingService.isCardanoAddressCapableAlgo(key.algo)
               ? Buffer.from(key.pubKey).toString("hex")
               : "";
           next[id] = { address: addr, pubKey: pub };
@@ -1550,7 +1554,7 @@ Salt: ${salt}`;
           const key = keys[idx];
           const addr = key ? displayAddresses[idx] || "" : "";
           const pub =
-            key && key.algo === "ed25519"
+            key && KeyRingService.isCardanoAddressCapableAlgo(key.algo)
               ? Buffer.from(key.pubKey).toString("hex")
               : "";
           next[id] = { address: addr, pubKey: pub };
