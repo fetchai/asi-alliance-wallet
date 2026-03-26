@@ -200,7 +200,10 @@ export class CardanoService {
     txId: string,
     chainId?: string
   ) {
-    const chainKey = chainId || "default";
+    if (!chainId) {
+      return;
+    }
+    const chainKey = chainId;
     const perChain =
       this.locallyPendingSentTxs.get(chainKey) ?? new Map<string, { createdAt: number; amount: string; fee?: string; minAdaForTokens?: string; assets?: CardanoAssetAmount[] }>();
     perChain.set(txId, {
@@ -633,6 +636,17 @@ export class CardanoService {
     return !!(this.keyRing && this.keyRing.isTransactionReady());
   }
 
+  getRuntimeState(): "not_initialized" | "provider_unavailable" | "ready" {
+    if (!this.keyRing) return "not_initialized";
+    const walletManager = this.keyRing.getWalletManager();
+    if (!walletManager) return "not_initialized";
+    const runtimeStatusGetter = (walletManager as any)?.getRuntimeStatus;
+    if (typeof runtimeStatusGetter === "function") {
+      return runtimeStatusGetter.call(walletManager);
+    }
+    return walletManager.hasWallet() ? "ready" : "provider_unavailable";
+  }
+
   /**
    * Gets wallet manager for advanced operations
    * WARNING: Provides direct access to CardanoWalletManager
@@ -656,29 +670,26 @@ export class CardanoService {
     chainId?: string;
     walletId?: string;
   }): Promise<CardanoTxHistoryResponse> {
-    const chainKey = params.chainId || "default";
-    const walletKey = params.walletId || "default";
+    if (!params.chainId) {
+      throw new Error("temporarily_unavailable: missing_chain_context");
+    }
+    if (!params.walletId) {
+      throw new Error("temporarily_unavailable: missing_wallet_context");
+    }
+    const chainKey = params.chainId;
+    const walletKey = params.walletId;
     const controller = await this.ensureTxHistoryController(
       chainKey,
       params.pageSize,
       walletKey
     );
-    const stored = await this.txHistoryStore?.get(chainKey, walletKey);
-    if (!controller.hasRealEmission && stored) {
-      controller.hasRealEmission = true;
-      controller.last = stored;
-      controller.latest$.next(stored);
-      return await this.withPendingTxs(stored, params.chainId);
-    }
-    // If controller was just created, it will have a seeded value. Prefer waiting for the first real emission
-    // (from wallet history stream), but don't block forever.
+    // Wait for first real emission from history loader. Do not treat seed/fallback as valid empty history.
     if (!controller.hasRealEmission) {
       try {
-        const res = await firstValueFrom(controller.latest$.pipe(skip(1), take(1), timeout(10000)));
+        const res = await firstValueFrom(controller.latest$.pipe(take(1), timeout(10000)));
         return await this.withPendingTxs(res, params.chainId);
       } catch {
-        const res = await firstValueFrom(controller.latest$);
-        return await this.withPendingTxs(res, params.chainId);
+        throw new Error("syncing: tx_history_initial_load_timeout");
       }
     }
     const res = await firstValueFrom(controller.latest$);
@@ -690,8 +701,14 @@ export class CardanoService {
     chainId?: string;
     walletId?: string;
   }): Promise<CardanoTxHistoryResponse> {
-    const chainKey = params.chainId || "default";
-    const walletKey = params.walletId || "default";
+    if (!params.chainId) {
+      throw new Error("temporarily_unavailable: missing_chain_context");
+    }
+    if (!params.walletId) {
+      throw new Error("temporarily_unavailable: missing_wallet_context");
+    }
+    const chainKey = params.chainId;
+    const walletKey = params.walletId;
     const controller = await this.ensureTxHistoryController(
       chainKey,
       params.pageSize,
@@ -701,7 +718,9 @@ export class CardanoService {
       return await this.withPendingTxs(controller.last, params.chainId);
     }
     // ReplaySubject emits current immediately; skip it and wait for the next update after loadMore().
-    const next = firstValueFrom(controller.latest$.pipe(skip(1), take(1), timeout(10000))).catch(() => controller.last);
+    const next = firstValueFrom(controller.latest$.pipe(skip(1), take(1), timeout(10000))).catch(() => {
+      throw new Error("syncing: tx_history_load_more_timeout");
+    });
     controller.loader.loadMore();
     return await this.withPendingTxs(await next, params.chainId);
   }
@@ -730,10 +749,8 @@ export class CardanoService {
     } catch { /* non-critical */ }
 
     const locallyPending = (() => {
-      const chainKey = chainId || "default";
-      const perChainKey =
-        this.locallyPendingSentTxs.has(chainKey) ? chainKey : chainId ? "default" : chainKey;
-      const perChain = this.locallyPendingSentTxs.get(perChainKey);
+      if (!chainId) return [] as CardanoTxHistoryItem[];
+      const perChain = this.locallyPendingSentTxs.get(chainId);
       if (!perChain) return [] as CardanoTxHistoryItem[];
 
       const ttlMs = 10 * 60 * 1000;
@@ -776,7 +793,7 @@ export class CardanoService {
       }
 
       if (perChain.size === 0) {
-        this.locallyPendingSentTxs.delete(perChainKey);
+        this.locallyPendingSentTxs.delete(chainId);
       }
       return items;
     })();
@@ -786,17 +803,14 @@ export class CardanoService {
     const locallyPendingFiltered = locallyPending.filter((p) => !confirmedIds.has(p.id));
 
     // Remove confirmed txs from local pending cache.
-    if (confirmedIds.size > 0) {
-      const chainKey = chainId || "default";
-      const perChainKey =
-        this.locallyPendingSentTxs.has(chainKey) ? chainKey : chainId ? "default" : chainKey;
-      const perChain = this.locallyPendingSentTxs.get(perChainKey);
+    if (confirmedIds.size > 0 && chainId) {
+      const perChain = this.locallyPendingSentTxs.get(chainId);
       if (perChain) {
         for (const id of confirmedIds) {
           perChain.delete(id);
         }
         if (perChain.size === 0) {
-          this.locallyPendingSentTxs.delete(perChainKey);
+          this.locallyPendingSentTxs.delete(chainId);
         }
       }
     }
@@ -873,9 +887,6 @@ export class CardanoService {
     );
 
     const latest$ = new ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean }>(1);
-    // Seed an initial value to guarantee GetTxHistory doesn't hang indefinitely.
-    // The real values will overwrite this once wallet history emits.
-    latest$.next({ items: [], mightHaveMore: true });
 
     const controller = {
       pageSize,
@@ -907,8 +918,6 @@ export class CardanoService {
         // Keep last known good history on transformation failures.
         if (controller.hasRealEmission) {
           latest$.next(controller.last);
-        } else {
-          latest$.next({ items: [], mightHaveMore: loaded.mightHaveMore });
         }
       }
     });

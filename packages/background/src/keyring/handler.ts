@@ -837,8 +837,12 @@ const handleListAccountsMsg: (
             const addressBytes = isSupported
               ? Buffer.from(address, "utf8")
               : new Uint8Array(0);
+            const isHexPubKey =
+              /^[0-9a-fA-F]+$/.test(pubKey) && pubKey.length % 2 === 0;
             const pubKeyBytes = isSupported
-              ? Buffer.from(pubKey, "utf8")
+              ? (pubKey
+                  ? Buffer.from(pubKey, isHexPubKey ? "hex" : "utf8")
+                  : new Uint8Array(0))
               : new Uint8Array(0);
 
             return {

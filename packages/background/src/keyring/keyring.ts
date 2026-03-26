@@ -2091,7 +2091,11 @@ export class KeyRing {
           delete persistent[storeId];
         } else {
           const addressBytes = Buffer.from(persisted.address, "utf8");
-          const pubKeyBytes = Buffer.from(persisted.pubKey, "utf8");
+          const pubKeyRaw = persisted.pubKey || "";
+          const looksHex = /^[0-9a-fA-F]+$/.test(pubKeyRaw) && pubKeyRaw.length % 2 === 0;
+          const pubKeyBytes = pubKeyRaw
+            ? Buffer.from(pubKeyRaw, looksHex ? "hex" : "utf8")
+            : new Uint8Array(0);
           this.cardanoKeyCache.set(keyId, {
             address: addressBytes,
             pubKey: pubKeyBytes,
@@ -2153,7 +2157,7 @@ export class KeyRing {
           });
           persistent[storeId] = {
             address: Buffer.from(key.address).toString("utf8"),
-            pubKey: Buffer.from(key.pubKey).toString("utf8"),
+            pubKey: Buffer.from(key.pubKey).toString("hex"),
           };
           keys.push({ ...key, name: walletName });
           continue;

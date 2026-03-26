@@ -153,7 +153,8 @@ export class CardanoKeyRing {
       
       return {
         algo: "ed25519",
-        pubKey: Buffer.from(addrObj.rewardAccount, "utf8"),
+        // Do not expose reward/stake account as pubKey. Keep shared Key.pubKey semantics strict.
+        pubKey: new Uint8Array(),
         address: Buffer.from(addrObj.address, "utf8"),
         isNanoLedger: false,
         isKeystone: false,
@@ -217,19 +218,15 @@ export class CardanoKeyRing {
 
   public async getAddresses(): Promise<string[]> {
     if (!this.walletManager) {
-      if (!this.keyAgent) {
-        throw new Error("Cardano key agent not initialized");
-      }
-      const addrObj = await this.keyAgent.deriveAddress({ index: 0, type: 0 }, 0);
-      return [addrObj.address];
+      throw new Error("provider_error: addresses_unavailable");
     }
     try {
       const addresses = await this.walletManager.getAddresses();
       return (addresses as any[]).map((a: any) => a.address);
     } catch (error) {
-      console.warn("Failed to get Cardano addresses from wallet manager:", error);
-      const addrObj = await this.keyAgent!.deriveAddress({ index: 0, type: 0 }, 0);
-      return [addrObj.address];
+      throw new Error(
+        `provider_error: addresses_unavailable: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

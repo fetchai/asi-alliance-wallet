@@ -117,7 +117,6 @@ describe("KeyRingService", () => {
       service["keyRing"] = {
         createMnemonicKey: mockCreateMnemonicKey,
       } as any;
-      service["correctChainForCardanoSupport"] = jest.fn().mockResolvedValue(undefined);
       service["cardanoService"] = {
         createMetaFromMnemonic: jest.fn().mockResolvedValue({
           cardano: "true",

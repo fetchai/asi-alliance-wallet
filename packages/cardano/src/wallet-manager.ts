@@ -3,6 +3,8 @@ import { getNetworkConfig, type BlockfrostConfig } from './adapters/env-adapter'
 import type { CardanoNetwork } from './utils/network';
 import { Cardano } from '@cardano-sdk/core';
 
+export type CardanoRuntimeStatus = "not_initialized" | "provider_unavailable" | "ready";
+
 export class CardanoWalletManager {
   private wallet: any;
   private wsProvider: any;
@@ -10,11 +12,18 @@ export class CardanoWalletManager {
   private readonly maxReconnectAttempts = 5;
   private keyAgent: any;
   private chainHistoryProvider: any;
+  private runtimeStatus: CardanoRuntimeStatus = "not_initialized";
 
-  private constructor(wallet: any, keyAgent: any, wsProvider?: any) {
+  private constructor(
+    wallet: any,
+    keyAgent: any,
+    wsProvider?: any,
+    runtimeStatus: CardanoRuntimeStatus = "not_initialized"
+  ) {
     this.wallet = wallet;
     this.keyAgent = keyAgent;
     this.wsProvider = wsProvider;
+    this.runtimeStatus = runtimeStatus;
     if (this.wallet) {
       this.setupWSErrorHandling();
     }
@@ -96,13 +105,27 @@ export class CardanoWalletManager {
         wallet = created.wallet;
         chainHistoryProvider = created.providers?.chainHistoryProvider;
       } catch (error) {
-        console.error('[CardanoWalletManager] Failed to create full wallet:', error);
+        throw new Error(
+          `[CardanoWalletManager] provider_unavailable: wallet_init_failed: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     } else {
-      console.warn('[CardanoWalletManager] No Blockfrost API key found for network:', network);
+      const manager = new CardanoWalletManager(
+        undefined,
+        keyAgent,
+        undefined,
+        "provider_unavailable"
+      );
+      manager.chainHistoryProvider = undefined;
+      return manager;
     }
 
-    const manager = new CardanoWalletManager(wallet, keyAgent);
+    const manager = new CardanoWalletManager(
+      wallet,
+      keyAgent,
+      undefined,
+      wallet ? "ready" : "provider_unavailable"
+    );
     manager.chainHistoryProvider = chainHistoryProvider;
     return manager;
   }
@@ -217,14 +240,15 @@ export class CardanoWalletManager {
 
   async getAddresses() {
     if (!this.wallet) {
-      return [];
+      throw new Error("provider_error: addresses_unavailable");
     }
     
     try {
       return await firstValueFrom(this.wallet.addresses$);
     } catch (error) {
-      console.warn("Failed to get addresses:", error);
-      return [];
+      throw new Error(
+        `provider_error: addresses_unavailable: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -326,6 +350,10 @@ export class CardanoWalletManager {
     return !!this.wallet;
   }
 
+  getRuntimeStatus(): CardanoRuntimeStatus {
+    return this.runtimeStatus;
+  }
+
   /**
    * Gets current blockchain tip
    * Needed for setting validity interval
@@ -414,6 +442,16 @@ export class CardanoWalletManager {
       address = Cardano.PaymentAddress(params.to);
     } catch (parseError: any) {
       throw new Error(`Invalid Cardano address format: ${parseError?.message || parseError}`);
+    }
+    const currentChain = this.keyAgent?.chainId;
+    if (!currentChain) {
+      throw new Error("network_context_missing");
+    }
+    const recipientNetworkId = address.getNetworkId();
+    const senderIsMainnet = currentChain.networkMagic === Cardano.NetworkMagics.Mainnet;
+    const recipientIsMainnet = recipientNetworkId === Cardano.NetworkId.Mainnet;
+    if (senderIsMainnet !== recipientIsMainnet) {
+      throw new Error("recipient_network_mismatch");
     }
 
     const { createWalletUtil } = await import('@cardano-sdk/wallet');
