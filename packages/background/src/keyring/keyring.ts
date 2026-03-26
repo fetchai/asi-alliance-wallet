@@ -78,6 +78,20 @@ const ErrUndefinedLedgerKeeper = new Error("Ledger keeper is not defined");
  And, this manages the state, crypto, address, signing and so on...
  */
 export class KeyRing {
+  private static readonly SAFE_META_KEYS = new Set<string>([
+    "__id__",
+    "name",
+    "nameByChain",
+    "mnemonicLength",
+    "cardano",
+    "coinType",
+    "__ledger__cosmos_app_like__",
+    "email",
+    "exportKeyRingDataDuplicationCheckKey",
+  ]);
+  private static readonly LEGACY_SENSITIVE_META_KEYS = new Set<string>([
+    "cardanoSerializedAgent",
+  ]);
   private cached: Map<string, Uint8Array> = new Map();
   private cardanoKeyCache: Map<
     string,
@@ -921,6 +935,18 @@ export class KeyRing {
       this.multiKeyStore = multiKeyStore;
     }
 
+    let hasSanitizedLegacySensitiveMeta = false;
+    if (this.keyStore) {
+      const { sanitized, changed } = this.stripLegacySensitiveMeta(this.keyStore);
+      this.keyStore = sanitized;
+      hasSanitizedLegacySensitiveMeta = hasSanitizedLegacySensitiveMeta || changed;
+    }
+    this.multiKeyStore = this.multiKeyStore.map((ks) => {
+      const { sanitized, changed } = this.stripLegacySensitiveMeta(ks);
+      hasSanitizedLegacySensitiveMeta = hasSanitizedLegacySensitiveMeta || changed;
+      return sanitized;
+    });
+
     let hasLegacyKeyStore = false;
     // In prior of version 1.2, bip44 path didn't tie with the keystore, and bip44 exists on the chain info.
     // But, after some chain matures, they decided the bip44 path's coin type.
@@ -943,7 +969,7 @@ export class KeyRing {
         this.updateLegacyKeyStore(keyStore);
       }
     }
-    if (hasLegacyKeyStore) {
+    if (hasLegacyKeyStore || hasSanitizedLegacySensitiveMeta) {
       await this.save();
     }
 
@@ -1951,7 +1977,7 @@ export class KeyRing {
         version: keyStore.version,
         type: keyStore.type,
         curve: keyStore.curve,
-        meta: keyStore.meta,
+        meta: this.sanitizeMetaForPublicInfo(keyStore.meta),
         ...(keyStore.coinTypeForChain !== undefined
           ? { coinTypeForChain: keyStore.coinTypeForChain }
           : {}),
@@ -1964,6 +1990,51 @@ export class KeyRing {
     }
 
     return result;
+  }
+
+  private sanitizeMetaForPublicInfo(
+    meta: Record<string, string> | undefined
+  ): Record<string, string> {
+    if (!meta) {
+      return {};
+    }
+
+    const sanitized: Record<string, string> = {};
+    for (const [key, value] of Object.entries(meta)) {
+      if (KeyRing.SAFE_META_KEYS.has(key)) {
+        sanitized[key] = value;
+      }
+    }
+    return sanitized;
+  }
+
+  private stripLegacySensitiveMeta(
+    keyStore: KeyStore
+  ): { sanitized: KeyStore; changed: boolean } {
+    if (!keyStore?.meta) {
+      return { sanitized: keyStore, changed: false };
+    }
+
+    let changed = false;
+    const nextMeta = { ...keyStore.meta };
+    for (const key of KeyRing.LEGACY_SENSITIVE_META_KEYS) {
+      if (key in nextMeta) {
+        delete nextMeta[key];
+        changed = true;
+      }
+    }
+
+    if (!changed) {
+      return { sanitized: keyStore, changed: false };
+    }
+
+    return {
+      sanitized: {
+        ...keyStore,
+        meta: nextMeta,
+      },
+      changed: true,
+    };
   }
 
   /**

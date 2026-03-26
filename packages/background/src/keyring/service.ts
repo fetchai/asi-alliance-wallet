@@ -58,6 +58,14 @@ import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
 
 export class KeyRingService {
+  private static sanitizeCardanoMeta(
+    meta: Record<string, string>
+  ): Record<string, string> {
+    const sanitized = { ...meta };
+    delete sanitized.cardanoSerializedAgent;
+    return sanitized;
+  }
+
   private keyRing!: KeyRing;
 
   protected analyticsSerice!: AnalyticsService;
@@ -353,12 +361,13 @@ export class KeyRingService {
         console.error("Failed to create Cardano meta:", error);
         return {};
       });
+    const safeCardanoMeta = KeyRingService.sanitizeCardanoMeta(cardanoMeta);
 
     const keyStoreInfo = await this.keyRing.createMnemonicKey(
       kdf,
       mnemonic,
       password,
-      { ...meta, ...cardanoMeta },
+      { ...meta, ...safeCardanoMeta },
       bip44HDPath,
       "secp256k1"
     );

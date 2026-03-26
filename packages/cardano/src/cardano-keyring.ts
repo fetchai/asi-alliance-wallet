@@ -82,11 +82,8 @@ export class CardanoKeyRing {
       { bip32Ed25519, logger: console }
     );
 
-    const serialized = keyAgent.serializableData;
-
     return {
       cardano: "true",
-      cardanoSerializedAgent: JSON.stringify(serialized),
       coinType: CARDANO_COIN_TYPE.toString(),
     };
   }

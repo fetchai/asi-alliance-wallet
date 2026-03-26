@@ -103,4 +103,38 @@ describe("KeyRingService", () => {
       expect(result).toBe(KeyRingStatus.UNLOCKED);
     });
   });
+
+  describe("createMnemonicKey security", () => {
+    it("does not persist cardanoSerializedAgent even if cardano meta provider returns it", async () => {
+      const mockCreateMnemonicKey = jest.fn().mockResolvedValue({
+        status: KeyRingStatus.UNLOCKED,
+        multiKeyStoreInfo: [],
+      });
+      service["keyRing"] = {
+        createMnemonicKey: mockCreateMnemonicKey,
+      } as any;
+      service["correctChainForCardanoSupport"] = jest.fn().mockResolvedValue(undefined);
+      service["cardanoService"] = {
+        createMetaFromMnemonic: jest.fn().mockResolvedValue({
+          cardano: "true",
+          coinType: "1815",
+          cardanoSerializedAgent: "{\"secret\":true}",
+        }),
+      } as any;
+
+      await service.createMnemonicKey(
+        "scrypt",
+        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        "password",
+        { name: "Wallet 1" },
+        { account: 0, change: 0, addressIndex: 0 }
+      );
+
+      expect(mockCreateMnemonicKey).toHaveBeenCalledTimes(1);
+      const mergedMeta = mockCreateMnemonicKey.mock.calls[0][3] as Record<string, string>;
+      expect(mergedMeta.cardano).toBe("true");
+      expect(mergedMeta.coinType).toBe("1815");
+      expect(mergedMeta.cardanoSerializedAgent).toBeUndefined();
+    });
+  });
 }); 
