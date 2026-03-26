@@ -84,9 +84,9 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
                 const syncStatus = (await requester.sendMessage(
                   BACKGROUND_PORT,
                   new GetCardanoSyncStatusMsg(chainStore.current.chainId)
-                )) as { isSettled: boolean } | undefined;
+                )) as { state?: string; isSettled?: boolean; error?: string } | undefined;
 
-                if (syncStatus?.isSettled) {
+                if (syncStatus?.state === "ready_with_data" && syncStatus?.isSettled) {
                   const maxLovelace = (await requester.sendMessage(
                     BACKGROUND_PORT,
                     new GetMaxSpendableAdaMsg(

@@ -445,12 +445,9 @@ export class KeyRingService {
 
     if (ks && walletSupportsCardano(ks)) {
       try {
-        let currentChainId: string | undefined;
-        try {
-          currentChainId = await this.chainsService.getSelectedChain();
-        } catch {
-          // chainsService might not be initialized yet, use undefined (defaults to mainnet)
-          currentChainId = undefined;
+        const currentChainId = await this.chainsService.getSelectedChain();
+        if (!currentChainId) {
+          throw new Error("network_context_missing");
         }
         await this.cardanoService.restoreFromKeyStore(
           ks,
@@ -460,6 +457,7 @@ export class KeyRingService {
         );
       } catch (error) {
         console.error("[KeyRingService] Failed to initialize CardanoService:", error);
+        throw error;
       }
     }
 
@@ -498,8 +496,11 @@ export class KeyRingService {
 
   public async ensureCardanoServiceReady(chainId?: string): Promise<void> {
     // If service is initialized but not ready, try to restore with chainId.
-    // Restore errors are logged and do not reject; init errors reject.
-    if (this.cardanoService.isInitialized() && !this.cardanoService.isReady() && chainId) {
+    // Restore/init errors are fail-closed and must reject.
+    if (this.cardanoService.isInitialized() && !this.cardanoService.isReady()) {
+      if (!chainId) {
+        throw new Error("network_context_missing");
+      }
       // Deduplication: get then create then set in the same sync turn; no await/then between get and set
       // so concurrent callers always see the same promise.
       const existing = this.cardanoRestoreByChainId.get(chainId);
@@ -511,16 +512,12 @@ export class KeyRingService {
           try {
             const ks = this.keyRing.getCurrentKeyStore();
             if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
-              try {
-                await this.cardanoService.restoreFromKeyStore(
-                  ks,
-                  this.keyRing.currentPassword,
-                  this.crypto,
-                  chainId
-                );
-              } catch (error) {
-                console.error("[KeyRingService] Failed to restore CardanoService:", error);
-              }
+              await this.cardanoService.restoreFromKeyStore(
+                ks,
+                this.keyRing.currentPassword,
+                this.crypto,
+                chainId
+              );
             }
             resolve();
           } catch (e) {
@@ -563,15 +560,9 @@ export class KeyRingService {
       throw new Error("Cardano requires 24-word mnemonic");
     }
 try {
-      // Use provided chainId, or try to get selected chain, or use undefined (defaults to mainnet)
-      let currentChainId = chainId;
+      const currentChainId = chainId || (await this.chainsService.getSelectedChain());
       if (!currentChainId) {
-        try {
-          currentChainId = await this.chainsService.getSelectedChain();
-        } catch {
-          // chainsService might not be initialized yet, use undefined (defaults to mainnet)
-          currentChainId = undefined;
-        }
+        throw new Error("network_context_missing");
       }
       await this.cardanoService.restoreFromKeyStore(
         ks,

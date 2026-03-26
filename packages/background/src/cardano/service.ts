@@ -872,17 +872,20 @@ export class CardanoService {
         latest$.next(next);
         await this.txHistoryStore?.set(chainKey, walletId, next);
       } catch {
-        // If transformation fails, still emit an empty list to avoid UI deadlock.
-        controller.hasRealEmission = true;
-        const next = { items: [], mightHaveMore: loaded.mightHaveMore };
-        controller.last = next;
-        latest$.next(next);
-        await this.txHistoryStore?.set(chainKey, walletId, next);
+        // Keep last known good history on transformation failures.
+        if (controller.hasRealEmission) {
+          latest$.next(controller.last);
+        } else {
+          latest$.next({ items: [], mightHaveMore: loaded.mightHaveMore });
+        }
       }
     });
 
     const errorSub = loader.error$.subscribe(() => {
-      // Intentionally no-op: UI will treat missing items as empty.
+      // Keep last known good value on loader errors.
+      if (controller.hasRealEmission) {
+        latest$.next(controller.last);
+      }
     });
     controller.sub = sub;
     controller.errorSub = errorSub;

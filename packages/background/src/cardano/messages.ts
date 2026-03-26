@@ -38,10 +38,42 @@ export interface CardanoTxHistoryResponse {
   mightHaveMore: boolean;
 }
 
+export type CardanoServiceState =
+  | "ready_with_data"
+  | "empty_valid"
+  | "temporarily_unavailable"
+  | "syncing"
+  | "provider_error";
+
+export interface CardanoBalancePayload {
+  available: string;
+  total: string;
+  rewards: string;
+}
+
+export interface CardanoBalanceResponse {
+  state: CardanoServiceState;
+  balance?: CardanoBalancePayload;
+  error?: string;
+}
+
+export interface CardanoSyncStatusResponse {
+  state: CardanoServiceState;
+  isSettled?: boolean;
+  error?: string;
+}
+
+export interface CardanoTxHistoryStateResponse {
+  state: CardanoServiceState;
+  items: CardanoTxHistoryItem[];
+  mightHaveMore: boolean;
+  error?: string;
+}
+
 /**
  * Message for getting Cardano balance
  */
-export class GetCardanoBalanceMsg extends Message<any> {
+export class GetCardanoBalanceMsg extends Message<CardanoBalanceResponse> {
   public static type() {
     return "cardano-get-balance";
   }
@@ -304,7 +336,7 @@ export class DiscardSendAdaTxDraftMsg extends Message<void> {
 /**
  * Message for getting Cardano wallet sync status (for UI sync status check)
  */
-export class GetCardanoSyncStatusMsg extends Message<{ isSettled: boolean }> {
+export class GetCardanoSyncStatusMsg extends Message<CardanoSyncStatusResponse> {
   public static type() {
     return "cardano-get-sync-status";
   }
@@ -335,7 +367,7 @@ export class GetCardanoSyncStatusMsg extends Message<{ isSettled: boolean }> {
  * Message for getting Cardano transaction history (ADA-only MVP).
  * Internal-only: the UI requests a serializable list, background uses wallet SDK + providers.
  */
-export class GetCardanoTxHistoryMsg extends Message<CardanoTxHistoryResponse> {
+export class GetCardanoTxHistoryMsg extends Message<CardanoTxHistoryStateResponse> {
   public static type() {
     return "cardano-get-tx-history";
   }
@@ -411,7 +443,7 @@ export class GetMaxSpendableAdaMsg extends Message<string> {
  * Message for loading more Cardano tx history items (ADA-only MVP).
  * Internal-only.
  */
-export class LoadMoreCardanoTxHistoryMsg extends Message<CardanoTxHistoryResponse> {
+export class LoadMoreCardanoTxHistoryMsg extends Message<CardanoTxHistoryStateResponse> {
   public static type() {
     return "cardano-load-more-tx-history";
   }

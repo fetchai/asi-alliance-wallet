@@ -973,22 +973,6 @@ export class KeyRing {
       await this.save();
     }
 
-    // Fix incorrect account index for existing wallets
-    let hasFixedAccountIndex = false;
-    for (let i = 0; i < this.multiKeyStore.length; i++) {
-      const keyStore = this.multiKeyStore[i];
-
-      if (keyStore.bip44HDPath && keyStore.bip44HDPath.account > 0) {
-        if (keyStore.bip44HDPath.account === i) {
-          keyStore.bip44HDPath.account = 0;
-          hasFixedAccountIndex = true;
-        }
-      }
-    }
-    if (hasFixedAccountIndex) {
-      await this.save();
-    }
-
     // Cardano-specific handling moved to CardanoService
 
     this.loaded = true;

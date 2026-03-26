@@ -88,6 +88,16 @@ export const CardanoTransactionsTab = observer(() => {
         setIsSyncingDueToTimeout(true);
         return;
       }
+      const state = (res as any)?.state as string | undefined;
+      if (state && state !== "ready_with_data" && state !== "empty_valid") {
+        setError((res as any)?.error || "Transaction history unavailable");
+        setItems([]);
+        setMightHaveMore(false);
+        setHasFetchedHistory(true);
+        setIsSyncing(state === "syncing");
+        setIsSyncingDueToTimeout(false);
+        return;
+      }
       const nextItems = (res?.items ?? []) as CardanoTxHistoryItem[];
       setItems(nextItems);
       setMightHaveMore(!!res?.mightHaveMore);
@@ -113,6 +123,11 @@ export const CardanoTransactionsTab = observer(() => {
         BACKGROUND_PORT,
         new LoadMoreCardanoTxHistoryMsg(pageSize, chainId)
       );
+      const state = (res as any)?.state as string | undefined;
+      if (state && state !== "ready_with_data" && state !== "empty_valid") {
+        setError((res as any)?.error || "Transaction history unavailable");
+        return;
+      }
       const nextItems = (res?.items ?? []) as CardanoTxHistoryItem[];
       setItems(nextItems);
       setMightHaveMore(!!res?.mightHaveMore);
@@ -160,7 +175,9 @@ export const CardanoTransactionsTab = observer(() => {
         );
         if (!isSubscribed) return;
 
-        const settled = !!syncStatus?.isSettled;
+        const settled =
+          (syncStatus as any)?.state === "ready_with_data" &&
+          !!(syncStatus as any)?.isSettled;
         if (!hasFetchedHistory) {
           setIsSyncing(!settled);
         }

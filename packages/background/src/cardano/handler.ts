@@ -11,11 +11,23 @@ import {
   GetCardanoTxHistoryMsg,
   LoadMoreCardanoTxHistoryMsg,
   GetMaxSpendableAdaMsg,
+  CardanoServiceState,
 } from "./messages";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
 import { Buffer } from "buffer/";
 import { formatErrorForLog } from "../logging/safe-error";
+
+const stateFromError = (error: unknown): CardanoServiceState => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("syncing:")) return "syncing";
+  if (message.includes("temporarily_unavailable:")) return "temporarily_unavailable";
+  if (message.includes("provider_error:")) return "provider_error";
+  return "temporarily_unavailable";
+};
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error ?? "unknown_error");
 
 export const getHandler: (
   service: CardanoService,
@@ -87,12 +99,33 @@ const handleGetCardanoBalanceMsg: (
     if (!env.isInternalMsg) {
       throw new Error("This message is only supported for internal requests");
     }
-    // Check that service is ready
     if (!service.isReady()) {
-      throw new Error("Cardano service not ready. Please unlock wallet first.");
+      return {
+        state: "temporarily_unavailable",
+        error: "cardano_not_ready",
+      };
     }
-
-    return await service.getBalance();
+    try {
+      const balanceRaw = await service.getBalance();
+      const available = (balanceRaw?.utxo?.available?.coins ?? BigInt(0)).toString();
+      const total = (balanceRaw?.utxo?.total?.coins ?? BigInt(0)).toString();
+      const rewards = (balanceRaw?.rewards ?? BigInt(0)).toString();
+      const hasAnyFunds =
+        available !== "0" || total !== "0" || rewards !== "0";
+      return {
+        state: hasAnyFunds ? "ready_with_data" : "empty_valid",
+        balance: {
+          available,
+          total,
+          rewards,
+        },
+      };
+    } catch (error) {
+      return {
+        state: stateFromError(error),
+        error: errorMessage(error),
+      };
+    }
   };
 };
 
@@ -145,34 +178,28 @@ const handleEstimateSendAdaMsg: (
 };
 
 const waitForCardanoWalletSettled = async (service: CardanoService) => {
-  try {
-    const walletManager = service.getWalletManager();
-    if (walletManager && walletManager.hasWallet()) {
-      const { firstValueFrom } = await import("rxjs");
-      const { filter, take, timeout } = await import("rxjs/operators");
+  const walletManager = service.getWalletManager();
+  if (!walletManager || !walletManager.hasWallet()) {
+    throw new Error("temporarily_unavailable: wallet_not_ready");
+  }
+  const { firstValueFrom } = await import("rxjs");
+  const { filter, take, timeout } = await import("rxjs/operators");
 
-      try {
-        await firstValueFrom(
-          walletManager.syncStatus$.pipe(
-            filter((isSettled: boolean) => isSettled === true),
-            take(1),
-            timeout(5000)
-          )
-        );
-      } catch {
-        const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(
-          () => false
-        );
-        if (!isSettled) {
-          throw new Error("Wallet is syncing. Please wait and try again.");
-        }
-      }
+  try {
+    await firstValueFrom(
+      walletManager.syncStatus$.pipe(
+        filter((isSettled: boolean) => isSettled === true),
+        take(1),
+        timeout(5000)
+      )
+    );
+  } catch {
+    const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(
+      () => false
+    );
+    if (!isSettled) {
+      throw new Error("syncing: wallet_sync_in_progress");
     }
-  } catch (error: any) {
-    if (error?.message?.includes("syncing")) {
-      throw error;
-    }
-    // Continue if sync check fails (wallet might not have this capability)
   }
 };
 
@@ -381,20 +408,35 @@ const handleGetCardanoSyncStatusMsg: (
     }
     
     if (!service.isReady()) {
-      return { isSettled: false };
+      return {
+        state: "temporarily_unavailable",
+        isSettled: false,
+        error: "cardano_not_ready",
+      };
     }
 
     try {
       const walletManager = service.getWalletManager();
       if (!walletManager || !walletManager.hasWallet()) {
-        return { isSettled: false };
+        return {
+          state: "temporarily_unavailable",
+          isSettled: false,
+          error: "wallet_not_ready",
+        };
       }
       
       const { firstValueFrom } = await import('rxjs');
       const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(() => false) as boolean;
-      return { isSettled };
+      return {
+        state: isSettled ? "ready_with_data" : "syncing",
+        isSettled,
+      };
     } catch (error) {
-      return { isSettled: false };
+      return {
+        state: stateFromError(error),
+        isSettled: false,
+        error: errorMessage(error),
+      };
     }
   };
 };
@@ -414,21 +456,45 @@ const handleGetCardanoTxHistoryMsg: (
     }
 
     if (!service.isInitialized()) {
-      throw new Error("Cardano service not ready. Please unlock wallet first.");
+      return {
+        state: "temporarily_unavailable",
+        items: [],
+        mightHaveMore: false,
+        error: "cardano_not_initialized",
+      };
     }
 
     if (!service.isReady()) {
-      return { items: [], mightHaveMore: false };
+      return {
+        state: "temporarily_unavailable",
+        items: [],
+        mightHaveMore: false,
+        error: "cardano_not_ready",
+      };
     }
 
     const walletId =
       keyRingService.getKeyRing().getCurrentKeyStore()?.meta?.["__id__"] || "";
 
-    return await service.getTxHistory({
-      pageSize: msg.pageSize,
-      chainId: msg.chainId,
-      walletId,
-    });
+    try {
+      const res = await service.getTxHistory({
+        pageSize: msg.pageSize,
+        chainId: msg.chainId,
+        walletId,
+      });
+      return {
+        state: res.items.length > 0 ? "ready_with_data" : "empty_valid",
+        items: res.items,
+        mightHaveMore: res.mightHaveMore,
+      };
+    } catch (error) {
+      return {
+        state: stateFromError(error),
+        items: [],
+        mightHaveMore: false,
+        error: errorMessage(error),
+      };
+    }
   };
 };
 
@@ -447,24 +513,48 @@ const handleLoadMoreCardanoTxHistoryMsg: (
     }
 
     if (!service.isInitialized()) {
-      throw new Error("Cardano service not ready. Please unlock wallet first.");
+      return {
+        state: "temporarily_unavailable",
+        items: [],
+        mightHaveMore: false,
+        error: "cardano_not_initialized",
+      };
     }
 
     // When wallet is unlocked but walletManager is not ready for this network
     // (e.g. after network switch or no Blockfrost for this chain), return empty history
     // instead of misleading "unlock wallet" so UI shows "No Activity Yet".
     if (!service.isReady()) {
-      return { items: [], mightHaveMore: false };
+      return {
+        state: "temporarily_unavailable",
+        items: [],
+        mightHaveMore: false,
+        error: "cardano_not_ready",
+      };
     }
 
     const walletId =
       keyRingService.getKeyRing().getCurrentKeyStore()?.meta?.["__id__"] || "";
 
-    return await service.loadMoreTxHistory({
-      pageSize: msg.pageSize,
-      chainId: msg.chainId,
-      walletId,
-    });
+    try {
+      const res = await service.loadMoreTxHistory({
+        pageSize: msg.pageSize,
+        chainId: msg.chainId,
+        walletId,
+      });
+      return {
+        state: res.items.length > 0 ? "ready_with_data" : "empty_valid",
+        items: res.items,
+        mightHaveMore: res.mightHaveMore,
+      };
+    } catch (error) {
+      return {
+        state: stateFromError(error),
+        items: [],
+        mightHaveMore: false,
+        error: errorMessage(error),
+      };
+    }
   };
 };
 

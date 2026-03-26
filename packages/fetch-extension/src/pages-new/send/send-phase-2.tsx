@@ -375,11 +375,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           const syncStatus = await messageRequester.sendMessage(
             BACKGROUND_PORT,
             new GetCardanoSyncStatusMsg(chainStore.current.chainId)
-          );
+          ) as { state?: string; isSettled?: boolean; error?: string };
 
           if (!isSubscribed) return;
 
-          if (syncStatus?.isSettled) {
+          if (syncStatus?.state === "ready_with_data" && syncStatus?.isSettled) {
             setIsCardanoSyncing(false);
             if (pollInterval) {
               clearInterval(pollInterval);

@@ -175,16 +175,7 @@ export class CardanoWalletManager {
 
   async getBalance() {
     if (!this.wallet) {
-      return {
-        utxo: {
-          available: { coins: BigInt(0), utxos: [] },
-          total: { coins: BigInt(0), utxos: [] },
-          unspendable: { coins: BigInt(0), utxos: [] }
-        },
-        rewards: BigInt(0),
-        deposits: BigInt(0),
-        assetInfo: new Map()
-      };
+      throw new Error("provider_error: wallet_unavailable");
     }
 
     try {
@@ -208,7 +199,7 @@ export class CardanoWalletManager {
       ]) as any;
 
       return {
-        utxo: { 
+        utxo: {
           available: available || { coins: BigInt(0), utxos: [] },
           total: total || { coins: BigInt(0), utxos: [] },
           unspendable: unspendable || { coins: BigInt(0), utxos: [] }
@@ -218,17 +209,9 @@ export class CardanoWalletManager {
         assetInfo: assetInfo || new Map()
       };
     } catch (error: any) {
-      // Return zero balance on error - tx.inspect() will validate sufficient funds
-      return {
-        utxo: {
-          available: { coins: BigInt(0), utxos: [] },
-          total: { coins: BigInt(0), utxos: [] },
-          unspendable: { coins: BigInt(0), utxos: [] }
-        },
-        rewards: BigInt(0),
-        deposits: BigInt(0),
-        assetInfo: new Map()
-      };
+      throw new Error(
+        `provider_error: balance_unavailable: ${error?.message || "unknown"}`
+      );
     }
   }
 

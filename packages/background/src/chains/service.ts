@@ -639,14 +639,13 @@ export class ChainsService {
       const oldChainId = this.selectedChainId;
 
       this.selectedChainId = chainId;
-      // Fire-and-forget: cache/consistency work runs in background so the response returns immediately
+      // Complete critical network switch handlers before notifying UI.
       for (const handler of this.onNetworkSwitchHandlers) {
-        void handler(oldChainId, chainId).catch((error) => {
+        await handler(oldChainId, chainId).catch((error) => {
           console.error("Network switch handler failed:", error);
+          throw error;
         });
       }
-      // Dispatched immediately after selectedChainId change, before handlers complete.
-      // First ListAccounts/getKey for the new chain may wait for readiness (e.g. ensureCardanoServiceReady) in background; the first request after switching to Cardano may be slow.
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,
         "network-changed",

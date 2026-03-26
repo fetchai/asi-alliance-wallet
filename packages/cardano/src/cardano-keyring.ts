@@ -52,6 +52,13 @@ export class CardanoKeyRing {
   private passphrase: Uint8Array = new Uint8Array();
   private currentNetwork: CardanoNetwork | undefined;
 
+  private resolveNetworkOrThrow(chainId?: string): CardanoNetwork {
+    if (!chainId) {
+      throw new Error("network_context_missing");
+    }
+    return getCardanoNetworkFromChainId(chainId);
+  }
+
   constructor() {
     makeObservable(this);
     this.keyAgent = undefined;
@@ -71,7 +78,7 @@ export class CardanoKeyRing {
     const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
     const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
     
-    const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
+    const network = this.resolveNetworkOrThrow(chainId);
     const cardanoChainId = await getCardanoChainIdFromNetwork(network);
 
     const bip32Ed25519 = await SodiumBip32Ed25519.create();
@@ -119,7 +126,7 @@ export class CardanoKeyRing {
       throw new Error("Cardano requires 24-word mnemonic");
     }
     
-    const network = chainId ? getCardanoNetworkFromChainId(chainId) : 'mainnet';
+    const network = this.resolveNetworkOrThrow(chainId);
     this.mnemonicWords = mnemonicWords;
     this.accountIndex = accountIndex;
     // Keep Cardano derivation independent from extension unlock password.
@@ -285,32 +292,9 @@ export class CardanoKeyRing {
    */
   async getBalance(): Promise<any> {
     if (!this.walletManager) {
-      return {
-        utxo: {
-          available: { coins: BigInt(0) },
-          total: { coins: BigInt(0) },
-          unspendable: { coins: BigInt(0) }
-        },
-        rewards: BigInt(0),
-        deposits: BigInt(0),
-        assetInfo: new Map()
-      };
+      throw new Error("provider_error: wallet_manager_unavailable");
     }
 
-    try {
-      return await this.walletManager.getBalance();
-    } catch (error) {
-      console.warn("Failed to fetch balance from wallet manager:", error);
-      return {
-        utxo: {
-          available: { coins: BigInt(0) },
-          total: { coins: BigInt(0) },
-          unspendable: { coins: BigInt(0) }
-        },
-        rewards: BigInt(0),
-        deposits: BigInt(0),
-        assetInfo: new Map()
-      };
-    }
+    return await this.walletManager.getBalance();
   }
 } 
