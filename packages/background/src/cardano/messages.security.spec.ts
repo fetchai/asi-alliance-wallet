@@ -184,7 +184,7 @@ describe("Cardano handler security boundaries", () => {
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(async () => undefined),
     };
-    const handler = getHandler(service, keyRingService);
+    const handler = getHandler(service as any, keyRingService as any);
 
     const msg = new EstimateSendAdaMsg(
       "addr_test1q...",
@@ -193,7 +193,10 @@ describe("Cardano handler security boundaries", () => {
       "cardano-mainnet"
     );
 
-    const result = await handler({ isInternalMsg: true }, msg);
+    const result = await handler(
+      { isInternalMsg: true, requestInteraction: jest.fn() },
+      msg
+    );
 
     expect(keyRingService.ensureCardanoServiceReady).toHaveBeenCalledWith(
       "cardano-mainnet"
@@ -215,11 +218,11 @@ describe("Cardano handler security boundaries", () => {
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(),
     };
-    const handler = getHandler(service, keyRingService);
+    const handler = getHandler(service as any, keyRingService as any);
 
     await expect(
       handler(
-        { isInternalMsg: false, origin: "https://example.app" },
+        { isInternalMsg: false, requestInteraction: jest.fn() },
         new EstimateSendAdaMsg(
           "addr_test1q...",
           "10000",
@@ -237,11 +240,11 @@ describe("Cardano handler security boundaries", () => {
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(),
     };
-    const handler = getHandler(service, keyRingService);
+    const handler = getHandler(service as any, keyRingService as any);
 
     await expect(
       handler(
-        { isInternalMsg: false, origin: "https://example.app" },
+        { isInternalMsg: false, requestInteraction: jest.fn() },
         new IsCardanoReadyMsg()
       )
     ).rejects.toThrow("This message is only supported for internal requests");
@@ -268,8 +271,8 @@ describe("Cardano handler security boundaries", () => {
       chainsService: { getSelectedChain: jest.fn(async () => "cardano-mainnet") },
       waitApprove: jest.fn(async () => ({ summaryHash: "hash" })),
     };
-    const handler = getHandler(service, keyRingService);
-    const externalEnv = { isInternalMsg: false, origin: "https://example.app" };
+    const handler = getHandler(service as any, keyRingService as any);
+    const externalEnv = { isInternalMsg: false, requestInteraction: jest.fn() };
 
     const msgs = [
       new GetCardanoBalanceMsg(),
@@ -311,10 +314,10 @@ describe("Cardano handler security boundaries", () => {
         getCurrentKeyStore: () => ({ meta: { __id__: "wallet-id" } }),
       })),
     };
-    const handler = getHandler(service, keyRingService);
+    const handler = getHandler(service as any, keyRingService as any);
 
     const result = await handler(
-      { isInternalMsg: true },
+      { isInternalMsg: true, requestInteraction: jest.fn() },
       new GetCardanoTxHistoryMsg(10, "cardano-mainnet")
     );
 
