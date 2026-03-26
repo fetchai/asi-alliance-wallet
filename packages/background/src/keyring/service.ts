@@ -156,14 +156,6 @@ export class KeyRingService {
         cardanoRuntimeTouched = true;
         await this.ensureCardanoServiceReady(newChainId);
       }
-
-      const keys = isCardano
-        ? await this.keyRing.getKeysForCardano(newChainId)
-        : await this.keyRing.getKeys(newChainId, isEvm);
-      await this.ensureAndRepairAddressCaches(newChainId, keys, {
-        isCardano,
-        isEvm,
-      });
     } catch (error) {
       if (cardanoRuntimeTouched) {
         // Cleanup touched Cardano runtime state to avoid cross-chain stale side effects
@@ -201,7 +193,32 @@ export class KeyRingService {
       );
       throw error;
     }
+
+    // Non-critical post-commit step: cache repair should not fail network switch commit.
+    this.runAddressCacheRepairBestEffort(newChainId).catch((error) => {
+      console.error(
+        `[KeyRingService] Post-switch cache repair failed for ${newChainId}:`,
+        error
+      );
+    });
   };
+
+  private async runAddressCacheRepairBestEffort(chainId: string): Promise<void> {
+    if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
+      return;
+    }
+
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    const isCardano = chainInfo.features?.includes("cardano") ?? false;
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
+    const keys = isCardano
+      ? await this.keyRing.getKeysForCardano(chainId)
+      : await this.keyRing.getKeys(chainId, isEvm);
+    await this.ensureAndRepairAddressCaches(chainId, keys, {
+      isCardano,
+      isEvm,
+    });
+  }
 
   async restore(): Promise<{
     status: KeyRingStatus;
