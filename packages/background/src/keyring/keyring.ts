@@ -2023,7 +2023,8 @@ export class KeyRing {
 
   /**
    * Derive Cardano keys for all wallets (including non-selected) using the in-memory password.
-   * For wallets that don't support Cardano, returns an entry with empty address/pubKey and algo 'secp256k1'.
+   * For wallets that don't support Cardano or fail derivation, returns a typed capability marker
+   * with empty address/pubKey (`cardano_unsupported` / `cardano_derivation_failed`).
    */
   public async getKeysForCardano(
     chainId: string
@@ -2134,6 +2135,8 @@ export class KeyRing {
         // Unsupported for Cardano
       }
 
+      let fallbackAlgo: "cardano_unsupported" | "cardano_derivation_failed" =
+        "cardano_unsupported";
       if (shouldTryCardano) {
         try {
           const svc = new CardanoService();
@@ -2155,18 +2158,19 @@ export class KeyRing {
           keys.push({ ...key, name: walletName });
           continue;
         } catch (error) {
+          fallbackAlgo = "cardano_derivation_failed";
           console.error(
             `[KeyRing] Cardano key derivation failed for ${walletName}:`,
             error
           );
-          // Fall through to placeholder - derivation failure is not critical
+          // Fall through to typed unsupported state.
         }
       }
 
-      // 3) Placeholder for unsupported or failed restoration
+      // 3) Typed placeholder for unsupported or failed restoration
       keys.push({
         name: walletName,
-        algo: "secp256k1",
+        algo: fallbackAlgo,
         pubKey: new Uint8Array(0),
         address: new Uint8Array(0),
         isKeystone: false,

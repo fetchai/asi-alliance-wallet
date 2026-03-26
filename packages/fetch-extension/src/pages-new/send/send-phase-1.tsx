@@ -15,6 +15,7 @@ import { removeComma } from "@utils/format";
 import style from "./style.module.scss";
 import { SendConfigs } from "./types";
 import {
+  CardanoSyncStatusResponse,
   GetCardanoSyncStatusMsg,
   GetMaxSpendableAdaMsg,
 } from "@keplr-wallet/background";
@@ -84,7 +85,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
                 const syncStatus = (await requester.sendMessage(
                   BACKGROUND_PORT,
                   new GetCardanoSyncStatusMsg(chainStore.current.chainId)
-                )) as { state?: string; isSettled?: boolean; error?: string } | undefined;
+                )) as CardanoSyncStatusResponse | undefined;
 
                 if (syncStatus?.state === "ready_with_data" && syncStatus?.isSettled) {
                   const maxLovelace = (await requester.sendMessage(

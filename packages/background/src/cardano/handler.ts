@@ -307,9 +307,10 @@ const handleSubmitSendAdaTxDraftMsg: (
         createdAt: approvalData.createdAt,
         submittedAt: Date.now(),
       }
-    )) as { summaryHash?: string };
+    )) as { summaryHash?: string; payloadHash?: string };
 
     const approvedSummaryHash = approveResult?.summaryHash || approvalData.summaryHash;
+    const approvedPayloadHash = approveResult?.payloadHash || approvalData.payloadHash;
 
     return await service.submitSendAdaTxDraft({
       draftId: msg.draftId,
@@ -320,6 +321,7 @@ const handleSubmitSendAdaTxDraftMsg: (
       networkId: context.networkId,
       unlockSessionId: context.unlockSessionId,
       approvedSummaryHash,
+      approvedPayloadHash,
     });
   };
 };
@@ -366,8 +368,9 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
         createdAt: approvalData.createdAt,
         submittedAt: Date.now(),
       }
-    )) as { summaryHash?: string };
+    )) as { summaryHash?: string; payloadHash?: string };
     const approvedSummaryHash = approveResult?.summaryHash || approvalData.summaryHash;
+    const approvedPayloadHash = approveResult?.payloadHash || approvalData.payloadHash;
 
     return await service.submitSendAdaTxDraft({
       draftId: msg.draftId,
@@ -378,6 +381,7 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
       networkId: context.networkId,
       unlockSessionId: context.unlockSessionId,
       approvedSummaryHash,
+      approvedPayloadHash,
     });
   };
 };

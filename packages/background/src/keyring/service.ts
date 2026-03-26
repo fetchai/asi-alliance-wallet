@@ -207,6 +207,10 @@ export class KeyRingService {
     if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
       return;
     }
+    const currentChainId = await this.chainsService.getSelectedChain();
+    if (currentChainId !== chainId) {
+      return;
+    }
 
     const chainInfo = await this.chainsService.getChainInfo(chainId);
     const isCardano = chainInfo.features?.includes("cardano") ?? false;

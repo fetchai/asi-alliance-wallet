@@ -15,6 +15,7 @@ import { skip, take, timeout } from "rxjs/operators";
 import type { KVStore } from "@keplr-wallet/common";
 import { CardanoTxHistoryStore } from "./tx-history-store";
 import { computeDraftSummaryHash } from "./draft-summary-hash";
+import { createHash } from "crypto";
 import {
   getWalletAddressSet,
   transformPendingTxsToItems,
@@ -365,6 +366,7 @@ export class CardanoService {
       networkId: string;
       unlockSessionId: string;
       source?: string;
+      payloadHash: string;
       to: string;
       amount: string;
       memo?: string;
@@ -407,6 +409,7 @@ export class CardanoService {
       .slice(2)}`;
 
     this.sendAdaTxDrafts.set(draftId, {
+      payloadHash: this.computeDraftPayloadHash(built.tx),
       createdAt: Date.now(),
       chainId: params.chainId,
       walletId: params.walletId,
@@ -443,6 +446,7 @@ export class CardanoService {
     networkId: string;
     unlockSessionId: string;
     approvedSummaryHash: string;
+    approvedPayloadHash: string;
   }): Promise<string> {
     const draft = this.sendAdaTxDrafts.get(params.draftId);
     if (!draft) {
@@ -473,6 +477,14 @@ export class CardanoService {
     if (this.getDraftSummaryHash(draft) !== params.approvedSummaryHash) {
       this.sendAdaTxDrafts.delete(params.draftId);
       throw new Error("Transaction draft summary mismatch. Please rebuild and try again.");
+    }
+    if (draft.payloadHash !== params.approvedPayloadHash) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      throw new Error("Transaction draft payload mismatch. Please rebuild and try again.");
+    }
+    if (this.computeDraftPayloadHash(draft.tx) !== draft.payloadHash) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      throw new Error("Transaction draft payload changed. Please rebuild and try again.");
     }
 
     try {
@@ -519,6 +531,7 @@ export class CardanoService {
     unlockSessionId: string;
   }): {
     summaryHash: string;
+    payloadHash: string;
     createdAt: number;
     draft: {
       draftId: string;
@@ -561,6 +574,7 @@ export class CardanoService {
 
     return {
       summaryHash: this.getDraftSummaryHash(draft),
+      payloadHash: draft.payloadHash,
       createdAt: draft.createdAt,
       draft: {
         draftId: params.draftId,
@@ -591,6 +605,24 @@ export class CardanoService {
     selectedAccountAddress: string;
   }): string {
     return computeDraftSummaryHash(draft);
+  }
+
+  private computeDraftPayloadHash(tx: any): string {
+    const serialized = this.serializeDraftPayload(tx);
+    return createHash("sha256").update(serialized).digest("hex");
+  }
+
+  private serializeDraftPayload(tx: any): string {
+    if (tx && typeof tx.toCbor === "function") {
+      return tx.toCbor();
+    }
+    if (tx && typeof tx.cbor === "string") {
+      return tx.cbor;
+    }
+    if (tx && typeof tx.toCore === "function") {
+      return JSON.stringify(tx.toCore());
+    }
+    throw new Error("Unable to serialize draft payload");
   }
 
   /**

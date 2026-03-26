@@ -843,7 +843,7 @@ const handleListAccountsMsg: (
 
             return {
               name: walletNames[idx],
-              algo: isSupported ? "ed25519" : "secp256k1",
+              algo: isSupported ? "ed25519" : "cardano_unsupported",
               pubKey: pubKeyBytes,
               address: addressBytes,
               bech32Address: address,

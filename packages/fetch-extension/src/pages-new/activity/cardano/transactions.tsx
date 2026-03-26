@@ -10,7 +10,13 @@ import {
   LoadMoreCardanoTxHistoryMsg,
   GetCardanoSyncStatusMsg,
 } from "@keplr-wallet/background";
-import type { CardanoTxHistoryAsset, CardanoTxHistoryItem } from "@keplr-wallet/background";
+import type {
+  CardanoServiceState,
+  CardanoSyncStatusResponse,
+  CardanoTxHistoryAsset,
+  CardanoTxHistoryItem,
+  CardanoTxHistoryStateResponse,
+} from "@keplr-wallet/background";
 import { NoActivity } from "../no-activity";
 import styles from "../native/style.module.scss";
 import { useNavigate } from "react-router";
@@ -88,19 +94,26 @@ export const CardanoTransactionsTab = observer(() => {
         setIsSyncingDueToTimeout(true);
         return;
       }
-      const state = (res as any)?.state as string | undefined;
+      const typedRes = res as CardanoTxHistoryStateResponse;
+      const state = typedRes?.state as CardanoServiceState | undefined;
       if (state && state !== "ready_with_data" && state !== "empty_valid") {
-        setError((res as any)?.error || "Transaction history unavailable");
+        const transient =
+          state === "syncing" || state === "temporarily_unavailable";
+        setIsSyncing(transient);
+        setIsSyncingDueToTimeout(false);
+        setHasFetchedHistory(!transient);
         setItems([]);
         setMightHaveMore(false);
-        setHasFetchedHistory(true);
-        setIsSyncing(state === "syncing");
-        setIsSyncingDueToTimeout(false);
+        setError(
+          transient
+            ? undefined
+            : typedRes?.error || "Transaction history unavailable"
+        );
         return;
       }
-      const nextItems = (res?.items ?? []) as CardanoTxHistoryItem[];
+      const nextItems = (typedRes?.items ?? []) as CardanoTxHistoryItem[];
       setItems(nextItems);
-      setMightHaveMore(!!res?.mightHaveMore);
+      setMightHaveMore(!!typedRes?.mightHaveMore);
       setHasFetchedHistory(true);
       setIsSyncing(false);
       setIsSyncingDueToTimeout(false);
@@ -123,14 +136,22 @@ export const CardanoTransactionsTab = observer(() => {
         BACKGROUND_PORT,
         new LoadMoreCardanoTxHistoryMsg(pageSize, chainId)
       );
-      const state = (res as any)?.state as string | undefined;
+      const typedRes = res as CardanoTxHistoryStateResponse;
+      const state = typedRes?.state as CardanoServiceState | undefined;
       if (state && state !== "ready_with_data" && state !== "empty_valid") {
-        setError((res as any)?.error || "Transaction history unavailable");
+        const transient =
+          state === "syncing" || state === "temporarily_unavailable";
+        setIsSyncing(transient);
+        setError(
+          transient
+            ? undefined
+            : typedRes?.error || "Transaction history unavailable"
+        );
         return;
       }
-      const nextItems = (res?.items ?? []) as CardanoTxHistoryItem[];
+      const nextItems = (typedRes?.items ?? []) as CardanoTxHistoryItem[];
       setItems(nextItems);
-      setMightHaveMore(!!res?.mightHaveMore);
+      setMightHaveMore(!!typedRes?.mightHaveMore);
     } catch (e: any) {
       setError(e?.message || "Failed to load more transactions");
     } finally {
@@ -169,17 +190,26 @@ export const CardanoTransactionsTab = observer(() => {
 
     const checkSyncAndMaybeRefetch = async () => {
       try {
-        const syncStatus = await requester.sendMessage(
+        const syncStatus = (await requester.sendMessage(
           BACKGROUND_PORT,
           new GetCardanoSyncStatusMsg(chainId)
-        );
+        )) as CardanoSyncStatusResponse;
         if (!isSubscribed) return;
 
-        const settled =
-          (syncStatus as any)?.state === "ready_with_data" &&
-          !!(syncStatus as any)?.isSettled;
+        const state = syncStatus?.state;
+        const settled = state === "ready_with_data" && !!syncStatus?.isSettled;
+        const transient =
+          state === "syncing" || state === "temporarily_unavailable";
         if (!hasFetchedHistory) {
-          setIsSyncing(!settled);
+          setIsSyncing(transient || !settled);
+        }
+        if (state === "provider_error") {
+          setError(syncStatus?.error || "Cardano provider unavailable");
+          if (interval) {
+            clearInterval(interval);
+            interval = null;
+          }
+          return;
         }
         if (settled && items.length === 0 && !isLoading && !error && !hasFetchedHistory) {
           fetchHistory();

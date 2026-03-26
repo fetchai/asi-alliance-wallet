@@ -19,6 +19,8 @@ import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import {
   BuildSendAdaTxDraftMsg,
+  CardanoServiceState,
+  CardanoSyncStatusResponse,
   DiscardSendAdaTxDraftMsg,
   GetCardanoSyncStatusMsg,
   KeyRingStatus,
@@ -320,6 +322,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const fiatCurrency = language.fiatCurrency;
     const { isOnline } = useNetwork();
     const [isCardanoSyncing, setIsCardanoSyncing] = useState(false);
+    const [cardanoSyncState, setCardanoSyncState] =
+      useState<CardanoServiceState | null>(null);
     const [cardanoDraft, setCardanoDraft] = useState<{
       draftId: string;
       fee: string;
@@ -347,9 +351,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const cardanoStatusMessage =
       !isOnline
         ? cardanoOfflineMessage
-        : isCardanoSyncing
-          ? "Syncing wallet… Please wait"
-          : undefined;
+        : cardanoSyncState === "temporarily_unavailable"
+          ? "Wallet is initializing. Please wait"
+          : cardanoSyncState === "provider_error"
+            ? cardanoDraftError || "Cardano provider unavailable"
+            : isCardanoSyncing
+              ? "Syncing wallet… Please wait"
+              : undefined;
 
     useEffect(() => {
       if (isFromPhase1 !== undefined) setFromPhase1(isFromPhase1);
@@ -361,6 +369,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
     useEffect(() => {
       if (!isCardano) {
+        setCardanoSyncState(null);
         setIsCardanoSyncing(false);
         return;
       }
@@ -372,25 +381,34 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         try {
           if (!isSubscribed) return;
           const messageRequester = new InExtensionMessageRequester();
-          const syncStatus = await messageRequester.sendMessage(
+          const syncStatus = (await messageRequester.sendMessage(
             BACKGROUND_PORT,
             new GetCardanoSyncStatusMsg(chainStore.current.chainId)
-          ) as { state?: string; isSettled?: boolean; error?: string };
+          )) as CardanoSyncStatusResponse;
 
           if (!isSubscribed) return;
 
-          if (syncStatus?.state === "ready_with_data" && syncStatus?.isSettled) {
+          const state = syncStatus?.state;
+          setCardanoSyncState(state ?? null);
+          if (state === "ready_with_data" && syncStatus?.isSettled) {
             setIsCardanoSyncing(false);
             if (pollInterval) {
               clearInterval(pollInterval);
               pollInterval = null;
             }
           } else {
-            setIsCardanoSyncing(true);
+            setIsCardanoSyncing(
+              state === "syncing" || state === "temporarily_unavailable"
+            );
+            if (state === "provider_error" && pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
           }
         } catch (error) {
           if (isSubscribed) {
-            setIsCardanoSyncing(false);
+            setCardanoSyncState("temporarily_unavailable");
+            setIsCardanoSyncing(true);
             if (pollInterval) {
               clearInterval(pollInterval);
               pollInterval = null;

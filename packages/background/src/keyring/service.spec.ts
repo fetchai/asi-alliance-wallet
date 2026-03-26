@@ -311,5 +311,62 @@ describe("KeyRingService", () => {
       ).resolves.toBeUndefined();
       expect((service["cardanoService"] as any).reset).not.toHaveBeenCalled();
     });
+
+    it("skips post-commit cache repair for stale chain after rapid switch", async () => {
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-newer"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      const ensureReady = jest.fn().mockResolvedValue(undefined);
+      service["ensureCardanoServiceReady"] = ensureReady;
+      const repair = jest.spyOn(service as any, "ensureAndRepairAddressCaches");
+      service["runAddressCacheRepairBestEffort"] = (service as any).runAddressCacheRepairBestEffort.bind(service);
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-old", "cardano-new")
+      ).resolves.toBeUndefined();
+
+      expect(ensureReady).toHaveBeenCalled();
+      expect(repair).not.toHaveBeenCalled();
+    });
+
+    it("supports retry after failed switch without stale dedup state", async () => {
+      const getSelectedChain = jest
+        .fn()
+        .mockResolvedValueOnce("cardano-new")
+        .mockResolvedValueOnce("cardano-new");
+      service["chainsService"] = {
+        getSelectedChain,
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({ meta: { key: "v" } }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        restoreFromKeyStore: jest.fn().mockResolvedValue(undefined),
+      } as any;
+
+      const ensure = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("first_failed"))
+        .mockResolvedValueOnce(undefined);
+      service["ensureCardanoServiceReady"] = ensure;
+      service["runAddressCacheRepairBestEffort"] = jest.fn().mockResolvedValue(undefined);
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-old", "cardano-new")
+      ).rejects.toThrow("first_failed");
+      expect((service as any)["cardanoRestoreByChainId"].size).toBe(0);
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-old", "cardano-new")
+      ).resolves.toBeUndefined();
+    });
   });
 });
