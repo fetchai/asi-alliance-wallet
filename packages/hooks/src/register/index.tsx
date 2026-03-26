@@ -153,15 +153,6 @@ export class RegisterConfig {
       });
     }
 
-    console.log("inside createMnemoic registerConfig", {
-      mode: this.mode,
-      mnemonic,
-      bip44HDPath,
-      password,
-      defaultName,
-      name: defaultName,
-      meta,
-    });
     try {
       if (this.mode === "create") {
         yield this.keyRingStore.newMnemonicKey(
@@ -222,11 +213,11 @@ export class RegisterConfig {
     password: string,
     bip44HDPath: BIP44HDPath,
     cosmosLikeApp: string,
-    selectedNetworks: string[] = []
+    selectedNetworks: string[] = [],
+    meta: Record<string, string> = {}
   ) {
     this._isLoading = true;
     const defaultName = this.getNextDefaultAccountName();
-    const meta = {};
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
         nameByChain: JSON.stringify(
@@ -243,24 +234,24 @@ export class RegisterConfig {
           pubkey,
           cosmosLikeApp,
           bip44HDPath,
-          // {
-          //   name: defaultName,
-          //   ...meta,
-          // },
           defaultName,
-          password
+          password,
+          {
+            name: defaultName,
+            ...meta,
+          }
         );
       } else {
         yield this.keyRingStore.newLedgerKey(
           pubkey,
           cosmosLikeApp,
           bip44HDPath,
-          // {
-          //   name: defaultName,
-          //   ...meta,
-          // },
           defaultName,
-          password
+          password,
+          {
+            name: defaultName,
+            ...meta,
+          }
         );
       }
       this._isFinalized = true;

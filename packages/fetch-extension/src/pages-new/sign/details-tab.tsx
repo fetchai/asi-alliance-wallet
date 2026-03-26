@@ -62,7 +62,8 @@ export const DetailsTab: FunctionComponent<{
         ? signDocHelper.signDocWrapper.aminoSignDoc.msgs
         : signDocHelper.signDocWrapper.protoSignDoc.txMsgs
       : [];
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isEvm =
+      chainStore.current.features?.includes("eth-key-sign") ?? false;
 
     const renderedMsgs = (() => {
       if (mode === "amino") {

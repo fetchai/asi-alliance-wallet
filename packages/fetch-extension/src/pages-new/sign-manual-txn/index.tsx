@@ -149,7 +149,7 @@ export const SignManualTxn = observer(() => {
       showBottomMenu={false}
       onBackButton={() => navigate(-1)}
     >
-      {chainInfo.features?.includes("evm") ? (
+      {chainInfo.features?.includes("eth-key-sign") ? (
         <UnsupportedNetwork chainID={chainInfo.chainName} />
       ) : (
         <React.Fragment>

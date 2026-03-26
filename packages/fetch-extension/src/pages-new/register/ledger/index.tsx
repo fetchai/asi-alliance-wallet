@@ -130,7 +130,8 @@ export const ImportLedgerPage: FunctionComponent<{
         password,
         bip44Option.bip44HDPath,
         "Cosmos",
-        selectedNetworks
+        selectedNetworks,
+        {}
       );
       analyticsStore.setUserProperties({
         registerType: "ledger",

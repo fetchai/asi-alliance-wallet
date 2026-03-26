@@ -47,13 +47,6 @@ import { useUnmount } from "@hooks/use-unmount";
 
 export const SignPageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
-
-  useInteractionInfo({
-    onWindowClose: () => {
-      signInteractionStore.rejectAll();
-    },
-  });
-
   const {
     chainStore,
     keyRingStore,
@@ -62,6 +55,13 @@ export const SignPageV2: FunctionComponent = observer(() => {
     queriesStore,
     ledgerInitStore,
   } = useStore();
+  const current = chainStore.current;
+
+  useInteractionInfo({
+    onWindowClose: () => {
+      signInteractionStore.rejectAll();
+    },
+  });
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const [signer, setSigner] = useState("");
@@ -79,7 +79,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
   >();
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
 
-  const current = chainStore.current;
   // There are services that sometimes use invalid tx to sign arbitrary data on the sign page.
   // In this case, there is no obligation to deal with it, but 0 gas is favorably allowed.
   const gasConfig = useZeroAllowedGasConfig(chainStore, current.chainId, 0);
@@ -225,9 +224,14 @@ export const SignPageV2: FunctionComponent = observer(() => {
   // So, it can be different the current chain and the expected selected chain for a moment.
   const isLoaded = (() => {
     if (!signDocHelper.signDocWrapper) {
+      console.log("sign doc wrapper not found", { signDocHelper });
       return false;
     }
 
+    console.log("sign doc wrapper found", {
+      currentChainIdentifier,
+      selectedChainIdentifier,
+    });
     return currentChainIdentifier === selectedChainIdentifier;
   })();
 

@@ -319,7 +319,7 @@ export class KeyRingCosmosService {
 
     return await this.interactionService.waitApproveV2(
       env,
-      "/sign-cosmos",
+      "/sign",
       "request-sign-cosmos",
       {
         origin,
@@ -880,7 +880,7 @@ export class KeyRingCosmosService {
     const signDoc = makeADR36AminoSignDoc(signer, data);
     return await this.interactionService.waitApproveV2(
       env,
-      "/sign-cosmos-adr36",
+      "/sign",
       "request-sign-cosmos",
       {
         origin,
@@ -978,7 +978,7 @@ export class KeyRingCosmosService {
 
     return await this.interactionService.waitApproveV2(
       env,
-      "/sign-cosmos",
+      "/sign",
       "request-sign-cosmos",
       {
         origin,
@@ -1477,7 +1477,7 @@ export class KeyRingCosmosService {
 
     return await this.interactionService.waitApproveV2(
       env,
-      "/sign-cosmos",
+      "/sign",
       "request-sign-cosmos",
       {
         origin,
@@ -1722,7 +1722,7 @@ export class KeyRingCosmosService {
 
     return await this.interactionService.waitApproveV2(
       env,
-      "/sign-cosmos",
+      "/sign",
       "request-sign-cosmos",
       {
         origin,
@@ -1960,7 +1960,7 @@ export class KeyRingCosmosService {
 
     return await this.interactionService.waitApproveV2(
       env,
-      "/sign-cosmos-icns",
+      "/sign",
       "request-sign-icns-adr36",
       interactionInfo,
       async () => {

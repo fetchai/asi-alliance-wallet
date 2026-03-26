@@ -257,7 +257,8 @@ const handleNewLedgerKeyMsg: (
       msg.app,
       msg.bip44HDPath,
       msg.name,
-      msg.password
+      msg.password,
+      msg.meta
     );
     return {
       vaultId,

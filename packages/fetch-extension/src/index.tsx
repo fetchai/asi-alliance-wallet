@@ -15,7 +15,7 @@ import "./styles/global.scss";
 import { HashRouter, Route, Routes } from "react-router-dom";
 
 import { IBCTransferPage } from "./pages-new/more/ibc-transfer";
-import { AccessPage, Secret20ViewingKeyAccessPage } from "./pages/access";
+import { AccessPage /*, Secret20ViewingKeyAccessPage*/ } from "./pages/access";
 import { NotificationPage } from "./pages/notification";
 
 import { Banner } from "@components/banner";
@@ -40,7 +40,7 @@ import { AddressBookPage } from "./pages-new/more/address-book";
 import { CurrencyPge } from "./pages-new/more/currency";
 import {
   SettingConnectionsPage,
-  SettingSecret20ViewingKeyConnectionsPage,
+  /*SettingSecret20ViewingKeyConnectionsPage,*/
 } from "./pages-new/more/security-privacy/connections";
 import { AddTokenPage } from "./pages-new/more/token/add";
 import { ManageTokenPage } from "./pages-new/more/token/manage";
@@ -88,7 +88,7 @@ import { Unstake } from "./pages-new/validator/unstake";
 import { AxelarBridgeCosmos } from "./pages/axelar-bridge/axelar-bridge-cosmos";
 import { AxelarBridgeEVM } from "./pages/axelar-bridge/axelar-bridge-evm";
 import { AgentChatSection } from "./pages/agent-chat-section";
-import { ApproveAddChainByNetworkPage } from "./pages/approveAddChainByNetwork";
+// import { ApproveAddChainByNetworkPage } from "./pages/approveAddChainByNetwork";
 import { ApproveSwitchAccountByAddressPage } from "./pages/approveSwitchAccountPage";
 import { ApproveSwitchChainPage } from "./pages/approveSwitchChainPage";
 import { AuthZPage } from "./pages/authz";
@@ -122,6 +122,7 @@ import { AddCosmosChain } from "./pages/setting/addCosmosChain";
 import { ChangePassword } from "./pages-new/more/security-privacy/change-password";
 import { SignManualTxn } from "./pages-new/sign-manual-txn";
 import { WalletStatus } from "@keplr-wallet/stores";
+import { SignEthereumPage } from "./pages-new/sign/eth-sign";
 
 const queryClient = new QueryClient();
 
@@ -196,9 +197,9 @@ const StateRenderer: FunctionComponent<{
       const msg = new StartAutoLockMonitoringMsg();
       const requester = new InExtensionMessageRequester();
       requester.sendMessage(BACKGROUND_PORT, msg);
-      chainStore.updateChainInfosFromBackground();
-      chainStore.updateEnabledChainIdentifiersFromBackground();
     }
+    chainStore.updateChainInfosFromBackground();
+    chainStore.updateEnabledChainIdentifiersFromBackground();
   }, [keyRingStore.status]);
 
   if (keyRingStore.status === "unlocked") {
@@ -277,10 +278,11 @@ const App = observer(() => {
                             />
                             <Route path="/unlock" element={<LockPage />} />
                             <Route path="/access" element={<AccessPage />} />
-                            <Route
+                            {/* TODO: fix the background handler */}
+                            {/* <Route
                               path="/access/viewing-key"
                               element={<Secret20ViewingKeyAccessPage />}
-                            />
+                            /> */}
                             <Route
                               path="/activity-details"
                               element={<ActivityDetails />}
@@ -325,12 +327,13 @@ const App = observer(() => {
                               path="more/security-privacy/connections"
                               element={<SettingConnectionsPage />}
                             />
-                            <Route
+                            {/* TODO: fix the background handler */}
+                            {/* <Route
                               path="/more/connections/viewing-key/:contractAddress"
                               element={
                                 <SettingSecret20ViewingKeyConnectionsPage />
                               }
-                            />
+                            /> */}
                             <Route
                               path="/more/address-book"
                               element={<AddressBookPage />}
@@ -392,10 +395,10 @@ const App = observer(() => {
                               path="/more/security-privacy"
                               element={<SecurityPrivacyPage />}
                             />
-                            {/* <Route path="/sign" element={<SignPage />} /> */}
+                            <Route path="/sign" element={<SignPageV2 />} />
                             <Route
-                              path="/sign-cosmos"
-                              element={<SignPageV2 />}
+                              path="/sign-ethereum"
+                              element={<SignEthereumPage />}
                             />
 
                             <Route
@@ -406,10 +409,11 @@ const App = observer(() => {
                               path="/suggest-chain"
                               element={<ChainSuggestedPage />}
                             />
-                            <Route
+                            {/* TODO: fix the background handler */}
+                            {/* <Route
                               path="/add-chain-by-network"
                               element={<ApproveAddChainByNetworkPage />}
-                            />
+                            /> */}
                             <Route
                               path="/switch-chain-by-chainid"
                               element={<ApproveSwitchChainPage />}

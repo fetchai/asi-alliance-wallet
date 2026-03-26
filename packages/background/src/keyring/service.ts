@@ -769,7 +769,8 @@ export class KeyRingService {
     app: string,
     bip44Path: BIP44HDPath,
     name: string,
-    password?: string
+    password?: string,
+    meta?: PlainObject
   ): Promise<string> {
     if (!this.vaultService.isSignedUp) {
       if (!password) {
@@ -790,6 +791,7 @@ export class KeyRingService {
         ...vaultData.insensitive,
         keyRingName: name,
         keyRingType: keyRing.supportedKeyRingType(),
+        keyRingMeta: meta,
       },
       vaultData.sensitive
     );
