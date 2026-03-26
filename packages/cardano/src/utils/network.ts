@@ -12,7 +12,7 @@ export function getCardanoNetworkFromChainId(chainId: string): CardanoNetwork {
     case 'cardano-sanchonet':
       return 'sanchonet';
     default:
-      return 'mainnet';
+      throw new Error(`network_context_invalid_chain: ${chainId}`);
   }
 }
 

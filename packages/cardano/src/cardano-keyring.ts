@@ -166,15 +166,11 @@ export class CardanoKeyRing {
 
 
   private async updateNetworkIfNeeded(chainId: string): Promise<void> {
-    try {
-      const network = getCardanoNetworkFromChainId(chainId);
-      if (this.currentNetwork === network) {
-        return;
-      }
-      await this.rebuildAgentsForNetwork(network);
-    } catch (error) {
-      console.error("Failed to update network:", error);
+    const network = getCardanoNetworkFromChainId(chainId);
+    if (this.currentNetwork === network) {
+      return;
     }
+    await this.rebuildAgentsForNetwork(network);
   }
 
   private async rebuildAgentsForNetwork(network: CardanoNetwork): Promise<void> {

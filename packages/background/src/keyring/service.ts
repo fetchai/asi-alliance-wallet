@@ -118,6 +118,11 @@ export class KeyRingService {
     this.keyRing.removeAllKeyStoreCoinType(chainId);
   };
 
+  private async isCardanoChain(chainId: string): Promise<boolean> {
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    return chainInfo.features?.includes("cardano") ?? false;
+  }
+
   /**
    * Runs in background after setSelectedChain (fire-and-forget).
    * First ListAccounts/getKey for the new chain may wait for restore or cache fill in background;
@@ -449,12 +454,19 @@ export class KeyRingService {
         if (!currentChainId) {
           throw new Error("network_context_missing");
         }
-        await this.cardanoService.restoreFromKeyStore(
-          ks,
-          this.keyRing.currentPassword,
-          this.crypto,
-          currentChainId
-        );
+        const shouldInitCardano = await this.isCardanoChain(currentChainId);
+        if (shouldInitCardano) {
+          await this.cardanoService.restoreFromKeyStore(
+            ks,
+            this.keyRing.currentPassword,
+            this.crypto,
+            currentChainId
+          );
+        } else {
+          // Keep Cardano detached when active chain is non-Cardano.
+          this.cardanoService.reset();
+          this.cardanoRestoreByChainId.clear();
+        }
       } catch (error) {
         console.error("[KeyRingService] Failed to initialize CardanoService:", error);
         throw error;
@@ -500,6 +512,9 @@ export class KeyRingService {
     if (this.cardanoService.isInitialized() && !this.cardanoService.isReady()) {
       if (!chainId) {
         throw new Error("network_context_missing");
+      }
+      if (!(await this.isCardanoChain(chainId))) {
+        throw new Error(`network_context_invalid_for_cardano: ${chainId}`);
       }
       // Deduplication: get then create then set in the same sync turn; no await/then between get and set
       // so concurrent callers always see the same promise.
@@ -563,6 +578,9 @@ try {
       const currentChainId = chainId || (await this.chainsService.getSelectedChain());
       if (!currentChainId) {
         throw new Error("network_context_missing");
+      }
+      if (!(await this.isCardanoChain(currentChainId))) {
+        throw new Error(`network_context_invalid_for_cardano: ${currentChainId}`);
       }
       await this.cardanoService.restoreFromKeyStore(
         ks,
