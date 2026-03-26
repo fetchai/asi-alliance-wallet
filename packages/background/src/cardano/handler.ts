@@ -14,17 +14,15 @@ import {
 } from "./messages";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
-import { PermissionService } from "../permission/service";
 import { Buffer } from "buffer/";
+import { formatErrorForLog } from "../logging/safe-error";
 
 export const getHandler: (
   service: CardanoService,
-  keyRingService: KeyRingService,
-  permissionService: PermissionService
+  keyRingService: KeyRingService
 ) => Handler = (
   service: CardanoService,
-  keyRingService: KeyRingService,
-  permissionService: PermissionService
+  keyRingService: KeyRingService
 ) => {
   return (env: Env, msg: Message<unknown>) => {
     // Use msg.type() instead of constructor comparison because parseMessage uses Object.setPrototypeOf
@@ -57,7 +55,7 @@ export const getHandler: (
       case IsCardanoReadyMsg.type():
         return handleIsCardanoReadyMsg(service)(env, msg as IsCardanoReadyMsg);
       case EstimateSendAdaMsg.type():
-        return handleEstimateSendAdaMsg(service, keyRingService, permissionService)(
+        return handleEstimateSendAdaMsg(service, keyRingService)(
           env,
           msg as EstimateSendAdaMsg
         );
@@ -70,7 +68,10 @@ export const getHandler: (
       case GetMaxSpendableAdaMsg.type():
         return handleGetMaxSpendableAdaMsg(service, keyRingService)(env, msg as GetMaxSpendableAdaMsg);
       default:
-        console.error("[Cardano Handler] Unknown message type:", msgType);
+        console.error(
+          "[Cardano Handler] Unknown message type",
+          formatErrorForLog(new Error("Unknown message type"), { msgType })
+        );
         throw new Error(`Unknown msg type: ${msgType}`);
     }
   };
@@ -82,7 +83,10 @@ export const getHandler: (
 const handleGetCardanoBalanceMsg: (
   service: CardanoService
 ) => InternalHandler<GetCardanoBalanceMsg> = (service) => {
-  return async (_, _msg) => {
+  return async (env, _msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
     // Check that service is ready
     if (!service.isReady()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
@@ -98,7 +102,10 @@ const handleGetCardanoBalanceMsg: (
 const handleIsCardanoReadyMsg: (
   service: CardanoService
 ) => InternalHandler<IsCardanoReadyMsg> = (service) => {
-  return async (_, _msg) => {
+  return async (env, _msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
     return service.isReady();
   };
 };
@@ -108,19 +115,11 @@ const handleIsCardanoReadyMsg: (
  */
 const handleEstimateSendAdaMsg: (
   service: CardanoService,
-  keyRingService: KeyRingService,
-  permissionService: PermissionService
-) => InternalHandler<EstimateSendAdaMsg> = (service, keyRingService, permissionService) => {
+  keyRingService: KeyRingService
+) => InternalHandler<EstimateSendAdaMsg> = (service, keyRingService) => {
   return async (env, msg) => {
     if (!env.isInternalMsg) {
-      if (!msg.chainId) {
-        throw new Error("chainId is required");
-      }
-      await permissionService.checkOrGrantBasicAccessPermission(
-        env,
-        msg.chainId,
-        msg.origin
-      );
+      throw new Error("This message is only supported for internal requests");
     }
 
     // If chainId is provided, ensure service is ready for that network
@@ -372,7 +371,10 @@ const handleGetCardanoSyncStatusMsg: (
   service: CardanoService,
   keyRingService: KeyRingService
 ) => InternalHandler<GetCardanoSyncStatusMsg> = (service, keyRingService) => {
-  return async (_, msg) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
     // If chainId is provided, ensure service is ready for that network
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);

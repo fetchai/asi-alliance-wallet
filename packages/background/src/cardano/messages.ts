@@ -85,7 +85,7 @@ export class IsCardanoReadyMsg extends Message<boolean> {
   }
 
   override approveExternal(): boolean {
-    return true;
+    return false;
   }
 
   route(): string {

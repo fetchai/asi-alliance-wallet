@@ -51,6 +51,7 @@ import { SignDoc } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import { KeyRingStatus } from "./keyring";
 import { ExtensionKVStore } from "@keplr-wallet/common";
 import { Account, WalletStatus } from "@fetchai/wallet-types";
+import { formatErrorForLog } from "../logging/safe-error";
 
 export const getHandler: (service: KeyRingService) => Handler = (
   service: KeyRingService
@@ -780,7 +781,7 @@ const handleListAccountsMsg: (
       } catch (error) {
         console.error(
           "[KeyRingService] ensureCardanoServiceReady failed in ListAccountsMsg:",
-          error
+          formatErrorForLog(error, { chainId, source: "ListAccountsMsg" })
         );
         return {
           accounts: [],

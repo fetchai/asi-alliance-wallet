@@ -62,7 +62,7 @@ export class KeyRingService {
     meta: Record<string, string>
   ): Record<string, string> {
     const sanitized = { ...meta };
-    delete sanitized.cardanoSerializedAgent;
+    delete sanitized["cardanoSerializedAgent"];
     return sanitized;
   }
 

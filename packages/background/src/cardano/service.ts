@@ -14,6 +14,7 @@ import { firstValueFrom, ReplaySubject, Subscription } from "rxjs";
 import { skip, take, timeout } from "rxjs/operators";
 import type { KVStore } from "@keplr-wallet/common";
 import { CardanoTxHistoryStore } from "./tx-history-store";
+import { computeDraftSummaryHash } from "./draft-summary-hash";
 import {
   getWalletAddressSet,
   transformPendingTxsToItems,
@@ -589,20 +590,7 @@ export class CardanoService {
     networkId: string;
     selectedAccountAddress: string;
   }): string {
-    const normalizedAssets = (draft.assets ?? [])
-      .map((a) => `${a.assetId}:${a.amount}`)
-      .sort();
-    return JSON.stringify({
-      to: draft.to,
-      amount: draft.amount,
-      memo: draft.memo ?? "",
-      fee: draft.fee,
-      total: draft.total,
-      minAdaForTokens: draft.minAdaForTokens ?? "",
-      assets: normalizedAssets,
-      networkId: draft.networkId,
-      sender: draft.selectedAccountAddress,
-    });
+    return computeDraftSummaryHash(draft);
   }
 
   /**

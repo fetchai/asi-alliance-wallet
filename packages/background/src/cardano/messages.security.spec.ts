@@ -8,6 +8,8 @@ import {
   IsCardanoReadyMsg,
   SubmitSendAdaTxDraftMsg,
   SubmitSendAdaTxDraftWithPasswordMsg,
+  GetCardanoSyncStatusMsg,
+  LoadMoreCardanoTxHistoryMsg,
 } from "./messages";
 import { getHandler } from "./handler";
 
@@ -33,13 +35,13 @@ describe("Cardano message security boundaries", () => {
     expect(new DiscardSendAdaTxDraftMsg("draft-id").approveExternal()).toBe(false);
   });
 
-  it("keeps IsCardanoReady externally callable", () => {
-    expect(new IsCardanoReadyMsg().approveExternal()).toBe(true);
+  it("keeps IsCardanoReady internal-only", () => {
+    expect(new IsCardanoReadyMsg().approveExternal()).toBe(false);
   });
 });
 
-describe("Cardano estimate handler path", () => {
-  it("allows internal estimate requests without external permission checks", async () => {
+describe("Cardano handler security boundaries", () => {
+  it("allows internal estimate requests", async () => {
     const service = {
       isReady: jest.fn(() => true),
       estimateSendAda: jest.fn(async () => ({
@@ -50,15 +52,7 @@ describe("Cardano estimate handler path", () => {
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(async () => undefined),
     };
-    const permissionService = {
-      checkOrGrantBasicAccessPermission: jest.fn(async () => undefined),
-    };
-
-    const handler = getHandler(
-      service as any,
-      keyRingService as any,
-      permissionService as any
-    );
+    const handler = getHandler(service as any, keyRingService as any);
 
     const msg = new EstimateSendAdaMsg(
       "addr_test1q...",
@@ -69,7 +63,6 @@ describe("Cardano estimate handler path", () => {
 
     const result = await handler({ isInternalMsg: true } as any, msg as any);
 
-    expect(permissionService.checkOrGrantBasicAccessPermission).not.toHaveBeenCalled();
     expect(keyRingService.ensureCardanoServiceReady).toHaveBeenCalledWith(
       "cardano-mainnet"
     );
@@ -80,5 +73,84 @@ describe("Cardano estimate handler path", () => {
       assets: undefined,
     });
     expect(result).toEqual({ fee: "1234", total: "11234" });
+  });
+
+  it("rejects external estimate requests", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+      estimateSendAda: jest.fn(),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    await expect(
+      handler(
+        { isInternalMsg: false, origin: "https://example.app" } as any,
+        new EstimateSendAdaMsg("addr_test1q...", "10000", "memo", "cardano-mainnet") as any
+      )
+    ).rejects.toThrow("This message is only supported for internal requests");
+  });
+
+  it("rejects external IsCardanoReady requests", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    await expect(
+      handler(
+        { isInternalMsg: false, origin: "https://example.app" } as any,
+        new IsCardanoReadyMsg() as any
+      )
+    ).rejects.toThrow("This message is only supported for internal requests");
+  });
+
+  it("rejects external requests for financial cardano handlers", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+      isInitialized: jest.fn(() => true),
+      getBalance: jest.fn(async () => ({ available: "1", total: "1", rewards: "0" })),
+      getWalletManager: jest.fn(() => ({ hasWallet: () => false })),
+      getTxHistory: jest.fn(async () => ({ items: [], mightHaveMore: false })),
+      loadMoreTxHistory: jest.fn(async () => ({ items: [], mightHaveMore: false })),
+      getMaxSpendableAda: jest.fn(() => "0"),
+      discardSendAdaTxDraft: jest.fn(),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => undefined),
+      checkPassword: jest.fn(() => true),
+      getCurrentUnlockSessionId: jest.fn(() => "sess"),
+      getKeyRing: jest.fn(() => ({
+        getCurrentKeyStore: () => ({ meta: { __id__: "wallet-id" } }),
+      })),
+      chainsService: { getSelectedChain: jest.fn(async () => "cardano-mainnet") },
+      waitApprove: jest.fn(async () => ({ summaryHash: "hash" })),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+    const externalEnv = { isInternalMsg: false, origin: "https://example.app" } as any;
+
+    const msgs = [
+      new GetCardanoBalanceMsg(),
+      new EstimateSendAdaMsg("addr_test1q...", "10000", "memo", "cardano-mainnet"),
+      new BuildSendAdaTxDraftMsg("addr_test1q...", "10000"),
+      new SubmitSendAdaTxDraftMsg("draft-id"),
+      new SubmitSendAdaTxDraftWithPasswordMsg("draft-id", "password"),
+      new DiscardSendAdaTxDraftMsg("draft-id"),
+      new GetCardanoTxHistoryMsg(10),
+      new LoadMoreCardanoTxHistoryMsg(10),
+      new GetMaxSpendableAdaMsg("cardano-mainnet", "addr_test1q..."),
+      new GetCardanoSyncStatusMsg("cardano-mainnet"),
+    ];
+
+    for (const msg of msgs) {
+      await expect(handler(externalEnv, msg as any)).rejects.toThrow(
+        "This message is only supported for internal requests"
+      );
+    }
   });
 });

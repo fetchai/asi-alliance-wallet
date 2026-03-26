@@ -72,7 +72,9 @@ export class PermissionService {
     origin: string
   ) {
     const status = await this.keyRingService.checkReadiness(env);
-    
+
+    // Intentionally no-op when wallet is empty. There is no key material to protect,
+    // and prompting/permission side effects before wallet creation is unnecessary.
     if (status === KeyRingStatus.EMPTY) {
       return;
     }

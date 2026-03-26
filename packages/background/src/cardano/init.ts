@@ -16,13 +16,11 @@ import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
-import { PermissionService } from "../permission/service";
 
 export function init(
   router: Router,
   service: CardanoService,
-  keyRingService: KeyRingService,
-  permissionService: PermissionService
+  keyRingService: KeyRingService
 ): void {
   router.registerMessage(GetCardanoBalanceMsg);
   router.registerMessage(IsCardanoReadyMsg);
@@ -36,5 +34,5 @@ export function init(
   router.registerMessage(LoadMoreCardanoTxHistoryMsg);
   router.registerMessage(GetMaxSpendableAdaMsg);
 
-  router.addHandler(ROUTE, getHandler(service, keyRingService, permissionService));
+  router.addHandler(ROUTE, getHandler(service, keyRingService));
 }
