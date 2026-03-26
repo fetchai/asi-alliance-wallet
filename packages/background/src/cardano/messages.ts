@@ -35,13 +35,27 @@ const validateCardanoAssetAmounts = (
     const assetId = String(a.assetId);
     const assetAmount = String(a.amount);
 
-    // Cardano.AssetId wire shape in this codebase: policyId (first 56 hex chars)
-    // + assetName (hex suffix, may be empty because parseAssetId uses slice(56)).
+    // Strict Cardano AssetId parsing for wallet boundary:
+    // policyId: exactly 56 hex chars
+    // assetName: hex string with even length, <= 32 bytes => <= 64 hex chars (may be empty)
     if (assetId.length < 56) {
       throw new Error("assetId is too short");
     }
-    if (!/^[0-9a-fA-F]+$/.test(assetId)) {
-      throw new Error("assetId must be hex");
+
+    const policyId = assetId.slice(0, 56);
+    const assetName = assetId.slice(56);
+
+    if (!/^[0-9a-fA-F]{56}$/.test(policyId)) {
+      throw new Error("policyId must be 56 hex chars");
+    }
+    if (assetName.length % 2 !== 0) {
+      throw new Error("assetName must be even-length hex");
+    }
+    if (assetName.length > 64) {
+      throw new Error("assetName is too long");
+    }
+    if (assetName && !/^[0-9a-fA-F]+$/.test(assetName)) {
+      throw new Error("assetName must be hex");
     }
 
     // Ensure duplicate detection is case-insensitive for hex ids.

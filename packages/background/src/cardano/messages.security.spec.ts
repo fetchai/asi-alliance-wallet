@@ -86,24 +86,56 @@ describe("Cardano message security boundaries", () => {
     const policy = "a".repeat(56);
     const assetId1 = `${policy}4142`;
     const assetIdUpper = `${policy.toUpperCase()}4142`;
+    const assetIdOddAssetName = `${policy}1`;
+    const assetIdTooLongAssetName = `${policy}${"f".repeat(66)}`;
 
     expect(() =>
       new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
         { assetId: "", amount: "1" },
-      ] as any).validateBasic()
+      ]).validateBasic()
     ).toThrow();
 
     expect(() =>
       new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
         { assetId: "a".repeat(55), amount: "1" },
-      ] as any).validateBasic()
+      ]).validateBasic()
     ).toThrow();
 
     expect(() =>
       new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
         { assetId: "g".repeat(56) + "4142", amount: "1" },
-      ] as any).validateBasic()
+      ]).validateBasic()
     ).toThrow();
+
+    expect(() =>
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        [{ assetId: assetIdOddAssetName, amount: "1" }]
+      ).validateBasic()
+    ).toThrow("assetName must be even-length hex");
+
+    expect(() =>
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        [{ assetId: assetIdTooLongAssetName, amount: "1" }]
+      ).validateBasic()
+    ).toThrow("assetName is too long");
+
+    expect(() =>
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        [{ assetId: policy, amount: "1" }]
+      ).validateBasic()
+    ).not.toThrow();
 
     expect(() =>
       new BuildSendAdaTxDraftMsg(
@@ -111,7 +143,7 @@ describe("Cardano message security boundaries", () => {
         "0",
         undefined,
         undefined,
-        [{ assetId: assetId1, amount: "-1" }] as any
+        [{ assetId: assetId1, amount: "-1" }]
       ).validateBasic()
     ).toThrow();
 
@@ -121,7 +153,7 @@ describe("Cardano message security boundaries", () => {
         "0",
         undefined,
         undefined,
-        [{ assetId: assetId1, amount: "0" }] as any
+        [{ assetId: assetId1, amount: "0" }]
       ).validateBasic()
     ).toThrow();
 
@@ -152,7 +184,7 @@ describe("Cardano handler security boundaries", () => {
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(async () => undefined),
     };
-    const handler = getHandler(service as any, keyRingService as any);
+    const handler = getHandler(service, keyRingService);
 
     const msg = new EstimateSendAdaMsg(
       "addr_test1q...",
@@ -161,7 +193,7 @@ describe("Cardano handler security boundaries", () => {
       "cardano-mainnet"
     );
 
-    const result = await handler({ isInternalMsg: true } as any, msg as any);
+    const result = await handler({ isInternalMsg: true }, msg);
 
     expect(keyRingService.ensureCardanoServiceReady).toHaveBeenCalledWith(
       "cardano-mainnet"
@@ -183,12 +215,17 @@ describe("Cardano handler security boundaries", () => {
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(),
     };
-    const handler = getHandler(service as any, keyRingService as any);
+    const handler = getHandler(service, keyRingService);
 
     await expect(
       handler(
-        { isInternalMsg: false, origin: "https://example.app" } as any,
-        new EstimateSendAdaMsg("addr_test1q...", "10000", "memo", "cardano-mainnet") as any
+        { isInternalMsg: false, origin: "https://example.app" },
+        new EstimateSendAdaMsg(
+          "addr_test1q...",
+          "10000",
+          "memo",
+          "cardano-mainnet"
+        )
       )
     ).rejects.toThrow("This message is only supported for internal requests");
   });
@@ -200,12 +237,12 @@ describe("Cardano handler security boundaries", () => {
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(),
     };
-    const handler = getHandler(service as any, keyRingService as any);
+    const handler = getHandler(service, keyRingService);
 
     await expect(
       handler(
-        { isInternalMsg: false, origin: "https://example.app" } as any,
-        new IsCardanoReadyMsg() as any
+        { isInternalMsg: false, origin: "https://example.app" },
+        new IsCardanoReadyMsg()
       )
     ).rejects.toThrow("This message is only supported for internal requests");
   });
@@ -231,8 +268,8 @@ describe("Cardano handler security boundaries", () => {
       chainsService: { getSelectedChain: jest.fn(async () => "cardano-mainnet") },
       waitApprove: jest.fn(async () => ({ summaryHash: "hash" })),
     };
-    const handler = getHandler(service as any, keyRingService as any);
-    const externalEnv = { isInternalMsg: false, origin: "https://example.app" } as any;
+    const handler = getHandler(service, keyRingService);
+    const externalEnv = { isInternalMsg: false, origin: "https://example.app" };
 
     const msgs = [
       new GetCardanoBalanceMsg(),
@@ -248,7 +285,7 @@ describe("Cardano handler security boundaries", () => {
     ];
 
     for (const msg of msgs) {
-      await expect(handler(externalEnv, msg as any)).rejects.toThrow(
+      await expect(handler(externalEnv, msg)).rejects.toThrow(
         "This message is only supported for internal requests"
       );
     }
@@ -274,11 +311,11 @@ describe("Cardano handler security boundaries", () => {
         getCurrentKeyStore: () => ({ meta: { __id__: "wallet-id" } }),
       })),
     };
-    const handler = getHandler(service as any, keyRingService as any);
+    const handler = getHandler(service, keyRingService);
 
     const result = await handler(
-      { isInternalMsg: true } as any,
-      new GetCardanoTxHistoryMsg(10, "cardano-mainnet") as any
+      { isInternalMsg: true },
+      new GetCardanoTxHistoryMsg(10, "cardano-mainnet")
     );
 
     expect(result).toEqual({
