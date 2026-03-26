@@ -36,7 +36,7 @@ export function getBlockfrostConfigs(): NetworkConfigs {
     },
     preprod: {
       baseUrl: process.env['BLOCKFROST_URL_PREPROD'] || 'https://cardano-preprod.blockfrost.io/api/v0',
-      projectId: process.env['BLOCKFROST_PROJECT_ID_PREPROD'] || 'preprodyDpsILnzsmce0lq4S8NWmkEcLsgRsP3O'
+      projectId: process.env['BLOCKFROST_PROJECT_ID_PREPROD'] || process.env['BLOCKFROST_API_KEY'] || ''
     },
     sanchonet: {
       baseUrl: process.env['BLOCKFROST_URL_SANCHONET'] || 'https://cardano-sanchonet.blockfrost.io/api/v0',
