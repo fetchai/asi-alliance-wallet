@@ -18,6 +18,46 @@ const validateNonNegativeLovelaceAmount = (amount: string): void => {
   validateLovelaceAmountFormat(amount);
 };
 
+const validateCardanoAssetAmounts = (
+  assets: CardanoAssetAmount[] | undefined
+): void => {
+  if (!assets || assets.length === 0) return;
+
+  const seen = new Set<string>();
+  for (const a of assets) {
+    if (!a?.assetId) {
+      throw new Error("assetId is empty");
+    }
+    if (!a?.amount) {
+      throw new Error("asset amount is empty");
+    }
+
+    const assetId = String(a.assetId);
+    const assetAmount = String(a.amount);
+
+    // Cardano.AssetId wire shape in this codebase: policyId (first 56 hex chars)
+    // + assetName (hex suffix, may be empty because parseAssetId uses slice(56)).
+    if (assetId.length < 56) {
+      throw new Error("assetId is too short");
+    }
+    if (!/^[0-9a-fA-F]+$/.test(assetId)) {
+      throw new Error("assetId must be hex");
+    }
+
+    // Ensure duplicate detection is case-insensitive for hex ids.
+    const assetIdKey = assetId.toLowerCase();
+    if (seen.has(assetIdKey)) {
+      throw new Error("duplicate assetId");
+    }
+    seen.add(assetIdKey);
+
+    const qty = validateLovelaceAmountFormat(assetAmount);
+    if (qty <= BigInt(0)) {
+      throw new Error("asset amount must be positive");
+    }
+  }
+};
+
 /** Describes a single native asset transfer within a Cardano transaction. */
 export interface CardanoTxHistoryAsset {
   policyId: string;
@@ -179,6 +219,7 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string; mi
     const hasAssets = this.assets && this.assets.length > 0;
     if (hasAssets) {
       validateNonNegativeLovelaceAmount(this.amount);
+      validateCardanoAssetAmounts(this.assets);
     } else {
       validatePositiveLovelaceAmount(this.amount);
     }
@@ -236,6 +277,7 @@ export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
     const hasAssets = this.assets && this.assets.length > 0;
     if (hasAssets) {
       validateNonNegativeLovelaceAmount(this.amount);
+      validateCardanoAssetAmounts(this.assets);
     } else {
       validatePositiveLovelaceAmount(this.amount);
     }

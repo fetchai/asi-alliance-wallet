@@ -1,6 +1,8 @@
-import { CardanoKeyRing } from "../../../cardano/src/cardano-keyring";
-import { CardanoWalletManager } from "../../../cardano/src/wallet-manager";
-import { getBlockfrostConfigs } from "../../../cardano/src/adapters/env-adapter";
+import {
+  CardanoKeyRing,
+  CardanoWalletManager,
+  getBlockfrostConfigs,
+} from "@keplr-wallet/cardano";
 
 const keyAgentFactory = jest.fn();
 

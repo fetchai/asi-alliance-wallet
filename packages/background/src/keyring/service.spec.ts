@@ -135,9 +135,9 @@ describe("KeyRingService", () => {
 
       expect(mockCreateMnemonicKey).toHaveBeenCalledTimes(1);
       const mergedMeta = mockCreateMnemonicKey.mock.calls[0][3] as Record<string, string>;
-      expect(mergedMeta.cardano).toBe("true");
-      expect(mergedMeta.coinType).toBe("1815");
-      expect(mergedMeta.cardanoSerializedAgent).toBeUndefined();
+      expect(mergedMeta["cardano"]).toBe("true");
+      expect(mergedMeta["coinType"]).toBe("1815");
+      expect(mergedMeta["cardanoSerializedAgent"]).toBeUndefined();
     });
   });
 

@@ -54,8 +54,8 @@ describe("KeyRing security hardening", () => {
       name: "Wallet 1",
       cardano: "true",
     });
-    expect(info[0].meta.cardanoSerializedAgent).toBeUndefined();
-    expect(info[0].meta.unknownField).toBeUndefined();
+    expect(info[0].meta["cardanoSerializedAgent"]).toBeUndefined();
+    expect(info[0].meta["unknownField"]).toBeUndefined();
   });
 
   it("removes legacy cardanoSerializedAgent from persisted keystores on restore", async () => {

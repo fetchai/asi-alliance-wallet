@@ -63,7 +63,9 @@ describe("Cardano message security boundaries", () => {
   });
 
   it("allows amount=0 only when assets are present", () => {
-    const assets = [{ assetId: "policy.asset", amount: "1" }];
+    const policy = "a".repeat(56);
+    const assetId = `${policy}4142`;
+    const assets = [{ assetId, amount: "1" }];
 
     expect(() =>
       new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, assets).validateBasic()
@@ -78,6 +80,63 @@ describe("Cardano message security boundaries", () => {
     expect(() =>
       new BuildSendAdaTxDraftMsg("addr_test1q...", "0").validateBasic()
     ).toThrow("amount must be a positive number");
+  });
+
+  it("validates Cardano assets array (assetId, non-negative asset.amount, no duplicates)", () => {
+    const policy = "a".repeat(56);
+    const assetId1 = `${policy}4142`;
+    const assetIdUpper = `${policy.toUpperCase()}4142`;
+
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: "", amount: "1" },
+      ] as any).validateBasic()
+    ).toThrow();
+
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: "a".repeat(55), amount: "1" },
+      ] as any).validateBasic()
+    ).toThrow();
+
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: "g".repeat(56) + "4142", amount: "1" },
+      ] as any).validateBasic()
+    ).toThrow();
+
+    expect(() =>
+      new BuildSendAdaTxDraftMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        [{ assetId: assetId1, amount: "-1" }] as any
+      ).validateBasic()
+    ).toThrow();
+
+    expect(() =>
+      new BuildSendAdaTxDraftMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        [{ assetId: assetId1, amount: "0" }] as any
+      ).validateBasic()
+    ).toThrow();
+
+    expect(() =>
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        [
+          { assetId: assetId1, amount: "1" },
+          { assetId: assetIdUpper, amount: "2" },
+        ]
+      ).validateBasic()
+    ).toThrow("duplicate assetId");
   });
 });
 
