@@ -61,148 +61,149 @@ export const getHandler: (service: KeyRingService) => Handler = (
   service: KeyRingService
 ) => {
   return (env: Env, msg: Message<unknown>) => {
-    switch (msg.constructor) {
-      case RestoreKeyRingMsg:
+    const msgType = msg.type();
+    switch (msgType) {
+      case RestoreKeyRingMsg.type():
         return handleRestoreKeyRingMsg(service)(env, msg as RestoreKeyRingMsg);
-      case DeleteKeyRingMsg:
+      case DeleteKeyRingMsg.type():
         return handleDeleteKeyRingMsg(service)(env, msg as DeleteKeyRingMsg);
-      case UpdateNameKeyRingMsg:
+      case UpdateNameKeyRingMsg.type():
         return handleUpdateNameKeyRingMsg(service)(
           env,
           msg as UpdateNameKeyRingMsg
         );
-      case ShowKeyRingMsg:
+      case ShowKeyRingMsg.type():
         return handleShowKeyRingMsg(service)(env, msg as ShowKeyRingMsg);
-      case CreateMnemonicKeyMsg:
+      case CreateMnemonicKeyMsg.type():
         return handleCreateMnemonicKeyMsg(service)(
           env,
           msg as CreateMnemonicKeyMsg
         );
-      case AddMnemonicKeyMsg:
+      case AddMnemonicKeyMsg.type():
         return handleAddMnemonicKeyMsg(service)(env, msg as AddMnemonicKeyMsg);
-      case CreatePrivateKeyMsg:
+      case CreatePrivateKeyMsg.type():
         return handleCreatePrivateKeyMsg(service)(
           env,
           msg as CreatePrivateKeyMsg
         );
-      case AddPrivateKeyMsg:
+      case AddPrivateKeyMsg.type():
         return handleAddPrivateKeyMsg(service)(env, msg as AddPrivateKeyMsg);
-      case CreateKeystoneKeyMsg:
+      case CreateKeystoneKeyMsg.type():
         return handleCreateKeystoneKeyMsg(service)(
           env,
           msg as CreateKeystoneKeyMsg
         );
-      case CreateLedgerKeyMsg:
+      case CreateLedgerKeyMsg.type():
         return handleCreateLedgerKeyMsg(service)(
           env,
           msg as CreateLedgerKeyMsg
         );
-      case AddKeystoneKeyMsg:
+      case AddKeystoneKeyMsg.type():
         return handleAddKeystoneKeyMsg(service)(env, msg as AddKeystoneKeyMsg);
-      case AddLedgerKeyMsg:
+      case AddLedgerKeyMsg.type():
         return handleAddLedgerKeyMsg(service)(env, msg as AddLedgerKeyMsg);
-      case LockKeyRingMsg:
+      case LockKeyRingMsg.type():
         return handleLockKeyRingMsg(service)(env, msg as LockKeyRingMsg);
-      case UnlockKeyRingMsg:
+      case UnlockKeyRingMsg.type():
         return handleUnlockKeyRingMsg(service)(env, msg as UnlockKeyRingMsg);
-      case GetKeyMsg:
+      case GetKeyMsg.type():
         return handleGetKeyMsg(service)(env, msg as GetKeyMsg);
-      case GetAccountMsg:
+      case GetAccountMsg.type():
         return handleGetAccountMsg(service)(env, msg as GetAccountMsg);
-      case RequestSignAminoMsg:
+      case RequestSignAminoMsg.type():
         return handleRequestSignAminoMsg(service)(
           env,
           msg as RequestSignAminoMsg
         );
-      case RequestSignEIP712CosmosTxMsg_v0:
+      case RequestSignEIP712CosmosTxMsg_v0.type():
         return handleRequestSignEIP712CosmosTxMsg_v0(service)(
           env,
           msg as RequestSignEIP712CosmosTxMsg_v0
         );
-      case RequestVerifyADR36AminoSignDoc:
+      case RequestVerifyADR36AminoSignDoc.type():
         return handleRequestVerifyADR36AminoSignDoc(service)(
           env,
           msg as RequestVerifyADR36AminoSignDoc
         );
-      case RequestSignDirectMsg:
+      case RequestSignDirectMsg.type():
         return handleRequestSignDirectMsg(service)(
           env,
           msg as RequestSignDirectMsg
         );
-      case RequestICNSAdr36SignaturesMsg:
+      case RequestICNSAdr36SignaturesMsg.type():
         return handleRequestICNSAdr36SignaturesMsg(service)(
           env,
           msg as RequestICNSAdr36SignaturesMsg
         );
-      case GetMultiKeyStoreInfoMsg:
+      case GetMultiKeyStoreInfoMsg.type():
         return handleGetMultiKeyStoreInfoMsg(service)(
           env,
           msg as GetMultiKeyStoreInfoMsg
         );
-      case ChangeKeyRingMsg:
+      case ChangeKeyRingMsg.type():
         return handleChangeKeyRingMsg(service)(env, msg as ChangeKeyRingMsg);
-      case GetIsKeyStoreCoinTypeSetMsg:
+      case GetIsKeyStoreCoinTypeSetMsg.type():
         return handleGetIsKeyStoreCoinTypeSetMsg(service)(
           env,
           msg as GetIsKeyStoreCoinTypeSetMsg
         );
-      case SetKeyStoreCoinTypeMsg:
+      case SetKeyStoreCoinTypeMsg.type():
         return handleSetKeyStoreCoinTypeMsg(service)(
           env,
           msg as SetKeyStoreCoinTypeMsg
         );
-      case CheckPasswordMsg:
+      case CheckPasswordMsg.type():
         return handleCheckPasswordMsg(service)(env, msg as CheckPasswordMsg);
-      case ExportKeyRingDatasMsg:
+      case ExportKeyRingDatasMsg.type():
         return handleExportKeyRingDatasMsg(service)(
           env,
           msg as ExportKeyRingDatasMsg
         );
-      case InitNonDefaultLedgerAppMsg:
+      case InitNonDefaultLedgerAppMsg.type():
         return handleInitNonDefaultLedgerAppMsg(service)(
           env,
           msg as InitNonDefaultLedgerAppMsg
         );
-      case ChangeKeyRingNameMsg:
+      case ChangeKeyRingNameMsg.type():
         return handleChangeKeyNameMsg(service)(
           env,
           msg as ChangeKeyRingNameMsg
         );
-      case StatusMsg:
+      case StatusMsg.type():
         return handleStatusMsg(service)(env, msg as StatusMsg);
-      case RestoreWalletMsg:
+      case RestoreWalletMsg.type():
         return handleRestoreWalletMsg(service)(env, msg as StatusMsg);
-      case LockWalletMsg:
+      case LockWalletMsg.type():
         return handleLockWallet(service)(env, msg as LockWalletMsg);
-      case UnlockWalletMsg:
+      case UnlockWalletMsg.type():
         return handleUnlockWallet(service)(env, msg as UnlockWalletMsg);
-      case CurrentAccountMsg:
+      case CurrentAccountMsg.type():
         return handleCurrentAccountMsg(service)(env, msg as CurrentAccountMsg);
-      case SwitchAccountMsg:
+      case SwitchAccountMsg.type():
         return handleSwitchAccountMsg(service)(env, msg as SwitchAccountMsg);
-      case ListAccountsMsg:
+      case ListAccountsMsg.type():
         return handleListAccountsMsg(service)(env, msg as ListAccountsMsg);
-      case GetKeyMsgFetchSigning:
+      case GetKeyMsgFetchSigning.type():
         return handleGetKeyMsgFetchSigning(service)(
           env,
           msg as GetKeyMsgFetchSigning
         );
-      case RequestSignAminoMsgFetchSigning:
+      case RequestSignAminoMsgFetchSigning.type():
         return handleRequestSignAminoMsgFetchSigning(service)(
           env,
           msg as RequestSignAminoMsgFetchSigning
         );
-      case RequestSignDirectMsgFetchSigning:
+      case RequestSignDirectMsgFetchSigning.type():
         return handleRequestSignDirectMsgFetchSigning(service)(
           env,
           msg as RequestSignDirectMsgFetchSigning
         );
-      case RequestVerifyADR36AminoSignDocFetchSigning:
+      case RequestVerifyADR36AminoSignDocFetchSigning.type():
         return handleRequestVerifyADR36AminoSignDocFetchSigning(service)(
           env,
           msg as RequestVerifyADR36AminoSignDocFetchSigning
         );
-      case RefreshAccountList:
+      case RefreshAccountList.type():
         return handleRefreshAccountListMsg(service)(
           env,
           msg as RefreshAccountList

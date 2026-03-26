@@ -2077,7 +2077,7 @@ export class KeyRing {
       if (cached) {
         keys.push({
           name: walletName,
-          algo: "ed25519",
+          algo: "cardano_address_only",
           pubKey: cached.pubKey,
           address: cached.address,
           isKeystone: false,
@@ -2103,7 +2103,7 @@ export class KeyRing {
           });
           keys.push({
             name: walletName,
-            algo: "ed25519",
+            algo: "cardano_address_only",
             pubKey: pubKeyBytes,
             address: addressBytes,
             isKeystone: false,
