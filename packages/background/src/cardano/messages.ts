@@ -1,6 +1,15 @@
 import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 
+const validatePositiveLovelaceAmount = (amount: string): void => {
+  if (!/^[0-9]+$/.test(amount)) {
+    throw new Error("amount must be a positive integer string");
+  }
+  if (BigInt(amount) <= BigInt(0)) {
+    throw new Error("amount must be a positive number");
+  }
+};
+
 /** Describes a single native asset transfer within a Cardano transaction. */
 export interface CardanoTxHistoryAsset {
   policyId: string;
@@ -31,11 +40,13 @@ export interface CardanoTxHistoryItem {
   timestamp?: number; // Unix ms, derived from slot using per-network genesis constants
   fromAddresses?: string[]; // non-own input addresses (sender side)
   toAddresses?: string[]; // non-own output addresses (receiver side)
+  isDegraded?: boolean; // true when tx data could not be fully resolved (e.g. unresolved inputs)
 }
 
 export interface CardanoTxHistoryResponse {
   items: CardanoTxHistoryItem[];
   mightHaveMore: boolean;
+  hasDegradedItems?: boolean;
 }
 
 export type CardanoServiceState =
@@ -67,6 +78,7 @@ export interface CardanoTxHistoryStateResponse {
   state: CardanoServiceState;
   items: CardanoTxHistoryItem[];
   mightHaveMore: boolean;
+  hasDegradedItems?: boolean;
   error?: string;
 }
 
@@ -157,8 +169,8 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string; mi
     }
 
     const hasAssets = this.assets && this.assets.length > 0;
-    if (!hasAssets && (isNaN(Number(this.amount)) || Number(this.amount) <= 0)) {
-      throw new Error("amount must be a positive number");
+    if (!hasAssets) {
+      validatePositiveLovelaceAmount(this.amount);
     }
   }
 
@@ -212,8 +224,8 @@ export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
     }
 
     const hasAssets = this.assets && this.assets.length > 0;
-    if (!hasAssets && (isNaN(Number(this.amount)) || Number(this.amount) <= 0)) {
-      throw new Error("amount must be a positive number");
+    if (!hasAssets) {
+      validatePositiveLovelaceAmount(this.amount);
     }
   }
 

@@ -876,7 +876,7 @@ export class KeyRing {
         const activePub =
           (activeKey.algo === "ed25519" ||
             activeKey.algo === "cardano_address_only")
-            ? Buffer.from(activeKey.pubKey).toString("utf8")
+            ? Buffer.from(activeKey.pubKey).toString("hex")
             : "";
 
         existingCache[activeWalletId] = {

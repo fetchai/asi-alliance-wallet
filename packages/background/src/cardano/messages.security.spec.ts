@@ -12,6 +12,7 @@ import {
   LoadMoreCardanoTxHistoryMsg,
 } from "./messages";
 import { getHandler } from "./handler";
+import { of } from "rxjs";
 
 describe("Cardano message security boundaries", () => {
   it("keeps EstimateSendAda internal-only", () => {
@@ -37,6 +38,28 @@ describe("Cardano message security boundaries", () => {
 
   it("keeps IsCardanoReady internal-only", () => {
     expect(new IsCardanoReadyMsg().approveExternal()).toBe(false);
+  });
+
+  it("accepts large integer lovelace amounts in estimate/build validation", () => {
+    const huge = "123456789012345678901234567890";
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", huge).validateBasic()
+    ).not.toThrow();
+    expect(() =>
+      new BuildSendAdaTxDraftMsg("addr_test1q...", huge).validateBasic()
+    ).not.toThrow();
+  });
+
+  it("rejects non-integer amount formats in estimate/build validation", () => {
+    const invalid = ["1.2", "1e6", " 10", "+10", "-10", "abc", "0"];
+    for (const amount of invalid) {
+      expect(() =>
+        new EstimateSendAdaMsg("addr_test1q...", amount).validateBasic()
+      ).toThrow();
+      expect(() =>
+        new BuildSendAdaTxDraftMsg("addr_test1q...", amount).validateBasic()
+      ).toThrow();
+    }
   });
 });
 
@@ -152,5 +175,41 @@ describe("Cardano handler security boundaries", () => {
         "This message is only supported for internal requests"
       );
     }
+  });
+
+  it("propagates degraded tx history semantics to response", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+      isInitialized: jest.fn(() => true),
+      getTxHistory: jest.fn(async () => ({
+        items: [{ id: "tx1", direction: "unknown", amount: "0", isDegraded: true }],
+        mightHaveMore: false,
+        hasDegradedItems: true,
+      })),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => undefined),
+      getKeyRing: jest.fn(() => ({
+        getCurrentKeyStore: () => ({ meta: { __id__: "wallet-id" } }),
+      })),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    const result = await handler(
+      { isInternalMsg: true } as any,
+      new GetCardanoTxHistoryMsg(10, "cardano-mainnet") as any
+    );
+
+    expect(result).toEqual({
+      state: "ready_with_data",
+      items: [{ id: "tx1", direction: "unknown", amount: "0", isDegraded: true }],
+      mightHaveMore: false,
+      hasDegradedItems: true,
+      error: "tx_history_partial_data",
+    });
   });
 });

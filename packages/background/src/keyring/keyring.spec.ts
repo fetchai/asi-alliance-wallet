@@ -79,4 +79,40 @@ describe("KeyRing security hardening", () => {
     expect(persistedCurrent?.meta?.cardanoSerializedAgent).toBeUndefined();
     expect(persistedMulti?.[0]?.meta?.cardanoSerializedAgent).toBeUndefined();
   });
+
+  it("writes Cardano active wallet pubKey in hex format", async () => {
+    const kvStore = new MemoryKVStore("keyring-cardano-cache-hex-write");
+    const keyRing = makeKeyRing(kvStore);
+    const loadSpy = jest
+      .spyOn(keyRing, "loadCardanoChainCache")
+      .mockResolvedValue({});
+    const saveSpy = jest
+      .spyOn(keyRing, "saveCardanoChainCache")
+      .mockResolvedValue();
+
+    await (keyRing as any).updateCacheForActiveWallet(
+      "cardano-preview",
+      [
+        {
+          algo: "cardano_address_only",
+          pubKey: Uint8Array.from([0xde, 0xad, 0xbe, 0xef]),
+          address: Buffer.from("addr_test1qpz", "utf8"),
+          isKeystone: false,
+          isNanoLedger: false,
+        },
+      ],
+      ["wallet-id-1"],
+      ["Wallet 1"],
+      "wallet-id-1",
+      true
+    );
+
+    expect(loadSpy).toHaveBeenCalledWith("cardano-preview");
+    expect(saveSpy).toHaveBeenCalledWith("cardano-preview", {
+      "wallet-id-1": {
+        address: "addr_test1qpz",
+        pubKey: "deadbeef",
+      },
+    });
+  });
 });

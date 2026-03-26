@@ -40,9 +40,9 @@ export class CardanoService {
       walletId: string;
       walletManagerRef: unknown;
       hasRealEmission: boolean;
-      last: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean };
+      last: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean };
       loader: ReturnType<typeof createTxHistoryLoader>;
-      latest$: ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean }>;
+      latest$: ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean }>;
       sub: Subscription;
       errorSub: Subscription;
     }
@@ -726,7 +726,7 @@ export class CardanoService {
   }
 
   private async withPendingTxs(
-    res: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean },
+    res: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean },
     chainId?: string
   ): Promise<CardanoTxHistoryResponse> {
     const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
@@ -829,7 +829,8 @@ export class CardanoService {
 
     return {
       items: [...Array.from(mergedPendingById.values()), ...(res.items || [])],
-      mightHaveMore: res.mightHaveMore
+      mightHaveMore: res.mightHaveMore,
+      hasDegradedItems: res.hasDegradedItems || (res.items || []).some((item) => item.isDegraded === true),
     };
   }
 
@@ -886,14 +887,14 @@ export class CardanoService {
       pageSize
     );
 
-    const latest$ = new ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean }>(1);
+    const latest$ = new ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean }>(1);
 
     const controller = {
       pageSize,
       walletId,
       walletManagerRef: walletManager,
       hasRealEmission: false,
-      last: { items: [] as CardanoTxHistoryItem[], mightHaveMore: true },
+      last: { items: [] as CardanoTxHistoryItem[], mightHaveMore: true, hasDegradedItems: false },
       loader,
       latest$,
       // will be assigned below
@@ -910,7 +911,11 @@ export class CardanoService {
           chainKey
         );
         controller.hasRealEmission = true;
-        const next = { items, mightHaveMore: loaded.mightHaveMore };
+        const next = {
+          items,
+          mightHaveMore: loaded.mightHaveMore,
+          hasDegradedItems: items.some((item) => item.isDegraded === true),
+        };
         controller.last = next;
         latest$.next(next);
         await this.txHistoryStore?.set(chainKey, walletId, next);
@@ -1036,6 +1041,7 @@ export class CardanoService {
       let ownedInputsCoins = BigInt(0);
       const ownedInputAssets = new Map<string, bigint>();
       const nonOwnInputAddrs: string[] = [];
+      let isInputResolutionDegraded = false;
       try {
         const inputs = getInputs(tx);
         const missingInputs: any[] = [];
@@ -1061,8 +1067,15 @@ export class CardanoService {
 
         if (missingInputs.length > 0) {
           const resolvedInputs = await getTxInputsValueAndAddress(missingInputs, chainHistoryProvider, wallet as any);
+          if (resolvedInputs.length < missingInputs.length) {
+            isInputResolutionDegraded = true;
+          }
           for (const input of resolvedInputs) {
             const addr = String(input?.address ?? "");
+            if (!addr || input?.value == null) {
+              isInputResolutionDegraded = true;
+              continue;
+            }
             if (walletAddresses.has(addr)) {
               ownedInputsCoins += getCoins(input?.value);
               for (const [assetId, qty] of getAssetsFromValue(input?.value)) {
@@ -1074,7 +1087,7 @@ export class CardanoService {
           }
         }
       } catch {
-        // If inputs can't be resolved, leave as 0 and fall back to unknown direction.
+        isInputResolutionDegraded = true;
       }
 
       const fee = getFee(tx);
@@ -1083,7 +1096,10 @@ export class CardanoService {
       let direction: CardanoTxHistoryItem["direction"] = "unknown";
       let amount = BigInt(0);
 
-      if (net > 0) {
+      if (isInputResolutionDegraded) {
+        direction = "unknown";
+        amount = BigInt(0);
+      } else if (net > 0) {
         direction = "received";
         amount = net;
       } else if (net < 0) {
@@ -1142,6 +1158,7 @@ export class CardanoService {
         timestamp: slot != null ? CardanoService.slotToTimestampMs(slot, chainKey) : undefined,
         fromAddresses,
         toAddresses,
+        isDegraded: isInputResolutionDegraded || undefined,
       });
     }
 

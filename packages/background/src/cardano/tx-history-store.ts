@@ -4,6 +4,7 @@ import type { CardanoTxHistoryItem } from "./messages";
 export type CardanoTxHistorySnapshot = {
   items: CardanoTxHistoryItem[];
   mightHaveMore: boolean;
+  hasDegradedItems?: boolean;
 };
 
 export class CardanoTxHistoryStore {

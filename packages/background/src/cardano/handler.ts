@@ -476,6 +476,7 @@ const handleGetCardanoTxHistoryMsg: (
         state: "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
+        hasDegradedItems: false,
         error: "cardano_not_initialized",
       };
     }
@@ -486,6 +487,7 @@ const handleGetCardanoTxHistoryMsg: (
         state: runtimeState === "provider_unavailable" ? "provider_error" : "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
+        hasDegradedItems: false,
         error: runtimeState === "provider_unavailable" ? "provider_unavailable" : "cardano_not_ready",
       };
     }
@@ -500,6 +502,7 @@ const handleGetCardanoTxHistoryMsg: (
           state: "syncing",
           items: [],
           mightHaveMore: false,
+          hasDegradedItems: false,
           error: "wallet_sync_in_progress",
         };
       }
@@ -512,12 +515,15 @@ const handleGetCardanoTxHistoryMsg: (
         state: res.items.length > 0 ? "ready_with_data" : "empty_valid",
         items: res.items,
         mightHaveMore: res.mightHaveMore,
+        hasDegradedItems: Boolean(res.hasDegradedItems),
+        error: res.hasDegradedItems ? "tx_history_partial_data" : undefined,
       };
     } catch (error) {
       return {
         state: stateFromError(error),
         items: [],
         mightHaveMore: false,
+        hasDegradedItems: false,
         error: errorMessage(error),
       };
     }
@@ -543,6 +549,7 @@ const handleLoadMoreCardanoTxHistoryMsg: (
         state: "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
+        hasDegradedItems: false,
         error: "cardano_not_initialized",
       };
     }
@@ -556,6 +563,7 @@ const handleLoadMoreCardanoTxHistoryMsg: (
         state: runtimeState === "provider_unavailable" ? "provider_error" : "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
+        hasDegradedItems: false,
         error: runtimeState === "provider_unavailable" ? "provider_unavailable" : "cardano_not_ready",
       };
     }
@@ -570,6 +578,7 @@ const handleLoadMoreCardanoTxHistoryMsg: (
           state: "syncing",
           items: [],
           mightHaveMore: false,
+          hasDegradedItems: false,
           error: "wallet_sync_in_progress",
         };
       }
@@ -582,12 +591,15 @@ const handleLoadMoreCardanoTxHistoryMsg: (
         state: res.items.length > 0 ? "ready_with_data" : "empty_valid",
         items: res.items,
         mightHaveMore: res.mightHaveMore,
+        hasDegradedItems: Boolean(res.hasDegradedItems),
+        error: res.hasDegradedItems ? "tx_history_partial_data" : undefined,
       };
     } catch (error) {
       return {
         state: stateFromError(error),
         items: [],
         mightHaveMore: false,
+        hasDegradedItems: false,
         error: errorMessage(error),
       };
     }
