@@ -138,9 +138,15 @@ export const StoreProvider: FunctionComponent<PropsWithChildren> = ({
     const disposal5 = addGlobalEventListener(
       "keplr_suggested_chain_added",
       async () => {
+        const current = stores.chainStore.current;
+        const selectedChainId = stores.chainStore.selectedChainId;
         await stores.keyRingStore.refreshKeyRingStatus();
         await stores.chainStore.updateChainInfosFromBackground();
         await stores.chainStore.updateEnabledChainIdentifiersFromBackground();
+        if (current.chainId !== selectedChainId) {
+          await stores.chainStore.selectChain(selectedChainId);
+          await stores.chainStore.saveLastViewChainId();
+        }
       }
     );
 

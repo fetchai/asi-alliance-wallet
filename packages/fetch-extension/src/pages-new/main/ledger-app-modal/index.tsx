@@ -8,6 +8,7 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { TryLedgerInitMsg, LedgerApp } from "@keplr-wallet/background";
 import { useNavigate } from "react-router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
   const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
@@ -33,9 +34,8 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
   const isOpen = (() => {
     if (
       accountInfo.rejectionReason &&
-      accountInfo.rejectionReason.message.includes(
-        "No ethereum public key. Initialize ethereum app on Ledger by selecting the chain in the extension"
-      )
+      accountInfo.rejectionReason instanceof WalletError &&
+      accountInfo.rejectionReason.code === 901
     ) {
       return true;
     }

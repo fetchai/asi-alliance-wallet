@@ -66,7 +66,7 @@ export const AssetView = observer(() => {
 
   const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
     accountInfo.bech32Address
-  ).vestingAccount;
+  ).isVestingAccount;
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -118,7 +118,6 @@ export const AssetView = observer(() => {
     accountInfo.bech32Address
   ).vestingAccount;
   const latestBlockTime = queries.cosmos.queryRPCStatus.latestBlockTime;
-
   const vestingEndTimeStamp = Number(
     vestingInfo.base_vesting_account?.end_time
   );

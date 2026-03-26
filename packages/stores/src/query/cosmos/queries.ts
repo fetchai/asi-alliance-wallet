@@ -143,21 +143,6 @@ export class CosmosQueriesImpl {
       chainId,
       chainGetter
     );
-
-    base.queryBalances.addBalanceRegistry(
-      new ObservableQueryCosmosBalanceRegistry(sharedContext)
-    );
-
-    this.queryAccount = new ObservableQueryAccount(
-      sharedContext,
-      chainId,
-      chainGetter
-    );
-    this.querySpendableBalances = new ObservableQuerySpendableBalances(
-      sharedContext,
-      chainId,
-      chainGetter
-    );
     this.queryMint = new ObservableQueryMintingInfation(
       sharedContext,
       chainId,
@@ -175,12 +160,6 @@ export class CosmosQueriesImpl {
     );
 
     this.querySupplyTotal = new ObservableQuerySupplyTotal(
-      sharedContext,
-      chainId,
-      chainGetter
-    );
-
-    this.queryDistributionParams = new ObservableQueryDistributionParams(
       sharedContext,
       chainId,
       chainGetter

@@ -426,12 +426,13 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                       ids.add(data.id);
                     }
                   }
+                  const dataToApprove = {
+                    ...chainInfo,
+                    updateFromRepoDisabled,
+                  } as ChainInfo;
                   await chainSuggestStore.approveWithProceedNext(
                     Array.from(ids),
-                    {
-                      ...chainInfo,
-                      updateFromRepoDisabled,
-                    } as ChainInfo,
+                    dataToApprove,
                     async (proceedNext) => {
                       loadingIndicator.setIsLoading(
                         "chain-suggest-switch",
@@ -441,9 +442,9 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                       await chainStore.updateChainInfosFromBackground();
                       await chainStore.updateEnabledChainIdentifiersFromBackground();
                       if (chainInfo) {
-                        chainStore.selectChain(chainInfo?.chainId);
+                        await chainStore.selectChain(chainInfo?.chainId);
                       }
-                      chainStore.saveLastViewChainId();
+                      await chainStore.saveLastViewChainId();
                       analyticsStore.logEvent("approve_click");
 
                       dispatchGlobalEventExceptSelf(
@@ -460,6 +461,11 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                             false
                           );
                           handleExternalInteractionWithNoProceedNext();
+                        } else if (
+                          interactionInfo.interaction &&
+                          interactionInfo.interactionInternal
+                        ) {
+                          navigate("/");
                         }
                       }
                     }

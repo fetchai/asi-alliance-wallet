@@ -19,6 +19,7 @@ import { debounce } from "lodash";
 import { INITIAL_CHAIN_CONFIG } from "./constants";
 import { useNotification } from "@components/notification";
 import { useWebSocketSupport } from "../../../use-rpc-websocket-support";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 type EndpointCheckResult = {
   valid: boolean;
@@ -308,7 +309,7 @@ export const AddCosmosChain: FunctionComponent = () => {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     try {
-      loadingIndicator.setIsLoading("chain-details-adding", true);
+      loadingIndicator.setIsLoading("chain-suggest-switch", true);
       // checking if the provided endpoint is a valid rest/rpc url
       const [rpcResult, restResult] = await Promise.all([
         checkEndpointValidity(newChainInfo.rpc, "rpc"),
@@ -335,18 +336,36 @@ export const AddCosmosChain: FunctionComponent = () => {
         setInfo(
           "Invalid REST or RPC endpoint. Please provide a valid endpoint."
         );
-        loadingIndicator.setIsLoading("chain-details-adding", false);
+        loadingIndicator.setIsLoading("chain-suggest-switch", false);
         return;
       }
-      chainStore.addCustomChainInfo(newChainInfo);
-      chainStore.selectChain(newChainInfo.chainId);
-      loadingIndicator.setIsLoading("chain-details-adding", false);
+      await chainStore.addCustomChainInfo(newChainInfo);
+      dispatchGlobalEventExceptSelf("keplr_suggested_chain_added");
+      await chainStore.selectChain(newChainInfo.chainId);
+      await chainStore.saveLastViewChainId();
+      notification.push({
+        type: "success",
+        placement: "top-center",
+        duration: 5,
+        content: `Succesfully added chain ${newChainInfo.chainName}`,
+        canDelete: true,
+        transition: { duration: 0.25 },
+      });
+      navigate("/", { replace: true });
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new Cosmos chain",
       });
     } catch (error) {
       console.error(error);
-      loadingIndicator.setIsLoading("chain-details-adding", false);
+      loadingIndicator.setIsLoading("chain-suggest-switch", false);
+      notification.push({
+        type: "danger",
+        placement: "top-center",
+        duration: 5,
+        content: error.message || "Unable to add custom chain",
+        canDelete: true,
+        transition: { duration: 0.25 },
+      });
       setInfo("Error adding chain.");
       setHasErrors(true);
     }
@@ -597,7 +616,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           }}
           disabled={!isValid}
           text={
-            loadingIndicator.isLoading("chain-details-adding") ||
+            loadingIndicator.isLoading("chain-suggest-switch") ||
             loadingIndicator.isLoading("chain-details")
               ? "Loading..."
               : "Add Chain"

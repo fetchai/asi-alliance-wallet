@@ -8,7 +8,7 @@ import {
   PrefixKVStore,
   sortedJsonByKeyStringify,
 } from "@keplr-wallet/common";
-import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { Bech32Address, ChainIdHelper } from "@keplr-wallet/cosmos";
 import { Env, WEBPAGE_PORT } from "@keplr-wallet/router";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
 import {
@@ -565,6 +565,7 @@ export class ChainsService {
         ? res.data
         : {
             ...res.data,
+            bech32Config: Bech32Address.defaultBech32Config("fetch"),
             rest: res.data.rpc,
             evm: {
               chainId: parseInt(res.data.chainId.replace("eip155:", ""), 10),

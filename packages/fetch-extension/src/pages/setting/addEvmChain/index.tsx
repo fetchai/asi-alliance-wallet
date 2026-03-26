@@ -6,13 +6,16 @@ import { Form } from "reactstrap";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import style from "./style.module.scss";
 import { useStore } from "../../../stores";
-import { Bech32Address } from "@keplr-wallet/cosmos";
 import axios from "axios";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { ChainInfo } from "@keplr-wallet/types";
+import { Bech32Address } from "@keplr-wallet/cosmos";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+import { useNotification } from "@components/notification";
 
 export const AddEvmChain: FunctionComponent = () => {
   const navigate = useNavigate();
+  const notification = useNotification();
   const { chainStore, analyticsStore } = useStore();
   const [hasErrors, setHasErrors] = useState(false);
   const [info, setInfo] = useState("");
@@ -54,7 +57,7 @@ export const AddEvmChain: FunctionComponent = () => {
         },
       },
     ],
-    features: ["evm"],
+    features: ["eth-address-gen", "eth-key-sign"],
   };
   const [newChainInfo, setNewChainInfo] = useState(initialState);
 
@@ -112,6 +115,11 @@ export const AddEvmChain: FunctionComponent = () => {
         const symbol = chainData.nativeCurrency.symbol;
         setNewChainInfo({
           ...newChainInfo,
+          evm: {
+            chainId,
+            rpc: rpcUrl,
+            websocket: "",
+          },
           currencies: [
             {
               coinDenom: symbol,
@@ -144,9 +152,8 @@ export const AddEvmChain: FunctionComponent = () => {
           ],
           rpc: rpcUrl,
           rest: rpcUrl,
-          chainId: chainId.toString(),
+          chainId: `eip155:${chainId.toString()}`,
           chainName: chainData.name,
-          bech32Config: Bech32Address.defaultBech32Config(symbol.toLowerCase()),
         });
       } else {
         setInfo(
@@ -239,15 +246,36 @@ export const AddEvmChain: FunctionComponent = () => {
 
   const isValid = !hasErrors && newChainInfo.rpc && newChainInfo.chainId;
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     try {
-      chainStore.addCustomChainInfo(newChainInfo);
-      chainStore.selectChain(newChainInfo.chainId);
+      loadingIndicator.setIsLoading("chain-suggest-switch", true);
+      await chainStore.addCustomChainInfo(newChainInfo);
+      dispatchGlobalEventExceptSelf("keplr_suggested_chain_added");
+      await chainStore.selectChain(newChainInfo.chainId);
+      await chainStore.saveLastViewChainId();
+      notification.push({
+        type: "success",
+        placement: "top-center",
+        duration: 5,
+        content: `Succesfully added chain ${newChainInfo.chainName}`,
+        canDelete: true,
+        transition: { duration: 0.25 },
+      });
+      navigate("/", { replace: true });
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new EVM chain",
       });
     } catch (error) {
+      notification.push({
+        type: "danger",
+        placement: "top-center",
+        duration: 5,
+        content: error.message || "Unable to add custom chain",
+        canDelete: true,
+        transition: { duration: 0.25 },
+      });
+      loadingIndicator.setIsLoading("chain-suggest-switch", false);
       console.log("error", error);
     }
   };
@@ -339,7 +367,12 @@ export const AddEvmChain: FunctionComponent = () => {
             fontWeight: 400,
           }}
           disabled={!isValid}
-          text="Add Chain"
+          text={
+            loadingIndicator.isLoading("chain-suggest-switch") ||
+            loadingIndicator.isLoading("chain-details")
+              ? "Loading..."
+              : "Add Chain"
+          }
         />
       </Form>
     </HeaderLayout>

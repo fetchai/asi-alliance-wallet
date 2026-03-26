@@ -236,7 +236,11 @@ export const ChainInfoSchema = Joi.object<ChainInfo>({
 
       return values;
     }),
-  bech32Config: Bech32ConfigSchema,
+  bech32Config: Joi.when("chainId", {
+    is: Joi.string().pattern(/^eip155:/),
+    then: Joi.any().optional(),
+    otherwise: Bech32ConfigSchema.required(),
+  }),
   currencies: Joi.array()
     .min(1)
     .items(CurrencySchema, CW20CurrencySchema, Secret20CurrencySchema)
@@ -345,11 +349,11 @@ export const ChainInfoSchema = Joi.object<ChainInfo>({
       );
     }
 
-    if (value.bech32Config != null) {
-      throw new Error(
-        "if chainId is EIP-155 chain id defined in CAIP-2, bech32Config should be undefined"
-      );
-    }
+    // if (value.bech32Config != null) {
+    //   throw new Error(
+    //     "if chainId is EIP-155 chain id defined in CAIP-2, bech32Config should be undefined"
+    //   );
+    // }
   }
 
   if (!value.bech32Config) {
