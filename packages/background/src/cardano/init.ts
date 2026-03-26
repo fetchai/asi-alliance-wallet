@@ -1,7 +1,5 @@
 import { Router } from "@keplr-wallet/router";
 import {
-  SendAdaMsg,
-  SendAdaWithPasswordMsg,
   GetCardanoBalanceMsg,
   IsCardanoReadyMsg,
   EstimateSendAdaMsg,
@@ -26,8 +24,6 @@ export function init(
   keyRingService: KeyRingService,
   permissionService: PermissionService
 ): void {
-  router.registerMessage(SendAdaMsg);
-  router.registerMessage(SendAdaWithPasswordMsg);
   router.registerMessage(GetCardanoBalanceMsg);
   router.registerMessage(IsCardanoReadyMsg);
   router.registerMessage(EstimateSendAdaMsg);

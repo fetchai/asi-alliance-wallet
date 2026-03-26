@@ -19,6 +19,22 @@ type CardanoSignOptions = KeplrSignOptions & {
   };
 };
 
+function displayAmountToBaseUnits(amount: string, decimals: number): string {
+  const normalized = amount.trim();
+  if (!normalized) {
+    throw new Error("Amount is empty");
+  }
+  if (!/^\d+(\.\d+)?$/.test(normalized)) {
+    throw new Error("Invalid amount format");
+  }
+
+  const [wholePart, fractionPartRaw = ""] = normalized.split(".");
+  const truncatedFraction = fractionPartRaw.slice(0, decimals);
+  const paddedFraction = truncatedFraction.padEnd(decimals, "0");
+  const units = `${wholePart}${paddedFraction}`.replace(/^0+(?=\d)/, "");
+  return units || "0";
+}
+
 function getCardanoSpendingPassword(
   signOptions?: KeplrSignOptions
 ): string | undefined {
@@ -53,11 +69,7 @@ export class CardanoSendAdapter {
     }
 
     // Convert display amount to base units
-    const actualAmount = (() => {
-      let dec = parseFloat(amount);
-      dec = dec * Math.pow(10, currency.coinDecimals);
-      return Math.floor(dec).toString();
-    })();
+    const actualAmount = displayAmountToBaseUnits(amount, currency.coinDecimals);
 
     // Build assets array for native token sends
     let assets: CardanoAssetAmount[] | undefined;

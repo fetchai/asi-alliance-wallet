@@ -1,7 +1,5 @@
 import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
 import {
-  SendAdaMsg,
-  SendAdaWithPasswordMsg,
   GetCardanoBalanceMsg,
   IsCardanoReadyMsg,
   EstimateSendAdaMsg,
@@ -34,16 +32,6 @@ export const getHandler: (
     const msgType = msg.type();
 
     switch (msgType) {
-      case SendAdaMsg.type():
-        return handleSendAdaMsg(service, keyRingService)(
-          env,
-          msg as SendAdaMsg
-        );
-      case SendAdaWithPasswordMsg.type():
-        return handleSendAdaWithPasswordMsg(service, keyRingService)(
-          env,
-          msg as SendAdaWithPasswordMsg
-        );
       case BuildSendAdaTxDraftMsg.type():
         return handleBuildSendAdaTxDraftMsg(service, keyRingService)(
           env,
@@ -84,136 +72,6 @@ export const getHandler: (
       default:
         console.error("[Cardano Handler] Unknown message type:", msgType);
         throw new Error(`Unknown msg type: ${msgType}`);
-    }
-  };
-};
-
-/**
- * Handler for sending ADA transaction with password confirmation (internal only).
- */
-const handleSendAdaWithPasswordMsg: (
-  service: CardanoService,
-  keyRingService: KeyRingService
-) => InternalHandler<SendAdaWithPasswordMsg> = (service, keyRingService) => {
-  return async (env, msg) => {
-    if (!env.isInternalMsg) {
-      throw new Error("This message is only supported for internal requests");
-    }
-
-    // Password confirmation step: require correct password even if the keyring is already unlocked.
-    if (!keyRingService.checkPassword(msg.password)) {
-      throw new Error("Invalid password");
-    }
-
-    // Ensure Cardano service is initialized for the requested network (requires unlocked keyring).
-    if (msg.chainId) {
-      await keyRingService.ensureCardanoServiceReady(msg.chainId);
-    }
-
-    if (!service.isReady()) {
-      throw new Error("Cardano service not ready. Please unlock wallet first.");
-    }
-
-    // Keep existing sync safety check.
-    try {
-      const walletManager = service.getWalletManager();
-      if (walletManager && walletManager.hasWallet()) {
-        const { firstValueFrom } = await import("rxjs");
-        const { filter, take, timeout } = await import("rxjs/operators");
-
-        try {
-          await firstValueFrom(
-            walletManager.syncStatus$.pipe(
-              filter((isSettled: boolean) => isSettled === true),
-              take(1),
-              timeout(5000)
-            )
-          );
-        } catch (syncError: any) {
-          const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(
-            () => false
-          );
-          if (!isSettled) {
-            throw new Error("Wallet is syncing. Please wait and try again.");
-          }
-        }
-      }
-    } catch (error: any) {
-      if (error?.message?.includes("syncing")) {
-        throw error;
-      }
-      // Continue if sync check fails (wallet might not have this capability)
-    }
-
-    return await service.sendAda({
-      to: msg.to,
-      amount: msg.amount,
-      memo: msg.memo,
-      assets: msg.assets,
-    });
-  };
-};
-
-/**
- * Handler for sending ADA transaction
- */
-const handleSendAdaMsg: (
-  service: CardanoService,
-  keyRingService: KeyRingService
-) => InternalHandler<SendAdaMsg> = (service, keyRingService) => {
-  return async (env, msg) => {
-    if (!env.isInternalMsg) {
-      throw new Error("External direct-send is disabled. Use signing flow.");
-    }
-
-    // If chainId is provided, ensure service is ready for that network
-    if (msg.chainId) {
-      await keyRingService.ensureCardanoServiceReady(msg.chainId);
-    }
-
-    if (!service.isReady()) {
-      throw new Error("Cardano service not ready. Please unlock wallet first.");
-    }
-
-    try {
-      const walletManager = service.getWalletManager();
-      if (walletManager && walletManager.hasWallet()) {
-        const { firstValueFrom } = await import('rxjs');
-        const { filter, take, timeout } = await import('rxjs/operators');
-
-        try {
-          await firstValueFrom(
-            walletManager.syncStatus$.pipe(
-              filter((isSettled: boolean) => isSettled === true),
-              take(1),
-              timeout(5000) // 5 seconds - if already synced, will return immediately
-            )
-          );
-        } catch (syncError: any) {
-          // Check current state
-          const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(() => false);
-          if (!isSettled) {
-            throw new Error("Wallet is syncing. Please wait and try again.");
-          }
-        }
-      }
-    } catch (error: any) {
-      if (error?.message?.includes('syncing')) {
-        throw error;
-      }
-      // Continue if sync check fails (wallet might not have this capability)
-    }
-
-    try {
-      const txHash = await service.sendAda({
-        to: msg.to,
-        amount: msg.amount,
-        memo: msg.memo,
-        assets: msg.assets,
-      });
-      return txHash;
-    } catch (error) {
-      throw error;
     }
   };
 };
@@ -417,7 +275,7 @@ const handleSubmitSendAdaTxDraftMsg: (
       "/cardano/send-confirm",
       "request-cardano-send",
       {
-        origin: env.origin || "wallet-ui",
+        origin: (env as { origin?: string }).origin || "wallet-ui",
         source: "wallet-ui",
         ...approvalData.draft,
         createdAt: approvalData.createdAt,
@@ -476,7 +334,7 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
       "/cardano/send-confirm",
       "request-cardano-send",
       {
-        origin: env.origin || "wallet-ui",
+        origin: (env as { origin?: string }).origin || "wallet-ui",
         source: "wallet-ui",
         ...approvalData.draft,
         createdAt: approvalData.createdAt,

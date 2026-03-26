@@ -29,6 +29,10 @@ import { useNotification } from "@components/notification";
 export interface QRCodeSharedData {
   // The uri for the wallet connect
   wcURI: string;
+  // Session-bound identifier to prevent cross-session replay.
+  sessionId: string;
+  // One-time token that must be echoed by the importer.
+  requestToken: string;
   // The temporary password for encrypt/descrypt the key datas.
   // This must not be shared the other than the extension and mobile.
   sharedPassword: string;
@@ -157,7 +161,6 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
             }
             onSetExportKeyRingDatas(keyRingData);
           } catch (e) {
-            console.log("Fail to decrypt: " + e.message);
             setError("password", {
               message: intl.formatMessage({
                 id: "setting.export-to-mobile.input.password.error.invalid",
@@ -267,7 +270,6 @@ const QRCodeView: FunctionComponent<{
     if (connector) {
       connector.on("display_uri", (error, payload) => {
         if (error) {
-          console.log(error);
           navigate("/");
           return;
         }
@@ -275,10 +277,18 @@ const QRCodeView: FunctionComponent<{
         const bytes = new Uint8Array(32);
         crypto.getRandomValues(bytes);
         const password = Buffer.from(bytes).toString("hex");
+        const sessionBytes = new Uint8Array(16);
+        crypto.getRandomValues(sessionBytes);
+        const sessionId = Buffer.from(sessionBytes).toString("hex");
+        const tokenBytes = new Uint8Array(16);
+        crypto.getRandomValues(tokenBytes);
+        const requestToken = Buffer.from(tokenBytes).toString("hex");
 
         const uri = payload.params[0] as string;
         setQRCodeData({
           wcURI: uri,
+          sessionId,
+          requestToken,
           sharedPassword: password,
         });
       });
@@ -289,7 +299,6 @@ const QRCodeView: FunctionComponent<{
 
   const onConnect = (error: any) => {
     if (error) {
-      console.log(error);
       navigate("/");
     }
   };
@@ -301,12 +310,14 @@ const QRCodeView: FunctionComponent<{
       return;
     }
 
+    const reqParams = payload?.params?.[0] ?? {};
     if (
       isExpired ||
       error ||
-      payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1"
+      payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1" ||
+      reqParams.sessionId !== qrCodeData.sessionId ||
+      reqParams.requestToken !== qrCodeData.requestToken
     ) {
-      console.log(error, payload?.method);
       navigate("/");
     } else {
       if (processOnce.current) {
@@ -328,6 +339,15 @@ const QRCodeView: FunctionComponent<{
       );
 
       (async () => {
+        const peerName = connector.peerMeta?.name || "Unknown app";
+        const peerUrl = connector.peerMeta?.url || "unknown";
+        await confirm.confirm({
+          title: "Confirm export to connected app",
+          paragraph: `Connected app: ${peerName} (${peerUrl}). Export wallet data now?`,
+          yes: "Export",
+          no: "Cancel",
+        });
+
         const addressBooks: {
           [chainId: string]: AddressBookData[] | undefined;
         } = {};
@@ -360,7 +380,10 @@ const QRCodeView: FunctionComponent<{
         });
 
         navigate("/");
-      })();
+      })().catch(() => {
+        processOnce.current = false;
+        navigate("/");
+      });
     }
   };
   const onCallRequestRef = useRef(onCallRequest);
@@ -384,7 +407,7 @@ const QRCodeView: FunctionComponent<{
         // Kill session after 5 seconds.
         // Delay is needed because it is possible for wc to being processing the request.
         setTimeout(() => {
-          connector.killSession().catch(console.log);
+          connector.killSession().catch(() => {});
         }, 5000);
       };
     }
