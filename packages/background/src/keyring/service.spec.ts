@@ -187,5 +187,34 @@ describe("KeyRingService", () => {
         service.ensureCardanoServiceReady("cardano-mainnet")
       ).rejects.toThrow("temporarily_unavailable: wallet_not_ready");
     });
+
+    it("throws on existing dedup promise path when service remains not ready", async () => {
+      service["chainsService"] = {
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["cardanoService"] = {
+        isInitialized: jest.fn().mockReturnValue(true),
+        isReady: jest.fn().mockReturnValue(false),
+      } as any;
+      service["cardanoRestoreByChainId"] = new Map([
+        ["cardano-mainnet", Promise.resolve()],
+      ]);
+
+      await expect(
+        service.ensureCardanoServiceReady("cardano-mainnet")
+      ).rejects.toThrow("temporarily_unavailable: wallet_not_ready");
+    });
+
+    it("throws on init dedup promise path when service remains not ready", async () => {
+      service["cardanoService"] = {
+        isInitialized: jest.fn().mockReturnValue(false),
+        isReady: jest.fn().mockReturnValue(false),
+      } as any;
+      service["cardanoServiceInitPromise"] = Promise.resolve();
+
+      await expect(
+        service.ensureCardanoServiceReady("cardano-mainnet")
+      ).rejects.toThrow("temporarily_unavailable: wallet_not_ready");
+    });
   });
 });

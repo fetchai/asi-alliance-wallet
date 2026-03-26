@@ -129,9 +129,10 @@ export class KeyRingService {
    * ensureCardanoServiceReady restores when needed so correctness is preserved.
    */
   protected readonly onNetworkSwitch = async (
-    _oldChainId: string | undefined,
+    oldChainId: string | undefined,
     newChainId: string
   ): Promise<void> => {
+    let cardanoRuntimeTouched = false;
     try {
       if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
         return;
@@ -152,6 +153,7 @@ export class KeyRingService {
         if (stillCurrent !== targetChainId) {
           return;
         }
+        cardanoRuntimeTouched = true;
         await this.ensureCardanoServiceReady(newChainId);
       }
 
@@ -163,6 +165,36 @@ export class KeyRingService {
         isEvm,
       });
     } catch (error) {
+      if (cardanoRuntimeTouched) {
+        // Cleanup touched Cardano runtime state to avoid cross-chain stale side effects
+        // when selected chain rollback is triggered by ChainsService.
+        this.cardanoService.reset();
+        this.cardanoRestoreByChainId.clear();
+
+        // Best-effort restore old Cardano context after rollback.
+        try {
+          if (
+            oldChainId &&
+            (await this.isCardanoChain(oldChainId)) &&
+            this.keyRing.status === KeyRingStatus.UNLOCKED
+          ) {
+            const ks = this.keyRing.getCurrentKeyStore();
+            if (ks && walletSupportsCardano(ks)) {
+              await this.cardanoService.restoreFromKeyStore(
+                ks,
+                this.keyRing.currentPassword,
+                this.crypto,
+                oldChainId
+              );
+            }
+          }
+        } catch (rollbackError) {
+          console.error(
+            "[KeyRingService] Failed to restore old Cardano context after switch failure:",
+            rollbackError
+          );
+        }
+      }
       console.error(
         `Network switch consistency check failed for ${newChainId}:`,
         error
@@ -519,7 +551,9 @@ export class KeyRingService {
       // so concurrent callers always see the same promise.
       const existing = this.cardanoRestoreByChainId.get(chainId);
       if (existing) {
-        return existing;
+        await existing;
+        this.assertCardanoServiceReady(chainId);
+        return;
       }
       const promise = new Promise<void>((resolve, reject) => {
         (async () => {
@@ -549,7 +583,9 @@ export class KeyRingService {
 
     if (!this.cardanoService.isInitialized()) {
       if (this.cardanoServiceInitPromise) {
-        return this.cardanoServiceInitPromise;
+        await this.cardanoServiceInitPromise;
+        this.assertCardanoServiceReady(chainId);
+        return;
       }
 
       const ks = this.keyRing.getCurrentKeyStore();
