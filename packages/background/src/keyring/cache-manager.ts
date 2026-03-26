@@ -29,6 +29,7 @@ export interface CacheManagerConfig {
 export class AddressCacheManager {
   private static readonly CARDANO_CACHE_PREFIX = "cardano_addr_cache:";
   private static readonly GENERIC_CACHE_PREFIX = "addr_cache:";
+  private static readonly ENCRYPTION_FAILURE_PREFIX = "cache_encryption_failed:";
   private static readonly LOCK_TIMEOUT_MS = 5000;
 
   private kvStore: KVStore;
@@ -209,6 +210,10 @@ export class AddressCacheManager {
     return `${AddressCacheManager.GENERIC_CACHE_PREFIX}${chainId}`;
   }
 
+  private getEncryptionFailureKey(chainId: string, cacheType: string): string {
+    return `${AddressCacheManager.ENCRYPTION_FAILURE_PREFIX}${cacheType}:${chainId}`;
+  }
+
   /**
    * Internal: Load Cardano cache without lock
    */
@@ -266,6 +271,7 @@ export class AddressCacheManager {
     cache: Record<string, { address: string; pubKey: string }>
   ): Promise<void> {
     const key = this.getCardanoCacheKey(chainId);
+    const failureKey = this.getEncryptionFailureKey(chainId, "cardano");
 
     if (!this.password) {
       return;
@@ -282,8 +288,13 @@ export class AddressCacheManager {
 
       const encrypted = await this.encryptCacheData(cacheData);
       await this.kvStore.set(key, encrypted);
+      await this.kvStore.set(failureKey, null as any);
     } catch (e: unknown) {
-      await this.kvStore.set(key, cache);
+      const errorMessage = this.formatError(e);
+      await this.kvStore.set(failureKey, errorMessage as any);
+      throw new Error(
+        `[AddressCacheManager] Failed to encrypt Cardano cache for ${chainId}: ${errorMessage}`
+      );
     }
   }
 
@@ -409,6 +420,7 @@ export class AddressCacheManager {
     >
   ): Promise<void> {
     const key = this.getGenericCacheKey(chainId);
+    const failureKey = this.getEncryptionFailureKey(chainId, "generic");
 
     if (!this.password) {
       return;
@@ -426,8 +438,13 @@ export class AddressCacheManager {
 
       const encrypted = await this.encryptCacheData(cacheData);
       await this.kvStore.set(key, encrypted);
+      await this.kvStore.set(failureKey, null as any);
     } catch (e: unknown) {
-      await this.kvStore.set(key, cache);
+      const errorMessage = this.formatError(e);
+      await this.kvStore.set(failureKey, errorMessage as any);
+      throw new Error(
+        `[AddressCacheManager] Failed to encrypt generic cache for ${chainId}: ${errorMessage}`
+      );
     }
   }
 
@@ -650,11 +667,6 @@ export class AddressCacheManager {
           const data = await this.kvStore.get<any>(key);
 
           if (data && !this.isEncryptedCacheData(data)) {
-            const backupKey = `${AddressCacheManager.CARDANO_CACHE_PREFIX}backup_v1:${chainId}`;
-            const hasBackup = await this.kvStore.get<any>(backupKey);
-            if (!hasBackup) {
-              await this.kvStore.set(backupKey, data);
-            }
             await this.saveCardanoCache(
               chainId,
               data as Record<string, { address: string; pubKey: string }>
@@ -666,10 +678,12 @@ export class AddressCacheManager {
                 loaded
               )
             ) {
-              await this.kvStore.set(key, data);
               await this.kvStore.set(
                 `cache_migration_review_needed:${chainId}`,
                 true as any
+              );
+              throw new Error(
+                `Cardano cache migration validation failed for ${chainId}`
               );
             }
           }
@@ -679,11 +693,6 @@ export class AddressCacheManager {
           const data = await this.kvStore.get<any>(key);
 
           if (data && !this.isEncryptedCacheData(data)) {
-            const backupKey = `${AddressCacheManager.GENERIC_CACHE_PREFIX}backup_v1:${chainId}`;
-            const hasBackup = await this.kvStore.get<any>(backupKey);
-            if (!hasBackup) {
-              await this.kvStore.set(backupKey, data);
-            }
             await this.saveGenericCache(
               chainId,
               data as Record<string, { address: string; name?: string }>
@@ -695,10 +704,12 @@ export class AddressCacheManager {
                 loaded
               )
             ) {
-              await this.kvStore.set(key, data);
               await this.kvStore.set(
                 `cache_migration_review_needed:${chainId}`,
                 true as any
+              );
+              throw new Error(
+                `Generic cache migration validation failed for ${chainId}`
               );
             }
           }
