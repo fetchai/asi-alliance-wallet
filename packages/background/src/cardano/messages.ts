@@ -131,7 +131,7 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string; mi
   }
 
   override approveExternal(): boolean {
-    return true;
+    return false;
   }
 
   route(): string {
