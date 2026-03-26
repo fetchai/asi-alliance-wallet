@@ -17,11 +17,10 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import {
   GetSidePanelEnabledMsg,
   GetSidePanelIsSupportedMsg,
-  LedgerApp,
 } from "@keplr-wallet/background";
 
 import { LedgerBox, LedgerGuideBoxProps } from "./ledger-guide-box";
-import { useUSBDevices } from "@utils/ledger";
+// import { useUSBDevices } from "@utils/ledger";
 
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import {
@@ -29,10 +28,7 @@ import {
   KeplrError as WalletError,
 } from "@keplr-wallet/router";
 
-import {
-  ErrFailedInit,
-  ErrFailedUnknown,
-} from "@keplr-wallet/background/src/ledger/types";
+import { ErrFailedUnknown } from "@keplr-wallet/background/src/ledger/types";
 
 import { ErrModuleLedgerSign } from "@keplr-wallet/background/build/ledger/types";
 
@@ -41,6 +37,7 @@ import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 import { useUnmount } from "@hooks/use-unmount";
 import { FormattedMessage } from "react-intl";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { handleEthereumPreSignByLedger } from "./utils/handle-eth-sign";
 
 export const SignEthereumPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -109,7 +106,7 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
   const [ledgerInfo, setLedgerInfo] = useState<
     LedgerGuideBoxProps | undefined
   >();
-  const { testUSBDevices } = useUSBDevices();
+  // const { testUSBDevices } = useUSBDevices();
 
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
@@ -307,49 +304,40 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
                     }
                     dataLoading={accountInfo.broadcastInProgress}
                     onClick={async (e: any) => {
-                      try {
-                        e.preventDefault();
-                        setApproveButtonClicked(true);
+                      e.preventDefault();
+                      const interactionData =
+                        signEthereumInteractionStore.waitingData;
+                      if (interactionData) {
+                        try {
+                          setApproveButtonClicked(true);
 
-                        if (
-                          keyRingStore.selectedKeyInfo?.type === "ledger" &&
-                          !ledgerInitStore.isInitNeeded
-                        ) {
-                          if (
-                            !(await testUSBDevices(ledgerInitStore.isWebHID))
-                          ) {
-                            throw new WalletError(
-                              ErrModuleLedgerSign,
-                              ErrFailedInit,
-                              "Connect and unlock your Ledger device."
-                            );
-                          } else {
-                            await ledgerInitStore.tryLedgerInit(
-                              ethSignType
-                                ? LedgerApp.Ethereum
-                                : LedgerApp.Cosmos,
-                              ethSignType ? "Ethereum" : "Cosmos"
+                          let signature;
+                          if (interactionData.data.keyType === "ledger") {
+                            setApproveButtonClicked(true);
+                            signature = await handleEthereumPreSignByLedger(
+                              interactionData,
+                              signingDataBuff,
+                              {
+                                useWebHID: ledgerInitStore.isWebHID,
+                              }
                             );
                           }
-                        }
+                          if (interactionData.data.keyType === "ledger") {
+                            setLedgerInfo({
+                              isWarning: false,
+                              title: "Sign on Ledger",
+                              ledgerError: new WalletError(
+                                ErrModuleLedgerSign,
+                                ErrFailedUnknown,
+                                "To proceed, please review and approve the transaction on your Ledger device."
+                              ),
+                            });
+                          }
 
-                        if (keyRingStore.selectedKeyInfo?.type === "ledger") {
-                          setLedgerInfo({
-                            isWarning: false,
-                            title: "Sign on Ledger",
-                            ledgerError: new WalletError(
-                              ErrModuleLedgerSign,
-                              ErrFailedUnknown,
-                              "To proceed, please review and approve the transaction on your Ledger device."
-                            ),
-                          });
-                        }
-
-                        if (signEthereumInteractionStore.waitingData) {
                           await signEthereumInteractionStore.approveWithProceedNext(
                             signEthereumInteractionStore.waitingData.id,
                             signingDataBuff as Uint8Array,
-                            undefined,
+                            signature,
                             async (proceedNext) => {
                               if (!proceedNext) {
                                 if (
@@ -376,19 +364,19 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
                               }
                             }
                           );
-                        }
-                      } catch (e) {
-                        setApproveButtonClicked(false);
+                        } catch (e) {
+                          setApproveButtonClicked(false);
 
-                        if (
-                          e instanceof WalletError &&
-                          e.module === ErrModuleLedgerSign
-                        ) {
-                          setLedgerInfo({
-                            isWarning: true,
-                            title: "Error",
-                            ledgerError: e,
-                          });
+                          if (
+                            e instanceof WalletError &&
+                            e.module === ErrModuleLedgerSign
+                          ) {
+                            setLedgerInfo({
+                              isWarning: true,
+                              title: "Error",
+                              ledgerError: e,
+                            });
+                          }
                         }
                       }
                     }}

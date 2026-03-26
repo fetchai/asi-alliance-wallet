@@ -12709,7 +12709,7 @@ __metadata:
     "@toruslabs/fetch-node-details": =11.0.1
     "@toruslabs/torus.js": =8.0.1
     "@types/chart.js": ^2.9.25
-    "@types/chrome": 0.0.88
+    "@types/chrome": 0.0.268
     "@types/classnames": ^2.3.1
     "@types/color": ^3.0.3
     "@types/debounce": ^1.2.1
@@ -20419,12 +20419,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/chrome@npm:0.0.88":
-  version: 0.0.88
-  resolution: "@types/chrome@npm:0.0.88"
+"@types/chrome@npm:0.0.268":
+  version: 0.0.268
+  resolution: "@types/chrome@npm:0.0.268"
   dependencies:
     "@types/filesystem": "*"
-  checksum: 89cb5a9fcb89f61b4284c9e94d881616be1f27f13f52361c0f1696033e5f6975432168968e03638eb919519513236bcb940f08075d56743263ee652e67e8991c
+    "@types/har-format": "*"
+  checksum: c7ae2479b225beea673681df0a6022f251e98bdf1c162c84363d52efb32edf5d26cf8007d6ed92d497837212a1c2cfa6ad9c3c1c0d0169e0a5189fa084555ee4
   languageName: node
   linkType: hard
 

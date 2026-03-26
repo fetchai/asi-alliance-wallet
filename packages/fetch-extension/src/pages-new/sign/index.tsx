@@ -27,23 +27,23 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import {
   GetSidePanelEnabledMsg,
   GetSidePanelIsSupportedMsg,
-  LedgerApp,
 } from "@keplr-wallet/background";
 import { LedgerBox, LedgerGuideBoxProps } from "./ledger-guide-box";
-import { useUSBDevices } from "@utils/ledger";
+// import { useUSBDevices } from "@utils/ledger";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import {
   BACKGROUND_PORT,
   KeplrError as WalletError,
 } from "@keplr-wallet/router";
+import { ErrFailedInit } from "@keplr-wallet/background/src/ledger/types";
 import {
-  ErrFailedInit,
   ErrFailedUnknown,
-} from "@keplr-wallet/background/src/ledger/types";
-import { ErrModuleLedgerSign } from "@keplr-wallet/background/build/ledger/types";
+  ErrModuleLedgerSign,
+} from "@keplr-wallet/background/build/ledger/types";
 import { useInteractionInfo } from "@hooks/interaction";
 import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 import { useUnmount } from "@hooks/use-unmount";
+import { handleCosmosPreSign } from "./utils/handle-cosmos-sign";
 
 export const SignPageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
     EthSignType | undefined
   >();
   const [approveButtonClicked, setApproveButtonClicked] = useState(false);
-  const { testUSBDevices } = useUSBDevices();
+  // const { testUSBDevices } = useUSBDevices();
   const [ledgerInfo, setLedgerInfo] = useState<
     LedgerGuideBoxProps | undefined
   >();
@@ -323,6 +323,84 @@ export const SignPageV2: FunctionComponent = observer(() => {
       : "320px";
   }
 
+  const approve = async () => {
+    const interactionData = signInteractionStore.waitingData;
+    if (signDocHelper.signDocWrapper && interactionData) {
+      let presignOptions;
+      try {
+        setApproveButtonClicked(true);
+        if (interactionData.data.keyType === "ledger") {
+          presignOptions = {
+            useWebHID: ledgerInitStore.isWebHID,
+            signEthPlainJSON: chainStore
+              .getChain(
+                signInteractionStore.waitingData?.data.chainId ??
+                  current.chainId
+              )
+              .hasFeature("evm-ledger-sign-plain-json"),
+          };
+        }
+
+        const signDocWrapper = signDocHelper.signDocWrapper;
+
+        const signature = await handleCosmosPreSign(
+          interactionData,
+          signDocWrapper,
+          presignOptions
+        );
+
+        if (interactionData.data.keyType === "ledger") {
+          setLedgerInfo({
+            isWarning: false,
+            title: "Sign on Ledger",
+            ledgerError: new WalletError(
+              ErrModuleLedgerSign,
+              ErrFailedUnknown,
+              "To proceed, please review and approve the transaction on your Ledger device."
+            ),
+          });
+        }
+
+        await signInteractionStore.approveWithProceedNext(
+          interactionData.id,
+          signDocWrapper,
+          signature,
+          async (proceedNext) => {
+            if (!proceedNext) {
+              if (
+                interactionInfo.interaction &&
+                !interactionInfo.interactionInternal
+              ) {
+                handleExternalInteractionWithNoProceedNext();
+              }
+            }
+            if (
+              interactionInfo.interaction &&
+              interactionInfo.interactionInternal
+            ) {
+              await unmountPromise.promise;
+            }
+          },
+          {
+            preDelay: 200,
+          }
+        );
+      } catch (e) {
+        console.log(e);
+
+        setApproveButtonClicked(false);
+
+        if (e instanceof WalletError && e.module === ErrModuleLedgerSign) {
+          setLedgerInfo({
+            isWarning: true,
+            title: "Error",
+            ledgerError: e,
+          });
+        }
+      }
+    }
+  };
+
   return (
     <div>
       {
@@ -408,92 +486,8 @@ export const SignPageV2: FunctionComponent = observer(() => {
                     }
                     dataLoading={accountInfo.broadcastInProgress}
                     onClick={async (e: any) => {
-                      try {
-                        e.preventDefault();
-                        setApproveButtonClicked(true);
-
-                        if (
-                          keyRingStore.selectedKeyInfo?.type === "ledger" &&
-                          !ledgerInitStore.isInitNeeded
-                        ) {
-                          if (
-                            !(await testUSBDevices(ledgerInitStore.isWebHID))
-                          ) {
-                            throw new WalletError(
-                              ErrModuleLedgerSign,
-                              ErrFailedInit,
-                              "Connect and unlock your Ledger device."
-                            );
-                          } else {
-                            await ledgerInitStore.tryLedgerInit(
-                              ethSignType
-                                ? LedgerApp.Ethereum
-                                : LedgerApp.Cosmos,
-                              ethSignType ? "Ethereum" : "Cosmos"
-                            );
-                          }
-                        }
-
-                        if (keyRingStore.selectedKeyInfo?.type === "ledger") {
-                          setLedgerInfo({
-                            isWarning: false,
-                            title: "Sign on Ledger",
-                            ledgerError: new WalletError(
-                              ErrModuleLedgerSign,
-                              ErrFailedUnknown,
-                              "To proceed, please review and approve the transaction on your Ledger device."
-                            ),
-                          });
-                        }
-
-                        if (needSetIsProcessing) {
-                          setIsProcessing(true);
-                        }
-
-                        if (signDocHelper.signDocWrapper) {
-                          const interactionData =
-                            signInteractionStore.waitingData;
-                          if (interactionData) {
-                            await signInteractionStore.approveWithProceedNext(
-                              interactionData.id,
-                              signDocHelper.signDocWrapper,
-                              undefined,
-                              async (proceedNext) => {
-                                if (!proceedNext) {
-                                  if (
-                                    interactionInfo.interaction &&
-                                    !interactionInfo.interactionInternal
-                                  ) {
-                                    handleExternalInteractionWithNoProceedNext();
-                                  }
-                                }
-                                if (
-                                  interactionInfo.interaction &&
-                                  interactionInfo.interactionInternal
-                                ) {
-                                  await unmountPromise.promise;
-                                }
-                              },
-                              {
-                                preDelay: 200,
-                              }
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        setApproveButtonClicked(false);
-
-                        if (
-                          e instanceof WalletError &&
-                          e.module === ErrModuleLedgerSign
-                        ) {
-                          setLedgerInfo({
-                            isWarning: true,
-                            title: "Error",
-                            ledgerError: e,
-                          });
-                        }
-                      }
+                      e.preventDefault();
+                      await approve();
                     }}
                   />
                 )}

@@ -62,7 +62,10 @@ export const ADR36SignDocDetailsTab: FunctionComponent<{
 
         try {
           if (ethSignType) {
-            if (ethSignType === EthSignType.TRANSACTION) {
+            if (
+              ethSignType === EthSignType.TRANSACTION ||
+              ethSignType === EthSignType.EIP712
+            ) {
               const txnParams: UnsignedTransaction = JSON.parse(ethData as any);
 
               const msgContent = renderEvmTxn(
