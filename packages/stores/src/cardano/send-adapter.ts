@@ -4,8 +4,10 @@ import { MakeTxResponse } from "../account/types";
 import { MessageRequester, BACKGROUND_PORT } from "@keplr-wallet/router";
 import {
   EstimateSendAdaMsg,
-  SendAdaMsg,
-  SendAdaWithPasswordMsg,
+  BuildSendAdaTxDraftMsg,
+  SubmitSendAdaTxDraftMsg,
+  SubmitSendAdaTxDraftWithPasswordMsg,
+  DiscardSendAdaTxDraftMsg,
 } from "@keplr-wallet/background";
 import type { CardanoAssetAmount } from "@keplr-wallet/background";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
@@ -73,22 +75,30 @@ export class CardanoSendAdapter {
       _signOptions?: KeplrSignOptions,
       onTxEvents?: any
     ) => {
+      let draftId: string | undefined;
       try {
-        const spendingPassword = getCardanoSpendingPassword(_signOptions);
-        const msg = spendingPassword
-          ? new SendAdaWithPasswordMsg(
+        const draft = (await this.messageRequester.sendMessage(
+          BACKGROUND_PORT,
+          new BuildSendAdaTxDraftMsg(
             recipient,
             lovelaceAmount,
-            spendingPassword,
             _memo,
             this.chainId,
             assets
           )
-          : new SendAdaMsg(recipient, lovelaceAmount, _memo, this.chainId, assets);
+        )) as { draftId: string };
+        draftId = draft.draftId;
 
+        const spendingPassword = getCardanoSpendingPassword(_signOptions);
         const txHash = await this.messageRequester.sendMessage(
           BACKGROUND_PORT,
-          msg
+          spendingPassword
+            ? new SubmitSendAdaTxDraftWithPasswordMsg(
+                draftId,
+                spendingPassword,
+                this.chainId
+              )
+            : new SubmitSendAdaTxDraftMsg(draftId, this.chainId)
         ) as string;
 
         if (onTxEvents?.onBroadcasted) {
@@ -98,6 +108,16 @@ export class CardanoSendAdapter {
           onTxEvents.onFulfill({ txHash });
         }
       } catch (error) {
+        if (draftId) {
+          try {
+            await this.messageRequester.sendMessage(
+              BACKGROUND_PORT,
+              new DiscardSendAdaTxDraftMsg(draftId)
+            );
+          } catch {
+            // Ignore cleanup errors.
+          }
+        }
         if (onTxEvents?.onBroadcastFailed) {
           onTxEvents.onBroadcastFailed(error);
         }

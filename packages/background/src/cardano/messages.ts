@@ -73,7 +73,7 @@ export class SendAdaMsg extends Message<string> {
   }
 
   override approveExternal(): boolean {
-    return true;
+    return false;
   }
 
   route(): string {

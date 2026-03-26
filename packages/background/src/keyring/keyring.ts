@@ -110,6 +110,7 @@ export class KeyRing {
   private multiKeyStore: KeyStore[];
 
   private password: string = "";
+  private unlockSessionId: string = "";
 
   /**
    * Run cache migration once per unlock session to avoid delay on every wallet switch.
@@ -656,6 +657,7 @@ export class KeyRing {
       throw new Error("Key ring is not unlocked");
     }
     this.cacheMigrationDoneThisSession = false;
+    this.unlockSessionId = "";
     this.clearCaches();
     this.password = "";
 
@@ -724,6 +726,9 @@ export class KeyRing {
     }
 
     this.password = password;
+    this.unlockSessionId = `kr_sess_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2)}`;
     this.cacheManager.setPassword(password);
     this.clearCardanoMemoryCache();
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
@@ -740,6 +745,10 @@ export class KeyRing {
     }
 
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+  }
+
+  public getCurrentUnlockSessionId(): string {
+    return this.unlockSessionId;
   }
 
   /**

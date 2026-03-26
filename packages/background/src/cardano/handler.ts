@@ -17,6 +17,7 @@ import {
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
 import { PermissionService } from "../permission/service";
+import { Buffer } from "buffer/";
 
 export const getHandler: (
   service: CardanoService,
@@ -34,7 +35,7 @@ export const getHandler: (
 
     switch (msgType) {
       case SendAdaMsg.type():
-        return handleSendAdaMsg(service, keyRingService, permissionService)(
+        return handleSendAdaMsg(service, keyRingService)(
           env,
           msg as SendAdaMsg
         );
@@ -158,19 +159,11 @@ const handleSendAdaWithPasswordMsg: (
  */
 const handleSendAdaMsg: (
   service: CardanoService,
-  keyRingService: KeyRingService,
-  permissionService: PermissionService
-) => InternalHandler<SendAdaMsg> = (service, keyRingService, permissionService) => {
+  keyRingService: KeyRingService
+) => InternalHandler<SendAdaMsg> = (service, keyRingService) => {
   return async (env, msg) => {
     if (!env.isInternalMsg) {
-      if (!msg.chainId) {
-        throw new Error("chainId is required");
-      }
-      await permissionService.checkOrGrantBasicAccessPermission(
-        env,
-        msg.chainId,
-        msg.origin
-      );
+      throw new Error("External direct-send is disabled. Use signing flow.");
     }
 
     // If chainId is provided, ensure service is ready for that network
@@ -326,6 +319,42 @@ const waitForCardanoWalletSettled = async (service: CardanoService) => {
   }
 };
 
+const getCardanoDraftContext = async (
+  service: CardanoService,
+  keyRingService: KeyRingService,
+  chainId?: string
+): Promise<{
+  walletId: string;
+  selectedAccountAddress: string;
+  selectedKeyStoreId: string;
+  networkId: string;
+  unlockSessionId: string;
+}> => {
+  const selectedKeyStoreId =
+    keyRingService.getKeyRing().getCurrentKeyStore()?.meta?.["__id__"] || "";
+  const key = await service.getKey(chainId);
+  const selectedAccountAddress = Buffer.from(key.address).toString("utf8");
+
+  let networkId = chainId || "";
+  if (!networkId) {
+    try {
+      networkId = await keyRingService.chainsService.getSelectedChain();
+    } catch {
+      networkId = "cardano-unknown";
+    }
+  }
+
+  return {
+    walletId: selectedKeyStoreId,
+    selectedAccountAddress,
+    selectedKeyStoreId,
+    networkId,
+    unlockSessionId:
+      keyRingService.getCurrentUnlockSessionId() ||
+      service.getCurrentRuntimeSessionId(),
+  };
+};
+
 const handleBuildSendAdaTxDraftMsg: (
   service: CardanoService,
   keyRingService: KeyRingService
@@ -341,12 +370,19 @@ const handleBuildSendAdaTxDraftMsg: (
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
     await waitForCardanoWalletSettled(service);
+    const context = await getCardanoDraftContext(service, keyRingService, msg.chainId);
     return await service.buildSendAdaTxDraft({
       to: msg.to,
       amount: msg.amount,
       memo: msg.memo,
       chainId: msg.chainId,
       assets: msg.assets,
+      walletId: context.walletId,
+      selectedAccountAddress: context.selectedAccountAddress,
+      selectedKeyStoreId: context.selectedKeyStoreId,
+      networkId: context.networkId,
+      unlockSessionId: context.unlockSessionId,
+      source: "wallet-ui",
     });
   };
 };
@@ -366,7 +402,41 @@ const handleSubmitSendAdaTxDraftMsg: (
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
     await waitForCardanoWalletSettled(service);
-    return await service.submitSendAdaTxDraft({ draftId: msg.draftId, chainId: msg.chainId });
+    const context = await getCardanoDraftContext(service, keyRingService, msg.chainId);
+    const approvalData = service.getSendAdaTxDraftApprovalData({
+      draftId: msg.draftId,
+      chainId: msg.chainId,
+      walletId: context.walletId,
+      selectedAccountAddress: context.selectedAccountAddress,
+      selectedKeyStoreId: context.selectedKeyStoreId,
+      networkId: context.networkId,
+      unlockSessionId: context.unlockSessionId,
+    });
+    const approveResult = (await keyRingService.waitApprove(
+      env,
+      "/cardano/send-confirm",
+      "request-cardano-send",
+      {
+        origin: env.origin || "wallet-ui",
+        source: "wallet-ui",
+        ...approvalData.draft,
+        createdAt: approvalData.createdAt,
+        submittedAt: Date.now(),
+      }
+    )) as { summaryHash?: string };
+
+    const approvedSummaryHash = approveResult?.summaryHash || approvalData.summaryHash;
+
+    return await service.submitSendAdaTxDraft({
+      draftId: msg.draftId,
+      chainId: msg.chainId,
+      walletId: context.walletId,
+      selectedAccountAddress: context.selectedAccountAddress,
+      selectedKeyStoreId: context.selectedKeyStoreId,
+      networkId: context.networkId,
+      unlockSessionId: context.unlockSessionId,
+      approvedSummaryHash,
+    });
   };
 };
 
@@ -391,7 +461,40 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
     await waitForCardanoWalletSettled(service);
-    return await service.submitSendAdaTxDraft({ draftId: msg.draftId, chainId: msg.chainId });
+    const context = await getCardanoDraftContext(service, keyRingService, msg.chainId);
+    const approvalData = service.getSendAdaTxDraftApprovalData({
+      draftId: msg.draftId,
+      chainId: msg.chainId,
+      walletId: context.walletId,
+      selectedAccountAddress: context.selectedAccountAddress,
+      selectedKeyStoreId: context.selectedKeyStoreId,
+      networkId: context.networkId,
+      unlockSessionId: context.unlockSessionId,
+    });
+    const approveResult = (await keyRingService.waitApprove(
+      env,
+      "/cardano/send-confirm",
+      "request-cardano-send",
+      {
+        origin: env.origin || "wallet-ui",
+        source: "wallet-ui",
+        ...approvalData.draft,
+        createdAt: approvalData.createdAt,
+        submittedAt: Date.now(),
+      }
+    )) as { summaryHash?: string };
+    const approvedSummaryHash = approveResult?.summaryHash || approvalData.summaryHash;
+
+    return await service.submitSendAdaTxDraft({
+      draftId: msg.draftId,
+      chainId: msg.chainId,
+      walletId: context.walletId,
+      selectedAccountAddress: context.selectedAccountAddress,
+      selectedKeyStoreId: context.selectedKeyStoreId,
+      networkId: context.networkId,
+      unlockSessionId: context.unlockSessionId,
+      approvedSummaryHash,
+    });
   };
 };
 

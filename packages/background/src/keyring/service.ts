@@ -1272,6 +1272,19 @@ Salt: ${salt}`;
     return this.keyRing.checkPassword(password);
   }
 
+  public getCurrentUnlockSessionId(): string {
+    return this.keyRing.getCurrentUnlockSessionId();
+  }
+
+  public async waitApprove(
+    env: Env,
+    url: string,
+    type: string,
+    data: unknown
+  ): Promise<unknown> {
+    return await this.interactionService.waitApprove(env, url, type, data);
+  }
+
   getMultiKeyStoreInfo(): MultiKeyStoreInfoWithSelected {
     return this.keyRing.getMultiKeyStoreInfo();
   }

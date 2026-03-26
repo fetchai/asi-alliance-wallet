@@ -45,6 +45,7 @@ export class CardanoService {
       errorSub: Subscription;
     }
   >();
+  private runtimeSessionId = "";
 
   constructor(notification?: Notification, kvStore?: KVStore) {
     this.notification = notification;
@@ -83,6 +84,9 @@ export class CardanoService {
     }
 
     await this.waitForKeyAgentReady();
+    this.runtimeSessionId = `cad_sess_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2)}`;
   }
 
   /**
@@ -113,7 +117,19 @@ export class CardanoService {
       }
     }
     this.txHistoryControllers.clear();
+    this.sendAdaTxDrafts.clear();
+    this.locallyPendingSentTxs.clear();
     this.keyRing = undefined;
+    this.runtimeSessionId = "";
+  }
+
+  getCurrentRuntimeSessionId(): string {
+    if (!this.runtimeSessionId) {
+      this.runtimeSessionId = `cad_sess_${Date.now().toString(36)}_${Math.random()
+        .toString(36)
+        .slice(2)}`;
+    }
+    return this.runtimeSessionId;
   }
 
   /** Get Cardano public key/address for UI and signing */
@@ -342,6 +358,12 @@ export class CardanoService {
     {
       createdAt: number;
       chainId?: string;
+      walletId: string;
+      selectedAccountAddress: string;
+      selectedKeyStoreId: string;
+      networkId: string;
+      unlockSessionId: string;
+      source?: string;
       to: string;
       amount: string;
       memo?: string;
@@ -359,6 +381,12 @@ export class CardanoService {
     memo?: string;
     chainId?: string;
     assets?: CardanoAssetAmount[];
+    walletId: string;
+    selectedAccountAddress: string;
+    selectedKeyStoreId: string;
+    networkId: string;
+    unlockSessionId: string;
+    source?: string;
   }): Promise<CardanoSendAdaTxDraft> {
     const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
     if (!walletManager) {
@@ -380,6 +408,12 @@ export class CardanoService {
     this.sendAdaTxDrafts.set(draftId, {
       createdAt: Date.now(),
       chainId: params.chainId,
+      walletId: params.walletId,
+      selectedAccountAddress: params.selectedAccountAddress,
+      selectedKeyStoreId: params.selectedKeyStoreId,
+      networkId: params.networkId,
+      unlockSessionId: params.unlockSessionId,
+      source: params.source,
       to: params.to,
       amount: params.amount,
       memo: params.memo,
@@ -402,14 +436,20 @@ export class CardanoService {
   async submitSendAdaTxDraft(params: {
     draftId: string;
     chainId?: string;
+    walletId: string;
+    selectedAccountAddress: string;
+    selectedKeyStoreId: string;
+    networkId: string;
+    unlockSessionId: string;
+    approvedSummaryHash: string;
   }): Promise<string> {
     const draft = this.sendAdaTxDrafts.get(params.draftId);
     if (!draft) {
       throw new Error("Transaction draft not found. Please rebuild and try again.");
     }
 
-    // Enforce a generous TTL. If expired, refuse to submit to avoid mismatches and stale validity interval.
-    const ttlMs = 60 * 60 * 1000; // 1 hour
+    // Keep draft lifetime short to avoid stale context reuse.
+    const ttlMs = 10 * 60 * 1000; // 10 minutes
     if (Date.now() - draft.createdAt > ttlMs) {
       this.sendAdaTxDrafts.delete(params.draftId);
       throw new Error("Transaction draft expired. Please rebuild and try again.");
@@ -418,6 +458,20 @@ export class CardanoService {
     // Optional safety: ensure the draft is used on the intended chain.
     if (draft.chainId && params.chainId && draft.chainId !== params.chainId) {
       throw new Error("Transaction draft chain mismatch. Please rebuild and try again.");
+    }
+    if (
+      draft.walletId !== params.walletId ||
+      draft.selectedAccountAddress !== params.selectedAccountAddress ||
+      draft.selectedKeyStoreId !== params.selectedKeyStoreId ||
+      draft.networkId !== params.networkId ||
+      draft.unlockSessionId !== params.unlockSessionId
+    ) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      throw new Error("Transaction draft context mismatch. Please rebuild and try again.");
+    }
+    if (this.getDraftSummaryHash(draft) !== params.approvedSummaryHash) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      throw new Error("Transaction draft summary mismatch. Please rebuild and try again.");
     }
 
     try {
@@ -452,6 +506,103 @@ export class CardanoService {
 
   discardSendAdaTxDraft(draftId: string): void {
     this.sendAdaTxDrafts.delete(draftId);
+  }
+
+  getSendAdaTxDraftApprovalData(params: {
+    draftId: string;
+    chainId?: string;
+    walletId: string;
+    selectedAccountAddress: string;
+    selectedKeyStoreId: string;
+    networkId: string;
+    unlockSessionId: string;
+  }): {
+    summaryHash: string;
+    createdAt: number;
+    draft: {
+      draftId: string;
+      to: string;
+      amount: string;
+      memo?: string;
+      assets?: CardanoAssetAmount[];
+      fee: string;
+      total: string;
+      minAdaForTokens?: string;
+      chainId?: string;
+      networkId: string;
+      source?: string;
+      sender: string;
+    };
+  } {
+    const draft = this.sendAdaTxDrafts.get(params.draftId);
+    if (!draft) {
+      throw new Error("Transaction draft not found. Please rebuild and try again.");
+    }
+
+    const ttlMs = 10 * 60 * 1000;
+    if (Date.now() - draft.createdAt > ttlMs) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      throw new Error("Transaction draft expired. Please rebuild and try again.");
+    }
+    if (draft.chainId && params.chainId && draft.chainId !== params.chainId) {
+      throw new Error("Transaction draft chain mismatch. Please rebuild and try again.");
+    }
+    if (
+      draft.walletId !== params.walletId ||
+      draft.selectedAccountAddress !== params.selectedAccountAddress ||
+      draft.selectedKeyStoreId !== params.selectedKeyStoreId ||
+      draft.networkId !== params.networkId ||
+      draft.unlockSessionId !== params.unlockSessionId
+    ) {
+      this.sendAdaTxDrafts.delete(params.draftId);
+      throw new Error("Transaction draft context mismatch. Please rebuild and try again.");
+    }
+
+    return {
+      summaryHash: this.getDraftSummaryHash(draft),
+      createdAt: draft.createdAt,
+      draft: {
+        draftId: params.draftId,
+        to: draft.to,
+        amount: draft.amount,
+        memo: draft.memo,
+        assets: draft.assets,
+        fee: draft.fee,
+        total: draft.total,
+        minAdaForTokens: draft.minAdaForTokens,
+        chainId: draft.chainId,
+        networkId: draft.networkId,
+        source: draft.source,
+        sender: draft.selectedAccountAddress,
+      },
+    };
+  }
+
+  private getDraftSummaryHash(draft: {
+    to: string;
+    amount: string;
+    memo?: string;
+    assets?: CardanoAssetAmount[];
+    fee: string;
+    total: string;
+    minAdaForTokens?: string;
+    networkId: string;
+    selectedAccountAddress: string;
+  }): string {
+    const normalizedAssets = (draft.assets ?? [])
+      .map((a) => `${a.assetId}:${a.amount}`)
+      .sort();
+    return JSON.stringify({
+      to: draft.to,
+      amount: draft.amount,
+      memo: draft.memo ?? "",
+      fee: draft.fee,
+      total: draft.total,
+      minAdaForTokens: draft.minAdaForTokens ?? "",
+      assets: normalizedAssets,
+      networkId: draft.networkId,
+      sender: draft.selectedAccountAddress,
+    });
   }
 
   /**
