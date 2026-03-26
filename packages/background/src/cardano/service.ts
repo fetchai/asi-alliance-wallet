@@ -1154,7 +1154,10 @@ export class CardanoService {
         direction,
         amount: amount.toString(),
         fee: fee.toString(),
-        assets: assetTransfers.length > 0 ? assetTransfers : undefined,
+        assets:
+          isInputResolutionDegraded || assetTransfers.length === 0
+            ? undefined
+            : assetTransfers,
         timestamp: slot != null ? CardanoService.slotToTimestampMs(slot, chainKey) : undefined,
         fromAddresses,
         toAddresses,

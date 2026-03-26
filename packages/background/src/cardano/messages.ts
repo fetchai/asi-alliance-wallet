@@ -1,13 +1,21 @@
 import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 
-const validatePositiveLovelaceAmount = (amount: string): void => {
+const validateLovelaceAmountFormat = (amount: string): bigint => {
   if (!/^[0-9]+$/.test(amount)) {
-    throw new Error("amount must be a positive integer string");
+    throw new Error("amount must be a non-negative integer string");
   }
-  if (BigInt(amount) <= BigInt(0)) {
+  return BigInt(amount);
+};
+
+const validatePositiveLovelaceAmount = (amount: string): void => {
+  if (validateLovelaceAmountFormat(amount) <= BigInt(0)) {
     throw new Error("amount must be a positive number");
   }
+};
+
+const validateNonNegativeLovelaceAmount = (amount: string): void => {
+  validateLovelaceAmountFormat(amount);
 };
 
 /** Describes a single native asset transfer within a Cardano transaction. */
@@ -169,7 +177,9 @@ export class EstimateSendAdaMsg extends Message<{ fee: string; total: string; mi
     }
 
     const hasAssets = this.assets && this.assets.length > 0;
-    if (!hasAssets) {
+    if (hasAssets) {
+      validateNonNegativeLovelaceAmount(this.amount);
+    } else {
       validatePositiveLovelaceAmount(this.amount);
     }
   }
@@ -224,7 +234,9 @@ export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
     }
 
     const hasAssets = this.assets && this.assets.length > 0;
-    if (!hasAssets) {
+    if (hasAssets) {
+      validateNonNegativeLovelaceAmount(this.amount);
+    } else {
       validatePositiveLovelaceAmount(this.amount);
     }
   }

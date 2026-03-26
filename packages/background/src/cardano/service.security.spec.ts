@@ -1,4 +1,16 @@
 import { computeDraftSummaryHash } from "./draft-summary-hash";
+import { CardanoService } from "./service";
+import { of } from "rxjs";
+
+jest.mock("@keplr-wallet/cardano", () => {
+  const actual = jest.requireActual("@keplr-wallet/cardano");
+  return {
+    ...actual,
+    getTxInputsValueAndAddress: jest.fn(async () => {
+      throw new Error("input_resolution_failed");
+    }),
+  };
+});
 
 describe("CardanoService draft summary digest", () => {
   const baseDraft = {
@@ -56,5 +68,49 @@ describe("CardanoService draft summary digest", () => {
     expect(changedFee).not.toEqual(digest);
     expect(changedSender).not.toEqual(digest);
     expect(changedNetwork).not.toEqual(digest);
+  });
+});
+
+describe("CardanoService degraded history policy", () => {
+  it("hides asset transfers when tx is degraded", async () => {
+    const service = new CardanoService();
+    const wallet = {
+      addresses$: of([{ address: "addr_test1self" }]),
+      assetInfo$: of(new Map()),
+    } as any;
+
+    const txs = [
+      {
+        id: "tx_degraded_1",
+        body: {
+          fee: { coins: "10" },
+          outputs: [
+            {
+              address: "addr_test1self",
+              value: {
+                coins: "100",
+                assets: {
+                  "policy1.asset1": "5",
+                },
+              },
+            },
+          ],
+          inputs: [{ txId: "missing_input_1", index: 0 }],
+        },
+      },
+    ];
+
+    const items = await (service as any).transformHydratedTxsToItems(
+      txs,
+      wallet,
+      {},
+      "cardano-preview"
+    );
+
+    expect(items).toHaveLength(1);
+    expect(items[0].isDegraded).toBe(true);
+    expect(items[0].direction).toBe("unknown");
+    expect(items[0].amount).toBe("0");
+    expect(items[0].assets).toBeUndefined();
   });
 });

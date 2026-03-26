@@ -51,7 +51,7 @@ describe("Cardano message security boundaries", () => {
   });
 
   it("rejects non-integer amount formats in estimate/build validation", () => {
-    const invalid = ["1.2", "1e6", " 10", "+10", "-10", "abc", "0"];
+    const invalid = ["1.2", "1e6", " 10", "+10", "-10", "abc"];
     for (const amount of invalid) {
       expect(() =>
         new EstimateSendAdaMsg("addr_test1q...", amount).validateBasic()
@@ -60,6 +60,24 @@ describe("Cardano message security boundaries", () => {
         new BuildSendAdaTxDraftMsg("addr_test1q...", amount).validateBasic()
       ).toThrow();
     }
+  });
+
+  it("allows amount=0 only when assets are present", () => {
+    const assets = [{ assetId: "policy.asset", amount: "1" }];
+
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, assets).validateBasic()
+    ).not.toThrow();
+    expect(() =>
+      new BuildSendAdaTxDraftMsg("addr_test1q...", "0", undefined, undefined, assets).validateBasic()
+    ).not.toThrow();
+
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", "0").validateBasic()
+    ).toThrow("amount must be a positive number");
+    expect(() =>
+      new BuildSendAdaTxDraftMsg("addr_test1q...", "0").validateBasic()
+    ).toThrow("amount must be a positive number");
   });
 });
 
