@@ -41,7 +41,7 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
       this.proposalStatus === ProposalStatus.VOTING_PERIOD &&
-      !chainInfo?.features?.includes("evm")
+      !chainInfo?.features?.includes("eth-key-sign")
     );
   }
 

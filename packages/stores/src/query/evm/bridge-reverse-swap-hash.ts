@@ -19,7 +19,7 @@ export class ObservableBridgeReverseSwapHashInner extends ObservableJsonRPCQuery
     protected readonly nativeBridge: ObservableQueryNativeFetEthBrige,
     protected readonly swapId: string
   ) {
-    const ethereumURL = chainGetter.getChain("1").rpc;
+    const ethereumURL = chainGetter.getChain("eip155:1").rpc;
 
     super(kvStore, ethereumURL, "", "eth_getLogs", [
       {

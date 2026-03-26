@@ -182,7 +182,7 @@ export const AssetView = observer(() => {
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        current.chainId === "1" || current.chainId === "injective-1"
+        current.chainId === "eip155:1" || current.chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )

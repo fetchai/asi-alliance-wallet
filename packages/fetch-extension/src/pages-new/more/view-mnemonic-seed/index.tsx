@@ -28,7 +28,7 @@ interface FormData {
 export const ExportPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { index = "-1 " } = useParams<{ index: string; type?: string }>();
+  const { index = "" } = useParams<{ index: string; type?: string }>();
 
   const intl = useIntl();
   const notification = useNotification();
@@ -52,10 +52,10 @@ export const ExportPage: FunctionComponent = observer(() => {
   });
 
   useEffect(() => {
-    if (parseInt(index).toString() !== index) {
-      throw new Error("Invalid index");
+    if (!index || !keyRingStore.keyInfos.find((item) => item.id === index)) {
+      throw new Error("Invalid account id");
     }
-  }, [index]);
+  }, [index, keyRingStore]);
 
   useEffect(() => {
     if (keyRing) {

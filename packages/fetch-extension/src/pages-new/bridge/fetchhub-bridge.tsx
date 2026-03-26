@@ -206,12 +206,12 @@ export const FetchhubBridge: FunctionComponent<{
             onClick={(e) => {
               e.preventDefault();
               nativeBridgeConfig.recipientConfig.setRawRecipient(
-                accountStore.getAccount("1").ethereumHexAddress
+                accountStore.getAccount("eip155:1").ethereumHexAddress
               );
             }}
           >
             Bridge to your Ethereum address:{" "}
-            {accountStore.getAccount("1").ethereumHexAddress}
+            {accountStore.getAccount("eip155:1").ethereumHexAddress}
           </div>
         )}
         <div className={style["hr"]} />

@@ -67,7 +67,8 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
         (value) => value.isSelected
       );
 
-      const isEvm = chainStore.current.features?.includes("evm") ?? false;
+      const isEvm =
+        chainStore.current.features?.includes("eth-key-sign") ?? false;
       const addresses = accounts
         .filter(
           (account: any) =>

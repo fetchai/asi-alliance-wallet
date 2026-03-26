@@ -299,7 +299,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
   >("");
   const { queriesStore, priceStore, accountStore, chainStore, analyticsStore } =
     useStore();
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
   const queryBalances = queriesStore

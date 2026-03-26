@@ -35,7 +35,7 @@ export const NativeTokens = observer(() => {
   useEffect(() => {
     setNativeToken(balanceQuery.balances[0]);
   }, []);
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
   const accountInfo = accountStore.getAccount(current.chainId);
 
   const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(

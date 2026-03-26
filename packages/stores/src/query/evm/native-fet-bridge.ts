@@ -59,7 +59,7 @@ export class ObservableQueryNativeFetEthBrige {
   protected readonly _nativeBridgeAddress: string;
 
   constructor(kvStore: QuerySharedContext, chainGetter: ChainGetter) {
-    const ethereumURL = chainGetter.getChain("1").rpc;
+    const ethereumURL = chainGetter.getChain("eip155:1").rpc;
     this._nativeBridgeAddress = "0x947872ad4d95e89E513d7202550A810aC1B626cC";
 
     this._querySwapMin = new ObservableQueryByFunction(
@@ -118,7 +118,7 @@ export class ObservableQueryNativeFetEthBrige {
     );
     this._queryLatestBlock = new ObservableQueryLatestBlock(
       kvStore,
-      "1",
+      "eip155:1",
       chainGetter
     );
   }

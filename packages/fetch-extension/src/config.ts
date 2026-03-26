@@ -156,7 +156,7 @@ const EmbedChainInfos: (ChainInfo | ModularChainInfo)[] = [
     rest: "https://evm-1.keplr.app",
     // rpc: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     // rest: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
-    chainId: "1",
+    chainId: "eip155:1",
     chainName: "Ethereum",
     stakeCurrency: {
       coinDenom: "ETH",
@@ -209,7 +209,7 @@ const EmbedChainInfos: (ChainInfo | ModularChainInfo)[] = [
         },
       },
     ],
-    features: ["eth-key-sign"],
+    features: ["eth-key-sign", "eth-address-gen"],
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
   },
@@ -445,7 +445,7 @@ const EmbedChainInfos: (ChainInfo | ModularChainInfo)[] = [
     ],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/binancesmartchain/images/bnb.png",
-    features: ["evm"],
+    features: ["eth-key-sign", "eth-address-gen"],
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
   },
@@ -501,7 +501,7 @@ const EmbedChainInfos: (ChainInfo | ModularChainInfo)[] = [
         },
       },
     ],
-    features: ["evm"],
+    features: ["eth-key-sign", "eth-address-gen"],
   },
   {
     rpc: "https://cosmos-rpc.publicnode.com:443",

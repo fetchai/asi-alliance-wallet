@@ -53,8 +53,9 @@ export class nativeBridgeAmountConfig extends AmountConfig {
     }
 
     const isEvm =
-      this.chainGetter.getChain(this.chainId).features?.includes("evm") ??
-      false;
+      this.chainGetter
+        .getChain(this.chainId)
+        .features?.includes("eth-key-sign") ?? false;
     const chainBridgeStatus = isEvm ? ethBridgeStatus : nativeBridgeStatus;
     const destChainBridgeStatus = isEvm ? nativeBridgeStatus : ethBridgeStatus;
 

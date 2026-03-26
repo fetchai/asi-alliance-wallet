@@ -93,8 +93,9 @@ export class EthereumAccountImpl {
     })()}`;
 
     const isEvm =
-      this.chainGetter.getChain(this.chainId).features?.includes("evm") ??
-      false;
+      this.chainGetter
+        .getChain(this.chainId)
+        .features?.includes("eth-key-sign") ?? false;
     if (denomHelper.type === "native" && isEvm) {
       if (!isAddress(recipient)) {
         throw new Error("Invalid receipient address");
@@ -472,7 +473,7 @@ export class EthereumAccountImpl {
     };
 
     // EIP1995 support only for ethereum as of now
-    if (this.chainId === "1") {
+    if (this.chainId === "eip155:1") {
       const baseFee = this.queries.evm.queryEthGasFees.base;
 
       if (!baseFee) {

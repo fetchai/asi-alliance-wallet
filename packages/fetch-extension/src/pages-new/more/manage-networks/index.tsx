@@ -24,11 +24,11 @@ export const ManageNetworks: FunctionComponent = observer(() => {
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
   const mainChainList = chainStore.chainInfos.filter(
-    (chainInfo) => !chainInfo.features?.includes("eth-key-sign")
+    (chainInfo) => !chainInfo.evm
   );
 
-  const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
-    chainInfo.features?.includes("eth-key-sign")
+  const evmChainList = chainStore.chainInfos.filter(
+    (chainInfo) => chainInfo.features?.includes("eth-key-sign") && chainInfo.evm
   );
 
   const isChainEnabled = (chainId: string) => {

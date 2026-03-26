@@ -70,12 +70,12 @@ export const MorePage: FunctionComponent = () => {
       });
   }, []);
 
-  // const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  // const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
 
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        chainId === "1" || chainId === "injective-1"
+        chainId === "eip155:1" || chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )
@@ -132,7 +132,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!currentChain.features?.includes("evm") && (
+      {!currentChain.features?.includes("eth-key-sign") && (
         <Card
           leftImageStyle={{ background: "transparent", height: "16px" }}
           style={{ marginBottom: "8px" }}
@@ -166,7 +166,7 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {!chainStore.current.features?.includes("evm") &&
+      {!chainStore.current.features?.includes("eth-key-sign") &&
         chainId !== "noble-1" && (
           <Card
             leftImageStyle={{ background: "transparent" }}
@@ -194,7 +194,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!chainStore.current.features?.includes("evm") && (
+      {!chainStore.current.features?.includes("eth-key-sign") && (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "5px" }}

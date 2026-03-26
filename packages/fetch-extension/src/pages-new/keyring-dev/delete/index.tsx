@@ -28,7 +28,7 @@ export const DeleteWallet: FunctionComponent = () => {
   const navigate = useNavigate();
   const intl = useIntl();
 
-  const { index = "-1 " } = useParams<{ index: string }>();
+  const { index = "" } = useParams<{ index: string }>();
 
   const [loading, setLoading] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
@@ -46,7 +46,7 @@ export const DeleteWallet: FunctionComponent = () => {
   });
 
   useEffect(() => {
-    if (!keyRingStore.keyInfos.find((item) => item.id === index)) {
+    if (!index || !keyRingStore.keyInfos.find((item) => item.id === index)) {
       throw new Error("Invalid account id");
     }
   }, [index, keyRingStore]);

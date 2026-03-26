@@ -49,7 +49,7 @@ export const DepositView: FunctionComponent = observer(() => {
   const { isBuySupportChain, buySupportServiceInfos } = useBuy();
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
 
   return (
     <div>
@@ -101,7 +101,7 @@ export const DepositView: FunctionComponent = observer(() => {
         </Button>
       </div>
 
-      {["fetchhub-4", "1"].includes(chainStore.current.chainId) && (
+      {["fetchhub-4", "eip155:1"].includes(chainStore.current.chainId) && (
         <div>
           <hr className={styleDeposit["hr"]} />
           <div className={styleDeposit["containerInner"]}>

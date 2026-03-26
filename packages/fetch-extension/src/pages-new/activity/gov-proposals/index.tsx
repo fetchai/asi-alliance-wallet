@@ -81,7 +81,9 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
       setIsOpen(false);
     };
 
-    const isSupportedNetwork = !(current.features?.includes("evm") ?? false);
+    const isSupportedNetwork = !(
+      current.features?.includes("eth-key-sign") ?? false
+    );
 
     return (
       <React.Fragment>

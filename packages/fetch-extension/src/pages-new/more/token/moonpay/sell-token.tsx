@@ -36,7 +36,7 @@ export const SellToken: FunctionComponent<{
     max: null,
   });
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
   const defaultAddress =
     accountStore.getAccount(chainId)[
       isEvm ? "ethereumHexAddress" : "bech32Address"

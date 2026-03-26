@@ -1532,11 +1532,8 @@ export class Keplr implements IKeplr, KeplrCoreTypes {
               keplrLogoWrap.style.position = "relative";
               keplrLogoWrap.style.marginRight = "1rem";
               const keplrLogo = document.createElement("img");
-              const keplrLogoUrl = chrome.runtime.getURL(
-                `/assets/${
-                  isKeplrLocked ? "locked-keplr-logo" : "icon"
-                }-128.png`
-              );
+              const keplrLogoUrl =
+                chrome.runtime.getURL(`/assets/icon-128.png`);
               keplrLogo.src = keplrLogoUrl;
               keplrLogo.style.boxSizing = "border-box";
               keplrLogo.style.width = "3rem";
@@ -1562,8 +1559,8 @@ export class Keplr implements IKeplr, KeplrCoreTypes {
               mainText.style.fontSize = "1rem";
               mainText.style.color = isLightMode ? "#020202" : "#FEFEFE";
               mainText.textContent = isKeplrLocked
-                ? "Unlock Keplr to proceed"
-                : "Open Keplr to approve request(s)";
+                ? "Unlock ASI Wallet to proceed"
+                : "Open ASI Wallet to approve request(s)";
 
               // const arrowLeftOpenWrapper = document.createElement("div");
               // arrowLeftOpenWrapper.style.boxSizing = "border-box";

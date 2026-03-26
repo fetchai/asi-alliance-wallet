@@ -74,10 +74,7 @@ export const WalletDetailsView = observer(
                 return undefined;
               }
 
-              if (
-                modularChainInfo.chainId.startsWith("eip155") ||
-                modularChainInfo.chainId === "1"
-              ) {
+              if (modularChainInfo.chainId.startsWith("eip155")) {
                 return undefined;
               }
 

@@ -22,7 +22,7 @@ export class ObservableBridgeHistoryInner extends ObservableJsonRPCQuery<
     protected readonly nativeBridge: ObservableQueryNativeFetEthBrige,
     protected readonly bech32Address: string
   ) {
-    const ethereumURL = chainGetter.getChain("1").rpc;
+    const ethereumURL = chainGetter.getChain("eip155:1").rpc;
 
     const ethereumHexAddress = bech32Address
       ? Bech32Address.fromBech32(

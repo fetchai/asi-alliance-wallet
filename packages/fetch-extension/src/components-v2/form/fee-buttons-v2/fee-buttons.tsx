@@ -210,7 +210,8 @@ export const FeeButtonsInner: FunctionComponent<
     const { chainStore, analyticsStore } = useStore();
 
     const intl = useIntl();
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isEvm =
+      chainStore.current.features?.includes("eth-key-sign") ?? false;
 
     const language = useLanguage();
 

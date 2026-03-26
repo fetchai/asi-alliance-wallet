@@ -65,7 +65,7 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
   const selectedChainInfo = chainStore.getChain(selectedChainId);
-  const isEvm = selectedChainInfo.features?.includes("evm");
+  const isEvm = selectedChainInfo.features?.includes("eth-key-sign");
 
   return (
     <HeaderLayout
@@ -105,7 +105,7 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
             </DropdownMenu>
           </ButtonDropdown>
           <div style={{ flex: 1 }} />
-          {selectedChainId !== "1" && (
+          {selectedChainId !== "eip155:1" && (
             <div
               style={{
                 display: "flex",
@@ -142,7 +142,7 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
             </div>
           )}
         </div>
-        {selectedChainId === "1" ? (
+        {selectedChainId === "eip155:1" ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
             <img
               src={require("../../../public/assets/img/icons8-lock.svg")}

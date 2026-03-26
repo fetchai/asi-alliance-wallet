@@ -53,7 +53,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     (currency: AppCurrency) => currency.coinMinimalDenom === "uusdc"
   );
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
   const stakable = (() => {
     if (isNoble && hasUSDC) {
       return balanceQuery.getBalanceFromCurrency(hasUSDC);
@@ -94,7 +94,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     },
     refetchInterval: 3600 * 1000,
     refetchOnMount: false,
-    enabled: !current?.features?.includes("evm"),
+    enabled: !current?.features?.includes("eth-key-sign"),
     staleTime: accountOrChainChanged ? 0 : 3600 * 1000,
   });
 
@@ -134,7 +134,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        current.chainId === "1" || current.chainId === "injective-1"
+        current.chainId === "eip155:1" || current.chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )

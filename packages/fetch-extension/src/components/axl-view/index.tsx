@@ -20,7 +20,7 @@ export const AXLView: FunctionComponent = () => {
   const balance = extractNumberFromBalance(
     queryBalance?.balance.trim(true).maxDecimals(18).toString()
   );
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
   return (
     <div className={style["containerInner"]}>
       <div className={style["vertical"]}>

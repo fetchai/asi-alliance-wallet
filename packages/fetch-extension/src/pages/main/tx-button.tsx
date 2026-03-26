@@ -40,7 +40,7 @@ export const TxButtonView: FunctionComponent = observer(() => {
     accountInfo.bech32Address
   );
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
 
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
 

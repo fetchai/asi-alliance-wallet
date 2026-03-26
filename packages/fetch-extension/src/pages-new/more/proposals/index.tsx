@@ -153,7 +153,10 @@ export const Proposals = observer(() => {
         </div>
       }
     >
-      {!(current.features?.includes("evm") || current.chainId === "noble-1") ? (
+      {!(
+        current.features?.includes("eth-key-sign") ||
+        current.chainId === "noble-1"
+      ) ? (
         isError ? (
           <ErrorActivity />
         ) : isLoading ? (

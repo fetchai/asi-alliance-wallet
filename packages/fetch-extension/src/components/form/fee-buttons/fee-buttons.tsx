@@ -318,7 +318,8 @@ export const FeeButtonsInner: FunctionComponent<
       }
     }, [feeConfig, feeConfig.feeCurrency, feeConfig.fee]);
     const intl = useIntl();
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isEvm =
+      chainStore.current.features?.includes("eth-key-sign") ?? false;
 
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);

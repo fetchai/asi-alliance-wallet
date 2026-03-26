@@ -103,7 +103,8 @@ export class ObservableQueryCosmosBalances extends ObservableQueryTendermint<Bal
     also avoid fetching the endpoint for evm networks*/
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
-      this.bech32Address.length > 0 && !chainInfo?.features?.includes("evm")
+      this.bech32Address.length > 0 &&
+      !chainInfo?.features?.includes("eth-key-sign")
     );
   }
 
@@ -148,7 +149,7 @@ export class ObservableQueryCosmosBalanceRegistry implements BalanceRegistry {
   ) {
     const denomHelper = new DenomHelper(minimalDenom);
     const isEvm =
-      chainGetter.getChain(chainId).features?.includes("evm") ?? false;
+      chainGetter.getChain(chainId).features?.includes("eth-key-sign") ?? false;
 
     if (denomHelper.type !== "native" || isEvm) {
       return;

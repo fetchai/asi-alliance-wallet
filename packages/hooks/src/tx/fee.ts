@@ -298,7 +298,7 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
       );
     }
 
-    if (this.chainId === "1") {
+    if (this.chainId === "eip155:1") {
       const ethereumFees = this.queriesStore.get(this.chainId).evm
         ?.queryEthGasFees.fees;
 
@@ -315,7 +315,9 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
       }
     }
 
-    if (this.chainGetter.getChain(this.chainId).features?.includes("evm")) {
+    if (
+      this.chainGetter.getChain(this.chainId).features?.includes("eth-key-sign")
+    ) {
       const evmGasPrice = this.queriesStore.get(this.chainId).evm?.queryGasPrice
         .gasPrice;
       if (evmGasPrice) {
@@ -503,7 +505,7 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
       return undefined;
     }
 
-    if (this.chainId === "1") {
+    if (this.chainId === "eip155:1") {
       const ethereumFeesQuery = this.queriesStore.get(this.chainId).evm
         ?.queryEthGasFees;
 

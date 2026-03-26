@@ -83,7 +83,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
 
   const queries = queriesStore.get(chainStore.current.chainId);
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
   const query = isEvm
     ? queries.evm.queryErc20Metadata
     : isSecret20

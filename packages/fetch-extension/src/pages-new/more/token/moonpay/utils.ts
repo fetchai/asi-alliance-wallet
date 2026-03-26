@@ -31,7 +31,7 @@ export const getCurrencyCodeForMoonpay = (coinDenom: string | undefined) => {
 };
 
 export const moonpayTokenCode = (chainId: string, coinDenom: string) => {
-  if (chainId === "1" && coinDenom === "FET") return "fet_eth";
+  if (chainId === "eip155:1" && coinDenom === "FET") return "fet_eth";
   if (chainId === "noble-1" && coinDenom === "USDC") return "usdc_noble";
   if (
     coinDenom === "USDC" ||

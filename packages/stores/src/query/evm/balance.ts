@@ -123,7 +123,7 @@ export class ObservableQueryEvmNativeBalanceRegistry
   ): ObservableQueryBalanceInner | undefined {
     const denomHelper = new DenomHelper(minimalDenom);
     const isEvm =
-      chainGetter.getChain(chainId).features?.includes("evm") ?? false;
+      chainGetter.getChain(chainId).features?.includes("eth-key-sign") ?? false;
 
     if (!(isEvm && denomHelper.type === "native")) {
       return;

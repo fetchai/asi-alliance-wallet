@@ -26,13 +26,14 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     const mainChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
         !chainInfo.beta &&
-        !chainInfo.features?.includes("eth-key-sign") &&
+        !chainInfo.evm &&
         chainStore.isEnabledChain(chainInfo.chainId)
     );
 
     const evmChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
         chainInfo.features?.includes("eth-key-sign") &&
+        chainInfo.evm &&
         chainStore.isEnabledChain(chainInfo.chainId)
     );
 

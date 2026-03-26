@@ -64,12 +64,13 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     // check if address is whitelisted for Buy/Sell feature
     const isAddressWhitelisted = accountInfo?.bech32Address
       ? checkAddressIsBuySellWhitelisted(
-          chainId === "1" || chainId === "injective-1"
+          chainId === "eip155:1" || chainId === "injective-1"
             ? accountInfo.ethereumHexAddress || ""
             : accountInfo.bech32Address
         )
       : false;
-    const isBridgeSupported = chainId === CHAIN_ID_FETCHHUB || chainId === "1";
+    const isBridgeSupported =
+      chainId === CHAIN_ID_FETCHHUB || chainId === "eip155:1";
 
     return (
       <div className={style["actions"]}>

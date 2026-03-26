@@ -48,7 +48,7 @@ export const AccountView: FunctionComponent = observer(() => {
     }
   })();
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
 
   const intl = useIntl();
 

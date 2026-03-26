@@ -230,7 +230,7 @@ export class RecipientConfig
       }
     }
 
-    const isEvm = this.chainInfo.features?.includes("evm");
+    const isEvm = this.chainInfo.features?.includes("eth-key-sign");
 
     if (isEvm) {
       try {
