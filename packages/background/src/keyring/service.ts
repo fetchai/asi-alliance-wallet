@@ -152,11 +152,7 @@ export class KeyRingService {
         if (stillCurrent !== targetChainId) {
           return;
         }
-        try {
-          await this.ensureCardanoServiceReady(newChainId);
-        } catch (error) {
-          console.error("[KeyRingService] Failed to rebind CardanoService:", error);
-        }
+        await this.ensureCardanoServiceReady(newChainId);
       }
 
       const keys = isCardano
@@ -171,6 +167,7 @@ export class KeyRingService {
         `Network switch consistency check failed for ${newChainId}:`,
         error
       );
+      throw error;
     }
   };
 
@@ -440,6 +437,8 @@ export class KeyRingService {
 
   lock(): KeyRingStatus {
     this.keyRing.lock();
+    this.cardanoService.reset();
+    this.cardanoRestoreByChainId.clear();
     return this.keyRing.status;
   }
 
@@ -543,7 +542,9 @@ export class KeyRingService {
       // Set must run in the same sync turn after creating the promise.
       this.cardanoRestoreByChainId.set(chainId, promise);
       promise.finally(() => this.cardanoRestoreByChainId.delete(chainId));
-      return promise;
+      await promise;
+      this.assertCardanoServiceReady(chainId);
+      return;
     }
 
     if (!this.cardanoService.isInitialized()) {
@@ -558,6 +559,7 @@ export class KeyRingService {
         this.cardanoServiceInitPromise = promise;
         try {
           await promise;
+          this.assertCardanoServiceReady(chainId);
         } catch (error) {
           console.error("[KeyRingService] Failed to initialize CardanoService:", error);
           throw error;
@@ -567,6 +569,16 @@ export class KeyRingService {
       } else {
         throw new Error("KeyRing not ready for Cardano initialization");
       }
+    }
+
+    this.assertCardanoServiceReady(chainId);
+  }
+
+  private assertCardanoServiceReady(chainId?: string): void {
+    if (!this.cardanoService.isReady()) {
+      throw new Error(
+        `temporarily_unavailable: wallet_not_ready${chainId ? `: ${chainId}` : ""}`
+      );
     }
   }
 

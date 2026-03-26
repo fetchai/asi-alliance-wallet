@@ -637,14 +637,19 @@ export class ChainsService {
   async setSelectedChain(chainId: string) {
     if (this.selectedChainId !== chainId) {
       const oldChainId = this.selectedChainId;
-
       this.selectedChainId = chainId;
-      // Complete critical network switch handlers before notifying UI.
-      for (const handler of this.onNetworkSwitchHandlers) {
-        await handler(oldChainId, chainId).catch((error) => {
-          console.error("Network switch handler failed:", error);
-          throw error;
-        });
+      try {
+        // Complete critical network switch handlers before notifying UI.
+        for (const handler of this.onNetworkSwitchHandlers) {
+          await handler(oldChainId, chainId).catch((error) => {
+            console.error("Network switch handler failed:", error);
+            throw error;
+          });
+        }
+      } catch (error) {
+        // Fail-closed: roll back selected chain when critical switch handlers fail.
+        this.selectedChainId = oldChainId;
+        throw error;
       }
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,

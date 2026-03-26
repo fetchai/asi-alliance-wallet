@@ -9,7 +9,11 @@ describe("KeyRingService", () => {
   let mockCardanoService: CardanoService;
 
   beforeEach(() => {
-    mockCardanoService = {} as CardanoService;
+    mockCardanoService = {
+      reset: jest.fn(),
+      isInitialized: jest.fn().mockReturnValue(false),
+      isReady: jest.fn().mockReturnValue(false),
+    } as any as CardanoService;
     service = new KeyRingService(
       new MemoryKVStore("test"),
       [],
@@ -137,4 +141,51 @@ describe("KeyRingService", () => {
       expect(mergedMeta.cardanoSerializedAgent).toBeUndefined();
     });
   });
-}); 
+
+  describe("lock lifecycle", () => {
+    it("resets cardano runtime state on lock", () => {
+      let status = KeyRingStatus.UNLOCKED;
+      const mockLock = jest.fn().mockImplementation(() => {
+        status = KeyRingStatus.LOCKED;
+      });
+      service["keyRing"] = {
+        get status() {
+          return status;
+        },
+        lock: mockLock,
+      } as any;
+      service["cardanoRestoreByChainId"] = new Map([
+        ["cardano-mainnet", Promise.resolve()],
+      ]);
+
+      const result = service.lock();
+
+      expect(mockLock).toHaveBeenCalled();
+      expect((mockCardanoService as any).reset).toHaveBeenCalled();
+      expect((service as any)["cardanoRestoreByChainId"].size).toBe(0);
+      expect(result).toBe(KeyRingStatus.LOCKED);
+    });
+  });
+
+  describe("ensureCardanoServiceReady contract", () => {
+    it("throws when restore attempt completes but service is still not ready", async () => {
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({}),
+        currentPassword: "pw",
+      } as any;
+      service["chainsService"] = {
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["cardanoService"] = {
+        isInitialized: jest.fn().mockReturnValue(true),
+        isReady: jest.fn().mockReturnValue(false),
+        restoreFromKeyStore: jest.fn().mockResolvedValue(undefined),
+      } as any;
+
+      await expect(
+        service.ensureCardanoServiceReady("cardano-mainnet")
+      ).rejects.toThrow("temporarily_unavailable: wallet_not_ready");
+    });
+  });
+});
