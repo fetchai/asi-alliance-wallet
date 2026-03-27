@@ -437,9 +437,14 @@ export class CardanoWalletManager {
       throw new Error(`Invalid recipient address: ${params.to}`);
     }
 
-    let address: any;
+    const parsedAddress = Cardano.Address.fromString(params.to);
+    if (!parsedAddress) {
+      throw new Error(`Invalid Cardano address format: Unable to parse recipient address`);
+    }
+
+    let paymentAddress: Cardano.PaymentAddress;
     try {
-      address = Cardano.PaymentAddress(params.to);
+      paymentAddress = Cardano.PaymentAddress(params.to);
     } catch (parseError: any) {
       throw new Error(`Invalid Cardano address format: ${parseError?.message || parseError}`);
     }
@@ -447,7 +452,7 @@ export class CardanoWalletManager {
     if (!currentChain) {
       throw new Error("network_context_missing");
     }
-    const recipientNetworkId = address.getNetworkId();
+    const recipientNetworkId = parsedAddress.getNetworkId();
     const senderIsMainnet = currentChain.networkMagic === Cardano.NetworkMagics.Mainnet;
     const recipientIsMainnet = recipientNetworkId === Cardano.NetworkId.Mainnet;
     if (senderIsMainnet !== recipientIsMainnet) {
@@ -464,7 +469,7 @@ export class CardanoWalletManager {
 
     const outputsMap = new Map([
       ['output1', {
-        address,
+        address: paymentAddress,
         value: {
           coins: params.amount,
           assets: sdkAssets,
