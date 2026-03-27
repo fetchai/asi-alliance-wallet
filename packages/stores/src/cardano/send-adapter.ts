@@ -68,6 +68,8 @@ export class CardanoSendAdapter {
       return undefined;
     }
 
+    const normalizedRecipient = recipient.trim();
+
     // Convert display amount to base units
     const actualAmount = displayAmountToBaseUnits(amount, currency.coinDecimals);
 
@@ -87,12 +89,16 @@ export class CardanoSendAdapter {
       _signOptions?: KeplrSignOptions,
       onTxEvents?: any
     ) => {
+      if (!normalizedRecipient) {
+        throw new Error("Recipient address is required");
+      }
+
       let draftId: string | undefined;
       try {
         const draft = (await this.messageRequester.sendMessage(
           BACKGROUND_PORT,
           new BuildSendAdaTxDraftMsg(
-            recipient,
+            normalizedRecipient,
             lovelaceAmount,
             _memo,
             this.chainId,
@@ -140,8 +146,12 @@ export class CardanoSendAdapter {
     return {
       msgs: async () => ({ aminoMsgs: [], protoMsgs: [] }),
       simulate: async () => {
+        if (!normalizedRecipient) {
+          throw new Error("Recipient address is required");
+        }
+
         const estimateMsg = new EstimateSendAdaMsg(
-          recipient, lovelaceAmount, undefined, this.chainId, assets
+          normalizedRecipient, lovelaceAmount, undefined, this.chainId, assets
         );
         const estimate = await this.messageRequester.sendMessage(BACKGROUND_PORT, estimateMsg) as {
           fee: string;

@@ -99,8 +99,16 @@ export const SendPage: FunctionComponent = observer(() => {
     sendConfigs.feeConfig,
     gasSimulatorKey,
     () => {
+      const isCardano = current.features?.includes("cardano") ?? false;
       if (!sendConfigs.amountConfig.sendCurrency) {
         throw new Error("Send currency not set");
+      }
+
+      if (isCardano) {
+        // Cardano fee is derived from draft build flow, so keep simulator quiet.
+        return {
+          simulate: async () => ({ gasUsed: 0 }),
+        } as any;
       }
 
       // Prefer not to use the gas config or fee config,
@@ -134,6 +142,12 @@ export const SendPage: FunctionComponent = observer(() => {
   );
 
   useEffect(() => {
+    if (current.features?.includes("cardano")) {
+      gasSimulator.forceDisable(false);
+      gasSimulator.setEnabled(false);
+      return;
+    }
+
     // To simulate secretwasm, we need to include the signature in the tx.
     // With the current structure, this approach is not possible.
     if (
@@ -152,6 +166,7 @@ export const SendPage: FunctionComponent = observer(() => {
       gasSimulator.setEnabled(true);
     }
   }, [
+    current.features,
     accountInfo.secret.msgOpts.send.secret20.gas,
     gasSimulator,
     sendConfigs.amountConfig.sendCurrency,

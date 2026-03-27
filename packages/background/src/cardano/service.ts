@@ -216,6 +216,24 @@ export class CardanoService {
     this.locallyPendingSentTxs.set(chainKey, perChain);
   }
 
+  private removeLocallyPendingSentTx(txId: string, chainId?: string) {
+    if (!chainId) {
+      return;
+    }
+    const perChain = this.locallyPendingSentTxs.get(chainId);
+    if (!perChain) {
+      return;
+    }
+    perChain.delete(txId);
+    if (perChain.size === 0) {
+      this.locallyPendingSentTxs.delete(chainId);
+    }
+  }
+
+  private createDraftPendingTxId(draftId: string): string {
+    return `draft-pending:${draftId}`;
+  }
+
   /**
    * Gets Cardano wallet balance
    */
@@ -411,8 +429,26 @@ export class CardanoService {
       .toString(36)
       .slice(2)}`;
 
+    const payloadHash = this.computeDraftPayloadHash({
+      chainId: params.chainId,
+      walletId: params.walletId,
+      selectedAccountAddress: params.selectedAccountAddress,
+      selectedKeyStoreId: params.selectedKeyStoreId,
+      networkId: params.networkId,
+      unlockSessionId: params.unlockSessionId,
+      source: params.source,
+      to: params.to,
+      amount: params.amount,
+      memo: params.memo,
+      assets: params.assets,
+      fee: built.fee,
+      total: built.total,
+      minAdaForTokens: built.minAdaForTokens,
+      tx: built.tx,
+    });
+
     this.sendAdaTxDrafts.set(draftId, {
-      payloadHash: this.computeDraftPayloadHash(built.tx),
+      payloadHash,
       createdAt: Date.now(),
       chainId: params.chainId,
       walletId: params.walletId,
@@ -485,12 +521,25 @@ export class CardanoService {
       this.sendAdaTxDrafts.delete(params.draftId);
       throw new Error("Transaction draft payload mismatch. Please rebuild and try again.");
     }
-    if (this.computeDraftPayloadHash(draft.tx) !== draft.payloadHash) {
+    if (this.computeDraftPayloadHash(draft) !== draft.payloadHash) {
       this.sendAdaTxDrafts.delete(params.draftId);
       throw new Error("Transaction draft payload changed. Please rebuild and try again.");
     }
 
     try {
+      // Show tx in Activity immediately after approval, even before network broadcast.
+      const draftPendingTxId = this.createDraftPendingTxId(params.draftId);
+      this.registerLocallyPendingSentTx(
+        {
+          amount: draft.amount,
+          fee: draft.fee,
+          minAdaForTokens: draft.minAdaForTokens,
+          assets: draft.assets,
+        },
+        draftPendingTxId,
+        params.chainId
+      );
+
       const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
       if (!walletManager) {
         throw new Error("Wallet manager not initialized");
@@ -498,6 +547,8 @@ export class CardanoService {
       const signedTx = (await draft.tx.sign()).cbor;
       const txIdAny = await walletManager.submitTx(signedTx);
       const txId = typeof txIdAny === "string" ? txIdAny : txIdAny?.toString?.() ?? String(txIdAny);
+
+      this.removeLocallyPendingSentTx(draftPendingTxId, params.chainId);
 
       // Lace-like behavior: show pending immediately after broadcast.
       this.registerLocallyPendingSentTx(
@@ -610,22 +661,74 @@ export class CardanoService {
     return computeDraftSummaryHash(draft);
   }
 
-  private computeDraftPayloadHash(tx: any): string {
-    const serialized = this.serializeDraftPayload(tx);
-    return createHash("sha256").update(serialized).digest("hex");
+  private computeDraftPayloadHash(draft: {
+    chainId?: string;
+    walletId: string;
+    selectedAccountAddress: string;
+    selectedKeyStoreId: string;
+    networkId: string;
+    unlockSessionId: string;
+    source?: string;
+    to: string;
+    amount: string;
+    memo?: string;
+    assets?: CardanoAssetAmount[];
+    fee: string;
+    total: string;
+    minAdaForTokens?: string;
+    tx?: any;
+  }): string {
+    const normalizedAssets = (draft.assets ?? [])
+      .map((a) => `${a.assetId}:${a.amount}`)
+      .sort();
+    const txFingerprint = this.trySerializeTxFingerprint(draft.tx);
+    const payload = JSON.stringify({
+      chainId: draft.chainId ?? "",
+      walletId: draft.walletId,
+      sender: draft.selectedAccountAddress,
+      selectedKeyStoreId: draft.selectedKeyStoreId,
+      networkId: draft.networkId,
+      unlockSessionId: draft.unlockSessionId,
+      source: draft.source ?? "",
+      to: draft.to,
+      amount: draft.amount,
+      memo: draft.memo ?? "",
+      fee: draft.fee,
+      total: draft.total,
+      minAdaForTokens: draft.minAdaForTokens ?? "",
+      assets: normalizedAssets,
+      txFingerprint: txFingerprint ?? "",
+    });
+    return createHash("sha256").update(payload).digest("hex");
   }
 
-  private serializeDraftPayload(tx: any): string {
-    if (tx && typeof tx.toCbor === "function") {
-      return tx.toCbor();
+  private trySerializeTxFingerprint(tx: any): string | undefined {
+    try {
+      if (tx && typeof tx.toCbor === "function") {
+        return tx.toCbor();
+      }
+      if (tx && typeof tx.cbor === "string") {
+        return tx.cbor;
+      }
+      if (tx && typeof tx.toCore === "function") {
+        return JSON.stringify(tx.toCore());
+      }
+    } catch (error) {
+      console.warn("[CardanoService] tx fingerprint serialization failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
     }
-    if (tx && typeof tx.cbor === "string") {
-      return tx.cbor;
+
+    if (tx != null) {
+      console.warn("[CardanoService] tx fingerprint unavailable", {
+        txType: typeof tx,
+        hasToCbor: typeof tx?.toCbor === "function",
+        hasCborString: typeof tx?.cbor === "string",
+        hasToCore: typeof tx?.toCore === "function",
+      });
     }
-    if (tx && typeof tx.toCore === "function") {
-      return JSON.stringify(tx.toCore());
-    }
-    throw new Error("Unable to serialize draft payload");
+    return undefined;
   }
 
   /**

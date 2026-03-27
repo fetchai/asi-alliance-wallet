@@ -62,6 +62,30 @@ const isSelfSendRecipient = ({
   return bech32Address != null && recipient === bech32Address.trim();
 };
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  const maybeObj = error as
+    | { message?: unknown; details?: unknown; response?: { data?: { message?: unknown } } }
+    | undefined;
+  const responseMessage = maybeObj?.response?.data?.message;
+  if (typeof responseMessage === "string" && responseMessage.trim().length > 0) {
+    return responseMessage;
+  }
+  const details = maybeObj?.details;
+  if (typeof details === "string" && details.trim().length > 0) {
+    return details;
+  }
+  const message = maybeObj?.message;
+  if (typeof message === "string" && message.trim().length > 0) {
+    return message;
+  }
+
+  return "Transaction failed";
+};
+
 type CardanoPasswordConfirmModalProps = {
   isOpen: boolean;
   isSyncing: boolean;
@@ -209,7 +233,8 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               await props.onConfirm(password);
               props.onCancel();
             } catch (err: any) {
-              const message = `${err?.message ?? ""}`.toLowerCase();
+              const messageText = getErrorMessage(err);
+              const message = messageText.toLowerCase();
               if (
                 message.includes("invalid password") ||
                 message.includes("fail to decrypt")
@@ -224,7 +249,7 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               } else {
                 setPasswordError(undefined);
                 props.onNotifyWarning(
-                  err?.message ? `Transaction Failed: ${err.message}` : "Transaction Failed"
+                  `Transaction Failed: ${messageText}`
                 );
               }
             } finally {
@@ -429,13 +454,23 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       };
     }, [isCardano, chainStore.current.chainId]);
 
+    const normalizedCardanoDraftError = (() => {
+      if (!cardanoDraftError) {
+        return null;
+      }
+      if (cardanoDraftError === "recipient address is empty") {
+        return "Recipient address is required";
+      }
+      return cardanoDraftError;
+    })();
+
     const sendConfigError =
       sendConfigs.recipientConfig.error ??
       sendConfigs.amountConfig.error ??
       sendConfigs.memoConfig.error ??
       (isCardano
-        ? cardanoDraftError
-          ? new Error(cardanoDraftError)
+        ? normalizedCardanoDraftError
+          ? new Error(normalizedCardanoDraftError)
           : !cardanoDraft && !isBuildingCardanoDraft
           ? new Error("Transaction is not ready")
           : undefined
@@ -493,7 +528,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         return;
       }
 
-      const recipient = sendConfigs?.recipientConfig?.recipient ?? "";
+      const normalizedRecipient = sendConfigs?.recipientConfig?.recipient?.trim?.() ?? "";
+      const recipientError = sendConfigs?.recipientConfig?.error;
       const amountStr = sendConfigs?.amountConfig?.amount ?? "";
       const memo = sendConfigs?.memoConfig?.memo ?? "";
       const sendCurrency = sendConfigs?.amountConfig?.sendCurrency;
@@ -501,7 +537,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       const denomHelper = sendCurrency ? new DenomHelper(sendCurrency.coinMinimalDenom) : null;
       const isTokenSend = denomHelper?.type === CARDANO_NATIVE_TOKEN_TYPE;
 
-      if (!recipient || !amountStr) {
+      if (!normalizedRecipient || !amountStr || recipientError) {
         setCardanoDraft(null);
         setCardanoDraftError(null);
         setIsBuildingCardanoDraft(false);
@@ -523,7 +559,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
           const requester = new InExtensionMessageRequester();
           const draftMsg = new BuildSendAdaTxDraftMsg(
-            recipient,
+            normalizedRecipient,
             lovelaceAmount,
             memo,
             chainStore.current.chainId,
@@ -548,7 +584,12 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         } catch (e: any) {
           if (!cancelled) {
             setCardanoDraft(null);
-            setCardanoDraftError(e?.message ?? "Failed to build transaction");
+            const message = e?.message ?? "Failed to build transaction";
+            setCardanoDraftError(
+              message === "recipient address is empty"
+                ? "Recipient address is required"
+                : message
+            );
           }
         } finally {
           if (!cancelled) {
@@ -567,6 +608,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       isCardanoSyncing,
       chainStore.current.chainId,
       sendConfigs?.recipientConfig?.recipient,
+      sendConfigs?.recipientConfig?.error,
       sendConfigs?.amountConfig?.amount,
       sendConfigs?.amountConfig?.sendCurrency?.coinDecimals,
       sendConfigs?.amountConfig?.sendCurrency?.coinMinimalDenom,
@@ -598,7 +640,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
         if (isCardano) {
           if (!cardanoDraft?.draftId) {
-            throw new Error(cardanoDraftError || "Transaction is not ready");
+            throw new Error(normalizedCardanoDraftError || "Transaction is not ready");
           }
 
           const requester = new InExtensionMessageRequester();
@@ -984,12 +1026,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
               try {
                 await doSend();
-              } catch (e) {
+              } catch (e: any) {
+                const errorMessage = getErrorMessage(e);
                 analyticsStore.logEvent("send_txn_broadcasted_fail", {
                   chainId: chainStore.current.chainId,
                   chainName: chainStore.current.chainName,
                   feeType: sendConfigs.feeConfig.feeType,
-                  message: e?.message ?? "",
+                  message: errorMessage,
                 });
 
                 const currentPathName = getPathname();
@@ -1010,18 +1053,17 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                       },
                     },
                   });
-                } else {
-                  notification.push({
-                    type: "warning",
-                    placement: "top-center",
-                    duration: 5,
-                    content: `Transaction Failed`,
-                    canDelete: true,
-                    transition: {
-                      duration: 0.25,
-                    },
-                  });
                 }
+                notification.push({
+                  type: "warning",
+                  placement: "top-center",
+                  duration: 5,
+                  content: `Transaction Failed: ${errorMessage}`,
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
               }
             }
           }}

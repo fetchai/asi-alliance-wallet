@@ -29,6 +29,32 @@ const stateFromError = (error: unknown): CardanoServiceState => {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error ?? "unknown_error");
 
+const getSubmitErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  const maybeObj = error as
+    | { message?: unknown; details?: unknown; response?: { data?: { message?: unknown } } }
+    | undefined;
+  const responseMessage = maybeObj?.response?.data?.message;
+  if (typeof responseMessage === "string" && responseMessage.trim().length > 0) {
+    return responseMessage;
+  }
+
+  const details = maybeObj?.details;
+  if (typeof details === "string" && details.trim().length > 0) {
+    return details;
+  }
+
+  const message = maybeObj?.message;
+  if (typeof message === "string" && message.trim().length > 0) {
+    return message;
+  }
+
+  return "Cardano transaction submission failed";
+};
+
 export const getHandler: (
   service: CardanoService,
   keyRingService: KeyRingService
@@ -309,17 +335,21 @@ const handleSubmitSendAdaTxDraftMsg: (
     const approvedSummaryHash = approvalData.summaryHash;
     const approvedPayloadHash = approvalData.payloadHash;
 
-    return await service.submitSendAdaTxDraft({
-      draftId: msg.draftId,
-      chainId: msg.chainId,
-      walletId: context.walletId,
-      selectedAccountAddress: context.selectedAccountAddress,
-      selectedKeyStoreId: context.selectedKeyStoreId,
-      networkId: context.networkId,
-      unlockSessionId: context.unlockSessionId,
-      approvedSummaryHash,
-      approvedPayloadHash,
-    });
+    try {
+      return await service.submitSendAdaTxDraft({
+        draftId: msg.draftId,
+        chainId: msg.chainId,
+        walletId: context.walletId,
+        selectedAccountAddress: context.selectedAccountAddress,
+        selectedKeyStoreId: context.selectedKeyStoreId,
+        networkId: context.networkId,
+        unlockSessionId: context.unlockSessionId,
+        approvedSummaryHash,
+        approvedPayloadHash,
+      });
+    } catch (error) {
+      throw new Error(getSubmitErrorMessage(error));
+    }
   };
 };
 
@@ -357,17 +387,21 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
     const approvedSummaryHash = approvalData.summaryHash;
     const approvedPayloadHash = approvalData.payloadHash;
 
-    return await service.submitSendAdaTxDraft({
-      draftId: msg.draftId,
-      chainId: msg.chainId,
-      walletId: context.walletId,
-      selectedAccountAddress: context.selectedAccountAddress,
-      selectedKeyStoreId: context.selectedKeyStoreId,
-      networkId: context.networkId,
-      unlockSessionId: context.unlockSessionId,
-      approvedSummaryHash,
-      approvedPayloadHash,
-    });
+    try {
+      return await service.submitSendAdaTxDraft({
+        draftId: msg.draftId,
+        chainId: msg.chainId,
+        walletId: context.walletId,
+        selectedAccountAddress: context.selectedAccountAddress,
+        selectedKeyStoreId: context.selectedKeyStoreId,
+        networkId: context.networkId,
+        unlockSessionId: context.unlockSessionId,
+        approvedSummaryHash,
+        approvedPayloadHash,
+      });
+    } catch (error) {
+      throw new Error(getSubmitErrorMessage(error));
+    }
   };
 };
 
