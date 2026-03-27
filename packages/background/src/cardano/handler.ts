@@ -306,21 +306,8 @@ const handleSubmitSendAdaTxDraftMsg: (
       networkId: context.networkId,
       unlockSessionId: context.unlockSessionId,
     });
-    const approveResult = (await keyRingService.waitApprove(
-      env,
-      "/cardano/send-confirm",
-      "request-cardano-send",
-      {
-        origin: (env as { origin?: string }).origin || "wallet-ui",
-        source: "wallet-ui",
-        ...approvalData.draft,
-        createdAt: approvalData.createdAt,
-        submittedAt: Date.now(),
-      }
-    )) as { summaryHash?: string; payloadHash?: string };
-
-    const approvedSummaryHash = approveResult?.summaryHash || approvalData.summaryHash;
-    const approvedPayloadHash = approveResult?.payloadHash || approvalData.payloadHash;
+    const approvedSummaryHash = approvalData.summaryHash;
+    const approvedPayloadHash = approvalData.payloadHash;
 
     return await service.submitSendAdaTxDraft({
       draftId: msg.draftId,
@@ -367,20 +354,8 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
       networkId: context.networkId,
       unlockSessionId: context.unlockSessionId,
     });
-    const approveResult = (await keyRingService.waitApprove(
-      env,
-      "/cardano/send-confirm",
-      "request-cardano-send",
-      {
-        origin: (env as { origin?: string }).origin || "wallet-ui",
-        source: "wallet-ui",
-        ...approvalData.draft,
-        createdAt: approvalData.createdAt,
-        submittedAt: Date.now(),
-      }
-    )) as { summaryHash?: string; payloadHash?: string };
-    const approvedSummaryHash = approveResult?.summaryHash || approvalData.summaryHash;
-    const approvedPayloadHash = approveResult?.payloadHash || approvalData.payloadHash;
+    const approvedSummaryHash = approvalData.summaryHash;
+    const approvedPayloadHash = approvalData.payloadHash;
 
     return await service.submitSendAdaTxDraft({
       draftId: msg.draftId,
