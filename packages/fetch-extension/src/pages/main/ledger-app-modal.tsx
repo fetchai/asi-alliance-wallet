@@ -6,6 +6,7 @@ import { useStore } from "../../stores";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { LedgerApp, TryLedgerInitMsg } from "@keplr-wallet/background";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
   const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
@@ -98,6 +99,10 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
                     keyRingStore.selectedKeyInfo.id,
                     pubkey,
                     LedgerApp.Ethereum
+                  );
+                  dispatchGlobalEventExceptSelf(
+                    "keplr_ledger_app_connected",
+                    keyRingStore.selectedKeyInfo.id
                   );
                 }
                 accountInfo.disconnect();

@@ -123,6 +123,7 @@ import { ChangePassword } from "./pages-new/more/security-privacy/change-passwor
 import { SignManualTxn } from "./pages-new/sign-manual-txn";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { SignEthereumPage } from "./pages-new/sign/eth-sign";
+import { Secret20ViewingKeyAccessPage } from "./pages/access/viewing-key";
 
 const queryClient = new QueryClient();
 
@@ -278,11 +279,10 @@ const App = observer(() => {
                             />
                             <Route path="/unlock" element={<LockPage />} />
                             <Route path="/access" element={<AccessPage />} />
-                            {/* TODO: fix the background handler */}
-                            {/* <Route
+                            <Route
                               path="/access/viewing-key"
                               element={<Secret20ViewingKeyAccessPage />}
-                            /> */}
+                            />
                             <Route
                               path="/activity-details"
                               element={<ActivityDetails />}

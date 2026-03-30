@@ -4,7 +4,7 @@
 // import { ButtonV2 } from "@components-v2/buttons/button";
 // import { GithubIcon, InformationCircleOutline } from "@components/icon";
 // import { ToolTip } from "@components/tooltip";
-// import { useInteractionInfo } from "@keplr-wallet/hooks";
+// import { useInteractionInfo } from "@hooks/interaction";
 // import { EmptyLayout } from "@layouts/empty-layout";
 // import classNames from "classnames";
 // import { observer } from "mobx-react-lite";
@@ -13,14 +13,29 @@
 // import style from "./style.module.scss";
 
 // export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
-//   const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
-//     useStore();
+//   const {
+//     chainSuggestStore,
+//     analyticsStore,
+//     uiConfigStore,
+//     chainStore,
+//     permissionStore,
+//   } = useStore();
 //   const [updateFromRepoDisabled, setUpdateFromRepoDisabled] = useState(false);
 //   const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
 //   const navigate = useNavigate();
 
-//   const interactionInfo = useInteractionInfo(() => {
-//     chainSuggestStore.rejectAll();
+//   useInteractionInfo({
+//     onWindowClose: async () => {
+//       await chainSuggestStore.rejectAll();
+//     },
+//     onUnmount: async () => {
+//       if (chainSuggestStore.waitingSuggestedChainInfo) {
+//         await chainSuggestStore.rejectWithProceedNext(
+//           chainSuggestStore.waitingSuggestedChainInfo?.id,
+//           () => {}
+//         );
+//       }
+//     },
 //   });
 
 //   const communityChainInfo = chainSuggestStore.waitingSuggestedChainInfo
@@ -28,6 +43,12 @@
 //         chainSuggestStore.waitingSuggestedChainInfo.data.chainInfo.chainId
 //       )
 //     : undefined;
+
+//   const isLoading = chainSuggestStore.waitingSuggestedChainInfo
+//     ? permissionStore.isObsoleteInteractionApproved(
+//         chainSuggestStore?.waitingSuggestedChainInfo?.id
+//       )
+//     : true;
 
 //   useEffect(() => {
 //     if (chainSuggestStore.waitingSuggestedChainInfo) {
@@ -346,7 +367,7 @@
 //             <ButtonV2
 //               text=""
 //               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-//               dataLoading={chainSuggestStore.isLoading}
+//               dataLoading={isLoading}
 //               onClick={async (e: any) => {
 //                 e.preventDefault();
 
@@ -367,7 +388,7 @@
 //             <ButtonV2
 //               text=""
 //               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-//               dataLoading={chainSuggestStore.isLoading}
+//               dataLoading={isLoading}
 //               onClick={async (e: any) => {
 //                 e.preventDefault();
 

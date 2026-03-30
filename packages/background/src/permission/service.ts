@@ -293,7 +293,9 @@ export class PermissionService {
 
     await this.interactionService.waitApproveV2(
       env,
-      "/access",
+      options?.permissionTypeForMessage === "secret20-viewing-key"
+        ? "/access/viewing-key"
+        : "/access",
       INTERACTION_TYPE_PERMISSION,
       permissionData,
       (newChainId?: string) => {

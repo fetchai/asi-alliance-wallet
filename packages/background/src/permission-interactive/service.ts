@@ -99,7 +99,8 @@ export class PermissionInteractiveService {
   async ensureEnabled(
     env: Env,
     chainIds: string[],
-    origin: string
+    origin: string,
+    msgType?: string
   ): Promise<void> {
     await this.ensureKeyRingNotEmpty(env);
 
@@ -108,7 +109,10 @@ export class PermissionInteractiveService {
     return await this.permissionService.checkOrGrantBasicAccessPermission(
       env,
       chainIds,
-      origin
+      origin,
+      {
+        permissionTypeForMessage: msgType,
+      }
     );
   }
 

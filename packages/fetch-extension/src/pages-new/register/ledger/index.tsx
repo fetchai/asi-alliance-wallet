@@ -138,6 +138,10 @@ export const ImportLedgerPage: FunctionComponent<{
         accountType: "ledger",
       });
       dispatchGlobalEventExceptSelf(
+        "keplr_ledger_app_connected",
+        ledgerInitStore.cosmosLikeApp || "Cosmos"
+      );
+      dispatchGlobalEventExceptSelf(
         "keplr_new_key_created",
         keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
       );

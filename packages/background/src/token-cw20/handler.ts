@@ -131,7 +131,8 @@ const handleGetSecret20ViewingKey: (
     await permissionInteractionService.ensureEnabled(
       env,
       [msg.chainId],
-      msg.origin
+      msg.origin,
+      "secret20-viewing-key"
     );
 
     const key = await keyRingCosmosService.getKeySelected(msg.chainId);

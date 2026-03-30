@@ -316,7 +316,7 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
                             setApproveButtonClicked(true);
                             signature = await handleEthereumPreSignByLedger(
                               interactionData,
-                              signingDataBuff,
+                              signingDataBuff as Uint8Array,
                               {
                                 useWebHID: ledgerInitStore.isWebHID,
                               }

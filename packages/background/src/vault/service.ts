@@ -574,15 +574,15 @@ export class VaultService {
         password.password.length > 0 &&
         password.aesCounter.length > 0
       ) {
-        await browser.storage.session.set({
+        await (browser.storage as any).session.set({
           ["vault.password"]: Buffer.from(password.password).toString("hex"),
           ["vault.aesCounter"]: Buffer.from(password.aesCounter).toString(
             "hex"
           ),
         });
       } else {
-        await browser.storage.session.remove("vault.password");
-        await browser.storage.session.remove("vault.aesCounter");
+        await (browser.storage as any).session.remove("vault.password");
+        await (browser.storage as any).session.remove("vault.aesCounter");
       }
     } catch (e) {
       console.log(
@@ -593,8 +593,10 @@ export class VaultService {
 
   async unlockWithSessionPasswordIfPossible(): Promise<void> {
     try {
-      const passwordHex = await browser.storage.session.get("vault.password");
-      const aesCounterHex = await browser.storage.session.get(
+      const passwordHex = await (browser.storage as any).session.get(
+        "vault.password"
+      );
+      const aesCounterHex = await (browser.storage as any).session.get(
         "vault.aesCounter"
       );
       if (

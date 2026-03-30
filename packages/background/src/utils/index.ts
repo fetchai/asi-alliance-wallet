@@ -9,11 +9,11 @@ export const runIfOnlyAppStart = async (
   // 이 경우 session이 값을 저장함으로써 최초 한번만 실행되도록 보장한다.
   if (isServiceWorker()) {
     try {
-      const v = await browser.storage.session.get(key);
+      const v = await (browser.storage as any).session.get(key);
       if (v[key]) {
         skip = true;
       }
-      await browser.storage.session.set({
+      await (browser.storage as any).session.set({
         [key]: true,
       });
     } catch (e) {

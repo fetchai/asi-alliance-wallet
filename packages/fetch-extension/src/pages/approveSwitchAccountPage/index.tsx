@@ -13,6 +13,7 @@ import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -307,7 +308,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     interactionInfo.interaction &&
                     !interactionInfo.interactionInternal
                   ) {
-                    window.close();
+                    handleExternalInteractionWithNoProceedNext();
                   } else {
                     navigate("/");
                   }

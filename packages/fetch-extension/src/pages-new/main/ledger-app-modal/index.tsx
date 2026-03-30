@@ -9,6 +9,7 @@ import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { TryLedgerInitMsg, LedgerApp } from "@keplr-wallet/background";
 import { useNavigate } from "react-router";
 import { KeplrError as WalletError } from "@keplr-wallet/router";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
   const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
@@ -101,11 +102,22 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
                       ledgerInitStore.cosmosLikeApp || "Cosmos"
                     )
                   );
-                if (keyRingStore?.selectedKeyInfo) {
+                if (
+                  keyRingStore?.selectedKeyInfo &&
+                  (
+                    keyRingStore.selectedKeyInfo?.insensitive?.[
+                      LedgerApp.Ethereum
+                    ] as any
+                  )?.pubKey !== pubkey
+                ) {
                   await keyRingStore.appendLedgerKeyApp(
                     keyRingStore.selectedKeyInfo.id,
                     pubkey,
                     LedgerApp.Ethereum
+                  );
+                  dispatchGlobalEventExceptSelf(
+                    "keplr_ledger_app_connected",
+                    keyRingStore.selectedKeyInfo.id
                   );
                 }
                 accountInfo.disconnect();

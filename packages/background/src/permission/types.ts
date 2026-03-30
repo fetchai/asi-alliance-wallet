@@ -11,6 +11,7 @@ export function isBasicAccessPermissionType(type: string) {
 
 export interface PermissionOptions {
   isUnableToChangeChainInUI?: boolean;
+  permissionTypeForMessage?: string;
   isForEVM?: boolean;
   isForStarknet?: boolean;
   isForBitcoin?: boolean;
