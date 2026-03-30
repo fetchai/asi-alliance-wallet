@@ -57,9 +57,20 @@ export const SignPageV2: FunctionComponent = observer(() => {
   } = useStore();
   const current = chainStore.current;
 
-  useInteractionInfo({
+  const interactionInfo = useInteractionInfo({
     onWindowClose: () => {
       signInteractionStore.rejectAll();
+    },
+    onUnmount: async () => {
+      if (signInteractionStore?.waitingData) {
+        if (needSetIsProcessing) {
+          setIsProcessing(true);
+        }
+        signInteractionStore.rejectWithProceedNext(
+          signInteractionStore.waitingData?.id,
+          () => {}
+        );
+      }
     },
   });
 
@@ -193,20 +204,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const preferNoSetMemo =
     signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo ===
       true || isProcessing;
-
-  const interactionInfo = useInteractionInfo({
-    onUnmount: async () => {
-      if (signInteractionStore?.waitingData) {
-        if (needSetIsProcessing) {
-          setIsProcessing(true);
-        }
-        signInteractionStore.rejectWithProceedNext(
-          signInteractionStore.waitingData?.id,
-          () => {}
-        );
-      }
-    },
-  });
   const currentChainId = chainStore.current.chainId;
   const currentChainIdentifier = useMemo(
     () => ChainIdHelper.parse(currentChainId).identifier,
@@ -224,14 +221,9 @@ export const SignPageV2: FunctionComponent = observer(() => {
   // So, it can be different the current chain and the expected selected chain for a moment.
   const isLoaded = (() => {
     if (!signDocHelper.signDocWrapper) {
-      console.log("sign doc wrapper not found", { signDocHelper });
       return false;
     }
 
-    console.log("sign doc wrapper found", {
-      currentChainIdentifier,
-      selectedChainIdentifier,
-    });
     return currentChainIdentifier === selectedChainIdentifier;
   })();
 

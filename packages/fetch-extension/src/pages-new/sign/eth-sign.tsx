@@ -51,6 +51,35 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
   } = useStore();
 
   const current = chainStore.current;
+  const interactionInfo = useInteractionInfo({
+    onWindowClose: () => {
+      signEthereumInteractionStore.rejectAll();
+    },
+    onUnmount: async () => {
+      if (signEthereumInteractionStore.waitingData) {
+        await signEthereumInteractionStore.rejectWithProceedNext(
+          signEthereumInteractionStore.waitingData.id,
+          () => {}
+        );
+      }
+    },
+  });
+
+  const [unmountPromise] = useState(() => {
+    let resolver: () => void;
+    const promise = new Promise<void>((resolve) => {
+      resolver = resolve;
+    });
+
+    return {
+      promise,
+      resolver: resolver!,
+    };
+  });
+
+  useUnmount(() => {
+    unmountPromise.resolver();
+  });
 
   const accountInfo = accountStore.getAccount(current.chainId);
 
@@ -59,19 +88,18 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
   const [data, setData] = useState<string | Uint8Array>();
 
   const [approveButtonClicked, setApproveButtonClicked] = useState(false);
-  //   const [signingDataBuff, _setSigningDataBuff] = useState(() => {
-  //     const message = signEthereumInteractionStore.waitingData?.data?.message;
-  //     const parsed = JSON.parse(Buffer.from(message).toString("utf8"));
-  //     if (parsed.requiredErc20Approvals) {
-  //       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  //       const { requiredErc20Approvals: _, ...unsignedTx } = parsed;
-  //       return Buffer.from(JSON.stringify(unsignedTx), "utf8");
-  //     }
-  //     return Buffer.from(message);
-  //   });
-  const signingDataBuff = Buffer.from(
-    signEthereumInteractionStore.waitingData?.data?.message || ""
-  );
+
+  const signingDataBuff = useMemo(() => {
+    const message = signEthereumInteractionStore.waitingData?.data?.message;
+    if (!message) return Buffer.from([]);
+    const parsed = JSON.parse(Buffer.from(message).toString("utf8"));
+    if (parsed.requiredErc20Approvals) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { requiredErc20Approvals: _, ...unsignedTx } = parsed;
+      return Buffer.from(JSON.stringify(unsignedTx), "utf8");
+    }
+    return Buffer.from(message);
+  }, [signEthereumInteractionStore.waitingData]);
 
   const signingDataText = useMemo(() => {
     // If the message is 32 bytes, it's probably a hash.
@@ -111,22 +139,6 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
 
-  const [unmountPromise] = useState(() => {
-    let resolver: () => void;
-    const promise = new Promise<void>((resolve) => {
-      resolver = resolve;
-    });
-
-    return {
-      promise,
-      resolver: resolver!,
-    };
-  });
-
-  useUnmount(() => {
-    unmountPromise.resolver();
-  });
-
   useEffect(() => {
     if (signEthereumInteractionStore.waitingData) {
       const d = signEthereumInteractionStore.waitingData;
@@ -155,20 +167,6 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
     currentChainIdentifier !== selectedChainIdentifier;
 
   const approveIsDisabled = !isLoaded;
-
-  const interactionInfo = useInteractionInfo({
-    onWindowClose: () => {
-      signEthereumInteractionStore.rejectAll();
-    },
-    onUnmount: async () => {
-      if (signEthereumInteractionStore.waitingData) {
-        signEthereumInteractionStore.rejectWithProceedNext(
-          signEthereumInteractionStore.waitingData.id,
-          () => {}
-        );
-      }
-    },
-  });
 
   const tabs = [
     {
@@ -321,8 +319,6 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
                                 useWebHID: ledgerInitStore.isWebHID,
                               }
                             );
-                          }
-                          if (interactionData.data.keyType === "ledger") {
                             setLedgerInfo({
                               isWarning: false,
                               title: "Sign on Ledger",
@@ -335,7 +331,7 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
                           }
 
                           await signEthereumInteractionStore.approveWithProceedNext(
-                            signEthereumInteractionStore.waitingData.id,
+                            interactionData.id,
                             signingDataBuff as Uint8Array,
                             signature,
                             async (proceedNext) => {
@@ -362,6 +358,9 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
                                 //      페이지를 벗어나고 나서야 data를 지우도록한다.
                                 await unmountPromise.promise;
                               }
+                            },
+                            {
+                              preDelay: 200,
                             }
                           );
                         } catch (e) {

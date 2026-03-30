@@ -24,6 +24,8 @@ import {
 } from "@ethersproject/providers";
 
 import { isAddress } from "@ethersproject/address";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { serialize } from "@ethersproject/transactions";
 import { KVStore } from "@keplr-wallet/common";
 import { BigNumber } from "@ethersproject/bignumber";
 
@@ -465,9 +467,11 @@ export class EthereumAccountImpl {
     const gasPrice = BigNumber.from(fee.amount[0].amount).div(
       BigNumber.from(fee.gas)
     );
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const evmInfo = chainInfo.evm;
     const rawTxData = {
       ...params,
-      chainId: parseInt(this.chainId),
+      chainId: evmInfo?.chainId,
       nonce,
       gasLimit: parseInt(fee.gas),
     };
@@ -738,16 +742,21 @@ export class EthereumAccountImpl {
     const keplr = (await this.base.getKeplr())!;
     const signResponse = await keplr.signEthereum(
       this.chainId,
-      this.base.bech32Address,
+      this.base.ethereumHexAddress,
       rawTxn,
       EthSignType.TRANSACTION
+    );
+
+    const signedTx = Buffer.from(
+      serialize(txData, signResponse).replace("0x", ""),
+      "hex"
     );
 
     const result = await this.instance.post("", {
       jsonrpc: "2.0",
       id: "1",
       method: "eth_sendRawTransaction",
-      params: [`0x${Buffer.from(signResponse).toString("hex")}`],
+      params: [`0x${Buffer.from(signedTx.toString("hex"))}`],
     });
 
     if (!(result.data && result.data.result)) {
