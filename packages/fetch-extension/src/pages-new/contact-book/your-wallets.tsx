@@ -76,10 +76,10 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
         )
         .map((account: any) => {
           if (isEvm) {
-            return account.ethereumHexAddress;
+            return account.ethereumHexAddress.trim();
           }
 
-          return account.bech32Address;
+          return account.bech32Address.trim();
         });
 
       setAddresses(addresses);

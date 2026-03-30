@@ -17,7 +17,7 @@ import {
 } from "./errors";
 import { Bech32Address, ChainIdHelper } from "@keplr-wallet/cosmos";
 import { useState } from "react";
-import { isAddress } from "@ethersproject/address";
+import { getAddress, isAddress } from "@ethersproject/address";
 import { Buffer } from "buffer/";
 import { validateICNSName } from "@keplr-wallet/common";
 
@@ -168,6 +168,23 @@ export class RecipientConfig
     return this.bech32Prefix;
   }
 
+  static isEthereumHexAddressWithChecksum(hexAddress: string): boolean {
+    const isHexAddress = !!hexAddress.match(/^0x[0-9A-Fa-f]*$/);
+    const isChecksumAddress = !!hexAddress.match(
+      /([A-F].*[a-f])|([a-f].*[A-F])/
+    );
+    if (!isHexAddress || hexAddress.length !== 42) {
+      return false;
+    }
+
+    const checksumHexAddress = getAddress(hexAddress.toLowerCase());
+    if (isChecksumAddress && checksumHexAddress !== hexAddress) {
+      return false;
+    }
+
+    return true;
+  }
+
   get recipient(): string {
     const rawRecipient = this.rawRecipient.trim();
 
@@ -179,23 +196,21 @@ export class RecipientConfig
       }
     }
 
-    if (this._allowHexAddressOnEthermint) {
-      const hasEthereumAddress =
-        this.chainInfo.features?.includes("eth-address-gen");
-      if (hasEthereumAddress && rawRecipient.startsWith("0x")) {
-        try {
-          if (isAddress(rawRecipient)) {
-            const buf = Buffer.from(
-              rawRecipient.replace("0x", "").toLowerCase(),
-              "hex"
-            );
-            return new Bech32Address(buf).toBech32(this.bech32Prefix);
-          }
-        } catch {
-          return "";
-        }
-        return "";
-      }
+    const chainInfo = this.chainInfo;
+    const isEvmChain = !!this.chainInfo.evm;
+    const hasEthereumAddress =
+      chainInfo.bip44.coinType === 60 ||
+      !!chainInfo.features?.includes("eth-address-gen") ||
+      !!chainInfo.features?.includes("eth-key-sign");
+    if (
+      hasEthereumAddress &&
+      RecipientConfig.isEthereumHexAddressWithChecksum(rawRecipient) &&
+      this._allowHexAddressOnEthermint &&
+      !isEvmChain
+    ) {
+      return new Bech32Address(
+        Buffer.from(rawRecipient.replace("0x", "").toLowerCase(), "hex")
+      ).toBech32(this.bech32Prefix);
     }
 
     return rawRecipient;
