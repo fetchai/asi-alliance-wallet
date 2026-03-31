@@ -22,19 +22,21 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     onMultiSelectChange,
     onSelectAll,
   }) => {
-    const { chainStore } = useStore();
+    const { chainStore, keyRingStore } = useStore();
     const mainChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
         !chainInfo.beta &&
         !chainInfo.evm &&
-        chainStore.isEnabledChain(chainInfo.chainId)
+        (chainStore.isEnabledChain(chainInfo.chainId) ||
+          (!keyRingStore?.selectedKeyInfo && !chainInfo.hideInUI))
     );
 
     const evmChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
         chainInfo.features?.includes("eth-key-sign") &&
         chainInfo.evm &&
-        chainStore.isEnabledChain(chainInfo.chainId)
+        (chainStore.isEnabledChain(chainInfo.chainId) ||
+          (!keyRingStore?.selectedKeyInfo && !chainInfo.hideInUI))
     );
 
     const cosmosMainList = mainChainList.filter(
