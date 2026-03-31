@@ -43,10 +43,10 @@ export const getHandler: (
       case PingMsg:
         return {};
       case GetChainInfosWithCoreTypesMsg:
-        return handleGetInfosWithCoreTypesMsg(chainsService)(
-          env,
-          msg as GetChainInfosWithCoreTypesMsg
-        );
+        return handleGetInfosWithCoreTypesMsg(
+          chainsService,
+          permissionInteractiveService
+        )(env, msg as GetChainInfosWithCoreTypesMsg);
       case SetSelectedChainMsg:
         return handleSetSelectedChainMsg(chainsService)(
           env,
@@ -117,9 +117,17 @@ export const getHandler: (
 };
 
 const handleGetInfosWithCoreTypesMsg: (
-  service: ChainsService
-) => InternalHandler<GetChainInfosWithCoreTypesMsg> = (service) => {
-  return () => {
+  service: ChainsService,
+  permissionInteractiveService: PermissionInteractiveService
+) => InternalHandler<GetChainInfosWithCoreTypesMsg> = (
+  service,
+  permissionInteractiveService
+) => {
+  return async (env, msg) => {
+    await permissionInteractiveService.checkOrGrantGetChainInfosWithoutEndpointsPermission(
+      env,
+      msg.origin
+    );
     return {
       chainInfos: service.getChainInfosWithCoreTypes(),
       modulrChainInfos: service.getModularChainInfos(),

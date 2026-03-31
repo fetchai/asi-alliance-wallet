@@ -505,7 +505,7 @@ export class SwitchAccountMsg extends Message<void> {
   }
 
   route(): string {
-    return "keyring";
+    return ROUTE;
   }
 
   type(): string {

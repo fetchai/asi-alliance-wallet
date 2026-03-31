@@ -13,8 +13,6 @@ import {
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import {
   EnableAccessMsg,
-  StatusMsg,
-  UnlockWalletMsg,
   SwitchAccountMsg,
   GetNetworkMsg,
   AddNetworkAndSwitchMsg,
@@ -26,6 +24,8 @@ import {
   RestoreWalletMsg,
   GetChainInfosWithCoreTypesMsg,
   LockKeyRingMsg,
+  UnlockKeyRingMsg,
+  GetKeyRingStatusOnlyMsg,
 } from "../types/msgs";
 import deepmerge from "deepmerge";
 
@@ -64,11 +64,27 @@ export class FetchWalletApi implements WalletApi {
   ) {}
 
   async status(): Promise<WalletStatus> {
-    return await this.requester.sendMessage(BACKGROUND_PORT, new StatusMsg());
+    const res = await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new GetKeyRingStatusOnlyMsg()
+    );
+    switch (res.status) {
+      case "empty":
+        return WalletStatus.EMPTY;
+      case "locked":
+        return WalletStatus.LOCKED;
+      case "unlocked":
+        return WalletStatus.UNLOCKED;
+      default:
+        return WalletStatus.NOTLOADED;
+    }
   }
 
-  async unlockWallet(): Promise<void> {
-    await this.requester.sendMessage(BACKGROUND_PORT, new UnlockWalletMsg());
+  async unlockWallet(password: string): Promise<void> {
+    await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new UnlockKeyRingMsg(password)
+    );
   }
 
   async lockWallet(): Promise<void> {

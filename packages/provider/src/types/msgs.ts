@@ -4,6 +4,8 @@ import {
   NetworkConfig,
   WalletStatus,
   ChainInfoWithCoreTypes,
+  KeyInfo,
+  KeyRingStatus,
 } from "@fetchai/wallet-types";
 import { Message } from "@keplr-wallet/router";
 import {
@@ -738,9 +740,11 @@ export class StatusMsg extends Message<WalletStatus> {
   }
 }
 
-export class UnlockWalletMsg extends Message<void> {
+export class GetKeyRingStatusOnlyMsg extends Message<{
+  status: KeyRingStatus;
+}> {
   public static type() {
-    return "unlock-wallet-msg";
+    return "get-keyring-status-only";
   }
 
   constructor() {
@@ -752,33 +756,38 @@ export class UnlockWalletMsg extends Message<void> {
   }
 
   route(): string {
-    return "keyring";
+    return "keyring-v2";
   }
 
   type(): string {
-    return UnlockWalletMsg.type();
+    return GetKeyRingStatusOnlyMsg.type();
   }
 }
 
-export class LockWalletMsg extends Message<void> {
+export class UnlockKeyRingMsg extends Message<{
+  status: KeyRingStatus;
+  keyInfos: KeyInfo[];
+}> {
   public static type() {
-    return "lock-wallet-msg";
+    return "unlock-keyring";
   }
 
-  constructor() {
+  constructor(public readonly password: string) {
     super();
   }
 
   validateBasic(): void {
-    // noop
+    if (!this.password) {
+      throw new Error("password not set");
+    }
   }
 
   route(): string {
-    return "keyring";
+    return "keyring-v2";
   }
 
   type(): string {
-    return LockWalletMsg.type();
+    return UnlockKeyRingMsg.type();
   }
 }
 

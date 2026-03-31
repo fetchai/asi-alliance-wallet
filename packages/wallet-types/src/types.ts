@@ -20,6 +20,21 @@ export enum WalletStatus {
   UNLOCKED,
 }
 
+type Primitive = string | number | boolean;
+export type PlainObject = {
+  [key: string]: PlainObject | Primitive | undefined;
+};
+
+export interface KeyInfo {
+  readonly id: string;
+  readonly name: string;
+  readonly type: string;
+  readonly isSelected: boolean;
+  readonly insensitive: PlainObject;
+}
+
+export type KeyRingStatus = "empty" | "locked" | "unlocked";
+
 export type ChainInfoWithSuggestedOptions = ChainInfo & {
   readonly updateFromRepoDisabled?: boolean;
 };
@@ -367,7 +382,7 @@ export interface WalletApi {
   /**
    * Allows the dApp to
    */
-  unlockWallet(): Promise<void>;
+  unlockWallet(password: string): Promise<void>;
 
   /**
    * Allows the user to grant global permissions for selected chain ids to the origin (dApp)
