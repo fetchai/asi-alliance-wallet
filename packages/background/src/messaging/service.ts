@@ -1,6 +1,7 @@
-import { KeyRingCosmosService as KeyRingService } from "../keyring-cosmos";
+import { KeyRingCosmosService } from "../keyring-cosmos";
+import { KeyRingService } from "../keyring/service";
 import { Env } from "@keplr-wallet/router";
-import { Hash, PrivKeySecp256k1 } from "@keplr-wallet/crypto";
+import { PrivKeySecp256k1 } from "@keplr-wallet/crypto";
 import { decrypt, encrypt, PrivateKey } from "eciesjs";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { fromBase64, fromHex, toBase64, toHex } from "@cosmjs/encoding";
@@ -14,9 +15,14 @@ export class MessagingService {
   // bech32 prefix
   private _publicKeyCache = new Map<string, PubKey>();
   protected keyRingService!: KeyRingService;
+  protected keyRingCosmosService!: KeyRingCosmosService;
 
-  async init(keyRingService: KeyRingService) {
+  async init(
+    keyRingService: KeyRingService,
+    keyRingCosmosService: KeyRingCosmosService
+  ) {
     this.keyRingService = keyRingService;
+    this.keyRingCosmosService = keyRingCosmosService;
   }
 
   /**
@@ -114,8 +120,8 @@ export class MessagingService {
           memo: "",
         };
 
-        const vaultId = this.keyRingService.keyRingService.selectedVaultId;
-        const signData = await this.keyRingService.signAminoADR36(
+        const vaultId = this.keyRingService.selectedVaultId;
+        const signData = await this.keyRingCosmosService.signAminoADR36(
           env,
           "",
           vaultId,
@@ -306,13 +312,25 @@ export class MessagingService {
       })
     ) as Uint8Array;
 
-    const signature = await this.keyRingService.keyRingService.sign(
+    const signature = await this.keyRingService.sign(
       chainId,
-      this.keyRingService.keyRingService.selectedVaultId,
+      this.keyRingService.selectedVaultId,
       message,
       "sha256"
     );
 
-    return Hash.sha256(new Uint8Array([...signature.r, ...signature.s]));
+    const signatureBytes = chainId.includes("eip155")
+      ? new Uint8Array(
+          Buffer.concat([
+            signature.r,
+            signature.s,
+            (signature.v
+              ? Buffer.from("1c", "hex")
+              : Buffer.from("1b", "hex")) as Uint8Array,
+          ])
+        )
+      : new Uint8Array([...signature.r, ...signature.s]);
+
+    return signatureBytes;
   }
 }

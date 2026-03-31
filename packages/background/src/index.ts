@@ -9,6 +9,7 @@ import * as ChainsUpdate from "./chains-update/internal";
 import * as SecretWasm from "./secret-wasm/internal";
 import * as BackgroundTx from "./tx/internal";
 import * as BackgroundTxEthereum from "./tx-ethereum/internal";
+import * as Messaging from "./messaging/internal";
 import * as TokenCW20 from "./token-cw20/internal";
 import * as TokenERC20 from "./token-erc20/internal";
 import * as Interaction from "./interaction/internal";
@@ -124,6 +125,8 @@ export function init(
     storeCreator("side-panel"),
     analyticsService
   );
+
+  const messagingService = new Messaging.MessagingService();
 
   const interactionService = new Interaction.InteractionService(
     eventMsgRequester,
@@ -398,6 +401,7 @@ export function init(
   TokenScan.init(router, tokenScanService);
   RecentSendHistory.init(router, recentSendHistoryService);
   SidePanel.init(router, sidePanelService);
+  Messaging.init(router, messagingService);
   Settings.init(router, settingsService);
   Ledger.init(router, ledgerService);
   ManageViewAssetToken.init(router, manageViewAssetTokenService);
@@ -444,6 +448,7 @@ export function init(
       await manageViewAssetTokenService.init();
 
       await backgroundTxExecutorService.init();
+      await messagingService.init(keyRingV2Service, keyRingCosmosService);
     },
     keyRingService: keyRingV2Service,
     analyticsService: analyticsService,
