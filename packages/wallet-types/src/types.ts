@@ -382,7 +382,7 @@ export interface WalletApi {
   /**
    * Allows the dApp to
    */
-  unlockWallet(password: string): Promise<void>;
+  unlockWallet(): Promise<void>;
 
   /**
    * Allows the user to grant global permissions for selected chain ids to the origin (dApp)

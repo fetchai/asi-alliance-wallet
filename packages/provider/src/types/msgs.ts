@@ -751,6 +751,10 @@ export class GetKeyRingStatusOnlyMsg extends Message<{
     super();
   }
 
+  override approveExternal(): boolean {
+    return true;
+  }
+
   validateBasic(): void {
     // noop
   }
@@ -844,6 +848,10 @@ export class SwitchAccountMsg extends Message<void> {
     super();
   }
 
+  override approveExternal(): boolean {
+    return true;
+  }
+
   validateBasic(): void {
     if (!this.address) {
       throw new Error("address is empty");
@@ -851,7 +859,7 @@ export class SwitchAccountMsg extends Message<void> {
   }
 
   route(): string {
-    return "keyring";
+    return "keyring-V2";
   }
 
   type(): string {
@@ -936,6 +944,10 @@ export class LockKeyRingMsg extends Message<{
 
   constructor() {
     super();
+  }
+
+  override approveExternal(): boolean {
+    return true;
   }
 
   validateBasic(): void {

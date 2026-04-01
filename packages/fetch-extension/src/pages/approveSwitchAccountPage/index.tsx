@@ -66,7 +66,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
             );
           });
 
-          setAddressIndex(accounts[index].id);
+          setAddressIndex(accounts[index]?.vaultId);
           analyticsStore.logEvent("Account switch suggested", {
             chainId: accountSwitchStore.waitingSuggestedAccount.data.address,
           });
@@ -286,8 +286,8 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     accountSwitchStore.waitingSuggestedAccount?.data.address;
                   if (address !== undefined && addressIndex !== undefined) {
                     try {
-                      accountSwitchStore.approve(address);
-                      keyRingStore.selectKeyRing(addressIndex);
+                      await accountSwitchStore.approve(address);
+                      await keyRingStore.selectKeyRing(addressIndex);
                       analyticsStore.logEvent("change_wallet_click");
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();

@@ -24,7 +24,6 @@ import {
   RestoreWalletMsg,
   GetChainInfosWithCoreTypesMsg,
   LockKeyRingMsg,
-  UnlockKeyRingMsg,
   GetKeyRingStatusOnlyMsg,
 } from "../types/msgs";
 import deepmerge from "deepmerge";
@@ -80,11 +79,13 @@ export class FetchWalletApi implements WalletApi {
     }
   }
 
-  async unlockWallet(password: string): Promise<void> {
-    await this.requester.sendMessage(
+  async unlockWallet(): Promise<void> {
+    const network = await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new UnlockKeyRingMsg(password)
+      new GetNetworkMsg()
     );
+    const chainId = network?.chainId || "";
+    await this.keplr.enable(chainId);
   }
 
   async lockWallet(): Promise<void> {

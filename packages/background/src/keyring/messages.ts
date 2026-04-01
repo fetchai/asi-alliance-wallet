@@ -77,6 +77,10 @@ export class GetKeyRingStatusOnlyMsg extends Message<{
     super();
   }
 
+  override approveExternal(): boolean {
+    return true;
+  }
+
   validateBasic(): void {
     // noop
   }
@@ -410,6 +414,10 @@ export class LockKeyRingMsg extends Message<{
     return "lock-keyring";
   }
 
+  override approveExternal(): boolean {
+    return true;
+  }
+
   constructor() {
     super();
   }
@@ -496,6 +504,10 @@ export class SwitchAccountMsg extends Message<void> {
 
   constructor(public readonly address: string) {
     super();
+  }
+
+  override approveExternal(): boolean {
+    return true;
   }
 
   validateBasic(): void {
