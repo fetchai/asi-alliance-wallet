@@ -605,6 +605,10 @@ export class GetCosmosKeysForEachVaultSettledMsg extends Message<
     super();
   }
 
+  override approveExternal(): boolean {
+    return true;
+  }
+
   validateBasic(): void {
     if (!this.chainId) {
       throw new Error("chain id not set");

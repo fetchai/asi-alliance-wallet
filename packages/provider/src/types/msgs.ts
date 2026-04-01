@@ -18,6 +18,7 @@ import {
   StdSignDoc,
   ChainInfoWithoutEndpoints,
   ModularChainInfo,
+  SettledResponses,
 } from "@keplr-wallet/types";
 
 export class EnableAccessMsg extends Message<void> {
@@ -1212,6 +1213,88 @@ export class RequestVerifyADR36AminoSignDocFetchSigning extends Message<boolean>
 
   type(): string {
     return RequestVerifyADR36AminoSignDocFetchSigning.type();
+  }
+}
+
+export class GetKeyRingStatusMsg extends Message<{
+  status: KeyRingStatus;
+  keyInfos: KeyInfo[];
+  needMigration: boolean;
+  isMigrating: boolean;
+}> {
+  public static type() {
+    return "get-keyring-status";
+  }
+
+  constructor() {
+    super();
+  }
+
+  override approveExternal(): boolean {
+    return true;
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return "keyring-v2";
+  }
+
+  type(): string {
+    return GetKeyRingStatusMsg.type();
+  }
+}
+
+export class GetCosmosKeysForEachVaultSettledMsg extends Message<
+  SettledResponses<
+    Key & {
+      vaultId: string;
+    }
+  >
+> {
+  public static type() {
+    return "GetCosmosKeysForEachVaultSettledMsg";
+  }
+
+  constructor(
+    public readonly chainId: string,
+    public readonly vaultIds: string[]
+  ) {
+    super();
+  }
+
+  override approveExternal(): boolean {
+    return true;
+  }
+
+  validateBasic(): void {
+    if (!this.chainId) {
+      throw new Error("chain id not set");
+    }
+
+    if (!this.vaultIds || this.vaultIds.length === 0) {
+      throw new Error("vaultIds are not set");
+    }
+
+    const seen = new Map<string, boolean>();
+
+    for (const vaultId of this.vaultIds) {
+      if (seen.get(vaultId)) {
+        throw new Error(`vaultId ${vaultId} is duplicated`);
+      }
+
+      seen.set(vaultId, true);
+    }
+  }
+
+  route(): string {
+    return "keyring-cosmos";
+  }
+
+  type(): string {
+    return GetCosmosKeysForEachVaultSettledMsg.type();
   }
 }
 

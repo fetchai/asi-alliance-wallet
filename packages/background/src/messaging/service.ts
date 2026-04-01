@@ -1,7 +1,7 @@
 import { KeyRingCosmosService } from "../keyring-cosmos";
 import { KeyRingService } from "../keyring/service";
 import { Env } from "@keplr-wallet/router";
-import { PrivKeySecp256k1 } from "@keplr-wallet/crypto";
+import { PrivKeySecp256k1, Hash } from "@keplr-wallet/crypto";
 import { decrypt, encrypt, PrivateKey } from "eciesjs";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { fromBase64, fromHex, toBase64, toHex } from "@cosmjs/encoding";
@@ -331,6 +331,6 @@ export class MessagingService {
         )
       : new Uint8Array([...signature.r, ...signature.s]);
 
-    return signatureBytes;
+    return Hash.sha256(Buffer.from(signatureBytes) as Uint8Array);
   }
 }

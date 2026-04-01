@@ -9,13 +9,13 @@ import {
   OfflineDirectSigner,
   EthSignType,
   Key,
+  ChainInfo,
 } from "@keplr-wallet/types";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import {
   EnableAccessMsg,
   SwitchAccountMsg,
   GetNetworkMsg,
-  AddNetworkAndSwitchMsg,
   SwitchNetworkByChainIdMsg,
   ListEntriesMsg,
   AddEntryMsg,
@@ -25,6 +25,8 @@ import {
   GetChainInfosWithCoreTypesMsg,
   LockKeyRingMsg,
   GetKeyRingStatusOnlyMsg,
+  GetCosmosKeysForEachVaultSettledMsg,
+  GetKeyRingStatusMsg,
 } from "../types/msgs";
 import deepmerge from "deepmerge";
 
@@ -40,7 +42,6 @@ import {
   WalletStatus,
   AddressBookApi,
   AddressBookEntry,
-  NetworkConfig,
   ChainInfoWithCoreTypes,
 } from "@fetchai/wallet-types";
 
@@ -59,7 +60,7 @@ export class FetchWalletApi implements WalletApi {
     public signing: SigningApi,
     public addressBook: AddressBookApi,
     protected readonly requester: MessageRequester,
-    public keplr: Keplr
+    public readonly keplr: Keplr
   ) {}
 
   async status(): Promise<WalletStatus> {
@@ -141,7 +142,15 @@ export class FetchAccount implements AccountsApi {
       return [];
     }
 
-    const accountsResponse: any = await this.keplr.getKeysSettled([chainId]);
+    const keyInfos = await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new GetKeyRingStatusMsg()
+    );
+    const vaultIds = keyInfos.keyInfos.map((keyInfo: any) => keyInfo.id);
+    const accountsResponse: any = await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new GetCosmosKeysForEachVaultSettledMsg(chainId, vaultIds)
+    );
     const accounts: Key[] = accountsResponse.map((item: any) => item.value);
     const accountsTransformed = accounts.map((item) => ({
       ...item,
@@ -160,7 +169,10 @@ export class FetchAccount implements AccountsApi {
 }
 
 export class FetchNetworks implements NetworksApi {
-  constructor(protected readonly requester: MessageRequester) {}
+  constructor(
+    protected readonly requester: MessageRequester,
+    public readonly keplr: Keplr
+  ) {}
 
   async getNetwork(): Promise<ChainInfoWithCoreTypes | undefined> {
     return await this.requester.sendMessage(
@@ -169,17 +181,14 @@ export class FetchNetworks implements NetworksApi {
     );
   }
 
-  async switchToNetwork(network: NetworkConfig): Promise<void> {
+  async switchToNetwork(chain: ChainInfo): Promise<void> {
     // Add network
-    await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new AddNetworkAndSwitchMsg(network)
-    );
+    await this.keplr.experimentalSuggestChain(chain);
 
     // enable access
     await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new EnableAccessMsg([network.chainId])
+      new EnableAccessMsg([chain.chainId])
     );
   }
 
@@ -382,7 +391,7 @@ export class ExtensionCoreFetchWallet implements FetchBrowserWallet {
     this.keplr = keplr;
     this.version = version;
     this.wallet = new FetchWalletApi(
-      new FetchNetworks(_requester),
+      new FetchNetworks(_requester, this.keplr),
       new FetchAccount(_requester, this.keplr),
       new FetchSigning(_requester, this.keplr),
       new FetchAddressBook(_requester),

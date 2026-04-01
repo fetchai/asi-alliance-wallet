@@ -3,7 +3,6 @@ import {
   AccountsApi,
   AddressBookApi,
   AddressBookEntry,
-  NetworkConfig,
   NetworksApi,
   SigningApi,
   WalletApi,
@@ -12,6 +11,7 @@ import {
 } from "@fetchai/wallet-types";
 import {
   AminoSignResponse,
+  ChainInfo,
   DirectSignResponse,
   EthSignType,
   KeplrIntereactionOptions,
@@ -119,8 +119,8 @@ export class InjectedFetchNetworks implements NetworksApi {
     return await this.requestViaProxy("getNetwork", []);
   }
 
-  async switchToNetwork(network: NetworkConfig): Promise<void> {
-    return await this.requestViaProxy("switchToNetwork", [network]);
+  async switchToNetwork(chain: ChainInfo): Promise<void> {
+    return await this.requestViaProxy("switchToNetwork", [chain]);
   }
 
   async switchToNetworkByChainId(chainId: string): Promise<void> {

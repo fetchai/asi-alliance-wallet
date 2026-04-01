@@ -11,7 +11,6 @@ import {
   ChainInfo,
 } from "@keplr-wallet/types";
 import { PublicKey } from "./public-keys";
-import { NetworkConfig } from "./network-info";
 
 export enum WalletStatus {
   NOTLOADED,
@@ -125,7 +124,7 @@ export interface NetworksApi {
    * @param network The new network to target the Wallet at.
    * @throws An error if the dApp does not have permission to the networks API
    */
-  switchToNetwork(network: NetworkConfig): Promise<void>;
+  switchToNetwork(chain: ChainInfo): Promise<void>;
 
   /**
    * Switch to a previous network by chain id

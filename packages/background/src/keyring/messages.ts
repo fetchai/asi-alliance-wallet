@@ -53,6 +53,10 @@ export class GetKeyRingStatusMsg extends Message<{
     super();
   }
 
+  override approveExternal(): boolean {
+    return true;
+  }
+
   validateBasic(): void {
     // noop
   }
