@@ -22,11 +22,11 @@ export const SupportedChainFeatures = [
   "ibc-pfm",
   "authz-msg-revoke-fixed",
   "osmosis-base-fee-beta",
-  "feemarket",
+  // "feemarket",
   "evm-feemarket",
   "op-stack-l1-data-fee",
   "force-enable-evm-ledger",
-  "ibc-v2",
+  // "ibc-v2",
   "evm-ledger-sign-plain-json",
   "initia-dynamicfee",
   "eth-secp256k1-initia",
@@ -129,46 +129,46 @@ export const RecognizableChainFeaturesMethod: {
       return result.status === 400;
     },
   },
-  {
-    feature: "feemarket",
-    fetch: async (_features, _rpc, rest) => {
-      const result = await simpleFetch<{
-        params: {
-          enabled: boolean;
-        };
-      }>(rest, "/feemarket/v1/params");
+  // {
+  //   feature: "feemarket",
+  //   fetch: async (_features, _rpc, rest) => {
+  //     const result = await simpleFetch<{
+  //       params: {
+  //         enabled: boolean;
+  //       };
+  //     }>(rest, "/feemarket/v1/params");
 
-      return result.data.params.enabled;
-    },
-  },
-  {
-    feature: "ibc-v2",
-    fetch: async (features, _rpc, rest) => {
-      if (!features.includes("ibc-go")) {
-        return false;
-      }
-      const result = await simpleFetch<{
-        code: number;
-        message: string;
-        details: string[];
-      }>(rest, "/ibc/apps/transfer/v1/denoms/test", {
-        validateStatus: (status) => {
-          return status === 400;
-        },
-      });
+  //     return result.data.params.enabled;
+  //   },
+  // },
+  // {
+  //   feature: "ibc-v2",
+  //   fetch: async (features, _rpc, rest) => {
+  //     if (!features.includes("ibc-go")) {
+  //       return false;
+  //     }
+  //     const result = await simpleFetch<{
+  //       code: number;
+  //       message: string;
+  //       details: string[];
+  //     }>(rest, "/ibc/apps/transfer/v1/denoms/test", {
+  //       validateStatus: (status) => {
+  //         return status === 400;
+  //       },
+  //     });
 
-      if (
-        result.status === 400 &&
-        result.data?.message &&
-        typeof result.data.message === "string" &&
-        result.data.message.includes("invalid denom trace hash")
-      ) {
-        return true;
-      }
+  //     if (
+  //       result.status === 400 &&
+  //       result.data?.message &&
+  //       typeof result.data.message === "string" &&
+  //       result.data.message.includes("invalid denom trace hash")
+  //     ) {
+  //       return true;
+  //     }
 
-      return false;
-    },
-  },
+  //     return false;
+  //   },
+  // },
 ];
 
 /**

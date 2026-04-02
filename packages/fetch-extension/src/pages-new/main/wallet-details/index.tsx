@@ -165,8 +165,11 @@ export const WalletDetailsView = observer(
       }
     })();
 
-    const isEvm =
-      chainStore.current.features?.includes("eth-key-sign") ?? false;
+    const isEthAddressSupported =
+      chainStore.current.features?.includes("eth-key-sign") &&
+      chainStore.current.features?.includes("eth-address-gen");
+
+    const isEvm = (isEthAddressSupported && chainStore.current.evm) ?? false;
 
     const intl = useIntl();
     const notification = useNotification();
@@ -418,7 +421,7 @@ export const WalletDetailsView = observer(
                 </React.Fragment>
               )}
               {accountInfo.walletStatus !== WalletStatus.Rejected &&
-              isEvm &&
+              isEthAddressSupported &&
               accountInfo.hasEthereumHexAddress ? (
                 <div
                   style={{
@@ -461,12 +464,14 @@ export const WalletDetailsView = observer(
                       )}
                     </span>
                   </Address>
-                  <AddressFloatingMenu
-                    isOpen={open}
-                    toggle={() => setOpen((prev) => !prev)}
-                    addresses={addresses}
-                    onCopy={(address: string) => copyAddress(address)}
-                  />
+                  {isEvm && (
+                    <AddressFloatingMenu
+                      isOpen={open}
+                      toggle={() => setOpen((prev) => !prev)}
+                      addresses={addresses}
+                      onCopy={(address: string) => copyAddress(address)}
+                    />
+                  )}
                 </div>
               ) : (
                 <React.Fragment />
