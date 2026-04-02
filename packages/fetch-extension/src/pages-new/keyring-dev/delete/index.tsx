@@ -52,8 +52,8 @@ export const DeleteWallet: FunctionComponent = () => {
   }, [index, keyRingStore]);
 
   const keyStore = useMemo(() => {
-    return keyRingStore.selectedKeyInfo;
-  }, [keyRingStore.selectedKeyInfo, index]);
+    return keyRingStore.keyInfos.find((keyInfo) => keyInfo.id === index);
+  }, [keyRingStore.keyInfos, index]);
 
   const onBackUpMnemonicButtonClick = useCallback(
     (e: MouseEvent) => {

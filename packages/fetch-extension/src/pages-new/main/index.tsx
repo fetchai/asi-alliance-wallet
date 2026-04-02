@@ -24,6 +24,7 @@ export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
   const [isSelectWalletOpen, setIsSelectWalletOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState<boolean>(false);
+  const [selectedWalletId, setSelectedWalletId] = useState<string>("");
   const [tokenState, setTokenState] = useState({});
   const intl = useIntl();
   const language = useLanguage();
@@ -147,6 +148,7 @@ export const MainPage: FunctionComponent = observer(() => {
       >
         <SetKeyRingPage
           onItemSelect={() => setIsSelectWalletOpen(false)}
+          setSelectedWalletId={setSelectedWalletId}
           setIsSelectWalletOpen={setIsSelectWalletOpen}
           setIsOptionsOpen={setIsOptionsOpen}
         />
@@ -177,7 +179,7 @@ export const MainPage: FunctionComponent = observer(() => {
         title={"Manage Wallet"}
         closeClicked={() => setIsOptionsOpen(false)}
       >
-        <WalletOptions />
+        <WalletOptions selectedWalletId={selectedWalletId} />
       </Dropdown>
     </HeaderLayout>
   );

@@ -21,7 +21,7 @@ interface FormData {
 
 export const ChangeNamePageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
-  const { index = "-1 " } = useParams<{ index: string }>();
+  const { index = "" } = useParams<{ index: string }>();
 
   const intl = useIntl();
 
@@ -74,8 +74,8 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   };
 
   const keyStore = useMemo(() => {
-    return keyRingStore.selectedKeyInfo;
-  }, [keyRingStore.selectedKeyInfo, index]);
+    return keyRingStore.keyInfos.find((keyInfo) => keyInfo.id === index);
+  }, [keyRingStore.keyInfos, index]);
 
   const keyRingMeta = keyStore?.insensitive["keyRingMeta"] as any;
   const isKeyStoreReady = keyRingStore.status === "unlocked";

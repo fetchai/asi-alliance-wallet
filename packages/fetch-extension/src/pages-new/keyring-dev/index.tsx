@@ -18,11 +18,18 @@ interface SetKeyRingProps {
   navigateTo?: any;
   onItemSelect?: () => void;
   setIsOptionsOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+  setSelectedWalletId?: React.Dispatch<React.SetStateAction<string>>;
   setIsSelectWalletOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
-  ({ navigateTo, onItemSelect, setIsOptionsOpen, setIsSelectWalletOpen }) => {
+  ({
+    navigateTo,
+    onItemSelect,
+    setIsOptionsOpen,
+    setIsSelectWalletOpen,
+    setSelectedWalletId,
+  }) => {
     const intl = useIntl();
     const navigate = useNavigate();
     const {
@@ -62,8 +69,6 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
       }
       return;
     };
-
-    console.log({ keyRingStore: keyRingStore.keyInfos });
 
     return (
       <div>
@@ -144,8 +149,8 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 </React.Fragment>
               }
               rightContent={
-                keyStore.isSelected ? (
-                  <div style={{ display: "flex", columnGap: "12px" }}>
+                <div style={{ display: "flex", columnGap: "12px" }}>
+                  {keyStore.isSelected ? (
                     <img
                       style={{
                         width: "16px",
@@ -154,23 +159,25 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                       src={require("@assets/svg/wireframe/check.svg")}
                       alt=""
                     />
-                    <img
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => {
-                        setIsSelectWalletOpen?.(false);
-                        setIsOptionsOpen?.(true);
-                      }}
-                      src={require("@assets/svg/edit-icon.svg")}
-                      alt=""
-                    />
-                  </div>
-                ) : (
-                  ""
-                )
+                  ) : (
+                    ""
+                  )}
+                  <img
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      cursor: "pointer",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsSelectWalletOpen?.(false);
+                      setIsOptionsOpen?.(true);
+                      setSelectedWalletId?.(keyStore.id);
+                    }}
+                    src={require("@assets/svg/edit-icon.svg")}
+                    alt=""
+                  />
+                </div>
               }
               subheading={
                 keyStore.isSelected

@@ -110,7 +110,7 @@ export const ExportPage: FunctionComponent = observer(() => {
               <i className="fas fa-exclamation-circle" />
               <div>
                 <h1>
-                  Your secret&nbsp;
+                  Your Secret&nbsp;
                   {type === "mnemonic" ? "Recovery Phrase" : "Private Key"}
                 </h1>
                 <p>Make sure no one is looking at your screen</p>
