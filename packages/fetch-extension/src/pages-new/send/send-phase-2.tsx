@@ -6,7 +6,7 @@ import { useStore } from "../../stores";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useLocation, useNavigate } from "react-router";
 import { useLanguage } from "../../languages";
-import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { observer } from "mobx-react-lite";
 import { TransxStatus } from "@components-v2/transx-status";
 import { TXNTYPE } from "../../config";
@@ -35,8 +35,11 @@ import type { KeplrSignOptions } from "@keplr-wallet/types";
 import {
   getBannerValidationError,
   getHighestPriorityNonRecipientBlockingError,
+  isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
+  normalizeCardanoDraftError,
+  parseAmountToBaseUnits,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 
@@ -371,6 +374,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const isCardano = chainStore.current.features?.includes("cardano") ?? false;
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
     const cardanoDenom = chainStore.current.stakeCurrency.coinDenom;
+    const nativeAdaCoinDecimals = chainStore.current.stakeCurrency.coinDecimals;
+    const sendCurrency = sendConfigs?.amountConfig?.sendCurrency;
+    const sendCurrencyCoinDecimals =
+      sendCurrency?.coinDecimals ?? nativeAdaCoinDecimals;
+    const sendCurrencyDenom = sendCurrency?.coinDenom ?? cardanoDenom;
     const shouldRequireCardanoPassword =
       isCardano && keyRingStore.keyRingType === "mnemonic";
     const [isCardanoPasswordConfirmOpen, setIsCardanoPasswordConfirmOpen] =
@@ -463,15 +471,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       };
     }, [isCardano, chainStore.current.chainId]);
 
-    const normalizedCardanoDraftError = (() => {
-      if (!cardanoDraftError) {
-        return null;
-      }
-      if (cardanoDraftError === "recipient address is empty") {
-        return "Recipient address is required";
-      }
-      return cardanoDraftError;
-    })();
+    const normalizedCardanoDraftError = normalizeCardanoDraftError({
+      rawError: cardanoDraftError,
+      cardanoDenom,
+      sendCurrencyDenom,
+      sendCurrencyCoinDecimals,
+      nativeAdaCoinDecimals,
+    });
 
     const postRecipientError = getHighestPriorityNonRecipientBlockingError({
       amountError: sendConfigs.amountConfig.error,
@@ -537,17 +543,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
 
-    const parseAmount = (amount: string, decimals: number) => {
-      const decimalAmount = new Dec(amount ? amount : "0");
-
-      const scaledAmount = decimalAmount
-        .mul(DecUtils.getTenExponentNInPrecisionRange(decimals))
-        .truncate()
-        .toString();
-
-      return BigInt(scaledAmount);
-    };
-
     useEffect(() => {
       // Close the confirm modal if Cardano context changes underneath (chain switch / key type switch).
       if (isCardanoPasswordConfirmOpen && !shouldRequireCardanoPassword) {
@@ -578,8 +573,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       const recipientError = sendConfigs?.recipientConfig?.error;
       const amountStr = sendConfigs?.amountConfig?.amount ?? "";
       const memo = sendConfigs?.memoConfig?.memo ?? "";
+      const amountError = sendConfigs?.amountConfig?.error;
+      const memoError = sendConfigs?.memoConfig?.error;
       const sendCurrency = sendConfigs?.amountConfig?.sendCurrency;
-      const decimals = sendCurrency?.coinDecimals ?? 6;
+      const decimals = sendCurrency?.coinDecimals ?? nativeAdaCoinDecimals;
       const denomHelper = sendCurrency ? new DenomHelper(sendCurrency.coinMinimalDenom) : null;
       const isTokenSend = denomHelper?.type === CARDANO_NATIVE_TOKEN_TYPE;
 
@@ -593,17 +590,57 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       let cancelled = false;
       const timeoutId = setTimeout(async () => {
         try {
+          const requester = new InExtensionMessageRequester();
+          const clearCurrentDraft = () => {
+            if (cardanoDraft?.draftId) {
+              requester.sendMessage(
+                BACKGROUND_PORT,
+                new DiscardSendAdaTxDraftMsg(cardanoDraft.draftId)
+              );
+            }
+            setCardanoDraft(null);
+          };
+
+          const baseAmountBigInt = parseAmountToBaseUnits(amountStr, decimals);
+          const hasNoAmountOrMemoError = amountError == null && memoError == null;
+          const hasPositiveDecimalAmount = isPositiveDecimalAmount(amountStr);
+          const isSubLovelaceAmount =
+            !isTokenSend &&
+            hasNoAmountOrMemoError &&
+            hasPositiveDecimalAmount &&
+            baseAmountBigInt === BigInt(0);
+          const isTokenDustAmount =
+            isTokenSend &&
+            hasNoAmountOrMemoError &&
+            hasPositiveDecimalAmount &&
+            baseAmountBigInt === BigInt(0);
+
+          if (isSubLovelaceAmount || isTokenDustAmount) {
+            clearCurrentDraft();
+            setCardanoDraftError(
+              normalizeCardanoDraftError({
+                rawError: isSubLovelaceAmount
+                  ? "amount must be a positive number"
+                  : "asset amount must be positive",
+                cardanoDenom,
+                sendCurrencyDenom: sendCurrency?.coinDenom,
+                sendCurrencyCoinDecimals: decimals,
+                nativeAdaCoinDecimals,
+              })
+            );
+            setIsBuildingCardanoDraft(false);
+            return;
+          }
+
           setIsBuildingCardanoDraft(true);
           setCardanoDraftError(null);
-
-          const baseAmount = parseAmount(amountStr, decimals).toString();
+          const baseAmount = baseAmountBigInt.toString();
           // For token sends, ADA amount is "0" and token goes into assets
           const lovelaceAmount = isTokenSend ? "0" : baseAmount;
           const assets = isTokenSend && denomHelper
             ? [{ assetId: denomHelper.contractAddress, amount: baseAmount }]
             : undefined;
 
-          const requester = new InExtensionMessageRequester();
           const draftMsg = new BuildSendAdaTxDraftMsg(
             normalizedRecipient,
             lovelaceAmount,
@@ -632,9 +669,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             setCardanoDraft(null);
             const message = e?.message ?? "Failed to build transaction";
             setCardanoDraftError(
-              message === "recipient address is empty"
-                ? "Recipient address is required"
-                : message
+              normalizeCardanoDraftError({
+                rawError: message,
+                cardanoDenom,
+                sendCurrencyDenom: sendCurrency?.coinDenom,
+                sendCurrencyCoinDecimals: decimals,
+                nativeAdaCoinDecimals,
+              })
             );
           }
         } finally {
@@ -659,6 +700,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       sendConfigs?.amountConfig?.sendCurrency?.coinDecimals,
       sendConfigs?.amountConfig?.sendCurrency?.coinMinimalDenom,
       sendConfigs?.memoConfig?.memo,
+      sendConfigs?.memoConfig?.error,
+      sendConfigs?.amountConfig?.error,
+      chainStore.current.stakeCurrency.coinDecimals,
     ]);
 
     const feeText = (() => {
@@ -877,7 +921,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 sendConfigs.amountConfig
                   ? new CoinPretty(
                       sendConfigs.amountConfig?.sendCurrency,
-                      parseAmount(sendConfigs.amountConfig.amount, decimals)
+                      parseAmountToBaseUnits(
+                        sendConfigs.amountConfig.amount,
+                        decimals
+                      )
                     )
                   : new CoinPretty(
                       sendConfigs.amountConfig?.sendCurrency,

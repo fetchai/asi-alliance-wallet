@@ -10,10 +10,14 @@ jest.mock("@keplr-wallet/hooks", () => {
 
 import { EmptyAddressError } from "@keplr-wallet/hooks";
 import {
+  getMinimumDisplayAmountFromDecimals,
   getBannerValidationError,
   getHighestPriorityNonRecipientBlockingError,
+  isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
+  normalizeCardanoDraftError,
+  parseAmountToBaseUnits,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 
@@ -137,5 +141,83 @@ describe("isOnlyEmptyRecipientBlocking", () => {
     expect(isOnlyEmptyRecipientBlocking(emptyErr, new Error("other"))).toBe(
       false
     );
+  });
+});
+
+describe("parseAmountToBaseUnits", () => {
+  it("converts sub-lovelace ADA input to zero base units", () => {
+    expect(parseAmountToBaseUnits("0.0000001", 6)).toBe(BigInt(0));
+  });
+});
+
+describe("isPositiveDecimalAmount", () => {
+  it("returns true only for valid positive decimals", () => {
+    expect(isPositiveDecimalAmount("0.1")).toBe(true);
+    expect(isPositiveDecimalAmount("0")).toBe(false);
+    expect(isPositiveDecimalAmount("abc")).toBe(false);
+  });
+});
+
+describe("getMinimumDisplayAmountFromDecimals", () => {
+  it("returns smallest display unit from decimals", () => {
+    expect(getMinimumDisplayAmountFromDecimals(6)).toBe("0.000001");
+    expect(getMinimumDisplayAmountFromDecimals(0)).toBe("1");
+  });
+});
+
+describe("normalizeCardanoDraftError", () => {
+  const params = {
+    cardanoDenom: "tADA",
+    sendCurrencyDenom: "tADA",
+    sendCurrencyCoinDecimals: 6,
+    nativeAdaCoinDecimals: 6,
+  };
+
+  it("normalizes recipient required error", () => {
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "recipient address is empty",
+      })
+    ).toBe("Recipient address is required");
+  });
+
+  it("normalizes sub-lovelace positive number error", () => {
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "amount must be a positive number",
+      })
+    ).toBe("Amount too small. Minimum sendable amount is 0.000001 tADA");
+  });
+
+  it("normalizes minimum output lovelace error to ADA", () => {
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError:
+          "Amount too small: minimum output value is 970000 lovelace (protocol minimum for this output). Please send at least 970000 lovelace.",
+      })
+    ).toBe("Amount too small. Minimum required is 0.97 tADA");
+  });
+
+  it("returns raw error when no cardano mapping exists", () => {
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "some random failure",
+      })
+    ).toBe("some random failure");
+  });
+
+  it("normalizes token dust error using token decimals", () => {
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "asset amount must be positive",
+        sendCurrencyDenom: "TOKEN",
+        sendCurrencyCoinDecimals: 4,
+      })
+    ).toBe("Amount too small. Minimum sendable amount is 0.0001 TOKEN");
   });
 });
