@@ -41,6 +41,8 @@ export interface AddressInputProps {
   pageName?: string;
   disabled?: boolean;
   value: string;
+  /** Fires when the recipient input loses focus (e.g. Send phase touched state). */
+  onRecipientBlur?: () => void;
 }
 
 function numOfCharacter(str: string, c: string): number {
@@ -57,6 +59,7 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
     disabled = false,
     value,
     pageName,
+    onRecipientBlur,
   }) => {
     const intl = useIntl();
     const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
@@ -235,6 +238,7 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
                 recipientConfig.setRawRecipient(value);
                 e.preventDefault();
               }}
+              onBlur={() => onRecipientBlur?.()}
               autoComplete="off"
               disabled={disabled}
             />

@@ -32,6 +32,13 @@ import { CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
 import { lovelacesToAdaString } from "@keplr-wallet/cardano";
 import { Modal, ModalBody } from "reactstrap";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
+import {
+  getBannerValidationError,
+  getHighestPriorityNonRecipientBlockingError,
+  isOnlyEmptyRecipientBlocking,
+  isReviewTransactionButtonDisabled,
+  shouldEnableReviewWhenInvalid,
+} from "./send-phase-2-helpers";
 
 type CardanoSignOptions = KeplrSignOptions & {
   cardano?: { spendingPassword?: string };
@@ -359,6 +366,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       null
     );
     const [isBuildingCardanoDraft, setIsBuildingCardanoDraft] = useState(false);
+    const [recipientTouched, setRecipientTouched] = useState(false);
+    const [reviewAttempted, setReviewAttempted] = useState(false);
     const isCardano = chainStore.current.features?.includes("cardano") ?? false;
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
     const cardanoDenom = chainStore.current.stakeCurrency.coinDenom;
@@ -464,6 +473,17 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       return cardanoDraftError;
     })();
 
+    const postRecipientError = getHighestPriorityNonRecipientBlockingError({
+      amountError: sendConfigs.amountConfig.error,
+      memoError: sendConfigs.memoConfig.error,
+      isCardano,
+      normalizedCardanoDraftError,
+      cardanoDraft,
+      isBuildingCardanoDraft,
+      gasError: sendConfigs.gasConfig.error,
+      feeError: sendConfigs.feeConfig.error,
+    });
+
     const sendConfigError =
       sendConfigs.recipientConfig.error ??
       sendConfigs.amountConfig.error ??
@@ -476,6 +496,32 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           : undefined
         : sendConfigs.gasConfig.error ?? sendConfigs.feeConfig.error);
     const txStateIsValid = sendConfigError == null;
+
+    const onlyEmptyRecipientBlocking = isOnlyEmptyRecipientBlocking(
+      sendConfigs.recipientConfig.error,
+      postRecipientError
+    );
+
+    const bannerValidationError = getBannerValidationError({
+      sendConfigError,
+      recipientError: sendConfigs.recipientConfig.error,
+      postRecipientError,
+      recipientTouched,
+      reviewAttempted,
+    });
+
+    const reviewOperationalDisabled =
+      !accountInfo.isReadyToSendMsgs ||
+      isCardanoSyncing ||
+      (isCardano && !isOnline);
+
+    const reviewButtonDisabled = isReviewTransactionButtonDisabled({
+      operationalDisabled: reviewOperationalDisabled,
+      txStateIsValid,
+      onlyEmptyRecipientBlocking,
+      recipientTouched,
+      reviewAttempted,
+    });
 
     const recipient = sendConfigs.recipientConfig.recipient?.trim() ?? "";
     const hasNoRecipientError = sendConfigs.recipientConfig.error == null;
@@ -857,6 +903,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           label={intl.formatMessage({ id: "send.input.recipient" })}
           value={configs ? configs.recipient : ""}
           pageName="Send"
+          onRecipientBlur={() => setRecipientTouched(true)}
         />
         <MemoInput
           memoConfig={sendConfigs.memoConfig}
@@ -920,7 +967,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             />
           )}
         </div>
-        {!txStateIsValid && sendConfigError && !isBuildingCardanoDraft && (
+        {bannerValidationError && !isBuildingCardanoDraft && (
           <div
             style={{
               textAlign: "center",
@@ -937,7 +984,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
               className="fas fa-exclamation-circle"
               style={{ marginRight: "8px" }}
             />
-            {sendConfigError.message}
+            {bannerValidationError.message}
           </div>
         )}
         {isSelfSend && (
@@ -1014,6 +1061,16 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           onClick={async (e: any) => {
             e.preventDefault();
             if (
+              shouldEnableReviewWhenInvalid({
+                onlyEmptyRecipientBlocking,
+                recipientTouched,
+                reviewAttempted,
+              })
+            ) {
+              setReviewAttempted(true);
+              return;
+            }
+            if (
               accountInfo.isReadyToSendMsgs &&
               txStateIsValid &&
               !isCardanoSyncing &&
@@ -1068,12 +1125,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             }
           }}
           data-loading={accountInfo.isSendingMsg === "send"}
-          disabled={
-            !accountInfo.isReadyToSendMsgs ||
-            !txStateIsValid ||
-            isCardanoSyncing ||
-            (isCardano && !isOnline)
-          }
+          disabled={reviewButtonDisabled}
           btnBgEnabled={true}
         >
           {activityStore.getPendingTxnTypes[TXNTYPE.send] && (
