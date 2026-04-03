@@ -48,7 +48,12 @@ export const AccountView: FunctionComponent = observer(() => {
     }
   })();
 
-  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
 
   const intl = useIntl();
 

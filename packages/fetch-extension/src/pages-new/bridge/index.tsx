@@ -37,7 +37,13 @@ export const BridgePage: FunctionComponent = observer(() => {
       )
     : true;
 
-  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
+  const current = chainStore.current;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
   return (
     <HeaderLayout
       showTopMenu={true}

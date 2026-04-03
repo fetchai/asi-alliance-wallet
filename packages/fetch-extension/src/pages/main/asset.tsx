@@ -75,8 +75,13 @@ const EmptyState = ({
   const [walletStatus, setWalletStatus] = useState<WalletStatus>();
   // const [loading, setLoading] = useState(true);
   useEffect(() => {
+    const current = chainStore.current;
     const isEvm =
-      chainStore.current.features?.includes("eth-key-sign") ?? false;
+      Boolean(
+        current.features?.includes("eth-key-sign") &&
+          current.features?.includes("eth-address-gen") &&
+          current.evm
+      ) ?? false;
     const accountInfo = accountStore.getAccount(chainId);
     setWalletStatus(accountInfo.walletStatus);
     setAddress(
@@ -213,7 +218,12 @@ export const AssetView: FunctionComponent = observer(() => {
     (currency: AppCurrency) => currency.coinMinimalDenom === "uusdc"
   );
 
-  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
 
   const stakable = (() => {
     if (isNoble && hasUSDC) {

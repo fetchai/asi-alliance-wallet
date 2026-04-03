@@ -162,7 +162,11 @@ const ActivityTab = () => {
   const current = chainStore.current;
   const [activityTooltip, setActivityTooltip] = useState("");
   const [activityDisabled, setActivityDisabled] = useState(false);
-  const isEvm = current.features?.includes("eth-key-sign") ?? false;
+  const isEvm =
+    (current.features?.includes("eth-key-sign") &&
+      current.features?.includes("eth-address-gen") &&
+      current.evm) ??
+    false;
   useEffect(() => {
     if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       setActivityTooltip("Coming soon for ledger");

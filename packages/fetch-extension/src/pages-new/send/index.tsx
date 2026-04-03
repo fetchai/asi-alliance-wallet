@@ -74,7 +74,12 @@ export const SendPage: FunctionComponent = observer(() => {
     }
   );
 
-  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
   const spendableBalances = isEvm
     ? queries.queryBalances
         .getQueryBech32Address(accountInfo.bech32Address)

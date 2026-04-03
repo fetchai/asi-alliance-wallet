@@ -70,7 +70,13 @@ export const MorePage: FunctionComponent = () => {
       });
   }, []);
 
-  // const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
+  const current = chainStore.current;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
 
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
@@ -132,7 +138,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!currentChain.features?.includes("eth-key-sign") && (
+      {!isEvm && (
         <Card
           leftImageStyle={{ background: "transparent", height: "16px" }}
           style={{ marginBottom: "8px" }}
@@ -166,22 +172,21 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {!chainStore.current.features?.includes("eth-key-sign") &&
-        chainId !== "noble-1" && (
-          <Card
-            leftImageStyle={{ background: "transparent" }}
-            style={{ marginBottom: "8px" }}
-            leftImage={require("@assets/svg/wireframe/voting-power.svg")}
-            heading={"Proposals"}
-            onClick={(e: any) => {
-              e.preventDefault();
-              analyticsStore.logEvent("proposal_view_click", {
-                pageName: "More",
-              });
-              navigate("/proposal");
-            }}
-          />
-        )}
+      {!isEvm && chainId !== "noble-1" && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/voting-power.svg")}
+          heading={"Proposals"}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("proposal_view_click", {
+              pageName: "More",
+            });
+            navigate("/proposal");
+          }}
+        />
+      )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ marginBottom: "6px" }}
@@ -194,7 +199,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!chainStore.current.features?.includes("eth-key-sign") && (
+      {!isEvm && (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "5px" }}

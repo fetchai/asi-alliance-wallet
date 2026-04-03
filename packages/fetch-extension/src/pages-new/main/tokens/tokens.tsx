@@ -69,7 +69,6 @@ export const Tokens = observer(() => {
     return inUsd;
   };
 
-  console.log("Tokens rendered", tokens);
   return (
     <React.Fragment>
       {tokens.map((token) => {

@@ -63,7 +63,11 @@ export const NativeTab = observer(() => {
   const current = chainStore.current;
   const accountInfo = accountStore.getAccount(current.chainId);
   const isActivitySupported = !(
-    current.features?.includes("eth-key-sign") ?? false
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false
   );
   const [isOpen, setIsOpen] = useState(false);
   const [_date, setDate] = useState("");

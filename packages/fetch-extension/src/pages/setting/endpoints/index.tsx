@@ -65,7 +65,12 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
   const selectedChainInfo = chainStore.getChain(selectedChainId);
-  const isEvm = selectedChainInfo.features?.includes("eth-key-sign");
+  const isEvm =
+    Boolean(
+      selectedChainInfo.features?.includes("eth-key-sign") &&
+        selectedChainInfo.features?.includes("eth-address-gen") &&
+        selectedChainInfo.evm
+    ) ?? false;
 
   return (
     <HeaderLayout

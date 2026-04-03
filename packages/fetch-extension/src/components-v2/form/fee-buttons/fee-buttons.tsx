@@ -231,8 +231,13 @@ export const FeeButtonsInner: FunctionComponent<
     const { chainStore, analyticsStore } = useStore();
 
     const intl = useIntl();
+    const current = chainStore.current;
     const isEvm =
-      chainStore.current.features?.includes("eth-key-sign") ?? false;
+      Boolean(
+        current.features?.includes("eth-key-sign") &&
+          current.features?.includes("eth-address-gen") &&
+          current.evm
+      ) ?? false;
 
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);

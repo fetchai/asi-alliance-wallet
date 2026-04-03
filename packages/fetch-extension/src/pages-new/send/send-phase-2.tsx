@@ -55,8 +55,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const { isFromPhase1, isMaxAmount } = location.state || {};
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
+    const current = chainStore.current;
     const isEvm =
-      chainStore.current.features?.includes("eth-key-sign") ?? false;
+      Boolean(
+        current.features?.includes("eth-key-sign") &&
+          current.features?.includes("eth-address-gen") &&
+          current.evm
+      ) ?? false;
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
       return value && value.shrink(true).maxDecimals(6).toString();

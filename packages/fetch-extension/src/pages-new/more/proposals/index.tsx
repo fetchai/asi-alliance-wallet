@@ -123,6 +123,14 @@ export const Proposals = observer(() => {
     setProposals(newProposal);
   };
 
+  const isProposalsSupported = !(
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false
+  );
+
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -153,10 +161,7 @@ export const Proposals = observer(() => {
         </div>
       }
     >
-      {!(
-        current.features?.includes("eth-key-sign") ||
-        current.chainId === "noble-1"
-      ) ? (
+      {!(!isProposalsSupported || current.chainId === "noble-1") ? (
         isError ? (
           <ErrorActivity />
         ) : isLoading ? (

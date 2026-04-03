@@ -82,7 +82,11 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
     };
 
     const isSupportedNetwork = !(
-      current.features?.includes("eth-key-sign") ?? false
+      Boolean(
+        current.features?.includes("eth-key-sign") &&
+          current.features?.includes("eth-address-gen") &&
+          current.evm
+      ) ?? false
     );
 
     return (

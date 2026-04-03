@@ -61,7 +61,11 @@ const HomeTab = () => <Tab {...bottomNav[0]} />;
 const StakeTab = () => {
   const { chainStore } = useStore();
   const current = chainStore.current;
-  const isEvm = current.features?.includes("eth-key-sign") ?? false;
+  const isEvm =
+    (current.features?.includes("eth-key-sign") &&
+      current.features?.includes("eth-address-gen") &&
+      current.evm) ??
+    false;
 
   const [stakingTooltip, setStakingTooltip] = useState("");
   const [stakingDisabled, setStakingDisabled] = useState(false);
@@ -91,10 +95,15 @@ const StakeTab = () => {
 
 const ActivityTab = () => {
   const { chainStore } = useStore();
-  const current = chainStore.current;
   const [activityTooltip, setActivityTooltip] = useState("");
   const [activityDisabled, setActivityDisabled] = useState(false);
-  const isEvm = current.features?.includes("eth-key-sign") ?? false;
+  const current = chainStore.current;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
   useEffect(() => {
     if (isEvm) {
       setActivityTooltip("Feature not available on this network");

@@ -49,8 +49,13 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
           );
           const accounts = settledResponse.map((item: any) => item.value);
 
+          const current = chainStore.current;
           const isEvm =
-            chainStore.current.features?.includes("eth-key-sign") ?? false;
+            Boolean(
+              current.features?.includes("eth-key-sign") &&
+                current.features?.includes("eth-address-gen") &&
+                current.evm
+            ) ?? false;
           const addresses = accounts.map((account) => {
             if (isEvm) {
               return account.ethereumHexAddress;

@@ -24,7 +24,13 @@ export const BuyToken: FunctionComponent<{
   const { chainStore, accountStore } = useStore();
   const chainId = chainStore.current.chainId;
   const currentChain = chainStore.current.chainName;
-  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
+  const current = chainStore.current;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
   const defaultAddress =
     accountStore.getAccount(chainId)[
       isEvm ? "ethereumHexAddress" : "bech32Address"

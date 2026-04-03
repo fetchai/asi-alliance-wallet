@@ -28,7 +28,13 @@ export const BridgeHistoryView: FunctionComponent = observer(() => {
   const { chainStore, accountStore, queriesStore } = useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
-  const isEvm = chainStore.current.features?.includes("eth-key-sign") ?? false;
+  const current = chainStore.current;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
   const currentQueriesStore = queriesStore.get(chainStore.current.chainId);
 
   const currentChainBridgeHistoryQuery = isEvm
@@ -85,8 +91,13 @@ export const BridgeHistoryView: FunctionComponent = observer(() => {
 const BridgeStatus: FunctionComponent<{ history: BridgeHistory }> = observer(
   ({ history }) => {
     const { chainStore, queriesStore } = useStore();
+    const current = chainStore.current;
     const isEvm =
-      chainStore.current.features?.includes("eth-key-sign") ?? false;
+      Boolean(
+        current.features?.includes("eth-key-sign") &&
+          current.features?.includes("eth-address-gen") &&
+          current.evm
+      ) ?? false;
     const currentQueriesStore = queriesStore.get(chainStore.current.chainId);
 
     const counterChainSwapStatusQuery = isEvm
