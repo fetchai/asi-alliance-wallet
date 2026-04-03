@@ -70,9 +70,13 @@ export class ObservableChainQuerySpendableBalances extends ObservableQueryTender
   protected override canFetch(): boolean {
     // avoid fetching the endpoint for evm networks
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return (
-      !chainInfo?.features?.includes("eth-key-sign") && this.address.length > 0
-    );
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return !isEvm && this.address.length > 0;
   }
 
   @computed

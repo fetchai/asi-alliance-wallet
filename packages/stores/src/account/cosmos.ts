@@ -261,10 +261,12 @@ export class CosmosAccountImpl {
     recipient: string
   ) {
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
+    const chainInfo = this.chainGetter.getChain(this.chainId);
     const isEvm =
-      this.chainGetter
-        .getChain(this.chainId)
-        .features?.includes("eth-key-sign") ?? false;
+      (chainInfo.features?.includes("eth-key-sign") &&
+        chainInfo.features?.includes("eth-address-gen") &&
+        chainInfo.evm) ??
+      false;
     if (denomHelper.type === "native" && !isEvm) {
       const actualAmount = (() => {
         let dec = new Dec(amount);

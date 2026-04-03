@@ -39,10 +39,13 @@ export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTall
   protected override canFetch(): boolean {
     // avoid fetching the endpoint for evm networks
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return (
-      this.proposalStatus === ProposalStatus.VOTING_PERIOD &&
-      !chainInfo?.features?.includes("eth-key-sign")
-    );
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return this.proposalStatus === ProposalStatus.VOTING_PERIOD && !isEvm;
   }
 
   get raw() {

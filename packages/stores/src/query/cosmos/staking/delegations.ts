@@ -48,10 +48,13 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
     /* If bech32 address is empty, it will always fail, so don't need to fetch it.
     also avoid fetching the endpoint for evm networks*/
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return (
-      this.bech32Address.length > 0 &&
-      !chainInfo?.features?.includes("eth-key-sign")
-    );
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return this.bech32Address.length > 0 && !isEvm;
   }
 
   @computed

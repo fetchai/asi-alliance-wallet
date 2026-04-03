@@ -68,10 +68,18 @@ export const Tokens = observer(() => {
     const inUsd = value && value.shrink(true).maxDecimals(6).toString();
     return inUsd;
   };
+
+  console.log("Tokens rendered", tokens);
   return (
     <React.Fragment>
       {tokens.map((token) => {
         const error = token.error;
+        console.log(
+          "Rendering token:",
+          token.currency.coinDenom,
+          "Error:",
+          error
+        );
         const validSelector = Buffer.from(
           Hash.sha256(
             Buffer.from(token.balance.currency.coinMinimalDenom) as Uint8Array

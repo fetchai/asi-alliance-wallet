@@ -245,7 +245,12 @@ export class RecipientConfig
       }
     }
 
-    const isEvm = this.chainInfo.features?.includes("eth-key-sign");
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const isEvm =
+      (chainInfo.features?.includes("eth-key-sign") &&
+        chainInfo.features?.includes("eth-address-gen") &&
+        chainInfo.evm) ??
+      false;
 
     if (isEvm) {
       try {

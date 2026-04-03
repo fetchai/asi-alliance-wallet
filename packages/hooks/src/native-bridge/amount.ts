@@ -52,10 +52,12 @@ export class nativeBridgeAmountConfig extends AmountConfig {
       return new Error("Could not fetch bridge data, try later");
     }
 
+    const chainInfo = this.chainGetter.getChain(this.chainId);
     const isEvm =
-      this.chainGetter
-        .getChain(this.chainId)
-        .features?.includes("eth-key-sign") ?? false;
+      (chainInfo.features?.includes("eth-key-sign") &&
+        chainInfo.features?.includes("eth-address-gen") &&
+        chainInfo.evm) ??
+      false;
     const chainBridgeStatus = isEvm ? ethBridgeStatus : nativeBridgeStatus;
     const destChainBridgeStatus = isEvm ? nativeBridgeStatus : ethBridgeStatus;
 
