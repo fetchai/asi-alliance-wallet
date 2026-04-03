@@ -1,7 +1,6 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { useNavigate } from "react-router";
 import { useStore } from "../../../stores";
-import { Dec } from "@keplr-wallet/unit";
 import { observer } from "mobx-react-lite";
 import { Card } from "@components-v2/card";
 import style from "./style.module.scss";
@@ -12,6 +11,7 @@ import {
   checkAddressIsBuySellWhitelisted,
 } from "@utils/moonpay-currency";
 import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
+import { getNativeBridgeModeByChainId } from "@utils/native-bridge-mode";
 
 interface WalletActionsProps {
   isOpen: boolean;
@@ -21,17 +21,11 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
   ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
 
-    const {
-      accountStore,
-      chainStore,
-      queriesStore,
-      activityStore,
-      analyticsStore,
-    } = useStore();
+    const { accountStore, chainStore, activityStore, analyticsStore } =
+      useStore();
 
     const chainId = chainStore.current.chainId;
     const accountInfo = accountStore.getAccount(chainId);
-    const queries = queriesStore.get(chainId);
     const { data } = useMoonpayCurrency();
 
     const allowedTokenList = data?.filter(
@@ -52,13 +46,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     //     bal.balance.toDec().gt(new Dec(0))
     //   ) !== undefined;
 
-    const stakable = queries.queryBalances.getQueryBech32Address(
-      accountInfo.bech32Address
-    ).stakable;
-    const isStakableExist = useMemo(() => {
-      return stakable.balance.toDec().gt(new Dec(0));
-    }, [stakable.balance]);
-    console.log(isStakableExist);
+    const nativeBridgeMode = getNativeBridgeModeByChainId(chainId);
 
     // check if address is whitelisted for Buy/Sell feature
     const isAddressWhitelisted = accountInfo?.bech32Address
@@ -145,23 +133,25 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
             ""
           )}
 
-          <Card
-            leftImageStyle={{ background: "transparent", height: "18px" }}
-            style={{
-              background: "var(--card-bg)",
-              height: "60px",
-              marginBottom: "6px",
-            }}
-            leftImage={require("@assets/svg/wireframe/bridge.svg")}
-            heading={"Bridge"}
-            onClick={() => {
-              navigate("/bridge");
-              analyticsStore.logEvent("native_bridge_click", {
-                tabName: "fund_transfer_tab",
-                pageName: "Home",
-              });
-            }}
-          />
+          {nativeBridgeMode !== "none" ? (
+            <Card
+              leftImageStyle={{ background: "transparent", height: "18px" }}
+              style={{
+                background: "var(--card-bg)",
+                height: "60px",
+                marginBottom: "6px",
+              }}
+              leftImage={require("@assets/svg/wireframe/bridge.svg")}
+              heading={"Bridge"}
+              onClick={() => {
+                navigate("/bridge");
+                analyticsStore.logEvent("native_bridge_click", {
+                  tabName: "fund_transfer_tab",
+                  pageName: "Home",
+                });
+              }}
+            />
+          ) : null}
         </Dropdown>
       </div>
     );
