@@ -1,6 +1,10 @@
 import { EmptyAddressError } from "@keplr-wallet/hooks";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
 import { lovelacesToAdaString } from "@keplr-wallet/cardano";
+import {
+  CardanoUiErrorCode,
+  parseCardanoUiError,
+} from "@keplr-wallet/cardano";
 
 const MIN_OUTPUT_LOVELACE_REGEX =
   /minimum output value is (\d+) lovelace/i;
@@ -179,4 +183,127 @@ export function isReviewTransactionButtonDisabled(params: {
     recipientTouched: params.recipientTouched,
     reviewAttempted: params.reviewAttempted,
   });
+}
+
+export const CARDANO_SUCCESS_TRANSITION_DELAY_MS = 350;
+
+export function getCardanoPostSubmitStatusSequence(): readonly [
+  "pending",
+  "success",
+] {
+  return ["pending", "success"] as const;
+}
+
+export function shouldStartCardanoSuccessTransition(params: {
+  submitSucceeded: boolean;
+  hasPendingToSuccessTransitionStarted: boolean;
+}): boolean {
+  return (
+    params.submitSucceeded && !params.hasPendingToSuccessTransitionStarted
+  );
+}
+
+const CARDANO_MODAL_LEVEL_ERROR_HINTS = [
+  "invalid password",
+  "fail to decrypt",
+  "password is required",
+  "wallet is syncing",
+  "please unlock wallet first",
+];
+
+export function parseCardanoUiErrorMessage(message: string): {
+  code?: CardanoUiErrorCode;
+  message: string;
+} {
+  return parseCardanoUiError(message);
+}
+
+export function isCardanoModalLevelErrorMessage(message: string): boolean {
+  const parsed = parseCardanoUiErrorMessage(message);
+  if (parsed.code) {
+    return (
+      parsed.code === "invalid_password" ||
+      parsed.code === "password_required" ||
+      parsed.code === "wallet_locked" ||
+      parsed.code === "wallet_syncing"
+    );
+  }
+  const normalizedMessage = parsed.message.toLowerCase();
+  return CARDANO_MODAL_LEVEL_ERROR_HINTS.some((hint) =>
+    normalizedMessage.includes(hint)
+  );
+}
+
+export function shouldNavigateCardanoFailedFromError(params: {
+  isFromPasswordModal: boolean;
+  errorMessage: string;
+}): boolean {
+  if (!params.isFromPasswordModal) {
+    return true;
+  }
+
+  return !isCardanoModalLevelErrorMessage(params.errorMessage);
+}
+
+export function getCardanoPasswordModalInlineError(params: {
+  parsedCode?: CardanoUiErrorCode;
+  message: string;
+  syncingMessage?: string;
+}): string | undefined {
+  const normalizedMessage = params.message.toLowerCase();
+
+  if (
+    params.parsedCode === "invalid_password" ||
+    normalizedMessage.includes("invalid password") ||
+    normalizedMessage.includes("fail to decrypt")
+  ) {
+    return "Invalid password";
+  }
+
+  if (
+    params.parsedCode === "password_required" ||
+    normalizedMessage.includes("password is required")
+  ) {
+    return "Password is required";
+  }
+
+  if (
+    params.parsedCode === "wallet_syncing" ||
+    normalizedMessage.includes("wallet is syncing")
+  ) {
+    return params.syncingMessage ?? "Wallet is syncing. Please wait.";
+  }
+
+  if (
+    params.parsedCode === "wallet_locked" ||
+    normalizedMessage.includes("please unlock wallet first")
+  ) {
+    return "Wallet is locked. Please unlock and try again.";
+  }
+
+  return undefined;
+}
+
+export function shouldPushCardanoFailedWarningFromModal(params: {
+  parsedCode?: CardanoUiErrorCode;
+  message: string;
+}): boolean {
+  return (
+    getCardanoPasswordModalInlineError({
+      parsedCode: params.parsedCode,
+      message: params.message,
+    }) == null
+  );
+}
+
+export function shouldNavigateCardanoSuccessAfterSubmit(params: {
+  submitSucceeded: boolean;
+  isDetachedPage: boolean;
+  currentPathName: string;
+}): boolean {
+  return (
+    params.submitSucceeded &&
+    !params.isDetachedPage &&
+    params.currentPathName === "send"
+  );
 }

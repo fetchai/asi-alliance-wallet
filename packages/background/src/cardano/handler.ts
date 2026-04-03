@@ -17,6 +17,7 @@ import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
 import { Buffer } from "buffer/";
 import { formatErrorForLog } from "../logging/safe-error";
+import { encodeCardanoUiError } from "@keplr-wallet/cardano";
 
 const stateFromError = (error: unknown): CardanoServiceState => {
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -53,6 +54,23 @@ const getSubmitErrorMessage = (error: unknown): string => {
   }
 
   return "Cardano transaction submission failed";
+};
+
+const toCardanoUiSubmitError = (rawMessage: string): string => {
+  const normalized = rawMessage.toLowerCase();
+  if (normalized.includes("invalid password") || normalized.includes("fail to decrypt")) {
+    return encodeCardanoUiError("invalid_password", rawMessage);
+  }
+  if (normalized.includes("password is required")) {
+    return encodeCardanoUiError("password_required", rawMessage);
+  }
+  if (normalized.includes("please unlock wallet first")) {
+    return encodeCardanoUiError("wallet_locked", rawMessage);
+  }
+  if (normalized.includes("wallet is syncing") || normalized.includes("syncing:")) {
+    return encodeCardanoUiError("wallet_syncing", rawMessage);
+  }
+  return rawMessage;
 };
 
 export const getHandler: (
@@ -348,7 +366,7 @@ const handleSubmitSendAdaTxDraftMsg: (
         approvedPayloadHash,
       });
     } catch (error) {
-      throw new Error(getSubmitErrorMessage(error));
+      throw new Error(toCardanoUiSubmitError(getSubmitErrorMessage(error)));
     }
   };
 };
@@ -365,13 +383,18 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
       throw new Error("This message is only supported for internal requests");
     }
     if (!keyRingService.checkPassword(msg.password)) {
-      throw new Error("Invalid password");
+      throw new Error(encodeCardanoUiError("invalid_password", "Invalid password"));
     }
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
     }
     if (!service.isReady()) {
-      throw new Error("Cardano service not ready. Please unlock wallet first.");
+      throw new Error(
+        encodeCardanoUiError(
+          "wallet_locked",
+          "Cardano service not ready. Please unlock wallet first."
+        )
+      );
     }
     await waitForCardanoWalletSettled(service);
     const context = await getCardanoDraftContext(service, keyRingService, msg.chainId);
@@ -400,7 +423,7 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
         approvedPayloadHash,
       });
     } catch (error) {
-      throw new Error(getSubmitErrorMessage(error));
+      throw new Error(toCardanoUiSubmitError(getSubmitErrorMessage(error)));
     }
   };
 };

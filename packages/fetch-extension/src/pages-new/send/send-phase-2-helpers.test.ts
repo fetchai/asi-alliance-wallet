@@ -10,6 +10,10 @@ jest.mock("@keplr-wallet/hooks", () => {
 
 import { EmptyAddressError } from "@keplr-wallet/hooks";
 import {
+  CARDANO_SUCCESS_TRANSITION_DELAY_MS,
+  getCardanoPostSubmitStatusSequence,
+  getCardanoPasswordModalInlineError,
+  parseCardanoUiErrorMessage,
   getMinimumDisplayAmountFromDecimals,
   getBannerValidationError,
   getHighestPriorityNonRecipientBlockingError,
@@ -18,6 +22,11 @@ import {
   isReviewTransactionButtonDisabled,
   normalizeCardanoDraftError,
   parseAmountToBaseUnits,
+  isCardanoModalLevelErrorMessage,
+  shouldNavigateCardanoSuccessAfterSubmit,
+  shouldNavigateCardanoFailedFromError,
+  shouldPushCardanoFailedWarningFromModal,
+  shouldStartCardanoSuccessTransition,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 
@@ -219,5 +228,180 @@ describe("normalizeCardanoDraftError", () => {
         sendCurrencyCoinDecimals: 4,
       })
     ).toBe("Amount too small. Minimum sendable amount is 0.0001 TOKEN");
+  });
+});
+
+describe("Cardano post-submit status flow", () => {
+  it("keeps pending -> success sequence for post-submit UI flow", () => {
+    expect(getCardanoPostSubmitStatusSequence()).toEqual([
+      "pending",
+      "success",
+    ]);
+  });
+
+  it("uses a small deterministic delay for pending -> success transition", () => {
+    expect(CARDANO_SUCCESS_TRANSITION_DELAY_MS).toBeGreaterThan(0);
+  });
+
+  it("enforces single-owner transition scheduling", () => {
+    expect(
+      shouldStartCardanoSuccessTransition({
+        submitSucceeded: true,
+        hasPendingToSuccessTransitionStarted: false,
+      })
+    ).toBe(true);
+    expect(
+      shouldStartCardanoSuccessTransition({
+        submitSucceeded: true,
+        hasPendingToSuccessTransitionStarted: true,
+      })
+    ).toBe(false);
+    expect(
+      shouldStartCardanoSuccessTransition({
+        submitSucceeded: false,
+        hasPendingToSuccessTransitionStarted: false,
+      })
+    ).toBe(false);
+  });
+});
+
+describe("Cardano error classification", () => {
+  it("parses structured cardano ui error messages", () => {
+    expect(
+      parseCardanoUiErrorMessage("cardano_ui_error:invalid_password:Invalid password")
+    ).toEqual({
+      code: "invalid_password",
+      message: "Invalid password",
+    });
+  });
+
+  it("falls back for plain error messages", () => {
+    expect(parseCardanoUiErrorMessage("some generic error")).toEqual({
+      message: "some generic error",
+    });
+  });
+
+  it("rejects unknown structured error codes via whitelist", () => {
+    expect(
+      parseCardanoUiErrorMessage("cardano_ui_error:unknown_code:Some message")
+    ).toEqual({
+      message: "Some message",
+    });
+  });
+
+  it("detects modal-level password and wallet-state errors", () => {
+    expect(
+      isCardanoModalLevelErrorMessage(
+        "cardano_ui_error:wallet_locked:Cardano service not ready. Please unlock wallet first."
+      )
+    ).toBe(true);
+    expect(isCardanoModalLevelErrorMessage("Invalid password")).toBe(true);
+    expect(
+      isCardanoModalLevelErrorMessage("Password is required")
+    ).toBe(true);
+    expect(
+      isCardanoModalLevelErrorMessage("Wallet is syncing. Please wait")
+    ).toBe(true);
+    expect(
+      isCardanoModalLevelErrorMessage("Please unlock wallet first")
+    ).toBe(true);
+  });
+
+  it("does not treat generic submit failures as modal-level", () => {
+    expect(
+      isCardanoModalLevelErrorMessage("submit tx failed: provider unavailable")
+    ).toBe(false);
+  });
+
+  it("blocks failed navigation for modal-level errors from password modal", () => {
+    expect(
+      shouldNavigateCardanoFailedFromError({
+        isFromPasswordModal: true,
+        errorMessage: "cardano_ui_error:invalid_password:Invalid password",
+      })
+    ).toBe(false);
+  });
+
+  it("allows failed navigation for system-level errors from password modal", () => {
+    expect(
+      shouldNavigateCardanoFailedFromError({
+        isFromPasswordModal: true,
+        errorMessage: "submit tx failed: provider unavailable",
+      })
+    ).toBe(true);
+  });
+
+  it("allows failed navigation for non-modal submissions", () => {
+    expect(
+      shouldNavigateCardanoFailedFromError({
+        isFromPasswordModal: false,
+        errorMessage: "Invalid password",
+      })
+    ).toBe(true);
+  });
+
+  it("maps modal-level errors to inline modal messages", () => {
+    expect(
+      getCardanoPasswordModalInlineError({
+        parsedCode: "invalid_password",
+        message: "irrelevant",
+      })
+    ).toBe("Invalid password");
+    expect(
+      getCardanoPasswordModalInlineError({
+        parsedCode: "wallet_syncing",
+        message: "irrelevant",
+        syncingMessage: "Syncing wallet… Please wait",
+      })
+    ).toBe("Syncing wallet… Please wait");
+  });
+
+  it("returns undefined for system-level errors (allows warning toast path)", () => {
+    expect(
+      getCardanoPasswordModalInlineError({
+        message: "submit tx failed: provider unavailable",
+      })
+    ).toBeUndefined();
+  });
+
+  it("does not push failed warning payload for modal-level errors", () => {
+    expect(
+      shouldPushCardanoFailedWarningFromModal({
+        parsedCode: "invalid_password",
+        message: "Invalid password",
+      })
+    ).toBe(false);
+  });
+
+  it("allows failed warning payload for system-level modal errors", () => {
+    expect(
+      shouldPushCardanoFailedWarningFromModal({
+        message: "submit tx failed: provider unavailable",
+      })
+    ).toBe(true);
+  });
+
+  it("navigates to success only after successful submit on send route", () => {
+    expect(
+      shouldNavigateCardanoSuccessAfterSubmit({
+        submitSucceeded: true,
+        isDetachedPage: false,
+        currentPathName: "send",
+      })
+    ).toBe(true);
+    expect(
+      shouldNavigateCardanoSuccessAfterSubmit({
+        submitSucceeded: true,
+        isDetachedPage: false,
+        currentPathName: "activity",
+      })
+    ).toBe(false);
+    expect(
+      shouldNavigateCardanoSuccessAfterSubmit({
+        submitSucceeded: false,
+        isDetachedPage: false,
+        currentPathName: "send",
+      })
+    ).toBe(false);
   });
 });

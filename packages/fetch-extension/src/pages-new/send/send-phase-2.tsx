@@ -33,13 +33,21 @@ import { lovelacesToAdaString } from "@keplr-wallet/cardano";
 import { Modal, ModalBody } from "reactstrap";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
 import {
+  CARDANO_SUCCESS_TRANSITION_DELAY_MS,
+  getCardanoPostSubmitStatusSequence,
   getBannerValidationError,
+  getCardanoPasswordModalInlineError,
   getHighestPriorityNonRecipientBlockingError,
   isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
   normalizeCardanoDraftError,
   parseAmountToBaseUnits,
+  parseCardanoUiErrorMessage,
+  shouldNavigateCardanoFailedFromError,
+  shouldNavigateCardanoSuccessAfterSubmit,
+  shouldPushCardanoFailedWarningFromModal,
+  shouldStartCardanoSuccessTransition,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 
@@ -243,24 +251,25 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               await props.onConfirm(password);
               props.onCancel();
             } catch (err: any) {
-              const messageText = getErrorMessage(err);
-              const message = messageText.toLowerCase();
-              if (
-                message.includes("invalid password") ||
-                message.includes("fail to decrypt")
-              ) {
-                setPasswordError("Invalid password");
-              } else if (message.includes("password is required")) {
-                setPasswordError("Password is required");
-              } else if (message.includes("wallet is syncing")) {
-                setPasswordError(props.statusMessage ?? "Wallet is syncing. Please wait.");
-              } else if (message.includes("please unlock wallet first")) {
-                setPasswordError("Wallet is locked. Please unlock and try again.");
+              const parsedError = parseCardanoUiErrorMessage(getErrorMessage(err));
+              const messageText = parsedError.message;
+              const inlineError = getCardanoPasswordModalInlineError({
+                parsedCode: parsedError.code,
+                message: messageText,
+                syncingMessage: props.statusMessage,
+              });
+              if (inlineError) {
+                setPasswordError(inlineError);
               } else {
                 setPasswordError(undefined);
-                props.onNotifyWarning(
-                  `Transaction Failed: ${messageText}`
-                );
+                if (
+                  shouldPushCardanoFailedWarningFromModal({
+                    parsedCode: parsedError.code,
+                    message: messageText,
+                  })
+                ) {
+                  props.onNotifyWarning(`Transaction Failed: ${messageText}`);
+                }
               }
             } finally {
               setIsLoading(false);
@@ -384,6 +393,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const [isCardanoPasswordConfirmOpen, setIsCardanoPasswordConfirmOpen] =
       useState(false);
     const passwordInputRef = useRef<HTMLInputElement>(null);
+    const cardanoSuccessTransitionTimeoutRef = useRef<ReturnType<
+      typeof setTimeout
+    > | null>(null);
+    const hasStartedCardanoPendingToSuccessRef = useRef(false);
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
       return value && value.shrink(true).maxDecimals(6).toString();
@@ -400,6 +413,15 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             : isCardanoSyncing
               ? "Syncing wallet… Please wait"
               : undefined;
+
+    useEffect(() => {
+      return () => {
+        if (cardanoSuccessTransitionTimeoutRef.current) {
+          clearTimeout(cardanoSuccessTransitionTimeoutRef.current);
+          cardanoSuccessTransitionTimeoutRef.current = null;
+        }
+      };
+    }, []);
 
     useEffect(() => {
       if (isFromPhase1 !== undefined) setFromPhase1(isFromPhase1);
@@ -753,9 +775,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             feeType: sendConfigs.feeConfig.feeType,
           });
 
+          const [pendingStatus, successStatus] = getCardanoPostSubmitStatusSequence();
           navigate("/send", {
             replace: true,
-            state: { trnsxStatus: "pending", isNext: true },
+            state: { trnsxStatus: pendingStatus, isNext: true },
           });
           notification.push({
             type: "primary",
@@ -766,9 +789,36 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             transition: { duration: 0.25 },
           });
 
-          if (keyRingStore.keyRingType === "ledger") {
-            navigate("/send");
+          if (
+            shouldStartCardanoSuccessTransition({
+              submitSucceeded: true,
+              hasPendingToSuccessTransitionStarted:
+                hasStartedCardanoPendingToSuccessRef.current,
+            })
+          ) {
+            hasStartedCardanoPendingToSuccessRef.current = true;
+            if (cardanoSuccessTransitionTimeoutRef.current) {
+              clearTimeout(cardanoSuccessTransitionTimeoutRef.current);
+            }
+            cardanoSuccessTransitionTimeoutRef.current = setTimeout(() => {
+              cardanoSuccessTransitionTimeoutRef.current = null;
+              const currentPathName = getPathname();
+              if (
+                shouldNavigateCardanoSuccessAfterSubmit({
+                  submitSucceeded: true,
+                  isDetachedPage,
+                  currentPathName,
+                })
+              ) {
+                navigate("/send", {
+                  replace: true,
+                  state: { trnsxStatus: successStatus, isNext: true },
+                });
+              }
+              hasStartedCardanoPendingToSuccessRef.current = false;
+            }, CARDANO_SUCCESS_TRANSITION_DELAY_MS);
           }
+
           if (isDetachedPage) {
             window.close();
           }
@@ -907,8 +957,54 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             });
           }
         }
-      } finally {
-        // noop
+      } catch (e: any) {
+        if (isCardano) {
+          hasStartedCardanoPendingToSuccessRef.current = false;
+          if (cardanoSuccessTransitionTimeoutRef.current) {
+            clearTimeout(cardanoSuccessTransitionTimeoutRef.current);
+            cardanoSuccessTransitionTimeoutRef.current = null;
+          }
+          const errorMessage = getErrorMessage(e);
+          const parsedError = parseCardanoUiErrorMessage(errorMessage);
+          const shouldNavigateToFailed = shouldNavigateCardanoFailedFromError({
+            isFromPasswordModal:
+              options?.cardanoSpendingPassword !== undefined,
+            errorMessage: errorMessage,
+          });
+          if (!shouldNavigateToFailed) {
+            throw e;
+          }
+          analyticsStore.logEvent("send_txn_broadcasted_fail", {
+            chainId: chainStore.current.chainId,
+            chainName: chainStore.current.chainName,
+            feeType: sendConfigs.feeConfig.feeType,
+            message: errorMessage,
+          });
+
+          const currentPathName = getPathname();
+          if (
+            !isDetachedPage &&
+            (currentPathName === "send" || currentPathName === "sign")
+          ) {
+            navigate("/send", {
+              replace: true,
+              state: { trnsxStatus: "failed", isNext: true },
+            });
+          }
+
+          notification.push({
+            type: "warning",
+            placement: "top-center",
+            duration: 5,
+            content: `Transaction Failed: ${parsedError.message}`,
+            canDelete: true,
+            transition: {
+              duration: 0.25,
+            },
+          });
+          return;
+        }
+        throw e;
       }
     };
 

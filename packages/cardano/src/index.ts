@@ -18,6 +18,7 @@ export * from './utils/lovelacesToAdaString';
 export * from './utils/parseAssetId';
 export * from './utils/formatAssetAmount';
 export * from './utils/network';
+export * from './utils/ui-error-contract';
 
 // Export validators with explicit names to avoid conflict with api/extension/isValidAddress
 export {
