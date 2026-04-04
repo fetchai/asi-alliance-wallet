@@ -89,12 +89,14 @@ export const ActivityPage: FunctionComponent = observer(() => {
       }}
     >
       <div className={style["container"]}>
-        <div className={style["title"]}>
+        <div className={isCardano ? style["titleCardano"] : style["title"]}>
           <FormattedMessage id="main.menu.activity" />
         </div>
+
         {isCardano ? (
-          // Cardano exposes a single tab; render content directly to avoid a "fake" clickable tab UI.
-          <CardanoTransactionsTab />
+          <div className={style["cardanoContent"]}>
+            <CardanoTransactionsTab />
+          </div>
         ) : (
           <div className={style["tabContainer"]}>
             <TabsPanel
