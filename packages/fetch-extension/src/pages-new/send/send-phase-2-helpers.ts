@@ -82,6 +82,14 @@ export const normalizeCardanoDraftError = (params: {
     return `Amount too small. Minimum required is ${minAda} ${params.cardanoDenom}`;
   }
 
+  // Cardano SDK coin-selection error (e.g. when "max" leaves no UTxO for fee/change).
+  if (/\butxo fully depleted\b/i.test(rawError)) {
+    return (
+      "Insufficient balance to cover amount + fees. " +
+      "Try reducing the amount or leaving some balance for transaction fees."
+    );
+  }
+
   return rawError;
 };
 

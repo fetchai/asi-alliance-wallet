@@ -219,6 +219,30 @@ describe("normalizeCardanoDraftError", () => {
     ).toBe("some random failure");
   });
 
+  it("normalizes UTxO fully depleted SDK error to user-friendly message", () => {
+    const expected =
+      "Insufficient balance to cover amount + fees. " +
+      "Try reducing the amount or leaving some balance for transaction fees.";
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "UTxO Fully Depleted",
+      })
+    ).toBe(expected);
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "utxo fully depleted",
+      })
+    ).toBe(expected);
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "Transaction build failed: UTxO Fully Depleted",
+      })
+    ).toBe(expected);
+  });
+
   it("normalizes token dust error using token decimals", () => {
     expect(
       normalizeCardanoDraftError({
