@@ -28,6 +28,22 @@ export function isCardanoSendOperationalGuard(params: {
   return false;
 }
 
+/**
+ * Same gate as the Cardano draft build effect in SendPhase2: trimmed recipient, non-empty amount,
+ * and no recipient validation error. Until true, missing draft is expected, not a validation failure.
+ */
+export function isCardanoSendDraftInputsReady(params: {
+  recipient: string;
+  recipientError: Error | undefined;
+  amount: string;
+}): boolean {
+  return (
+    (params.recipient?.trim() ?? "").length > 0 &&
+    params.recipientError == null &&
+    (params.amount ?? "").length > 0
+  );
+}
+
 const MIN_OUTPUT_LOVELACE_REGEX =
   /minimum output value is (\d+) lovelace/i;
 
@@ -127,6 +143,11 @@ export function getHighestPriorityNonRecipientBlockingError(params: {
   isBuildingCardanoDraft: boolean;
   /** When true, omit synthetic "Transaction is not ready" during sync/offline operational guard. */
   cardanoOperationalGuard?: boolean;
+  /**
+   * When false, omit synthetic "Transaction is not ready" — form input is not sufficient to
+   * trigger draft build yet (mirrors {@link isCardanoSendDraftInputsReady}).
+   */
+  cardanoDraftInputsReady?: boolean;
   gasError: Error | undefined;
   feeError: Error | undefined;
 }): Error | undefined {
@@ -136,7 +157,9 @@ export function getHighestPriorityNonRecipientBlockingError(params: {
       : !params.cardanoDraft && !params.isBuildingCardanoDraft
       ? params.cardanoOperationalGuard
         ? undefined
-        : new Error("Transaction is not ready")
+        : params.cardanoDraftInputsReady
+          ? new Error("Transaction is not ready")
+          : undefined
       : undefined
     : params.gasError ?? params.feeError;
 

@@ -17,6 +17,7 @@ import {
   getMinimumDisplayAmountFromDecimals,
   getBannerValidationError,
   getHighestPriorityNonRecipientBlockingError,
+  isCardanoSendDraftInputsReady,
   isCardanoSendOperationalGuard,
   isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
@@ -47,7 +48,7 @@ describe("getHighestPriorityNonRecipientBlockingError", () => {
     expect(r).toBe(amountErr);
   });
 
-  it("returns Transaction is not ready for Cardano without draft when guard is off", () => {
+  it("returns Transaction is not ready for Cardano without draft when guard is off and inputs ready", () => {
     const r = getHighestPriorityNonRecipientBlockingError({
       amountError: undefined,
       memoError: undefined,
@@ -56,10 +57,27 @@ describe("getHighestPriorityNonRecipientBlockingError", () => {
       cardanoDraft: null,
       isBuildingCardanoDraft: false,
       cardanoOperationalGuard: false,
+      cardanoDraftInputsReady: true,
       gasError: undefined,
       feeError: undefined,
     });
     expect(r?.message).toBe("Transaction is not ready");
+  });
+
+  it("omits Transaction is not ready when Cardano draft inputs are not ready yet", () => {
+    const r = getHighestPriorityNonRecipientBlockingError({
+      amountError: undefined,
+      memoError: undefined,
+      isCardano: true,
+      normalizedCardanoDraftError: null,
+      cardanoDraft: null,
+      isBuildingCardanoDraft: false,
+      cardanoOperationalGuard: false,
+      cardanoDraftInputsReady: false,
+      gasError: undefined,
+      feeError: undefined,
+    });
+    expect(r).toBeUndefined();
   });
 
   it("omits Transaction is not ready when Cardano operational guard is on", () => {
@@ -75,6 +93,48 @@ describe("getHighestPriorityNonRecipientBlockingError", () => {
       feeError: undefined,
     });
     expect(r).toBeUndefined();
+  });
+});
+
+describe("isCardanoSendDraftInputsReady", () => {
+  it("is false when recipient is empty", () => {
+    expect(
+      isCardanoSendDraftInputsReady({
+        recipient: "  ",
+        recipientError: undefined,
+        amount: "1",
+      })
+    ).toBe(false);
+  });
+
+  it("is false when recipient has validation error", () => {
+    expect(
+      isCardanoSendDraftInputsReady({
+        recipient: "addr_bad",
+        recipientError: new Error("invalid"),
+        amount: "1",
+      })
+    ).toBe(false);
+  });
+
+  it("is false when amount is empty", () => {
+    expect(
+      isCardanoSendDraftInputsReady({
+        recipient: "addr1",
+        recipientError: undefined,
+        amount: "",
+      })
+    ).toBe(false);
+  });
+
+  it("is true when trimmed recipient and non-empty amount with no recipient error", () => {
+    expect(
+      isCardanoSendDraftInputsReady({
+        recipient: "  addr1  ",
+        recipientError: undefined,
+        amount: "1.5",
+      })
+    ).toBe(true);
   });
 });
 

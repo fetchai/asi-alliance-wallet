@@ -238,7 +238,7 @@ const sendConfigs = {
   recipientConfig: {
     recipient: "addr_test1recipient",
     rawRecipient: "addr_test1recipient",
-    error: undefined,
+    error: undefined as Error | undefined,
     setRawRecipient: jest.fn(),
   },
   amountConfig: {
@@ -624,6 +624,34 @@ describe("SendPhase2 real flow guards", () => {
           call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
       )
     ).toBe(true);
+  });
+
+  it("Cardano: no Transaction is not ready with prefilled amount and empty recipient", async () => {
+    const hooks = jest.requireMock("@keplr-wallet/hooks") as unknown as {
+      EmptyAddressError: new (message: string) => Error;
+    };
+    const prevRecipient = sendConfigs.recipientConfig.recipient;
+    const prevRaw = sendConfigs.recipientConfig.rawRecipient;
+    const prevRecipientError = sendConfigs.recipientConfig.error;
+
+    sendConfigs.recipientConfig.recipient = "";
+    sendConfigs.recipientConfig.rawRecipient = "";
+    sendConfigs.recipientConfig.error = new hooks.EmptyAddressError(
+      "Address is empty"
+    );
+
+    try {
+      renderComponent();
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+        await flushMicrotasksDeep();
+      });
+      expect(container.textContent).not.toContain("Transaction is not ready");
+    } finally {
+      sendConfigs.recipientConfig.recipient = prevRecipient;
+      sendConfigs.recipientConfig.rawRecipient = prevRaw;
+      sendConfigs.recipientConfig.error = prevRecipientError;
+    }
   });
 
   describe("Cardano sync polling recovery", () => {

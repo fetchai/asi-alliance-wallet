@@ -38,6 +38,7 @@ import {
   getBannerValidationError,
   getCardanoPasswordModalInlineError,
   getHighestPriorityNonRecipientBlockingError,
+  isCardanoSendDraftInputsReady,
   isCardanoSendOperationalGuard,
   isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
@@ -543,6 +544,12 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       isCardanoSyncing,
     });
 
+    const cardanoDraftInputsReady = isCardanoSendDraftInputsReady({
+      recipient: sendConfigs.recipientConfig.recipient ?? "",
+      recipientError: sendConfigs.recipientConfig.error,
+      amount: sendConfigs.amountConfig.amount ?? "",
+    });
+
     const postRecipientError = getHighestPriorityNonRecipientBlockingError({
       amountError: sendConfigs.amountConfig.error,
       memoError: sendConfigs.memoConfig.error,
@@ -551,6 +558,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       cardanoDraft,
       isBuildingCardanoDraft,
       cardanoOperationalGuard,
+      cardanoDraftInputsReady,
       gasError: sendConfigs.gasConfig.error,
       feeError: sendConfigs.feeConfig.error,
     });
@@ -562,7 +570,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       (isCardano
         ? normalizedCardanoDraftError
           ? new Error(normalizedCardanoDraftError)
-          : !cardanoDraft && !isBuildingCardanoDraft && !cardanoOperationalGuard
+          : !cardanoDraft &&
+              !isBuildingCardanoDraft &&
+              !cardanoOperationalGuard &&
+              cardanoDraftInputsReady
           ? new Error("Transaction is not ready")
           : undefined
         : sendConfigs.gasConfig.error ?? sendConfigs.feeConfig.error);
