@@ -265,10 +265,15 @@ describe("SendPhase2 real flow guards", () => {
   const renderComponent = (props?: {
     trnsxStatus?: string;
     isCardano?: boolean;
+    /** When set, used instead of default cardano-testnet / cosmoshub-4 (e.g. poll effect deps). */
+    chainId?: string;
   }) => {
     const isCardano = props?.isCardano ?? true;
+    const chainId =
+      props?.chainId ??
+      (isCardano ? "cardano-testnet" : "cosmoshub-4");
     mockStore.chainStore.current = {
-      chainId: isCardano ? "cardano-testnet" : "cosmoshub-4",
+      chainId,
       chainName: isCardano ? "Cardano Testnet" : "Cosmos Hub",
       features: isCardano ? ["cardano"] : [],
       stakeCurrency: {
@@ -530,5 +535,307 @@ describe("SendPhase2 real flow guards", () => {
         (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
       )
     ).toBe(true);
+  });
+
+  describe("Cardano sync polling recovery", () => {
+    type SyncQueueItem = "reject" | { state: string; isSettled?: boolean };
+
+    let syncQueue: SyncQueueItem[];
+
+    const countGetCardanoSyncStatusCalls = (): number =>
+      mockSendMessage.mock.calls.filter(
+        (call) =>
+          (call[1] as { constructor?: { name?: string } } | undefined)?.constructor
+            ?.name === "GetCardanoSyncStatusMsg"
+      ).length;
+
+    const bottomActionButton = (): HTMLButtonElement | undefined =>
+      [...container.querySelectorAll("button")].find(
+        (b) =>
+          b.textContent?.includes("Review Transaction") ||
+          b.textContent?.includes("Syncing wallet")
+      ) as HTMLButtonElement | undefined;
+
+    beforeEach(() => {
+      syncQueue = [];
+      mockSendMessage.mockImplementation(
+        (_port: unknown, msg: { constructor?: { name?: string } }) => {
+          const name = msg?.constructor?.name;
+          if (name === "GetCardanoSyncStatusMsg") {
+            const item = syncQueue.shift();
+            if (item === "reject") {
+              return Promise.reject(new Error("GetCardanoSyncStatusMsg ipc fail"));
+            }
+            if (item == null) {
+              return Promise.reject(new Error("sync queue exhausted"));
+            }
+            return Promise.resolve(item);
+          }
+          if (name === "BuildSendAdaTxDraftMsg") {
+            return Promise.resolve({
+              draftId: "draft-id",
+              fee: "170000",
+              total: "1230000",
+            });
+          }
+          if (name === "DiscardSendAdaTxDraftMsg") {
+            return Promise.resolve(undefined);
+          }
+          return Promise.resolve("tx-ok");
+        }
+      );
+    });
+
+    const runDraftDebounce = async () => {
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+        await flushMicrotasks();
+      });
+    };
+
+    it("recovers after GetCardanoSyncStatusMsg reject then success; poll stops after ready", async () => {
+      syncQueue = ["reject", { state: "ready_with_data", isSettled: true }];
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      await runDraftDebounce();
+
+      const btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.disabled).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+    });
+
+    it("recovers after provider_error then success; poll stops after ready", async () => {
+      syncQueue = [
+        { state: "provider_error", isSettled: false },
+        { state: "ready_with_data", isSettled: true },
+      ];
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      await runDraftDebounce();
+
+      const btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.disabled).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+    });
+
+    it("reject after provider_error keeps last known-good sync UI (catch must not fake syncing)", async () => {
+      syncQueue = [
+        { state: "provider_error", isSettled: false },
+        "reject",
+        { state: "ready_with_data", isSettled: true },
+      ];
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await runDraftDebounce();
+
+      let btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.textContent).not.toContain("Syncing wallet");
+      expect(container.textContent).not.toMatch(/Syncing Cardano wallet/i);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.textContent).not.toContain("Syncing wallet");
+      expect(container.textContent).not.toMatch(/Syncing Cardano wallet/i);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+
+      await runDraftDebounce();
+
+      btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.disabled).toBe(false);
+    });
+
+    it("temporarily_unavailable (successful body) keeps isCardanoSyncing and poll non-terminal until ready", async () => {
+      syncQueue = [
+        { state: "temporarily_unavailable", isSettled: false },
+        { state: "temporarily_unavailable", isSettled: false },
+        { state: "ready_with_data", isSettled: true },
+      ];
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      let btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Syncing wallet");
+      expect(btn?.disabled).toBe(true);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Syncing wallet");
+      expect(btn?.disabled).toBe(true);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+
+      await runDraftDebounce();
+
+      btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.disabled).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+    });
+
+    it("does not make sync poll terminal after GetCardanoSyncStatusMsg reject", async () => {
+      syncQueue = [
+        "reject",
+        "reject",
+        { state: "ready_with_data", isSettled: true },
+      ];
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+
+      await runDraftDebounce();
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+    });
+
+    it("does not make sync poll terminal after provider_error", async () => {
+      syncQueue = [
+        { state: "provider_error", isSettled: false },
+        { state: "provider_error", isSettled: false },
+        { state: "ready_with_data", isSettled: true },
+      ];
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+
+      await runDraftDebounce();
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+    });
+
+    it("after prior ready (poll stopped), chainId change restarts sync effect; reject then ready recovers", async () => {
+      syncQueue = [{ state: "ready_with_data", isSettled: true }];
+      renderComponent({ chainId: "cardano-chain-a" });
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      syncQueue = ["reject", { state: "ready_with_data", isSettled: true }];
+      await act(async () => {
+        renderComponent({ chainId: "cardano-chain-b" });
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+
+      await runDraftDebounce();
+
+      const btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.disabled).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(3);
+    });
   });
 });
