@@ -26,6 +26,24 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useNotification } from "@components/notification";
 
+function safeRejectWalletConnectRequest(
+  connector: WalletConnect,
+  requestId: unknown,
+  message: string
+): void {
+  if (requestId == null) {
+    return;
+  }
+  try {
+    connector.rejectRequest({
+      id: requestId as number,
+      error: { message },
+    });
+  } catch {
+    // Best-effort: connector may already be closed.
+  }
+}
+
 export interface QRCodeSharedData {
   // The uri for the wallet connect
   wcURI: string;
@@ -311,49 +329,122 @@ const QRCodeView: FunctionComponent<{
     }
 
     const reqParams = payload?.params?.[0] ?? {};
-    if (
-      isExpired ||
-      error ||
-      payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1" ||
-      reqParams.sessionId !== qrCodeData.sessionId ||
-      reqParams.requestToken !== qrCodeData.requestToken
-    ) {
-      navigate("/");
-    } else {
-      if (processOnce.current) {
-        return;
-      }
-      processOnce.current = true;
 
-      const buf = Buffer.from(JSON.stringify(keyRingData));
-
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      const iv = Buffer.from(bytes);
-
-      const counter = new Counter(0);
-      counter.setBytes(iv);
-      const aesCtr = new AES.ModeOfOperation.ctr(
-        Buffer.from(qrCodeData.sharedPassword, "hex"),
-        counter
+    if (isExpired) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Export request expired"
       );
+      navigate("/");
+      return;
+    }
 
-      (async () => {
+    if (error) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Export request failed"
+      );
+      navigate("/");
+      return;
+    }
+
+    if (
+      payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1"
+    ) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Invalid export request method"
+      );
+      navigate("/");
+      return;
+    }
+
+    const sid = reqParams.sessionId;
+    const tok = reqParams.requestToken;
+    const hasSid =
+      sid !== undefined && sid !== null && String(sid).length > 0;
+    const hasTok =
+      tok !== undefined && tok !== null && String(tok).length > 0;
+
+    let handshakeOk = false;
+    if (!hasSid && !hasTok) {
+      // Legacy mobile: no session-bound fields in the custom request.
+      handshakeOk = true;
+    } else if (hasSid && hasTok) {
+      if (sid === qrCodeData.sessionId && tok === qrCodeData.requestToken) {
+        handshakeOk = true;
+      }
+    }
+
+    if (!handshakeOk) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Invalid export session handshake"
+      );
+      navigate("/");
+      return;
+    }
+
+    if (processOnce.current) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Export already in progress"
+      );
+      return;
+    }
+    processOnce.current = true;
+
+    const buf = Buffer.from(JSON.stringify(keyRingData));
+
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const iv = Buffer.from(bytes);
+
+    const counter = new Counter(0);
+    counter.setBytes(iv);
+    const aesCtr = new AES.ModeOfOperation.ctr(
+      Buffer.from(qrCodeData.sharedPassword, "hex"),
+      counter
+    );
+
+    (async () => {
+      let approved = false;
+      try {
         const peerName = connector.peerMeta?.name || "Unknown app";
         const peerUrl = connector.peerMeta?.url || "unknown";
-        await confirm.confirm({
+        const ok = await confirm.confirm({
           title: "Confirm export to connected app",
           paragraph: `Connected app: ${peerName} (${peerUrl}). Export wallet data now?`,
           yes: "Export",
           no: "Cancel",
         });
 
+        if (!ok) {
+          safeRejectWalletConnectRequest(
+            connector,
+            payload?.id,
+            "User cancelled export"
+          );
+          navigate("/");
+          return;
+        }
+
         const addressBooks: {
           [chainId: string]: AddressBookData[] | undefined;
         } = {};
 
         if (payload.params && payload.params.length > 0) {
-          for (const chainId of payload.params[0].addressBookChainIds ?? []) {
+          for (const chainId of payload.params[0].addressBookChainIds ??
+            []) {
+            if (typeof chainId !== "string" || !chainStore.hasChain(chainId)) {
+              continue;
+            }
+
             const addressBookConfig =
               addressBookConfigMap.getAddressBookConfig(chainId);
 
@@ -374,17 +465,31 @@ const QRCodeView: FunctionComponent<{
           addressBooks,
         };
 
+        if (payload?.id == null) {
+          navigate("/");
+          return;
+        }
+
         connector.approveRequest({
           id: payload.id,
           result: [response],
         });
 
+        approved = true;
         navigate("/");
-      })().catch(() => {
-        processOnce.current = false;
+      } catch (e) {
+        safeRejectWalletConnectRequest(
+          connector,
+          payload?.id,
+          e instanceof Error ? e.message : "Export failed"
+        );
         navigate("/");
-      });
-    }
+      } finally {
+        if (!approved) {
+          processOnce.current = false;
+        }
+      }
+    })();
   };
   const onCallRequestRef = useRef(onCallRequest);
   onCallRequestRef.current = onCallRequest;
