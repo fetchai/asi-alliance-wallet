@@ -5,6 +5,12 @@ import {
 } from "./keyring";
 import { Key, KeyStoreMetaKnown } from "./types";
 import { CardanoService } from "../cardano/service";
+import {
+  CARDANO_ENSURE_MESSAGE,
+  formatNetworkContextInvalidForCardano,
+  formatProviderUnavailableError,
+  formatWalletNotReadyError,
+} from "../cardano/ensure-errors";
 
 import {
   Bech32Address,
@@ -205,7 +211,9 @@ export class KeyRingService {
     });
   };
 
-  private async runAddressCacheRepairBestEffort(chainId: string): Promise<void> {
+  private async runAddressCacheRepairBestEffort(
+    chainId: string
+  ): Promise<void> {
     if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
       return;
     }
@@ -442,7 +450,7 @@ export class KeyRingService {
       try {
         const currentChainId = await this.chainsService.getSelectedChain();
         if (!currentChainId) {
-          throw new Error("network_context_missing");
+          throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
         }
         const shouldInitCardano = await this.isCardanoChain(currentChainId);
         if (shouldInitCardano) {
@@ -458,7 +466,10 @@ export class KeyRingService {
           this.cardanoRestoreByChainId.clear();
         }
       } catch (error) {
-        console.error("[KeyRingService] Failed to initialize CardanoService:", error);
+        console.error(
+          "[KeyRingService] Failed to initialize CardanoService:",
+          error
+        );
         throw error;
       }
     }
@@ -501,10 +512,10 @@ export class KeyRingService {
     // Restore/init errors are fail-closed and must reject.
     if (this.cardanoService.isInitialized() && !this.cardanoService.isReady()) {
       if (!chainId) {
-        throw new Error("network_context_missing");
+        throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
       }
       if (!(await this.isCardanoChain(chainId))) {
-        throw new Error(`network_context_invalid_for_cardano: ${chainId}`);
+        throw new Error(formatNetworkContextInvalidForCardano(chainId));
       }
       // Deduplication: get then create then set in the same sync turn; no await/then between get and set
       // so concurrent callers always see the same promise.
@@ -556,13 +567,16 @@ export class KeyRingService {
           await promise;
           this.assertCardanoServiceReady(chainId);
         } catch (error) {
-          console.error("[KeyRingService] Failed to initialize CardanoService:", error);
+          console.error(
+            "[KeyRingService] Failed to initialize CardanoService:",
+            error
+          );
           throw error;
         } finally {
           this.cardanoServiceInitPromise = null;
         }
       } else {
-        throw new Error("KeyRing not ready for Cardano initialization");
+        throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
       }
     }
 
@@ -572,28 +586,28 @@ export class KeyRingService {
   private assertCardanoServiceReady(chainId?: string): void {
     const runtimeState = this.cardanoService.getRuntimeState();
     if (runtimeState === "provider_unavailable") {
-      throw new Error(
-        `provider_error: provider_unavailable${chainId ? `: ${chainId}` : ""}`
-      );
+      throw new Error(formatProviderUnavailableError(chainId));
     }
     if (!this.cardanoService.isReady()) {
-      throw new Error(
-        `temporarily_unavailable: wallet_not_ready${chainId ? `: ${chainId}` : ""}`
-      );
+      throw new Error(formatWalletNotReadyError(chainId));
     }
   }
 
-  private async initializeCardanoService(ks: any, chainId?: string): Promise<void> {
+  private async initializeCardanoService(
+    ks: any,
+    chainId?: string
+  ): Promise<void> {
     if (!walletSupportsCardano(ks)) {
-      throw new Error("Cardano requires 24-word mnemonic");
+      throw new Error(CARDANO_ENSURE_MESSAGE.MNEMONIC_24);
     }
-try {
-      const currentChainId = chainId || (await this.chainsService.getSelectedChain());
+    try {
+      const currentChainId =
+        chainId || (await this.chainsService.getSelectedChain());
       if (!currentChainId) {
-        throw new Error("network_context_missing");
+        throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
       }
       if (!(await this.isCardanoChain(currentChainId))) {
-        throw new Error(`network_context_invalid_for_cardano: ${currentChainId}`);
+        throw new Error(formatNetworkContextInvalidForCardano(currentChainId));
       }
       await this.cardanoService.restoreFromKeyStore(
         ks,
@@ -602,7 +616,10 @@ try {
         currentChainId
       );
     } catch (error) {
-      console.error("[KeyRingService] Failed to initialize CardanoService:", error);
+      console.error(
+        "[KeyRingService] Failed to initialize CardanoService:",
+        error
+      );
       throw error;
     }
   }
