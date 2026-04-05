@@ -87,10 +87,17 @@ const getErrorMessage = (error: unknown): string => {
   }
 
   const maybeObj = error as
-    | { message?: unknown; details?: unknown; response?: { data?: { message?: unknown } } }
+    | {
+        message?: unknown;
+        details?: unknown;
+        response?: { data?: { message?: unknown } };
+      }
     | undefined;
   const responseMessage = maybeObj?.response?.data?.message;
-  if (typeof responseMessage === "string" && responseMessage.trim().length > 0) {
+  if (
+    typeof responseMessage === "string" &&
+    responseMessage.trim().length > 0
+  ) {
     return responseMessage;
   }
   const details = maybeObj?.details;
@@ -122,9 +129,9 @@ type CardanoPasswordConfirmModalProps = {
   onNotifyWarning: (content: string) => void;
 };
 
-const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = (
-  props
-) => {
+const CardanoPasswordConfirmModal: React.FC<
+  CardanoPasswordConfirmModalProps
+> = (props) => {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
@@ -160,7 +167,9 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
           Enter your wallet password to confirm this Cardano transaction.
         </div>
         {props.isWalletLocked ? (
-          <div style={{ fontSize: "12px", opacity: 0.75, marginBottom: "12px" }}>
+          <div
+            style={{ fontSize: "12px", opacity: 0.75, marginBottom: "12px" }}
+          >
             This will also unlock your wallet.
           </div>
         ) : null}
@@ -178,7 +187,13 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
             <div style={{ opacity: 0.7 }}>Network</div>
             <div style={{ fontWeight: 600 }}>{props.networkName}</div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: "6px",
+            }}
+          >
             <div style={{ opacity: 0.7 }}>To</div>
             <div
               style={{
@@ -191,7 +206,13 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               {props.recipient}
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: "6px",
+            }}
+          >
             <div style={{ opacity: 0.7 }}>Amount</div>
             <div style={{ fontWeight: 600 }}>{props.amountText}</div>
           </div>
@@ -228,8 +249,10 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               </div>
             </div>
           ) : null}
-          {(props.isSyncing || props.statusMessage) ? (
-            <div style={{ marginTop: "10px", color: "#b8860b", fontWeight: 600 }}>
+          {props.isSyncing || props.statusMessage ? (
+            <div
+              style={{ marginTop: "10px", color: "#b8860b", fontWeight: 600 }}
+            >
               {props.statusMessage ?? "Syncing wallet… Please wait"}
             </div>
           ) : null}
@@ -252,7 +275,9 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
               await props.onConfirm(password);
               props.onCancel();
             } catch (err: any) {
-              const parsedError = parseCardanoUiErrorMessage(getErrorMessage(err));
+              const parsedError = parseCardanoUiErrorMessage(
+                getErrorMessage(err)
+              );
               const messageText = parsedError.message;
               const inlineError = getCardanoPasswordModalInlineError({
                 parsedCode: parsedError.code,
@@ -315,10 +340,15 @@ const CardanoPasswordConfirmModal: React.FC<CardanoPasswordConfirmModalProps> = 
                 isLoading
                   ? "Confirming..."
                   : props.isSyncing || props.statusMessage
-                    ? "Syncing wallet..."
-                    : "Confirm"
+                  ? "Syncing wallet..."
+                  : "Confirm"
               }
-              disabled={isLoading || !password || props.isSyncing || !!props.statusMessage}
+              disabled={
+                isLoading ||
+                !password ||
+                props.isSyncing ||
+                !!props.statusMessage
+              }
               styleProps={{ flex: 1, height: "44px" }}
             />
           </div>
@@ -403,17 +433,18 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       return value && value.shrink(true).maxDecimals(6).toString();
     };
     const intl = useIntl();
-    const cardanoOfflineMessage = intl.formatMessage({ id: "cardano.status.offline" });
-    const cardanoStatusMessage =
-      !isOnline
-        ? cardanoOfflineMessage
-        : cardanoSyncState === "temporarily_unavailable"
-          ? "Wallet is initializing. Please wait"
-          : cardanoSyncState === "provider_error"
-            ? cardanoDraftError || "Cardano provider unavailable"
-            : isCardanoSyncing
-              ? "Syncing wallet… Please wait"
-              : undefined;
+    const cardanoOfflineMessage = intl.formatMessage({
+      id: "cardano.status.offline",
+    });
+    const cardanoStatusMessage = !isOnline
+      ? cardanoOfflineMessage
+      : cardanoSyncState === "temporarily_unavailable"
+      ? "Wallet is initializing. Please wait"
+      : cardanoSyncState === "provider_error"
+      ? cardanoDraftError || "Cardano provider unavailable"
+      : isCardanoSyncing
+      ? "Syncing wallet… Please wait"
+      : undefined;
 
     useEffect(() => {
       return () => {
@@ -440,9 +471,18 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       }
 
       let isSubscribed = true;
-      let pollInterval: NodeJS.Timeout | null = null;
+      let pollEpoch = 0;
+      let pollTimeout: ReturnType<typeof setTimeout> | null = null;
 
-      const checkSync = async () => {
+      const clearPollTimeout = () => {
+        if (pollTimeout != null) {
+          clearTimeout(pollTimeout);
+          pollTimeout = null;
+        }
+      };
+
+      const runPoll = async () => {
+        const myEpoch = ++pollEpoch;
         try {
           if (!isSubscribed) return;
           const messageRequester = new InExtensionMessageRequester();
@@ -451,33 +491,41 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             new GetCardanoSyncStatusMsg(chainStore.current.chainId)
           )) as CardanoSyncStatusResponse;
 
-          if (!isSubscribed) return;
+          if (!isSubscribed || myEpoch !== pollEpoch) return;
 
           const state = syncStatus?.state;
           setCardanoSyncState(state ?? null);
           if (state === "ready_with_data" && syncStatus?.isSettled) {
             setIsCardanoSyncing(false);
-            if (pollInterval) {
-              clearInterval(pollInterval);
-              pollInterval = null;
-            }
-          } else {
-            setIsCardanoSyncing(
-              state === "syncing" || state === "temporarily_unavailable"
-            );
+            return;
           }
-        } catch {}
+          setIsCardanoSyncing(
+            state === "syncing" || state === "temporarily_unavailable"
+          );
+          if (isSubscribed && myEpoch === pollEpoch) {
+            clearPollTimeout();
+            pollTimeout = setTimeout(() => {
+              pollTimeout = null;
+              void runPoll();
+            }, 2000);
+          }
+        } catch {
+          if (!isSubscribed || myEpoch !== pollEpoch) return;
+          clearPollTimeout();
+          pollTimeout = setTimeout(() => {
+            pollTimeout = null;
+            void runPoll();
+          }, 2000);
+        }
       };
 
       setIsCardanoSyncing(true);
-      checkSync();
-      pollInterval = setInterval(checkSync, 2000);
+      void runPoll();
 
       return () => {
         isSubscribed = false;
-        if (pollInterval) {
-          clearInterval(pollInterval);
-        }
+        pollEpoch++;
+        clearPollTimeout();
       };
     }, [isCardano, chainStore.current.chainId]);
 
@@ -534,8 +582,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     });
 
     const reviewOperationalDisabled =
-      !accountInfo.isReadyToSendMsgs ||
-      (isCardano && cardanoOperationalGuard);
+      !accountInfo.isReadyToSendMsgs || (isCardano && cardanoOperationalGuard);
 
     const reviewButtonDisabled = isReviewTransactionButtonDisabled({
       operationalDisabled: reviewOperationalDisabled,
@@ -585,7 +632,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         return;
       }
 
-      const normalizedRecipient = sendConfigs?.recipientConfig?.recipient?.trim?.() ?? "";
+      const normalizedRecipient =
+        sendConfigs?.recipientConfig?.recipient?.trim?.() ?? "";
       const recipientError = sendConfigs?.recipientConfig?.error;
       const amountStr = sendConfigs?.amountConfig?.amount ?? "";
       const memo = sendConfigs?.memoConfig?.memo ?? "";
@@ -593,7 +641,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       const memoError = sendConfigs?.memoConfig?.error;
       const sendCurrency = sendConfigs?.amountConfig?.sendCurrency;
       const decimals = sendCurrency?.coinDecimals ?? nativeAdaCoinDecimals;
-      const denomHelper = sendCurrency ? new DenomHelper(sendCurrency.coinMinimalDenom) : null;
+      const denomHelper = sendCurrency
+        ? new DenomHelper(sendCurrency.coinMinimalDenom)
+        : null;
       const isTokenSend = denomHelper?.type === CARDANO_NATIVE_TOKEN_TYPE;
 
       if (!normalizedRecipient || !amountStr || recipientError) {
@@ -618,7 +668,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           };
 
           const baseAmountBigInt = parseAmountToBaseUnits(amountStr, decimals);
-          const hasNoAmountOrMemoError = amountError == null && memoError == null;
+          const hasNoAmountOrMemoError =
+            amountError == null && memoError == null;
           const hasPositiveDecimalAmount = isPositiveDecimalAmount(amountStr);
           const isSubLovelaceAmount =
             !isTokenSend &&
@@ -653,9 +704,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           const baseAmount = baseAmountBigInt.toString();
           // For token sends, ADA amount is "0" and token goes into assets
           const lovelaceAmount = isTokenSend ? "0" : baseAmount;
-          const assets = isTokenSend && denomHelper
-            ? [{ assetId: denomHelper.contractAddress, amount: baseAmount }]
-            : undefined;
+          const assets =
+            isTokenSend && denomHelper
+              ? [{ assetId: denomHelper.contractAddress, amount: baseAmount }]
+              : undefined;
 
           const draftMsg = new BuildSendAdaTxDraftMsg(
             normalizedRecipient,
@@ -664,10 +716,15 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             chainStore.current.chainId,
             assets
           );
-          const res = await requester.sendMessage(
+          const res = (await requester.sendMessage(
             BACKGROUND_PORT,
             draftMsg
-          ) as { draftId: string; fee: string; total: string; minAdaForTokens?: string } | null;
+          )) as {
+            draftId: string;
+            fee: string;
+            total: string;
+            minAdaForTokens?: string;
+          } | null;
 
           if (cancelled) return;
 
@@ -725,7 +782,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       try {
         if (isCardano && cardanoDraft?.fee) {
           const feeAda = lovelacesToAdaString(cardanoDraft.fee);
-          if (cardanoDraft.minAdaForTokens && cardanoDraft.minAdaForTokens !== "0") {
+          if (
+            cardanoDraft.minAdaForTokens &&
+            cardanoDraft.minAdaForTokens !== "0"
+          ) {
             const minAda = lovelacesToAdaString(cardanoDraft.minAdaForTokens);
             return `${feeAda} ${cardanoDenom} (+ ${minAda} ${cardanoDenom} min ADA)`;
           }
@@ -746,7 +806,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
         if (isCardano) {
           if (!cardanoDraft?.draftId) {
-            throw new Error(normalizedCardanoDraftError || "Transaction is not ready");
+            throw new Error(
+              normalizedCardanoDraftError || "Transaction is not ready"
+            );
           }
 
           const requester = new InExtensionMessageRequester();
@@ -769,7 +831,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             feeType: sendConfigs.feeConfig.feeType,
           });
 
-          const [pendingStatus, successStatus] = getCardanoPostSubmitStatusSequence();
+          const [pendingStatus, successStatus] =
+            getCardanoPostSubmitStatusSequence();
           navigate("/send", {
             replace: true,
             state: { trnsxStatus: pendingStatus, isNext: true },
@@ -961,8 +1024,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           const errorMessage = getErrorMessage(e);
           const parsedError = parseCardanoUiErrorMessage(errorMessage);
           const shouldNavigateToFailed = shouldNavigateCardanoFailedFromError({
-            isFromPasswordModal:
-              options?.cardanoSpendingPassword !== undefined,
+            isFromPasswordModal: options?.cardanoSpendingPassword !== undefined,
             errorMessage: errorMessage,
           });
           if (!shouldNavigateToFailed) {
@@ -1138,10 +1200,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
               color: "var(--font-secondary, #737676)",
             }}
           >
-            <i
-              className="fas fa-info-circle"
-              style={{ marginRight: "8px" }}
-            />
+            <i className="fas fa-info-circle" style={{ marginRight: "8px" }} />
             {intl.formatMessage({
               id: "send.self-send-warning",
               defaultMessage:
@@ -1163,15 +1222,18 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             }}
           >
             {!isOnline ? (
-              <>
+              <React.Fragment>
                 <i className="fas fa-wifi" style={{ marginRight: "8px" }} />
                 {cardanoOfflineMessage}
-              </>
+              </React.Fragment>
             ) : (
-              <>
-                <i className="fas fa-sync fa-spin" style={{ marginRight: "8px" }} />
+              <React.Fragment>
+                <i
+                  className="fas fa-sync fa-spin"
+                  style={{ marginRight: "8px" }}
+                />
                 Syncing Cardano wallet... Please wait
-              </>
+              </React.Fragment>
             )}
           </div>
         )}
