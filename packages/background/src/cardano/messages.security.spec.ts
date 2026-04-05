@@ -12,6 +12,12 @@ import {
   LoadMoreCardanoTxHistoryMsg,
 } from "./messages";
 import { getHandler } from "./handler";
+import {
+  CARDANO_ENSURE_MESSAGE,
+  formatNetworkContextInvalidForCardano,
+  formatProviderUnavailableError,
+} from "./ensure-errors";
+// eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
 import { of } from "rxjs";
 
 describe("Cardano message security boundaries", () => {
@@ -24,16 +30,26 @@ describe("Cardano message security boundaries", () => {
     expect(new GetCardanoBalanceMsg().approveExternal()).toBe(false);
     expect(new GetCardanoTxHistoryMsg(20).approveExternal()).toBe(false);
     expect(
-      new GetMaxSpendableAdaMsg("cardano-mainnet", "addr_test1q...").approveExternal()
+      new GetMaxSpendableAdaMsg(
+        "cardano-mainnet",
+        "addr_test1q..."
+      ).approveExternal()
     ).toBe(false);
     expect(
       new BuildSendAdaTxDraftMsg("addr_test1q...", "1000000").approveExternal()
     ).toBe(false);
-    expect(new SubmitSendAdaTxDraftMsg("draft-id").approveExternal()).toBe(false);
+    expect(new SubmitSendAdaTxDraftMsg("draft-id").approveExternal()).toBe(
+      false
+    );
     expect(
-      new SubmitSendAdaTxDraftWithPasswordMsg("draft-id", "password").approveExternal()
+      new SubmitSendAdaTxDraftWithPasswordMsg(
+        "draft-id",
+        "password"
+      ).approveExternal()
     ).toBe(false);
-    expect(new DiscardSendAdaTxDraftMsg("draft-id").approveExternal()).toBe(false);
+    expect(new DiscardSendAdaTxDraftMsg("draft-id").approveExternal()).toBe(
+      false
+    );
   });
 
   it("keeps IsCardanoReady internal-only", () => {
@@ -68,10 +84,22 @@ describe("Cardano message security boundaries", () => {
     const assets = [{ assetId, amount: "1" }];
 
     expect(() =>
-      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, assets).validateBasic()
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        assets
+      ).validateBasic()
     ).not.toThrow();
     expect(() =>
-      new BuildSendAdaTxDraftMsg("addr_test1q...", "0", undefined, undefined, assets).validateBasic()
+      new BuildSendAdaTxDraftMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        assets
+      ).validateBasic()
     ).not.toThrow();
 
     expect(() =>
@@ -108,66 +136,40 @@ describe("Cardano message security boundaries", () => {
     ).toThrow();
 
     expect(() =>
-      new EstimateSendAdaMsg(
-        "addr_test1q...",
-        "0",
-        undefined,
-        undefined,
-        [{ assetId: assetIdOddAssetName, amount: "1" }]
-      ).validateBasic()
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: assetIdOddAssetName, amount: "1" },
+      ]).validateBasic()
     ).toThrow("assetName must be even-length hex");
 
     expect(() =>
-      new EstimateSendAdaMsg(
-        "addr_test1q...",
-        "0",
-        undefined,
-        undefined,
-        [{ assetId: assetIdTooLongAssetName, amount: "1" }]
-      ).validateBasic()
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: assetIdTooLongAssetName, amount: "1" },
+      ]).validateBasic()
     ).toThrow("assetName is too long");
 
     expect(() =>
-      new EstimateSendAdaMsg(
-        "addr_test1q...",
-        "0",
-        undefined,
-        undefined,
-        [{ assetId: policy, amount: "1" }]
-      ).validateBasic()
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: policy, amount: "1" },
+      ]).validateBasic()
     ).not.toThrow();
 
     expect(() =>
-      new BuildSendAdaTxDraftMsg(
-        "addr_test1q...",
-        "0",
-        undefined,
-        undefined,
-        [{ assetId: assetId1, amount: "-1" }]
-      ).validateBasic()
+      new BuildSendAdaTxDraftMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: assetId1, amount: "-1" },
+      ]).validateBasic()
     ).toThrow();
 
     expect(() =>
-      new BuildSendAdaTxDraftMsg(
-        "addr_test1q...",
-        "0",
-        undefined,
-        undefined,
-        [{ assetId: assetId1, amount: "0" }]
-      ).validateBasic()
+      new BuildSendAdaTxDraftMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: assetId1, amount: "0" },
+      ]).validateBasic()
     ).toThrow();
 
     expect(() =>
-      new EstimateSendAdaMsg(
-        "addr_test1q...",
-        "0",
-        undefined,
-        undefined,
-        [
-          { assetId: assetId1, amount: "1" },
-          { assetId: assetIdUpper, amount: "2" },
-        ]
-      ).validateBasic()
+      new EstimateSendAdaMsg("addr_test1q...", "0", undefined, undefined, [
+        { assetId: assetId1, amount: "1" },
+        { assetId: assetIdUpper, amount: "2" },
+      ]).validateBasic()
     ).toThrow("duplicate assetId");
   });
 });
@@ -254,10 +256,17 @@ describe("Cardano handler security boundaries", () => {
     const service = {
       isReady: jest.fn(() => true),
       isInitialized: jest.fn(() => true),
-      getBalance: jest.fn(async () => ({ available: "1", total: "1", rewards: "0" })),
+      getBalance: jest.fn(async () => ({
+        available: "1",
+        total: "1",
+        rewards: "0",
+      })),
       getWalletManager: jest.fn(() => ({ hasWallet: () => false })),
       getTxHistory: jest.fn(async () => ({ items: [], mightHaveMore: false })),
-      loadMoreTxHistory: jest.fn(async () => ({ items: [], mightHaveMore: false })),
+      loadMoreTxHistory: jest.fn(async () => ({
+        items: [],
+        mightHaveMore: false,
+      })),
       getMaxSpendableAda: jest.fn(() => "0"),
       discardSendAdaTxDraft: jest.fn(),
     };
@@ -268,7 +277,9 @@ describe("Cardano handler security boundaries", () => {
       getKeyRing: jest.fn(() => ({
         getCurrentKeyStore: () => ({ meta: { __id__: "wallet-id" } }),
       })),
-      chainsService: { getSelectedChain: jest.fn(async () => "cardano-mainnet") },
+      chainsService: {
+        getSelectedChain: jest.fn(async () => "cardano-mainnet"),
+      },
       waitApprove: jest.fn(async () => ({ summaryHash: "hash" })),
     };
     const handler = getHandler(service as any, keyRingService as any);
@@ -276,7 +287,12 @@ describe("Cardano handler security boundaries", () => {
 
     const msgs = [
       new GetCardanoBalanceMsg(),
-      new EstimateSendAdaMsg("addr_test1q...", "10000", "memo", "cardano-mainnet"),
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "10000",
+        "memo",
+        "cardano-mainnet"
+      ),
       new BuildSendAdaTxDraftMsg("addr_test1q...", "10000"),
       new SubmitSendAdaTxDraftMsg("draft-id"),
       new SubmitSendAdaTxDraftWithPasswordMsg("draft-id", "password"),
@@ -294,12 +310,146 @@ describe("Cardano handler security boundaries", () => {
     }
   });
 
+  it("GetCardanoSyncStatusMsg returns structured response when ensureCardanoServiceReady throws", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+      getRuntimeState: jest.fn(() => "ok"),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => {
+        throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
+      }),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    const result = await handler(
+      { isInternalMsg: true, requestInteraction: jest.fn() },
+      new GetCardanoSyncStatusMsg("cardano-mainnet")
+    );
+
+    expect(result).toEqual({
+      state: "temporarily_unavailable",
+      isSettled: false,
+      error: CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY,
+    });
+    expect(service.getWalletManager).not.toHaveBeenCalled();
+  });
+
+  it("GetCardanoSyncStatusMsg propagates unknown ensureCardanoServiceReady errors", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => {
+        throw new Error("unexpected ensure failure");
+      }),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    await expect(
+      handler(
+        { isInternalMsg: true, requestInteraction: jest.fn() },
+        new GetCardanoSyncStatusMsg("cardano-mainnet")
+      )
+    ).rejects.toThrow("unexpected ensure failure");
+    expect(service.getWalletManager).not.toHaveBeenCalled();
+  });
+
+  it("GetCardanoSyncStatusMsg returns structured provider_error when ensure throws provider_error protocol message", async () => {
+    const msgText = formatProviderUnavailableError("cardano-mainnet");
+    const service = {
+      isReady: jest.fn(() => true),
+      getRuntimeState: jest.fn(() => "ok"),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => {
+        throw new Error(msgText);
+      }),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    const result = await handler(
+      { isInternalMsg: true, requestInteraction: jest.fn() },
+      new GetCardanoSyncStatusMsg("cardano-mainnet")
+    );
+
+    expect(result).toEqual({
+      state: "provider_error",
+      isSettled: false,
+      error: msgText,
+    });
+    expect(service.getWalletManager).not.toHaveBeenCalled();
+  });
+
+  it("GetCardanoSyncStatusMsg propagates network_context_missing from ensure (not normalized)", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => {
+        throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
+      }),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    await expect(
+      handler(
+        { isInternalMsg: true, requestInteraction: jest.fn() },
+        new GetCardanoSyncStatusMsg("cardano-mainnet")
+      )
+    ).rejects.toThrow(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
+    expect(service.getWalletManager).not.toHaveBeenCalled();
+  });
+
+  it("GetCardanoSyncStatusMsg propagates network_context_invalid_for_cardano from ensure (not normalized)", async () => {
+    const msgText = formatNetworkContextInvalidForCardano("cardano-mainnet");
+    const service = {
+      isReady: jest.fn(() => true),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => {
+        throw new Error(msgText);
+      }),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    await expect(
+      handler(
+        { isInternalMsg: true, requestInteraction: jest.fn() },
+        new GetCardanoSyncStatusMsg("cardano-mainnet")
+      )
+    ).rejects.toThrow(msgText);
+    expect(service.getWalletManager).not.toHaveBeenCalled();
+  });
+
   it("propagates degraded tx history semantics to response", async () => {
     const service = {
       isReady: jest.fn(() => true),
       isInitialized: jest.fn(() => true),
       getTxHistory: jest.fn(async () => ({
-        items: [{ id: "tx1", direction: "unknown", amount: "0", isDegraded: true }],
+        items: [
+          { id: "tx1", direction: "unknown", amount: "0", isDegraded: true },
+        ],
         mightHaveMore: false,
         hasDegradedItems: true,
       })),
@@ -323,7 +473,9 @@ describe("Cardano handler security boundaries", () => {
 
     expect(result).toEqual({
       state: "ready_with_data",
-      items: [{ id: "tx1", direction: "unknown", amount: "0", isDegraded: true }],
+      items: [
+        { id: "tx1", direction: "unknown", amount: "0", isDegraded: true },
+      ],
       mightHaveMore: false,
       hasDegradedItems: true,
       error: "tx_history_partial_data",

@@ -37,6 +37,24 @@ export function stateFromProtocolMessage(
   return null;
 }
 
+/**
+ * Maps ensureCardanoServiceReady failures to a structured sync state when the case is recoverable
+ * by polling. Returns null so the handler can propagate precondition bugs and unknown errors.
+ */
+export function classifyEnsureCardanoServiceReadyError(
+  error: unknown
+): CardanoServiceState | null {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const fromProtocol = stateFromProtocolMessage(message);
+  if (fromProtocol !== null) {
+    return fromProtocol;
+  }
+  if (message === CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY) {
+    return "temporarily_unavailable";
+  }
+  return null;
+}
+
 /** Inner SDK/wallet try: unknown → temporarily_unavailable (existing handler semantics). */
 export function stateFromErrorMessage(message: string): CardanoServiceState {
   return stateFromProtocolMessage(message) ?? "temporarily_unavailable";

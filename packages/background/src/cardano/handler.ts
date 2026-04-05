@@ -18,13 +18,14 @@ import { KeyRingService } from "../keyring/service";
 import { Buffer } from "buffer/";
 import { formatErrorForLog } from "../logging/safe-error";
 import { encodeCardanoUiError } from "@keplr-wallet/cardano";
+import {
+  classifyEnsureCardanoServiceReadyError,
+  stateFromErrorMessage,
+} from "./ensure-errors";
 
 const stateFromError = (error: unknown): CardanoServiceState => {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  if (message.includes("syncing:")) return "syncing";
-  if (message.includes("temporarily_unavailable:")) return "temporarily_unavailable";
-  if (message.includes("provider_error:")) return "provider_error";
-  return "temporarily_unavailable";
+  return stateFromErrorMessage(message);
 };
 
 const errorMessage = (error: unknown): string =>
@@ -36,10 +37,17 @@ const getSubmitErrorMessage = (error: unknown): string => {
   }
 
   const maybeObj = error as
-    | { message?: unknown; details?: unknown; response?: { data?: { message?: unknown } } }
+    | {
+        message?: unknown;
+        details?: unknown;
+        response?: { data?: { message?: unknown } };
+      }
     | undefined;
   const responseMessage = maybeObj?.response?.data?.message;
-  if (typeof responseMessage === "string" && responseMessage.trim().length > 0) {
+  if (
+    typeof responseMessage === "string" &&
+    responseMessage.trim().length > 0
+  ) {
     return responseMessage;
   }
 
@@ -58,7 +66,10 @@ const getSubmitErrorMessage = (error: unknown): string => {
 
 const toCardanoUiSubmitError = (rawMessage: string): string => {
   const normalized = rawMessage.toLowerCase();
-  if (normalized.includes("invalid password") || normalized.includes("fail to decrypt")) {
+  if (
+    normalized.includes("invalid password") ||
+    normalized.includes("fail to decrypt")
+  ) {
     return encodeCardanoUiError("invalid_password", rawMessage);
   }
   if (normalized.includes("password is required")) {
@@ -67,7 +78,10 @@ const toCardanoUiSubmitError = (rawMessage: string): string => {
   if (normalized.includes("please unlock wallet first")) {
     return encodeCardanoUiError("wallet_locked", rawMessage);
   }
-  if (normalized.includes("wallet is syncing") || normalized.includes("syncing:")) {
+  if (
+    normalized.includes("wallet is syncing") ||
+    normalized.includes("syncing:")
+  ) {
     return encodeCardanoUiError("wallet_syncing", rawMessage);
   }
   return rawMessage;
@@ -76,10 +90,7 @@ const toCardanoUiSubmitError = (rawMessage: string): string => {
 export const getHandler: (
   service: CardanoService,
   keyRingService: KeyRingService
-) => Handler = (
-  service: CardanoService,
-  keyRingService: KeyRingService
-) => {
+) => Handler = (service: CardanoService, keyRingService: KeyRingService) => {
   return (env: Env, msg: Message<unknown>) => {
     // Use msg.type() instead of constructor comparison because parseMessage uses Object.setPrototypeOf
     // which may not preserve exact constructor reference
@@ -97,17 +108,20 @@ export const getHandler: (
           msg as SubmitSendAdaTxDraftMsg
         );
       case SubmitSendAdaTxDraftWithPasswordMsg.type():
-        return handleSubmitSendAdaTxDraftWithPasswordMsg(service, keyRingService)(
-          env,
-          msg as SubmitSendAdaTxDraftWithPasswordMsg
-        );
+        return handleSubmitSendAdaTxDraftWithPasswordMsg(
+          service,
+          keyRingService
+        )(env, msg as SubmitSendAdaTxDraftWithPasswordMsg);
       case DiscardSendAdaTxDraftMsg.type():
         return handleDiscardSendAdaTxDraftMsg(service)(
           env,
           msg as DiscardSendAdaTxDraftMsg
         );
       case GetCardanoBalanceMsg.type():
-        return handleGetCardanoBalanceMsg(service)(env, msg as GetCardanoBalanceMsg);
+        return handleGetCardanoBalanceMsg(service)(
+          env,
+          msg as GetCardanoBalanceMsg
+        );
       case IsCardanoReadyMsg.type():
         return handleIsCardanoReadyMsg(service)(env, msg as IsCardanoReadyMsg);
       case EstimateSendAdaMsg.type():
@@ -116,13 +130,25 @@ export const getHandler: (
           msg as EstimateSendAdaMsg
         );
       case GetCardanoSyncStatusMsg.type():
-        return handleGetCardanoSyncStatusMsg(service, keyRingService)(env, msg as GetCardanoSyncStatusMsg);
+        return handleGetCardanoSyncStatusMsg(service, keyRingService)(
+          env,
+          msg as GetCardanoSyncStatusMsg
+        );
       case GetCardanoTxHistoryMsg.type():
-        return handleGetCardanoTxHistoryMsg(service, keyRingService)(env, msg as GetCardanoTxHistoryMsg);
+        return handleGetCardanoTxHistoryMsg(service, keyRingService)(
+          env,
+          msg as GetCardanoTxHistoryMsg
+        );
       case LoadMoreCardanoTxHistoryMsg.type():
-        return handleLoadMoreCardanoTxHistoryMsg(service, keyRingService)(env, msg as LoadMoreCardanoTxHistoryMsg);
+        return handleLoadMoreCardanoTxHistoryMsg(service, keyRingService)(
+          env,
+          msg as LoadMoreCardanoTxHistoryMsg
+        );
       case GetMaxSpendableAdaMsg.type():
-        return handleGetMaxSpendableAdaMsg(service, keyRingService)(env, msg as GetMaxSpendableAdaMsg);
+        return handleGetMaxSpendableAdaMsg(service, keyRingService)(
+          env,
+          msg as GetMaxSpendableAdaMsg
+        );
       default:
         console.error(
           "[Cardano Handler] Unknown message type",
@@ -146,17 +172,24 @@ const handleGetCardanoBalanceMsg: (
     if (!service.isReady()) {
       const runtimeState = service.getRuntimeState();
       return {
-        state: runtimeState === "provider_unavailable" ? "provider_error" : "temporarily_unavailable",
-        error: runtimeState === "provider_unavailable" ? "provider_unavailable" : "cardano_not_ready",
+        state:
+          runtimeState === "provider_unavailable"
+            ? "provider_error"
+            : "temporarily_unavailable",
+        error:
+          runtimeState === "provider_unavailable"
+            ? "provider_unavailable"
+            : "cardano_not_ready",
       };
     }
     try {
       const balanceRaw = await service.getBalance();
-      const available = (balanceRaw?.utxo?.available?.coins ?? BigInt(0)).toString();
+      const available = (
+        balanceRaw?.utxo?.available?.coins ?? BigInt(0)
+      ).toString();
       const total = (balanceRaw?.utxo?.total?.coins ?? BigInt(0)).toString();
       const rewards = (balanceRaw?.rewards ?? BigInt(0)).toString();
-      const hasAnyFunds =
-        available !== "0" || total !== "0" || rewards !== "0";
+      const hasAnyFunds = available !== "0" || total !== "0" || rewards !== "0";
       return {
         state: hasAnyFunds ? "ready_with_data" : "empty_valid",
         balance: {
@@ -204,7 +237,7 @@ const handleEstimateSendAdaMsg: (
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
     }
-    
+
     if (!service.isReady()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
@@ -227,7 +260,9 @@ const waitForCardanoWalletSettled = async (service: CardanoService) => {
   if (!walletManager || !walletManager.hasWallet()) {
     throw new Error("temporarily_unavailable: wallet_not_ready");
   }
+  // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
   const { firstValueFrom } = await import("rxjs");
+  // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
   const { filter, take, timeout } = await import("rxjs/operators");
 
   try {
@@ -248,13 +283,18 @@ const waitForCardanoWalletSettled = async (service: CardanoService) => {
   }
 };
 
-const readCardanoWalletSettled = async (service: CardanoService): Promise<boolean> => {
+const readCardanoWalletSettled = async (
+  service: CardanoService
+): Promise<boolean> => {
   const walletManager = service.getWalletManager();
   if (!walletManager || !walletManager.hasWallet()) {
     throw new Error("temporarily_unavailable: wallet_not_ready");
   }
+  // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
   const { firstValueFrom } = await import("rxjs");
-  return (await firstValueFrom(walletManager.syncStatus$).catch(() => false)) as boolean;
+  return (await firstValueFrom(walletManager.syncStatus$).catch(
+    () => false
+  )) as boolean;
 };
 
 const getCardanoDraftContext = async (
@@ -308,7 +348,11 @@ const handleBuildSendAdaTxDraftMsg: (
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
     await waitForCardanoWalletSettled(service);
-    const context = await getCardanoDraftContext(service, keyRingService, msg.chainId);
+    const context = await getCardanoDraftContext(
+      service,
+      keyRingService,
+      msg.chainId
+    );
     return await service.buildSendAdaTxDraft({
       to: msg.to,
       amount: msg.amount,
@@ -340,7 +384,11 @@ const handleSubmitSendAdaTxDraftMsg: (
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
     await waitForCardanoWalletSettled(service);
-    const context = await getCardanoDraftContext(service, keyRingService, msg.chainId);
+    const context = await getCardanoDraftContext(
+      service,
+      keyRingService,
+      msg.chainId
+    );
     const approvalData = service.getSendAdaTxDraftApprovalData({
       draftId: msg.draftId,
       chainId: msg.chainId,
@@ -383,7 +431,9 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
       throw new Error("This message is only supported for internal requests");
     }
     if (!keyRingService.checkPassword(msg.password)) {
-      throw new Error(encodeCardanoUiError("invalid_password", "Invalid password"));
+      throw new Error(
+        encodeCardanoUiError("invalid_password", "Invalid password")
+      );
     }
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
@@ -397,7 +447,11 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
       );
     }
     await waitForCardanoWalletSettled(service);
-    const context = await getCardanoDraftContext(service, keyRingService, msg.chainId);
+    const context = await getCardanoDraftContext(
+      service,
+      keyRingService,
+      msg.chainId
+    );
     const approvalData = service.getSendAdaTxDraftApprovalData({
       draftId: msg.draftId,
       chainId: msg.chainId,
@@ -450,15 +504,33 @@ const handleGetCardanoSyncStatusMsg: (
     }
     // If chainId is provided, ensure service is ready for that network
     if (msg.chainId) {
-      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+      try {
+        await keyRingService.ensureCardanoServiceReady(msg.chainId);
+      } catch (error) {
+        const classified = classifyEnsureCardanoServiceReadyError(error);
+        if (classified === null) {
+          throw error;
+        }
+        return {
+          state: classified,
+          isSettled: false,
+          error: errorMessage(error),
+        };
+      }
     }
-    
+
     if (!service.isReady()) {
       const runtimeState = service.getRuntimeState();
       return {
-        state: runtimeState === "provider_unavailable" ? "provider_error" : "temporarily_unavailable",
+        state:
+          runtimeState === "provider_unavailable"
+            ? "provider_error"
+            : "temporarily_unavailable",
         isSettled: false,
-        error: runtimeState === "provider_unavailable" ? "provider_unavailable" : "cardano_not_ready",
+        error:
+          runtimeState === "provider_unavailable"
+            ? "provider_unavailable"
+            : "cardano_not_ready",
       };
     }
 
@@ -467,14 +539,23 @@ const handleGetCardanoSyncStatusMsg: (
       if (!walletManager || !walletManager.hasWallet()) {
         const runtimeState = service.getRuntimeState();
         return {
-          state: runtimeState === "provider_unavailable" ? "provider_error" : "temporarily_unavailable",
+          state:
+            runtimeState === "provider_unavailable"
+              ? "provider_error"
+              : "temporarily_unavailable",
           isSettled: false,
-          error: runtimeState === "provider_unavailable" ? "provider_unavailable" : "wallet_not_ready",
+          error:
+            runtimeState === "provider_unavailable"
+              ? "provider_unavailable"
+              : "wallet_not_ready",
         };
       }
-      
-      const { firstValueFrom } = await import('rxjs');
-      const isSettled = await firstValueFrom(walletManager.syncStatus$).catch(() => false) as boolean;
+
+      // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
+      const { firstValueFrom } = await import("rxjs");
+      const isSettled = (await firstValueFrom(walletManager.syncStatus$).catch(
+        () => false
+      )) as boolean;
       return {
         state: isSettled ? "ready_with_data" : "syncing",
         isSettled,
@@ -516,11 +597,17 @@ const handleGetCardanoTxHistoryMsg: (
     if (!service.isReady()) {
       const runtimeState = service.getRuntimeState();
       return {
-        state: runtimeState === "provider_unavailable" ? "provider_error" : "temporarily_unavailable",
+        state:
+          runtimeState === "provider_unavailable"
+            ? "provider_error"
+            : "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
         hasDegradedItems: false,
-        error: runtimeState === "provider_unavailable" ? "provider_unavailable" : "cardano_not_ready",
+        error:
+          runtimeState === "provider_unavailable"
+            ? "provider_unavailable"
+            : "cardano_not_ready",
       };
     }
 
@@ -566,7 +653,10 @@ const handleGetCardanoTxHistoryMsg: (
 const handleLoadMoreCardanoTxHistoryMsg: (
   service: CardanoService,
   keyRingService: KeyRingService
-) => InternalHandler<LoadMoreCardanoTxHistoryMsg> = (service, keyRingService) => {
+) => InternalHandler<LoadMoreCardanoTxHistoryMsg> = (
+  service,
+  keyRingService
+) => {
   return async (env, msg) => {
     if (!env.isInternalMsg) {
       throw new Error("This message is only supported for internal requests");
@@ -592,11 +682,17 @@ const handleLoadMoreCardanoTxHistoryMsg: (
     if (!service.isReady()) {
       const runtimeState = service.getRuntimeState();
       return {
-        state: runtimeState === "provider_unavailable" ? "provider_error" : "temporarily_unavailable",
+        state:
+          runtimeState === "provider_unavailable"
+            ? "provider_error"
+            : "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
         hasDegradedItems: false,
-        error: runtimeState === "provider_unavailable" ? "provider_unavailable" : "cardano_not_ready",
+        error:
+          runtimeState === "provider_unavailable"
+            ? "provider_unavailable"
+            : "cardano_not_ready",
       };
     }
 
