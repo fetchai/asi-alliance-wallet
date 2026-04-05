@@ -29,7 +29,7 @@ jest.mock("../../languages", () => ({
 }));
 
 jest.mock("../../hooks", () => ({
-  useNetwork: () => ({ isOnline: true }),
+  useNetwork: jest.fn(() => ({ isOnline: true })),
 }));
 
 jest.mock("react-intl", () => ({
@@ -245,6 +245,9 @@ describe("SendPhase2 real flow guards", () => {
     mockLocationState = {};
     mockStore.accountStore.getAccount = defaultCardanoAccount;
     mockGetPathname.mockReturnValue("send");
+    (jest.requireMock("../../hooks").useNetwork as jest.Mock).mockReturnValue({
+      isOnline: true,
+    });
     mockSendMessage.mockResolvedValue({
       state: "ready_with_data",
       isSettled: true,
@@ -708,6 +711,7 @@ describe("SendPhase2 real flow guards", () => {
       let btn = bottomActionButton();
       expect(btn?.textContent).toContain("Syncing wallet");
       expect(btn?.disabled).toBe(true);
+      expect(container.textContent).not.toContain("Transaction is not ready");
 
       await act(async () => {
         jest.advanceTimersByTime(2000);
@@ -718,6 +722,7 @@ describe("SendPhase2 real flow guards", () => {
       btn = bottomActionButton();
       expect(btn?.textContent).toContain("Syncing wallet");
       expect(btn?.disabled).toBe(true);
+      expect(container.textContent).not.toContain("Transaction is not ready");
 
       await act(async () => {
         jest.advanceTimersByTime(2000);
@@ -736,6 +741,42 @@ describe("SendPhase2 real flow guards", () => {
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
+    });
+
+    it("operational guard: no red Transaction is not ready while offline and sync pending", async () => {
+      (jest.requireMock("../../hooks").useNetwork as jest.Mock).mockReturnValue({
+        isOnline: false,
+      });
+      syncQueue = [{ state: "syncing", isSettled: false }];
+      mockSendMessage.mockImplementation(
+        (_port: unknown, msg: { constructor?: { name?: string } }) => {
+          const name = msg?.constructor?.name;
+          if (name === "GetCardanoSyncStatusMsg") {
+            return Promise.resolve(syncQueue[0]);
+          }
+          if (name === "BuildSendAdaTxDraftMsg") {
+            return Promise.resolve({
+              draftId: "draft-id",
+              fee: "170000",
+              total: "1230000",
+            });
+          }
+          if (name === "DiscardSendAdaTxDraftMsg") {
+            return Promise.resolve(undefined);
+          }
+          return Promise.resolve("tx-ok");
+        }
+      );
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(container.textContent).not.toContain("Transaction is not ready");
+      expect(container.textContent).toContain("cardano.status.offline");
+      const actionBtn = [...container.querySelectorAll("button")].find((b) =>
+        b.textContent?.includes("cardano.status.offline")
+      );
+      expect(actionBtn?.disabled).toBe(true);
     });
 
     it("does not make sync poll terminal after GetCardanoSyncStatusMsg reject", async () => {

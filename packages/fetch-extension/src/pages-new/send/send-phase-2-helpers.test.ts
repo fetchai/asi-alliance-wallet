@@ -17,6 +17,7 @@ import {
   getMinimumDisplayAmountFromDecimals,
   getBannerValidationError,
   getHighestPriorityNonRecipientBlockingError,
+  isCardanoSendOperationalGuard,
   isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
@@ -44,6 +45,71 @@ describe("getHighestPriorityNonRecipientBlockingError", () => {
       feeError: new Error("fee"),
     });
     expect(r).toBe(amountErr);
+  });
+
+  it("returns Transaction is not ready for Cardano without draft when guard is off", () => {
+    const r = getHighestPriorityNonRecipientBlockingError({
+      amountError: undefined,
+      memoError: undefined,
+      isCardano: true,
+      normalizedCardanoDraftError: null,
+      cardanoDraft: null,
+      isBuildingCardanoDraft: false,
+      cardanoOperationalGuard: false,
+      gasError: undefined,
+      feeError: undefined,
+    });
+    expect(r?.message).toBe("Transaction is not ready");
+  });
+
+  it("omits Transaction is not ready when Cardano operational guard is on", () => {
+    const r = getHighestPriorityNonRecipientBlockingError({
+      amountError: undefined,
+      memoError: undefined,
+      isCardano: true,
+      normalizedCardanoDraftError: null,
+      cardanoDraft: null,
+      isBuildingCardanoDraft: false,
+      cardanoOperationalGuard: true,
+      gasError: undefined,
+      feeError: undefined,
+    });
+    expect(r).toBeUndefined();
+  });
+});
+
+describe("isCardanoSendOperationalGuard", () => {
+  const base = {
+    isCardano: true as const,
+    isOnline: true,
+    isCardanoSyncing: false,
+  };
+
+  it("is false when not Cardano", () => {
+    expect(
+      isCardanoSendOperationalGuard({
+        ...base,
+        isCardano: false,
+        isOnline: false,
+        isCardanoSyncing: true,
+      })
+    ).toBe(false);
+  });
+
+  it("is true when offline", () => {
+    expect(isCardanoSendOperationalGuard({ ...base, isOnline: false })).toBe(
+      true
+    );
+  });
+
+  it("is true when syncing", () => {
+    expect(
+      isCardanoSendOperationalGuard({ ...base, isCardanoSyncing: true })
+    ).toBe(true);
+  });
+
+  it("is false when ready and online and not syncing", () => {
+    expect(isCardanoSendOperationalGuard(base)).toBe(false);
   });
 });
 

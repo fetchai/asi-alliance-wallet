@@ -38,6 +38,7 @@ import {
   getBannerValidationError,
   getCardanoPasswordModalInlineError,
   getHighestPriorityNonRecipientBlockingError,
+  isCardanoSendOperationalGuard,
   isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
@@ -488,6 +489,12 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       nativeAdaCoinDecimals,
     });
 
+    const cardanoOperationalGuard = isCardanoSendOperationalGuard({
+      isCardano,
+      isOnline,
+      isCardanoSyncing,
+    });
+
     const postRecipientError = getHighestPriorityNonRecipientBlockingError({
       amountError: sendConfigs.amountConfig.error,
       memoError: sendConfigs.memoConfig.error,
@@ -495,6 +502,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       normalizedCardanoDraftError,
       cardanoDraft,
       isBuildingCardanoDraft,
+      cardanoOperationalGuard,
       gasError: sendConfigs.gasConfig.error,
       feeError: sendConfigs.feeConfig.error,
     });
@@ -506,7 +514,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       (isCardano
         ? normalizedCardanoDraftError
           ? new Error(normalizedCardanoDraftError)
-          : !cardanoDraft && !isBuildingCardanoDraft
+          : !cardanoDraft && !isBuildingCardanoDraft && !cardanoOperationalGuard
           ? new Error("Transaction is not ready")
           : undefined
         : sendConfigs.gasConfig.error ?? sendConfigs.feeConfig.error);
@@ -527,8 +535,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
     const reviewOperationalDisabled =
       !accountInfo.isReadyToSendMsgs ||
-      isCardanoSyncing ||
-      (isCardano && !isOnline);
+      (isCardano && cardanoOperationalGuard);
 
     const reviewButtonDisabled = isReviewTransactionButtonDisabled({
       operationalDisabled: reviewOperationalDisabled,
@@ -1142,7 +1149,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             })}
           </div>
         )}
-        {(isCardanoSyncing || !isOnline) && isCardano && (
+        {isCardano && cardanoOperationalGuard && (
           <div
             style={{
               textAlign: "center",
@@ -1172,7 +1179,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           variant="dark"
           type="button"
           text={
-            isCardano && (isCardanoSyncing || !isOnline)
+            isCardano && cardanoOperationalGuard
               ? !isOnline
                 ? cardanoOfflineMessage
                 : "Syncing wallet..."
@@ -1203,8 +1210,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             if (
               accountInfo.isReadyToSendMsgs &&
               txStateIsValid &&
-              !isCardanoSyncing &&
-              isOnline
+              !(isCardano && cardanoOperationalGuard)
             ) {
               if (shouldRequireCardanoPassword) {
                 setIsCardanoPasswordConfirmOpen(true);

@@ -6,6 +6,28 @@ import {
   parseCardanoUiError,
 } from "@keplr-wallet/cardano";
 
+/**
+ * True during Cardano sync/offline operational window: use status banners and disable review
+ * instead of showing synthetic validation "Transaction is not ready". Does not include
+ * provider_error — those stay validation/draft-error UX unless handled separately.
+ */
+export function isCardanoSendOperationalGuard(params: {
+  isCardano: boolean;
+  isOnline: boolean;
+  isCardanoSyncing: boolean;
+}): boolean {
+  if (!params.isCardano) {
+    return false;
+  }
+  if (!params.isOnline) {
+    return true;
+  }
+  if (params.isCardanoSyncing) {
+    return true;
+  }
+  return false;
+}
+
 const MIN_OUTPUT_LOVELACE_REGEX =
   /minimum output value is (\d+) lovelace/i;
 
@@ -103,6 +125,8 @@ export function getHighestPriorityNonRecipientBlockingError(params: {
   normalizedCardanoDraftError: string | null;
   cardanoDraft: { draftId: string } | null | undefined;
   isBuildingCardanoDraft: boolean;
+  /** When true, omit synthetic "Transaction is not ready" during sync/offline operational guard. */
+  cardanoOperationalGuard?: boolean;
   gasError: Error | undefined;
   feeError: Error | undefined;
 }): Error | undefined {
@@ -110,7 +134,9 @@ export function getHighestPriorityNonRecipientBlockingError(params: {
     ? params.normalizedCardanoDraftError
       ? new Error(params.normalizedCardanoDraftError)
       : !params.cardanoDraft && !params.isBuildingCardanoDraft
-      ? new Error("Transaction is not ready")
+      ? params.cardanoOperationalGuard
+        ? undefined
+        : new Error("Transaction is not ready")
       : undefined
     : params.gasError ?? params.feeError;
 
