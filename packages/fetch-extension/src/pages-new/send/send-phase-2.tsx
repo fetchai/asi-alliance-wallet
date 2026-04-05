@@ -464,21 +464,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             setIsCardanoSyncing(
               state === "syncing" || state === "temporarily_unavailable"
             );
-            if (state === "provider_error" && pollInterval) {
-              clearInterval(pollInterval);
-              pollInterval = null;
-            }
           }
-        } catch (error) {
-          if (isSubscribed) {
-            setCardanoSyncState("temporarily_unavailable");
-            setIsCardanoSyncing(true);
-            if (pollInterval) {
-              clearInterval(pollInterval);
-              pollInterval = null;
-            }
-          }
-        }
+        } catch {}
       };
 
       setIsCardanoSyncing(true);
