@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import React from "react";
-import { act } from "react-dom/test-utils";
+import { act, Simulate } from "react-dom/test-utils";
 import { createRoot, Root } from "react-dom/client";
 import { SendPhase2 } from "./send-phase-2";
 
@@ -13,6 +13,35 @@ let mockLocationState: Record<string, unknown> = {};
 
 jest.mock("mobx-react-lite", () => ({
   observer: (component: unknown) => component,
+}));
+
+jest.mock("@keplr-wallet/stores", () => ({
+  CARDANO_NATIVE_TOKEN_TYPE: "native",
+}));
+
+jest.mock("@keplr-wallet/hooks", () => ({
+  EmptyAddressError: class EmptyAddressError extends Error {
+    override readonly name = "EmptyAddressError";
+  },
+}));
+
+jest.mock("@keplr-wallet/cardano", () => ({
+  lovelacesToAdaString: (lovelaces: string) => String(lovelaces),
+  CardanoUiErrorCode: {},
+  parseCardanoUiError: (message: string) => {
+    const prefix = "cardano_ui_error:";
+    if (message.startsWith(prefix)) {
+      const rest = message.slice(prefix.length);
+      const colon = rest.indexOf(":");
+      if (colon >= 0) {
+        return {
+          code: rest.slice(0, colon),
+          message: rest.slice(colon + 1),
+        };
+      }
+    }
+    return { message };
+  },
 }));
 
 jest.mock("../../stores", () => ({
@@ -51,28 +80,30 @@ jest.mock("@components-v2/form/fee-buttons-v2", () => ({
 jest.mock("@components-v2/form", () => ({
   AddressInput: () => null,
   MemoInput: () => null,
-  PasswordInput: React.forwardRef(
-    (
-      props: {
-        value: string;
-        onChange: (event: { target: { value: string } }) => void;
-        error?: string;
-      },
-      ref: React.Ref<HTMLInputElement>
-    ) => (
+  PasswordInput: React.forwardRef(function MockPasswordInput(
+    props: {
+      value: string;
+      onChange: (event: { target: { value: string } }) => void;
+      error?: string;
+    },
+    ref: React.Ref<HTMLInputElement>
+  ) {
+    return (
       <div>
         <input
           ref={ref}
           value={props.value}
-          onChange={(e) => props.onChange({ target: { value: e.target.value } })}
+          onChange={(e) =>
+            props.onChange({ target: { value: e.target.value } })
+          }
           data-testid="password-input"
         />
         {props.error ? (
           <div data-testid="password-error">{props.error}</div>
         ) : null}
       </div>
-    )
-  ),
+    );
+  }),
 }));
 
 jest.mock("@components-v2/buttons/button", () => ({
@@ -95,8 +126,12 @@ jest.mock("@components-v2/buttons/button", () => ({
 
 jest.mock("reactstrap", () => ({
   Modal: (props: { isOpen: boolean; children: React.ReactNode }) =>
-    props.isOpen ? <div data-testid="password-modal">{props.children}</div> : null,
-  ModalBody: (props: { children: React.ReactNode }) => <div>{props.children}</div>,
+    props.isOpen ? (
+      <div data-testid="password-modal">{props.children}</div>
+    ) : null,
+  ModalBody: (props: { children: React.ReactNode }) => (
+    <div>{props.children}</div>
+  ),
 }));
 
 jest.mock("@components-v2/transx-status", () => ({
@@ -131,13 +166,19 @@ jest.mock("@keplr-wallet/background", () => {
     ) {}
   }
   class BuildSendAdaTxDraftMsg {
-    constructor() {}
+    /* mock stub */
+    constructor() {
+      return;
+    }
   }
   class DiscardSendAdaTxDraftMsg {
-    constructor() {}
+    /* mock stub */
+    constructor() {
+      return;
+    }
   }
   class GetCardanoSyncStatusMsg {
-    constructor() {}
+    constructor(public chainId?: string) {}
   }
   return {
     SubmitSendAdaTxDraftMsg,
@@ -176,7 +217,9 @@ const mockStore = {
     getAccount: defaultCardanoAccount,
   },
   priceStore: {
-    calculatePrice: () => ({ shrink: () => ({ maxDecimals: () => ({ toString: () => "0" }) }) }),
+    calculatePrice: () => ({
+      shrink: () => ({ maxDecimals: () => ({ toString: () => "0" }) }),
+    }),
   },
   analyticsStore: {
     logEvent: jest.fn(),
@@ -229,6 +272,13 @@ const flushMicrotasks = async (): Promise<void> => {
   await Promise.resolve();
 };
 
+/** Drain nested Promise continuations (e.g. async sync poll + follow-up state). */
+const flushMicrotasksDeep = async (rounds = 8): Promise<void> => {
+  for (let i = 0; i < rounds; i++) {
+    await Promise.resolve();
+  }
+};
+
 describe("SendPhase2 real flow guards", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -273,8 +323,7 @@ describe("SendPhase2 real flow guards", () => {
   }) => {
     const isCardano = props?.isCardano ?? true;
     const chainId =
-      props?.chainId ??
-      (isCardano ? "cardano-testnet" : "cosmoshub-4");
+      props?.chainId ?? (isCardano ? "cardano-testnet" : "cosmoshub-4");
     mockStore.chainStore.current = {
       chainId,
       chainName: isCardano ? "Cardano Testnet" : "Cosmos Hub",
@@ -302,8 +351,11 @@ describe("SendPhase2 real flow guards", () => {
 
   const advanceDraftBuild = async () => {
     await act(async () => {
+      await flushMicrotasksDeep();
+    });
+    await act(async () => {
       jest.advanceTimersByTime(350);
-      await flushMicrotasks();
+      await flushMicrotasksDeep();
     });
   };
 
@@ -311,37 +363,47 @@ describe("SendPhase2 real flow guards", () => {
     renderComponent();
     await advanceDraftBuild();
 
-    const reviewButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Review Transaction")
+    const reviewButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Review Transaction")
     ) as HTMLButtonElement;
-    act(() => {
+    await act(async () => {
       reviewButton.click();
+      await flushMicrotasksDeep();
     });
 
-    const input = container.querySelector("[data-testid='password-input']") as HTMLInputElement;
-    act(() => {
-      input.value = "bad-password";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+    const modalEl = container.querySelector("[data-testid='password-modal']");
+    expect(modalEl).not.toBeNull();
+    const modalRoot = modalEl as HTMLElement;
+    const input = modalRoot.querySelector(
+      "[data-testid='password-input']"
+    ) as HTMLInputElement;
+    await act(async () => {
+      Simulate.change(input, { target: { value: "bad-password" } } as any);
+      await flushMicrotasksDeep();
     });
 
     mockSendMessage.mockRejectedValueOnce(
       new Error("cardano_ui_error:invalid_password:Invalid password")
     );
 
-    const confirmButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Confirm")
+    const confirmButton = [...modalRoot.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Confirm")
     ) as HTMLButtonElement;
     await act(async () => {
       confirmButton.click();
+      await flushMicrotasksDeep();
     });
 
-    expect(container.querySelector("[data-testid='password-modal']")).not.toBeNull();
-    expect(container.querySelector("[data-testid='password-error']")?.textContent).toContain(
-      "Invalid password"
-    );
+    expect(
+      container.querySelector("[data-testid='password-modal']")
+    ).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='password-error']")?.textContent
+    ).toContain("Invalid password");
     expect(
       mockNavigate.mock.calls.some(
-        (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "failed"
+        (call) =>
+          call[0] === "/send" && call[1]?.state?.trnsxStatus === "failed"
       )
     ).toBe(false);
     const sendNavCallsAfterModalError = mockNavigate.mock.calls.filter(
@@ -371,31 +433,41 @@ describe("SendPhase2 real flow guards", () => {
     renderComponent();
     await advanceDraftBuild();
 
-    const reviewButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Review Transaction")
+    const reviewButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Review Transaction")
     ) as HTMLButtonElement;
-    act(() => {
+    await act(async () => {
       reviewButton.click();
+      await flushMicrotasksDeep();
     });
 
-    const input = container.querySelector("[data-testid='password-input']") as HTMLInputElement;
-    act(() => {
-      input.value = "ok-password";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+    const modalEl = container.querySelector("[data-testid='password-modal']");
+    expect(modalEl).not.toBeNull();
+    const modalRoot = modalEl as HTMLElement;
+    const input = modalRoot.querySelector(
+      "[data-testid='password-input']"
+    ) as HTMLInputElement;
+    await act(async () => {
+      Simulate.change(input, { target: { value: "ok-password" } } as any);
+      await flushMicrotasksDeep();
     });
 
-    mockSendMessage.mockRejectedValueOnce(new Error("submit tx failed: provider unavailable"));
+    mockSendMessage.mockRejectedValueOnce(
+      new Error("submit tx failed: provider unavailable")
+    );
 
-    const confirmButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Confirm")
+    const confirmButton = [...modalRoot.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Confirm")
     ) as HTMLButtonElement;
     await act(async () => {
       confirmButton.click();
+      await flushMicrotasksDeep();
     });
 
     expect(
       mockNavigate.mock.calls.some(
-        (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "failed"
+        (call) =>
+          call[0] === "/send" && call[1]?.state?.trnsxStatus === "failed"
       )
     ).toBe(true);
   });
@@ -404,37 +476,45 @@ describe("SendPhase2 real flow guards", () => {
     renderComponent();
     await advanceDraftBuild();
 
-    const reviewButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Review Transaction")
+    const reviewButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Review Transaction")
     ) as HTMLButtonElement;
-    act(() => {
+    await act(async () => {
       reviewButton.click();
+      await flushMicrotasksDeep();
     });
 
-    const input = container.querySelector("[data-testid='password-input']") as HTMLInputElement;
-    act(() => {
-      input.value = "good-password";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+    const modalEl = container.querySelector("[data-testid='password-modal']");
+    expect(modalEl).not.toBeNull();
+    const modalRoot = modalEl as HTMLElement;
+    const input = modalRoot.querySelector(
+      "[data-testid='password-input']"
+    ) as HTMLInputElement;
+    await act(async () => {
+      Simulate.change(input, { target: { value: "good-password" } } as any);
+      await flushMicrotasksDeep();
     });
 
     mockSendMessage.mockResolvedValueOnce("tx-id-1");
 
-    const confirmButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Confirm")
+    const confirmButton = [...modalRoot.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Confirm")
     ) as HTMLButtonElement;
     await act(async () => {
       confirmButton.click();
+      await flushMicrotasksDeep();
     });
 
     expect(
       mockNavigate.mock.calls.some(
-        (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
+        (call) =>
+          call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
       )
     ).toBe(true);
 
     await act(async () => {
       jest.advanceTimersByTime(350);
-      await flushMicrotasks();
+      await flushMicrotasksDeep();
     });
 
     const successCalls = mockNavigate.mock.calls.filter(
@@ -473,24 +553,28 @@ describe("SendPhase2 real flow guards", () => {
 
     renderComponent({ isCardano: false });
 
-    const reviewButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Review Transaction")
+    const reviewButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Review Transaction")
     ) as HTMLButtonElement;
     await act(async () => {
       reviewButton.click();
       await flushMicrotasks();
     });
 
-    expect(container.querySelector("[data-testid='password-modal']")).toBeNull();
+    expect(
+      container.querySelector("[data-testid='password-modal']")
+    ).toBeNull();
     expect(nonCardanoSend).toHaveBeenCalled();
     expect(
       mockNavigate.mock.calls.some(
-        (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
+        (call) =>
+          call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
       )
     ).toBe(true);
     expect(
       mockNavigate.mock.calls.some(
-        (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "success"
+        (call) =>
+          call[0] === "/send" && call[1]?.state?.trnsxStatus === "success"
       )
     ).toBe(false);
   });
@@ -519,8 +603,8 @@ describe("SendPhase2 real flow guards", () => {
 
     renderComponent({ isCardano: false });
 
-    const reviewButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Review Transaction")
+    const reviewButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Review Transaction")
     ) as HTMLButtonElement;
     await act(async () => {
       reviewButton.click();
@@ -530,12 +614,14 @@ describe("SendPhase2 real flow guards", () => {
     expect(nonCardanoSend).toHaveBeenCalled();
     expect(
       mockNavigate.mock.calls.some(
-        (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "success"
+        (call) =>
+          call[0] === "/send" && call[1]?.state?.trnsxStatus === "success"
       )
     ).toBe(true);
     expect(
       mockNavigate.mock.calls.some(
-        (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
+        (call) =>
+          call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
       )
     ).toBe(true);
   });
@@ -548,8 +634,8 @@ describe("SendPhase2 real flow guards", () => {
     const countGetCardanoSyncStatusCalls = (): number =>
       mockSendMessage.mock.calls.filter(
         (call) =>
-          (call[1] as { constructor?: { name?: string } } | undefined)?.constructor
-            ?.name === "GetCardanoSyncStatusMsg"
+          (call[1] as { constructor?: { name?: string } } | undefined)
+            ?.constructor?.name === "GetCardanoSyncStatusMsg"
       ).length;
 
     const bottomActionButton = (): HTMLButtonElement | undefined =>
@@ -567,7 +653,9 @@ describe("SendPhase2 real flow guards", () => {
           if (name === "GetCardanoSyncStatusMsg") {
             const item = syncQueue.shift();
             if (item === "reject") {
-              return Promise.reject(new Error("GetCardanoSyncStatusMsg ipc fail"));
+              return Promise.reject(
+                new Error("GetCardanoSyncStatusMsg ipc fail")
+              );
             }
             if (item == null) {
               return Promise.reject(new Error("sync queue exhausted"));
@@ -744,9 +832,11 @@ describe("SendPhase2 real flow guards", () => {
     });
 
     it("operational guard: no red Transaction is not ready while offline and sync pending", async () => {
-      (jest.requireMock("../../hooks").useNetwork as jest.Mock).mockReturnValue({
-        isOnline: false,
-      });
+      (jest.requireMock("../../hooks").useNetwork as jest.Mock).mockReturnValue(
+        {
+          isOnline: false,
+        }
+      );
       syncQueue = [{ state: "syncing", isSettled: false }];
       mockSendMessage.mockImplementation(
         (_port: unknown, msg: { constructor?: { name?: string } }) => {
@@ -877,6 +967,145 @@ describe("SendPhase2 real flow guards", () => {
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
+    });
+
+    it("sequential poll: long first GetCardanoSyncStatusMsg does not overlap; 2s delay after await", async () => {
+      let firstResolve!: (value: { state: string; isSettled: boolean }) => void;
+      const firstDeferred = new Promise<{ state: string; isSettled: boolean }>(
+        (resolve) => {
+          firstResolve = resolve;
+        }
+      );
+      let syncCallIndex = 0;
+      mockSendMessage.mockImplementation(
+        (_port: unknown, msg: { constructor?: { name?: string } }) => {
+          const name = msg?.constructor?.name;
+          if (name === "GetCardanoSyncStatusMsg") {
+            syncCallIndex += 1;
+            if (syncCallIndex === 1) {
+              return firstDeferred;
+            }
+            return Promise.resolve({ state: "syncing", isSettled: false });
+          }
+          if (name === "BuildSendAdaTxDraftMsg") {
+            return Promise.resolve({
+              draftId: "draft-id",
+              fee: "170000",
+              total: "1230000",
+            });
+          }
+          if (name === "DiscardSendAdaTxDraftMsg") {
+            return Promise.resolve(undefined);
+          }
+          return Promise.resolve("tx-ok");
+        }
+      );
+
+      renderComponent();
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        firstResolve({ state: "syncing", isSettled: false });
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1999);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1);
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+    });
+
+    it("stale sync response from previous chain does not revert ready UI on new chain", async () => {
+      let chainAResolve!: (value: {
+        state: string;
+        isSettled: boolean;
+      }) => void;
+      const chainADeferred = new Promise<{ state: string; isSettled: boolean }>(
+        (resolve) => {
+          chainAResolve = resolve;
+        }
+      );
+
+      mockSendMessage.mockImplementation(
+        (
+          _port: unknown,
+          msg: { constructor?: { name?: string }; chainId?: string }
+        ) => {
+          const name = msg?.constructor?.name;
+          if (name === "GetCardanoSyncStatusMsg") {
+            const chainId = msg.chainId;
+            if (chainId === "cardano-chain-a") {
+              return chainADeferred;
+            }
+            if (chainId === "cardano-chain-b") {
+              return Promise.resolve({
+                state: "ready_with_data",
+                isSettled: true,
+              });
+            }
+            return Promise.reject(
+              new Error("unexpected GetCardanoSyncStatusMsg chainId")
+            );
+          }
+          if (name === "BuildSendAdaTxDraftMsg") {
+            return Promise.resolve({
+              draftId: "draft-id",
+              fee: "170000",
+              total: "1230000",
+            });
+          }
+          if (name === "DiscardSendAdaTxDraftMsg") {
+            return Promise.resolve(undefined);
+          }
+          return Promise.resolve("tx-ok");
+        }
+      );
+
+      renderComponent({ chainId: "cardano-chain-a" });
+      await act(async () => {
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(1);
+
+      await act(async () => {
+        renderComponent({ chainId: "cardano-chain-b" });
+        await flushMicrotasks();
+      });
+      expect(countGetCardanoSyncStatusCalls()).toBe(2);
+
+      await runDraftDebounce();
+
+      let btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.disabled).toBe(false);
+      expect(container.textContent).not.toMatch(/Syncing Cardano wallet/i);
+
+      await act(async () => {
+        chainAResolve({ state: "syncing", isSettled: false });
+        await flushMicrotasks();
+      });
+
+      btn = bottomActionButton();
+      expect(btn?.textContent).toContain("Review Transaction");
+      expect(btn?.disabled).toBe(false);
+      expect(container.textContent).not.toMatch(/Syncing Cardano wallet/i);
     });
   });
 });
