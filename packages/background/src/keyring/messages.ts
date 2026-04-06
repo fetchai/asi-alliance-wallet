@@ -1329,6 +1329,35 @@ export class RefreshAccountList extends Message<boolean> {
   }
 }
 
+/**
+ * Plain-runtime broadcast payload (via browser.runtime.sendMessage from background)
+ * so all extension UI surfaces can refresh keyring/chain state. Not the router Message envelope.
+ */
+export const KEYRING_SURFACES_SYNC_MESSAGE_TYPE =
+  "fetchwallet-keyring-surfaces-sync";
+
+export class BroadcastKeyringSurfacesSyncMsg extends Message<boolean> {
+  public static type() {
+    return "broadcast-keyring-surfaces-sync";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return BroadcastKeyringSurfacesSyncMsg.type();
+  }
+}
+
 export class GetAccountMsg extends Message<Account | null> {
   public static type() {
     return "get-account-msg";

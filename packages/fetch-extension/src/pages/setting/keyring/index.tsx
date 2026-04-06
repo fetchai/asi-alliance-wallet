@@ -16,8 +16,10 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
-import { CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
-import { isCardanoChain, walletSupportsCardano } from "../../../utils";
+import {
+  ensureChainCompatibleBeforeSelectKeyStore,
+  requestKeyringSurfacesSyncBroadcast,
+} from "../../../utils";
 
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
@@ -138,24 +140,14 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                       e.preventDefault();
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
+                        await ensureChainCompatibleBeforeSelectKeyStore(
+                          chainStore,
+                          keyStore
+                        );
                         await keyRingStore.changeKeyRing(i);
                         analyticsStore.logEvent("select_account_click");
 
-                        // Check if current chain is Cardano and new wallet doesn't support it
-                        const isCardanoSupportedWallet =
-                          walletSupportsCardano(keyStore);
-                        const isCurrentChainCardano = isCardanoChain(
-                          chainStore.current
-                        );
-
-                        // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
-                        if (
-                          isCurrentChainCardano &&
-                          !isCardanoSupportedWallet
-                        ) {
-                          chainStore.selectChain(CHAIN_ID_FETCHHUB);
-                          chainStore.saveLastViewChainId();
-                        }
+                        await requestKeyringSurfacesSyncBroadcast();
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();
                         proposalStore.resetProposals();

@@ -56,7 +56,11 @@ import { SupportedCurve } from "./types";
 import { Buffer } from "buffer/";
 import { trimAminoSignDoc } from "./amino-sign-doc";
 import { KeystoneService } from "../keystone";
-import { RequestICNSAdr36SignaturesMsg, SwitchAccountMsg } from "./messages";
+import {
+  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+  RequestICNSAdr36SignaturesMsg,
+  SwitchAccountMsg,
+} from "./messages";
 import { walletSupportsCardano } from "./keyring";
 import { getDefaultFallbackChainId } from "./default-chain";
 import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
@@ -299,6 +303,7 @@ export class KeyRingService {
       if (keyStoreChanged) {
         this.cardanoService.reset();
         this.cardanoRestoreByChainId.clear();
+        await this.alignSelectedChainWithCurrentWalletIfNeeded();
       }
 
       return {
@@ -313,6 +318,65 @@ export class KeyRingService {
           {}
         );
       }
+    }
+  }
+
+  /**
+   * When the current chain is Cardano but the selected wallet cannot use Cardano,
+   * move to the same non-Cardano fallback policy as the rest of keyring (see default-chain).
+   */
+  private async alignSelectedChainWithCurrentWalletIfNeeded(): Promise<void> {
+    try {
+      const ks = this.keyRing.getCurrentKeyStore();
+      const currentChainId = await this.chainsService.getSelectedChain();
+      if (currentChainId && ks && !walletSupportsCardano(ks)) {
+        const chainInfo = await this.chainsService.getChainInfo(
+          currentChainId
+        );
+        const isCardano = chainInfo.features?.includes("cardano") ?? false;
+        if (isCardano) {
+          const chainInfos = await this.chainsService.getChainInfos();
+          const fallbackId = getDefaultFallbackChainId(chainInfos);
+          if (fallbackId) {
+            await this.chainsService.setSelectedChain(fallbackId);
+          }
+        }
+      }
+    } catch (e) {
+      console.error(
+        "[KeyRingService] Failed to align chain with wallet after key store change:",
+        e
+      );
+    }
+  }
+
+  /**
+   * Fan-out to all extension UI contexts so each surface refreshes MobX state.
+   */
+  broadcastKeyringSurfacesSync(): void {
+    try {
+      const g = globalThis as {
+        browser?: { runtime?: typeof browser.runtime };
+        chrome?: { runtime?: typeof chrome.runtime };
+      };
+      const rt = g.browser?.runtime ?? g.chrome?.runtime;
+      if (!rt?.sendMessage) {
+        return;
+      }
+      const payload = {
+        type: KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+        seq: Date.now(),
+      };
+      // browser/chrome runtime typings union yields non-callable intersection; narrow at call site.
+      const sendMessage = rt.sendMessage as (
+        message: unknown
+      ) => void | Promise<unknown>;
+      const out = sendMessage(payload);
+      if (out != null && typeof (out as Promise<unknown>).then === "function") {
+        void (out as Promise<unknown>).catch(() => {});
+      }
+    } catch {
+      // noop
     }
   }
 
@@ -1306,28 +1370,7 @@ Salt: ${salt}`;
       const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
       this.cardanoService.reset();
       this.cardanoRestoreByChainId.clear();
-      try {
-        const ks = this.keyRing.getCurrentKeyStore();
-        const currentChainId = await this.chainsService.getSelectedChain();
-        if (currentChainId && ks && !walletSupportsCardano(ks)) {
-          const chainInfo = await this.chainsService.getChainInfo(
-            currentChainId
-          );
-          const isCardano = chainInfo.features?.includes("cardano") ?? false;
-          if (isCardano) {
-            const chainInfos = await this.chainsService.getChainInfos();
-            const fallbackId = getDefaultFallbackChainId(chainInfos);
-            if (fallbackId) {
-              await this.chainsService.setSelectedChain(fallbackId);
-            }
-          }
-        }
-      } catch (e) {
-        console.error(
-          "[KeyRingService] Failed to align chain with wallet after key store change:",
-          e
-        );
-      }
+      await this.alignSelectedChainWithCurrentWalletIfNeeded();
       return result;
     } finally {
       // Note: if fallback `setSelectedChain` ran above, it also dispatches

@@ -38,6 +38,7 @@ import classNames from "classnames";
 import {
   ensureCompatibleChainForUpcomingWallet,
   getNextDefaultAccountName,
+  requestKeyringSurfacesSyncBroadcast,
   validateWalletName,
 } from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
@@ -734,6 +735,7 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                   BACKGROUND_PORT,
                   new RefreshAccountList()
                 );
+                await requestKeyringSurfacesSyncBroadcast();
               }
               analyticsStore.setUserProperties({
                 registerType: "seed",

@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { ChainStore } from "./chain";
 import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
-import { KeyRingStatus } from "@keplr-wallet/background";
+import {
+  getDefaultFallbackChainId,
+  KeyRingStatus,
+  walletSupportsCardano,
+} from "@keplr-wallet/background";
 import { setCacheManager } from "@keplr-wallet/common";
 import { addressCacheStore } from "../utils/address-cache-store";
 import {
@@ -74,9 +78,10 @@ import { FeeType } from "@keplr-wallet/hooks";
 import { AnalyticsStore, NoopAnalyticsClient } from "@keplr-wallet/analytics";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { ExtensionAnalyticsClient } from "../analytics";
-import { autorun, reaction, runInAction } from "mobx";
+import { autorun, flowResult, reaction, runInAction } from "mobx";
 import { AddressCacheById } from "../utils/address-cache-store";
 import { AddressCacheSyncManager } from "./address-cache-sync-manager";
+import { isCardanoChain } from "../utils";
 
 export class RootStore {
   public readonly uiConfigStore: UIConfigStore;
@@ -166,6 +171,8 @@ export class RootStore {
   private _lastWalletIds: Set<string> | undefined = undefined;
   private _lastWalletStatus: number | undefined = undefined;
   private _walletListSyncGeneration = 0;
+  /** Prevents stacked repairs if selectChainAndPersist retriggers this reaction mid-flight. */
+  private _cardanoChainRepairInFlight = false;
   private _disposers: Array<() => void> = [];
 
   constructor() {
@@ -430,6 +437,57 @@ export class RootStore {
       { fireImmediately: true }
     );
     this._disposers.push(addressCacheReactionDisposer);
+
+    // Repair layer: recover from stale Cardano selection when the selected wallet cannot use Cardano.
+    this._disposers.push(
+      reaction(
+        () => {
+          if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+            return null;
+          }
+          const selected = this.keyRingStore.multiKeyStoreInfo.find(
+            (k) => k.selected
+          );
+          if (!selected) {
+            return null;
+          }
+          return {
+            chainId: this.chainStore.selectedChainId,
+            walletId: selected.meta?.["__id__"] || "",
+          };
+        },
+        (snap) => {
+          if (!snap?.walletId) {
+            return;
+          }
+          if (this._cardanoChainRepairInFlight) {
+            return;
+          }
+          const selected = this.keyRingStore.multiKeyStoreInfo.find(
+            (k) => k.selected
+          );
+          if (!selected || selected.meta?.["__id__"] !== snap.walletId) {
+            return;
+          }
+          if (!isCardanoChain(this.chainStore.current)) {
+            return;
+          }
+          if (walletSupportsCardano(selected)) {
+            return;
+          }
+          const fallback = getDefaultFallbackChainId(this.chainStore.chainInfos);
+          if (!fallback || fallback === this.chainStore.selectedChainId) {
+            return;
+          }
+          this._cardanoChainRepairInFlight = true;
+          void flowResult(
+            this.chainStore.selectChainAndPersist(fallback)
+          ).finally(() => {
+            this._cardanoChainRepairInFlight = false;
+          });
+        }
+      )
+    );
 
     this.accountStore = new AccountStore(
       window,

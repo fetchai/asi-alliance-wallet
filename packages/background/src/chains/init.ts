@@ -9,6 +9,7 @@ import {
   SwitchNetworkByChainIdMsg,
   AddNetworkAndSwitchMsg,
   SetSelectedChainMsg,
+  GetSelectedChainIdMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
@@ -19,6 +20,7 @@ export function init(router: Router, service: ChainsService): void {
   router.registerMessage(GetChainInfosWithoutEndpointsMsg);
   router.registerMessage(SuggestChainInfoMsg);
   router.registerMessage(SetSelectedChainMsg);
+  router.registerMessage(GetSelectedChainIdMsg);
   router.registerMessage(RemoveSuggestedChainInfoMsg);
   router.registerMessage(GetNetworkMsg);
   router.registerMessage(ListNetworksMsg);

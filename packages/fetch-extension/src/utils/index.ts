@@ -9,7 +9,12 @@ import {
 } from "../config.ui.var";
 import { formatAddress } from "./format";
 import { GroupEvent } from "./group-events";
-import { MultiKeyStoreInfoWithSelected } from "@keplr-wallet/background";
+import {
+  getDefaultFallbackChainId,
+  MultiKeyStoreInfoWithSelected,
+  walletSupportsCardano,
+} from "@keplr-wallet/background";
+import type { ChainInfo } from "@keplr-wallet/types";
 import { RegisterMode } from "@keplr-wallet/hooks";
 
 // translate the contact address into the address book name if it exists
@@ -132,15 +137,16 @@ export function isCardanoChain(
   return chain?.features?.includes("cardano") ?? false;
 }
 
-/** Minimal chain store surface for awaitable switch away from Cardano after add/import. */
+/** Minimal chain store surface for awaitable switch away from Cardano after add/import / account switch. */
 export type ChainStoreForCardanoAwaitableSwitch = {
   readonly current: { features?: string[] };
+  readonly chainInfos: Array<Pick<ChainInfo, "chainId" | "features">>;
   selectChainAndPersist(chainId: string): IterableIterator<unknown>;
 };
 
 /**
  * If the user is on Cardano but the wallet about to be selected (pre changeKeyRing) does not support
- * Cardano, switch to Fetchhub and persist. Call site must pass a deterministic `supportsCardano`.
+ * Cardano, switch using the same fallback policy as background (`getDefaultFallbackChainId`).
  */
 export async function ensureCompatibleChainForUpcomingWallet(
   chainStore: ChainStoreForCardanoAwaitableSwitch,
@@ -152,7 +158,37 @@ export async function ensureCompatibleChainForUpcomingWallet(
   if (options.supportsCardano) {
     return;
   }
-  await flowResult(chainStore.selectChainAndPersist(CHAIN_ID_FETCHHUB));
+  const fallback = getDefaultFallbackChainId(chainStore.chainInfos);
+  if (!fallback) {
+    return;
+  }
+  await flowResult(chainStore.selectChainAndPersist(fallback));
 }
 
-export { walletSupportsCardano } from "@keplr-wallet/background";
+/**
+ * Enforce background-aligned fallback before selecting a different keystore (manual switch, etc.).
+ */
+export async function ensureChainCompatibleBeforeSelectKeyStore(
+  chainStore: ChainStoreForCardanoAwaitableSwitch,
+  targetKeyStore: Parameters<typeof walletSupportsCardano>[0]
+): Promise<void> {
+  if (!isCardanoChain(chainStore.current)) {
+    return;
+  }
+  if (walletSupportsCardano(targetKeyStore)) {
+    return;
+  }
+  const fallback = getDefaultFallbackChainId(chainStore.chainInfos);
+  if (!fallback) {
+    return;
+  }
+  await flowResult(chainStore.selectChainAndPersist(fallback));
+}
+
+export { walletSupportsCardano };
+
+export {
+  requestKeyringSurfacesSyncBroadcast,
+  syncKeyringSurfacesFromBackground,
+  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+} from "./keyring-surfaces-sync";

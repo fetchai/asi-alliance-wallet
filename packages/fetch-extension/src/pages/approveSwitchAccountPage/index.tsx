@@ -14,8 +14,11 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
-import { isCardanoChain, walletSupportsCardano } from "../../utils";
+import { flowResult } from "mobx";
+import {
+  ensureChainCompatibleBeforeSelectKeyStore,
+  requestKeyringSurfacesSyncBroadcast,
+} from "../../utils";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -326,21 +329,16 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                   ) {
                     try {
                       accountSwitchStore.approve(address);
-                      keyRingStore.changeKeyRing(addressIndex);
-                      
-                      // Check if current chain is Cardano and new wallet doesn't support it
-                      const newKeyStore = keyRingStore.multiKeyStoreInfo[addressIndex];
-                      const isCardanoSupportedWallet =
-                        walletSupportsCardano(newKeyStore);
-                      const isCurrentChainCardano = isCardanoChain(
-                        chainStore.current
+                      const targetKeyStore =
+                        keyRingStore.multiKeyStoreInfo[addressIndex];
+                      await ensureChainCompatibleBeforeSelectKeyStore(
+                        chainStore,
+                        targetKeyStore
                       );
-                      
-                      // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
-                      if (isCurrentChainCardano && !isCardanoSupportedWallet) {
-                        chainStore.selectChain(CHAIN_ID_FETCHHUB);
-                        chainStore.saveLastViewChainId();
-                      }
+                      await flowResult(
+                        keyRingStore.changeKeyRing(addressIndex)
+                      );
+                      await requestKeyringSurfacesSyncBroadcast();
                       analyticsStore.logEvent("change_wallet_click");
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();

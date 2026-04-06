@@ -11,8 +11,12 @@ import { useNavigate } from "react-router";
 import { useNotification } from "@components/notification";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
-import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
-import { isCardanoChain, walletSupportsCardano } from "../../utils";
+import {
+  ensureChainCompatibleBeforeSelectKeyStore,
+  isCardanoChain,
+  requestKeyringSurfacesSyncBroadcast,
+  walletSupportsCardano,
+} from "../../utils";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import {
@@ -398,24 +402,14 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                         e.preventDefault();
                         loadingIndicator.setIsLoading("keyring", true);
                         try {
+                          await ensureChainCompatibleBeforeSelectKeyStore(
+                            chainStore,
+                            keyStore
+                          );
                           await keyRingStore.changeKeyRing(i);
                           analyticsStore.logEvent("change_wallet_click");
 
-                          // Check if current chain is Cardano and new wallet doesn't support it
-                          const isCardanoSupportedWallet =
-                            walletSupportsCardano(keyStore);
-                          const isCurrentChainCardano = isCardanoChain(
-                            chainStore.current
-                          );
-
-                          // Switch to fetchhub if current chain is Cardano but new wallet doesn't support it
-                          if (
-                            isCurrentChainCardano &&
-                            !isCardanoSupportedWallet
-                          ) {
-                            chainStore.selectChain(CHAIN_ID_FETCHHUB);
-                            chainStore.saveLastViewChainId();
-                          }
+                          await requestKeyringSurfacesSyncBroadcast();
                           loadingIndicator.setIsLoading("keyring", false);
                           chatStore.userDetailsStore.resetUser();
                           proposalStore.resetProposals();

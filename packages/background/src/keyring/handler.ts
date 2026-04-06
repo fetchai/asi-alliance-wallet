@@ -43,6 +43,7 @@ import {
   RestoreWalletMsg,
   GetKeyMsgFetchSigning,
   RefreshAccountList,
+  BroadcastKeyringSurfacesSyncMsg,
 } from "./messages";
 import { KeyRingService } from "./service";
 import { Bech32Address } from "@keplr-wallet/cosmos";
@@ -208,6 +209,11 @@ export const getHandler: (service: KeyRingService) => Handler = (
           env,
           msg as RefreshAccountList
         );
+      case BroadcastKeyringSurfacesSyncMsg.type():
+        return handleBroadcastKeyringSurfacesSyncMsg(service)(
+          env,
+          msg as BroadcastKeyringSurfacesSyncMsg
+        );
       default:
         throw new Error("Unknown msg type");
     }
@@ -227,6 +233,15 @@ const handleRefreshAccountListMsg: (
   service: KeyRingService
 ) => InternalHandler<RefreshAccountList> = (_service) => {
   return async (_env, _msg) => {
+    return true;
+  };
+};
+
+const handleBroadcastKeyringSurfacesSyncMsg: (
+  service: KeyRingService
+) => InternalHandler<BroadcastKeyringSurfacesSyncMsg> = (service) => {
+  return async (_env, _msg) => {
+    service.broadcastKeyringSurfacesSync();
     return true;
   };
 };

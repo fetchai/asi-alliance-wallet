@@ -27,6 +27,7 @@ import classNames from "classnames";
 import {
   ensureCompatibleChainForUpcomingWallet,
   getNextDefaultAccountName,
+  requestKeyringSurfacesSyncBroadcast,
   validateWalletName,
 } from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
@@ -508,6 +509,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                       BACKGROUND_PORT,
                       new RefreshAccountList()
                     );
+                    await requestKeyringSurfacesSyncBroadcast();
                   } catch (e) {
                     alert(e.message ? e.message : e.toString());
                     registerConfig.clear();
