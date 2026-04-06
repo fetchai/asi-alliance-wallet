@@ -58,6 +58,7 @@ import { trimAminoSignDoc } from "./amino-sign-doc";
 import { KeystoneService } from "../keystone";
 import { RequestICNSAdr36SignaturesMsg, SwitchAccountMsg } from "./messages";
 import { walletSupportsCardano } from "./keyring";
+import { getDefaultFallbackChainId } from "./default-chain";
 import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
@@ -1305,8 +1306,32 @@ Salt: ${salt}`;
       const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
       this.cardanoService.reset();
       this.cardanoRestoreByChainId.clear();
+      try {
+        const ks = this.keyRing.getCurrentKeyStore();
+        const currentChainId = await this.chainsService.getSelectedChain();
+        if (currentChainId && ks && !walletSupportsCardano(ks)) {
+          const chainInfo = await this.chainsService.getChainInfo(
+            currentChainId
+          );
+          const isCardano = chainInfo.features?.includes("cardano") ?? false;
+          if (isCardano) {
+            const chainInfos = await this.chainsService.getChainInfos();
+            const fallbackId = getDefaultFallbackChainId(chainInfos);
+            if (fallbackId) {
+              await this.chainsService.setSelectedChain(fallbackId);
+            }
+          }
+        }
+      } catch (e) {
+        console.error(
+          "[KeyRingService] Failed to align chain with wallet after key store change:",
+          e
+        );
+      }
       return result;
     } finally {
+      // Note: if fallback `setSelectedChain` ran above, it also dispatches
+      // `keystore-changed` — duplicate event is benign but can trigger extra UI refresh.
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,
         "keystore-changed",

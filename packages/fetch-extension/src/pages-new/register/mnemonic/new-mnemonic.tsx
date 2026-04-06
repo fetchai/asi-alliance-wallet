@@ -35,7 +35,11 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
+import {
+  ensureCompatibleChainForUpcomingWallet,
+  getNextDefaultAccountName,
+  validateWalletName,
+} from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RefreshAccountList } from "@keplr-wallet/background";
@@ -562,7 +566,8 @@ export const VerifyMnemonicModePage: FunctionComponent<{
       setRandomizedWords(words);
     }, [newMnemonicConfig.mnemonic]);
 
-    const { analyticsStore, keyRingStore, chainStore, accountStore } = useStore();
+    const { analyticsStore, keyRingStore, chainStore, accountStore } =
+      useStore();
 
     const handleClickFirstButton = (word: string, index: number) => {
       if (!clickedButtons.includes(index)) {
@@ -713,11 +718,18 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 chainStore.chainInfos,
                 accountStore
               );
-              // if we already have accounts, switch to the newly created account
+              // Add flow only: align chain before changeKeyRing so first keystore-changed uses Cosmos.
               if (registerConfig.mode !== "create") {
-                await keyRingStore.changeKeyRing(
-                  keyRingStore.multiKeyStoreInfo.length - 1
-                );
+                const mnemonicWords = newMnemonicConfig.mnemonic
+                  .trim()
+                  .split(/\s+/);
+                const supportsCardano = mnemonicWords.length === 24;
+                await ensureCompatibleChainForUpcomingWallet(chainStore, {
+                  supportsCardano,
+                });
+                const newWalletIndex =
+                  keyRingStore.multiKeyStoreInfo.length - 1;
+                await keyRingStore.changeKeyRing(newWalletIndex);
                 await new InExtensionMessageRequester().sendMessage(
                   BACKGROUND_PORT,
                   new RefreshAccountList()

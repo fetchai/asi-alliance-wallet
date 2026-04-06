@@ -1,3 +1,4 @@
+import { flowResult } from "mobx";
 import { NameAddress } from "@chatTypes";
 import {
   CHAIN_ID_DORADO,
@@ -131,5 +132,27 @@ export function isCardanoChain(
   return chain?.features?.includes("cardano") ?? false;
 }
 
-/** Re-exported from @keplr-wallet/background (single source of truth for Cardano wallet support). */
+/** Minimal chain store surface for awaitable switch away from Cardano after add/import. */
+export type ChainStoreForCardanoAwaitableSwitch = {
+  readonly current: { features?: string[] };
+  selectChainAndPersist(chainId: string): IterableIterator<unknown>;
+};
+
+/**
+ * If the user is on Cardano but the wallet about to be selected (pre changeKeyRing) does not support
+ * Cardano, switch to Fetchhub and persist. Call site must pass a deterministic `supportsCardano`.
+ */
+export async function ensureCompatibleChainForUpcomingWallet(
+  chainStore: ChainStoreForCardanoAwaitableSwitch,
+  options: { supportsCardano: boolean }
+): Promise<void> {
+  if (!isCardanoChain(chainStore.current)) {
+    return;
+  }
+  if (options.supportsCardano) {
+    return;
+  }
+  await flowResult(chainStore.selectChainAndPersist(CHAIN_ID_FETCHHUB));
+}
+
 export { walletSupportsCardano } from "@keplr-wallet/background";

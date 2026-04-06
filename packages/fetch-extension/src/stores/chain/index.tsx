@@ -171,6 +171,22 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     this.requester.sendMessage(BACKGROUND_PORT, msg);
   }
 
+  /**
+   * Awaitable network switch: local selection, background SetSelectedChain, then persist last-view chain.
+   * Prefer this (with MobX flow/flowResult) before changeKeyRing in add/import so keystore-changed handlers
+   * that call getKey already see a non-Cardano chain, avoiding Cardano-24w race with a newly added wallet.
+   */
+  @flow
+  *selectChainAndPersist(chainId: string) {
+    if (this._isInitializing) {
+      this.deferChainIdSelect = chainId;
+    }
+    this._selectedChainId = chainId;
+    const msg = new SetSelectedChainMsg(chainId);
+    yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    yield this.saveLastViewChainId();
+  }
+
   @action
   toggleShowTestnet(value: boolean) {
     this._showTestnet = value;

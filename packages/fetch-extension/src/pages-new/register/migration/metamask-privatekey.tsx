@@ -15,7 +15,11 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
+import {
+  ensureCompatibleChainForUpcomingWallet,
+  getNextDefaultAccountName,
+  validateWalletName,
+} from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RefreshAccountList } from "@keplr-wallet/background";
@@ -46,7 +50,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
     // initially sets the password error as true for create mode
     registerConfig.mode === "create" ? true : false
   );
-  const { keyRingStore } = useStore();
+  const { keyRingStore, chainStore } = useStore();
 
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [accountNameValidationError, setAccountNameValidationError] =
@@ -108,9 +112,14 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
             {},
             selectedNetworks
           );
-          await keyRingStore.changeKeyRing(
-            keyRingStore.multiKeyStoreInfo.length - 1
-          );
+          // Add/import only: align chain before changeKeyRing so keystore-changed/getKey is not on Cardano.
+          if (registerConfig.mode !== "create") {
+            await ensureCompatibleChainForUpcomingWallet(chainStore, {
+              supportsCardano: false,
+            });
+          }
+          const newWalletIndex = keyRingStore.multiKeyStoreInfo.length - 1;
+          await keyRingStore.changeKeyRing(newWalletIndex);
           await new InExtensionMessageRequester().sendMessage(
             BACKGROUND_PORT,
             new RefreshAccountList()
