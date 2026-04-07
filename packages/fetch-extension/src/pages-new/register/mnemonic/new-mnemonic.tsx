@@ -39,6 +39,7 @@ import {
   ensureCompatibleChainForUpcomingWallet,
   getNextDefaultAccountName,
   requestKeyringSurfacesSyncBroadcast,
+  supportsCardanoFromMnemonicWordCount,
   validateWalletName,
 } from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
@@ -724,7 +725,9 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 const mnemonicWords = newMnemonicConfig.mnemonic
                   .trim()
                   .split(/\s+/);
-                const supportsCardano = mnemonicWords.length === 24;
+                const supportsCardano = supportsCardanoFromMnemonicWordCount(
+                  mnemonicWords.length
+                );
                 await ensureCompatibleChainForUpcomingWallet(chainStore, {
                   supportsCardano,
                 });

@@ -101,9 +101,9 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
           return;
         }
         setAddressIndex(index);
-          analyticsStore.logEvent("Account switch suggested", {
-            chainId: chainStore.current.chainId,
-          });
+        analyticsStore.logEvent("Account switch suggested", {
+          chainId: chainStore.current.chainId,
+        });
         setIsLoadingPlaceholder(false);
       };
 
@@ -320,48 +320,188 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                 onClick={async (e: any) => {
                   e.preventDefault();
 
-                  const address =
+                  const targetAddress =
                     accountSwitchStore.waitingSuggestedAccount?.data.address;
                   if (
-                    address !== undefined &&
-                    addressIndex !== undefined &&
-                    addressIndex >= 0
+                    targetAddress === undefined ||
+                    addressIndex === undefined ||
+                    addressIndex < 0 ||
+                    hasLoadError
                   ) {
+                    return;
+                  }
+
+                  let localSwitchCompleted = false;
+                  const previousChainId = chainStore.selectedChainId;
+
+                  try {
+                    await flowResult(keyRingStore.refreshMultiKeyStoreInfo());
+
+                    const requester = new InExtensionMessageRequester();
+                    const listResult = await requester.sendMessage(
+                      BACKGROUND_PORT,
+                      new ListAccountsMsg()
+                    );
+
+                    if (listResult.error) {
+                      notification.push({
+                        placement: "top-center",
+                        type: "danger",
+                        duration: 4,
+                        content: listResult.error,
+                        canDelete: true,
+                        transition: { duration: 0.25 },
+                      });
+                      return;
+                    }
+
+                    const isEvm =
+                      chainStore.current.features?.includes("evm") ?? false;
+                    const addresses = listResult.accounts.map((account) => {
+                      if (isEvm) {
+                        return account.EVMAddress;
+                      }
+                      return account.bech32Address;
+                    });
+
+                    const resolvedIndex = addresses.findIndex(
+                      (a) => a === targetAddress
+                    );
+                    if (resolvedIndex < 0) {
+                      notification.push({
+                        placement: "top-center",
+                        type: "danger",
+                        duration: 4,
+                        content:
+                          "This address is no longer in the wallet list. Reject and try again.",
+                        canDelete: true,
+                        transition: { duration: 0.25 },
+                      });
+                      return;
+                    }
+
+                    if (resolvedIndex >= keyRingStore.multiKeyStoreInfo.length) {
+                      notification.push({
+                        placement: "top-center",
+                        type: "danger",
+                        duration: 4,
+                        content:
+                          "Wallet list out of sync. Reject and try again.",
+                        canDelete: true,
+                        transition: { duration: 0.25 },
+                      });
+                      return;
+                    }
+
+                    const targetKeyStore =
+                      keyRingStore.multiKeyStoreInfo[resolvedIndex];
+                    if (addresses[resolvedIndex] !== targetAddress) {
+                      return;
+                    }
+
                     try {
-                      accountSwitchStore.approve(address);
-                      const targetKeyStore =
-                        keyRingStore.multiKeyStoreInfo[addressIndex];
                       await ensureChainCompatibleBeforeSelectKeyStore(
                         chainStore,
                         targetKeyStore
                       );
+                    } catch (alignErr) {
+                      console.error(
+                        "[ApproveSwitchAccount] chain compatibility failed:",
+                        alignErr
+                      );
+                      notification.push({
+                        placement: "top-center",
+                        type: "danger",
+                        duration: 4,
+                        content:
+                          alignErr instanceof Error
+                            ? alignErr.message
+                            : String(alignErr),
+                        canDelete: true,
+                        transition: { duration: 0.25 },
+                      });
+                      return;
+                    }
+
+                    const chainMovedForCompatibility =
+                      chainStore.selectedChainId !== previousChainId;
+
+                    try {
                       await flowResult(
-                        keyRingStore.changeKeyRing(addressIndex)
+                        keyRingStore.changeKeyRing(resolvedIndex)
                       );
-                      await requestKeyringSurfacesSyncBroadcast();
-                      analyticsStore.logEvent("change_wallet_click");
-                      chatStore.userDetailsStore.resetUser();
-                      proposalStore.resetProposals();
-                      chatStore.messagesStore.resetChatList();
-                      chatStore.messagesStore.setIsChatSubscriptionActive(
-                        false
+                    } catch (keyRingErr) {
+                      if (chainMovedForCompatibility) {
+                        try {
+                          await flowResult(
+                            chainStore.selectChainAndPersist(previousChainId)
+                          );
+                        } catch (rbErr) {
+                          console.error(
+                            "[ApproveSwitchAccount] chain rollback after changeKeyRing failure:",
+                            rbErr
+                          );
+                        }
+                      }
+                      console.error(
+                        "[ApproveSwitchAccount] changeKeyRing failed:",
+                        keyRingErr
                       );
-                      messageAndGroupListenerUnsubscribe();
-                    } catch (error) {
-                      console.log(
-                        "error while trying to switch account",
-                        error
+                      notification.push({
+                        placement: "top-center",
+                        type: "danger",
+                        duration: 4,
+                        content:
+                          keyRingErr instanceof Error
+                            ? keyRingErr.message
+                            : String(keyRingErr),
+                        canDelete: true,
+                        transition: { duration: 0.25 },
+                      });
+                      return;
+                    }
+
+                    await requestKeyringSurfacesSyncBroadcast();
+                    localSwitchCompleted = true;
+
+                    analyticsStore.logEvent("change_wallet_click");
+                    chatStore.userDetailsStore.resetUser();
+                    proposalStore.resetProposals();
+                    chatStore.messagesStore.resetChatList();
+                    chatStore.messagesStore.setIsChatSubscriptionActive(false);
+                    messageAndGroupListenerUnsubscribe();
+
+                    await flowResult(
+                      accountSwitchStore.approve(targetAddress)
+                    );
+
+                    if (
+                      interactionInfo.interaction &&
+                      !interactionInfo.interactionInternal
+                    ) {
+                      window.close();
+                    } else {
+                      navigate("/");
+                    }
+                  } catch (error) {
+                    console.error(
+                      "[ApproveSwitchAccount] switch flow failed:",
+                      error
+                    );
+                    notification.push({
+                      placement: "top-center",
+                      type: "danger",
+                      duration: 4,
+                      content:
+                        error instanceof Error ? error.message : String(error),
+                      canDelete: true,
+                      transition: { duration: 0.25 },
+                    });
+                    if (localSwitchCompleted) {
+                      console.warn(
+                        "[ApproveSwitchAccount] Local wallet/chain switch finished but approve failed; extension state left as switched; dApp did not receive approval."
                       );
                     }
-                  }
-
-                  if (
-                    interactionInfo.interaction &&
-                    !interactionInfo.interactionInternal
-                  ) {
-                    window.close();
-                  } else {
-                    navigate("/");
                   }
                 }}
                 text={<FormattedMessage id="chain.suggested.button.approve" />}

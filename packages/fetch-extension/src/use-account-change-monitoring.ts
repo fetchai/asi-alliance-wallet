@@ -1,3 +1,8 @@
+/**
+ * Account / keyring refresh listens on both KEYRING_SURFACES_SYNC and legacy
+ * RefreshAccountList plus background `keystore-changed`; extra listeners can mean
+ * duplicate UI refresh — consolidate when maintaining this area (see plan / tech debt).
+ */
 import { useEffect, useState } from "react";
 import {
   KEYRING_SURFACES_SYNC_MESSAGE_TYPE,

@@ -67,6 +67,31 @@ export function walletSupportsCardano(
   );
 }
 
+/**
+ Keystore must leave Cardano networks: known non–24-word mnemonic, or non-mnemonic types
+ that do not support Cardano via this wallet. For mnemonic without `mnemonicLength` in meta,
+ returns false (indeterminate) so UI/alignment does not force fallback until post-unlock
+ migration runs (see `calculateMnemonicLengthInBackground`), matching `getKeysForCardano`.
+ */
+export function walletShouldLeaveCardanoChain(
+  ks:
+    | { type?: string; meta?: Record<string, unknown> }
+    | null
+    | undefined
+): boolean {
+  if (walletSupportsCardano(ks)) {
+    return false;
+  }
+  if (ks?.type === "mnemonic") {
+    const len = ks.meta?.["mnemonicLength"];
+    if (len == null || len === "") {
+      return false;
+    }
+    return String(len) !== "24";
+  }
+  return true;
+}
+
 const KeyStoreKey = "key-store";
 const KeyMultiStoreKey = "key-multi-store";
 const ErrUndefinedLedgerKeeper = new Error("Ledger keeper is not defined");
@@ -745,8 +770,7 @@ export class KeyRing {
       .slice(2)}`;
     this.cacheManager.setPassword(password);
     this.clearCardanoMemoryCache();
-    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
-    this.calculateMnemonicLengthInBackground(password);
+    await this.calculateMnemonicLengthInBackground(password);
 
     if (!this.cacheMigrationDoneThisSession) {
       try {

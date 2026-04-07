@@ -28,6 +28,7 @@ import {
   ensureCompatibleChainForUpcomingWallet,
   getNextDefaultAccountName,
   requestKeyringSurfacesSyncBroadcast,
+  supportsCardanoFromMnemonicWordCount,
   validateWalletName,
 } from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
@@ -494,7 +495,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         .join(" ")
                         .trim()
                         .split(/\s+/);
-                      supportsCardano = mnemonicWords.length === 24;
+                      supportsCardano = supportsCardanoFromMnemonicWordCount(
+                        mnemonicWords.length
+                      );
                     }
                     // Add/import only: align chain before changeKeyRing so keystore-changed/getKey is not on Cardano.
                     if (registerConfig.mode !== "create") {

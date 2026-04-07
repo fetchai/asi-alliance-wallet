@@ -12,6 +12,7 @@ import { GroupEvent } from "./group-events";
 import {
   getDefaultFallbackChainId,
   MultiKeyStoreInfoWithSelected,
+  walletShouldLeaveCardanoChain,
   walletSupportsCardano,
 } from "@keplr-wallet/background";
 import type { ChainInfo } from "@keplr-wallet/types";
@@ -137,6 +138,11 @@ export function isCardanoChain(
   return chain?.features?.includes("cardano") ?? false;
 }
 
+/** Pre-keystore UI: word count that will yield Cardano-capable mnemonic after import (matches persisted `mnemonicLength` / `walletSupportsCardano`). */
+export function supportsCardanoFromMnemonicWordCount(wordCount: number): boolean {
+  return wordCount === 24;
+}
+
 /** Minimal chain store surface for awaitable switch away from Cardano after add/import / account switch. */
 export type ChainStoreForCardanoAwaitableSwitch = {
   readonly current: { features?: string[] };
@@ -147,6 +153,7 @@ export type ChainStoreForCardanoAwaitableSwitch = {
 /**
  * If the user is on Cardano but the wallet about to be selected (pre changeKeyRing) does not support
  * Cardano, switch using the same fallback policy as background (`getDefaultFallbackChainId`).
+ * Prefer that helper for all add/import/switch/delete flows — avoid hard-coding a default chain id in UI.
  */
 export async function ensureCompatibleChainForUpcomingWallet(
   chainStore: ChainStoreForCardanoAwaitableSwitch,
@@ -167,6 +174,7 @@ export async function ensureCompatibleChainForUpcomingWallet(
 
 /**
  * Enforce background-aligned fallback before selecting a different keystore (manual switch, etc.).
+ * Uses `getDefaultFallbackChainId` only — keep policy consistent with background alignment.
  */
 export async function ensureChainCompatibleBeforeSelectKeyStore(
   chainStore: ChainStoreForCardanoAwaitableSwitch,
@@ -175,7 +183,7 @@ export async function ensureChainCompatibleBeforeSelectKeyStore(
   if (!isCardanoChain(chainStore.current)) {
     return;
   }
-  if (walletSupportsCardano(targetKeyStore)) {
+  if (!walletShouldLeaveCardanoChain(targetKeyStore)) {
     return;
   }
   const fallback = getDefaultFallbackChainId(chainStore.chainInfos);
@@ -185,7 +193,7 @@ export async function ensureChainCompatibleBeforeSelectKeyStore(
   await flowResult(chainStore.selectChainAndPersist(fallback));
 }
 
-export { walletSupportsCardano };
+export { walletShouldLeaveCardanoChain, walletSupportsCardano };
 
 export {
   requestKeyringSurfacesSyncBroadcast,

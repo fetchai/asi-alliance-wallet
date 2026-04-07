@@ -211,6 +211,7 @@ export class GetSelectedChainIdMsg extends Message<{ chainId: string }> {
     // noop
   }
 
+  // Exposes selected chain id to callers; keep `approveExternal` aligned with product/security review (fingerprinting surface).
   override approveExternal(): boolean {
     return true;
   }

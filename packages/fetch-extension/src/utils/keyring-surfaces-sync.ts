@@ -4,7 +4,7 @@ import {
   GetSelectedChainIdMsg,
   KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
   getDefaultFallbackChainId,
-  walletSupportsCardano,
+  walletShouldLeaveCardanoChain,
 } from "@keplr-wallet/background";
 import type { ChainInfo } from "@keplr-wallet/types";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
@@ -31,12 +31,12 @@ function chainInfoIsCardano(
 function resolveTargetChainIdForSync(
   chainInfos: Array<Pick<ChainInfo, "chainId" | "features">>,
   backgroundChainId: string,
-  selected: Parameters<typeof walletSupportsCardano>[0] | undefined
+  selected: Parameters<typeof walletShouldLeaveCardanoChain>[0] | undefined
 ): string {
   if (
     selected &&
     chainInfoIsCardano(chainInfos, backgroundChainId) &&
-    !walletSupportsCardano(selected)
+    walletShouldLeaveCardanoChain(selected)
   ) {
     const fb = getDefaultFallbackChainId(chainInfos);
     return fb || backgroundChainId;

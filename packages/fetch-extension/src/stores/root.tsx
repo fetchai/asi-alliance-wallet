@@ -4,7 +4,7 @@ import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
 import {
   getDefaultFallbackChainId,
   KeyRingStatus,
-  walletSupportsCardano,
+  walletShouldLeaveCardanoChain,
 } from "@keplr-wallet/background";
 import { setCacheManager } from "@keplr-wallet/common";
 import { addressCacheStore } from "../utils/address-cache-store";
@@ -438,7 +438,7 @@ export class RootStore {
     );
     this._disposers.push(addressCacheReactionDisposer);
 
-    // Repair layer: recover from stale Cardano selection when the selected wallet cannot use Cardano.
+    // Repair layer: recover from stale Cardano selection when the selected wallet must leave Cardano.
     this._disposers.push(
       reaction(
         () => {
@@ -472,7 +472,7 @@ export class RootStore {
           if (!isCardanoChain(this.chainStore.current)) {
             return;
           }
-          if (walletSupportsCardano(selected)) {
+          if (!walletShouldLeaveCardanoChain(selected)) {
             return;
           }
           const fallback = getDefaultFallbackChainId(this.chainStore.chainInfos);
@@ -480,12 +480,18 @@ export class RootStore {
             return;
           }
           this._cardanoChainRepairInFlight = true;
-          void flowResult(
-            this.chainStore.selectChainAndPersist(fallback)
-          ).finally(() => {
-            this._cardanoChainRepairInFlight = false;
-          });
-        }
+          void flowResult(this.chainStore.selectChainAndPersist(fallback))
+            .catch((e) => {
+              console.error(
+                "[RootStore] Cardano chain repair (select fallback) failed:",
+                e
+              );
+            })
+            .finally(() => {
+              this._cardanoChainRepairInFlight = false;
+            });
+        },
+        { fireImmediately: true }
       )
     );
 

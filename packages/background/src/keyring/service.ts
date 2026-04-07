@@ -61,7 +61,10 @@ import {
   RequestICNSAdr36SignaturesMsg,
   SwitchAccountMsg,
 } from "./messages";
-import { walletSupportsCardano } from "./keyring";
+import {
+  walletShouldLeaveCardanoChain,
+  walletSupportsCardano,
+} from "./keyring";
 import { getDefaultFallbackChainId } from "./default-chain";
 import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
@@ -329,7 +332,7 @@ export class KeyRingService {
     try {
       const ks = this.keyRing.getCurrentKeyStore();
       const currentChainId = await this.chainsService.getSelectedChain();
-      if (currentChainId && ks && !walletSupportsCardano(ks)) {
+      if (currentChainId && ks && walletShouldLeaveCardanoChain(ks)) {
         const chainInfo = await this.chainsService.getChainInfo(
           currentChainId
         );
@@ -662,7 +665,7 @@ export class KeyRingService {
     ks: any,
     chainId?: string
   ): Promise<void> {
-    if (!walletSupportsCardano(ks)) {
+    if (walletShouldLeaveCardanoChain(ks)) {
       throw new Error(CARDANO_ENSURE_MESSAGE.MNEMONIC_24);
     }
     try {
