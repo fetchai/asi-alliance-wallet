@@ -90,4 +90,47 @@ describe("rollbackLocalStateAfterFailedApproveSwitch", () => {
       })
     ).rejects.toThrow(/resolve previous wallet/);
   });
+
+  it("restores wallet and chain after approve fails post local alignment", async () => {
+    const multi = [
+      { selected: true, meta: { __id__: "wallet-prev" } },
+      { selected: false, meta: { __id__: "wallet-next" } },
+    ];
+    let selectedChainId = "cardano-preview";
+
+    const changeKeyRing = jest.fn((i: number) => {
+      multi.forEach((k, idx) => {
+        k.selected = idx === i;
+      });
+      return (function* () {
+        yield undefined;
+      })();
+    });
+    const selectChainAndPersist = jest.fn((id: string) => {
+      selectedChainId = id;
+      return (function* () {
+        yield undefined;
+      })();
+    });
+
+    // Local alignment and switch already happened before approve.
+    multi[0].selected = false;
+    multi[1].selected = true;
+    selectedChainId = "fetchhub-4";
+
+    await rollbackLocalStateAfterFailedApproveSwitch({
+      multiKeyStoreInfo: multi as any,
+      previousWalletId: "wallet-prev",
+      previousKeyRingIndex: 0,
+      previousChainId: "cardano-preview",
+      getSelectedChainId: () => selectedChainId,
+      changeKeyRing,
+      selectChainAndPersist,
+    });
+
+    expect(multi[0].selected).toBe(true);
+    expect(multi[1].selected).toBe(false);
+    expect(selectedChainId).toBe("cardano-preview");
+    expect(requestKeyringSurfacesSyncBroadcast).toHaveBeenCalled();
+  });
 });

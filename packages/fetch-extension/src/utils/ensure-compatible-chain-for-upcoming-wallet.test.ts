@@ -93,3 +93,45 @@ describe("ensureChainCompatibleBeforeSelectKeyStore", () => {
     expect(selectChainAndPersist).not.toHaveBeenCalled();
   });
 });
+
+describe("import flow regression (Cardano 24w -> import 12w)", () => {
+  it("switches to fallback before auto-selecting imported wallet", async () => {
+    const events: string[] = [];
+    const state = {
+      chainId: "cardano-preview",
+      selectedWalletId: "wallet-24w",
+    };
+
+    const selectChainAndPersist = jest.fn((id: string) => {
+      events.push(`switch-chain:${id}`);
+      state.chainId = id;
+      return (function* () {
+        yield undefined;
+      })();
+    });
+    const changeKeyRing = jest.fn(async (walletId: string) => {
+      events.push(`change-wallet:${walletId}`);
+      state.selectedWalletId = walletId;
+    });
+
+    await ensureCompatibleChainForUpcomingWallet(
+      {
+        current: { features: ["cardano"] },
+        chainInfos: [
+          { chainId: "cardano-preview", features: ["cardano"] },
+          { chainId: PREFERRED_DEFAULT_CHAIN_ID, features: ["cosmos"] },
+        ],
+        selectChainAndPersist,
+      },
+      { supportsCardano: false }
+    );
+    await changeKeyRing("wallet-12w");
+
+    expect(events).toEqual([
+      `switch-chain:${PREFERRED_DEFAULT_CHAIN_ID}`,
+      "change-wallet:wallet-12w",
+    ]);
+    expect(state.chainId).toBe(PREFERRED_DEFAULT_CHAIN_ID);
+    expect(state.selectedWalletId).toBe("wallet-12w");
+  });
+});
