@@ -1,4 +1,3 @@
-import { flowResult } from "mobx";
 import { NameAddress } from "@chatTypes";
 import {
   CHAIN_ID_DORADO,
@@ -10,12 +9,10 @@ import {
 import { formatAddress } from "./format";
 import { GroupEvent } from "./group-events";
 import {
-  getDefaultFallbackChainId,
   MultiKeyStoreInfoWithSelected,
   walletShouldLeaveCardanoChain,
   walletSupportsCardano,
 } from "@keplr-wallet/background";
-import type { ChainInfo } from "@keplr-wallet/types";
 import { RegisterMode } from "@keplr-wallet/hooks";
 
 // translate the contact address into the address book name if it exists
@@ -131,67 +128,18 @@ export function isFeatureAvailable(chainId: string): boolean {
   ].includes(chainId);
 }
 
-/** True when the chain has the Cardano feature (cardano-preview, cardano-preprod, cardano-mainnet, etc.). Must match background: chain.features?.includes("cardano"). */
-export function isCardanoChain(
-  chain: { features?: string[] } | null | undefined
-): boolean {
-  return chain?.features?.includes("cardano") ?? false;
-}
+export { isCardanoChain } from "./is-cardano-chain";
 
 /** Pre-keystore UI: word count that will yield Cardano-capable mnemonic after import (matches persisted `mnemonicLength` / `walletSupportsCardano`). */
 export function supportsCardanoFromMnemonicWordCount(wordCount: number): boolean {
   return wordCount === 24;
 }
 
-/** Minimal chain store surface for awaitable switch away from Cardano after add/import / account switch. */
-export type ChainStoreForCardanoAwaitableSwitch = {
-  readonly current: { features?: string[] };
-  readonly chainInfos: Array<Pick<ChainInfo, "chainId" | "features">>;
-  selectChainAndPersist(chainId: string): IterableIterator<unknown>;
-};
-
-/**
- * If the user is on Cardano but the wallet about to be selected (pre changeKeyRing) does not support
- * Cardano, switch using the same fallback policy as background (`getDefaultFallbackChainId`).
- * Prefer that helper for all add/import/switch/delete flows — avoid hard-coding a default chain id in UI.
- */
-export async function ensureCompatibleChainForUpcomingWallet(
-  chainStore: ChainStoreForCardanoAwaitableSwitch,
-  options: { supportsCardano: boolean }
-): Promise<void> {
-  if (!isCardanoChain(chainStore.current)) {
-    return;
-  }
-  if (options.supportsCardano) {
-    return;
-  }
-  const fallback = getDefaultFallbackChainId(chainStore.chainInfos);
-  if (!fallback) {
-    return;
-  }
-  await flowResult(chainStore.selectChainAndPersist(fallback));
-}
-
-/**
- * Enforce background-aligned fallback before selecting a different keystore (manual switch, etc.).
- * Uses `getDefaultFallbackChainId` only — keep policy consistent with background alignment.
- */
-export async function ensureChainCompatibleBeforeSelectKeyStore(
-  chainStore: ChainStoreForCardanoAwaitableSwitch,
-  targetKeyStore: Parameters<typeof walletSupportsCardano>[0]
-): Promise<void> {
-  if (!isCardanoChain(chainStore.current)) {
-    return;
-  }
-  if (!walletShouldLeaveCardanoChain(targetKeyStore)) {
-    return;
-  }
-  const fallback = getDefaultFallbackChainId(chainStore.chainInfos);
-  if (!fallback) {
-    return;
-  }
-  await flowResult(chainStore.selectChainAndPersist(fallback));
-}
+export {
+  ensureCompatibleChainForUpcomingWallet,
+  ensureChainCompatibleBeforeSelectKeyStore,
+  type ChainStoreForCardanoAwaitableSwitch,
+} from "./cardano-awaitable-alignment";
 
 export { walletShouldLeaveCardanoChain, walletSupportsCardano };
 

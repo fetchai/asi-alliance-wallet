@@ -208,6 +208,30 @@ const extensionConfig = () => {
       alias: {
         ...commonResolve().alias,
         ...altResolve().alias,
+        "@keplr-wallet/background/build/messaging": path.resolve(
+          __dirname,
+          "../background/src/messaging"
+        ),
+        "@keplr-wallet/background/build/messaging/types": path.resolve(
+          __dirname,
+          "../background/src/messaging/types.ts"
+        ),
+        "@keplr-wallet/background/build/messaging/constants": path.resolve(
+          __dirname,
+          "../background/src/messaging/constants.ts"
+        ),
+        "@keplr-wallet/background/src/ledger/types": path.resolve(
+          __dirname,
+          "../background/src/ledger/types.ts"
+        ),
+        "@keplr-wallet/background/build/ledger/types": path.resolve(
+          __dirname,
+          "../background/src/ledger/types.ts"
+        ),
+        "@keplr-wallet/background/src/auto-lock-account": path.resolve(
+          __dirname,
+          "../background/src/auto-lock-account/index.ts"
+        ),
         crypto: require.resolve("crypto-browserify"),
       },
       fallback: {

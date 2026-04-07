@@ -19,6 +19,7 @@ import {
   ensureChainCompatibleBeforeSelectKeyStore,
   requestKeyringSurfacesSyncBroadcast,
 } from "../../utils";
+import { rollbackLocalStateAfterFailedApproveSwitch } from "../../utils/approve-switch-rollback";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -331,7 +332,6 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     return;
                   }
 
-                  let localSwitchCompleted = false;
                   const previousChainId = chainStore.selectedChainId;
 
                   try {
@@ -399,6 +399,15 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                       return;
                     }
 
+                    const previousWalletId = String(
+                      keyRingStore.multiKeyStoreInfo.find((k) => k.selected)
+                        ?.meta?.["__id__"] ?? ""
+                    );
+                    const previousKeyRingIndex =
+                      keyRingStore.multiKeyStoreInfo.findIndex(
+                        (k) => k.selected
+                      );
+
                     try {
                       await ensureChainCompatibleBeforeSelectKeyStore(
                         chainStore,
@@ -462,7 +471,6 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     }
 
                     await requestKeyringSurfacesSyncBroadcast();
-                    localSwitchCompleted = true;
 
                     analyticsStore.logEvent("change_wallet_click");
                     chatStore.userDetailsStore.resetUser();
@@ -471,9 +479,55 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     chatStore.messagesStore.setIsChatSubscriptionActive(false);
                     messageAndGroupListenerUnsubscribe();
 
-                    await flowResult(
-                      accountSwitchStore.approve(targetAddress)
-                    );
+                    try {
+                      await flowResult(
+                        accountSwitchStore.approve(targetAddress)
+                      );
+                    } catch (approveErr) {
+                      console.error(
+                        "[ApproveSwitchAccount] approve failed:",
+                        approveErr
+                      );
+                      const approveMessage =
+                        approveErr instanceof Error
+                          ? approveErr.message
+                          : String(approveErr);
+                      try {
+                        await rollbackLocalStateAfterFailedApproveSwitch({
+                          multiKeyStoreInfo: keyRingStore.multiKeyStoreInfo,
+                          previousWalletId,
+                          previousKeyRingIndex,
+                          previousChainId,
+                          getSelectedChainId: () => chainStore.selectedChainId,
+                          changeKeyRing: (i) => keyRingStore.changeKeyRing(i),
+                          selectChainAndPersist: (id) =>
+                            chainStore.selectChainAndPersist(id),
+                        });
+                        notification.push({
+                          placement: "top-center",
+                          type: "danger",
+                          duration: 6,
+                          content: `${approveMessage} Your wallet and network were restored because the dApp did not receive approval.`,
+                          canDelete: true,
+                          transition: { duration: 0.25 },
+                        });
+                      } catch (rollbackErr) {
+                        console.error(
+                          "[ApproveSwitchAccount] rollback after failed approve:",
+                          rollbackErr
+                        );
+                        notification.push({
+                          placement: "top-center",
+                          type: "danger",
+                          duration: 8,
+                          content:
+                            "Account switch failed and automatic rollback failed. The extension may not match the dApp — disconnect and try again.",
+                          canDelete: true,
+                          transition: { duration: 0.25 },
+                        });
+                      }
+                      return;
+                    }
 
                     if (
                       interactionInfo.interaction &&
@@ -497,11 +551,6 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                       canDelete: true,
                       transition: { duration: 0.25 },
                     });
-                    if (localSwitchCompleted) {
-                      console.warn(
-                        "[ApproveSwitchAccount] Local wallet/chain switch finished but approve failed; extension state left as switched; dApp did not receive approval."
-                      );
-                    }
                   }
                 }}
                 text={<FormattedMessage id="chain.suggested.button.approve" />}

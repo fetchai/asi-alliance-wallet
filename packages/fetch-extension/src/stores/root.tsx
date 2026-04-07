@@ -1,11 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { ChainStore } from "./chain";
 import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
-import {
-  getDefaultFallbackChainId,
-  KeyRingStatus,
-  walletShouldLeaveCardanoChain,
-} from "@keplr-wallet/background";
+import { KeyRingStatus } from "@keplr-wallet/background";
 import { setCacheManager } from "@keplr-wallet/common";
 import { addressCacheStore } from "../utils/address-cache-store";
 import {
@@ -81,7 +77,7 @@ import { ExtensionAnalyticsClient } from "../analytics";
 import { autorun, flowResult, reaction, runInAction } from "mobx";
 import { AddressCacheById } from "../utils/address-cache-store";
 import { AddressCacheSyncManager } from "./address-cache-sync-manager";
-import { isCardanoChain } from "../utils";
+import { getCardanoChainRepairFallbackIfStale } from "../utils/cardano-chain-repair";
 
 export class RootStore {
   public readonly uiConfigStore: UIConfigStore;
@@ -457,26 +453,16 @@ export class RootStore {
           };
         },
         (snap) => {
-          if (!snap?.walletId) {
-            return;
-          }
           if (this._cardanoChainRepairInFlight) {
             return;
           }
-          const selected = this.keyRingStore.multiKeyStoreInfo.find(
-            (k) => k.selected
+          const fallback = getCardanoChainRepairFallbackIfStale(
+            snap ?? undefined,
+            this.keyRingStore.multiKeyStoreInfo,
+            this.chainStore.current,
+            this.chainStore.chainInfos
           );
-          if (!selected || selected.meta?.["__id__"] !== snap.walletId) {
-            return;
-          }
-          if (!isCardanoChain(this.chainStore.current)) {
-            return;
-          }
-          if (!walletShouldLeaveCardanoChain(selected)) {
-            return;
-          }
-          const fallback = getDefaultFallbackChainId(this.chainStore.chainInfos);
-          if (!fallback || fallback === this.chainStore.selectedChainId) {
+          if (!fallback) {
             return;
           }
           this._cardanoChainRepairInFlight = true;

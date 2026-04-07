@@ -3,6 +3,16 @@
   "version": "0.12.12",
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./cardano-chain-policy": {
+      "types": "./build/keyring/cardano-chain-policy.d.ts",
+      "default": "./build/keyring/cardano-chain-policy.js"
+    }
+  },
   "author": "chainapsis",
   "license": "Apache-2.0",
   "publishConfig": {
