@@ -3,9 +3,15 @@ import { CardanoService } from "./service";
 import { of } from "rxjs";
 
 jest.mock("@keplr-wallet/cardano", () => {
-  const actual = jest.requireActual("@keplr-wallet/cardano");
   return {
-    ...actual,
+    CardanoKeyRing: class {},
+    CardanoWalletManager: class {},
+    createObservableTransactionsByAddressesProvider: jest.fn(),
+    createTxHistoryLoader: jest.fn(),
+    parseAssetId: jest.fn((assetId: string) => ({
+      policyId: assetId.slice(0, 56),
+      assetName: assetId.slice(56),
+    })),
     getTxInputsValueAndAddress: jest.fn(async () => {
       throw new Error("input_resolution_failed");
     }),

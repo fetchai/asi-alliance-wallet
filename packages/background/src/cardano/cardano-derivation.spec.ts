@@ -6,6 +6,10 @@ import {
 
 const keyAgentFactory = jest.fn();
 
+jest.mock("@cardano-sdk/tx-construction", () => ({
+  minAdaRequired: jest.fn(),
+}));
+
 jest.mock("@cardano-sdk/crypto", () => ({
   SodiumBip32Ed25519: { create: jest.fn().mockResolvedValue({}) },
 }));

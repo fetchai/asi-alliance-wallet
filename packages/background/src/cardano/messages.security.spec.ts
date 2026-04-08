@@ -20,6 +20,12 @@ import {
 // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
 import { of } from "rxjs";
 
+jest.mock("@keplr-wallet/cardano", () => ({
+  encodeCardanoUiError: (code: string, message: string) =>
+    `cardano_ui_error:${code}:${message}`,
+  parseCardanoUiError: (message: string) => ({ message }),
+}));
+
 describe("Cardano message security boundaries", () => {
   it("keeps EstimateSendAda internal-only", () => {
     const msg = new EstimateSendAdaMsg("addr_test1q...", "1000000");

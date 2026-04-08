@@ -85,7 +85,10 @@ export class AddressCacheManager {
         }
       });
 
-    const newLockVoid = newLock.then(() => {});
+    const newLockVoid = newLock.then(
+      () => {},
+      () => {}
+    );
     this.operationLocks.set(lockKey, newLockVoid);
 
     return newLock;

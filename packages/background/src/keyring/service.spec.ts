@@ -180,6 +180,7 @@ describe("KeyRingService", () => {
         isInitialized: jest.fn().mockReturnValue(true),
         isReady: jest.fn().mockReturnValue(false),
         restoreFromKeyStore: jest.fn().mockResolvedValue(undefined),
+        getRuntimeState: jest.fn().mockReturnValue("ok"),
       } as any;
 
       await expect(
@@ -194,6 +195,7 @@ describe("KeyRingService", () => {
       service["cardanoService"] = {
         isInitialized: jest.fn().mockReturnValue(true),
         isReady: jest.fn().mockReturnValue(false),
+        getRuntimeState: jest.fn().mockReturnValue("ok"),
       } as any;
       service["cardanoRestoreByChainId"] = new Map([
         ["cardano-mainnet", Promise.resolve()],
@@ -208,6 +210,7 @@ describe("KeyRingService", () => {
       service["cardanoService"] = {
         isInitialized: jest.fn().mockReturnValue(false),
         isReady: jest.fn().mockReturnValue(false),
+        getRuntimeState: jest.fn().mockReturnValue("ok"),
       } as any;
       service["cardanoServiceInitPromise"] = Promise.resolve();
 
@@ -232,7 +235,8 @@ describe("KeyRingService", () => {
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
         getCurrentKeyStore: jest.fn().mockReturnValue({
-          meta: { key: "v" },
+          type: "mnemonic",
+          meta: { key: "v", mnemonicLength: "24" },
           bip44HDPath: { account: 0, change: 0, addressIndex: 0 },
         }),
         currentPassword: "pw",
@@ -267,7 +271,8 @@ describe("KeyRingService", () => {
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
         getCurrentKeyStore: jest.fn().mockReturnValue({
-          meta: { key: "v" },
+          type: "mnemonic",
+          meta: { key: "v", mnemonicLength: "24" },
           bip44HDPath: { account: 0, change: 0, addressIndex: 0 },
         }),
         currentPassword: "pw",
@@ -328,7 +333,7 @@ describe("KeyRingService", () => {
         service["onNetworkSwitch"]("cardano-old", "cardano-new")
       ).resolves.toBeUndefined();
 
-      expect(ensureReady).toHaveBeenCalled();
+      expect(ensureReady).not.toHaveBeenCalled();
       expect(repair).not.toHaveBeenCalled();
     });
 
