@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState, useEffect, useRef } from "react";
+import React, { FunctionComponent } from "react";
 
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
@@ -17,20 +17,13 @@ import {
   requestKeyringSurfacesSyncBroadcast,
   walletSupportsCardano,
 } from "../../utils";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import {
-  ListAccountsMsg,
-  MultiKeyStoreInfoWithSelectedElem,
-} from "@keplr-wallet/background";
+import { MultiKeyStoreInfoWithSelectedElem } from "@keplr-wallet/background";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import {
-  normalizeCacheData,
-  mergePartialCacheData,
-  hasRequiredAddresses,
-} from "@utils/cache-validation";
-import { addressCacheStore } from "@utils/address-cache-store";
-import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
+  resolveWalletPickerItemState,
+  walletPickerRowIsClickable,
+} from "@utils/resolve-wallet-picker-item-state";
+import { useWalletPickerAddressSync } from "./use-wallet-picker-address-sync";
 
 interface SetKeyRingProps {
   navigateTo?: any;
@@ -44,176 +37,17 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
     const intl = useIntl();
     const navigate = useNavigate();
     const notification = useNotification();
-    const {
-      chainStore,
-      accountStore,
-      keyRingStore,
-      analyticsStore,
-      chatStore,
-      proposalStore,
-    } = useStore();
+    const { chainStore, keyRingStore, analyticsStore, chatStore, proposalStore } =
+      useStore();
 
     const chainId = chainStore.current.chainId;
-    const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const loadingIndicator = useLoadingIndicator();
-    const [addressesById, setAddressesById] = useState<Record<string, string>>(
-      {}
-    );
-    const [isLoadingAddresses, setIsLoadingAddresses] =
-      useState<boolean>(false);
-    const abortControllerRef = useRef<AbortController | null>(null);
-    const isLoadingRef = useRef<boolean>(false);
 
-    const currentWalletIds = React.useMemo(
-      () =>
-        keyRingStore.multiKeyStoreInfo.map((ks) => ks.meta?.["__id__"] || ""),
-      [keyRingStore.multiKeyStoreInfo]
-    );
-
-    const getAllWalletAddresses = React.useCallback(async () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      if (isLoadingRef.current) {
-        return;
-      }
-
-      isLoadingRef.current = true;
-
-      const currentChainId = chainStore.current.chainId;
-
-      try {
-        const existingCache = addressCacheStore.getCache(currentChainId);
-        const hasAnyCachedAddress =
-          Object.keys(existingCache).length > 0 &&
-          Object.values(existingCache).some((addr) => Boolean(addr));
-        setAddressesById(existingCache);
-
-        const isCurrentChainCardano = isCardanoChain(
-          chainStore.getChain(currentChainId)
-        );
-
-        const requiredWalletIds: string[] = isCurrentChainCardano
-          ? keyRingStore.multiKeyStoreInfo
-              .filter((ks) => walletSupportsCardano(ks))
-              .map((ks) => ks.meta?.["__id__"] || "")
-          : currentWalletIds;
-
-        const shouldSyncFromBackend =
-          Object.keys(existingCache).length === 0 ||
-          !hasRequiredAddresses(existingCache, requiredWalletIds);
-
-        if (shouldSyncFromBackend) {
-          setIsLoadingAddresses(!hasAnyCachedAddress);
-          const requester = new InExtensionMessageRequester();
-
-          const msg = new ListAccountsMsg();
-          const result = await requester.sendMessage(BACKGROUND_PORT, msg);
-
-          if (result.error) {
-            notification.push({
-              placement: "top-center",
-              type: "danger",
-              duration: 4,
-              content: result.error,
-              canDelete: true,
-              transition: { duration: 0.25 },
-            });
-            isLoadingRef.current = false;
-            setIsLoadingAddresses(false);
-            return;
-          }
-
-          const { accounts } = result;
-          const isEvm = chainStore.current.features?.includes("evm") ?? false;
-          const snapshotWalletIds = [...currentWalletIds];
-
-          const fetchedById: Record<string, string> = {};
-          snapshotWalletIds.forEach((id, idx) => {
-            const acc = accounts[idx];
-            fetchedById[id] = acc
-              ? isEvm
-                ? acc.EVMAddress
-                : acc.bech32Address
-              : "";
-          });
-
-          await addressCacheStore.atomicCacheUpdate(
-            currentChainId,
-            (currentCache) => {
-              const normalizedCache = normalizeCacheData(
-                currentCache,
-                snapshotWalletIds
-              );
-              const fetchedAddresses = snapshotWalletIds.map(
-                (id) => fetchedById[id] || ""
-              );
-              const mergedCache = mergePartialCacheData(
-                normalizedCache,
-                snapshotWalletIds,
-                fetchedAddresses
-              );
-
-              return {
-                newCache: mergedCache,
-                result: mergedCache,
-              };
-            }
-          );
-
-          const syncedCache = addressCacheStore.getCache(currentChainId);
-          setAddressesById(syncedCache);
-
-          isLoadingRef.current = false;
-          setIsLoadingAddresses(false);
-          return;
-        }
-
-        isLoadingRef.current = false;
-        setIsLoadingAddresses(false);
-        return;
-      } catch (error) {
-        if (error.name === "AbortError") {
-          isLoadingRef.current = false;
-          setIsLoadingAddresses(false);
-          return;
-        }
-
-        console.warn(
-          "Failed to fetch addresses, keeping cached values:",
-          error
-        );
-      } finally {
-        isLoadingRef.current = false;
-        setIsLoadingAddresses(false);
-      }
-    }, [
-      chainStore.current.chainId,
-      currentWalletIds,
-      keyRingStore.multiKeyStoreInfo,
-    ]);
-
-    // Serialize wallet IDs for stable dependency comparison
-    const walletIdsKey = currentWalletIds.join(",");
-
-    useEffect(() => {
-      // Prevent race conditions by checking if component is still mounted
-      let isMounted = true;
-
-      const loadAddresses = async () => {
-        if (isMounted) {
-          await getAllWalletAddresses();
-        }
-      };
-
-      loadAddresses();
-
-      return () => {
-        isMounted = false;
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chainStore.current.chainId, walletIdsKey]);
+    const { addressesById, isLoadingAddresses } = useWalletPickerAddressSync({
+      chainStore,
+      keyRingStore,
+      notification,
+    });
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
@@ -244,52 +78,6 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
       <div>
         {keyRingStore.multiKeyStoreInfo.map(
           (keyStore: MultiKeyStoreInfoWithSelectedElem, i: number) => {
-            const bip44HDPath = keyStore.bip44HDPath
-              ? keyStore.bip44HDPath
-              : {
-                  account: 0,
-                  change: 0,
-                  addressIndex: 0,
-                };
-            let paragraph = keyStore.meta?.["email"]
-              ? keyStore.meta["email"]
-              : undefined;
-            if (keyStore.type === "keystone") {
-              paragraph = "Keystone";
-            } else if (keyStore.type === "ledger") {
-              const coinType = (() => {
-                if (
-                  keyStore.meta &&
-                  keyStore.meta["__ledger__cosmos_app_like__"] &&
-                  keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
-                ) {
-                  return (
-                    AppCoinType[
-                      keyStore.meta["__ledger__cosmos_app_like__"] as App
-                    ] || 118
-                  );
-                }
-
-                return 118;
-              })();
-
-              paragraph = `Ledger - m/44'/${coinType}'/${bip44HDPath.account}'${
-                bip44HDPath.change !== 0 || bip44HDPath.addressIndex !== 0
-                  ? `/${bip44HDPath.change}/${bip44HDPath.addressIndex}`
-                  : ""
-              }`;
-
-              if (
-                keyStore.meta &&
-                keyStore.meta["__ledger__cosmos_app_like__"] &&
-                keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
-              ) {
-                paragraph += ` (${keyStore.meta["__ledger__cosmos_app_like__"]})`;
-              }
-            }
-
-            console.log("paragraph", paragraph);
-
             const nameByChain = keyStore.meta?.["nameByChain"]
               ? JSON.parse(keyStore.meta["nameByChain"])
               : {};
@@ -301,14 +89,23 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 id: "setting.keyring.unnamed-account",
               });
             const isCardanoNetwork = isCardanoChain(chainStore.current);
-            const isCardanoSupportedWallet =
-              walletSupportsCardano(keyStore);
+            const isCardanoSupportedWallet = walletSupportsCardano(keyStore);
             const walletId = keyStore.meta?.["__id__"] || "";
-            const hasAddressForWallet = Boolean(addressesById[walletId]);
-            const isClickable =
-              !keyStore.selected &&
-              (!isCardanoNetwork ||
-                (isCardanoSupportedWallet && hasAddressForWallet));
+            const walletBoundAddress = addressesById[walletId] || "";
+
+            const pickerItemState = resolveWalletPickerItemState({
+              isCardanoNetwork,
+              isCardanoSupportedWallet,
+              walletBoundAddress,
+              isLoadingAddresses,
+            });
+
+            const isClickable = walletPickerRowIsClickable({
+              isRowSelected: Boolean(keyStore.selected),
+              isCardanoNetwork,
+              isCardanoSupportedWallet,
+              item: pickerItemState,
+            });
 
             return (
               <Card
@@ -357,34 +154,18 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                   )
                 }
                 subheading={(() => {
-                  if (keyStore.selected) {
-                    const isEvm =
-                      chainStore.current.features?.includes("evm") ?? false;
-                    const addr = isEvm
-                      ? (accountInfo as any).ethereumHexAddress ||
-                        accountInfo.bech32Address
-                      : accountInfo.bech32Address;
-                    return formatAddress(addr);
+                  switch (pickerItemState.kind) {
+                    case "address":
+                      return formatAddress(pickerItemState.address);
+                    case "unsupported":
+                      return pickerItemState.reason === "cardano_unsupported"
+                        ? "Not supported on Cardano"
+                        : "";
+                    case "loading":
+                      return <Skeleton height="14px" width="120px" />;
+                    case "empty":
+                      return "";
                   }
-
-                  if (addressesById[walletId]) {
-                    return formatAddress(addressesById[walletId]);
-                  }
-
-                  if (isCardanoNetwork && !isCardanoSupportedWallet) {
-                    return "Not supported on Cardano";
-                  }
-
-                  if (isLoadingAddresses) {
-                    return <Skeleton height="14px" width="120px" />;
-                  }
-
-                  // On Cardano, empty address means unsupported for that wallet
-                  if (isCardanoNetwork) {
-                    return "Not supported on Cardano";
-                  }
-
-                  return "";
                 })()}
                 style={{
                   padding: keyStore.selected ? "18px 18px" : "18px 16px",
