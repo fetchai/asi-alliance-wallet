@@ -1,5 +1,3 @@
-/** @jest-environment jsdom */
-
 import React from "react";
 import { act, Simulate } from "react-dom/test-utils";
 import { createRoot, Root } from "react-dom/client";
@@ -71,6 +69,12 @@ jest.mock("@components/notification", () => ({
 
 jest.mock("@utils/pathname", () => ({
   getPathname: () => mockGetPathname(),
+}));
+
+jest.mock("../../config", () => ({
+  TXNTYPE: {
+    send: "send",
+  },
 }));
 
 jest.mock("@components-v2/form/fee-buttons-v2", () => ({

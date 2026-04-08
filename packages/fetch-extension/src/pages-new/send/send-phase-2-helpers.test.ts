@@ -8,6 +8,36 @@ jest.mock("@keplr-wallet/hooks", () => {
   return { EmptyAddressError };
 });
 
+jest.mock("@keplr-wallet/cardano", () => ({
+  CardanoUiErrorCode: {},
+  parseCardanoUiError: (message: string) => {
+    const prefix = "cardano_ui_error:";
+    if (!message.startsWith(prefix)) {
+      return { message };
+    }
+    const rest = message.slice(prefix.length);
+    const sep = rest.indexOf(":");
+    if (sep < 0) {
+      return { message: rest };
+    }
+    const code = rest.slice(0, sep);
+    const parsedMessage = rest.slice(sep + 1);
+    const knownCodes = new Set([
+      "invalid_password",
+      "password_required",
+      "wallet_locked",
+      "wallet_syncing",
+    ]);
+    return knownCodes.has(code)
+      ? { code, message: parsedMessage }
+      : { message: parsedMessage };
+  },
+  lovelacesToAdaString: (lovelaces: string, decimals = 6) => {
+    const value = Number(lovelaces) / 10 ** Number(decimals);
+    return String(value);
+  },
+}));
+
 import { EmptyAddressError } from "@keplr-wallet/hooks";
 import {
   CARDANO_SUCCESS_TRANSITION_DELAY_MS,
