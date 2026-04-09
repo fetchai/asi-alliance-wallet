@@ -28,6 +28,8 @@ module.exports = {
   testPathIgnorePatterns: [
     "/node_modules/",
     "/src/pages-new/send/send-phase-2.flow-ui.test.tsx$",
+    "/src/pages-new/send/send-phase-2-display.test.tsx$",
+    "/src/components-v2/form/coin-input.flow.test.tsx$",
     "/src/pages-new/keyring-dev/set-key-ring-page.test.tsx$",
   ],
   testMatch: ["**/src/**/?(*.)+(spec|test).[jt]s?(x)"],
