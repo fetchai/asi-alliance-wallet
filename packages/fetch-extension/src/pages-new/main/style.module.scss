@@ -74,6 +74,7 @@
 }
 
 .change-net {
+  flex: 0 0 auto;
   height: 24px !important;
   background-color: transparent !important;
   padding: 0px 12px !important;
@@ -85,6 +86,11 @@
   justify-content: center;
   cursor: pointer;
   box-shadow: none;
+
+  img {
+    width: 14px;
+    height: 16px;
+  }
 }
 
 .chat-button {
@@ -132,6 +138,66 @@
   align-items: center;
   position: relative;
   z-index: 100;
+}
+
+.wallet-detail-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wallet-detail-main--rejected {
+  flex-direction: row;
+  align-items: center;
+}
+
+.wallet-detail-body {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.wallet-address-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 400;
+  width: 100%;
+}
+
+.wallet-address-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ToolTip trigger inside Address: flex-shrink + full width of .wallet-address-content */
+.wallet-address-tooltip-trigger {
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.wallet-address-copy-slot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.wallet-address-inline {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.wallet-address-prefix {
+  flex-shrink: 0;
 }
 
 .rewards-card {
@@ -252,4 +318,6 @@
   font-size: 14px;
   font-weight: bold;
   color: rgba($font-dark, 0.8);
+  min-width: 0;
+  overflow: hidden;
 }

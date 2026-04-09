@@ -8,6 +8,7 @@ import {
   separateNumericAndDenom,
   splitBech32,
 } from "@utils/format";
+import classnames from "classnames";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
@@ -50,8 +51,8 @@ export const WalletDetailsView = observer(
     const current = chainStore.current;
     const [chatTooltip, setChatTooltip] = useState("");
     const [chatDisabled, setChatDisabled] = useState(false);
-    const outerDivRef = useRef<HTMLDivElement>(null);
-    const outerDivRefEvm = useRef<HTMLDivElement>(null);
+    const bech32TextMeasureRef = useRef<HTMLDivElement>(null);
+    const evmTextMeasureRef = useRef<HTMLDivElement>(null);
 
     const [currentTxnType, setCurrentTxnType] = useState<string>("");
 
@@ -283,16 +284,10 @@ export const WalletDetailsView = observer(
         </div>
         <div className={style["wallet-detail-card"]}>
           <div
-            style={
-              accountInfo.walletStatus === WalletStatus.Rejected
-                ? { display: "flex", gap: "10px", alignItems: "center" }
-                : {
-                    display: "flex",
-                    columnGap: "10px",
-                    flexDirection: "column",
-                    width: "78%",
-                  }
-            }
+            className={classnames(style["wallet-detail-main"], {
+              [style["wallet-detail-main--rejected"]]:
+                accountInfo.walletStatus === WalletStatus.Rejected,
+            })}
           >
             <div className={style["wallet-address"]}>
               {(() => {
@@ -314,7 +309,7 @@ export const WalletDetailsView = observer(
                 }
               })()}
             </div>
-            <div style={{ width: "100%" }}>
+            <div className={style["wallet-detail-body"]}>
               <div className={style["walletRejected"]}>
                 {accountInfo.walletStatus === WalletStatus.Rejected && (
                   <ToolTip
@@ -352,37 +347,44 @@ export const WalletDetailsView = observer(
                 <React.Fragment>
                   {displayBech32Address ? (
                     <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        cursor: "pointer",
-                        fontWeight: 400,
-                      }}
-                      ref={outerDivRef}
+                      className={style["wallet-address-row"]}
                       onClick={() => copyAddress(displayBech32Address)}
                     >
-                      <Address
-                        maxCharacters={16}
-                        lineBreakBeforePrefix={false}
-                        tooltipAddress={displayBech32Address}
-                        childrenStyle={{ opacity: 1 }}
+                      <div
+                        ref={bech32TextMeasureRef}
+                        className={style["wallet-address-content"]}
                       >
-                        <span style={{ display: "flex" }}>
-                          {splitBech32(displayBech32Address).prefix}
-                          <span className={style["wallet-address-text"]}>
-                            <ResponsiveAddressView
-                              containerRef={outerDivRef}
-                              address={splitBech32(displayBech32Address).rest}
-                            />
+                        <Address
+                          maxCharacters={16}
+                          lineBreakBeforePrefix={false}
+                          tooltipAddress={displayBech32Address}
+                          childrenClassName={
+                            style["wallet-address-tooltip-trigger"]
+                          }
+                          childrenStyle={{ opacity: 1 }}
+                        >
+                          <span className={style["wallet-address-inline"]}>
+                            <span className={style["wallet-address-prefix"]}>
+                              {splitBech32(displayBech32Address).prefix}
+                            </span>
+                            <span className={style["wallet-address-text"]}>
+                              <ResponsiveAddressView
+                                containerRef={bech32TextMeasureRef}
+                                address={splitBech32(displayBech32Address).rest}
+                              />
+                            </span>
                           </span>
-                        </span>
-                      </Address>
-                      <img
-                        style={{ cursor: "pointer" }}
-                        src={require("@assets/svg/wireframe/copyGrey.svg")}
-                        alt=""
-                      />
+                        </Address>
+                      </div>
+                      <div
+                        className={style["wallet-address-copy-slot"]}
+                        aria-hidden="true"
+                      >
+                        <img
+                          src={require("@assets/svg/wireframe/copyGrey.svg")}
+                          alt=""
+                        />
+                      </div>
                     </div>
                   ) : (
                     <Skeleton height="21px" />
@@ -392,48 +394,54 @@ export const WalletDetailsView = observer(
               {accountInfo.walletStatus !== WalletStatus.Rejected &&
                 (isEvm || accountInfo.hasEthereumHexAddress) && (
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                      gap: "6px",
-                    }}
-                    ref={outerDivRefEvm}
+                    className={style["wallet-address-row"]}
                     onClick={() => copyAddress(accountInfo.ethereumHexAddress)}
                   >
-                    <Address
-                      isRaw={true}
-                      placement="bottom-end"
-                      tooltipAddress={displayEvmAddress}
-                      childrenStyle={{ opacity: 1 }}
+                    <div
+                      ref={evmTextMeasureRef}
+                      className={style["wallet-address-content"]}
                     >
-                      <span style={{ display: "flex" }}>
-                        {displayEvmAddress ? (
-                          displayEvmAddress.length === 42 ? (
-                            <React.Fragment>
-                              {displayEvmAddress.slice(0, 2)}
-                              <span className={style["wallet-address-text"]}>
-                                <ResponsiveAddressView
-                                  containerRef={outerDivRefEvm}
-                                  address={displayEvmAddress.slice(2)}
-                                />
-                              </span>
-                            </React.Fragment>
+                      <Address
+                        isRaw={true}
+                        placement="bottom-end"
+                        tooltipAddress={displayEvmAddress}
+                        childrenClassName={
+                          style["wallet-address-tooltip-trigger"]
+                        }
+                        childrenStyle={{ opacity: 1 }}
+                      >
+                        <span className={style["wallet-address-inline"]}>
+                          {displayEvmAddress ? (
+                            displayEvmAddress.length === 42 ? (
+                              <React.Fragment>
+                                <span className={style["wallet-address-prefix"]}>
+                                  {displayEvmAddress.slice(0, 2)}
+                                </span>
+                                <span className={style["wallet-address-text"]}>
+                                  <ResponsiveAddressView
+                                    containerRef={evmTextMeasureRef}
+                                    address={displayEvmAddress.slice(2)}
+                                  />
+                                </span>
+                              </React.Fragment>
+                            ) : (
+                              <React.Fragment>{displayEvmAddress}</React.Fragment>
+                            )
                           ) : (
-                            <React.Fragment>
-                              {displayEvmAddress}
-                            </React.Fragment>
-                          )
-                        ) : (
-                          "..."
-                        )}
-                      </span>
-                    </Address>
-                    <img
-                      style={{ cursor: "pointer" }}
-                      src={require("@assets/svg/wireframe/copy.svg")}
-                      alt=""
-                    />
+                            "..."
+                          )}
+                        </span>
+                      </Address>
+                    </div>
+                    <div
+                      className={style["wallet-address-copy-slot"]}
+                      aria-hidden="true"
+                    >
+                      <img
+                        src={require("@assets/svg/wireframe/copy.svg")}
+                        alt=""
+                      />
+                    </div>
                   </div>
                 )}
             </div>
@@ -451,7 +459,6 @@ export const WalletDetailsView = observer(
             className={style["change-net"]}
           >
             <img
-              style={{ width: "14px", height: "16px" }}
               src={require("@assets/svg/wireframe/chevron-down.svg")}
               alt=""
             />
