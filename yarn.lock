@@ -12693,7 +12693,7 @@ __metadata:
     "@keplr-wallet/stores-bitcoin": 0.13.11
     "@keplr-wallet/stores-core": "workspace:^"
     "@keplr-wallet/stores-etc": 0.13.11
-    "@keplr-wallet/stores-ibc": "workspace:^"
+    "@keplr-wallet/stores-ibc": 0.13.11
     "@keplr-wallet/types": 0.13.11
     "@keplr-wallet/unit": 0.13.11
     "@keystonehq/animated-qr": ^0.8.6
@@ -12822,61 +12822,6 @@ __metadata:
     mobx-utils: ^6
     react: ^18
     react-dom: ^18
-  languageName: unknown
-  linkType: soft
-
-"@keplr-wallet/hooks-bitcoin@workspace:packages/hooks-bitcoin":
-  version: 0.0.0-use.local
-  resolution: "@keplr-wallet/hooks-bitcoin@workspace:packages/hooks-bitcoin"
-  dependencies:
-    "@keplr-wallet/background": 0.13.11
-    "@keplr-wallet/common": 0.13.11
-    "@keplr-wallet/cosmos": 0.13.11
-    "@keplr-wallet/crypto": 0.13.11
-    "@keplr-wallet/proto-types": 0.13.11
-    "@keplr-wallet/simple-fetch": 0.13.11
-    "@keplr-wallet/stores": 0.13.11
-    "@keplr-wallet/stores-bitcoin": 0.13.11
-    "@keplr-wallet/types": 0.13.11
-    "@keplr-wallet/unit": 0.13.11
-    bitcoin-address-validation: ^3.0.0
-    buffer: ^6.0.3
-    long: ^4.0.0
-    utility-types: ^3.10.0
-  peerDependencies:
-    bitcoinjs-lib: ^6
-    mobx: ^6
-    mobx-utils: ^6
-    react: ^16.8.0 || ^17 || ^18
-  languageName: unknown
-  linkType: soft
-
-"@keplr-wallet/hooks-starknet@workspace:packages/hooks-starknet":
-  version: 0.0.0-use.local
-  resolution: "@keplr-wallet/hooks-starknet@workspace:packages/hooks-starknet"
-  dependencies:
-    "@ethersproject/address": ^5.7.0
-    "@ethersproject/providers": ^5.7.0
-    "@keplr-wallet/background": 0.13.11
-    "@keplr-wallet/common": 0.13.11
-    "@keplr-wallet/cosmos": 0.13.11
-    "@keplr-wallet/crypto": 0.13.11
-    "@keplr-wallet/proto-types": 0.13.11
-    "@keplr-wallet/simple-fetch": 0.13.11
-    "@keplr-wallet/stores": 0.13.11
-    "@keplr-wallet/stores-etc": 0.13.11
-    "@keplr-wallet/stores-eth": 0.13.11
-    "@keplr-wallet/stores-starknet": 0.13.11
-    "@keplr-wallet/types": 0.13.11
-    "@keplr-wallet/unit": 0.13.11
-    buffer: ^6.0.3
-    long: ^4.0.0
-    utility-types: ^3.10.0
-  peerDependencies:
-    mobx: ^6
-    mobx-utils: ^6
-    react: ^16.8.0 || ^17 || ^18
-    starknet: ^8
   languageName: unknown
   linkType: soft
 
@@ -13199,7 +13144,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keplr-wallet/stores-ibc@workspace:^, @keplr-wallet/stores-ibc@workspace:packages/stores-ibc":
+"@keplr-wallet/stores-ibc@0.13.11, @keplr-wallet/stores-ibc@workspace:packages/stores-ibc":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/stores-ibc@workspace:packages/stores-ibc"
   dependencies:
@@ -13216,7 +13161,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keplr-wallet/stores-starknet@0.13.11, @keplr-wallet/stores-starknet@workspace:packages/stores-starknet":
+"@keplr-wallet/stores-starknet@workspace:packages/stores-starknet":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/stores-starknet@workspace:packages/stores-starknet"
   dependencies:
@@ -13299,15 +13244,6 @@ __metadata:
   checksum: fe3f8a584feccb5f8ce366de4b2d5c462f4ce72a4209b7aa80651087ac2cca4d7583c968efe4f57305576a5695f0a543d2520081426204ac6ef6c65a38068aad
   languageName: node
   linkType: hard
-
-"@keplr-wallet/topup-client@workspace:packages/topup-client":
-  version: 0.0.0-use.local
-  resolution: "@keplr-wallet/topup-client@workspace:packages/topup-client"
-  dependencies:
-    "@keplr-wallet/simple-fetch": 0.13.11
-    "@keplr-wallet/types": 0.13.11
-  languageName: unknown
-  linkType: soft
 
 "@keplr-wallet/types@0.13.11, @keplr-wallet/types@workspace:packages/types":
   version: 0.0.0-use.local

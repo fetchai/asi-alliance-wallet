@@ -52,6 +52,7 @@
     "@keplr-wallet/simple-fetch": "0.13.11",
     "@keplr-wallet/stores": "0.13.11",
     "@keplr-wallet/stores-bitcoin": "0.13.11",
+    "@keplr-wallet/stores-core": "workspace:^",
     "@keplr-wallet/stores-etc": "0.13.11",
     "@keplr-wallet/stores-ibc": "0.13.11",
     "@keplr-wallet/types": "0.13.11",
@@ -137,8 +138,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.19.3",
-    "@keplr-wallet/stores-core": "workspace:^",
-    "@keplr-wallet/stores-ibc": "workspace:^",
     "@storybook/react": "^6.5.12",
     "@types/chart.js": "^2.9.25",
     "@types/chrome": "0.0.268",

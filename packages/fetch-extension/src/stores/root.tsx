@@ -20,7 +20,6 @@ import {
   EvmQueries,
   DeferInitialQueryController,
   getKeplrFromWindow,
-  // LedgerInitStore,
   ObservableQuery,
   QueriesStore,
   SecretAccount,
@@ -33,7 +32,6 @@ import {
   ActivityStore,
   TokenGraphStore,
 } from "@keplr-wallet/stores";
-// eslint-disable-next-line import/no-extraneous-dependencies
 import {
   KeyRingStore,
   TokensStore,
@@ -50,7 +48,6 @@ import {
   LedgerInitStore,
   SignEthereumInteractionStore,
 } from "@keplr-wallet/stores-core";
-// eslint-disable-next-line import/no-extraneous-dependencies
 import {
   IBCChannelStore,
   IBCCurrencyRegistrar,
@@ -339,8 +336,6 @@ export class RootStore {
         }
       }
     );
-
-    // this.transactionStore = new
 
     this.ibcChannelStore = new IBCChannelStore(
       new ExtensionKVStore("store_ibc_channel"),
