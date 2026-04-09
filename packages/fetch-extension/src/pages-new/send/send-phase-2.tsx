@@ -15,6 +15,7 @@ import { useNotification } from "@components/notification";
 import { useNetwork } from "../../hooks";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
+import { formatDisplayAmount } from "@utils/format";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import {
@@ -616,6 +617,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       });
 
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
+    const formattedDisplayAmount = formatDisplayAmount(
+      sendConfigs.amountConfig.amount ?? "",
+      { coinDecimals: decimals }
+    );
 
     useEffect(() => {
       // Close the confirm modal if Cardano context changes underneath (chain switch / key type switch).
@@ -1097,9 +1102,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
               {fiatCurrency.toUpperCase()}
             </div>
             <div className={style["amount"]}>
-              {parseFloat(sendConfigs.amountConfig.amount)
-                .toFixed(6)
-                .toString()}{" "}
+              {formattedDisplayAmount}{" "}
               {sendConfigs.amountConfig.sendCurrency.coinDenom}
             </div>
           </div>
@@ -1350,7 +1353,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           isWalletLocked={keyRingStore.status === KeyRingStatus.LOCKED}
           networkName={chainStore.current.chainName}
           recipient={sendConfigs.recipientConfig.recipient}
-          amountText={`${sendConfigs.amountConfig.amount} ${sendConfigs.amountConfig.sendCurrency.coinDenom}`}
+          amountText={`${formattedDisplayAmount} ${sendConfigs.amountConfig.sendCurrency.coinDenom}`}
           memo={sendConfigs.memoConfig.memo}
           passwordInputRef={passwordInputRef}
           onConfirm={async (password) => {

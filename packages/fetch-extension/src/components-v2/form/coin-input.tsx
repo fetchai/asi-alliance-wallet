@@ -15,6 +15,7 @@ import {
 import { AppCurrency } from "@keplr-wallet/types";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import {
+  formatDisplayAmount,
   hasValidDecimals,
   parseDollarAmount,
   parseExponential,
@@ -48,6 +49,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
       string | undefined
     >("");
     const [isToggleClicked, setIsToggleClicked] = useState<boolean>(false);
+    const [isInputFocused, setIsInputFocused] = useState(false);
 
     const { priceStore } = useStore();
 
@@ -194,6 +196,22 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
 
     const currency =
       priceStore.supportedVsCurrencies[fiatCurrency]?.currency?.toUpperCase();
+    const formattedTokenAmount = formatDisplayAmount(amountConfig.amount ?? "", {
+      coinDecimals: amountConfig.sendCurrency.coinDecimals,
+    });
+    const formattedFiatAmount = formatDisplayAmount(inputInFiatCurrency ?? "", {
+      coinDecimals: 6,
+      maxDecimals: 6,
+    });
+    const inputFiatValue = isInputFocused
+      ? inputInFiatCurrency ?? ""
+      : formattedFiatAmount;
+    const inputTokenValue = isInputFocused
+      ? parseExponential(
+          amountConfig.amount,
+          amountConfig.sendCurrency.coinDecimals
+        )
+      : formattedTokenAmount;
 
     return (
       <React.Fragment>
@@ -216,12 +234,11 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                 value={
                   isToggleClicked &&
                   amountConfig.sendCurrency["coinGeckoId"] !== undefined
-                    ? inputInFiatCurrency ?? ""
-                    : parseExponential(
-                        amountConfig.amount,
-                        amountConfig.sendCurrency.coinDecimals
-                      )
+                    ? inputFiatValue
+                    : inputTokenValue
                 }
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
                 onBeforeInput={(e) => {
                   const data = (e as any).data;
                   if (data && !/[0-9.]/.test(data)) {
@@ -300,8 +317,8 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
             <div className={styleCoinInput["amount-usd"]}>
               {isToggleClicked ||
               amountConfig.sendCurrency["coinGeckoId"] == undefined
-                ? `${amountConfig.amount} ${amountConfig.sendCurrency.coinDenom}`
-                : `${inputInFiatCurrency} ${currency}`}
+                ? `${formattedTokenAmount} ${amountConfig.sendCurrency.coinDenom}`
+                : `${formattedFiatAmount} ${currency}`}
             </div>
             {errorText != null ? (
               <div className={styleCoinInput["errorText"]}>{errorText}</div>
@@ -434,6 +451,19 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = observer(({
     setInputInFiatCurrency(valueInUsd);
   }, [amountConfig.sendCurrency, isCardano, isEvm]);
 
+  const formatCurrencyBalance = (currency: AppCurrency, amount: CoinPretty) => {
+    const normalizedAmount = amount.toDec().toString(currency.coinDecimals);
+    return formatDisplayAmount(normalizedAmount, {
+      coinDecimals: currency.coinDecimals,
+    });
+  };
+
+  const availableAmountDisplay = isEvm
+    ? formatCurrencyBalance(amountConfig.sendCurrency, balanceETH)
+    : isCardano
+      ? formatCurrencyBalance(amountConfig.sendCurrency, balanceCardano)
+      : formatCurrencyBalance(amountConfig.sendCurrency, balance);
+
   return (
     <React.Fragment>
       <Label className={styleCoinInput["label"]}>Asset</Label>
@@ -461,11 +491,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = observer(({
           >
             {" "}
             {`Available: ${
-              isEvm
-                ? balanceETH.shrink(true).maxDecimals(6).toString()
-                : isCardano
-                  ? balanceCardano.shrink(true).maxDecimals(6).toString()
-                  : balance.shrink(true).maxDecimals(6).toString()
+              availableAmountDisplay
             } `}
             {inputInFiatCurrency &&
               `(${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`}
@@ -500,10 +526,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = observer(({
                   pageName: "Send",
                 });
               }}
-              rightContent={`${currencyBalance
-                .shrink(true)
-                .maxDecimals(6)
-                .toString()}`}
+              rightContent={formatCurrencyBalance(currency, currencyBalance)}
             />
           );
         })}
