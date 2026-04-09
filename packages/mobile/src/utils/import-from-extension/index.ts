@@ -10,6 +10,15 @@ import { ExportKeyRingData } from "@keplr-wallet/background";
 import { KeyRingStore } from "@keplr-wallet/stores";
 import { Hash } from "@keplr-wallet/crypto";
 
+// Shown as remote peer identity on the extension export confirmation (WalletConnect peerMeta).
+const IMPORT_FROM_EXTENSION_WC_CLIENT_META = {
+  name: "ASI Alliance Wallet",
+  description:
+    "The official ASI Alliance Wallet for interacting with the ASI ledger",
+  url: "https://www.fetch.ai",
+  icons: ["https://www.fetch.ai/favicon.ico"],
+};
+
 export interface QRCodeSharedData {
   // The uri for the wallet connect
   wcURI: string;
@@ -58,6 +67,7 @@ export async function importFromExtension(
   try {
     const connector = new WalletConnect({
       uri: sharedData.wcURI,
+      clientMeta: IMPORT_FROM_EXTENSION_WC_CLIENT_META,
     });
 
     if (connector.connected) {
