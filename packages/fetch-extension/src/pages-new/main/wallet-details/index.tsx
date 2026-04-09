@@ -51,8 +51,8 @@ export const WalletDetailsView = observer(
     const current = chainStore.current;
     const [chatTooltip, setChatTooltip] = useState("");
     const [chatDisabled, setChatDisabled] = useState(false);
-    const bech32TextMeasureRef = useRef<HTMLDivElement>(null);
-    const evmTextMeasureRef = useRef<HTMLDivElement>(null);
+    const bech32TailMeasureRef = useRef<HTMLDivElement>(null);
+    const evmTailMeasureRef = useRef<HTMLDivElement>(null);
 
     const [currentTxnType, setCurrentTxnType] = useState<string>("");
 
@@ -350,10 +350,7 @@ export const WalletDetailsView = observer(
                       className={style["wallet-address-row"]}
                       onClick={() => copyAddress(displayBech32Address)}
                     >
-                      <div
-                        ref={bech32TextMeasureRef}
-                        className={style["wallet-address-content"]}
-                      >
+                      <div className={style["wallet-address-content"]}>
                         <Address
                           maxCharacters={16}
                           lineBreakBeforePrefix={false}
@@ -363,17 +360,22 @@ export const WalletDetailsView = observer(
                           }
                           childrenStyle={{ opacity: 1 }}
                         >
-                          <span className={style["wallet-address-inline"]}>
+                          <div className={style["wallet-address-inline"]}>
                             <span className={style["wallet-address-prefix"]}>
                               {splitBech32(displayBech32Address).prefix}
                             </span>
-                            <span className={style["wallet-address-text"]}>
-                              <ResponsiveAddressView
-                                containerRef={bech32TextMeasureRef}
-                                address={splitBech32(displayBech32Address).rest}
-                              />
-                            </span>
-                          </span>
+                            <div className={style["wallet-address-text"]}>
+                              <div
+                                ref={bech32TailMeasureRef}
+                                className={style["wallet-address-tail-measure"]}
+                              >
+                                <ResponsiveAddressView
+                                  containerRef={bech32TailMeasureRef}
+                                  address={splitBech32(displayBech32Address).rest}
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </Address>
                       </div>
                       <div
@@ -397,10 +399,7 @@ export const WalletDetailsView = observer(
                     className={style["wallet-address-row"]}
                     onClick={() => copyAddress(accountInfo.ethereumHexAddress)}
                   >
-                    <div
-                      ref={evmTextMeasureRef}
-                      className={style["wallet-address-content"]}
-                    >
+                    <div className={style["wallet-address-content"]}>
                       <Address
                         isRaw={true}
                         placement="bottom-end"
@@ -410,19 +409,24 @@ export const WalletDetailsView = observer(
                         }
                         childrenStyle={{ opacity: 1 }}
                       >
-                        <span className={style["wallet-address-inline"]}>
+                        <div className={style["wallet-address-inline"]}>
                           {displayEvmAddress ? (
                             displayEvmAddress.length === 42 ? (
                               <React.Fragment>
                                 <span className={style["wallet-address-prefix"]}>
                                   {displayEvmAddress.slice(0, 2)}
                                 </span>
-                                <span className={style["wallet-address-text"]}>
-                                  <ResponsiveAddressView
-                                    containerRef={evmTextMeasureRef}
-                                    address={displayEvmAddress.slice(2)}
-                                  />
-                                </span>
+                                <div className={style["wallet-address-text"]}>
+                                  <div
+                                    ref={evmTailMeasureRef}
+                                    className={style["wallet-address-tail-measure"]}
+                                  >
+                                    <ResponsiveAddressView
+                                      containerRef={evmTailMeasureRef}
+                                      address={displayEvmAddress.slice(2)}
+                                    />
+                                  </div>
+                                </div>
                               </React.Fragment>
                             ) : (
                               <React.Fragment>{displayEvmAddress}</React.Fragment>
@@ -430,7 +434,7 @@ export const WalletDetailsView = observer(
                           ) : (
                             "..."
                           )}
-                        </span>
+                        </div>
                       </Address>
                     </div>
                     <div
