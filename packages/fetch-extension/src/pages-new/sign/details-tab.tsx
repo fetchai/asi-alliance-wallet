@@ -45,15 +45,9 @@ export const DetailsTab: FunctionComponent<{
     preferNoSetMemo,
     isNeedLedgerEthBlindSigning,
   }) => {
-    const { chainStore, priceStore, accountStore, signInteractionStore } =
-      useStore();
+    const { chainStore, priceStore, accountStore } = useStore();
     const intl = useIntl();
     const language = useLanguage();
-    // Check if the fee is set manually from external interaction.
-    const manualFeeExternal = Boolean(
-      !signInteractionStore.waitingData?.isInternal &&
-        signInteractionStore.waitingData?.data?.signDocWrapper?.fees?.[0]
-    );
     const mode = signDocHelper.signDocWrapper
       ? signDocHelper.signDocWrapper.mode
       : "none";
@@ -155,7 +149,7 @@ export const DetailsTab: FunctionComponent<{
             </div>
           </div>
         )}
-        {(!preferNoSetFee && !manualFeeExternal) || !feeConfig.isManual ? (
+        {!preferNoSetFee || !feeConfig.isManual ? (
           <FeeButtons
             feeConfig={feeConfig}
             gasConfig={gasConfig}

@@ -174,7 +174,7 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
       component: (
         <ADR36SignDocDetailsTab
           signDocWrapper={undefined}
-          isADR36WithString={true}
+          isADR36WithString={false}
           ethSignType={ethSignType}
           ethData={signingDataText}
           origin={origin}

@@ -20,7 +20,6 @@ import {
 import { ADR36SignDocDetailsTab } from "./adr-36";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { unescapeHTML } from "@keplr-wallet/common";
-import { EthSignType } from "@keplr-wallet/types";
 import { Dropdown } from "@components-v2/dropdown";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { ButtonV2 } from "@components-v2/buttons/button";
@@ -41,9 +40,9 @@ import {
   ErrModuleLedgerSign,
 } from "@keplr-wallet/background/build/ledger/types";
 import { useInteractionInfo } from "@hooks/interaction";
-import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 import { useUnmount } from "@hooks/use-unmount";
 import { handleCosmosPreSign } from "./utils/handle-cosmos-sign";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 export const SignPageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -56,16 +55,32 @@ export const SignPageV2: FunctionComponent = observer(() => {
     ledgerInitStore,
   } = useStore();
   const current = chainStore.current;
+  // If the preferNoSetFee or preferNoSetMemo in sign options is true,
+  // don't show the fee buttons/memo input by default
+  // But, the sign options would be removed right after the users click the approve/reject button.
+  // Thus, without this state, the fee buttons/memo input would be shown after clicking the approve buttion.
+  const [isProcessing, setIsProcessing] = useState(false);
+  const needSetIsProcessing =
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
+      true ||
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo === true;
+
+  const preferNoSetFee =
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
+      true || isProcessing;
+  const preferNoSetMemo =
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo ===
+      true || isProcessing;
 
   const interactionInfo = useInteractionInfo({
     onWindowClose: () => {
+      if (needSetIsProcessing) {
+        setIsProcessing(true);
+      }
       signInteractionStore.rejectAll();
     },
     onUnmount: async () => {
       if (signInteractionStore?.waitingData) {
-        if (needSetIsProcessing) {
-          setIsProcessing(true);
-        }
         signInteractionStore.rejectWithProceedNext(
           signInteractionStore.waitingData?.id,
           () => {}
@@ -79,9 +94,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const [origin, setOrigin] = useState<string | undefined>();
   const [isADR36WithString, setIsADR36WithString] = useState<
     boolean | undefined
-  >();
-  const [ethSignType /*, setEthSignType*/] = useState<
-    EthSignType | undefined
   >();
   const [approveButtonClicked, setApproveButtonClicked] = useState(false);
   // const { testUSBDevices } = useUSBDevices();
@@ -135,9 +147,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
       if (data.data.signDocWrapper.isADR36SignDoc) {
         setIsADR36WithString(data.data.signDocWrapper.isADR36SignDoc);
       }
-      // if (data.data.signOptions.) {
-      //   setEthSignType(data.data.ethSignType);
-      // }
       setOrigin(data.data.origin);
       if (
         !data.data.signDocWrapper.isADR36SignDoc &&
@@ -159,7 +168,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
       }
       memoConfig.setMemo(memo);
       if (
-        (!data.isInternal || data.data.signOptions.preferNoSetFee) &&
+        data.data.signOptions.preferNoSetFee &&
         data.data.signDocWrapper.fees[0]
       ) {
         feeConfig.setManualFee(data.data.signDocWrapper.fees[0]);
@@ -188,22 +197,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
     signInteractionStore.waitingData,
   ]);
 
-  // If the preferNoSetFee or preferNoSetMemo in sign options is true,
-  // don't show the fee buttons/memo input by default
-  // But, the sign options would be removed right after the users click the approve/reject button.
-  // Thus, without this state, the fee buttons/memo input would be shown after clicking the approve buttion.
-  const [isProcessing, setIsProcessing] = useState(false);
-  const needSetIsProcessing =
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
-      true ||
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo === true;
-
-  const preferNoSetFee =
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
-      true || isProcessing;
-  const preferNoSetMemo =
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo ===
-      true || isProcessing;
   const currentChainId = chainStore.current.chainId;
   const currentChainIdentifier = useMemo(
     () => ChainIdHelper.parse(currentChainId).identifier,
@@ -219,13 +212,17 @@ export const SignPageV2: FunctionComponent = observer(() => {
   // and the chain is selected properly.
   // The chain store loads the saved chain infos including the suggested chain asynchronously on init.
   // So, it can be different the current chain and the expected selected chain for a moment.
-  const isLoaded = (() => {
-    if (!signDocHelper.signDocWrapper) {
-      return false;
-    }
+  const isLoaded =
+    (() => {
+      if (!signDocHelper.signDocWrapper) {
+        return false;
+      }
 
-    return currentChainIdentifier === selectedChainIdentifier;
-  })();
+      return currentChainIdentifier === selectedChainIdentifier;
+    })() ||
+    signInteractionStore.isObsoleteInteractionApproved(
+      signInteractionStore?.waitingData?.id
+    );
 
   // If this is undefined, show the chain name on the header.
   // If not, show the alternative title.
@@ -259,7 +256,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
         <ADR36SignDocDetailsTab
           signDocWrapper={signDocHelper.signDocWrapper}
           isADR36WithString={isADR36WithString}
-          ethSignType={ethSignType}
           origin={origin}
         />
       ) : (
@@ -274,7 +270,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
           preferNoSetFee={preferNoSetFee}
           preferNoSetMemo={preferNoSetMemo}
           isNeedLedgerEthBlindSigning={
-            ethSignType === EthSignType.EIP712 &&
             accountStore.getAccount(current.chainId).isNanoLedger
           }
         />
@@ -282,9 +277,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
     },
     {
       id: "Data",
-      component: (
-        <DataTab signDocHelper={signDocHelper} ethSignType={ethSignType} />
-      ),
+      component: <DataTab signDocHelper={signDocHelper} />,
     },
   ];
 
@@ -351,6 +344,9 @@ export const SignPageV2: FunctionComponent = observer(() => {
               "To proceed, please review and approve the transaction on your Ledger device."
             ),
           });
+        }
+        if (needSetIsProcessing) {
+          setIsProcessing(true);
         }
 
         await signInteractionStore.approveWithProceedNext(
