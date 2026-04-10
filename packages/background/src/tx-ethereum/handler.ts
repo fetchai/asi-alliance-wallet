@@ -8,16 +8,13 @@ import {
 import { SendTxEthereumMsg, SendTxEthereumMsgAndRecordMsg } from "./messages";
 import { BackgroundTxEthereumService } from "./service";
 import { PermissionInteractiveService } from "../permission-interactive";
-import { RecentSendHistoryService } from "../recent-send-history";
 
 export const getHandler: (
   service: BackgroundTxEthereumService,
-  permissionInteractionService: PermissionInteractiveService,
-  recentSendHistoryService: RecentSendHistoryService
+  permissionInteractionService: PermissionInteractiveService
 ) => Handler = (
   service: BackgroundTxEthereumService,
-  permissionInteractionService: PermissionInteractiveService,
-  recentSendHistoryService: RecentSendHistoryService
+  permissionInteractionService: PermissionInteractiveService
 ) => {
   return (env: Env, msg: Message<unknown>) => {
     switch (msg.constructor) {
@@ -30,8 +27,7 @@ export const getHandler: (
       case SendTxEthereumMsgAndRecordMsg:
         return handleSendTxEthereumMsgAndRecordMsg(
           service,
-          permissionInteractionService,
-          recentSendHistoryService
+          permissionInteractionService
         )(env, msg as SendTxEthereumMsgAndRecordMsg);
 
       default:
@@ -62,12 +58,10 @@ const handleSendTxEthereumMsg: (
 
 const handleSendTxEthereumMsgAndRecordMsg: (
   service: BackgroundTxEthereumService,
-  permissionInteractionService: PermissionInteractiveService,
-  recentSendHistoryService: RecentSendHistoryService
+  permissionInteractionService: PermissionInteractiveService
 ) => InternalHandler<SendTxEthereumMsgAndRecordMsg> = (
   service,
-  permissionInteractionService,
-  recentSendHistoryService
+  permissionInteractionService
 ) => {
   return async (env, msg) => {
     await permissionInteractionService.ensureEnabled(
@@ -79,17 +73,7 @@ const handleSendTxEthereumMsgAndRecordMsg: (
     return await service.sendEthereumTx(msg.origin, msg.chainId, msg.tx, {
       silent: msg.silent,
       onFulfill() {
-        recentSendHistoryService.addRecentSendHistory(
-          msg.destinationChainId,
-          msg.historyType,
-          {
-            sender: msg.sender,
-            recipient: msg.recipient,
-            amount: msg.amount,
-            memo: msg.memo,
-            ibcChannels: undefined,
-          }
-        );
+        // noop
       },
     });
   };

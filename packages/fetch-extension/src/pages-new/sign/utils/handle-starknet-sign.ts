@@ -37,9 +37,16 @@ import {
   DeployAccountFields,
 } from "@ledgerhq/hw-app-starknet";
 import { PubKeyStarknet } from "@keplr-wallet/crypto";
-// eslint-disable-next-line import/no-extraneous-dependencies
-import { Fee } from "@keplr-wallet/stores-starknet/build/account/internal";
 import { safeToBigInt } from "@keplr-wallet/common";
+
+export type Fee = {
+  l1MaxGas: string;
+  l1MaxGasPrice: string;
+  l1MaxDataGas: string;
+  l1MaxDataGasPrice: string;
+  l2MaxGas?: string;
+  l2MaxGasPrice?: string;
+};
 
 // eip-2645 derivation path, m/2645'/starknet'/{application}'/0'/{accountId}'/0
 export const STARKNET_LEDGER_DERIVATION_PATH =

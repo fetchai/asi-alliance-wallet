@@ -29,11 +29,10 @@ import * as KeyRingStarknet from "./keyring-starknet/internal";
 import * as KeyRingBitcoin from "./keyring-bitcoin/internal";
 import * as PermissionInteractive from "./permission-interactive/internal";
 import * as TokenScan from "./token-scan/internal";
-import * as RecentSendHistory from "./recent-send-history/internal";
 import * as SidePanel from "./side-panel/internal";
 import * as Settings from "./settings/internal";
 import * as ManageViewAssetToken from "./manage-view-asset-token/internal";
-import * as BackgroundTxExecutor from "./tx-executor/internal";
+// import * as BackgroundTxExecutor from "./tx-executor/internal";
 
 export * from "./chains";
 export * from "./ledger";
@@ -58,12 +57,11 @@ export * from "./keyring-starknet";
 export * from "./keyring-keystone";
 export * from "./keyring-bitcoin";
 export * from "./token-scan";
-export * from "./recent-send-history";
 export * from "./side-panel";
 export * from "./settings";
 export * from "./manage-view-asset-token";
 export * from "./tx-ethereum";
-export * from "./tx-executor";
+// export * from "./tx-executor";
 
 import { KVStore } from "@keplr-wallet/common";
 import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
@@ -309,19 +307,6 @@ export function init(
     keyRingBitcoinService
   );
 
-  const txExecutableMQ =
-    BackgroundTxExecutor.createSingleChannelEventBus<BackgroundTxExecutor.TxExecutionEvent>();
-
-  const recentSendHistoryService =
-    new RecentSendHistory.RecentSendHistoryService(
-      storeCreator("recent-send-history"),
-      chainsService,
-      backgroundTxService,
-      analyticsService,
-      notification,
-      txExecutableMQ.publisher
-    );
-
   const settingsService = new Settings.SettingsService(
     storeCreator("settings")
   );
@@ -333,19 +318,6 @@ export function init(
       vaultService,
       chainsUIService,
       chainsService
-    );
-
-  const backgroundTxExecutorService =
-    new BackgroundTxExecutor.BackgroundTxExecutorService(
-      storeCreator("background-tx-executor"),
-      chainsService,
-      keyRingCosmosService,
-      keyRingEthereumService,
-      backgroundTxService,
-      backgroundTxEthereumService,
-      analyticsService,
-      recentSendHistoryService,
-      txExecutableMQ.subscriber
     );
 
   Interaction.init(router, interactionService);
@@ -360,8 +332,7 @@ export function init(
   BackgroundTxEthereum.init(
     router,
     backgroundTxEthereumService,
-    permissionInteractiveService,
-    recentSendHistoryService
+    permissionInteractiveService
   );
   PhishingList.init(router, phishingListService);
   AutoLocker.init(router, autoLockAccountService);
@@ -399,13 +370,11 @@ export function init(
   TokenERC20.init(router, tokenERC20Service, permissionInteractiveService);
   SecretWasm.init(router, secretWasmService, permissionInteractiveService);
   TokenScan.init(router, tokenScanService);
-  RecentSendHistory.init(router, recentSendHistoryService);
   SidePanel.init(router, sidePanelService);
   Messaging.init(router, messagingService);
   Settings.init(router, settingsService);
   Ledger.init(router, ledgerService);
   ManageViewAssetToken.init(router, manageViewAssetTokenService);
-  BackgroundTxExecutor.init(router, backgroundTxExecutorService);
 
   return {
     initFn: async () => {
@@ -437,7 +406,6 @@ export function init(
 
       await tokenScanService.init();
 
-      await recentSendHistoryService.init();
       await settingsService.init();
 
       if (vaultAfterInitFn) {
@@ -447,7 +415,6 @@ export function init(
 
       await manageViewAssetTokenService.init();
 
-      await backgroundTxExecutorService.init();
       await messagingService.init(keyRingV2Service, keyRingCosmosService);
     },
     keyRingService: keyRingV2Service,

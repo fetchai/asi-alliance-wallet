@@ -54,8 +54,6 @@
       "@keplr-wallet/stores-eth/build/*": ["../stores-eth/src/*"],
       "@keplr-wallet/stores-ibc": ["../stores-ibc/src"],
       "@keplr-wallet/stores-ibc/build/*": ["../stores-ibc/src/*"],
-      "@keplr-wallet/stores-starknet": ["../stores-starknet/src"],
-      "@keplr-wallet/stores-starknet/build/*": ["../stores-starknet/src/*"],
       "@keplr-wallet/types": ["../types/src"],
       "@keplr-wallet/types/build/*": ["../types/src/*"],
       "@keplr-wallet/unit": ["../unit/src"],
