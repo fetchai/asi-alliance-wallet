@@ -1096,34 +1096,59 @@ export const snakeToCamelDeep = <T>(input: T): T => {
 
 export const downloadJson = async (data: unknown, filename: string) => {
   const json = JSON.stringify(data, null, 2);
-
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
   try {
-    const downloadId = await browser.downloads.download({
-      url,
-      filename,
-      conflictAction: "uniquify",
-      saveAs: true,
+    // Request optional permission
+    const granted = await new Promise<boolean>((resolve) => {
+      chrome.permissions.request({ permissions: ["downloads"] }, (result) =>
+        resolve(result)
+      );
     });
 
-    const listener = (delta: any) => {
-      if (delta.id === downloadId && delta.state) {
-        if (
-          delta.state.current === "complete" ||
-          delta.state.current === "interrupted"
-        ) {
-          browser.downloads.onChanged.removeListener(listener);
-          URL.revokeObjectURL(url);
-        }
-      }
-    };
+    if (granted) {
+      // use downloads API with Save As dialog
+      const downloadId = await browser.downloads.download({
+        url,
+        filename,
+        conflictAction: "uniquify",
+        saveAs: true,
+      });
 
-    browser.downloads.onChanged.addListener(listener);
+      const listener = (delta: any) => {
+        if (delta.id === downloadId && delta.state) {
+          if (
+            delta.state.current === "complete" ||
+            delta.state.current === "interrupted"
+          ) {
+            browser.downloads.onChanged.removeListener(listener);
+            URL.revokeObjectURL(url);
+          }
+        }
+      };
+
+      browser.downloads.onChanged.addListener(listener);
+    } else {
+      // Permission denied (fallback download)
+      fallbackDownload(url, filename);
+    }
   } catch {
-    URL.revokeObjectURL(url);
+    // error (fallback)
+    fallbackDownload(url, filename);
   }
+};
+
+const fallbackDownload = (json: string, filename: string) => {
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
 };
 
 export function detectInputType(doc: any): InputDocType {

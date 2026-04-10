@@ -18,14 +18,8 @@
     "page": "background.html",
     "persistent": true
   },
-  "permissions": [
-    "storage",
-    "notifications",
-    "identity",
-    "idle",
-    "alarms",
-    "downloads"
-  ],
+  "optional_permissions": ["downloads"],
+  "permissions": ["storage", "notifications", "identity", "idle", "alarms"],
   "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; object-src 'self'",
   "content_scripts": [
     {
