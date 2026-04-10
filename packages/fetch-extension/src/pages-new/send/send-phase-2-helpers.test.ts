@@ -1,3 +1,42 @@
+const mockMapCardanoMinimumViolation = jest.fn(
+  ({
+    minimumOutputLovelace,
+    coinMissingLovelace,
+  }: {
+    minimumOutputLovelace: string;
+    coinMissingLovelace?: string;
+  }) =>
+    /^\d+$/.test(minimumOutputLovelace) && BigInt(minimumOutputLovelace) > BigInt(0)
+      ? {
+          classification: "minimum_violation" as const,
+          minimumOutputLovelace,
+          coinMissingLovelace:
+            coinMissingLovelace && /^\d+$/.test(coinMissingLovelace)
+              ? coinMissingLovelace
+              : undefined,
+        }
+      : null
+);
+
+const mockFormatCardanoMinimumViolationMessage = jest.fn(
+  ({
+    violation,
+    cardanoDenom,
+    nativeAdaCoinDecimals,
+  }: {
+    violation: { minimumOutputLovelace: string };
+    cardanoDenom: string;
+    nativeAdaCoinDecimals: number;
+  }) => {
+    const safe = violation.minimumOutputLovelace.replace(/^0+/, "") || "0";
+    const padded = safe.padStart(nativeAdaCoinDecimals + 1, "0");
+    const whole = padded.slice(0, -nativeAdaCoinDecimals);
+    const frac = padded.slice(-nativeAdaCoinDecimals).replace(/0+$/, "");
+    const minAda = frac ? `${whole}.${frac}` : whole;
+    return `Amount too small. Minimum required is ${minAda} ${cardanoDenom}`;
+  }
+);
+
 jest.mock("@keplr-wallet/hooks", () => {
   class EmptyAddressError extends Error {
     constructor(message: string) {
@@ -36,6 +75,8 @@ jest.mock("@keplr-wallet/cardano", () => ({
     const value = Number(lovelaces) / 10 ** Number(decimals);
     return String(value);
   },
+  mapCardanoMinimumViolation: mockMapCardanoMinimumViolation,
+  formatCardanoMinimumViolationMessage: mockFormatCardanoMinimumViolationMessage,
 }));
 
 import { EmptyAddressError } from "@keplr-wallet/hooks";
@@ -52,6 +93,7 @@ import {
   isPositiveDecimalAmount,
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
+  formatAdaMinimumViolationMessageFromRawFields,
   normalizeCardanoDraftError,
   parseAmountToBaseUnits,
   isCardanoModalLevelErrorMessage,
@@ -331,6 +373,10 @@ describe("getMinimumDisplayAmountFromDecimals", () => {
 });
 
 describe("normalizeCardanoDraftError", () => {
+  beforeEach(() => {
+    mockMapCardanoMinimumViolation.mockClear();
+    mockFormatCardanoMinimumViolationMessage.mockClear();
+  });
   const params = {
     cardanoDenom: "tADA",
     sendCurrencyDenom: "tADA",
@@ -347,13 +393,38 @@ describe("normalizeCardanoDraftError", () => {
     ).toBe("Recipient address is required");
   });
 
-  it("normalizes sub-lovelace positive number error", () => {
+  it("maps legacy positive-number fallback to user-facing zero-amount message", () => {
     expect(
       normalizeCardanoDraftError({
         ...params,
         rawError: "amount must be a positive number",
       })
-    ).toBe("Amount too small. Minimum sendable amount is 0.000001 tADA");
+    ).toBe("Amount must be greater than 0");
+  });
+
+  it("formats structured minimum violation for display", () => {
+    expect(
+      formatAdaMinimumViolationMessageFromRawFields({
+        minimumOutputLovelace: "970000",
+        cardanoDenom: "tADA",
+        nativeAdaCoinDecimals: 6,
+      })
+    ).toBe("Amount too small. Minimum required is 0.97 tADA");
+    expect(mockMapCardanoMinimumViolation).toHaveBeenCalledWith({
+      minimumOutputLovelace: "970000",
+      coinMissingLovelace: undefined,
+    });
+  });
+
+  it("returns generic fallback for malformed structured minimum violation", () => {
+    expect(
+      formatAdaMinimumViolationMessageFromRawFields({
+        minimumOutputLovelace: "bad",
+        coinMissingLovelace: "1",
+        cardanoDenom: "tADA",
+        nativeAdaCoinDecimals: 6,
+      })
+    ).toBe("Failed to build transaction");
   });
 
   it("normalizes minimum output lovelace error to ADA", () => {
@@ -364,6 +435,10 @@ describe("normalizeCardanoDraftError", () => {
           "Amount too small: minimum output value is 970000 lovelace (protocol minimum for this output). Please send at least 970000 lovelace.",
       })
     ).toBe("Amount too small. Minimum required is 0.97 tADA");
+    expect(mockMapCardanoMinimumViolation).toHaveBeenCalledWith({
+      minimumOutputLovelace: "970000",
+    });
+    expect(mockFormatCardanoMinimumViolationMessage).toHaveBeenCalled();
   });
 
   it("returns raw error when no cardano mapping exists", () => {

@@ -1,15 +1,18 @@
-import { CardanoKeyRing, KeyStore, Key, CardanoWalletManager } from "@keplr-wallet/cardano";
+import {
+  CardanoKeyRing,
+  KeyStore,
+  Key,
+  CardanoWalletManager,
+  formatLegacyMinimumViolationLovelaceError,
+  mapCardanoMinimumViolation,
+  cardanoMalformedMinimumPayloadError,
+} from "@keplr-wallet/cardano";
 import { Crypto } from "../keyring/crypto";
 import type { KeyStore as KeyringKeyStore } from "../keyring/types";
 import { Notification } from "../tx/types";
 import type { CardanoTxHistoryItem, CardanoTxHistoryAsset, CardanoTxHistoryResponse, CardanoAssetAmount } from "./messages";
-import type { CardanoSendAdaTxDraft } from "./messages";
-import {
-  createObservableTransactionsByAddressesProvider,
-  createTxHistoryLoader,
-  getTxInputsValueAndAddress,
-  parseAssetId,
-} from "@keplr-wallet/cardano";
+import type { BuildSendAdaTxDraftResult } from "./messages";
+import { createObservableTransactionsByAddressesProvider, createTxHistoryLoader, getTxInputsValueAndAddress, parseAssetId } from "@keplr-wallet/cardano";
 import { firstValueFrom, ReplaySubject, Subscription } from "rxjs";
 import { skip, take, timeout } from "rxjs/operators";
 import type { KVStore } from "@keplr-wallet/common";
@@ -274,18 +277,36 @@ export class CardanoService {
       throw new Error("Wallet manager not initialized");
     }
 
-    try {
-      const sdkAssets = params.assets ? this.toSdkAssetMap(params.assets) : undefined;
-      const estimateParams = {
-        to: params.to,
-        amount: params.amount,
-        memo: params.memo,
-        assets: sdkAssets,
-      };
-      return await walletManager.estimateSendAda(estimateParams);
-    } catch (error) {
-      throw error;
+    const sdkAssets = params.assets ? this.toSdkAssetMap(params.assets) : undefined;
+    const outcome = await walletManager.buildSendAdaTxDraftOutcome({
+      to: params.to,
+      amount: params.amount,
+      memo: params.memo,
+      assets: sdkAssets,
+    });
+
+    if (outcome.kind === "minimum_violation") {
+      const violation = mapCardanoMinimumViolation({
+        minimumOutputLovelace: outcome.minimumOutputLovelace,
+        coinMissingLovelace: outcome.coinMissingLovelace,
+      });
+      if (!violation) {
+        throw cardanoMalformedMinimumPayloadError(
+          "Failed to estimate Cardano transaction"
+        );
+      }
+      throw new Error(
+        formatLegacyMinimumViolationLovelaceError({
+          violation,
+        })
+      );
     }
+
+    return {
+      fee: outcome.fee,
+      total: outcome.total,
+      minAdaForTokens: outcome.minAdaForTokens,
+    };
   }
 
   /**
@@ -411,19 +432,23 @@ export class CardanoService {
     networkId: string;
     unlockSessionId: string;
     source?: string;
-  }): Promise<CardanoSendAdaTxDraft> {
+  }): Promise<BuildSendAdaTxDraftResult> {
     const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
     if (!walletManager) {
       throw new Error("Wallet manager not initialized");
     }
 
     const sdkAssets = params.assets ? this.toSdkAssetMap(params.assets) : undefined;
-    const built = await walletManager.buildSendAdaTx({
+    const outcome = await walletManager.buildSendAdaTxDraftOutcome({
       to: params.to,
       amount: params.amount,
       memo: params.memo,
       assets: sdkAssets,
     });
+    if (outcome.kind === "minimum_violation") {
+      return outcome;
+    }
+    const built = outcome;
 
     const draftId = `cad_${Date.now().toString(36)}_${Math.random()
       .toString(36)
@@ -468,6 +493,7 @@ export class CardanoService {
     });
 
     return {
+      kind: "draft",
       draftId,
       fee: built.fee,
       total: built.total,

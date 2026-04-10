@@ -260,11 +260,20 @@ export interface CardanoSendAdaTxDraft {
   minAdaForTokens?: string; // minAda required by token outputs (lovelace)
 }
 
+/** Result of building a send draft: success with draft id, or structured ADA-only minimum violation (no draft created). */
+export type BuildSendAdaTxDraftResult =
+  | ({ kind: "draft" } & CardanoSendAdaTxDraft)
+  | {
+      kind: "minimum_violation";
+      minimumOutputLovelace: string;
+      coinMissingLovelace: string;
+    };
+
 /**
  * Internal-only: Build a Cardano send transaction draft once and reuse it for fee display + signing/submission.
  * Supports both ADA-only and multi-asset transactions.
  */
-export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
+export class BuildSendAdaTxDraftMsg extends Message<BuildSendAdaTxDraftResult> {
   public static type() {
     return "cardano-build-send-ada-tx-draft";
   }
@@ -274,7 +283,14 @@ export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
     public readonly amount: string, // in lovelaces (ADA portion)
     public readonly memo?: string,
     public readonly chainId?: string,
-    public readonly assets?: CardanoAssetAmount[] // Optional native assets
+    public readonly assets?: CardanoAssetAmount[], // Optional native assets
+    /**
+     * ADA-only: when true, `amount` may be `"0"` while the UI still shows a positive decimal
+     * (send-adapter maps that to lovelace `"0"` for draft build). Used so minimum-ADA checks
+     * run on the draft path instead of being blocked by validatePositiveLovelaceAmount.
+     * Must stay false when native assets are present (those paths use non-negative ADA rules).
+     */
+    public readonly allowZeroForMinimumCheck?: boolean
   ) {
     super();
   }
@@ -292,6 +308,8 @@ export class BuildSendAdaTxDraftMsg extends Message<CardanoSendAdaTxDraft> {
     if (hasAssets) {
       validateNonNegativeLovelaceAmount(this.amount);
       validateCardanoAssetAmounts(this.assets);
+    } else if (this.allowZeroForMinimumCheck) {
+      validateNonNegativeLovelaceAmount(this.amount);
     } else {
       validatePositiveLovelaceAmount(this.amount);
     }

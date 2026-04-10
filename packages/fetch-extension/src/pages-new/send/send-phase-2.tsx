@@ -28,6 +28,7 @@ import {
   SubmitSendAdaTxDraftMsg,
   SubmitSendAdaTxDraftWithPasswordMsg,
 } from "@keplr-wallet/background";
+import type { BuildSendAdaTxDraftResult } from "@keplr-wallet/background";
 import { DenomHelper } from "@keplr-wallet/common";
 import { CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
 import { lovelacesToAdaString } from "@keplr-wallet/cardano";
@@ -45,6 +46,7 @@ import {
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
   normalizeCardanoDraftError,
+  formatAdaMinimumViolationMessageFromRawFields,
   parseAmountToBaseUnits,
   parseCardanoUiErrorMessage,
   shouldNavigateCardanoFailedFromError,
@@ -410,6 +412,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const [cardanoDraftError, setCardanoDraftError] = useState<string | null>(
       null
     );
+    const [cardanoMinViolation, setCardanoMinViolation] = useState<{
+      minimumOutputLovelace: string;
+      coinMissingLovelace: string;
+    } | null>(null);
     const [isBuildingCardanoDraft, setIsBuildingCardanoDraft] = useState(false);
     const [recipientTouched, setRecipientTouched] = useState(false);
     const [reviewAttempted, setReviewAttempted] = useState(false);
@@ -531,13 +537,21 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       };
     }, [isCardano, chainStore.current.chainId]);
 
-    const normalizedCardanoDraftError = normalizeCardanoDraftError({
-      rawError: cardanoDraftError,
-      cardanoDenom,
-      sendCurrencyDenom,
-      sendCurrencyCoinDecimals,
-      nativeAdaCoinDecimals,
-    });
+    const normalizedCardanoDraftError =
+      cardanoMinViolation != null
+        ? formatAdaMinimumViolationMessageFromRawFields({
+            minimumOutputLovelace: cardanoMinViolation.minimumOutputLovelace,
+            coinMissingLovelace: cardanoMinViolation.coinMissingLovelace,
+            cardanoDenom,
+            nativeAdaCoinDecimals,
+          })
+        : normalizeCardanoDraftError({
+            rawError: cardanoDraftError,
+            cardanoDenom,
+            sendCurrencyDenom,
+            sendCurrencyCoinDecimals,
+            nativeAdaCoinDecimals,
+          });
 
     const cardanoOperationalGuard = isCardanoSendOperationalGuard({
       isCardano,
@@ -633,13 +647,16 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       if (!isCardano) {
         if (cardanoDraft?.draftId) {
           const requester = new InExtensionMessageRequester();
-          requester.sendMessage(
-            BACKGROUND_PORT,
-            new DiscardSendAdaTxDraftMsg(cardanoDraft.draftId)
-          );
+          void requester
+            .sendMessage(
+              BACKGROUND_PORT,
+              new DiscardSendAdaTxDraftMsg(cardanoDraft.draftId)
+            )
+            .catch(() => {});
         }
         setCardanoDraft(null);
         setCardanoDraftError(null);
+        setCardanoMinViolation(null);
         setIsBuildingCardanoDraft(false);
         return;
       }
@@ -661,10 +678,22 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         ? new DenomHelper(sendCurrency.coinMinimalDenom)
         : null;
       const isTokenSend = denomHelper?.type === CARDANO_NATIVE_TOKEN_TYPE;
+      const safeDiscardDraft = (
+        requester: InExtensionMessageRequester,
+        draftId: string | undefined
+      ) => {
+        if (!draftId) return;
+        void requester
+          .sendMessage(BACKGROUND_PORT, new DiscardSendAdaTxDraftMsg(draftId))
+          .catch(() => {});
+      };
 
       if (!normalizedRecipient || !amountStr || recipientError) {
+        const requesterEarly = new InExtensionMessageRequester();
+        safeDiscardDraft(requesterEarly, cardanoDraft?.draftId);
         setCardanoDraft(null);
         setCardanoDraftError(null);
+        setCardanoMinViolation(null);
         setIsBuildingCardanoDraft(false);
         return;
       }
@@ -674,12 +703,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         try {
           const requester = new InExtensionMessageRequester();
           const clearCurrentDraft = () => {
-            if (cardanoDraft?.draftId) {
-              requester.sendMessage(
-                BACKGROUND_PORT,
-                new DiscardSendAdaTxDraftMsg(cardanoDraft.draftId)
-              );
-            }
+            safeDiscardDraft(requester, cardanoDraft?.draftId);
             setCardanoDraft(null);
           };
 
@@ -698,13 +722,12 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             hasPositiveDecimalAmount &&
             baseAmountBigInt === BigInt(0);
 
-          if (isSubLovelaceAmount || isTokenDustAmount) {
+          if (isTokenDustAmount) {
             clearCurrentDraft();
+            setCardanoMinViolation(null);
             setCardanoDraftError(
               normalizeCardanoDraftError({
-                rawError: isSubLovelaceAmount
-                  ? "amount must be a positive number"
-                  : "asset amount must be positive",
+                rawError: "asset amount must be positive",
                 cardanoDenom,
                 sendCurrencyDenom: sendCurrency?.coinDenom,
                 sendCurrencyCoinDecimals: decimals,
@@ -717,6 +740,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
           setIsBuildingCardanoDraft(true);
           setCardanoDraftError(null);
+          setCardanoMinViolation(null);
           const baseAmount = baseAmountBigInt.toString();
           // For token sends, ADA amount is "0" and token goes into assets
           const lovelaceAmount = isTokenSend ? "0" : baseAmount;
@@ -730,32 +754,50 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             lovelaceAmount,
             memo,
             chainStore.current.chainId,
-            assets
+            assets,
+            isSubLovelaceAmount
           );
           const res = (await requester.sendMessage(
             BACKGROUND_PORT,
             draftMsg
-          )) as {
-            draftId: string;
-            fee: string;
-            total: string;
-            minAdaForTokens?: string;
-          } | null;
+          )) as BuildSendAdaTxDraftResult | null;
 
-          if (cancelled) return;
-
-          if (cardanoDraft?.draftId) {
-            requester.sendMessage(
-              BACKGROUND_PORT,
-              new DiscardSendAdaTxDraftMsg(cardanoDraft.draftId)
-            );
+          if (cancelled) {
+            if (res?.kind === "draft") {
+              safeDiscardDraft(requester, res.draftId);
+            }
+            return;
           }
 
-          setCardanoDraft(res ?? null);
-          setCardanoDraftError(null);
+          safeDiscardDraft(requester, cardanoDraft?.draftId);
+
+          if (res?.kind === "minimum_violation") {
+            setCardanoDraft(null);
+            setCardanoMinViolation({
+              minimumOutputLovelace: res.minimumOutputLovelace,
+              coinMissingLovelace: res.coinMissingLovelace,
+            });
+            setCardanoDraftError(null);
+          } else if (res?.kind === "draft") {
+            setCardanoMinViolation(null);
+            setCardanoDraft({
+              draftId: res.draftId,
+              fee: res.fee,
+              total: res.total,
+              minAdaForTokens: res.minAdaForTokens,
+            });
+            setCardanoDraftError(null);
+          } else {
+            setCardanoMinViolation(null);
+            setCardanoDraft(null);
+            setCardanoDraftError(null);
+          }
         } catch (e: any) {
           if (!cancelled) {
+            const requesterCatch = new InExtensionMessageRequester();
+            safeDiscardDraft(requesterCatch, cardanoDraft?.draftId);
             setCardanoDraft(null);
+            setCardanoMinViolation(null);
             const message = e?.message ?? "Failed to build transaction";
             setCardanoDraftError(
               normalizeCardanoDraftError({

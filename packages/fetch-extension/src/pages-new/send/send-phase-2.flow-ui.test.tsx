@@ -25,6 +25,41 @@ jest.mock("@keplr-wallet/hooks", () => ({
 
 jest.mock("@keplr-wallet/cardano", () => ({
   lovelacesToAdaString: (lovelaces: string) => String(lovelaces),
+  mapCardanoMinimumViolation: ({
+    minimumOutputLovelace,
+    coinMissingLovelace,
+  }: {
+    minimumOutputLovelace: string;
+    coinMissingLovelace?: string;
+  }) =>
+    /^\d+$/.test(minimumOutputLovelace) && BigInt(minimumOutputLovelace) > BigInt(0)
+      ? {
+          classification: "minimum_violation",
+          minimumOutputLovelace,
+          coinMissingLovelace:
+            coinMissingLovelace && /^\d+$/.test(coinMissingLovelace)
+              ? coinMissingLovelace
+              : undefined,
+        }
+      : null,
+  formatCardanoMinimumViolationMessage: ({
+    violation,
+    cardanoDenom,
+    nativeAdaCoinDecimals,
+  }: {
+    violation: { minimumOutputLovelace: string };
+    cardanoDenom: string;
+    nativeAdaCoinDecimals: number;
+  }) => {
+    const raw = String(violation.minimumOutputLovelace).padStart(
+      nativeAdaCoinDecimals + 1,
+      "0"
+    );
+    const whole = raw.slice(0, -nativeAdaCoinDecimals);
+    const frac = raw.slice(-nativeAdaCoinDecimals).replace(/0+$/, "");
+    const amount = frac ? `${whole}.${frac}` : whole;
+    return `Amount too small. Minimum required is ${amount} ${cardanoDenom}`;
+  },
   CardanoUiErrorCode: {},
   parseCardanoUiError: (message: string) => {
     const prefix = "cardano_ui_error:";
@@ -305,9 +340,6 @@ describe("SendPhase2 real flow guards", () => {
     mockSendMessage.mockResolvedValue({
       state: "ready_with_data",
       isSettled: true,
-      draftId: "draft-id",
-      fee: "170000",
-      total: "1230000",
     });
   });
 
@@ -696,6 +728,7 @@ describe("SendPhase2 real flow guards", () => {
           }
           if (name === "BuildSendAdaTxDraftMsg") {
             return Promise.resolve({
+              kind: "draft",
               draftId: "draft-id",
               fee: "170000",
               total: "1230000",
@@ -878,6 +911,7 @@ describe("SendPhase2 real flow guards", () => {
           }
           if (name === "BuildSendAdaTxDraftMsg") {
             return Promise.resolve({
+              kind: "draft",
               draftId: "draft-id",
               fee: "170000",
               total: "1230000",
@@ -1021,6 +1055,7 @@ describe("SendPhase2 real flow guards", () => {
           }
           if (name === "BuildSendAdaTxDraftMsg") {
             return Promise.resolve({
+              kind: "draft",
               draftId: "draft-id",
               fee: "170000",
               total: "1230000",
@@ -1098,6 +1133,7 @@ describe("SendPhase2 real flow guards", () => {
           }
           if (name === "BuildSendAdaTxDraftMsg") {
             return Promise.resolve({
+              kind: "draft",
               draftId: "draft-id",
               fee: "170000",
               total: "1230000",
@@ -1139,5 +1175,190 @@ describe("SendPhase2 real flow guards", () => {
       expect(btn?.disabled).toBe(false);
       expect(container.textContent).not.toMatch(/Syncing Cardano wallet/i);
     });
+  });
+
+  it("shows user-facing minimum_violation message for sub-lovelace ADA", async () => {
+    sendConfigs.amountConfig.amount = "0.0000001";
+    sendConfigs.recipientConfig.recipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.rawRecipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.error = undefined;
+
+    mockSendMessage.mockImplementation(
+      (_port: unknown, msg: { constructor?: { name?: string } }) => {
+        const name = msg?.constructor?.name;
+        if (name === "GetCardanoSyncStatusMsg") {
+          return Promise.resolve({ state: "ready_with_data", isSettled: true });
+        }
+        if (name === "BuildSendAdaTxDraftMsg") {
+          return Promise.resolve({
+            kind: "minimum_violation",
+            minimumOutputLovelace: "970000",
+            coinMissingLovelace: "969999",
+          });
+        }
+        if (name === "DiscardSendAdaTxDraftMsg") {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("ok");
+      }
+    );
+
+    renderComponent();
+    await advanceDraftBuild();
+    expect(container.textContent).toContain(
+      "Amount too small. Minimum required is 0.97 tADA"
+    );
+  });
+
+  it("shows same minimum_violation message for exactly 1 lovelace (0.000001 tADA)", async () => {
+    sendConfigs.amountConfig.amount = "0.000001";
+    sendConfigs.recipientConfig.recipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.rawRecipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.error = undefined;
+
+    mockSendMessage.mockImplementation(
+      (_port: unknown, msg: { constructor?: { name?: string } }) => {
+        const name = msg?.constructor?.name;
+        if (name === "GetCardanoSyncStatusMsg") {
+          return Promise.resolve({ state: "ready_with_data", isSettled: true });
+        }
+        if (name === "BuildSendAdaTxDraftMsg") {
+          return Promise.resolve({
+            kind: "minimum_violation",
+            minimumOutputLovelace: "970000",
+            coinMissingLovelace: "969999",
+          });
+        }
+        if (name === "DiscardSendAdaTxDraftMsg") {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("ok");
+      }
+    );
+
+    renderComponent();
+    await advanceDraftBuild();
+    expect(container.textContent).toContain(
+      "Amount too small. Minimum required is 0.97 tADA"
+    );
+    expect(container.textContent).not.toContain("amount must be a positive number");
+  });
+
+  it("handles lifecycle valid -> minimum_violation -> valid with draft cleanup", async () => {
+    sendConfigs.recipientConfig.recipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.rawRecipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.error = undefined;
+    const queue = [
+      { kind: "draft", draftId: "d1", fee: "100", total: "1100" },
+      {
+        kind: "minimum_violation",
+        minimumOutputLovelace: "970000",
+        coinMissingLovelace: "1",
+      },
+      { kind: "draft", draftId: "d2", fee: "100", total: "1100" },
+    ];
+    mockSendMessage.mockImplementation(
+      (_port: unknown, msg: { constructor?: { name?: string } }) => {
+        const name = msg?.constructor?.name;
+        if (name === "GetCardanoSyncStatusMsg") {
+          return Promise.resolve({ state: "ready_with_data", isSettled: true });
+        }
+        if (name === "BuildSendAdaTxDraftMsg") {
+          return Promise.resolve(queue.shift());
+        }
+        if (name === "DiscardSendAdaTxDraftMsg") {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("ok");
+      }
+    );
+
+    sendConfigs.amountConfig.amount = "1";
+    renderComponent();
+    await advanceDraftBuild();
+
+    sendConfigs.amountConfig.amount = "0.0000001";
+    renderComponent();
+    await advanceDraftBuild();
+    expect(container.textContent).toContain(
+      "Amount too small. Minimum required is 0.97 tADA"
+    );
+
+    sendConfigs.amountConfig.amount = "2";
+    renderComponent();
+    await advanceDraftBuild();
+    expect(container.textContent).not.toContain(
+      "Amount too small. Minimum required is 0.97 tADA"
+    );
+
+    const discardCalls = mockSendMessage.mock.calls.filter(
+      (c) => c[1]?.constructor?.name === "DiscardSendAdaTxDraftMsg"
+    );
+    expect(discardCalls.length).toBeGreaterThan(0);
+  });
+
+  it("discards late draft response after cancellation and on early-return", async () => {
+    sendConfigs.recipientConfig.recipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.rawRecipient = "addr_test1recipient";
+    sendConfigs.recipientConfig.error = undefined;
+    sendConfigs.amountConfig.amount = "1";
+
+    let resolveLate!: (value: unknown) => void;
+    const late = new Promise((resolve) => {
+      resolveLate = resolve;
+    });
+    let buildCount = 0;
+    mockSendMessage.mockImplementation(
+      (_port: unknown, msg: { constructor?: { name?: string } }) => {
+        const name = msg?.constructor?.name;
+        if (name === "GetCardanoSyncStatusMsg") {
+          return Promise.resolve({ state: "ready_with_data", isSettled: true });
+        }
+        if (name === "BuildSendAdaTxDraftMsg") {
+          buildCount += 1;
+          if (buildCount === 1) return late;
+          return Promise.resolve({
+            kind: "draft",
+            draftId: "fresh-draft",
+            fee: "100",
+            total: "1100",
+          });
+        }
+        if (name === "DiscardSendAdaTxDraftMsg") {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("ok");
+      }
+    );
+
+    renderComponent();
+    await advanceDraftBuild();
+
+    sendConfigs.amountConfig.amount = "2";
+    renderComponent();
+    await advanceDraftBuild();
+
+    await act(async () => {
+      resolveLate({
+        kind: "draft",
+        draftId: "late-draft",
+        fee: "100",
+        total: "1100",
+      });
+      await flushMicrotasksDeep();
+    });
+
+    sendConfigs.recipientConfig.recipient = "";
+    sendConfigs.recipientConfig.rawRecipient = "";
+    renderComponent();
+    await act(async () => {
+      await flushMicrotasksDeep();
+    });
+
+    const discarded = mockSendMessage.mock.calls
+      .filter((c) => c[1]?.constructor?.name === "DiscardSendAdaTxDraftMsg")
+      .map((c) => c[1]?.draftId);
+    expect(discarded).toContain("late-draft");
+    expect(discarded).toContain("fresh-draft");
   });
 });

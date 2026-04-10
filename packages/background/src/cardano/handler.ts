@@ -241,6 +241,7 @@ const handleEstimateSendAdaMsg: (
     if (!service.isReady()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
+    await waitForCardanoWalletSettled(service);
 
     try {
       return await service.estimateSendAda({

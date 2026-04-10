@@ -19,6 +19,7 @@ export * from './utils/parseAssetId';
 export * from './utils/formatAssetAmount';
 export * from './utils/network';
 export * from './utils/ui-error-contract';
+export * from './utils/send-minimum-violation';
 
 // Export validators with explicit names to avoid conflict with api/extension/isValidAddress
 export {

@@ -18,7 +18,7 @@ import {
   formatProviderUnavailableError,
 } from "./ensure-errors";
 // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
-import { of } from "rxjs";
+import { BehaviorSubject, of } from "rxjs";
 
 jest.mock("@keplr-wallet/cardano", () => ({
   encodeCardanoUiError: (code: string, message: string) =>
@@ -84,7 +84,7 @@ describe("Cardano message security boundaries", () => {
     }
   });
 
-  it("allows amount=0 only when assets are present", () => {
+  it("keeps ADA-only amount=0 blocked by default, but allows controlled 0 for minimum-check and for asset sends", () => {
     const policy = "a".repeat(56);
     const assetId = `${policy}4142`;
     const assets = [{ assetId, amount: "1" }];
@@ -114,6 +114,41 @@ describe("Cardano message security boundaries", () => {
     expect(() =>
       new BuildSendAdaTxDraftMsg("addr_test1q...", "0").validateBasic()
     ).toThrow("amount must be a positive number");
+    expect(() =>
+      new BuildSendAdaTxDraftMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        undefined,
+        true
+      ).validateBasic()
+    ).not.toThrow();
+  });
+
+  it("keeps 1 lovelace boundary parity between estimate and draft validation", () => {
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", "1").validateBasic()
+    ).not.toThrow();
+    expect(() =>
+      new BuildSendAdaTxDraftMsg("addr_test1q...", "1").validateBasic()
+    ).not.toThrow();
+  });
+
+  it("keeps sub-lovelace minimum-check scope draft-only (estimate has no special zero flag)", () => {
+    expect(() =>
+      new EstimateSendAdaMsg("addr_test1q...", "0").validateBasic()
+    ).toThrow("amount must be a positive number");
+    expect(() =>
+      new BuildSendAdaTxDraftMsg(
+        "addr_test1q...",
+        "0",
+        undefined,
+        undefined,
+        undefined,
+        true
+      ).validateBasic()
+    ).not.toThrow();
   });
 
   it("validates Cardano assets array (assetId, non-negative asset.amount, no duplicates)", () => {
@@ -188,6 +223,10 @@ describe("Cardano handler security boundaries", () => {
         fee: "1234",
         total: "11234",
       })),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
     };
     const keyRingService = {
       ensureCardanoServiceReady: jest.fn(async () => undefined),
@@ -217,6 +256,96 @@ describe("Cardano handler security boundaries", () => {
     });
     expect(result).toEqual({ fee: "1234", total: "11234" });
   });
+
+  it("estimate handler waits for settled wallet before estimating", async () => {
+    const sync$ = new BehaviorSubject<boolean>(false);
+    const service = {
+      isReady: jest.fn(() => true),
+      estimateSendAda: jest.fn(async () => ({ fee: "123", total: "124" })),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: sync$,
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => undefined),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    const pending = handler(
+      { isInternalMsg: true, requestInteraction: jest.fn() },
+      new EstimateSendAdaMsg("addr_test1q...", "1", undefined, "cardano-mainnet")
+    );
+    expect(service.estimateSendAda).not.toHaveBeenCalled();
+
+    sync$.next(true);
+    const res = await pending;
+    expect(res).toEqual({ fee: "123", total: "124" });
+    expect(service.getWalletManager).toHaveBeenCalled();
+    expect(service.estimateSendAda).toHaveBeenCalledWith({
+      to: "addr_test1q...",
+      amount: "1",
+      memo: undefined,
+      assets: undefined,
+    });
+  });
+
+  it("keeps 1 lovelace estimate boundary on minimum violation semantics", async () => {
+    const service = {
+      isReady: jest.fn(() => true),
+      estimateSendAda: jest.fn(async () => {
+        throw new Error(
+          "Amount too small: minimum output value is 970000 lovelace (protocol minimum for this output). Please send at least 970000 lovelace."
+        );
+      }),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: of(true),
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => undefined),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    let thrownMessage = "";
+    try {
+      await handler(
+        { isInternalMsg: true, requestInteraction: jest.fn() },
+        new EstimateSendAdaMsg("addr_test1q...", "1", undefined, "cardano-mainnet")
+      );
+    } catch (error: any) {
+      thrownMessage = String(error?.message ?? "");
+    }
+    expect(thrownMessage).toContain("minimum output value is 970000 lovelace");
+    expect(thrownMessage).not.toContain("amount must be a positive number");
+  });
+
+  it(
+    "estimate handler throws syncing error when wallet is explicitly unsettled",
+    async () => {
+      const sync$ = of(false);
+    const service = {
+      isReady: jest.fn(() => true),
+      estimateSendAda: jest.fn(async () => ({ fee: "1", total: "2" })),
+      getWalletManager: jest.fn(() => ({
+        hasWallet: () => true,
+        syncStatus$: sync$,
+      })),
+    };
+    const keyRingService = {
+      ensureCardanoServiceReady: jest.fn(async () => undefined),
+    };
+    const handler = getHandler(service as any, keyRingService as any);
+
+    const pending = handler(
+      { isInternalMsg: true, requestInteraction: jest.fn() },
+      new EstimateSendAdaMsg("addr_test1q...", "1", undefined, "cardano-mainnet")
+    );
+      await expect(pending).rejects.toThrow("syncing: wallet_sync_in_progress");
+      expect(service.estimateSendAda).not.toHaveBeenCalled();
+    }
+  );
 
   it("rejects external estimate requests", async () => {
     const service = {

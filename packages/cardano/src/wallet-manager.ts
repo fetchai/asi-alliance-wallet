@@ -427,7 +427,11 @@ export class CardanoWalletManager {
     return map;
   }
 
-  private async buildSendTransaction(params: {
+  /**
+   * Shared path: build recipient output(s), run validateOutputs — same as buildSendTransaction.
+   * Single source of truth for minimumCoin / coinMissing vs SDK.
+   */
+  private async prepareSendTransactionValidatedOutputs(params: {
     to: string;
     amount: string;
     memo?: string;
@@ -461,8 +465,6 @@ export class CardanoWalletManager {
 
     const { createWalletUtil } = await import('@cardano-sdk/wallet');
     const { buildTransactionProps } = await import('./wallet/lib/build-transaction-props');
-    const { setMissingCoins } = await import('./wallet/lib/set-missing-coins');
-    const { TX } = await import('./config');
 
     const sdkAssets =
       params.assets && params.assets.size > 0 ? this.toSdkAssetMap(params.assets) : undefined;
@@ -477,8 +479,6 @@ export class CardanoWalletManager {
       }]
     ]);
 
-    // Omit assetsInfo: our asset amounts are already in base units (lovelace / token smallest unit).
-    // Passing assetsInfo would trigger assetBalanceToBigInt to apply decimal scaling again (double conversion).
     const partialTxProps = buildTransactionProps({
       outputsMap,
       metadata: params.memo,
@@ -488,7 +488,6 @@ export class CardanoWalletManager {
       throw new Error('Transaction outputs are undefined');
     }
 
-    // Track coins before setMissingCoins to calculate minAda added for tokens
     const coinsBefore = [...partialTxProps.outputs].reduce(
       (sum, out) => sum + (out.value?.coins ?? BigInt(0)),
       BigInt(0)
@@ -497,19 +496,20 @@ export class CardanoWalletManager {
     const util = createWalletUtil(this.wallet);
     const minimumCoinQuantities = await util.validateOutputs(partialTxProps.outputs);
 
-    // For ADA-only transfers, if the requested amount is below the protocol minimum
-    // output value, surface it immediately with the calculated minimum (no hardcoded constant).
-    if (!sdkAssets) {
-      const outputEntry = partialTxProps.outputs ? [...partialTxProps.outputs][0] : undefined;
-      const validation = outputEntry ? minimumCoinQuantities.get(outputEntry) : undefined;
-      if (validation && validation.coinMissing > BigInt(0)) {
-        throw new Error(
-          `Amount too small: minimum output value is ${validation.minimumCoin} lovelace (protocol minimum for this output). Please send at least ${validation.minimumCoin} lovelace.`
-        );
-      }
-    }
+    return {
+      minimumCoinQuantities,
+      outputs: partialTxProps.outputs,
+      coinsBefore,
+      sdkAssets,
+      partialTxProps,
+    };
+  }
 
-    const outputsWithMissingCoins = setMissingCoins(minimumCoinQuantities, partialTxProps.outputs);
+  private async buildSendTransactionFromPrepared(prepared: Awaited<ReturnType<CardanoWalletManager["prepareSendTransactionValidatedOutputs"]>>) {
+    const { setMissingCoins } = await import('./wallet/lib/set-missing-coins');
+    const { TX } = await import('./config');
+
+    const outputsWithMissingCoins = setMissingCoins(prepared.minimumCoinQuantities, prepared.outputs);
 
     if (!outputsWithMissingCoins.outputs) {
       throw new Error('Outputs with missing coins are undefined');
@@ -519,7 +519,8 @@ export class CardanoWalletManager {
       (sum, out) => sum + (out.value?.coins ?? BigInt(0)),
       BigInt(0)
     );
-    const minAdaForTokens = coinsAfter > coinsBefore ? (coinsAfter - coinsBefore).toString() : "0";
+    const minAdaForTokens =
+      coinsAfter > prepared.coinsBefore ? (coinsAfter - prepared.coinsBefore).toString() : "0";
 
     const txBuilder = this.createTxBuilder();
     const tip = await firstValueFrom(this.tip$) as { slot: number };
@@ -530,8 +531,8 @@ export class CardanoWalletManager {
 
     outputsWithMissingCoins.outputs.forEach((output) => txBuilder.addOutput(output));
 
-    if (partialTxProps?.auxiliaryData?.blob) {
-      txBuilder.metadata(partialTxProps.auxiliaryData.blob);
+    if (prepared.partialTxProps?.auxiliaryData?.blob) {
+      txBuilder.metadata(prepared.partialTxProps.auxiliaryData.blob);
     }
 
     const tx = txBuilder.build();
@@ -542,8 +543,63 @@ export class CardanoWalletManager {
       throw new Error('Transaction inspection failed: no inputSelection');
     }
 
-    const feeStr = fee.toString();
-    return { tx, fee: feeStr, minAdaForTokens };
+    return { tx, fee: fee.toString(), minAdaForTokens };
+  }
+
+  async buildSendAdaTxDraftOutcome(params: {
+    to: string;
+    amount: string;
+    memo?: string;
+    assets?: Map<string, string>;
+  }): Promise<
+    | { kind: "minimum_violation"; minimumOutputLovelace: string; coinMissingLovelace: string }
+    | { kind: "draft"; tx: any; fee: string; total: string; minAdaForTokens: string }
+  > {
+    if (!this.wallet) {
+      throw new Error("Transaction features unavailable without Blockfrost API key");
+    }
+
+    const prepared = await this.prepareSendTransactionValidatedOutputs(params);
+    if (!prepared.sdkAssets) {
+      const outputEntry = [...prepared.outputs][0];
+      const validation = outputEntry ? prepared.minimumCoinQuantities.get(outputEntry) : undefined;
+      if (validation && validation.coinMissing > BigInt(0)) {
+        return {
+          kind: "minimum_violation",
+          minimumOutputLovelace: validation.minimumCoin.toString(),
+          coinMissingLovelace: validation.coinMissing.toString(),
+        };
+      }
+    }
+
+    const built = await this.buildSendTransactionFromPrepared(prepared);
+    const total = (BigInt(params.amount) + BigInt(built.fee) + BigInt(built.minAdaForTokens)).toString();
+    return {
+      kind: "draft",
+      tx: built.tx,
+      fee: built.fee,
+      total,
+      minAdaForTokens: built.minAdaForTokens,
+    };
+  }
+
+  private async buildSendTransaction(params: {
+    to: string;
+    amount: string;
+    memo?: string;
+    assets?: Map<string, string>;
+  }) {
+    const outcome = await this.buildSendAdaTxDraftOutcome(params);
+    if (outcome.kind === "minimum_violation") {
+      throw new Error(
+        `Amount too small: minimum output value is ${outcome.minimumOutputLovelace} lovelace (protocol minimum for this output). Please send at least ${outcome.minimumOutputLovelace} lovelace.`
+      );
+    }
+    return {
+      tx: outcome.tx,
+      fee: outcome.fee,
+      minAdaForTokens: outcome.minAdaForTokens,
+    };
   }
 
   async buildSendAdaTx(params: {
@@ -560,6 +616,10 @@ export class CardanoWalletManager {
     return { tx, fee, total, minAdaForTokens };
   }
 
+  /**
+   * Legacy estimate path retained for backward compatibility.
+   * Background service estimate flow is unified via buildSendAdaTxDraftOutcome.
+   */
   async estimateSendAda(params: {
     to: string;
     amount: string;

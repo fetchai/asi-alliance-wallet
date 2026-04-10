@@ -245,6 +245,7 @@ describe("SendPhase2 display formatting regression", () => {
         }
         if (name === "BuildSendAdaTxDraftMsg") {
           return Promise.resolve({
+            kind: "draft",
             draftId: "draft-id",
             fee: "170000",
             total: "1230000",

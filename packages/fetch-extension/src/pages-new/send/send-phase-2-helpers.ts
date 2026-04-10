@@ -1,8 +1,9 @@
 import { EmptyAddressError } from "@keplr-wallet/hooks";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
-import { lovelacesToAdaString } from "@keplr-wallet/cardano";
 import {
   CardanoUiErrorCode,
+  formatCardanoMinimumViolationMessage,
+  mapCardanoMinimumViolation,
   parseCardanoUiError,
 } from "@keplr-wallet/cardano";
 
@@ -46,9 +47,6 @@ export function isCardanoSendDraftInputsReady(params: {
 
 const MIN_OUTPUT_LOVELACE_REGEX =
   /minimum output value is (\d+) lovelace/i;
-
-const trimTrailingZeros = (value: string): string =>
-  value.replace(/\.?0+$/, "");
 
 export const getMinimumDisplayAmountFromDecimals = (decimals: number): string => {
   if (decimals <= 0) {
@@ -96,11 +94,9 @@ export const normalizeCardanoDraftError = (params: {
     return "Recipient address is required";
   }
 
+  // Legacy/non-structured fallback: keep user-facing wording for exact zero.
   if (rawError === "amount must be a positive number") {
-    const minAda = trimTrailingZeros(
-      lovelacesToAdaString("1", params.sendCurrencyCoinDecimals)
-    );
-    return `Amount too small. Minimum sendable amount is ${minAda} ${params.cardanoDenom}`;
+    return "Amount must be greater than 0";
   }
 
   if (rawError === "asset amount must be positive") {
@@ -114,10 +110,17 @@ export const normalizeCardanoDraftError = (params: {
   const minOutputMatch = rawError.match(MIN_OUTPUT_LOVELACE_REGEX);
   if (minOutputMatch) {
     const [, minLovelace] = minOutputMatch;
-    const minAda = trimTrailingZeros(
-      lovelacesToAdaString(minLovelace, params.nativeAdaCoinDecimals)
-    );
-    return `Amount too small. Minimum required is ${minAda} ${params.cardanoDenom}`;
+    const violation = mapCardanoMinimumViolation({
+      minimumOutputLovelace: minLovelace,
+    });
+    if (!violation) {
+      return "Failed to build transaction";
+    }
+    return formatCardanoMinimumViolationMessage({
+      violation,
+      cardanoDenom: params.cardanoDenom,
+      nativeAdaCoinDecimals: params.nativeAdaCoinDecimals,
+    });
   }
 
   // Cardano SDK coin-selection error (e.g. when "max" leaves no UTxO for fee/change).
@@ -130,6 +133,27 @@ export const normalizeCardanoDraftError = (params: {
 
   return rawError;
 };
+
+/** User-facing message for structured minimum_violation from BuildSendAdaTxDraftMsg (protocol min UTxO). */
+export function formatAdaMinimumViolationMessageFromRawFields(params: {
+  minimumOutputLovelace: string;
+  coinMissingLovelace?: string;
+  cardanoDenom: string;
+  nativeAdaCoinDecimals: number;
+}): string {
+  const violation = mapCardanoMinimumViolation({
+    minimumOutputLovelace: params.minimumOutputLovelace,
+    coinMissingLovelace: params.coinMissingLovelace,
+  });
+  if (!violation) {
+    return "Failed to build transaction";
+  }
+  return formatCardanoMinimumViolationMessage({
+    violation,
+    cardanoDenom: params.cardanoDenom,
+    nativeAdaCoinDecimals: params.nativeAdaCoinDecimals,
+  });
+}
 
 /**
  * Post-recipient slice of sendConfigError — same sources/order as SendPhase2, excluding recipientConfig.

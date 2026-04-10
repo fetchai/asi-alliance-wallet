@@ -1,10 +1,15 @@
 import { AppCurrency } from "@keplr-wallet/types";
 import { DenomHelper } from "@keplr-wallet/common";
+import {
+  cardanoMalformedMinimumPayloadError,
+  formatCardanoMinimumViolationMessage,
+  mapCardanoMinimumViolation,
+} from "@keplr-wallet/cardano";
 import { MakeTxResponse } from "../account/types";
 import { MessageRequester, BACKGROUND_PORT } from "@keplr-wallet/router";
 import {
-  EstimateSendAdaMsg,
   BuildSendAdaTxDraftMsg,
+  BuildSendAdaTxDraftResult,
   SubmitSendAdaTxDraftMsg,
   SubmitSendAdaTxDraftWithPasswordMsg,
   DiscardSendAdaTxDraftMsg,
@@ -39,6 +44,13 @@ function getCardanoSpendingPassword(
   signOptions?: KeplrSignOptions
 ): string | undefined {
   return (signOptions as CardanoSignOptions | undefined)?.cardano?.spendingPassword;
+}
+
+function isPositiveDecimalString(value: string): boolean {
+  const normalized = value.trim();
+  if (!/^\d+(\.\d+)?$/.test(normalized)) return false;
+  const [whole, fraction = ""] = normalized.split(".");
+  return /[1-9]/.test(whole) || /[1-9]/.test(fraction);
 }
 
 /**
@@ -83,6 +95,39 @@ export class CardanoSendAdapter {
       lovelaceAmount = "0";
     }
 
+    const allowZeroForMinimumCheck =
+      isNativeAda && actualAmount === "0" && isPositiveDecimalString(amount);
+    const throwFromMinimumViolationDraft = (params: {
+      minimumOutputLovelace: string;
+      coinMissingLovelace?: string;
+    }): never => {
+      const violation = mapCardanoMinimumViolation({
+        minimumOutputLovelace: params.minimumOutputLovelace,
+        coinMissingLovelace: params.coinMissingLovelace,
+      });
+      if (!violation) {
+        throw cardanoMalformedMinimumPayloadError("Failed to build transaction");
+      }
+      throw new Error(
+        formatCardanoMinimumViolationMessage({
+          violation,
+          cardanoDenom: currency.coinDenom,
+          nativeAdaCoinDecimals: currency.coinDecimals,
+        })
+      );
+    };
+    const safeDiscardDraft = async (draftId?: string) => {
+      if (!draftId) return;
+      try {
+        await this.messageRequester.sendMessage(
+          BACKGROUND_PORT,
+          new DiscardSendAdaTxDraftMsg(draftId)
+        );
+      } catch {
+        // Ignore cleanup errors.
+      }
+    };
+
     // Shared send logic: build message, broadcast, fire events
     const executeSend = async (
       _memo?: string,
@@ -95,17 +140,27 @@ export class CardanoSendAdapter {
 
       let draftId: string | undefined;
       try {
-        const draft = (await this.messageRequester.sendMessage(
+        const draftResult = (await this.messageRequester.sendMessage(
           BACKGROUND_PORT,
           new BuildSendAdaTxDraftMsg(
             normalizedRecipient,
             lovelaceAmount,
             _memo,
             this.chainId,
-            assets
+            assets,
+            allowZeroForMinimumCheck
           )
-        )) as { draftId: string };
-        draftId = draft.draftId;
+        )) as BuildSendAdaTxDraftResult;
+        if (draftResult.kind === "minimum_violation") {
+          throwFromMinimumViolationDraft({
+            minimumOutputLovelace: draftResult.minimumOutputLovelace,
+            coinMissingLovelace: draftResult.coinMissingLovelace,
+          });
+        }
+        if (draftResult.kind !== "draft") {
+          throw new Error("Unexpected Cardano draft build response");
+        }
+        draftId = draftResult.draftId;
 
         const spendingPassword = getCardanoSpendingPassword(_signOptions);
         const txHash = await this.messageRequester.sendMessage(
@@ -126,16 +181,7 @@ export class CardanoSendAdapter {
           onTxEvents.onFulfill({ txHash });
         }
       } catch (error) {
-        if (draftId) {
-          try {
-            await this.messageRequester.sendMessage(
-              BACKGROUND_PORT,
-              new DiscardSendAdaTxDraftMsg(draftId)
-            );
-          } catch {
-            // Ignore cleanup errors.
-          }
-        }
+        await safeDiscardDraft(draftId);
         if (onTxEvents?.onBroadcastFailed) {
           onTxEvents.onBroadcastFailed(error);
         }
@@ -149,16 +195,28 @@ export class CardanoSendAdapter {
         if (!normalizedRecipient) {
           throw new Error("Recipient address is required");
         }
-
-        const estimateMsg = new EstimateSendAdaMsg(
-          normalizedRecipient, lovelaceAmount, undefined, this.chainId, assets
-        );
-        const estimate = await this.messageRequester.sendMessage(BACKGROUND_PORT, estimateMsg) as {
-          fee: string;
-          total: string;
-          minAdaForTokens?: string;
-        };
-        return { gasUsed: parseInt(estimate.fee, 10) };
+        const draftResult = (await this.messageRequester.sendMessage(
+          BACKGROUND_PORT,
+          new BuildSendAdaTxDraftMsg(
+            normalizedRecipient,
+            lovelaceAmount,
+            undefined,
+            this.chainId,
+            assets,
+            allowZeroForMinimumCheck
+          )
+        )) as BuildSendAdaTxDraftResult;
+        if (draftResult.kind === "minimum_violation") {
+          throwFromMinimumViolationDraft({
+            minimumOutputLovelace: draftResult.minimumOutputLovelace,
+            coinMissingLovelace: draftResult.coinMissingLovelace,
+          });
+        }
+        if (draftResult.kind !== "draft") {
+          throw new Error("Unexpected Cardano draft build response");
+        }
+        await safeDiscardDraft(draftResult.draftId);
+        return { gasUsed: parseInt(draftResult.fee, 10) };
       },
       send: async (_fee: any, _memo?: string, _signOptions?: KeplrSignOptions, onTxEvents?: any) => {
         await executeSend(_memo, _signOptions, onTxEvents);
