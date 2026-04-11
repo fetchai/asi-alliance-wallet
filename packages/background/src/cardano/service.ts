@@ -1085,13 +1085,16 @@ export class CardanoService {
     };
   }
 
+  /** Dedup console noise when history contains many txs for an unsupported chain id. */
+  private static warnedUnknownSlotTimeChainKeys = new Set<string>();
+
   // Cardano genesis constants used to convert absolute slot → wall-clock Unix ms.
   // Byron: 20s/slot. Shelley and later: 1s/slot.
-  // Testnet genesis times sourced from https://book.world.dev.cardano.org/environments.html
+  // Mainnet + testnet systemStart values must match book.world.dev shelley-genesis.json (not environments.html summaries).
   private static slotToTimestampMs(slot: number, chainKey: string): number | undefined {
     switch (chainKey) {
       case "cardano-mainnet": {
-        // Byron genesis: 2017-09-23T21:44:51Z = 1506203091s
+        // Byron/system start: 2017-09-23T21:44:51Z = 1506203091s
         // Shelley transition: slot 4492800 → unix 1596059091s (1506203091 + 4492800 * 20)
         const SHELLEY_SLOT = 4_492_800;
         const SHELLEY_UNIX_S = 1_596_059_091;
@@ -1102,12 +1105,19 @@ export class CardanoService {
         return (BYRON_GENESIS_S + slot * 20) * 1000;
       }
       case "cardano-preview":
-        // Genesis: 2022-09-14T00:00:00Z = 1663113600s, 1s/slot
-        return (1_663_113_600 + slot) * 1000;
+        // preview/shelley-genesis.json systemStart 2022-10-25T00:00:00Z, 1s/slot from chain slot 0
+        return (1_666_656_000 + slot) * 1000;
       case "cardano-preprod":
-        // Genesis: 2022-04-01T00:00:00Z = 1648771200s, 1s/slot
-        return (1_648_771_200 + slot) * 1000;
+        // preprod/shelley-genesis.json systemStart 2022-06-01T00:00:00Z, 1s/slot from chain slot 0
+        return (1_654_041_600 + slot) * 1000;
       default:
+        if (!CardanoService.warnedUnknownSlotTimeChainKeys.has(chainKey)) {
+          CardanoService.warnedUnknownSlotTimeChainKeys.add(chainKey);
+          console.warn(
+            "[CardanoService] Unknown chainKey for slotToTimestampMs; timestamps omitted (no cross-network fallback):",
+            chainKey
+          );
+        }
         return undefined;
     }
   }
@@ -1273,7 +1283,9 @@ export class CardanoService {
         });
       }
 
-      const slot = tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : undefined;
+      const slotParsed =
+        tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : NaN;
+      const slot = Number.isFinite(slotParsed) ? slotParsed : undefined;
 
       items.push({
         id: txId,

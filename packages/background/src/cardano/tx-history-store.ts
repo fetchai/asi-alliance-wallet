@@ -1,6 +1,12 @@
 import { KVStore } from "@keplr-wallet/common";
 import type { CardanoTxHistoryItem } from "./messages";
 
+/**
+ * Increment when persisted snapshots must be dropped (e.g. wrong derived timestamps).
+ * KV key includes this so older versions are never read again.
+ */
+export const CARDANO_TX_HISTORY_STORE_VERSION = 2;
+
 export type CardanoTxHistorySnapshot = {
   items: CardanoTxHistoryItem[];
   mightHaveMore: boolean;
@@ -43,6 +49,6 @@ export class CardanoTxHistoryStore {
   }
 
   private getKey(chainId: string, walletId: string): string {
-    return `cardano.txHistory:${chainId}:${walletId}`;
+    return `cardano.txHistory.v${CARDANO_TX_HISTORY_STORE_VERSION}:${chainId}:${walletId}`;
   }
 }
