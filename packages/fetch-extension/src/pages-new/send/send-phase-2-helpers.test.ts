@@ -48,6 +48,8 @@ jest.mock("@keplr-wallet/hooks", () => {
 });
 
 jest.mock("@keplr-wallet/cardano", () => ({
+  CARDANO_SEND_CONFLICT_PENDING_MESSAGE:
+    "Another transaction is still pending. Please wait until your balance updates.",
   CardanoUiErrorCode: {},
   parseCardanoUiError: (message: string) => {
     const prefix = "cardano_ui_error:";
@@ -103,6 +105,9 @@ import {
   shouldStartCardanoSuccessTransition,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
+
+const CARDANO_SEND_CONFLICT_PENDING_MESSAGE =
+  "Another transaction is still pending. Please wait until your balance updates.";
 
 describe("getHighestPriorityNonRecipientBlockingError", () => {
   it("returns amount error when present", () => {
@@ -215,6 +220,7 @@ describe("isCardanoSendOperationalGuard", () => {
     isCardano: true as const,
     isOnline: true,
     isCardanoSyncing: false,
+    hasOutgoingPendingSpend: false,
   };
 
   it("is false when not Cardano", () => {
@@ -224,6 +230,7 @@ describe("isCardanoSendOperationalGuard", () => {
         isCardano: false,
         isOnline: false,
         isCardanoSyncing: true,
+        hasOutgoingPendingSpend: true,
       })
     ).toBe(false);
   });
@@ -232,6 +239,15 @@ describe("isCardanoSendOperationalGuard", () => {
     expect(isCardanoSendOperationalGuard({ ...base, isOnline: false })).toBe(
       true
     );
+  });
+
+  it("is true when outgoing spend pending", () => {
+    expect(
+      isCardanoSendOperationalGuard({
+        ...base,
+        hasOutgoingPendingSpend: true,
+      })
+    ).toBe(true);
   });
 
   it("is true when syncing", () => {
@@ -391,6 +407,15 @@ describe("normalizeCardanoDraftError", () => {
         rawError: "recipient address is empty",
       })
     ).toBe("Recipient address is required");
+  });
+
+  it("maps stable outgoing-pending conflict to user-facing line", () => {
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: CARDANO_SEND_CONFLICT_PENDING_MESSAGE,
+      })
+    ).toBe(CARDANO_SEND_CONFLICT_PENDING_MESSAGE);
   });
 
   it("maps legacy positive-number fallback to user-facing zero-amount message", () => {

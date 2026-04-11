@@ -31,7 +31,10 @@ import {
 import type { BuildSendAdaTxDraftResult } from "@keplr-wallet/background";
 import { DenomHelper } from "@keplr-wallet/common";
 import { CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
-import { lovelacesToAdaString } from "@keplr-wallet/cardano";
+import {
+  CARDANO_SEND_CONFLICT_PENDING_MESSAGE,
+  lovelacesToAdaString,
+} from "@keplr-wallet/cardano";
 import { Modal, ModalBody } from "reactstrap";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
 import {
@@ -401,6 +404,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const fiatCurrency = language.fiatCurrency;
     const { isOnline } = useNetwork();
     const [isCardanoSyncing, setIsCardanoSyncing] = useState(false);
+    const [hasCardanoOutgoingPending, setHasCardanoOutgoingPending] =
+      useState(false);
     const [cardanoSyncState, setCardanoSyncState] =
       useState<CardanoServiceState | null>(null);
     const [cardanoDraft, setCardanoDraft] = useState<{
@@ -475,6 +480,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       if (!isCardano) {
         setCardanoSyncState(null);
         setIsCardanoSyncing(false);
+        setHasCardanoOutgoingPending(false);
         return;
       }
 
@@ -503,7 +509,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
           const state = syncStatus?.state;
           setCardanoSyncState(state ?? null);
-          if (state === "ready_with_data" && syncStatus?.isSettled) {
+          const hasPending = syncStatus?.hasOutgoingPendingSpend === true;
+          setHasCardanoOutgoingPending(hasPending);
+          if (
+            state === "ready_with_data" &&
+            syncStatus?.isSettled &&
+            !hasPending
+          ) {
             setIsCardanoSyncing(false);
             return;
           }
@@ -519,6 +531,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           }
         } catch {
           if (!isSubscribed || myEpoch !== pollEpoch) return;
+          // Keep last known pending flag on transport/poll errors (avoid brief false unlock).
           clearPollTimeout();
           pollTimeout = setTimeout(() => {
             pollTimeout = null;
@@ -533,6 +546,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       return () => {
         isSubscribed = false;
         pollEpoch++;
+        setHasCardanoOutgoingPending(false);
         clearPollTimeout();
       };
     }, [isCardano, chainStore.current.chainId]);
@@ -557,6 +571,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       isCardano,
       isOnline,
       isCardanoSyncing,
+      hasOutgoingPendingSpend: hasCardanoOutgoingPending,
     });
 
     const cardanoDraftInputsReady = isCardanoSendDraftInputsReady({
@@ -1282,6 +1297,14 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 <i className="fas fa-wifi" style={{ marginRight: "8px" }} />
                 {cardanoOfflineMessage}
               </React.Fragment>
+            ) : hasCardanoOutgoingPending ? (
+              <React.Fragment>
+                <i
+                  className="fas fa-clock"
+                  style={{ marginRight: "8px" }}
+                />
+                {CARDANO_SEND_CONFLICT_PENDING_MESSAGE}
+              </React.Fragment>
             ) : (
               <React.Fragment>
                 <i
@@ -1300,6 +1323,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             isCardano && cardanoOperationalGuard
               ? !isOnline
                 ? cardanoOfflineMessage
+                : hasCardanoOutgoingPending
+                ? CARDANO_SEND_CONFLICT_PENDING_MESSAGE
                 : "Syncing wallet..."
               : "Review Transaction"
           }

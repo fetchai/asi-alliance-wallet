@@ -515,6 +515,7 @@ const handleGetCardanoSyncStatusMsg: (
         return {
           state: classified,
           isSettled: false,
+          hasOutgoingPendingSpend: false,
           error: errorMessage(error),
         };
       }
@@ -528,6 +529,7 @@ const handleGetCardanoSyncStatusMsg: (
             ? "provider_error"
             : "temporarily_unavailable",
         isSettled: false,
+        hasOutgoingPendingSpend: false,
         error:
           runtimeState === "provider_unavailable"
             ? "provider_unavailable"
@@ -545,6 +547,7 @@ const handleGetCardanoSyncStatusMsg: (
               ? "provider_error"
               : "temporarily_unavailable",
           isSettled: false,
+          hasOutgoingPendingSpend: false,
           error:
             runtimeState === "provider_unavailable"
               ? "provider_unavailable"
@@ -557,14 +560,19 @@ const handleGetCardanoSyncStatusMsg: (
       const isSettled = (await firstValueFrom(walletManager.syncStatus$).catch(
         () => false
       )) as boolean;
+      const hasOutgoingPendingSpend = await service.getHasOutgoingPendingSpend(
+        msg.chainId
+      );
       return {
         state: isSettled ? "ready_with_data" : "syncing",
         isSettled,
+        hasOutgoingPendingSpend,
       };
     } catch (error) {
       return {
         state: stateFromError(error),
         isSettled: false,
+        hasOutgoingPendingSpend: false,
         error: errorMessage(error),
       };
     }

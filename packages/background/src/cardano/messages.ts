@@ -133,6 +133,8 @@ export interface CardanoBalanceResponse {
 export interface CardanoSyncStatusResponse {
   state: CardanoServiceState;
   isSettled?: boolean;
+  /** True while a prior Cardano send is pending (local or SDK outgoing). */
+  hasOutgoingPendingSpend?: boolean;
   error?: string;
 }
 

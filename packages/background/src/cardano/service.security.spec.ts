@@ -7,6 +7,9 @@ jest.mock("@keplr-wallet/cardano", () => {
   const sendMinimum = jest.requireActual(
     "../../../cardano/src/utils/send-minimum-violation"
   );
+  const cardanoConstants = jest.requireActual(
+    "../../../cardano/src/constants/cardano-send-conflict"
+  );
   return {
     CardanoKeyRing: class {},
     CardanoWalletManager: class {},
@@ -46,6 +49,8 @@ jest.mock("@keplr-wallet/cardano", () => {
       sendMinimum.cardanoMalformedMinimumPayloadError,
     CARDANO_MINIMUM_VIOLATION_MALFORMED_PAYLOAD:
       sendMinimum.CARDANO_MINIMUM_VIOLATION_MALFORMED_PAYLOAD,
+    CARDANO_SEND_CONFLICT_PENDING_MESSAGE:
+      cardanoConstants.CARDANO_SEND_CONFLICT_PENDING_MESSAGE,
   };
 });
 

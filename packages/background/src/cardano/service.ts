@@ -6,6 +6,7 @@ import {
   formatLegacyMinimumViolationLovelaceError,
   mapCardanoMinimumViolation,
   cardanoMalformedMinimumPayloadError,
+  CARDANO_SEND_CONFLICT_PENDING_MESSAGE,
 } from "@keplr-wallet/cardano";
 import { Crypto } from "../keyring/crypto";
 import type { KeyStore as KeyringKeyStore } from "../keyring/types";
@@ -13,7 +14,7 @@ import { Notification } from "../tx/types";
 import type { CardanoTxHistoryItem, CardanoTxHistoryAsset, CardanoTxHistoryResponse, CardanoAssetAmount } from "./messages";
 import type { BuildSendAdaTxDraftResult } from "./messages";
 import { createObservableTransactionsByAddressesProvider, createTxHistoryLoader, getTxInputsValueAndAddress, parseAssetId } from "@keplr-wallet/cardano";
-import { firstValueFrom, ReplaySubject, Subscription } from "rxjs";
+import { firstValueFrom, of, ReplaySubject, Subscription } from "rxjs";
 import { skip, take, timeout } from "rxjs/operators";
 import type { KVStore } from "@keplr-wallet/common";
 import { CardanoTxHistoryStore } from "./tx-history-store";
@@ -51,6 +52,8 @@ export class CardanoService {
     }
   >();
   private runtimeSessionId = "";
+  /** Serializes Cardano ADA draft submit (sign + broadcast + pending bookkeeping). */
+  private submitAdaTxDraftSerial: Promise<void> = Promise.resolve();
 
   constructor(notification?: Notification, kvStore?: KVStore) {
     this.notification = notification;
@@ -124,6 +127,7 @@ export class CardanoService {
     this.txHistoryControllers.clear();
     this.sendAdaTxDrafts.clear();
     this.locallyPendingSentTxs.clear();
+    this.submitAdaTxDraftSerial = Promise.resolve();
     this.keyRing = undefined;
     this.runtimeSessionId = "";
   }
@@ -235,6 +239,91 @@ export class CardanoService {
 
   private createDraftPendingTxId(draftId: string): string {
     return `draft-pending:${draftId}`;
+  }
+
+  private async runWithSubmitAdaTxDraftLock<T>(fn: () => Promise<T>): Promise<T> {
+    const previous = this.submitAdaTxDraftSerial;
+    let release!: () => void;
+    this.submitAdaTxDraftSerial = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }
+
+  /** Short window where locallyPendingSentTxs still blocks sends until SDK outgoing updates. */
+  private static readonly LOCAL_OUTGOING_GUARD_GRACE_MS = 15_000;
+
+  /**
+   * Read-only: SDK outgoing queues. No wallet mutations.
+   */
+  private async hasSdkOutgoingPending(): Promise<boolean> {
+    const walletManager = this.keyRing?.getWalletManager?.() as
+      | CardanoWalletManager
+      | undefined;
+    if (!walletManager?.hasWallet?.()) {
+      return false;
+    }
+    const wallet = walletManager.getWallet() as WalletForPendingHistory;
+    const outgoing = wallet?.transactions?.outgoing;
+    if (!outgoing) {
+      return false;
+    }
+    const inFlight = (await firstValueFrom(outgoing.inFlight$ ?? of([])).catch(
+      () => []
+    )) as unknown[];
+    const signed = (await firstValueFrom(outgoing.signed$ ?? of([])).catch(
+      () => []
+    )) as unknown[];
+    return (inFlight?.length ?? 0) > 0 || (signed?.length ?? 0) > 0;
+  }
+
+  /**
+   * Read-only: true if locallyPendingSentTxs has any entry fresh enough to block sends.
+   * Does not mutate the map (shared with activity in withPendingTxs).
+   */
+  private hasFreshLocalOutgoingGuard(chainId?: string): boolean {
+    if (!chainId) {
+      return false;
+    }
+    const perChain = this.locallyPendingSentTxs.get(chainId);
+    if (!perChain || perChain.size === 0) {
+      return false;
+    }
+    const now = Date.now();
+    for (const [, v] of perChain) {
+      if (now - v.createdAt <= CardanoService.LOCAL_OUTGOING_GUARD_GRACE_MS) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Internal: used by build/submit enforcement (errors propagate). */
+  private async hasConflictingOutgoingSpend(chainId?: string): Promise<boolean> {
+    if (await this.hasSdkOutgoingPending()) {
+      return true;
+    }
+    if (this.hasFreshLocalOutgoingGuard(chainId)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * True while a prior send is still pending (local or SDK outgoing queues).
+   * Used by sync status UI; enforcement is in buildSendAdaTxDraft / submitSendAdaTxDraft.
+   */
+  async getHasOutgoingPendingSpend(chainId?: string): Promise<boolean> {
+    try {
+      return await this.hasConflictingOutgoingSpend(chainId);
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -438,6 +527,10 @@ export class CardanoService {
       throw new Error("Wallet manager not initialized");
     }
 
+    if (await this.hasConflictingOutgoingSpend(params.chainId)) {
+      throw new Error(CARDANO_SEND_CONFLICT_PENDING_MESSAGE);
+    }
+
     const sdkAssets = params.assets ? this.toSdkAssetMap(params.assets) : undefined;
     const outcome = await walletManager.buildSendAdaTxDraftOutcome({
       to: params.to,
@@ -513,47 +606,50 @@ export class CardanoService {
     approvedSummaryHash: string;
     approvedPayloadHash: string;
   }): Promise<string> {
-    const draft = this.sendAdaTxDrafts.get(params.draftId);
-    if (!draft) {
-      throw new Error("Transaction draft not found. Please rebuild and try again.");
-    }
+    return await this.runWithSubmitAdaTxDraftLock(async () => {
+      const draft = this.sendAdaTxDrafts.get(params.draftId);
+      if (!draft) {
+        throw new Error("Transaction draft not found. Please rebuild and try again.");
+      }
 
-    // Keep draft lifetime short to avoid stale context reuse.
-    const ttlMs = 10 * 60 * 1000; // 10 minutes
-    if (Date.now() - draft.createdAt > ttlMs) {
-      this.sendAdaTxDrafts.delete(params.draftId);
-      throw new Error("Transaction draft expired. Please rebuild and try again.");
-    }
+      // Keep draft lifetime short to avoid stale context reuse.
+      const ttlMs = 10 * 60 * 1000; // 10 minutes
+      if (Date.now() - draft.createdAt > ttlMs) {
+        this.sendAdaTxDrafts.delete(params.draftId);
+        throw new Error("Transaction draft expired. Please rebuild and try again.");
+      }
 
-    // Optional safety: ensure the draft is used on the intended chain.
-    if (draft.chainId && params.chainId && draft.chainId !== params.chainId) {
-      throw new Error("Transaction draft chain mismatch. Please rebuild and try again.");
-    }
-    if (
-      draft.walletId !== params.walletId ||
-      draft.selectedAccountAddress !== params.selectedAccountAddress ||
-      draft.selectedKeyStoreId !== params.selectedKeyStoreId ||
-      draft.networkId !== params.networkId ||
-      draft.unlockSessionId !== params.unlockSessionId
-    ) {
-      this.sendAdaTxDrafts.delete(params.draftId);
-      throw new Error("Transaction draft context mismatch. Please rebuild and try again.");
-    }
-    if (this.getDraftSummaryHash(draft) !== params.approvedSummaryHash) {
-      this.sendAdaTxDrafts.delete(params.draftId);
-      throw new Error("Transaction draft summary mismatch. Please rebuild and try again.");
-    }
-    if (draft.payloadHash !== params.approvedPayloadHash) {
-      this.sendAdaTxDrafts.delete(params.draftId);
-      throw new Error("Transaction draft payload mismatch. Please rebuild and try again.");
-    }
-    if (this.computeDraftPayloadHash(draft) !== draft.payloadHash) {
-      this.sendAdaTxDrafts.delete(params.draftId);
-      throw new Error("Transaction draft payload changed. Please rebuild and try again.");
-    }
+      // Optional safety: ensure the draft is used on the intended chain.
+      if (draft.chainId && params.chainId && draft.chainId !== params.chainId) {
+        throw new Error("Transaction draft chain mismatch. Please rebuild and try again.");
+      }
+      if (
+        draft.walletId !== params.walletId ||
+        draft.selectedAccountAddress !== params.selectedAccountAddress ||
+        draft.selectedKeyStoreId !== params.selectedKeyStoreId ||
+        draft.networkId !== params.networkId ||
+        draft.unlockSessionId !== params.unlockSessionId
+      ) {
+        this.sendAdaTxDrafts.delete(params.draftId);
+        throw new Error("Transaction draft context mismatch. Please rebuild and try again.");
+      }
+      if (this.getDraftSummaryHash(draft) !== params.approvedSummaryHash) {
+        this.sendAdaTxDrafts.delete(params.draftId);
+        throw new Error("Transaction draft summary mismatch. Please rebuild and try again.");
+      }
+      if (draft.payloadHash !== params.approvedPayloadHash) {
+        this.sendAdaTxDrafts.delete(params.draftId);
+        throw new Error("Transaction draft payload mismatch. Please rebuild and try again.");
+      }
+      if (this.computeDraftPayloadHash(draft) !== draft.payloadHash) {
+        this.sendAdaTxDrafts.delete(params.draftId);
+        throw new Error("Transaction draft payload changed. Please rebuild and try again.");
+      }
 
-    try {
-      // Show tx in Activity immediately after approval, even before network broadcast.
+      if (await this.hasConflictingOutgoingSpend(params.chainId)) {
+        throw new Error(CARDANO_SEND_CONFLICT_PENDING_MESSAGE);
+      }
+
       const draftPendingTxId = this.createDraftPendingTxId(params.draftId);
       this.registerLocallyPendingSentTx(
         {
@@ -566,35 +662,40 @@ export class CardanoService {
         params.chainId
       );
 
-      const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
-      if (!walletManager) {
-        throw new Error("Wallet manager not initialized");
+      try {
+        const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+        if (!walletManager) {
+          throw new Error("Wallet manager not initialized");
+        }
+        const signedTx = (await draft.tx.sign()).cbor;
+        const txIdAny = await walletManager.submitTx(signedTx);
+        const txId =
+          typeof txIdAny === "string"
+            ? txIdAny
+            : txIdAny?.toString?.() ?? String(txIdAny);
+
+        this.removeLocallyPendingSentTx(draftPendingTxId, params.chainId);
+
+        this.registerLocallyPendingSentTx(
+          {
+            amount: draft.amount,
+            fee: draft.fee,
+            minAdaForTokens: draft.minAdaForTokens,
+            assets: draft.assets,
+          },
+          txId,
+          params.chainId
+        );
+
+        this.sendAdaTxDrafts.delete(params.draftId);
+        return txId;
+      } catch (error: any) {
+        this.removeLocallyPendingSentTx(draftPendingTxId, params.chainId);
+        this.sendAdaTxDrafts.delete(params.draftId);
+        this.processCardanoTxError(error);
+        throw error;
       }
-      const signedTx = (await draft.tx.sign()).cbor;
-      const txIdAny = await walletManager.submitTx(signedTx);
-      const txId = typeof txIdAny === "string" ? txIdAny : txIdAny?.toString?.() ?? String(txIdAny);
-
-      this.removeLocallyPendingSentTx(draftPendingTxId, params.chainId);
-
-      // Lace-like behavior: show pending immediately after broadcast.
-      this.registerLocallyPendingSentTx(
-        {
-          amount: draft.amount,
-          fee: draft.fee,
-          minAdaForTokens: draft.minAdaForTokens,
-          assets: draft.assets,
-        },
-        txId,
-        params.chainId
-      );
-
-      this.sendAdaTxDrafts.delete(params.draftId);
-      return txId;
-    } catch (error: any) {
-      this.sendAdaTxDrafts.delete(params.draftId);
-      this.processCardanoTxError(error);
-      throw error;
-    }
+    });
   }
 
   discardSendAdaTxDraft(draftId: string): void {

@@ -469,6 +469,7 @@ describe("Cardano handler security boundaries", () => {
     expect(result).toEqual({
       state: "temporarily_unavailable",
       isSettled: false,
+      hasOutgoingPendingSpend: false,
       error: CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY,
     });
     expect(service.getWalletManager).not.toHaveBeenCalled();
@@ -523,6 +524,7 @@ describe("Cardano handler security boundaries", () => {
     expect(result).toEqual({
       state: "provider_error",
       isSettled: false,
+      hasOutgoingPendingSpend: false,
       error: msgText,
     });
     expect(service.getWalletManager).not.toHaveBeenCalled();

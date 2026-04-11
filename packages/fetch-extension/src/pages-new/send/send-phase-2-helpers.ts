@@ -2,6 +2,7 @@ import { EmptyAddressError } from "@keplr-wallet/hooks";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
 import {
   CardanoUiErrorCode,
+  CARDANO_SEND_CONFLICT_PENDING_MESSAGE,
   formatCardanoMinimumViolationMessage,
   mapCardanoMinimumViolation,
   parseCardanoUiError,
@@ -11,16 +12,21 @@ import {
  * True during Cardano sync/offline operational window: use status banners and disable review
  * instead of showing synthetic validation "Transaction is not ready". Does not include
  * provider_error — those stay validation/draft-error UX unless handled separately.
+ * When {@link hasOutgoingPendingSpend} is true, another send is still pending (matches background guard).
  */
 export function isCardanoSendOperationalGuard(params: {
   isCardano: boolean;
   isOnline: boolean;
   isCardanoSyncing: boolean;
+  hasOutgoingPendingSpend?: boolean;
 }): boolean {
   if (!params.isCardano) {
     return false;
   }
   if (!params.isOnline) {
+    return true;
+  }
+  if (params.hasOutgoingPendingSpend) {
     return true;
   }
   if (params.isCardanoSyncing) {
@@ -88,6 +94,10 @@ export const normalizeCardanoDraftError = (params: {
   const rawError = params.rawError?.trim();
   if (!rawError) {
     return null;
+  }
+
+  if (rawError === CARDANO_SEND_CONFLICT_PENDING_MESSAGE) {
+    return CARDANO_SEND_CONFLICT_PENDING_MESSAGE;
   }
 
   if (rawError === "recipient address is empty") {
