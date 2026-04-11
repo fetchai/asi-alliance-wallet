@@ -38,8 +38,6 @@ import {
 import { Modal, ModalBody } from "reactstrap";
 import type { KeplrSignOptions } from "@keplr-wallet/types";
 import {
-  CARDANO_SUCCESS_TRANSITION_DELAY_MS,
-  getCardanoPostSubmitStatusSequence,
   getBannerValidationError,
   getCardanoPasswordModalInlineError,
   getHighestPriorityNonRecipientBlockingError,
@@ -53,9 +51,7 @@ import {
   parseAmountToBaseUnits,
   parseCardanoUiErrorMessage,
   shouldNavigateCardanoFailedFromError,
-  shouldNavigateCardanoSuccessAfterSubmit,
   shouldPushCardanoFailedWarningFromModal,
-  shouldStartCardanoSuccessTransition,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 
@@ -437,10 +433,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const [isCardanoPasswordConfirmOpen, setIsCardanoPasswordConfirmOpen] =
       useState(false);
     const passwordInputRef = useRef<HTMLInputElement>(null);
-    const cardanoSuccessTransitionTimeoutRef = useRef<ReturnType<
-      typeof setTimeout
-    > | null>(null);
-    const hasStartedCardanoPendingToSuccessRef = useRef(false);
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
       return value && value.shrink(true).maxDecimals(6).toString();
@@ -458,15 +450,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       : isCardanoSyncing
       ? "Syncing wallet… Please wait"
       : undefined;
-
-    useEffect(() => {
-      return () => {
-        if (cardanoSuccessTransitionTimeoutRef.current) {
-          clearTimeout(cardanoSuccessTransitionTimeoutRef.current);
-          cardanoSuccessTransitionTimeoutRef.current = null;
-        }
-      };
-    }, []);
 
     useEffect(() => {
       if (isFromPhase1 !== undefined) setFromPhase1(isFromPhase1);
@@ -904,11 +887,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             feeType: sendConfigs.feeConfig.feeType,
           });
 
-          const [pendingStatus, successStatus] =
-            getCardanoPostSubmitStatusSequence();
           navigate("/send", {
             replace: true,
-            state: { trnsxStatus: pendingStatus, isNext: true },
+            state: { trnsxStatus: "pending", isNext: true },
           });
           notification.push({
             type: "primary",
@@ -918,36 +899,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             canDelete: true,
             transition: { duration: 0.25 },
           });
-
-          if (
-            shouldStartCardanoSuccessTransition({
-              submitSucceeded: true,
-              hasPendingToSuccessTransitionStarted:
-                hasStartedCardanoPendingToSuccessRef.current,
-            })
-          ) {
-            hasStartedCardanoPendingToSuccessRef.current = true;
-            if (cardanoSuccessTransitionTimeoutRef.current) {
-              clearTimeout(cardanoSuccessTransitionTimeoutRef.current);
-            }
-            cardanoSuccessTransitionTimeoutRef.current = setTimeout(() => {
-              cardanoSuccessTransitionTimeoutRef.current = null;
-              const currentPathName = getPathname();
-              if (
-                shouldNavigateCardanoSuccessAfterSubmit({
-                  submitSucceeded: true,
-                  isDetachedPage,
-                  currentPathName,
-                })
-              ) {
-                navigate("/send", {
-                  replace: true,
-                  state: { trnsxStatus: successStatus, isNext: true },
-                });
-              }
-              hasStartedCardanoPendingToSuccessRef.current = false;
-            }, CARDANO_SUCCESS_TRANSITION_DELAY_MS);
-          }
 
           if (isDetachedPage) {
             window.close();
@@ -1089,11 +1040,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         }
       } catch (e: any) {
         if (isCardano) {
-          hasStartedCardanoPendingToSuccessRef.current = false;
-          if (cardanoSuccessTransitionTimeoutRef.current) {
-            clearTimeout(cardanoSuccessTransitionTimeoutRef.current);
-            cardanoSuccessTransitionTimeoutRef.current = null;
-          }
           const errorMessage = getErrorMessage(e);
           const parsedError = parseCardanoUiErrorMessage(errorMessage);
           const shouldNavigateToFailed = shouldNavigateCardanoFailedFromError({

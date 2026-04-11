@@ -83,8 +83,6 @@ jest.mock("@keplr-wallet/cardano", () => ({
 
 import { EmptyAddressError } from "@keplr-wallet/hooks";
 import {
-  CARDANO_SUCCESS_TRANSITION_DELAY_MS,
-  getCardanoPostSubmitStatusSequence,
   getCardanoPasswordModalInlineError,
   parseCardanoUiErrorMessage,
   getMinimumDisplayAmountFromDecimals,
@@ -99,10 +97,8 @@ import {
   normalizeCardanoDraftError,
   parseAmountToBaseUnits,
   isCardanoModalLevelErrorMessage,
-  shouldNavigateCardanoSuccessAfterSubmit,
   shouldNavigateCardanoFailedFromError,
   shouldPushCardanoFailedWarningFromModal,
-  shouldStartCardanoSuccessTransition,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 
@@ -511,40 +507,6 @@ describe("normalizeCardanoDraftError", () => {
   });
 });
 
-describe("Cardano post-submit status flow", () => {
-  it("keeps pending -> success sequence for post-submit UI flow", () => {
-    expect(getCardanoPostSubmitStatusSequence()).toEqual([
-      "pending",
-      "success",
-    ]);
-  });
-
-  it("uses a small deterministic delay for pending -> success transition", () => {
-    expect(CARDANO_SUCCESS_TRANSITION_DELAY_MS).toBeGreaterThan(0);
-  });
-
-  it("enforces single-owner transition scheduling", () => {
-    expect(
-      shouldStartCardanoSuccessTransition({
-        submitSucceeded: true,
-        hasPendingToSuccessTransitionStarted: false,
-      })
-    ).toBe(true);
-    expect(
-      shouldStartCardanoSuccessTransition({
-        submitSucceeded: true,
-        hasPendingToSuccessTransitionStarted: true,
-      })
-    ).toBe(false);
-    expect(
-      shouldStartCardanoSuccessTransition({
-        submitSucceeded: false,
-        hasPendingToSuccessTransitionStarted: false,
-      })
-    ).toBe(false);
-  });
-});
-
 describe("Cardano error classification", () => {
   it("parses structured cardano ui error messages", () => {
     expect(
@@ -659,29 +621,5 @@ describe("Cardano error classification", () => {
         message: "submit tx failed: provider unavailable",
       })
     ).toBe(true);
-  });
-
-  it("navigates to success only after successful submit on send route", () => {
-    expect(
-      shouldNavigateCardanoSuccessAfterSubmit({
-        submitSucceeded: true,
-        isDetachedPage: false,
-        currentPathName: "send",
-      })
-    ).toBe(true);
-    expect(
-      shouldNavigateCardanoSuccessAfterSubmit({
-        submitSucceeded: true,
-        isDetachedPage: false,
-        currentPathName: "activity",
-      })
-    ).toBe(false);
-    expect(
-      shouldNavigateCardanoSuccessAfterSubmit({
-        submitSucceeded: false,
-        isDetachedPage: false,
-        currentPathName: "send",
-      })
-    ).toBe(false);
   });
 });

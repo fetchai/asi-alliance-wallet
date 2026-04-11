@@ -32,9 +32,7 @@ jest.mock("@keplr-wallet/cardano", () => ({
 import {
   getCardanoPasswordModalInlineError,
   shouldNavigateCardanoFailedFromError,
-  shouldNavigateCardanoSuccessAfterSubmit,
   shouldPushCardanoFailedWarningFromModal,
-  shouldStartCardanoSuccessTransition,
 } from "./send-phase-2-helpers";
 
 describe("SendPhase2 Cardano flow decisions", () => {
@@ -59,13 +57,6 @@ describe("SendPhase2 Cardano flow decisions", () => {
         message,
       })
     ).toBe(false);
-    expect(
-      shouldNavigateCardanoSuccessAfterSubmit({
-        submitSucceeded: false,
-        isDetachedPage: false,
-        currentPathName: "send",
-      })
-    ).toBe(false);
   });
 
   it("uses failed flow for system-level errors", () => {
@@ -87,35 +78,6 @@ describe("SendPhase2 Cardano flow decisions", () => {
         message,
       })
     ).toBe(true);
-  });
-
-  it("keeps success transition single-owner and submit-driven", () => {
-    expect(
-      shouldStartCardanoSuccessTransition({
-        submitSucceeded: true,
-        hasPendingToSuccessTransitionStarted: false,
-      })
-    ).toBe(true);
-    expect(
-      shouldStartCardanoSuccessTransition({
-        submitSucceeded: true,
-        hasPendingToSuccessTransitionStarted: true,
-      })
-    ).toBe(false);
-    expect(
-      shouldNavigateCardanoSuccessAfterSubmit({
-        submitSucceeded: true,
-        isDetachedPage: false,
-        currentPathName: "send",
-      })
-    ).toBe(true);
-    expect(
-      shouldNavigateCardanoSuccessAfterSubmit({
-        submitSucceeded: true,
-        isDetachedPage: false,
-        currentPathName: "home",
-      })
-    ).toBe(false);
   });
 
   it("keeps non-modal submit behavior unchanged", () => {

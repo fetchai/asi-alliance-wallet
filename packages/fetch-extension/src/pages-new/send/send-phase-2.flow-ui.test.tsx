@@ -14,7 +14,8 @@ jest.mock("mobx-react-lite", () => ({
 }));
 
 jest.mock("@keplr-wallet/stores", () => ({
-  CARDANO_NATIVE_TOKEN_TYPE: "native",
+  // Must match packages/stores (cardanonative); "native" wrongly flags ADA as token dust before Build.
+  CARDANO_NATIVE_TOKEN_TYPE: "cardanonative",
 }));
 
 jest.mock("@keplr-wallet/hooks", () => ({
@@ -178,6 +179,9 @@ jest.mock("@components-v2/transx-status", () => ({
     if (status === "success") {
       return <div data-testid="tx-status">Transaction Successful</div>;
     }
+    if (status === "pending") {
+      return <div data-testid="tx-status">Transaction Pending</div>;
+    }
     return <div data-testid="tx-status">{status}</div>;
   },
 }));
@@ -211,10 +215,7 @@ jest.mock("@keplr-wallet/background", () => {
     }
   }
   class DiscardSendAdaTxDraftMsg {
-    /* mock stub */
-    constructor() {
-      return;
-    }
+    constructor(public readonly draftId?: string) {}
   }
   class GetCardanoSyncStatusMsg {
     constructor(public chainId?: string) {}
@@ -228,6 +229,20 @@ jest.mock("@keplr-wallet/background", () => {
     KeyRingStatus: { LOCKED: "locked" },
   };
 });
+
+/** Mocked IPC message classes (same references as SendPhase2). Use instanceof, not constructor.name. */
+const ipcCardanoMessageTypes = () =>
+  jest.requireMock("@keplr-wallet/background") as {
+    GetCardanoSyncStatusMsg: new (chainId?: string) => object;
+    BuildSendAdaTxDraftMsg: new (...args: unknown[]) => object;
+    DiscardSendAdaTxDraftMsg: new (draftId?: string) => object;
+    SubmitSendAdaTxDraftMsg: new (draftId: string, chainId?: string) => object;
+    SubmitSendAdaTxDraftWithPasswordMsg: new (
+      draftId: string,
+      password: string,
+      chainId?: string
+    ) => object;
+  };
 
 const defaultCardanoAccount = () => ({
   bech32Address: "addr_test1q...",
@@ -337,9 +352,26 @@ describe("SendPhase2 real flow guards", () => {
     (jest.requireMock("../../hooks").useNetwork as jest.Mock).mockReturnValue({
       isOnline: true,
     });
-    mockSendMessage.mockResolvedValue({
-      state: "ready_with_data",
-      isSettled: true,
+    mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+      const bg = ipcCardanoMessageTypes();
+      if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+        return Promise.resolve({
+          state: "ready_with_data",
+          isSettled: true,
+        });
+      }
+      if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+        return Promise.resolve({
+          kind: "draft",
+          draftId: "draft-id-default",
+          fee: "170000",
+          total: "1230000",
+        });
+      }
+      if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+        return Promise.resolve(undefined);
+      }
+      return Promise.resolve(undefined);
     });
   });
 
@@ -354,10 +386,12 @@ describe("SendPhase2 real flow guards", () => {
   const renderComponent = (props?: {
     trnsxStatus?: string;
     isCardano?: boolean;
+    isDetachedPage?: boolean;
     /** When set, used instead of default cardano-testnet / cosmoshub-4 (e.g. poll effect deps). */
     chainId?: string;
   }) => {
     const isCardano = props?.isCardano ?? true;
+    const isDetachedPage = props?.isDetachedPage ?? false;
     const chainId =
       props?.chainId ?? (isCardano ? "cardano-testnet" : "cosmoshub-4");
     mockStore.chainStore.current = {
@@ -373,7 +407,7 @@ describe("SendPhase2 real flow guards", () => {
       root.render(
         <SendPhase2
           sendConfigs={sendConfigs}
-          isDetachedPage={false}
+          isDetachedPage={isDetachedPage}
           setIsNext={jest.fn()}
           trnsxStatus={props?.trnsxStatus as any}
           fromPhase1={false}
@@ -508,7 +542,7 @@ describe("SendPhase2 real flow guards", () => {
     ).toBe(true);
   });
 
-  it("navigates pending then success once and renders routed success screen", async () => {
+  it("Cardano submit: navigates to pending only; no auto success after timer advance", async () => {
     renderComponent();
     await advanceDraftBuild();
 
@@ -536,17 +570,20 @@ describe("SendPhase2 real flow guards", () => {
     const confirmButton = [...modalRoot.querySelectorAll("button")].find(
       (button) => button.textContent?.includes("Confirm")
     ) as HTMLButtonElement;
+    const navigateCountBeforeSubmit = mockNavigate.mock.calls.length;
     await act(async () => {
       confirmButton.click();
       await flushMicrotasksDeep();
     });
 
-    expect(
-      mockNavigate.mock.calls.some(
-        (call) =>
-          call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
-      )
-    ).toBe(true);
+    const submitNavigateCalls = mockNavigate.mock.calls.slice(
+      navigateCountBeforeSubmit
+    );
+    const submitPendingCalls = submitNavigateCalls.filter(
+      (call) =>
+        call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
+    );
+    expect(submitPendingCalls.length).toBe(1);
 
     await act(async () => {
       jest.advanceTimersByTime(350);
@@ -556,19 +593,82 @@ describe("SendPhase2 real flow guards", () => {
     const successCalls = mockNavigate.mock.calls.filter(
       (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "success"
     );
-    expect(successCalls.length).toBe(1);
-    expect(mockNavigate.mock.calls.some((call) => call[0] === "/")).toBe(false);
+    expect(successCalls.length).toBe(0);
 
-    const successRouteState = successCalls[0]?.[1]?.state;
-    expect(successRouteState).toBeDefined();
-    // Routed success roundtrip: feed captured navigate state back into useLocation + rerender with
-    // trnsxStatus from that same object (not a standalone literal success prop).
-
-    mockLocationState = successRouteState as Record<string, unknown>;
+    const pendingRouteState = submitPendingCalls[0]?.[1]?.state as Record<
+      string,
+      unknown
+    >;
+    expect(pendingRouteState).toBeDefined();
+    mockLocationState = pendingRouteState;
     renderComponent({
-      trnsxStatus: (successRouteState as { trnsxStatus: string }).trnsxStatus,
+      trnsxStatus: (pendingRouteState as { trnsxStatus: string }).trnsxStatus,
     });
-    expect(container.textContent).toContain("Transaction Successful");
+    expect(container.textContent).toContain("Transaction Pending");
+  });
+
+  it("Cardano detached submit: calls window.close and does not navigate to success after timer", async () => {
+    const closeSpy = jest.spyOn(window, "close").mockImplementation(() => {});
+
+    try {
+      renderComponent({ isDetachedPage: true });
+      await advanceDraftBuild();
+
+      const reviewButton = [...container.querySelectorAll("button")].find(
+        (button) => button.textContent?.includes("Review Transaction")
+      ) as HTMLButtonElement;
+      await act(async () => {
+        reviewButton.click();
+        await flushMicrotasksDeep();
+      });
+
+      const modalEl = container.querySelector("[data-testid='password-modal']");
+      expect(modalEl).not.toBeNull();
+      const modalRoot = modalEl as HTMLElement;
+      const input = modalRoot.querySelector(
+        "[data-testid='password-input']"
+      ) as HTMLInputElement;
+      await act(async () => {
+        Simulate.change(input, { target: { value: "good-password" } } as any);
+        await flushMicrotasksDeep();
+      });
+
+      const navigateCountBeforeSubmit = mockNavigate.mock.calls.length;
+      mockSendMessage.mockResolvedValueOnce("tx-id-detached");
+
+      const confirmButton = [...modalRoot.querySelectorAll("button")].find(
+        (button) => button.textContent?.includes("Confirm")
+      ) as HTMLButtonElement;
+      await act(async () => {
+        confirmButton.click();
+        await flushMicrotasksDeep();
+      });
+
+      const submitNavigateCalls = mockNavigate.mock.calls.slice(
+        navigateCountBeforeSubmit
+      );
+      expect(
+        submitNavigateCalls.filter(
+          (call) =>
+            call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
+        ).length
+      ).toBe(1);
+      expect(closeSpy).toHaveBeenCalled();
+
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+        await flushMicrotasksDeep();
+      });
+
+      expect(
+        mockNavigate.mock.calls.filter(
+          (call) =>
+            call[0] === "/send" && call[1]?.state?.trnsxStatus === "success"
+        ).length
+      ).toBe(0);
+    } finally {
+      closeSpy.mockRestore();
+    }
   });
 
   it("non-cardano minimal smoke: no password modal, send runs, pending navigation (success needs onFulfill)", async () => {
@@ -695,12 +795,12 @@ describe("SendPhase2 real flow guards", () => {
 
     let syncQueue: SyncQueueItem[];
 
-    const countGetCardanoSyncStatusCalls = (): number =>
-      mockSendMessage.mock.calls.filter(
-        (call) =>
-          (call[1] as { constructor?: { name?: string } } | undefined)
-            ?.constructor?.name === "GetCardanoSyncStatusMsg"
+    const countGetCardanoSyncStatusCalls = (): number => {
+      const { GetCardanoSyncStatusMsg } = ipcCardanoMessageTypes();
+      return mockSendMessage.mock.calls.filter(
+        (call) => call[1] instanceof GetCardanoSyncStatusMsg
       ).length;
+    };
 
     const bottomActionButton = (): HTMLButtonElement | undefined =>
       [...container.querySelectorAll("button")].find(
@@ -711,35 +811,33 @@ describe("SendPhase2 real flow guards", () => {
 
     beforeEach(() => {
       syncQueue = [];
-      mockSendMessage.mockImplementation(
-        (_port: unknown, msg: { constructor?: { name?: string } }) => {
-          const name = msg?.constructor?.name;
-          if (name === "GetCardanoSyncStatusMsg") {
-            const item = syncQueue.shift();
-            if (item === "reject") {
-              return Promise.reject(
-                new Error("GetCardanoSyncStatusMsg ipc fail")
-              );
-            }
-            if (item == null) {
-              return Promise.reject(new Error("sync queue exhausted"));
-            }
-            return Promise.resolve(item);
+      mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+        const bg = ipcCardanoMessageTypes();
+        if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+          const item = syncQueue.shift();
+          if (item === "reject") {
+            return Promise.reject(
+              new Error("GetCardanoSyncStatusMsg ipc fail")
+            );
           }
-          if (name === "BuildSendAdaTxDraftMsg") {
-            return Promise.resolve({
-              kind: "draft",
-              draftId: "draft-id",
-              fee: "170000",
-              total: "1230000",
-            });
+          if (item == null) {
+            return Promise.reject(new Error("sync queue exhausted"));
           }
-          if (name === "DiscardSendAdaTxDraftMsg") {
-            return Promise.resolve(undefined);
-          }
-          return Promise.resolve("tx-ok");
+          return Promise.resolve(item);
         }
-      );
+        if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+          return Promise.resolve({
+            kind: "draft",
+            draftId: "draft-id",
+            fee: "170000",
+            total: "1230000",
+          });
+        }
+        if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("tx-ok");
+      });
     });
 
     const runDraftDebounce = async () => {
@@ -903,26 +1001,24 @@ describe("SendPhase2 real flow guards", () => {
         }
       );
       syncQueue = [{ state: "syncing", isSettled: false }];
-      mockSendMessage.mockImplementation(
-        (_port: unknown, msg: { constructor?: { name?: string } }) => {
-          const name = msg?.constructor?.name;
-          if (name === "GetCardanoSyncStatusMsg") {
-            return Promise.resolve(syncQueue[0]);
-          }
-          if (name === "BuildSendAdaTxDraftMsg") {
-            return Promise.resolve({
-              kind: "draft",
-              draftId: "draft-id",
-              fee: "170000",
-              total: "1230000",
-            });
-          }
-          if (name === "DiscardSendAdaTxDraftMsg") {
-            return Promise.resolve(undefined);
-          }
-          return Promise.resolve("tx-ok");
+      mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+        const bg = ipcCardanoMessageTypes();
+        if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+          return Promise.resolve(syncQueue[0]);
         }
-      );
+        if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+          return Promise.resolve({
+            kind: "draft",
+            draftId: "draft-id",
+            fee: "170000",
+            total: "1230000",
+          });
+        }
+        if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("tx-ok");
+      });
       renderComponent();
       await act(async () => {
         await flushMicrotasks();
@@ -1043,30 +1139,28 @@ describe("SendPhase2 real flow guards", () => {
         }
       );
       let syncCallIndex = 0;
-      mockSendMessage.mockImplementation(
-        (_port: unknown, msg: { constructor?: { name?: string } }) => {
-          const name = msg?.constructor?.name;
-          if (name === "GetCardanoSyncStatusMsg") {
-            syncCallIndex += 1;
-            if (syncCallIndex === 1) {
-              return firstDeferred;
-            }
-            return Promise.resolve({ state: "syncing", isSettled: false });
+      mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+        const bg = ipcCardanoMessageTypes();
+        if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+          syncCallIndex += 1;
+          if (syncCallIndex === 1) {
+            return firstDeferred;
           }
-          if (name === "BuildSendAdaTxDraftMsg") {
-            return Promise.resolve({
-              kind: "draft",
-              draftId: "draft-id",
-              fee: "170000",
-              total: "1230000",
-            });
-          }
-          if (name === "DiscardSendAdaTxDraftMsg") {
-            return Promise.resolve(undefined);
-          }
-          return Promise.resolve("tx-ok");
+          return Promise.resolve({ state: "syncing", isSettled: false });
         }
-      );
+        if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+          return Promise.resolve({
+            kind: "draft",
+            draftId: "draft-id",
+            fee: "170000",
+            total: "1230000",
+          });
+        }
+        if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("tx-ok");
+      });
 
       renderComponent();
       await act(async () => {
@@ -1110,41 +1204,36 @@ describe("SendPhase2 real flow guards", () => {
         }
       );
 
-      mockSendMessage.mockImplementation(
-        (
-          _port: unknown,
-          msg: { constructor?: { name?: string }; chainId?: string }
-        ) => {
-          const name = msg?.constructor?.name;
-          if (name === "GetCardanoSyncStatusMsg") {
-            const chainId = msg.chainId;
-            if (chainId === "cardano-chain-a") {
-              return chainADeferred;
-            }
-            if (chainId === "cardano-chain-b") {
-              return Promise.resolve({
-                state: "ready_with_data",
-                isSettled: true,
-              });
-            }
-            return Promise.reject(
-              new Error("unexpected GetCardanoSyncStatusMsg chainId")
-            );
+      mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+        const bg = ipcCardanoMessageTypes();
+        if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+          const chainId = (msg as { chainId?: string }).chainId;
+          if (chainId === "cardano-chain-a") {
+            return chainADeferred;
           }
-          if (name === "BuildSendAdaTxDraftMsg") {
+          if (chainId === "cardano-chain-b") {
             return Promise.resolve({
-              kind: "draft",
-              draftId: "draft-id",
-              fee: "170000",
-              total: "1230000",
+              state: "ready_with_data",
+              isSettled: true,
             });
           }
-          if (name === "DiscardSendAdaTxDraftMsg") {
-            return Promise.resolve(undefined);
-          }
-          return Promise.resolve("tx-ok");
+          return Promise.reject(
+            new Error("unexpected GetCardanoSyncStatusMsg chainId")
+          );
         }
-      );
+        if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+          return Promise.resolve({
+            kind: "draft",
+            draftId: "draft-id",
+            fee: "170000",
+            total: "1230000",
+          });
+        }
+        if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+          return Promise.resolve(undefined);
+        }
+        return Promise.resolve("tx-ok");
+      });
 
       renderComponent({ chainId: "cardano-chain-a" });
       await act(async () => {
@@ -1183,25 +1272,23 @@ describe("SendPhase2 real flow guards", () => {
     sendConfigs.recipientConfig.rawRecipient = "addr_test1recipient";
     sendConfigs.recipientConfig.error = undefined;
 
-    mockSendMessage.mockImplementation(
-      (_port: unknown, msg: { constructor?: { name?: string } }) => {
-        const name = msg?.constructor?.name;
-        if (name === "GetCardanoSyncStatusMsg") {
-          return Promise.resolve({ state: "ready_with_data", isSettled: true });
-        }
-        if (name === "BuildSendAdaTxDraftMsg") {
-          return Promise.resolve({
-            kind: "minimum_violation",
-            minimumOutputLovelace: "970000",
-            coinMissingLovelace: "969999",
-          });
-        }
-        if (name === "DiscardSendAdaTxDraftMsg") {
-          return Promise.resolve(undefined);
-        }
-        return Promise.resolve("ok");
+    mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+      const bg = ipcCardanoMessageTypes();
+      if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+        return Promise.resolve({ state: "ready_with_data", isSettled: true });
       }
-    );
+      if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+        return Promise.resolve({
+          kind: "minimum_violation",
+          minimumOutputLovelace: "970000",
+          coinMissingLovelace: "969999",
+        });
+      }
+      if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+        return Promise.resolve(undefined);
+      }
+      return Promise.resolve("ok");
+    });
 
     renderComponent();
     await advanceDraftBuild();
@@ -1216,25 +1303,23 @@ describe("SendPhase2 real flow guards", () => {
     sendConfigs.recipientConfig.rawRecipient = "addr_test1recipient";
     sendConfigs.recipientConfig.error = undefined;
 
-    mockSendMessage.mockImplementation(
-      (_port: unknown, msg: { constructor?: { name?: string } }) => {
-        const name = msg?.constructor?.name;
-        if (name === "GetCardanoSyncStatusMsg") {
-          return Promise.resolve({ state: "ready_with_data", isSettled: true });
-        }
-        if (name === "BuildSendAdaTxDraftMsg") {
-          return Promise.resolve({
-            kind: "minimum_violation",
-            minimumOutputLovelace: "970000",
-            coinMissingLovelace: "969999",
-          });
-        }
-        if (name === "DiscardSendAdaTxDraftMsg") {
-          return Promise.resolve(undefined);
-        }
-        return Promise.resolve("ok");
+    mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+      const bg = ipcCardanoMessageTypes();
+      if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+        return Promise.resolve({ state: "ready_with_data", isSettled: true });
       }
-    );
+      if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+        return Promise.resolve({
+          kind: "minimum_violation",
+          minimumOutputLovelace: "970000",
+          coinMissingLovelace: "969999",
+        });
+      }
+      if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+        return Promise.resolve(undefined);
+      }
+      return Promise.resolve("ok");
+    });
 
     renderComponent();
     await advanceDraftBuild();
@@ -1257,21 +1342,19 @@ describe("SendPhase2 real flow guards", () => {
       },
       { kind: "draft", draftId: "d2", fee: "100", total: "1100" },
     ];
-    mockSendMessage.mockImplementation(
-      (_port: unknown, msg: { constructor?: { name?: string } }) => {
-        const name = msg?.constructor?.name;
-        if (name === "GetCardanoSyncStatusMsg") {
-          return Promise.resolve({ state: "ready_with_data", isSettled: true });
-        }
-        if (name === "BuildSendAdaTxDraftMsg") {
-          return Promise.resolve(queue.shift());
-        }
-        if (name === "DiscardSendAdaTxDraftMsg") {
-          return Promise.resolve(undefined);
-        }
-        return Promise.resolve("ok");
+    mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+      const bg = ipcCardanoMessageTypes();
+      if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+        return Promise.resolve({ state: "ready_with_data", isSettled: true });
       }
-    );
+      if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+        return Promise.resolve(queue.shift());
+      }
+      if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+        return Promise.resolve(undefined);
+      }
+      return Promise.resolve("ok");
+    });
 
     sendConfigs.amountConfig.amount = "1";
     renderComponent();
@@ -1291,8 +1374,9 @@ describe("SendPhase2 real flow guards", () => {
       "Amount too small. Minimum required is 0.97 tADA"
     );
 
+    const { DiscardSendAdaTxDraftMsg } = ipcCardanoMessageTypes();
     const discardCalls = mockSendMessage.mock.calls.filter(
-      (c) => c[1]?.constructor?.name === "DiscardSendAdaTxDraftMsg"
+      (c) => c[1] instanceof DiscardSendAdaTxDraftMsg
     );
     expect(discardCalls.length).toBeGreaterThan(0);
   });
@@ -1308,28 +1392,26 @@ describe("SendPhase2 real flow guards", () => {
       resolveLate = resolve;
     });
     let buildCount = 0;
-    mockSendMessage.mockImplementation(
-      (_port: unknown, msg: { constructor?: { name?: string } }) => {
-        const name = msg?.constructor?.name;
-        if (name === "GetCardanoSyncStatusMsg") {
-          return Promise.resolve({ state: "ready_with_data", isSettled: true });
-        }
-        if (name === "BuildSendAdaTxDraftMsg") {
-          buildCount += 1;
-          if (buildCount === 1) return late;
-          return Promise.resolve({
-            kind: "draft",
-            draftId: "fresh-draft",
-            fee: "100",
-            total: "1100",
-          });
-        }
-        if (name === "DiscardSendAdaTxDraftMsg") {
-          return Promise.resolve(undefined);
-        }
-        return Promise.resolve("ok");
+    mockSendMessage.mockImplementation((_port: unknown, msg: unknown) => {
+      const bg = ipcCardanoMessageTypes();
+      if (msg instanceof bg.GetCardanoSyncStatusMsg) {
+        return Promise.resolve({ state: "ready_with_data", isSettled: true });
       }
-    );
+      if (msg instanceof bg.BuildSendAdaTxDraftMsg) {
+        buildCount += 1;
+        if (buildCount === 1) return late;
+        return Promise.resolve({
+          kind: "draft",
+          draftId: "fresh-draft",
+          fee: "100",
+          total: "1100",
+        });
+      }
+      if (msg instanceof bg.DiscardSendAdaTxDraftMsg) {
+        return Promise.resolve(undefined);
+      }
+      return Promise.resolve("ok");
+    });
 
     renderComponent();
     await advanceDraftBuild();
@@ -1355,9 +1437,10 @@ describe("SendPhase2 real flow guards", () => {
       await flushMicrotasksDeep();
     });
 
+    const { DiscardSendAdaTxDraftMsg: DiscardMsg } = ipcCardanoMessageTypes();
     const discarded = mockSendMessage.mock.calls
-      .filter((c) => c[1]?.constructor?.name === "DiscardSendAdaTxDraftMsg")
-      .map((c) => c[1]?.draftId);
+      .filter((c) => c[1] instanceof DiscardMsg)
+      .map((c) => (c[1] as { draftId?: string }).draftId);
     expect(discarded).toContain("late-draft");
     expect(discarded).toContain("fresh-draft");
   });

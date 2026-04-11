@@ -276,24 +276,6 @@ export function isReviewTransactionButtonDisabled(params: {
   });
 }
 
-export const CARDANO_SUCCESS_TRANSITION_DELAY_MS = 350;
-
-export function getCardanoPostSubmitStatusSequence(): readonly [
-  "pending",
-  "success",
-] {
-  return ["pending", "success"] as const;
-}
-
-export function shouldStartCardanoSuccessTransition(params: {
-  submitSucceeded: boolean;
-  hasPendingToSuccessTransitionStarted: boolean;
-}): boolean {
-  return (
-    params.submitSucceeded && !params.hasPendingToSuccessTransitionStarted
-  );
-}
-
 const CARDANO_MODAL_LEVEL_ERROR_HINTS = [
   "invalid password",
   "fail to decrypt",
@@ -384,17 +366,5 @@ export function shouldPushCardanoFailedWarningFromModal(params: {
       parsedCode: params.parsedCode,
       message: params.message,
     }) == null
-  );
-}
-
-export function shouldNavigateCardanoSuccessAfterSubmit(params: {
-  submitSucceeded: boolean;
-  isDetachedPage: boolean;
-  currentPathName: string;
-}): boolean {
-  return (
-    params.submitSucceeded &&
-    !params.isDetachedPage &&
-    params.currentPathName === "send"
   );
 }
