@@ -9,9 +9,11 @@ import {
   DiscardSendAdaTxDraftMsg,
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
+  GetCardanoTrackedTxStatusMsg,
   LoadMoreCardanoTxHistoryMsg,
   GetMaxSpendableAdaMsg,
   CardanoServiceState,
+  type CardanoTrackedTxServiceState,
 } from "./messages";
 import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
@@ -138,6 +140,11 @@ export const getHandler: (
         return handleGetCardanoTxHistoryMsg(service, keyRingService)(
           env,
           msg as GetCardanoTxHistoryMsg
+        );
+      case GetCardanoTrackedTxStatusMsg.type():
+        return handleGetCardanoTrackedTxStatusMsg(service, keyRingService)(
+          env,
+          msg as GetCardanoTrackedTxStatusMsg
         );
       case LoadMoreCardanoTxHistoryMsg.type():
         return handleLoadMoreCardanoTxHistoryMsg(service, keyRingService)(
@@ -652,6 +659,87 @@ const handleGetCardanoTxHistoryMsg: (
         items: [],
         mightHaveMore: false,
         hasDegradedItems: false,
+        error: errorMessage(error),
+      };
+    }
+  };
+};
+
+const toTrackedTxServiceState = (
+  s: CardanoServiceState
+): CardanoTrackedTxServiceState =>
+  s === "empty_valid" ? "ready_with_data" : (s as CardanoTrackedTxServiceState);
+
+/** Handler for tracked tx send status (internal-only). Does not wait for wallet settled. */
+const handleGetCardanoTrackedTxStatusMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<GetCardanoTrackedTxStatusMsg> = (service, keyRingService) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    if (msg.chainId) {
+      try {
+        await keyRingService.ensureCardanoServiceReady(msg.chainId);
+      } catch (error) {
+        const classified = classifyEnsureCardanoServiceReadyError(error);
+        if (classified === null) {
+          throw error;
+        }
+        return {
+          state: toTrackedTxServiceState(classified),
+          txStatus: "pending",
+          error: errorMessage(error),
+        };
+      }
+    }
+
+    if (!service.isInitialized()) {
+      return {
+        state: "temporarily_unavailable",
+        txStatus: "pending",
+        error: "cardano_not_initialized",
+      };
+    }
+
+    if (!service.isReady()) {
+      const runtimeState = service.getRuntimeState();
+      return {
+        state:
+          runtimeState === "provider_unavailable"
+            ? "provider_error"
+            : "temporarily_unavailable",
+        txStatus: "pending",
+        error:
+          runtimeState === "provider_unavailable"
+            ? "provider_unavailable"
+            : "cardano_not_ready",
+      };
+    }
+
+    const walletId =
+      keyRingService.getKeyRing().getCurrentKeyStore()?.meta?.["__id__"] || "";
+
+    if (!walletId || !msg.chainId) {
+      return {
+        state: "temporarily_unavailable",
+        txStatus: "pending",
+        error: "missing_wallet_or_chain_context",
+      };
+    }
+
+    try {
+      return await service.getTrackedTxStatus({
+        txId: msg.txId,
+        chainId: msg.chainId,
+        walletId,
+      });
+    } catch (error) {
+      return {
+        state: toTrackedTxServiceState(stateFromError(error)),
+        txStatus: "pending",
         error: errorMessage(error),
       };
     }

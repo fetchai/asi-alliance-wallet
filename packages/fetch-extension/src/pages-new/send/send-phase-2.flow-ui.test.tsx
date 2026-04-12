@@ -600,6 +600,9 @@ describe("SendPhase2 real flow guards", () => {
       unknown
     >;
     expect(pendingRouteState).toBeDefined();
+    expect(pendingRouteState["cardanoPendingTxId"]).toBe("tx-id-1");
+    expect(pendingRouteState["cardanoPendingChainId"]).toBe("cardano-testnet");
+    expect(pendingRouteState["isCardanoTracking"]).toBe(true);
     mockLocationState = pendingRouteState;
     renderComponent({
       trnsxStatus: (pendingRouteState as { trnsxStatus: string }).trnsxStatus,

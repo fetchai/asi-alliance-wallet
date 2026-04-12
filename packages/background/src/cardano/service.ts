@@ -11,7 +11,14 @@ import {
 import { Crypto } from "../keyring/crypto";
 import type { KeyStore as KeyringKeyStore } from "../keyring/types";
 import { Notification } from "../tx/types";
-import type { CardanoTxHistoryItem, CardanoTxHistoryAsset, CardanoTxHistoryResponse, CardanoAssetAmount } from "./messages";
+import type {
+  CardanoTxHistoryItem,
+  CardanoTxHistoryAsset,
+  CardanoTxHistoryResponse,
+  CardanoAssetAmount,
+  CardanoTrackedTxStatusResponse,
+  CardanoTrackedTxServiceState,
+} from "./messages";
 import type { BuildSendAdaTxDraftResult } from "./messages";
 import { createObservableTransactionsByAddressesProvider, createTxHistoryLoader, getTxInputsValueAndAddress, parseAssetId } from "@keplr-wallet/cardano";
 import { firstValueFrom, of, ReplaySubject, Subscription } from "rxjs";
@@ -127,6 +134,7 @@ export class CardanoService {
     this.txHistoryControllers.clear();
     this.sendAdaTxDrafts.clear();
     this.locallyPendingSentTxs.clear();
+    this.trackedTxDeepScanCooldownUntil.clear();
     this.submitAdaTxDraftSerial = Promise.resolve();
     this.keyRing = undefined;
     this.runtimeSessionId = "";
@@ -201,6 +209,17 @@ export class CardanoService {
     string,
     Map<string, { createdAt: number; amount: string; fee?: string; minAdaForTokens?: string; assets?: CardanoAssetAmount[] }>
   > = new Map();
+
+  /**
+   * After a full deep pass without finding the tx, light-only polls until this timestamp;
+   * then deep paging is allowed again (avoids forever-exhausted and periodic retry after history updates).
+   */
+  private readonly trackedTxDeepScanCooldownUntil = new Map<string, number>();
+
+  private static readonly TRACKED_TX_HISTORY_PAGE_SIZE = 25;
+  private static readonly TRACKED_TX_MAX_LOAD_MORE_PAGES = 5;
+  /** Cooldown before repeating bounded loadMore for the same wallet/chain/tx key. */
+  private static readonly TRACKED_TX_DEEP_SCAN_COOLDOWN_MS = 45_000;
 
   private registerLocallyPendingSentTx(
     params: { amount: string; fee?: string; minAdaForTokens?: string; assets?: CardanoAssetAmount[] },
@@ -953,6 +972,156 @@ export class CardanoService {
     });
     controller.loader.loadMore();
     return await this.withPendingTxs(await next, params.chainId);
+  }
+
+  private normalizeCardanoTxId(txId: string): string {
+    return txId.trim().toLowerCase();
+  }
+
+  private trackedTxDeepScanCooldownKey(
+    walletId: string,
+    chainId: string,
+    txIdNorm: string
+  ): string {
+    return `${walletId}:${chainId}:${txIdNorm}`;
+  }
+
+  /**
+   * Same TTL semantics as locally pending rows merged in {@link withPendingTxs}.
+   */
+  private hasActiveLocallyPendingTx(txIdNorm: string, chainId: string): boolean {
+    const perChain = this.locallyPendingSentTxs.get(chainId);
+    if (!perChain) {
+      return false;
+    }
+    const ttlMs = 10 * 60 * 1000;
+    const now = Date.now();
+    for (const [id, v] of perChain.entries()) {
+      if (this.normalizeCardanoTxId(id) !== txIdNorm) {
+        continue;
+      }
+      if (now - v.createdAt > ttlMs) {
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  private findMergedHistoryItem(
+    items: CardanoTxHistoryItem[],
+    txIdNorm: string
+  ): CardanoTxHistoryItem | undefined {
+    return items.find((i) => this.normalizeCardanoTxId(i.id) === txIdNorm);
+  }
+
+  private mapTrackedTxErrorToState(error: unknown): CardanoTrackedTxServiceState {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    const m = message.toLowerCase();
+    if (m.includes("provider_unavailable") || m.includes("provider_error")) {
+      return "provider_error";
+    }
+    if (message.startsWith("syncing:") || m.includes("syncing")) {
+      return "syncing";
+    }
+    return "temporarily_unavailable";
+  }
+
+  /**
+   * Read-only merged history path (via getTxHistory) so {@link withPendingTxs} can surface
+   * confirmation and drop rows from locallyPendingSentTxs. Local pending is only a conservative
+   * fallback: when history errors, snapshot has no match yet, or not_found with more pages possible.
+   * On transient getTxHistory/loadMore errors, txStatus stays "pending" (send-flow contract).
+   */
+  async getTrackedTxStatus(params: {
+    txId: string;
+    chainId: string;
+    walletId: string;
+  }): Promise<CardanoTrackedTxStatusResponse> {
+    const txIdNorm = this.normalizeCardanoTxId(params.txId);
+    const deepKey = this.trackedTxDeepScanCooldownKey(
+      params.walletId,
+      params.chainId,
+      txIdNorm
+    );
+
+    const cooldownUntil =
+      this.trackedTxDeepScanCooldownUntil.get(deepKey) ?? 0;
+    const inDeepCooldown = Date.now() < cooldownUntil;
+
+    let res: CardanoTxHistoryResponse;
+    try {
+      res = await this.getTxHistory({
+        pageSize: CardanoService.TRACKED_TX_HISTORY_PAGE_SIZE,
+        chainId: params.chainId,
+        walletId: params.walletId,
+      });
+    } catch (error) {
+      return {
+        state: this.mapTrackedTxErrorToState(error),
+        txStatus: "pending",
+      };
+    }
+
+    let found = this.findMergedHistoryItem(res.items, txIdNorm);
+    if (found?.status === "confirmed") {
+      this.trackedTxDeepScanCooldownUntil.delete(deepKey);
+      return { state: "ready_with_data", txStatus: "confirmed" };
+    }
+    if (found) {
+      return { state: "ready_with_data", txStatus: "pending" };
+    }
+
+    if (this.hasActiveLocallyPendingTx(txIdNorm, params.chainId)) {
+      return { state: "ready_with_data", txStatus: "pending" };
+    }
+
+    if (
+      !found &&
+      res.mightHaveMore &&
+      !inDeepCooldown
+    ) {
+      let pages = 0;
+      while (res.mightHaveMore && pages < CardanoService.TRACKED_TX_MAX_LOAD_MORE_PAGES) {
+        try {
+          res = await this.loadMoreTxHistory({
+            pageSize: CardanoService.TRACKED_TX_HISTORY_PAGE_SIZE,
+            chainId: params.chainId,
+            walletId: params.walletId,
+          });
+        } catch {
+          // Transient loadMore failure: do not seal cooldown; next poll may retry deep path.
+          break;
+        }
+        pages += 1;
+        found = this.findMergedHistoryItem(res.items, txIdNorm);
+        if (found?.status === "confirmed") {
+          this.trackedTxDeepScanCooldownUntil.delete(deepKey);
+          return { state: "ready_with_data", txStatus: "confirmed" };
+        }
+        if (found) {
+          return { state: "ready_with_data", txStatus: "pending" };
+        }
+      }
+      if (
+        !found &&
+        (!res.mightHaveMore || pages >= CardanoService.TRACKED_TX_MAX_LOAD_MORE_PAGES)
+      ) {
+        this.trackedTxDeepScanCooldownUntil.set(
+          deepKey,
+          Date.now() + CardanoService.TRACKED_TX_DEEP_SCAN_COOLDOWN_MS
+        );
+      }
+    }
+
+    if (this.hasActiveLocallyPendingTx(txIdNorm, params.chainId)) {
+      return { state: "ready_with_data", txStatus: "pending" };
+    }
+
+    if (res.mightHaveMore) {
+      return { state: "ready_with_data", txStatus: "pending" };
+    }
+    return { state: "ready_with_data", txStatus: "not_found" };
   }
 
   private async withPendingTxs(

@@ -4,6 +4,7 @@ import {
   EstimateSendAdaMsg,
   GetCardanoBalanceMsg,
   GetCardanoTxHistoryMsg,
+  GetCardanoTrackedTxStatusMsg,
   GetMaxSpendableAdaMsg,
   IsCardanoReadyMsg,
   SubmitSendAdaTxDraftMsg,
@@ -35,6 +36,9 @@ describe("Cardano message security boundaries", () => {
   it("keeps internal-only Cardano financial messages closed to external", () => {
     expect(new GetCardanoBalanceMsg().approveExternal()).toBe(false);
     expect(new GetCardanoTxHistoryMsg(20).approveExternal()).toBe(false);
+    expect(
+      new GetCardanoTrackedTxStatusMsg("txid", "cardano-mainnet").approveExternal()
+    ).toBe(false);
     expect(
       new GetMaxSpendableAdaMsg(
         "cardano-mainnet",
@@ -433,6 +437,7 @@ describe("Cardano handler security boundaries", () => {
       new SubmitSendAdaTxDraftWithPasswordMsg("draft-id", "password"),
       new DiscardSendAdaTxDraftMsg("draft-id"),
       new GetCardanoTxHistoryMsg(10),
+      new GetCardanoTrackedTxStatusMsg("txid", "cardano-mainnet"),
       new LoadMoreCardanoTxHistoryMsg(10),
       new GetMaxSpendableAdaMsg("cardano-mainnet", "addr_test1q..."),
       new GetCardanoSyncStatusMsg("cardano-mainnet"),

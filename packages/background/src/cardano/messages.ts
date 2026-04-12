@@ -146,6 +146,22 @@ export interface CardanoTxHistoryStateResponse {
   error?: string;
 }
 
+/** Wallet/history pipeline state for send-flow tx tracking (subset of {@link CardanoServiceState}). */
+export type CardanoTrackedTxServiceState =
+  | "ready_with_data"
+  | "syncing"
+  | "temporarily_unavailable"
+  | "provider_error";
+
+export type CardanoTrackedTxStatus = "pending" | "confirmed" | "not_found";
+
+export interface CardanoTrackedTxStatusResponse {
+  state: CardanoTrackedTxServiceState;
+  txStatus: CardanoTrackedTxStatus;
+  /** Optional diagnostic (e.g. ensure/history failure); send-flow UI ignores for pending UX. */
+  error?: string;
+}
+
 /**
  * Message for getting Cardano balance
  */
@@ -496,6 +512,43 @@ export class GetCardanoTxHistoryMsg extends Message<CardanoTxHistoryStateRespons
 
   type(): string {
     return GetCardanoTxHistoryMsg.type();
+  }
+}
+
+/**
+ * Internal-only: read pending vs confirmed for a submitted tx id (merged history + local pending).
+ */
+export class GetCardanoTrackedTxStatusMsg extends Message<CardanoTrackedTxStatusResponse> {
+  public static type() {
+    return "cardano-get-tracked-tx-status";
+  }
+
+  constructor(
+    public readonly txId: string,
+    public readonly chainId: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.txId || !this.txId.trim()) {
+      throw new Error("txId is empty");
+    }
+    if (!this.chainId || !this.chainId.trim()) {
+      throw new Error("chainId is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetCardanoTrackedTxStatusMsg.type();
   }
 }
 

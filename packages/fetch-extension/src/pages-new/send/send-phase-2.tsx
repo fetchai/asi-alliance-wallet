@@ -8,7 +8,10 @@ import { useLocation, useNavigate } from "react-router";
 import { useLanguage } from "../../languages";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { observer } from "mobx-react-lite";
-import { TransxStatus } from "@components-v2/transx-status";
+import {
+  TransxStatus,
+  type CardanoSendTxTracking,
+} from "@components-v2/transx-status";
 import { TXNTYPE } from "../../config";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
 import { useNotification } from "@components/notification";
@@ -395,7 +398,23 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const navigate = useNavigate();
     const notification = useNotification();
     const location = useLocation();
-    const { isFromPhase1 } = location.state || {};
+    const sendRouteState = (location.state || {}) as {
+      isFromPhase1?: boolean;
+      cardanoPendingTxId?: string;
+      cardanoPendingChainId?: string;
+      isCardanoTracking?: boolean;
+    };
+    const { isFromPhase1 } = sendRouteState;
+    const cardanoSendTxTracking: CardanoSendTxTracking | undefined =
+      sendRouteState.isCardanoTracking === true &&
+      sendRouteState.cardanoPendingTxId &&
+      sendRouteState.cardanoPendingChainId
+        ? {
+            txId: sendRouteState.cardanoPendingTxId,
+            chainId: sendRouteState.cardanoPendingChainId,
+            active: true,
+          }
+        : undefined;
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
     const { isOnline } = useNetwork();
@@ -885,7 +904,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 chainStore.current.chainId
               );
 
-          await requester.sendMessage(BACKGROUND_PORT, msg);
+          const txId = (await requester.sendMessage(
+            BACKGROUND_PORT,
+            msg
+          )) as string;
 
           analyticsStore.logEvent("send_txn_broadcasted", {
             chainId: chainStore.current.chainId,
@@ -895,7 +917,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
           navigate("/send", {
             replace: true,
-            state: { trnsxStatus: "pending", isNext: true },
+            state: {
+              trnsxStatus: "pending",
+              isNext: true,
+              cardanoPendingTxId: txId,
+              cardanoPendingChainId: chainStore.current.chainId,
+              isCardanoTracking: true,
+            },
           });
           notification.push({
             type: "primary",
@@ -1381,6 +1409,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         {trnsxStatus !== undefined && (
           <TransxStatus
             status={trnsxStatus}
+            cardanoSendTxTracking={cardanoSendTxTracking}
             onClose={() => {
               navigate("/activity", { replace: true });
             }}
