@@ -23,6 +23,10 @@ jest.mock("@keplr-wallet/cardano", () => ({
 
 const mockNavigate = jest.fn();
 const mockSendMessage = jest.fn();
+
+/** Must match `recipient` / `rawRecipient` in self-send warning tests. */
+const MOCK_ACCOUNT_BECH32 = "addr_test1q...";
+
 const mockStore = {
   chainStore: {
     current: {
@@ -37,7 +41,7 @@ const mockStore = {
   },
   accountStore: {
     getAccount: () => ({
-      bech32Address: "addr_test1q...",
+      bech32Address: MOCK_ACCOUNT_BECH32,
       ethereumHexAddress: "0xabc",
       txInProgress: "send",
       isReadyToSendMsgs: true,
@@ -101,7 +105,10 @@ jest.mock("@components-v2/form/fee-buttons-v2", () => ({
 }));
 
 jest.mock("@components-v2/form", () => ({
-  AddressInput: () => null,
+  AddressInput: (props: { warningText?: string }) =>
+    props.warningText ? (
+      <div data-testid="address-input-warning">{props.warningText}</div>
+    ) : null,
   MemoInput: () => null,
   PasswordInput: React.forwardRef(function PasswordInputMock(
     _props: Record<string, unknown>,
@@ -183,11 +190,15 @@ jest.mock("@keplr-wallet/background", () => {
   };
 });
 
-const makeSendConfigs = () => ({
+const makeSendConfigs = (overrides?: {
+  recipient?: string;
+  rawRecipient?: string;
+  recipientError?: Error;
+}) => ({
   recipientConfig: {
-    recipient: "addr_test1recipient",
-    rawRecipient: "addr_test1recipient",
-    error: undefined as Error | undefined,
+    recipient: overrides?.recipient ?? "addr_test1recipient",
+    rawRecipient: overrides?.rawRecipient ?? "addr_test1recipient",
+    error: overrides?.recipientError as Error | undefined,
     setRawRecipient: jest.fn(),
   },
   amountConfig: {
@@ -319,5 +330,68 @@ describe("SendPhase2 display formatting regression", () => {
     expect(modal).not.toBeNull();
     expect(modal?.textContent).toContain("0.001 tADA");
     expect(modal?.textContent).not.toContain("0.000999999 tADA");
+  });
+
+  it("passes self-send warningText to AddressInput when recipient matches account and has no recipient error", async () => {
+    const sendConfigs = makeSendConfigs({
+      recipient: MOCK_ACCOUNT_BECH32,
+      rawRecipient: MOCK_ACCOUNT_BECH32,
+    });
+
+    act(() => {
+      root.render(
+        <SendPhase2
+          sendConfigs={sendConfigs}
+          isDetachedPage={false}
+          setIsNext={jest.fn()}
+          trnsxStatus={undefined as any}
+          fromPhase1={false}
+          configs={undefined}
+          setFromPhase1={jest.fn()}
+          gasSimulator={undefined}
+        />
+      );
+    });
+
+    await act(async () => {
+      await flushDeep();
+    });
+
+    const warning = container.querySelector(
+      "[data-testid='address-input-warning']"
+    );
+    expect(warning).not.toBeNull();
+    expect(warning?.textContent).toBe("send.self-send-warning");
+  });
+
+  it("does not pass self-send warningText when recipient matches account but recipient has an error", async () => {
+    const sendConfigs = makeSendConfigs({
+      recipient: MOCK_ACCOUNT_BECH32,
+      rawRecipient: MOCK_ACCOUNT_BECH32,
+      recipientError: new Error("invalid recipient"),
+    });
+
+    act(() => {
+      root.render(
+        <SendPhase2
+          sendConfigs={sendConfigs}
+          isDetachedPage={false}
+          setIsNext={jest.fn()}
+          trnsxStatus={undefined as any}
+          fromPhase1={false}
+          configs={undefined}
+          setFromPhase1={jest.fn()}
+          gasSimulator={undefined}
+        />
+      );
+    });
+
+    await act(async () => {
+      await flushDeep();
+    });
+
+    expect(
+      container.querySelector("[data-testid='address-input-warning']")
+    ).toBeNull();
   });
 });

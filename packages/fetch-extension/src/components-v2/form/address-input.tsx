@@ -43,6 +43,8 @@ export interface AddressInputProps {
   value: string;
   /** Fires when the recipient input loses focus (e.g. Send phase touched state). */
   onRecipientBlur?: () => void;
+  /** Optional non-blocking warning shown under the field (e.g. self-send). */
+  warningText?: string;
 }
 
 function numOfCharacter(str: string, c: string): number {
@@ -60,6 +62,7 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
     value,
     pageName,
     onRecipientBlur,
+    warningText,
   }) => {
     const intl = useIntl();
     const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
@@ -210,6 +213,17 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
       },
     ];
 
+    const showInvalidAgentAddress =
+      recipientConfig.rawRecipient.startsWith("agent") &&
+      validateAgentAddress(recipientConfig.rawRecipient);
+
+    const shouldShowWarning =
+      Boolean(warningText) &&
+      !errorText &&
+      !isFNSFecthing &&
+      !isICNSfetching &&
+      !showInvalidAgentAddress;
+
     return (
       <React.Fragment>
         <div className={styleAddressInput["label"]}>{label}</div>
@@ -297,12 +311,14 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
         !recipientConfig.rawRecipient.startsWith("agent") ? (
           <div className={styleAddressInput["errorText"]}>{errorText}</div>
         ) : null}
-        {recipientConfig.rawRecipient.startsWith("agent") &&
-          validateAgentAddress(recipientConfig.rawRecipient) && (
-            <div className={styleAddressInput["errorText"]}>
-              Invalid agent address
-            </div>
-          )}
+        {showInvalidAgentAddress ? (
+          <div className={styleAddressInput["errorText"]}>
+            Invalid agent address
+          </div>
+        ) : null}
+        {shouldShowWarning ? (
+          <div className={styleAddressInput["warningText"]}>{warningText}</div>
+        ) : null}
 
         <Dropdown
           isOpen={isAddressBookOpen}

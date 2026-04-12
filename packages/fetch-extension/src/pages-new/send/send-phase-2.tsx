@@ -628,6 +628,12 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         ethereumHexAddress: accountInfo.ethereumHexAddress,
       });
 
+    const selfSendWarningText = intl.formatMessage({
+      id: "send.self-send-warning",
+      defaultMessage:
+        "You are sending to your own address. Only fees will be deducted.",
+    });
+
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
     const formattedDisplayAmount = formatDisplayAmount(
       sendConfigs.amountConfig.amount ?? "",
@@ -1120,6 +1126,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           value={configs ? configs.recipient : ""}
           pageName="Send"
           onRecipientBlur={() => setRecipientTouched(true)}
+          warningText={isSelfSend ? selfSendWarningText : undefined}
         />
         <MemoInput
           memoConfig={sendConfigs.memoConfig}
@@ -1201,28 +1208,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
               style={{ marginRight: "8px" }}
             />
             {bannerValidationError.message}
-          </div>
-        )}
-        {isSelfSend && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "12px",
-              marginTop: "12px",
-              marginBottom: "8px",
-              background: "rgba(255, 193, 7, 0.15)",
-              border: "1px solid rgba(255, 193, 7, 0.4)",
-              borderRadius: "8px",
-              fontSize: "14px",
-              color: "var(--font-secondary, #737676)",
-            }}
-          >
-            <i className="fas fa-info-circle" style={{ marginRight: "8px" }} />
-            {intl.formatMessage({
-              id: "send.self-send-warning",
-              defaultMessage:
-                "You are sending to your own address. Only fees will be deducted.",
-            })}
           </div>
         )}
         {isCardano && cardanoOperationalGuard && (
