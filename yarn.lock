@@ -284,7 +284,7 @@ __metadata:
 
 "@asi-alliance/cardano@file:../cardano::locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores":
   version: 0.12.12
-  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=5e4c23&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
+  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=c2969a&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
   dependencies:
     "@blockfrost/blockfrost-js": ^5.5.0
     "@cardano-sdk/cardano-services-client": 0.26.28
@@ -308,7 +308,7 @@ __metadata:
     fuse.js: ^7.1.0
     lodash: ^4.17.21
     rxjs: ^7.8.2
-  checksum: 2d55f18b79ae82eec1ab86126b722839d43c90a61261192b140d8f824b98ca6b01a56a47797287929287c21bf4aaf9c52f6cecc00412562cdd0dac6cfa9e5d3e
+  checksum: ab5f0d78ade99c66bd969b55a0ec830df4ee885e8999945f35054fe8a2dccbfc0b712fa02735803a9c82b33b0dc15ae0feb9df78795234778b815192a7f077d8
   languageName: node
   linkType: hard
 
