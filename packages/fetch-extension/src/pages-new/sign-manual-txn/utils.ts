@@ -1094,6 +1094,28 @@ export const snakeToCamelDeep = <T>(input: T): T => {
   return input;
 };
 
+const requestDownloadsPermission = async (): Promise<boolean> => {
+  try {
+    if (typeof browser !== "undefined" && browser.permissions?.request) {
+      return await browser.permissions.request({
+        permissions: ["downloads"],
+      });
+    }
+
+    if (typeof chrome !== "undefined" && chrome.permissions?.request) {
+      return await new Promise<boolean>((resolve) => {
+        chrome.permissions.request({ permissions: ["downloads"] }, (granted) =>
+          resolve(granted)
+        );
+      });
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+};
+
 export const downloadJson = async (data: unknown, filename: string) => {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
@@ -1101,11 +1123,7 @@ export const downloadJson = async (data: unknown, filename: string) => {
 
   try {
     // Request optional permission
-    const granted = await new Promise<boolean>((resolve) => {
-      chrome.permissions.request({ permissions: ["downloads"] }, (result) =>
-        resolve(result)
-      );
-    });
+    const granted = await requestDownloadsPermission();
 
     if (granted) {
       // use downloads API with Save As dialog
