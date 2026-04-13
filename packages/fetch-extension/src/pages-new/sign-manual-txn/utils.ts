@@ -1131,11 +1131,13 @@ export const downloadJson = async (data: unknown, filename: string) => {
       browser.downloads.onChanged.addListener(listener);
     } else {
       // Permission denied (fallback download)
-      fallbackDownload(url, filename);
+      URL.revokeObjectURL(url);
+      fallbackDownload(json, filename);
     }
   } catch {
     // error (fallback)
-    fallbackDownload(url, filename);
+    URL.revokeObjectURL(url);
+    fallbackDownload(json, filename);
   }
 };
 
