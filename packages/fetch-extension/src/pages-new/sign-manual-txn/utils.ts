@@ -1094,36 +1094,81 @@ export const snakeToCamelDeep = <T>(input: T): T => {
   return input;
 };
 
+const requestDownloadsPermission = async (): Promise<boolean> => {
+  try {
+    if (typeof browser !== "undefined" && browser.permissions?.request) {
+      return await browser.permissions.request({
+        permissions: ["downloads"],
+      });
+    }
+
+    if (typeof chrome !== "undefined" && chrome.permissions?.request) {
+      return await new Promise<boolean>((resolve) => {
+        chrome.permissions.request({ permissions: ["downloads"] }, (granted) =>
+          resolve(granted)
+        );
+      });
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+};
+
 export const downloadJson = async (data: unknown, filename: string) => {
   const json = JSON.stringify(data, null, 2);
-
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
   try {
-    const downloadId = await browser.downloads.download({
-      url,
-      filename,
-      conflictAction: "uniquify",
-      saveAs: true,
-    });
+    // Request optional permission
+    const granted = await requestDownloadsPermission();
 
-    const listener = (delta: any) => {
-      if (delta.id === downloadId && delta.state) {
-        if (
-          delta.state.current === "complete" ||
-          delta.state.current === "interrupted"
-        ) {
-          browser.downloads.onChanged.removeListener(listener);
-          URL.revokeObjectURL(url);
+    if (granted) {
+      // use downloads API with Save As dialog
+      const downloadId = await browser.downloads.download({
+        url,
+        filename,
+        conflictAction: "uniquify",
+        saveAs: true,
+      });
+
+      const listener = (delta: any) => {
+        if (delta.id === downloadId && delta.state) {
+          if (
+            delta.state.current === "complete" ||
+            delta.state.current === "interrupted"
+          ) {
+            browser.downloads.onChanged.removeListener(listener);
+            URL.revokeObjectURL(url);
+          }
         }
-      }
-    };
+      };
 
-    browser.downloads.onChanged.addListener(listener);
+      browser.downloads.onChanged.addListener(listener);
+    } else {
+      // Permission denied (fallback download)
+      URL.revokeObjectURL(url);
+      fallbackDownload(json, filename);
+    }
   } catch {
+    // error (fallback)
     URL.revokeObjectURL(url);
+    fallbackDownload(json, filename);
   }
+};
+
+const fallbackDownload = (json: string, filename: string) => {
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
 };
 
 export function detectInputType(doc: any): InputDocType {
