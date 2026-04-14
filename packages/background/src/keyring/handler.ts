@@ -44,6 +44,7 @@ import {
   GetKeyMsgFetchSigning,
   RefreshAccountList,
   BroadcastKeyringSurfacesSyncMsg,
+  UpdatePasswordMsg,
 } from "./messages";
 import { KeyRingService } from "./service";
 import { Bech32Address } from "@keplr-wallet/cosmos";
@@ -155,6 +156,8 @@ export const getHandler: (service: KeyRingService) => Handler = (
         );
       case CheckPasswordMsg.type():
         return handleCheckPasswordMsg(service)(env, msg as CheckPasswordMsg);
+      case UpdatePasswordMsg.type():
+        return handleUpdatePasswordMsg(service)(env, msg as UpdatePasswordMsg);
       case ExportKeyRingDatasMsg.type():
         return handleExportKeyRingDatasMsg(service)(
           env,
@@ -621,6 +624,14 @@ const handleCheckPasswordMsg: (
   };
 };
 
+const handleUpdatePasswordMsg: (
+  service: KeyRingService
+) => InternalHandler<UpdatePasswordMsg> = (service) => {
+  return async (_, msg) => {
+    return await service.updatePassword(msg.oldPassword, msg.newPassword);
+  };
+};
+
 const handleExportKeyRingDatasMsg: (
   service: KeyRingService
 ) => InternalHandler<ExportKeyRingDatasMsg> = (service) => {
@@ -741,9 +752,9 @@ const handleCurrentAccountMsg: (
     const isEVM = chainInfo.features?.includes("evm");
     const isCardano = chainInfo.features?.includes("cardano");
     const bech32Add = isCardano
-      ? (isCardanoAddressCapableAlgo(key.algo)
-          ? Buffer.from(key.address).toString("utf8")
-          : "")
+      ? isCardanoAddressCapableAlgo(key.algo)
+        ? Buffer.from(key.address).toString("utf8")
+        : ""
       : new Bech32Address(key.address).toBech32(
           chainInfo.bech32Config.bech32PrefixAccAddr
         );
@@ -840,7 +851,9 @@ const handleListAccountsMsg: (
         if (walletIds.some((id) => !id)) return null;
 
         if (isCardano) {
-          const cache = await service.getKeyRing().loadCardanoChainCache(chainId);
+          const cache = await service
+            .getKeyRing()
+            .loadCardanoChainCache(chainId);
 
           const supportedFlags = walletInfos.map((w) => {
             const meta = w.meta as KeyStoreMetaKnown;
@@ -851,7 +864,9 @@ const handleListAccountsMsg: (
           const hasAll = walletIds.every((id, idx) => {
             if (!supportedFlags[idx]) return true;
             const entry = cache[id];
-            return Boolean(entry?.address && isValidCardanoAddress(entry.address));
+            return Boolean(
+              entry?.address && isValidCardanoAddress(entry.address)
+            );
           });
 
           if (!hasAll) return null;
@@ -868,14 +883,16 @@ const handleListAccountsMsg: (
             const isHexPubKey =
               /^[0-9a-fA-F]+$/.test(pubKey) && pubKey.length % 2 === 0;
             const pubKeyBytes = isSupported
-              ? (pubKey
-                  ? Buffer.from(pubKey, isHexPubKey ? "hex" : "utf8")
-                  : new Uint8Array(0))
+              ? pubKey
+                ? Buffer.from(pubKey, isHexPubKey ? "hex" : "utf8")
+                : new Uint8Array(0)
               : new Uint8Array(0);
 
             return {
               name: walletNames[idx],
-              algo: isSupported ? "cardano_address_only" : "cardano_unsupported",
+              algo: isSupported
+                ? "cardano_address_only"
+                : "cardano_unsupported",
               pubKey: pubKeyBytes,
               address: addressBytes,
               bech32Address: address,
@@ -910,17 +927,22 @@ const handleListAccountsMsg: (
           return {
             name: entry?.name || walletNames[idx],
             algo: "secp256k1",
-            pubKey: pubKeyHex ? Buffer.from(pubKeyHex, "hex") : new Uint8Array(0),
-            address: addressHex ? Buffer.from(addressHex, "hex") : new Uint8Array(0),
+            pubKey: pubKeyHex
+              ? Buffer.from(pubKeyHex, "hex")
+              : new Uint8Array(0),
+            address: addressHex
+              ? Buffer.from(addressHex, "hex")
+              : new Uint8Array(0),
             bech32Address: isEVM ? "" : bech32Add,
             isNanoLedger: keyStoreType === "ledger",
             isKeystone: keyStoreType === "keystone",
-            EVMAddress: isEVM && bech32Add
-              ? Bech32Address.fromBech32(
-                  bech32Add,
-                  chainInfo.bech32Config.bech32PrefixAccAddr
-                ).toHex(true)
-              : "",
+            EVMAddress:
+              isEVM && bech32Add
+                ? Bech32Address.fromBech32(
+                    bech32Add,
+                    chainInfo.bech32Config.bech32PrefixAccAddr
+                  ).toHex(true)
+                : "",
           };
         });
       } catch {
@@ -1083,9 +1105,9 @@ const handleGetAccountMsg: (
     let foundAccount: Account | null = null;
     keys.forEach((key) => {
       const bech32Add = isCardano
-        ? (isCardanoAddressCapableAlgo(key.algo)
-            ? Buffer.from(key.address).toString("utf8")
-            : "")
+        ? isCardanoAddressCapableAlgo(key.algo)
+          ? Buffer.from(key.address).toString("utf8")
+          : ""
         : new Bech32Address(key.address).toBech32(
             chainInfo.bech32Config.bech32PrefixAccAddr
           );
@@ -1136,9 +1158,9 @@ const handleGetKeyMsgFetchSigning: (
     const isEVM = chainInfo.features?.includes("evm");
     const isCardano = chainInfo.features?.includes("cardano");
     const bech32Add = isCardano
-      ? (isCardanoAddressCapableAlgo(key.algo)
-          ? Buffer.from(key.address).toString("utf8")
-          : "")
+      ? isCardanoAddressCapableAlgo(key.algo)
+        ? Buffer.from(key.address).toString("utf8")
+        : ""
       : new Bech32Address(key.address).toBech32(
           chainInfo.bech32Config.bech32PrefixAccAddr
         );

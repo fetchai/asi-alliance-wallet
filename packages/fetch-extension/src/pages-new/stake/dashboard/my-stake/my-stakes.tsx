@@ -43,7 +43,7 @@ export const MyStakes = observer(
 
     const fiatCurrency = language.fiatCurrency;
 
-    const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
+    const [isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
     const {
       chainStore,
       analyticsStore,
@@ -262,11 +262,11 @@ export const MyStakes = observer(
                   }}
                   disabled={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    _isWithdrawingRewards
+                    isWithdrawingRewards
                   }
                   text={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    _isWithdrawingRewards
+                    isWithdrawingRewards
                       ? ""
                       : "Claim all"
                   }
@@ -275,14 +275,14 @@ export const MyStakes = observer(
                       activityStore.getPendingTxnTypes[
                         TXNTYPE.withdrawRewards
                       ] ||
-                      _isWithdrawingRewards
+                      isWithdrawingRewards
                     )
                       return;
                     handleClaimRewards();
                   }}
                 >
                   {(activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    _isWithdrawingRewards) && (
+                    isWithdrawingRewards) && (
                     <i className="fas fa-spinner fa-spin ml-2 mr-2" />
                   )}
                 </ButtonV2>
@@ -326,34 +326,7 @@ export const MyStakes = observer(
           </div>
         </GlassCard>
 
-        <div
-          className={style["my-validators-container"]}
-          style={{
-            marginTop: "24px",
-          }}
-        >
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            <div
-              style={{
-                color: "var(--font-dark)",
-                fontSize: "16px",
-                fontWeight: 400,
-              }}
-            >
-              Staked balances
-            </div>
-            <div className={style["stake-count"]}>{delegations.length}</div>
-          </div>
-
-          <div
-            className={style["my-validators-container"]}
-            style={{
-              paddingBottom: "30px",
-            }}
-          >
-            <MyValidator />
-          </div>
-        </div>
+        <MyValidator />
       </div>
     );
   }
@@ -502,6 +475,13 @@ const DelegateReward: FunctionComponent = observer(() => {
           .getQueryBech32Address(account.bech32Address)
           .getStakableRewardOf(val.operator_address);
 
+        const parsedRewards =
+          parseFloat(rewards?.hideDenom(true).toString()) || 0;
+        const displayAmount =
+          parsedRewards >= 0.000001
+            ? rewards.maxDecimals(6).trim(true).shrink(true).toString()
+            : `< 0.000001 ${rewards?.denom}`;
+
         return parseFloat(rewards.toString().split(" ")[0]) > 0 ? (
           <div
             key={del.delegation.validator_address}
@@ -519,9 +499,7 @@ const DelegateReward: FunctionComponent = observer(() => {
               <div className={style["reward-title"]}>
                 {val.description.moniker?.trim()}
               </div>
-              <div className={style["reward-amount"]}>
-                {rewards.maxDecimals(4).trim(true).shrink(true).toString()}
-              </div>
+              <div className={style["reward-amount"]}>{displayAmount}</div>
             </div>
             <ButtonV2
               variant="light"

@@ -92,7 +92,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
         component: (
           <div>
             <NotificationOption
-              name="Show testnet"
+              name="Show Testnet"
               isChecked={chainStore.showTestnet}
               handleOnChange={() =>
                 chainStore.toggleShowTestnet(!chainStore.showTestnet)
@@ -125,7 +125,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     });
                     navigate("/manage-networks");
                   }}
-                  text={"Manage networks"}
+                  text={"Manage Networks"}
                 />
               }
               renderResult={(chainInfo, index) => (
@@ -206,12 +206,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                         : ""
                     }
                     heading={chainInfo.raw.chainName}
-                isActive={chainInfo.raw.chainId === chainStore.current.chainId}
-                leftImageStyle={{
-                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
-                    ? "#dddfdf"
-                    : "transparent",
-                }}
+                    isActive={
+                      chainInfo.raw.chainId === chainStore.current.chainId
+                    }
+                    leftImageStyle={{
+                      backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                        ? "#dddfdf"
+                        : "transparent",
+                    }}
                     rightContent={require("@assets/svg/wireframe/closeImage.svg")}
                     rightContentStyle={{ height: "24px", width: "24px" }}
                     rightContentOnClick={async (e: any) => {
@@ -237,7 +239,9 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     }}
                     onClick={() => {
                       let properties = {};
-                      if (chainInfo.raw.chainId !== chainStore.current.chainId) {
+                      if (
+                        chainInfo.raw.chainId !== chainStore.current.chainId
+                      ) {
                         properties = {
                           chainId: chainStore.current.chainId,
                           chainName: chainStore.current.chainName,
@@ -269,12 +273,13 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       showAddress
                         ? formatAddress(
                             accountStore.getAccount(chainInfo.raw.chainId)
-                          .bech32Address
-                      )
-                    : null
-                }
-              />
-            ))}</React.Fragment>
+                              .bech32Address
+                          )
+                        : null
+                    }
+                  />
+                ))}
+              </React.Fragment>
             )}
 
             <a
@@ -299,7 +304,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
         component: (
           <div>
             <NotificationOption
-              name="Show testnet"
+              name="Show Testnet"
               isChecked={chainStore.showTestnet}
               handleOnChange={() =>
                 chainStore.toggleShowTestnet(!chainStore.showTestnet)
@@ -331,7 +336,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     });
                     navigate("/manage-networks");
                   }}
-                  text={"Manage networks"}
+                  text={"Manage Networks"}
                 />
               }
               renderResult={(chainInfo, index) => (
@@ -406,7 +411,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
         component: (
           <div>
             {isCardanoSupportedWallet ? (
-              <>
+              <React.Fragment>
                 <NotificationOption
                   name="Show testnet"
                   isChecked={chainStore.showTestnet}
@@ -506,7 +511,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                     />
                   )}
                 />
-              </>
+              </React.Fragment>
             ) : (
               <div className={style["unsupported-message"]}>
                 <div className={style["message-text"]}>

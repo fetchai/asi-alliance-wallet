@@ -114,7 +114,7 @@ export const StakeDetails = observer(
             <div className={style["stake-data-row"]}>
               <div className={style["stake-data-title"]}>Staked amount</div>
               <div className={style["stake-data-value"]}>
-                {amount.maxDecimals(4).trim(true).toString()}
+                {amount.maxDecimals(6).trim(true).shrink(true).toString()}
               </div>
             </div>
 
@@ -125,12 +125,19 @@ export const StakeDetails = observer(
                   <div>
                     {!rewards ||
                     rewards.length === 0 ||
-                    parseFloat(
-                      rewards[0]?.maxDecimals(4).toString().split(" ")[0]
-                    ) < 0.00001 ? (
-                      <span style={{ color: "var(--font-dark)" }}>0</span>
+                    parseFloat(rewards[0]?.toString().split(" ")[0]) <
+                      0.000001 ? (
+                      <span style={{ color: "var(--font-dark)" }}>
+                        {parseFloat(rewards[0]?.hideDenom(true).toString()) > 0
+                          ? `< 0.000001 ${rewards[0]?.denom}`
+                          : `0 ${amount?.denom || ""}`}
+                      </span>
                     ) : (
-                      rewards[0]?.maxDecimals(4).toString()
+                      rewards[0]
+                        ?.maxDecimals(6)
+                        .trim(true)
+                        .shrink(true)
+                        .toString()
                     )}
                   </div>
                 ) : (
@@ -158,8 +165,18 @@ export const StakeDetails = observer(
                 marginTop: "0px",
                 backgroundColor: "transparent",
               }}
-              text="Unstake"
+              text={
+                <React.Fragment>
+                  Unstake
+                  {activityStore.getPendingTxnTypes[TXNTYPE.undelegate] && (
+                    <i className="fas fa-spinner fa-spin ml-2 mr-2" />
+                  )}
+                </React.Fragment>
+              }
+              disabled={activityStore.getPendingTxnTypes[TXNTYPE.undelegate]}
               onClick={() => {
+                if (activityStore.getPendingTxnTypes[TXNTYPE.undelegate])
+                  return;
                 analyticsStore.logEvent("unstake_click", {
                   chainId: chainStore.current.chainId,
                   chainName: chainStore.current.chainName,
@@ -182,9 +199,7 @@ export const StakeDetails = observer(
               disabled={
                 !rewards ||
                 rewards.length === 0 ||
-                parseFloat(
-                  rewards[0]?.maxDecimals(4).toString().split(" ")[0]
-                ) <= 0.0 ||
+                parseFloat(rewards[0]?.toString().split(" ")[0]) <= 0 ||
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
               }
               onClick={() => {

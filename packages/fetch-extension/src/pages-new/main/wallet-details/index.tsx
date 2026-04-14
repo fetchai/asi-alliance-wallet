@@ -117,15 +117,20 @@ export const WalletDetailsView = observer(
       ] || "";
     const cachedSelectedAddress =
       selectedWalletId && chainStore.current.chainId
-        ? addressCacheStore.getCache(chainStore.current.chainId)[selectedWalletId] ||
-          ""
+        ? addressCacheStore.getCache(chainStore.current.chainId)[
+            selectedWalletId
+          ] || ""
         : "";
-    const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected);
+    const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find(
+      (ks) => ks.selected
+    );
     const displayAccountName = (() => {
       const meta = selectedKeyStore?.meta;
       if (!meta) return "";
       try {
-        const nameByChain = meta["nameByChain"] ? JSON.parse(meta["nameByChain"]) : {};
+        const nameByChain = meta["nameByChain"]
+          ? JSON.parse(meta["nameByChain"])
+          : {};
         return (
           nameByChain?.[chainStore.current.chainId] ||
           meta["name"] ||
@@ -133,7 +138,8 @@ export const WalletDetailsView = observer(
         );
       } catch {
         return (
-          meta["name"] || intl.formatMessage({ id: "setting.keyring.unnamed-account" })
+          meta["name"] ||
+          intl.formatMessage({ id: "setting.keyring.unnamed-account" })
         );
       }
     })();
@@ -305,7 +311,11 @@ export const WalletDetailsView = observer(
                 } else if (accountInfo.walletStatus === WalletStatus.Rejected) {
                   return "Unable to Load Key";
                 } else {
-                  return displayAccountName ? displayAccountName : <Skeleton height="21px" />;
+                  return displayAccountName ? (
+                    displayAccountName
+                  ) : (
+                    <Skeleton height="21px" />
+                  );
                 }
               })()}
             </div>
@@ -371,7 +381,9 @@ export const WalletDetailsView = observer(
                               >
                                 <ResponsiveAddressView
                                   containerRef={bech32TailMeasureRef}
-                                  address={splitBech32(displayBech32Address).rest}
+                                  address={
+                                    splitBech32(displayBech32Address).rest
+                                  }
                                 />
                               </div>
                             </div>
@@ -413,13 +425,17 @@ export const WalletDetailsView = observer(
                           {displayEvmAddress ? (
                             displayEvmAddress.length === 42 ? (
                               <React.Fragment>
-                                <span className={style["wallet-address-prefix"]}>
+                                <span
+                                  className={style["wallet-address-prefix"]}
+                                >
                                   {displayEvmAddress.slice(0, 2)}
                                 </span>
                                 <div className={style["wallet-address-text"]}>
                                   <div
                                     ref={evmTailMeasureRef}
-                                    className={style["wallet-address-tail-measure"]}
+                                    className={
+                                      style["wallet-address-tail-measure"]
+                                    }
                                   >
                                     <ResponsiveAddressView
                                       containerRef={evmTailMeasureRef}
@@ -429,7 +445,9 @@ export const WalletDetailsView = observer(
                                 </div>
                               </React.Fragment>
                             ) : (
-                              <React.Fragment>{displayEvmAddress}</React.Fragment>
+                              <React.Fragment>
+                                {displayEvmAddress}
+                              </React.Fragment>
                             )
                           ) : (
                             "..."

@@ -2,6 +2,7 @@ import React from "react";
 import { act } from "react-dom/test-utils";
 import { createRoot, Root } from "react-dom/client";
 import { SendPhase2 } from "./send-phase-2";
+import { CoinPretty, Int } from "@keplr-wallet/unit";
 
 jest.mock("mobx-react-lite", () => ({
   observer: (component: unknown) => component,
@@ -138,8 +139,12 @@ jest.mock("@components-v2/buttons/button", () => ({
 
 jest.mock("reactstrap", () => ({
   Modal: (props: { isOpen: boolean; children: React.ReactNode }) =>
-    props.isOpen ? <div data-testid="password-modal">{props.children}</div> : null,
-  ModalBody: (props: { children: React.ReactNode }) => <div>{props.children}</div>,
+    props.isOpen ? (
+      <div data-testid="password-modal">{props.children}</div>
+    ) : null,
+  ModalBody: (props: { children: React.ReactNode }) => (
+    <div>{props.children}</div>
+  ),
 }));
 
 jest.mock("@components-v2/transx-status", () => ({
@@ -288,6 +293,19 @@ describe("SendPhase2 display formatting regression", () => {
           trnsxStatus={undefined as any}
           fromPhase1={false}
           configs={undefined}
+          balance={
+            new CoinPretty(
+              {
+                coinDenom: "ATOM",
+                coinMinimalDenom: "uatom",
+                coinDecimals: 6,
+                coinGeckoId: "cosmos",
+                coinImageUrl:
+                  "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
+              },
+              new Int(0)
+            )
+          }
           setFromPhase1={jest.fn()}
           gasSimulator={undefined}
         />
@@ -347,6 +365,19 @@ describe("SendPhase2 display formatting regression", () => {
           trnsxStatus={undefined as any}
           fromPhase1={false}
           configs={undefined}
+          balance={
+            new CoinPretty(
+              {
+                coinDenom: "ATOM",
+                coinMinimalDenom: "uatom",
+                coinDecimals: 6,
+                coinGeckoId: "cosmos",
+                coinImageUrl:
+                  "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
+              },
+              new Int(0)
+            )
+          }
           setFromPhase1={jest.fn()}
           gasSimulator={undefined}
         />
@@ -380,6 +411,19 @@ describe("SendPhase2 display formatting regression", () => {
           trnsxStatus={undefined as any}
           fromPhase1={false}
           configs={undefined}
+          balance={
+            new CoinPretty(
+              {
+                coinDenom: "ATOM",
+                coinMinimalDenom: "uatom",
+                coinDecimals: 6,
+                coinGeckoId: "cosmos",
+                coinImageUrl:
+                  "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
+              },
+              new Int(0)
+            )
+          }
           setFromPhase1={jest.fn()}
           gasSimulator={undefined}
         />

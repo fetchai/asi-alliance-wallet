@@ -36,7 +36,6 @@ import {
   Bech32Address,
   ChainIdHelper,
   EthermintChainIdHelper,
-  TendermintTxTracer,
 } from "@keplr-wallet/cosmos";
 import { BondStatus } from "../query/cosmos/staking/types";
 import { CosmosQueries, IQueriesStore, QueriesSetBase } from "../query";
@@ -53,11 +52,24 @@ import {
   txEventsWithPreOnFulfill,
   updateNodeOnTxnCompleted,
   updateProposalNodeOnTxnCompleted,
+  protoFeeToStdFee,
 } from "./utils";
 import { ExtensionOptionsWeb3Tx } from "@keplr-wallet/proto-types/ethermint/types/v1/web3";
 import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
 import { ActivityStore } from "../activity";
+import { CosmosTxTracer } from "./cosmos-tx-tracer";
+import { makeMultisignedTx } from "@cosmjs/stargate";
+/* eslint-disable import/no-extraneous-dependencies */
+import { MultisigThresholdPubkey } from "@cosmjs/amino";
+import { pubkeyToAddress } from "@cosmjs/amino";
+
+export interface TxRawJSON {
+  body: TxBody;
+  auth_info: AuthInfo;
+  signatures: string[];
+}
+
 export interface CosmosAccount {
   cosmos: CosmosAccountImpl;
 }
@@ -250,16 +262,14 @@ export class CosmosAccountImpl {
   ) {
     const chainInfo = this.chainGetter.getChain(this.chainId);
     const isCardano = chainInfo.features?.includes("cardano") ?? false;
-    
+
     // Skip Cosmos validation for Cardano addresses - handled by CardanoAccount
     if (isCardano) {
       return undefined;
     }
-    
+
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
-    const isEvm =
-      chainInfo.features?.includes("evm") ??
-      false;
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
     if (denomHelper.type === "native" && !isEvm) {
       const actualAmount = (() => {
         let dec = new Dec(amount);
@@ -439,6 +449,7 @@ export class CosmosAccountImpl {
 
     let txHash: Uint8Array;
     let signDoc: StdSignDoc;
+    let signature: string;
     let txId: string;
     let proposalNode: ProposalNode;
 
@@ -456,6 +467,7 @@ export class CosmosAccountImpl {
       );
       txHash = result.txHash;
       signDoc = result.signDoc;
+      signature = result.signature;
 
       txId = Buffer.from(txHash).toString("hex").toLocaleUpperCase();
 
@@ -537,7 +549,7 @@ export class CosmosAccountImpl {
       onBroadcasted(txHash);
     }
 
-    const txTracer = new TendermintTxTracer(
+    const txTracer = new CosmosTxTracer(
       this.chainGetter.getChain(this.chainId).rpc,
       "/websocket",
       {
@@ -585,7 +597,7 @@ export class CosmosAccountImpl {
         }
 
         if (onFulfill) {
-          onFulfill(tx);
+          onFulfill({ ...tx, signature });
         }
       })
       .catch(() => {
@@ -613,6 +625,7 @@ export class CosmosAccountImpl {
   ): Promise<{
     txHash: Uint8Array;
     signDoc: StdSignDoc;
+    signature: string;
   }> {
     if (this.base.walletStatus !== WalletStatus.Loaded) {
       throw new Error(`Wallet is not loaded: ${this.base.walletStatus}`);
@@ -804,6 +817,125 @@ export class CosmosAccountImpl {
           throw err;
         }),
       signDoc: signResponse.signed,
+      signature: signResponse.signature.signature,
+    };
+  }
+
+  /**
+   * Broadcast a Cosmos multisig transaction.
+   *
+   * This method assembles and broadcasts a multisig transaction using a
+   * LegacyAmino multisig public key. It supports both unsigned multisig
+   * transactions (where signatures are supplied separately) and fully
+   * signed multisig transactions.
+   *
+   * Important:
+   * - The full multisig public key (threshold + all pubkeys) is required,
+   *   even if only a subset of cosigners provide signatures.
+   * - Multisig signing uses SIGN_MODE_LEGACY_AMINO_JSON.
+   * - The provided multisig address is validated against the derived address
+   *   from the multisig public key and the current chain's bech32 prefix.
+   *
+   * @param multisigPubKey - The multisig threshold public key (LegacyAminoPubKey)
+   * @param msgs - Transaction messages (proto or amino-compatible)
+   * @param signDoc - Unsigned or signed transaction JSON payload
+   * @param signatures - Map of signer address to signature bytes (used for unsigned flow)
+   * @param multisigAddress - Bech32 multisig account address for the current chain
+   * @param mode - Broadcast mode: "block", "sync", or "async"
+   *
+   * @returns An object containing:
+   * - txHash: Broadcast transaction hash (hex-encoded)
+   * - signDoc: The original transaction payload
+   * - signature: Base64-encoded aggregated multisig signature
+   *
+   * @throws Error if the multisig public key does not match the provided address
+   * @throws Error if the transaction cannot be assembled or broadcast
+   */
+  async broadcastMultisigMsgs(
+    multisigPubKey: MultisigThresholdPubkey,
+    msgs: ProtoMsgsOrWithAminoMsgs["protoMsgs"],
+    signDoc: TxRawJSON,
+    signatures: Map<string, Uint8Array> = new Map<string, Uint8Array>([]),
+    multisigAddress: string,
+    mode: "block" | "async" | "sync" = "sync"
+  ): Promise<{
+    txHash: string;
+    signDoc: TxRawJSON;
+    signature: string;
+  }> {
+    const keplr = (await this.base.getKeplr())!;
+    const multisigAddressDerived = pubkeyToAddress(
+      multisigPubKey,
+      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+    );
+
+    if (multisigAddress !== multisigAddressDerived) {
+      throw new Error(
+        "Multisig public key does not match the multisig address in the transaction"
+      );
+    }
+
+    const account = await BaseAccount.fetchFromRest(
+      this.chainGetter.getChain(this.chainId).rest,
+      multisigAddress,
+      true
+    );
+
+    const sequence = account.getSequence().toString();
+
+    const bodyBytes = TxBody.encode({
+      messages: msgs,
+      memo: signDoc.body.memo,
+      timeoutHeight: signDoc.body.timeoutHeight,
+      extensionOptions: signDoc.body.extensionOptions,
+      nonCriticalExtensionOptions: signDoc.body.nonCriticalExtensionOptions,
+    }).finish();
+
+    const stdFee = protoFeeToStdFee(signDoc.auth_info.fee);
+
+    // Create the multisigned tx
+    const multisignedTx = makeMultisignedTx(
+      multisigPubKey,
+      parseInt(sequence),
+      stdFee,
+      bodyBytes,
+      signatures
+    );
+    const authInfoBytes = multisignedTx.authInfoBytes;
+
+    const signatureBytes = multisignedTx.signatures;
+
+    const txRaw = TxRaw.encode({
+      bodyBytes,
+      authInfoBytes,
+      signatures: signatureBytes,
+    }).finish();
+
+    this.base.setBroadcastInProgress(true);
+
+    const txHash = await keplr
+      .sendTx(this.chainId, txRaw, mode as BroadcastMode)
+      .then((res) => {
+        this.base.setBroadcastInProgress(false);
+        return res;
+      })
+      .catch((err) => {
+        this.base.setBroadcastInProgress(false);
+        throw err;
+      });
+
+    return {
+      txHash: Buffer.from(txHash).toString("hex").toLocaleUpperCase(),
+      signDoc,
+      signature: Buffer.from(
+        // combine all signatures as one base64 string
+        Uint8Array.from(
+          multisignedTx.signatures.reduce(
+            (prev: any, curr: any) => [...prev, ...curr],
+            [] as number[]
+          )
+        )
+      ).toString("base64"),
     };
   }
 

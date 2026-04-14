@@ -75,7 +75,7 @@ export const Receive: FunctionComponent = () => {
             marginBottom: "24px",
           }}
           headingStyle={{
-            width: "270px",
+            width: "95%",
           }}
           heading={accountInfo.bech32Address}
           rightContent={require("@assets/svg/wireframe/copy.svg")}

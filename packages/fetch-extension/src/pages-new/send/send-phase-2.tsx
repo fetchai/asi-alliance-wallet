@@ -363,6 +363,7 @@ const CardanoPasswordConfirmModal: React.FC<
     </Modal>
   );
 };
+import { removeComma } from "@utils/format";
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -373,6 +374,7 @@ interface SendPhase2Props {
   configs: any;
   setFromPhase1: any;
   gasSimulator: any;
+  balance: CoinPretty;
 }
 
 export const SendPhase2: React.FC<SendPhase2Props> = observer(
@@ -383,6 +385,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     trnsxStatus,
     fromPhase1,
     configs,
+    balance,
     setFromPhase1,
     gasSimulator,
   }) => {
@@ -401,10 +404,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const sendRouteState = (location.state || {}) as {
       isFromPhase1?: boolean;
       cardanoPendingTxId?: string;
+      isMaxAmount?: boolean;
       cardanoPendingChainId?: string;
       isCardanoTracking?: boolean;
     };
-    const { isFromPhase1 } = sendRouteState;
+    const { isFromPhase1, isMaxAmount } = sendRouteState;
     const cardanoSendTxTracking: CardanoSendTxTracking | undefined =
       sendRouteState.isCardanoTracking === true &&
       sendRouteState.cardanoPendingTxId &&
@@ -603,9 +607,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         ? normalizedCardanoDraftError
           ? new Error(normalizedCardanoDraftError)
           : !cardanoDraft &&
-              !isBuildingCardanoDraft &&
-              !cardanoOperationalGuard &&
-              cardanoDraftInputsReady
+            !isBuildingCardanoDraft &&
+            !cardanoOperationalGuard &&
+            cardanoDraftInputsReady
           ? new Error("Transaction is not ready")
           : undefined
         : sendConfigs.gasConfig.error ?? sendConfigs.feeConfig.error);
@@ -1117,6 +1121,25 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       }
     };
 
+    useEffect(() => {
+      const fee = sendConfigs.feeConfig.fee;
+      if (!fee || !balance) return;
+
+      const maxAmount = balance.sub(fee);
+      if (maxAmount.toDec().isNegative()) return;
+
+      if (isMaxAmount) {
+        sendConfigs.amountConfig.setAmount(
+          removeComma(maxAmount.shrink(true).hideDenom(true).toString())
+        );
+      }
+    }, [
+      isMaxAmount,
+      sendConfigs.feeConfig.fee,
+      sendConfigs.feeConfig.feeType,
+      balance,
+    ]);
+
     return (
       <div>
         <div className={style["editCard"]}>
@@ -1258,10 +1281,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
               </React.Fragment>
             ) : hasCardanoOutgoingPending ? (
               <React.Fragment>
-                <i
-                  className="fas fa-clock"
-                  style={{ marginRight: "8px" }}
-                />
+                <i className="fas fa-clock" style={{ marginRight: "8px" }} />
                 {CARDANO_SEND_CONFLICT_PENDING_MESSAGE}
               </React.Fragment>
             ) : (

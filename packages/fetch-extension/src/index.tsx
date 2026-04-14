@@ -127,6 +127,8 @@ import { useAutoLockMonitoring } from "./use-auto-lock-monitoring";
 import { BuySellTokenPage } from "./pages-new/more/token/moonpay";
 import { AddCosmosChain } from "./pages/setting/addCosmosChain";
 import { useAccountChangeMonitoring } from "./use-account-change-monitoring";
+import { ChangePassword } from "./pages-new/more/security-privacy/change-password";
+import { SignManualTxn } from "./pages-new/sign-manual-txn";
 
 const queryClient = new QueryClient();
 
@@ -344,6 +346,10 @@ ReactDOM.render(
                             element={<ManageTokenPage />}
                           />
                           <Route
+                            path="/more/security-privacy/change-password"
+                            element={<ChangePassword />}
+                          />
+                          <Route
                             path="/setting/endpoints"
                             element={<SettingEndpointsPage />}
                           />
@@ -393,6 +399,10 @@ ReactDOM.render(
                           <Route
                             path="/more/permissions/get-chain-infos"
                             element={<PermissionsGetChainInfosPage />}
+                          />
+                          <Route
+                            path="/more/sign-manual-txn"
+                            element={<SignManualTxn />}
                           />
                           <Route
                             path="/setting/chain-active"

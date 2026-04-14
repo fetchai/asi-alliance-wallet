@@ -865,8 +865,8 @@ export class KeyRing {
         const existingCache = await this.loadCardanoChainCache(chainId);
         const activeAddr = Buffer.from(activeKey.address).toString("utf8");
         const activePub =
-          (activeKey.algo === "ed25519" ||
-            activeKey.algo === "cardano_address_only")
+          activeKey.algo === "ed25519" ||
+          activeKey.algo === "cardano_address_only"
             ? Buffer.from(activeKey.pubKey).toString("hex")
             : "";
 
@@ -929,13 +929,17 @@ export class KeyRing {
 
     let hasSanitizedLegacySensitiveMeta = false;
     if (this.keyStore) {
-      const { sanitized, changed } = this.stripLegacySensitiveMeta(this.keyStore);
+      const { sanitized, changed } = this.stripLegacySensitiveMeta(
+        this.keyStore
+      );
       this.keyStore = sanitized;
-      hasSanitizedLegacySensitiveMeta = hasSanitizedLegacySensitiveMeta || changed;
+      hasSanitizedLegacySensitiveMeta =
+        hasSanitizedLegacySensitiveMeta || changed;
     }
     this.multiKeyStore = this.multiKeyStore.map((ks) => {
       const { sanitized, changed } = this.stripLegacySensitiveMeta(ks);
-      hasSanitizedLegacySensitiveMeta = hasSanitizedLegacySensitiveMeta || changed;
+      hasSanitizedLegacySensitiveMeta =
+        hasSanitizedLegacySensitiveMeta || changed;
       return sanitized;
     });
 
@@ -1791,7 +1795,9 @@ export class KeyRing {
 
             try {
               const cache = await this.loadGenericChainCache(currentChainId);
-              const activeEntry = activeWalletId ? cache[activeWalletId] : undefined;
+              const activeEntry = activeWalletId
+                ? cache[activeWalletId]
+                : undefined;
               if (activeEntry?.address) {
                 cachedActiveAddress = activeEntry.address;
               }
@@ -1824,14 +1830,15 @@ export class KeyRing {
             }
 
             if (activeWalletAddress) {
-              const consistencyResult = await this.cacheManager.checkConsistency(
-                currentChainId,
-                walletIds,
-                walletNames,
-                activeWalletId,
-                activeWalletAddress,
-                isCardano
-              );
+              const consistencyResult =
+                await this.cacheManager.checkConsistency(
+                  currentChainId,
+                  walletIds,
+                  walletNames,
+                  activeWalletId,
+                  activeWalletAddress,
+                  isCardano
+                );
 
               if (!consistencyResult.isConsistent) {
                 await this.clearAllAddressCaches();
@@ -1860,8 +1867,13 @@ export class KeyRing {
 
             try {
               const cache = await this.loadCardanoChainCache(currentChainId);
-              const activeEntry = activeWalletId ? cache[activeWalletId] : undefined;
-              if (activeEntry?.address && isValidCardanoAddress(activeEntry.address)) {
+              const activeEntry = activeWalletId
+                ? cache[activeWalletId]
+                : undefined;
+              if (
+                activeEntry?.address &&
+                isValidCardanoAddress(activeEntry.address)
+              ) {
                 cachedActiveAddress = activeEntry.address;
               }
               hasFullCache =
@@ -1879,7 +1891,9 @@ export class KeyRing {
               const activeWalletIndex = walletIds.indexOf(activeWalletId);
               activeWalletAddress =
                 activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
-                  ? Buffer.from(keys[activeWalletIndex].address).toString("utf8")
+                  ? Buffer.from(keys[activeWalletIndex].address).toString(
+                      "utf8"
+                    )
                   : "";
 
               await this.updateCacheForActiveWallet(
@@ -1893,14 +1907,15 @@ export class KeyRing {
             }
 
             if (activeWalletAddress && hasFullCache) {
-              const consistencyResult = await this.cacheManager.checkConsistency(
-                currentChainId,
-                walletIds,
-                walletNames,
-                activeWalletId,
-                activeWalletAddress,
-                isCardano
-              );
+              const consistencyResult =
+                await this.cacheManager.checkConsistency(
+                  currentChainId,
+                  walletIds,
+                  walletNames,
+                  activeWalletId,
+                  activeWalletAddress,
+                  isCardano
+                );
 
               if (!consistencyResult.isConsistent) {
                 await this.clearAllAddressCaches();
@@ -1984,9 +1999,10 @@ export class KeyRing {
     return sanitized;
   }
 
-  private stripLegacySensitiveMeta(
-    keyStore: KeyStore
-  ): { sanitized: KeyStore; changed: boolean } {
+  private stripLegacySensitiveMeta(keyStore: KeyStore): {
+    sanitized: KeyStore;
+    changed: boolean;
+  } {
     if (!keyStore?.meta) {
       return { sanitized: keyStore, changed: false };
     }
@@ -2084,7 +2100,8 @@ export class KeyRing {
         } else {
           const addressBytes = Buffer.from(persisted.address, "utf8");
           const pubKeyRaw = persisted.pubKey || "";
-          const looksHex = /^[0-9a-fA-F]+$/.test(pubKeyRaw) && pubKeyRaw.length % 2 === 0;
+          const looksHex =
+            /^[0-9a-fA-F]+$/.test(pubKeyRaw) && pubKeyRaw.length % 2 === 0;
           const pubKeyBytes = pubKeyRaw
             ? Buffer.from(pubKeyRaw, looksHex ? "hex" : "utf8")
             : new Uint8Array(0);
@@ -2185,6 +2202,61 @@ export class KeyRing {
     }
 
     return this.password === password;
+  }
+
+  async updatePassword(oldPassword: string, newPassword: string) {
+    if (!this.password) {
+      throw new Error("Keyring is locked");
+    }
+
+    if (this.password !== oldPassword) {
+      throw new Error("Invalid password");
+    }
+
+    if (oldPassword === newPassword) {
+      throw new Error("New password must be different");
+    }
+
+    const newMultiKeyStore: KeyStore[] = [];
+
+    for (const keyStore of this.multiKeyStore) {
+      if (keyStore.type) {
+        const decrypted = await Crypto.decrypt(
+          this.crypto,
+          keyStore,
+          oldPassword
+        );
+        const originalPayload = Buffer.from(decrypted).toString();
+
+        const reEncrypted = await Crypto.encrypt(
+          this.crypto,
+          keyStore.crypto.kdf,
+          keyStore.type,
+          keyStore.curve,
+          originalPayload,
+          newPassword,
+          keyStore.meta as Record<string, string>,
+          keyStore.bip44HDPath
+        );
+
+        if (
+          this.keyStore &&
+          KeyRing.getKeyStoreId(reEncrypted) ===
+            KeyRing.getKeyStoreId(this.keyStore)
+        ) {
+          this.keyStore = reEncrypted;
+        }
+
+        newMultiKeyStore.push(reEncrypted);
+      }
+    }
+
+    // Replace entire keystore array
+    this.multiKeyStore = newMultiKeyStore;
+    this.password = newPassword;
+
+    await this.save();
+    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
   }
 
   async exportKeyRingDatas(password: string): Promise<ExportKeyRingData[]> {

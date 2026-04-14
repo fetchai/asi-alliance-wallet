@@ -2,6 +2,7 @@ import React from "react";
 import { act, Simulate } from "react-dom/test-utils";
 import { createRoot, Root } from "react-dom/client";
 import { SendPhase2 } from "./send-phase-2";
+import { CoinPretty, Int } from "@keplr-wallet/unit";
 
 const mockNavigate = jest.fn();
 const mockNotificationPush = jest.fn();
@@ -33,7 +34,8 @@ jest.mock("@keplr-wallet/cardano", () => ({
     minimumOutputLovelace: string;
     coinMissingLovelace?: string;
   }) =>
-    /^\d+$/.test(minimumOutputLovelace) && BigInt(minimumOutputLovelace) > BigInt(0)
+    /^\d+$/.test(minimumOutputLovelace) &&
+    BigInt(minimumOutputLovelace) > BigInt(0)
       ? {
           classification: "minimum_violation",
           minimumOutputLovelace,
@@ -412,6 +414,19 @@ describe("SendPhase2 real flow guards", () => {
           trnsxStatus={props?.trnsxStatus as any}
           fromPhase1={false}
           configs={undefined}
+          balance={
+            new CoinPretty(
+              {
+                coinDenom: "ATOM",
+                coinMinimalDenom: "uatom",
+                coinDecimals: 6,
+                coinGeckoId: "cosmos",
+                coinImageUrl:
+                  "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
+              },
+              new Int(0)
+            )
+          }
           setFromPhase1={jest.fn()}
           gasSimulator={undefined}
         />
@@ -580,8 +595,7 @@ describe("SendPhase2 real flow guards", () => {
       navigateCountBeforeSubmit
     );
     const submitPendingCalls = submitNavigateCalls.filter(
-      (call) =>
-        call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
+      (call) => call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
     );
     expect(submitPendingCalls.length).toBe(1);
 
@@ -1329,7 +1343,9 @@ describe("SendPhase2 real flow guards", () => {
     expect(container.textContent).toContain(
       "Amount too small. Minimum required is 0.97 tADA"
     );
-    expect(container.textContent).not.toContain("amount must be a positive number");
+    expect(container.textContent).not.toContain(
+      "amount must be a positive number"
+    );
   });
 
   it("handles lifecycle valid -> minimum_violation -> valid with draft cleanup", async () => {

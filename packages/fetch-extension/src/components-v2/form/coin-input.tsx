@@ -39,11 +39,18 @@ export interface CoinInputProps {
   disableAllBalance?: boolean;
   overrideSelectableCurrencies?: AppCurrency[];
   dropdownDisabled?: boolean;
+  onAmountChange?: (value: string) => void;
   onPress?: () => void;
 }
 
 export const CoinInput: FunctionComponent<CoinInputProps> = observer(
-  ({ amountConfig, showAllBalance, disableAllBalance, onPress }) => {
+  ({
+    amountConfig,
+    showAllBalance,
+    disableAllBalance,
+    onPress,
+    onAmountChange,
+  }) => {
     const intl = useIntl();
     const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
       string | undefined
@@ -98,14 +105,15 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
       const shouldInit =
         isToggleClicked &&
         amountConfig.sendCurrency["coinGeckoId"] !== undefined &&
-        (( !prevFiatMode.isToggleClicked &&
-          (inputInFiatCurrency == null || inputInFiatCurrency === "") ) ||
+        ((!prevFiatMode.isToggleClicked &&
+          (inputInFiatCurrency == null || inputInFiatCurrency === "")) ||
           prevFiatMode.coinMinimalDenom !==
             amountConfig.sendCurrency.coinMinimalDenom ||
           prevFiatMode.fiatCurrency !== fiatCurrency);
 
       prevFiatMode.isToggleClicked = isToggleClicked;
-      prevFiatMode.coinMinimalDenom = amountConfig.sendCurrency.coinMinimalDenom;
+      prevFiatMode.coinMinimalDenom =
+        amountConfig.sendCurrency.coinMinimalDenom;
       prevFiatMode.fiatCurrency = fiatCurrency;
 
       if (!shouldInit) {
@@ -122,7 +130,13 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
       );
       const inputValueInUsd = convertToFiatCurrency(inputValue);
       setInputInFiatCurrency(inputValueInUsd ?? "");
-    }, [amountConfig.amount, amountConfig.sendCurrency, fiatCurrency, isToggleClicked, prevFiatMode]);
+    }, [
+      amountConfig.amount,
+      amountConfig.sendCurrency,
+      fiatCurrency,
+      isToggleClicked,
+      prevFiatMode,
+    ]);
 
     const [randomId] = useState(() => {
       const bytes = new Uint8Array(4);
@@ -196,9 +210,12 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
 
     const currency =
       priceStore.supportedVsCurrencies[fiatCurrency]?.currency?.toUpperCase();
-    const formattedTokenAmount = formatDisplayAmount(amountConfig.amount ?? "", {
-      coinDecimals: amountConfig.sendCurrency.coinDecimals,
-    });
+    const formattedTokenAmount = formatDisplayAmount(
+      amountConfig.amount ?? "",
+      {
+        coinDecimals: amountConfig.sendCurrency.coinDecimals,
+      }
+    );
     const formattedFiatAmount = formatDisplayAmount(inputInFiatCurrency ?? "", {
       coinDecimals: 6,
       maxDecimals: 6,
@@ -248,6 +265,7 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                 onChange={(e: any) => {
                   e.preventDefault();
                   let value = e.target.value.replace(/[^0-9.]/g, "");
+                  onAmountChange?.(value);
 
                   if (value === "") {
                     amountConfig.setAmount("");
@@ -284,8 +302,12 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                     ) {
                       setInputInFiatCurrency(value);
 
-                      const coinGeckoId = amountConfig.sendCurrency["coinGeckoId"];
-                      const price = priceStore.getPrice(coinGeckoId, fiatCurrency);
+                      const coinGeckoId =
+                        amountConfig.sendCurrency["coinGeckoId"];
+                      const price = priceStore.getPrice(
+                        coinGeckoId,
+                        fiatCurrency
+                      );
                       if (price == null) {
                         // Price not ready yet, keep fiat input editable.
                         return;
@@ -367,170 +389,175 @@ export interface TokenDropdownProps {
   amountConfig: IAmountConfig;
   overrideSelectableCurrencies?: AppCurrency[];
 }
-export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = observer(({
-  amountConfig,
-  overrideSelectableCurrencies,
-}) => {
-  const [isOpenTokenSelector, setIsOpenTokenSelector] = useState(false);
-  const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
-    string | undefined
-  >("");
-  const { queriesStore, priceStore, accountStore, chainStore, analyticsStore } =
-    useStore();
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
-  const accountInfo = accountStore.getAccount(chainStore.current.chainId);
-  const queries = queriesStore.get(chainStore.current.chainId);
-  const queryBalances = queriesStore
-    .get(amountConfig.chainId)
-    .queryBalances.getQueryBech32Address(amountConfig.sender);
+export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = observer(
+  ({ amountConfig, overrideSelectableCurrencies }) => {
+    const [isOpenTokenSelector, setIsOpenTokenSelector] = useState(false);
+    const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
+      string | undefined
+    >("");
+    const {
+      queriesStore,
+      priceStore,
+      accountStore,
+      chainStore,
+      analyticsStore,
+    } = useStore();
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+    const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+    const queries = queriesStore.get(chainStore.current.chainId);
+    const queryBalances = queriesStore
+      .get(amountConfig.chainId)
+      .queryBalances.getQueryBech32Address(amountConfig.sender);
 
-  const selectableCurrenciesSource =
-    overrideSelectableCurrencies ??
-    (isEvm || isCardano
-      ? queryBalances.balances.map((b) => b.currency)
-      : queries.cosmos.querySpendableBalances
-          .getQueryBech32Address(accountInfo.bech32Address)
-          .balances.map((b) => b.currency));
+    const selectableCurrenciesSource =
+      overrideSelectableCurrencies ??
+      (isEvm || isCardano
+        ? queryBalances.balances.map((b) => b.currency)
+        : queries.cosmos.querySpendableBalances
+            .getQueryBech32Address(accountInfo.bech32Address)
+            .balances.map((b) => b.currency));
 
-  const selectableCurrencies = selectableCurrenciesSource
-    .filter((cur) => {
-      const bal = queryBalances.getBalanceFromCurrency(cur);
-      if (bal.toDec().isZero()) return false;
-      // Filter out NFTs from send token selector (Cardano)
-      if (isCardano && (cur as any).isNft) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      return a.coinDenom < b.coinDenom ? -1 : 1;
-    });
-  const spendableBalances =
-    isEvm || isCardano
-      ? undefined
-      : queries.cosmos.querySpendableBalances
-          .getQueryBech32Address(accountInfo.bech32Address)
-          .balances?.find(
-            (bal) =>
-              amountConfig.sendCurrency.coinMinimalDenom ===
-              bal.currency.coinMinimalDenom
-          );
-  const balance = spendableBalances
-    ? spendableBalances
-    : new CoinPretty(amountConfig.sendCurrency, new Int(0));
+    const selectableCurrencies = selectableCurrenciesSource
+      .filter((cur) => {
+        const bal = queryBalances.getBalanceFromCurrency(cur);
+        if (bal.toDec().isZero()) return false;
+        // Filter out NFTs from send token selector (Cardano)
+        if (isCardano && (cur as any).isNft) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        return a.coinDenom < b.coinDenom ? -1 : 1;
+      });
+    const spendableBalances =
+      isEvm || isCardano
+        ? undefined
+        : queries.cosmos.querySpendableBalances
+            .getQueryBech32Address(accountInfo.bech32Address)
+            .balances?.find(
+              (bal) =>
+                amountConfig.sendCurrency.coinMinimalDenom ===
+                bal.currency.coinMinimalDenom
+            );
+    const balance = spendableBalances
+      ? spendableBalances
+      : new CoinPretty(amountConfig.sendCurrency, new Int(0));
 
-  const language = useLanguage();
-  const fiatCurrency = language.fiatCurrency;
-  const convertToFiatCurrency = (currency: any) => {
-    const value = priceStore.calculatePrice(currency, fiatCurrency);
-    const inUsd = value && value.shrink(true).maxDecimals(6).toString();
-    return inUsd;
-  };
+    const language = useLanguage();
+    const fiatCurrency = language.fiatCurrency;
+    const convertToFiatCurrency = (currency: any) => {
+      const value = priceStore.calculatePrice(currency, fiatCurrency);
+      const inUsd = value && value.shrink(true).maxDecimals(6).toString();
+      return inUsd;
+    };
 
-  const balancesMap = new Map(
-    queryBalances.balances.map((bal) => [
-      bal.currency.coinMinimalDenom,
-      bal.balance,
-    ])
-  );
+    const balancesMap = new Map(
+      queryBalances.balances.map((bal) => [
+        bal.currency.coinMinimalDenom,
+        bal.balance,
+      ])
+    );
 
-  const balanceETH =
-    balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
-    new CoinPretty(amountConfig.sendCurrency, new Int(0));
+    const balanceETH =
+      balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
+      new CoinPretty(amountConfig.sendCurrency, new Int(0));
 
-  const balanceCardano =
-    balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
-    new CoinPretty(amountConfig.sendCurrency, new Int(0));
+    const balanceCardano =
+      balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
+      new CoinPretty(amountConfig.sendCurrency, new Int(0));
 
-  useEffect(() => {
-    const currentChainBalance = isEvm
-      ? balanceETH
-      : isCardano
+    useEffect(() => {
+      const currentChainBalance = isEvm
+        ? balanceETH
+        : isCardano
         ? balanceCardano
         : balance;
-    const valueInUsd = convertToFiatCurrency(currentChainBalance);
-    setInputInFiatCurrency(valueInUsd);
-  }, [amountConfig.sendCurrency, isCardano, isEvm]);
+      const valueInUsd = convertToFiatCurrency(currentChainBalance);
+      setInputInFiatCurrency(valueInUsd);
+    }, [amountConfig.sendCurrency, isCardano, isEvm]);
 
-  const formatCurrencyBalance = (currency: AppCurrency, amount: CoinPretty) => {
-    const normalizedAmount = amount.toDec().toString(currency.coinDecimals);
-    return formatDisplayAmount(normalizedAmount, {
-      coinDecimals: currency.coinDecimals,
-    });
-  };
+    const formatCurrencyBalance = (
+      currency: AppCurrency,
+      amount: CoinPretty
+    ) => {
+      const normalizedAmount = amount.toDec().toString(currency.coinDecimals);
+      return formatDisplayAmount(normalizedAmount, {
+        coinDecimals: currency.coinDecimals,
+      });
+    };
 
-  const availableAmountDisplay = isEvm
-    ? formatCurrencyBalance(amountConfig.sendCurrency, balanceETH)
-    : isCardano
+    const availableAmountDisplay = isEvm
+      ? formatCurrencyBalance(amountConfig.sendCurrency, balanceETH)
+      : isCardano
       ? formatCurrencyBalance(amountConfig.sendCurrency, balanceCardano)
       : formatCurrencyBalance(amountConfig.sendCurrency, balance);
 
-  return (
-    <React.Fragment>
-      <Label className={styleCoinInput["label"]}>Asset</Label>
-      <Card
-        style={{
-          border: "1px solid var(--bg-grey-dark)",
-          background: "#FFF",
-          padding: "12px 18px",
-          marginBottom: "0px",
-        }}
-        onClick={() => {
-          setIsOpenTokenSelector(!isOpenTokenSelector);
-          analyticsStore.logEvent("send_from_click", {
-            pageName: "Send",
-          });
-        }}
-        heading={<div>{amountConfig.sendCurrency.coinDenom}</div>}
-        rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
-        subheading={
-          <div
-            style={{
-              color: "var(--font-secondary)",
-              fontSize: "12px",
-            }}
-          >
-            {" "}
-            {`Available: ${
-              availableAmountDisplay
-            } `}
-            {inputInFiatCurrency &&
-              `(${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`}
-          </div>
-        }
-      />
-      <Dropdown
-        setIsOpen={setIsOpenTokenSelector}
-        isOpen={isOpenTokenSelector}
-        title="Asset"
-        closeClicked={() => {
-          setIsOpenTokenSelector(false);
-        }}
-      >
-        {selectableCurrencies.map((currency) => {
-          const currencyBalance =
-            balancesMap.get(currency.coinMinimalDenom) ||
-            new CoinPretty(currency, new Int(0));
-
-          return (
-            <Card
-              heading={currency.coinDenom}
-              key={currency.coinMinimalDenom}
-              isActive={
-                currency.coinMinimalDenom ===
-                amountConfig.sendCurrency.coinMinimalDenom
-              }
-              onClick={async (e: any) => {
-                e.preventDefault();
-                amountConfig.setSendCurrency(currency);
-                analyticsStore.logEvent("select_token_click", {
-                  pageName: "Send",
-                });
+    return (
+      <React.Fragment>
+        <Label className={styleCoinInput["label"]}>Asset</Label>
+        <Card
+          style={{
+            border: "1px solid var(--bg-grey-dark)",
+            background: "#FFF",
+            padding: "12px 18px",
+            marginBottom: "0px",
+          }}
+          onClick={() => {
+            setIsOpenTokenSelector(!isOpenTokenSelector);
+            analyticsStore.logEvent("send_from_click", {
+              pageName: "Send",
+            });
+          }}
+          heading={<div>{amountConfig.sendCurrency.coinDenom}</div>}
+          rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
+          subheading={
+            <div
+              style={{
+                color: "var(--font-secondary)",
+                fontSize: "12px",
               }}
-              rightContent={formatCurrencyBalance(currency, currencyBalance)}
-            />
-          );
-        })}
-      </Dropdown>
-    </React.Fragment>
-  );
-});
+            >
+              {" "}
+              {`Available: ${availableAmountDisplay} `}
+              {inputInFiatCurrency &&
+                `(${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`}
+            </div>
+          }
+        />
+        <Dropdown
+          setIsOpen={setIsOpenTokenSelector}
+          isOpen={isOpenTokenSelector}
+          title="Asset"
+          closeClicked={() => {
+            setIsOpenTokenSelector(false);
+          }}
+        >
+          {selectableCurrencies.map((currency) => {
+            const currencyBalance =
+              balancesMap.get(currency.coinMinimalDenom) ||
+              new CoinPretty(currency, new Int(0));
+
+            return (
+              <Card
+                heading={currency.coinDenom}
+                key={currency.coinMinimalDenom}
+                isActive={
+                  currency.coinMinimalDenom ===
+                  amountConfig.sendCurrency.coinMinimalDenom
+                }
+                onClick={async (e: any) => {
+                  e.preventDefault();
+                  amountConfig.setSendCurrency(currency);
+                  analyticsStore.logEvent("select_token_click", {
+                    pageName: "Send",
+                  });
+                }}
+                rightContent={formatCurrencyBalance(currency, currencyBalance)}
+              />
+            );
+          })}
+        </Dropdown>
+      </React.Fragment>
+    );
+  }
+);

@@ -333,9 +333,7 @@ export class KeyRingService {
       const ks = this.keyRing.getCurrentKeyStore();
       const currentChainId = await this.chainsService.getSelectedChain();
       if (currentChainId && ks && walletShouldLeaveCardanoChain(ks)) {
-        const chainInfo = await this.chainsService.getChainInfo(
-          currentChainId
-        );
+        const chainInfo = await this.chainsService.getChainInfo(currentChainId);
         const isCardano = chainInfo.features?.includes("cardano") ?? false;
         if (isCardano) {
           const chainInfos = await this.chainsService.getChainInfos();
@@ -1401,6 +1399,10 @@ Salt: ${salt}`;
     data: unknown
   ): Promise<unknown> {
     return await this.interactionService.waitApprove(env, url, type, data);
+  }
+
+  async updatePassword(oldPassword: string, newPassword: string) {
+    return await this.keyRing.updatePassword(oldPassword, newPassword);
   }
 
   getMultiKeyStoreInfo(): MultiKeyStoreInfoWithSelected {

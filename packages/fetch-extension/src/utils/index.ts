@@ -5,6 +5,8 @@ import {
   CHAIN_ID_GEMINI,
   CHAIN_ID_LOCAL_TEST_NETWORK,
   CHAIN_ID_REMOTE_TEST_NETWORK,
+  EXPLORER_URL,
+  GEMINI_EXPLORER_URL,
 } from "../config.ui.var";
 import { formatAddress } from "./format";
 import { GroupEvent } from "./group-events";
@@ -13,7 +15,29 @@ import {
   walletShouldLeaveCardanoChain,
   walletSupportsCardano,
 } from "@keplr-wallet/background";
+export { isCardanoChain } from "./is-cardano-chain";
+
+export {
+  ensureCompatibleChainForUpcomingWallet,
+  ensureChainCompatibleBeforeSelectKeyStore,
+  type ChainStoreForCardanoAwaitableSwitch,
+} from "./cardano-awaitable-alignment";
+
+export { walletShouldLeaveCardanoChain, walletSupportsCardano };
+
+export {
+  requestKeyringSurfacesSyncBroadcast,
+  syncKeyringSurfacesFromBackground,
+  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+} from "./keyring-surfaces-sync";
 import { RegisterMode } from "@keplr-wallet/hooks";
+
+/** Pre-keystore UI: word count that will yield Cardano-capable mnemonic after import (matches persisted `mnemonicLength` / `walletSupportsCardano`). */
+export function supportsCardanoFromMnemonicWordCount(
+  wordCount: number
+): boolean {
+  return wordCount === 24;
+}
 
 // translate the contact address into the address book name if it exists
 export function getUserName(
@@ -118,6 +142,36 @@ export const getNextDefaultAccountName = (
   return `${prefix}-${lastNum + 1}`;
 };
 
+export const validateAccountName = (
+  value: string,
+  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  mode: RegisterMode
+): string | undefined => {
+  const trimmedValue = value.trimStart();
+  const isEmpty = trimmedValue === "";
+  const { isValid, isValidFormat, containsLetterOrNumber } = validateWalletName(
+    trimmedValue,
+    multiKeyStoreInfo,
+    mode
+  );
+
+  if (!isValid || isEmpty) {
+    if (!isValidFormat) {
+      return "Only letters, numbers and basic symbols (_-.@#()) are allowed.";
+    }
+
+    if (isEmpty) {
+      return "Account name cannot be empty";
+    }
+
+    if (!containsLetterOrNumber) {
+      return "Account name must contain at least one letter or number.";
+    }
+
+    return "Account name already exists, please try different name";
+  }
+};
+
 export function isFeatureAvailable(chainId: string): boolean {
   return [
     CHAIN_ID_FETCHHUB,
@@ -128,23 +182,60 @@ export function isFeatureAvailable(chainId: string): boolean {
   ].includes(chainId);
 }
 
-export { isCardanoChain } from "./is-cardano-chain";
+export const checkWebSocket = (
+  url: string,
+  timeout = 5000
+): Promise<boolean> => {
+  return new Promise((resolve) => {
+    let socket: WebSocket;
+    let settled = false;
 
-/** Pre-keystore UI: word count that will yield Cardano-capable mnemonic after import (matches persisted `mnemonicLength` / `walletSupportsCardano`). */
-export function supportsCardanoFromMnemonicWordCount(wordCount: number): boolean {
-  return wordCount === 24;
+    try {
+      socket = new WebSocket(url);
+    } catch (e) {
+      return resolve(false);
+    }
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        socket.close();
+        resolve(false);
+      }
+    }, timeout);
+
+    socket.onopen = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.close();
+      resolve(true);
+    };
+
+    socket.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(false);
+    };
+  });
+};
+
+export function toWssUrl(input: string): string {
+  if (!input) return "";
+
+  const stripped = input
+    .trim()
+    .replace(/^(https?:\/\/|wss?:\/\/)/i, "")
+    .replace(/\/+$/, "");
+
+  return `wss://${stripped}/websocket`;
 }
 
-export {
-  ensureCompatibleChainForUpcomingWallet,
-  ensureChainCompatibleBeforeSelectKeyStore,
-  type ChainStoreForCardanoAwaitableSwitch,
-} from "./cardano-awaitable-alignment";
-
-export { walletShouldLeaveCardanoChain, walletSupportsCardano };
-
-export {
-  requestKeyringSurfacesSyncBroadcast,
-  syncKeyringSurfacesFromBackground,
-  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
-} from "./keyring-surfaces-sync";
+export const explorerBaseURL = (chainId: string) => {
+  if (chainId === CHAIN_ID_GEMINI) {
+    return GEMINI_EXPLORER_URL;
+  } else if (chainId === CHAIN_ID_DORADO || chainId === CHAIN_ID_FETCHHUB) {
+    return `${EXPLORER_URL}/${chainId}`;
+  }
+};

@@ -15,6 +15,8 @@ import {
   KeyRingStatus,
   LockKeyRingMsg,
   MultiKeyStoreInfoWithSelected,
+  RestoreKeyRingMsg,
+  UpdatePasswordMsg,
   SetKeyStoreCoinTypeMsg,
   ShowKeyRingMsg,
   UnlockKeyRingMsg,
@@ -24,7 +26,6 @@ import {
   ExportKeyRingDatasMsg,
   CreateKeystoneKeyMsg,
   AddKeystoneKeyMsg,
-  RestoreKeyRingMsg,
 } from "@keplr-wallet/background";
 
 import { computed, flow, makeObservable, observable, runInAction } from "mobx";
@@ -544,6 +545,17 @@ export class KeyRingStore {
     if (selectedIndex === index) {
       this.dispatchKeyStoreChangeEvent();
     }
+  }
+
+  @flow
+  *updatePassword(oldPassword: string, newPassword: string) {
+    const isValidPassword: boolean = yield this.checkPassword(oldPassword);
+    if (!isValidPassword) {
+      throw new Error("Invalid password");
+    }
+    const msg = new UpdatePasswordMsg(oldPassword, newPassword);
+    yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    this.dispatchKeyStoreChangeEvent();
   }
 
   async checkPassword(password: string): Promise<boolean> {

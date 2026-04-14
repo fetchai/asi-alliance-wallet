@@ -28,15 +28,15 @@ interface SendPhase1Props {
   sendConfigs: SendConfigs;
   setIsNext: any;
   setFromPhase1: any;
+  balance: CoinPretty;
 }
 
 export const SendPhase1: React.FC<SendPhase1Props> = observer(
-  ({ setIsNext, sendConfigs, setFromPhase1 }) => {
+  ({ setIsNext, balance, sendConfigs, setFromPhase1 }) => {
     const [isChangeWalletOpen, setIsChangeWalletOpen] = useState(false);
-    const { chainStore, accountStore, queriesStore, analyticsStore } =
-      useStore();
-    const queries = queriesStore.get(chainStore.current.chainId);
+    const { chainStore, accountStore, analyticsStore } = useStore();
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+    const [isMaxAmount, setIsMaxAmount] = useState(false);
     const navigate = useNavigate();
     const intl = useIntl();
     useEffect(() => {
@@ -44,27 +44,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
       setFromPhase1(true);
     }, []);
 
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
     const isCardano = chainStore.current.features?.includes("cardano") ?? false;
-    const spendableBalances = isEvm || isCardano
-      ? queries.queryBalances
-          .getQueryBech32Address(accountInfo.bech32Address)
-          .balances?.find(
-            (bal) =>
-              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-              bal.currency.coinMinimalDenom
-          )?.balance
-      : queries.cosmos.querySpendableBalances
-          .getQueryBech32Address(accountInfo.bech32Address)
-          .balances?.find(
-            (bal) =>
-              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-              bal.currency.coinMinimalDenom
-          );
-
-    const balance = spendableBalances
-      ? spendableBalances
-      : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
 
     return (
       <div>
@@ -87,7 +67,10 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
                   new GetCardanoSyncStatusMsg(chainStore.current.chainId)
                 )) as CardanoSyncStatusResponse | undefined;
 
-                if (syncStatus?.state === "ready_with_data" && syncStatus?.isSettled) {
+                if (
+                  syncStatus?.state === "ready_with_data" &&
+                  syncStatus?.isSettled
+                ) {
                   const maxLovelace = (await requester.sendMessage(
                     BACKGROUND_PORT,
                     new GetMaxSpendableAdaMsg(
@@ -116,7 +99,10 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
               );
               const maxAmount = balance.sub(feeBuffer);
               const safeMaxAmount = maxAmount.toDec().isNegative()
-                ? new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0))
+                ? new CoinPretty(
+                    sendConfigs.amountConfig.sendCurrency,
+                    new Int(0)
+                  )
                 : maxAmount;
               const actualAmount = safeMaxAmount
                 .shrink(true)
@@ -133,14 +119,19 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
             );
             const maxAmount = balance.sub(fees);
             const safeMaxAmount = maxAmount.toDec().isNegative()
-              ? new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0))
+              ? new CoinPretty(
+                  sendConfigs.amountConfig.sendCurrency,
+                  new Int(0)
+                )
               : maxAmount;
             const actualAmount = safeMaxAmount
               .shrink(true)
               .hideDenom(true)
               .toString();
             sendConfigs.amountConfig.setAmount(removeComma(actualAmount));
+            setIsMaxAmount(true);
           }}
+          onAmountChange={(_) => setIsMaxAmount(false)}
           amountConfig={sendConfigs.amountConfig}
           label={intl.formatMessage({ id: "send.input.amount" })}
           balanceText={intl.formatMessage({
@@ -193,7 +184,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           }}
           headingStyle={{
             fontSize: "14px",
-            fontWeight: "400",
+            fontWeight: 400,
             opacity: "1",
           }}
           heading={accountInfo.name}
@@ -214,7 +205,7 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           text="Next"
           onClick={() => {
             setIsNext(true);
-            navigate("/send", { state: { isFromPhase1: true } });
+            navigate("/send", { state: { isFromPhase1: true, isMaxAmount } });
             analyticsStore.logEvent("next_click", { pageName: "Send" });
           }}
           styleProps={{

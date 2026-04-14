@@ -9,7 +9,10 @@ import { useLanguage } from "../../../languages";
 import { Card } from "@components-v2/card";
 import { ToolTip } from "@components/tooltip";
 import { formatTokenName } from "@utils/format";
-import { WrongViewingKeyError, CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
+import {
+  WrongViewingKeyError,
+  CARDANO_NATIVE_TOKEN_TYPE,
+} from "@keplr-wallet/stores";
 import { UncontrolledTooltip } from "reactstrap";
 import { useNotification } from "@components/notification";
 import { observer } from "mobx-react-lite";
@@ -41,9 +44,9 @@ export const Tokens = observer(() => {
     if (!accountInfo.bech32Address) return;
 
     // Re-discover native Cardano tokens (including newly received ASI) on Portfolio open.
-    queriesStore.get(current.chainId).cardano.refreshTokenBalancesForAddress(
-      accountInfo.bech32Address
-    );
+    queriesStore
+      .get(current.chainId)
+      .cardano.refreshTokenBalancesForAddress(accountInfo.bech32Address);
   }, [accountInfo.bech32Address, current.chainId, isCardano, queriesStore]);
 
   // Token discovery is auto-triggered by ObservableQueryCardanoBalanceRegistry
@@ -100,7 +103,10 @@ export const Tokens = observer(() => {
   const nftTokens = isCardano
     ? tokens.filter((token) => {
         const denom = new DenomHelper(token.currency.coinMinimalDenom);
-        return denom.type === CARDANO_NATIVE_TOKEN_TYPE && (token.currency as AppCurrencyWithNft).isNft;
+        return (
+          denom.type === CARDANO_NATIVE_TOKEN_TYPE &&
+          (token.currency as AppCurrencyWithNft).isNft
+        );
       })
     : [];
 
@@ -109,7 +115,11 @@ export const Tokens = observer(() => {
       {fungibleTokens.map((token) => {
         const error = token.error;
         const validSelector = Buffer.from(
-          Hash.sha256(Buffer.from(token.balance.currency.coinMinimalDenom))
+          Hash.sha256(
+            Buffer.from(
+              token.balance.currency.coinMinimalDenom
+            ) as unknown as Uint8Array
+          )
         )
           .toString("hex")
           .replace(/\d+/g, "")
@@ -255,13 +265,15 @@ export const Tokens = observer(() => {
 
       {/* NFT Section for Cardano */}
       {nftTokens.length > 0 && (
-        <>
-          <div style={{
-            fontSize: "13px",
-            fontWeight: 600,
-            color: "rgba(255,255,255,0.6)",
-            padding: "16px 4px 8px",
-          }}>
+        <React.Fragment>
+          <div
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.6)",
+              padding: "16px 4px 8px",
+            }}
+          >
             NFTs
           </div>
           {nftTokens.map((token) => {
@@ -322,7 +334,7 @@ export const Tokens = observer(() => {
               />
             );
           })}
-        </>
+        </React.Fragment>
       )}
     </React.Fragment>
   );

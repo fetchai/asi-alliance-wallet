@@ -8,9 +8,7 @@ import { Dropdown } from "@components-v2/dropdown";
 import { TXNTYPE } from "../../../config";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import {
-  GetCardanoSyncStatusMsg,
-} from "@keplr-wallet/background";
+import { GetCardanoSyncStatusMsg } from "@keplr-wallet/background";
 import {
   useMoonpayCurrency,
   checkAddressIsBuySellWhitelisted,
@@ -34,8 +32,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     const { data } = useMoonpayCurrency();
     const isCardanoChain =
       chainStore.current.features?.includes("cardano") ?? false;
-    const [cardanoOutgoingPending, setCardanoOutgoingPending] =
-      useState(false);
+    const [cardanoOutgoingPending, setCardanoOutgoingPending] = useState(false);
 
     useEffect(() => {
       if (!isCardanoChain) {
@@ -83,8 +80,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     }, [chainId, isCardanoChain]);
 
     const sendBlocked =
-      activityStore.getPendingTxnTypes[TXNTYPE.send] ||
-      cardanoOutgoingPending;
+      activityStore.getPendingTxnTypes[TXNTYPE.send] || cardanoOutgoingPending;
 
     const allowedTokenList = data?.filter(
       (item: any) =>
@@ -135,9 +131,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
             disabled={sendBlocked}
             leftImage={require("@assets/svg/wireframe/arrow-up.svg")}
             rightContent={
-              sendBlocked && (
-                <i className="fas fa-spinner fa-spin ml-2 mr-2" />
-              )
+              sendBlocked && <i className="fas fa-spinner fa-spin ml-2 mr-2" />
             }
             heading={"Send"}
             onClick={() => {
@@ -207,7 +201,9 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
                 });
               }}
             />
-          ) : null}
+          ) : (
+            ""
+          )}
         </Dropdown>
       </div>
     );

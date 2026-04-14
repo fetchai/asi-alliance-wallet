@@ -36,14 +36,26 @@ const envDefaults = {
   PROD_MOONPAY_API_KEY: process.env["PROD_MOONPAY_API_KEY"] || "",
   // Cardano Blockfrost API Keys
   BLOCKFROST_API_KEY: process.env["BLOCKFROST_API_KEY"] || "",
-  BLOCKFROST_PROJECT_ID_MAINNET: process.env["BLOCKFROST_PROJECT_ID_MAINNET"] || "",
-  BLOCKFROST_PROJECT_ID_PREVIEW: process.env["BLOCKFROST_PROJECT_ID_PREVIEW"] || "",
-  BLOCKFROST_PROJECT_ID_PREPROD: process.env["BLOCKFROST_PROJECT_ID_PREPROD"] || "",
-  BLOCKFROST_PROJECT_ID_SANCHONET: process.env["BLOCKFROST_PROJECT_ID_SANCHONET"] || "",
-  BLOCKFROST_URL_MAINNET: process.env["BLOCKFROST_URL_MAINNET"] || "https://cardano-mainnet.blockfrost.io/api/v0",
-  BLOCKFROST_URL_PREVIEW: process.env["BLOCKFROST_URL_PREVIEW"] || "https://cardano-preview.blockfrost.io/api/v0",
-  BLOCKFROST_URL_PREPROD: process.env["BLOCKFROST_URL_PREPROD"] || "https://cardano-preprod.blockfrost.io/api/v0",
-  BLOCKFROST_URL_SANCHONET: process.env["BLOCKFROST_URL_SANCHONET"] || "https://cardano-sanchonet.blockfrost.io/api/v0",
+  BLOCKFROST_PROJECT_ID_MAINNET:
+    process.env["BLOCKFROST_PROJECT_ID_MAINNET"] || "",
+  BLOCKFROST_PROJECT_ID_PREVIEW:
+    process.env["BLOCKFROST_PROJECT_ID_PREVIEW"] || "",
+  BLOCKFROST_PROJECT_ID_PREPROD:
+    process.env["BLOCKFROST_PROJECT_ID_PREPROD"] || "",
+  BLOCKFROST_PROJECT_ID_SANCHONET:
+    process.env["BLOCKFROST_PROJECT_ID_SANCHONET"] || "",
+  BLOCKFROST_URL_MAINNET:
+    process.env["BLOCKFROST_URL_MAINNET"] ||
+    "https://cardano-mainnet.blockfrost.io/api/v0",
+  BLOCKFROST_URL_PREVIEW:
+    process.env["BLOCKFROST_URL_PREVIEW"] ||
+    "https://cardano-preview.blockfrost.io/api/v0",
+  BLOCKFROST_URL_PREPROD:
+    process.env["BLOCKFROST_URL_PREPROD"] ||
+    "https://cardano-preprod.blockfrost.io/api/v0",
+  BLOCKFROST_URL_SANCHONET:
+    process.env["BLOCKFROST_URL_SANCHONET"] ||
+    "https://cardano-sanchonet.blockfrost.io/api/v0",
 };
 const commonResolve = () => ({
   extensions: [".ts", ".tsx", ".js", ".jsx", ".css", ".scss", ".svg"],
@@ -281,7 +293,7 @@ const extensionConfig = () => {
       new NodePolyfillPlugin(),
       new NormalModuleReplacementPlugin(
         /@dcspark\/cardano-multiplatform-lib-nodejs/,
-        '@dcspark/cardano-multiplatform-lib-browser'
+        "@dcspark/cardano-multiplatform-lib-browser"
       ),
       new NormalModuleReplacementPlugin(
         /@emurgo\/cardano-serialization-lib-nodejs/,
@@ -302,19 +314,40 @@ const extensionConfig = () => {
           ...(() => {
             if (isBuildManifestV2) {
               return [
-                { from: "src/public/assets/icon/icon-16.png", to: "assets/icon-16.png" },
-                { from: "src/public/assets/icon/icon-48.png", to: "assets/icon-48.png" },
-                { from: "src/public/assets/icon/icon-128.png", to: "assets/icon-128.png" },
+                {
+                  from: "src/public/assets/icon/icon-16.png",
+                  to: "assets/icon-16.png",
+                },
+                {
+                  from: "src/public/assets/icon/icon-48.png",
+                  to: "assets/icon-48.png",
+                },
+                {
+                  from: "src/public/assets/icon/icon-128.png",
+                  to: "assets/icon-128.png",
+                },
               ];
             }
             return [
-              { from: "src/public/assets/icon/icon-16.png", to: "assets/icon/icon-16.png" },
-              { from: "src/public/assets/icon/icon-48.png", to: "assets/icon/icon-48.png" },
-              { from: "src/public/assets/icon/icon-128.png", to: "assets/icon/icon-128.png" },
+              {
+                from: "src/public/assets/icon/icon-16.png",
+                to: "assets/icon/icon-16.png",
+              },
+              {
+                from: "src/public/assets/icon/icon-48.png",
+                to: "assets/icon/icon-48.png",
+              },
+              {
+                from: "src/public/assets/icon/icon-128.png",
+                to: "assets/icon/icon-128.png",
+              },
             ];
           })(),
           { from: "src/public/assets/logo-256.svg", to: "assets/logo-256.svg" },
-          { from: "src/public/assets/png/ASI-Logo-Icon-black.png", to: "assets/png/ASI-Logo-Icon-black.png" },
+          {
+            from: "src/public/assets/png/ASI-Logo-Icon-black.png",
+            to: "assets/png/ASI-Logo-Icon-black.png",
+          },
           ...(() => {
             if (isBuildManifestV2) {
               return [

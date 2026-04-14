@@ -12,7 +12,11 @@ import { useNotification } from "@components/notification";
 import { useNavigate, useLocation } from "react-router";
 import queryString from "querystring";
 
-import { useGasSimulator, useSendTxConfig, EmptyAddressError } from "@keplr-wallet/hooks";
+import {
+  useGasSimulator,
+  useSendTxConfig,
+  EmptyAddressError,
+} from "@keplr-wallet/hooks";
 import {
   fitPopupWindow,
   // openPopupWindow,
@@ -22,6 +26,7 @@ import { DenomHelper, ExtensionKVStore } from "@keplr-wallet/common";
 
 import { SendPhase1 } from "./send-phase-1";
 import { SendPhase2 } from "./send-phase-2";
+import { CoinPretty, Int } from "@keplr-wallet/unit";
 export const SendPage: FunctionComponent = observer(() => {
   const [isNext, setIsNext] = useState(false);
   const [fromPhase1, setFromPhase1] = useState(true);
@@ -58,6 +63,7 @@ export const SendPage: FunctionComponent = observer(() => {
   const current = chainStore.current;
 
   const accountInfo = accountStore.getAccount(current.chainId);
+  const queries = queriesStore.get(chainStore.current.chainId);
 
   const sendConfigs = useSendTxConfig(
     chainStore,
@@ -71,6 +77,28 @@ export const SendPage: FunctionComponent = observer(() => {
       computeTerraClassicTax: true,
     }
   );
+
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+  const spendableBalances =
+    isEvm || isCardano
+      ? queries.queryBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances?.find(
+            (bal) =>
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
+              bal.currency.coinMinimalDenom
+          )?.balance
+      : queries.cosmos.querySpendableBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances?.find(
+            (bal) =>
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
+              bal.currency.coinMinimalDenom
+          );
+  const balance = spendableBalances
+    ? spendableBalances
+    : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
 
   const gasSimulatorKey = useMemo(() => {
     if (sendConfigs.amountConfig.sendCurrency) {
@@ -117,9 +145,10 @@ export const SendPage: FunctionComponent = observer(() => {
       // Check for errors, but allow EmptyAddressError (user is still typing)
       // EmptyAddressError is expected when the address field is empty and should not block simulation
       const hasAmountError = sendConfigs.amountConfig.error != null;
-      const hasRecipientError = sendConfigs.recipientConfig.error != null && 
+      const hasRecipientError =
+        sendConfigs.recipientConfig.error != null &&
         !(sendConfigs.recipientConfig.error instanceof EmptyAddressError);
-      
+
       if (hasAmountError || hasRecipientError) {
         throw new Error("Not ready to simulate tx");
       }
@@ -373,6 +402,7 @@ export const SendPage: FunctionComponent = observer(() => {
                 setIsNext={setIsNext}
                 sendConfigs={sendConfigs}
                 setFromPhase1={setFromPhase1}
+                balance={balance}
               />
             ) : (
               <SendPhase2
@@ -380,6 +410,7 @@ export const SendPage: FunctionComponent = observer(() => {
                 sendConfigs={sendConfigs}
                 setIsNext={setIsNext}
                 trnsxStatus={trnsxStatus}
+                balance={balance}
                 fromPhase1={fromPhase1}
                 configs={configs}
                 setFromPhase1={setFromPhase1}

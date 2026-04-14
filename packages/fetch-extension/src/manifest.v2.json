@@ -3,12 +3,13 @@
 
   "name": "ASI Alliance Wallet",
   "description": "The official ASI Alliance Wallet for interacting with the ASI ledger",
-  "version": "0.24.2",
+  "version": "0.25.2",
   "icons": {
     "16": "assets/icon-16.png",
     "48": "assets/icon-48.png",
     "128": "assets/icon-128.png"
   },
+
   "browser_action": {
     "default_popup": "popup-loading.html",
     "default_title": "ASI Alliance Wallet"
@@ -17,6 +18,7 @@
     "page": "background.html",
     "persistent": true
   },
+  "optional_permissions": ["downloads"],
   "permissions": ["storage", "notifications", "identity", "idle", "alarms"],
   "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; object-src 'self'",
   "content_scripts": [

@@ -30,7 +30,7 @@ export const Stats = observer(
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
 
-    const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
+    const [isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
 
     const {
       chainStore,
@@ -75,10 +75,11 @@ export const Stats = observer(
     );
 
     const stakableReward = rewards.stakableReward;
-    const stakedSum = delegated.add(unbonding);
+    const stakedSum = delegated;
     const stakableBal = stakable.toString();
     const stakedBal = stakedSum.toString();
     const rewardsBal = stakableReward.toString();
+    const unbondingBal = unbonding.toString();
 
     const { numericPart: stakableBalNumber, denomPart: stakableDenom } =
       separateNumericAndDenom(stakableBal);
@@ -86,6 +87,8 @@ export const Stats = observer(
       separateNumericAndDenom(stakedBal);
     const { numericPart: rewardsBalNumber, denomPart: rewardDenom } =
       separateNumericAndDenom(rewardsBal);
+    const { numericPart: unbondingBalNumber, denomPart: unbondingDenom } =
+      separateNumericAndDenom(unbondingBal);
 
     const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
       accountInfo.bech32Address
@@ -146,12 +149,14 @@ export const Stats = observer(
     const stakableBalInUI = parseFloat(stakableBalNumber);
     const stakedBalInUI = parseFloat(stakedBalNumber);
     const rewardsBalInUI = parseFloat(rewardsBalNumber);
+    const unbondingBalInUI = parseFloat(unbondingBalNumber);
 
     const total = stakableBalInUI + stakedBalInUI + rewardsBalInUI;
 
     const stakablePercentage = total ? (spendableNumber / total) * 100 : 0;
     const stakedPercentage = total ? (stakedBalInUI / total) * 100 : 0;
     const rewardsPercentage = total ? (rewardsBalInUI / total) * 100 : 0;
+    const unbondingPercentage = total ? (unbondingBalInUI / total) * 100 : 0;
     const vestingPercentage =
       isVesting && !isVestingExpired(vestingEndTimeStamp)
         ? (Number(vestingBalance()) / total) * 100
@@ -166,21 +171,35 @@ export const Stats = observer(
     const rewardsInFiatCurrency = priceStore
       .calculatePrice(stakableReward, fiatCurrency)
       ?.toString();
+    const unbondingInFiatCurrency = priceStore
+      .calculatePrice(unbonding, fiatCurrency)
+      ?.toString();
+
+    const labels = ["Balance", "Staked", "Rewards", "Vesting"];
+    const data = [
+      parseFloat(spendableNumber),
+      parseFloat(stakedBalNumber),
+      parseFloat(rewardsBalNumber),
+      isVesting && !isVestingExpired(vestingEndTimeStamp)
+        ? parseFloat(vestingBalance().toString())
+        : 0,
+    ];
+    const backgroundColor = ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"];
+
+    // add unbonding if available
+    if (unbondingBalInUI > 0) {
+      labels.push("Unbonding");
+      data.push(unbondingBalInUI);
+      backgroundColor.push("#F4B400");
+    }
 
     const doughnutData = {
-      labels: ["Balance", "Staked", "Rewards", "vesting"],
+      labels,
       datasets: [
         {
-          data: [
-            parseFloat(spendableNumber),
-            parseFloat(stakedBalNumber),
-            parseFloat(rewardsBalNumber),
-            isVesting && !isVestingExpired(vestingEndTimeStamp)
-              ? parseFloat(vestingBalance().toString())
-              : 0,
-          ],
-          backgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
-          hoverBackgroundColor: ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"],
+          data,
+          backgroundColor,
+          hoverBackgroundColor: backgroundColor,
           borderColor: "transparent",
         },
       ],
@@ -197,6 +216,7 @@ export const Stats = observer(
         height: "120px",
       },
     };
+
     const handleClaimRewards = async () => {
       if (accountInfo.isReadyToSendTx) {
         try {
@@ -297,6 +317,8 @@ export const Stats = observer(
       accountInfo.walletStatus === WalletStatus.Loaded &&
       accountInfo.bech32Address &&
       !rewards.isFetching;
+
+    const value = parseFloat(rewardsBalNumber || 0);
 
     return (
       <div className={style["card"]}>
@@ -466,6 +488,51 @@ export const Stats = observer(
                 </div>
               </div>
             )}
+            {unbondingBalInUI > 0 && (
+              <div className={style["legend"]}>
+                <img
+                  src={
+                    unbondingInFiatCurrency !== undefined &&
+                    unbondingInFiatCurrency > "$0"
+                      ? require("@assets/svg/wireframe/legend-yellow-long.svg")
+                      : require("@assets/svg/wireframe/legend-yellow.svg")
+                  }
+                  alt=""
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "3px",
+                  }}
+                >
+                  <div className={style["label"]}>Unbonding</div>
+                  {isLoaded ? (
+                    <div className={style["value"]}>
+                      {Number(unbondingBalInUI.toFixed(2)).toLocaleString(
+                        "en-US"
+                      )}{" "}
+                      {` ${unbondingDenom} `}
+                      <span className={style["label"]}>
+                        ({unbondingPercentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  ) : (
+                    <Skeleton height="17.5px" />
+                  )}
+                  {isLoaded ? (
+                    unbondingInFiatCurrency !== undefined &&
+                    unbondingInFiatCurrency > "$0" ? (
+                      <div className={style["amountInUSD"]}>
+                        {unbondingInFiatCurrency}
+                      </div>
+                    ) : null
+                  ) : (
+                    <Skeleton height="21px" />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className={style["doughnut-graph"]}>
             <Doughnut data={doughnutData} options={doughnutData.options} />
@@ -484,7 +551,7 @@ export const Stats = observer(
           }}
           text="Claim rewards"
           disabled={
-            rewardsBal === "0.000000000000000000 FET" ||
+            parseFloat(rewardsBalNumber) === 0 ||
             activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
           }
         >
@@ -511,18 +578,20 @@ export const Stats = observer(
                 Claim rewards
               </div>
               <div className={style["claim-rewards-dropdown-subtitle"]}>
-                Transaction has been broadcasted to blockchain and pending
-                confirmation
+                Total rewards available to claim
               </div>
             </div>
 
             <div className={style["claim-rewards-reward"]}>
               <div className={style["label"]}>You’ve earned</div>
               <div className={style["value"]}>
-                {Number(parseFloat(rewardsBalNumber).toFixed(2)).toLocaleString(
-                  "en-US"
-                )}{" "}
-                {` ${rewardDenom} `}
+                {value === 0
+                  ? `0 ${rewardDenom}`
+                  : value < 0.000001
+                  ? `< 0.000001 ${rewardDenom}`
+                  : `${Number(parseFloat(value.toFixed(6))).toLocaleString(
+                      "en-US"
+                    )} ${rewardDenom}`}
               </div>
             </div>
 
@@ -536,13 +605,13 @@ export const Stats = observer(
               }}
               text="Claim my rewards"
               disabled={
-                rewardsBal === "0.000000000000000000 FET" ||
+                parseFloat(rewardsBalNumber) === 0 ||
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                _isWithdrawingRewards
+                isWithdrawingRewards
               }
             >
               {(activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                _isWithdrawingRewards) && (
+                isWithdrawingRewards) && (
                 <i className="fas fa-spinner fa-spin ml-2 mr-2" />
               )}
             </ButtonV2>

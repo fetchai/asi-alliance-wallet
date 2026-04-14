@@ -3,7 +3,7 @@
 
   "name": "ASI Alliance Wallet",
   "description": "The official ASI Alliance Wallet for interacting with the ASI ledger",
-  "version": "0.24.2",
+  "version": "0.25.2",
   "icons": {
     "16": "assets/icon/icon-16.png",
     "48": "assets/icon/icon-48.png",
@@ -20,6 +20,7 @@
   "background": {
     "service_worker": "background.bundle.js"
   },
+  "optional_permissions": ["downloads"],
   "permissions": [
     "storage",
     "notifications",

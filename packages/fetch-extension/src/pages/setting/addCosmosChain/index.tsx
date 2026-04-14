@@ -18,6 +18,7 @@ import { useLoadingIndicator } from "@components/loading-indicator";
 import { debounce } from "lodash";
 import { INITIAL_CHAIN_CONFIG } from "./constants";
 import { useNotification } from "@components/notification";
+import { useWebSocketSupport } from "../../../use-rpc-websocket-support";
 
 type EndpointCheckResult = {
   valid: boolean;
@@ -33,6 +34,9 @@ export const AddCosmosChain: FunctionComponent = () => {
   const [hasErrors, setHasErrors] = useState(false);
   const [autoFetchNetworkDetails, setAutoFetchNetworkDetails] = useState(true);
   const [newChainInfo, setNewChainInfo] = useState(INITIAL_CHAIN_CONFIG);
+  const { supported: wsSupported, loading: wsLoading } = useWebSocketSupport(
+    newChainInfo.rpc
+  );
   const chainList = chainStore.chainInfos;
   const isChainIdExist = chainList.some(
     (chain) => chain.chainId === newChainInfo.chainId
@@ -93,6 +97,16 @@ export const AddCosmosChain: FunctionComponent = () => {
           coinDecimals: 6,
         };
 
+        const gasPrices = registryData?.fees?.feeTokens?.[0];
+
+        const gasPriceStep = gasPrices
+          ? {
+              low: gasPrices?.low_gas_price || 0,
+              average: gasPrices?.average_gas_price || 0,
+              high: gasPrices?.high_gas_price || 0,
+            }
+          : null;
+
         if (restUrl && denom) {
           try {
             const denomUrl = `${restUrl.replace(
@@ -105,7 +119,9 @@ export const AddCosmosChain: FunctionComponent = () => {
             if (metadata) {
               const displayUnit =
                 metadata.denom_units?.find(
-                  (unit: any) => unit.denom === metadata.display
+                  (unit: any) =>
+                    unit.denom === metadata?.display ||
+                    unit.denom === metadata?.name
                 )?.exponent ?? 6;
 
               coinData = {
@@ -131,7 +147,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           feeCurrencies: [
             {
               ...(coinData.coinDenom ? coinData : prev.feeCurrencies[0]),
-              gasPriceStep: prev.feeCurrencies[0].gasPriceStep,
+              gasPriceStep: gasPriceStep || prev.feeCurrencies[0].gasPriceStep,
             },
           ],
           chainSymbolImageUrl: logo,
@@ -369,6 +385,8 @@ export const AddCosmosChain: FunctionComponent = () => {
     isChainUnique &&
     hasValidInputs;
 
+  const websocketNotSupported = !wsSupported && !wsLoading && newChainInfo.rpc;
+
   return (
     <HeaderLayout
       showBottomMenu={false}
@@ -449,11 +467,23 @@ export const AddCosmosChain: FunctionComponent = () => {
               ? "Network with this RPC URL already exists."
               : ""
           }
-          formGroupClassName={style["formGroup"]}
+          formGroupClassName={
+            websocketNotSupported
+              ? style["formGroupChainName"]
+              : style["formGroup"]
+          }
           formFeedbackClassName={style["formFeedback"]}
           onChange={handleChange}
           required
         />
+        {websocketNotSupported ? (
+          <p className={style["infoMessage"]} style={{ margin: "4px 0px" }}>
+            This RPC URL does not support WebSocket updates. Transaction
+            confirmation may take slightly longer.
+          </p>
+        ) : (
+          ""
+        )}
         <Input
           label="REST URL"
           type="text"

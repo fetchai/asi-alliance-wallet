@@ -21,7 +21,6 @@ import { Card } from "@components-v2/card";
 import { ImportLedgerPage } from "../ledger";
 import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
-import { PasswordValidationChecklist } from "../password-checklist";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
 import {
@@ -29,11 +28,13 @@ import {
   getNextDefaultAccountName,
   requestKeyringSurfacesSyncBroadcast,
   supportsCardanoFromMnemonicWordCount,
-  validateWalletName,
+  validateAccountName,
 } from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RefreshAccountList } from "@keplr-wallet/background";
+import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
+import { Checkbox } from "@components-v2/checkbox/checkbox";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -225,25 +226,16 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const intl = useIntl();
 
   const bip44Option = useBIP44Option();
-  const [password, setPassword] = useState("");
-  const [accountNameValidationError, setAccountNameValidationError] =
-    useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [passwordChecklistError, setPasswordChecklistError] = useState(
-    // initially sets the password error as true for create mode
-    registerConfig.mode === "create" ? true : false
-  );
-
-  const { analyticsStore, chainStore, accountStore, keyRingStore } = useStore();
+  const { analyticsStore, keyRingStore, chainStore, accountStore } = useStore();
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const accountList = keyRingStore.multiKeyStoreInfo;
   const defaultAccountName = getNextDefaultAccountName(accountList);
-  const [newAccountName, setNewAccountName] = useState(defaultAccountName);
 
   const {
     register,
     handleSubmit,
-    getValues,
+    watch,
+    trigger,
     setValue,
     formState: { errors },
   } = useForm<FormData>({
@@ -252,7 +244,13 @@ export const RecoverMnemonicPage: FunctionComponent<{
       password: "",
       confirmPassword: "",
     },
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
+
+  const [passwordCheckbox, setPasswordCheckbox] = useState(false);
+  const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
+  const { name, password, confirmPassword } = watch();
 
   const [shownMnemonicIndex, setShownMnemonicIndex] = useState(-1);
 
@@ -405,6 +403,17 @@ export const RecoverMnemonicPage: FunctionComponent<{
 
     handleTabChange(activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (confirmPassword) {
+      trigger("confirmPassword");
+    }
+  }, [password, trigger]);
+
+  const areInputsEmpty =
+    name === "" ||
+    (registerConfig.mode === "create" &&
+      (password === "" || confirmPassword === ""));
 
   return (
     <React.Fragment>
@@ -687,45 +696,27 @@ export const RecoverMnemonicPage: FunctionComponent<{
                       required: intl.formatMessage({
                         id: "register.name.error.required",
                       }),
-                    })}
-                    error={
-                      accountNameValidationError
-                        ? errorMessage
-                        : errors.name && errors.name.message
-                    }
-                    maxLength={20}
-                    onChange={(e) => {
-                      setErrorMessage("");
-                      const trimmedValue = e.target.value.trimStart();
-                      setValue(e.target.name as keyof FormData, trimmedValue);
-                      setNewAccountName(trimmedValue);
-                      const { isValid, isValidFormat, containsLetterOrNumber } =
-                        validateWalletName(
-                          trimmedValue,
+                      validate: (value: string) =>
+                        validateAccountName(
+                          value,
                           keyRingStore?.multiKeyStoreInfo,
                           registerConfig.mode
-                        );
-                      const isEmpty = trimmedValue === "";
-                      if (!isValid || isEmpty) {
-                        setErrorMessage(
-                          !isValidFormat
-                            ? "Only letters, numbers and basic symbols (_-.@#()) are allowed."
-                            : isEmpty
-                            ? "Account name cannot be empty"
-                            : !containsLetterOrNumber
-                            ? "Account name must contain at least one letter or number."
-                            : "Account name already exists, please try different name"
-                        );
-                      }
-                      setAccountNameValidationError(!isValid || isEmpty);
+                        ),
+                    })}
+                    onChange={(e: any) => {
+                      const trimmedValue = e.target.value.trimStart();
+                      setValue(e.target.name, trimmedValue, {
+                        shouldValidate: true,
+                      });
                     }}
+                    error={errors.name && errors.name.message}
+                    maxLength={20}
                   />
                   <div
                     className={classNames(
                       style["label"],
                       "mb-1 text-xs",
-                      newAccountName === defaultAccountName ||
-                        accountNameValidationError ||
+                      name === defaultAccountName ||
                         (errors.name && errors.name.message)
                         ? "invisible"
                         : "visible"
@@ -740,7 +731,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     seedType === SeedType.PRIVATE_KEY && "mt-[16px]"
                   )}
                   selectedNetworks={selectedNetworks}
-                  disabled={newAccountName === defaultAccountName}
+                  disabled={name === defaultAccountName}
                   onMultiSelectChange={(values) => {
                     setSelectedNetworks(values);
                   }}
@@ -752,6 +743,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         required: intl.formatMessage({
                           id: "register.create.input.password.error.required",
                         }),
+                        setValueAs: (value: string) => value.trim(),
                         validate: (password: string): string | undefined => {
                           if (password.length < 8) {
                             return intl.formatMessage({
@@ -760,7 +752,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                           }
                         },
                       })}
-                      onChange={(e: any) => setPassword(e.target.value)}
+                      placeholder="Enter Password (min 8 characters)"
                       error={errors.password && errors.password.message}
                     />
                     <PasswordInput
@@ -769,30 +761,38 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         required: intl.formatMessage({
                           id: "register.create.input.confirm-password.error.required",
                         }),
+                        setValueAs: (value: string) => value.trim(),
                         validate: (
                           confirmPassword: string
                         ): string | undefined => {
-                          if (
-                            confirmPassword !== getValues()["confirmPassword"]
-                          ) {
+                          if (confirmPassword !== password) {
                             return intl.formatMessage({
                               id: "register.create.input.confirm-password.error.unmatched",
                             });
                           }
                         },
                       })}
+                      placeholder="Confirm Password"
                       error={
                         errors.confirmPassword && errors.confirmPassword.message
                       }
                     />
-                    <div className="mt-4 space-y-1 text-sm">
-                      <PasswordValidationChecklist
+                    <div className="pt-2 space-y-1 text-sm">
+                      <PasswordStrengthMeter
                         password={password}
-                        onStatusChange={(status) =>
-                          setPasswordChecklistError(!status)
+                        onStrengthChange={(score) =>
+                          setPasswordStrengthScore(score)
                         }
                       />
                     </div>
+                    {passwordStrengthScore < 3 && password.length >= 8 && (
+                      <Checkbox
+                        isChecked={passwordCheckbox}
+                        className="py-2"
+                        setIsChecked={setPasswordCheckbox}
+                        label="I understand this password is not strong and still want to continue."
+                      />
+                    )}
                   </React.Fragment>
                 ) : null}
                 <div
@@ -817,10 +817,17 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   data-loading={registerConfig.isLoading}
                   disabled={
                     registerConfig.isLoading ||
-                    passwordChecklistError ||
-                    accountNameValidationError ||
+                    (registerConfig.mode === "create" &&
+                      (Boolean(
+                        errors?.confirmPassword?.message ||
+                          errors?.password?.message
+                      ) ||
+                        (password !== "" &&
+                          passwordStrengthScore < 3 &&
+                          !passwordCheckbox))) ||
+                    areInputsEmpty ||
                     (selectedNetworks.length === 0 &&
-                      newAccountName !== defaultAccountName)
+                      name !== defaultAccountName)
                   }
                   onClick={() => {
                     analyticsStore.logEvent("register_next_click", {

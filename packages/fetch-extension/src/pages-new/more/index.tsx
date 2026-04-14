@@ -19,6 +19,7 @@ import {
 } from "@utils/moonpay-currency";
 import * as manifest from "../../manifest.v3.json";
 import { useConfirm } from "@components/confirm";
+import { isRunningInSidePanel, toggleSidePanel } from "@utils/side-panel";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
@@ -108,7 +109,7 @@ export const MorePage: FunctionComponent = () => {
             display: "flex",
             alignItems: "center",
           }}
-          heading={<div>Switch to Side Panel</div>}
+          heading={<div>Switch To Side Panel</div>}
           subheading={"Open ASI Wallet in a sidebar on your screen"}
           rightContent={
             <SidePanelToggle
@@ -123,7 +124,7 @@ export const MorePage: FunctionComponent = () => {
         leftImageStyle={{ background: "transparent" }}
         style={{ marginBottom: "6px" }}
         leftImage={require("@assets/svg/wireframe/security.svg")}
-        heading={"Security & privacy"}
+        heading={"Security & Privacy"}
         onClick={() => {
           navigate("/more/security-privacy");
           analyticsStore.logEvent("security_and_privacy_click", {
@@ -131,19 +132,21 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      <Card
-        leftImageStyle={{ background: "transparent", height: "16px" }}
-        style={{ marginBottom: "8px" }}
-        leftImage={require("@assets/svg/wireframe/ibc-transfer-v2.svg")}
-        heading={"IBC Transfer"}
-        onClick={(e: any) => {
-          e.preventDefault();
-          analyticsStore.logEvent("ibc_transfer_click", {
-            pageName: "More",
-          });
-          navigate("/ibc-transfer");
-        }}
-      />
+      {!currentChain.features?.includes("evm") && (
+        <Card
+          leftImageStyle={{ background: "transparent", height: "16px" }}
+          style={{ marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/ibc-transfer-v2.svg")}
+          heading={"IBC Transfer"}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("ibc_transfer_click", {
+              pageName: "More",
+            });
+            navigate("/ibc-transfer");
+          }}
+        />
+      )}
       {currentChain?.raw?.type !== "testnet" &&
       moonpaySupportedTokens?.length > 0 &&
       !currentChain.beta &&
@@ -163,21 +166,22 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {chainStore.current.govUrl && (
-        <Card
-          leftImageStyle={{ background: "transparent" }}
-          style={{ marginBottom: "8px" }}
-          leftImage={require("@assets/svg/wireframe/voting-power.svg")}
-          heading={"Proposals"}
-          onClick={(e: any) => {
-            e.preventDefault();
-            analyticsStore.logEvent("proposal_view_click", {
-              pageName: "More",
-            });
-            navigate("/proposal");
-          }}
-        />
-      )}
+      {!chainStore.current.features?.includes("evm") &&
+        chainId !== "noble-1" && (
+          <Card
+            leftImageStyle={{ background: "transparent" }}
+            style={{ marginBottom: "8px" }}
+            leftImage={require("@assets/svg/wireframe/voting-power.svg")}
+            heading={"Proposals"}
+            onClick={(e: any) => {
+              e.preventDefault();
+              analyticsStore.logEvent("proposal_view_click", {
+                pageName: "More",
+              });
+              navigate("/proposal");
+            }}
+          />
+        )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ marginBottom: "6px" }}
@@ -190,6 +194,25 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
+      {!chainStore.current.features?.includes("evm") && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "5px" }}
+          leftImage={require("@assets/svg/wireframe/signature-doc.svg")}
+          onClick={async () => {
+            if (isRunningInSidePanel()) {
+              navigate("/more/sign-manual-txn");
+            } else {
+              await toggleSidePanel(false, setSidePanelEnabled);
+            }
+            analyticsStore.logEvent("sign_manual_txn_click", {
+              pageName: "More",
+            });
+          }}
+          heading="Manual Sign & Broadcast"
+          subheading={!isRunningInSidePanel() ? "Opens in side panel" : ""}
+        />
+      )}
       <Card
         leftImageStyle={{ background: "transparent", height: "18px" }}
         style={{ marginBottom: "6px" }}
