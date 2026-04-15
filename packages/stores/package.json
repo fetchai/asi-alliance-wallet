@@ -19,7 +19,6 @@
     "@keplr-wallet/provider-mock": "0.12.12"
   },
   "dependencies": {
-    "@asi-alliance/cardano": "../cardano",
     "@cosmjs/stargate": "^0.38.1",
     "@cosmjs/tendermint-rpc": "^0.38.1",
     "@emurgo/cardano-serialization-lib-browser": "^15.0.0",

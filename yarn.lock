@@ -282,36 +282,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@asi-alliance/cardano@file:../cardano::locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores":
-  version: 0.12.12
-  resolution: "@asi-alliance/cardano@file:../cardano#../cardano::hash=6e81c1&locator=%40keplr-wallet%2Fstores%40workspace%3Apackages%2Fstores"
-  dependencies:
-    "@blockfrost/blockfrost-js": ^5.5.0
-    "@cardano-sdk/cardano-services-client": 0.26.28
-    "@cardano-sdk/core": 0.46.10
-    "@cardano-sdk/crypto": 0.4.4
-    "@cardano-sdk/input-selection": 0.14.18
-    "@cardano-sdk/key-management": 0.29.10
-    "@cardano-sdk/tx-construction": 0.28.8
-    "@cardano-sdk/util": 0.17.1
-    "@cardano-sdk/wallet": 0.53.21
-    "@cardano-sdk/web-extension": 0.39.32
-    "@keplr-wallet/common": "*"
-    "@keplr-wallet/crypto": "*"
-    "@ledgerhq/devices": ^8.4.4
-    "@stablelib/chacha20poly1305": 1.0.1
-    bignumber.js: ^9.1.2
-    bip39: ^3.1.0
-    bottleneck: ^2.19.5
-    buffer: ^6.0.3
-    crc: ^4.3.2
-    fuse.js: ^7.1.0
-    lodash: ^4.17.21
-    rxjs: ^7.8.2
-  checksum: f534364f1a6f0228d8628b46972472f6227309eded136bc664bde486d72e38770a49c9dadbdc5b5c102489551025a3f68774c7b060e1b2160e7937a3cd4defe6
-  languageName: node
-  linkType: hard
-
 "@aw-web-design/x-default-browser@npm:1.4.126":
   version: 1.4.126
   resolution: "@aw-web-design/x-default-browser@npm:1.4.126"
@@ -13000,7 +12970,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/stores@workspace:packages/stores"
   dependencies:
-    "@asi-alliance/cardano": ../cardano
     "@cosmjs/stargate": ^0.38.1
     "@cosmjs/tendermint-rpc": ^0.38.1
     "@emurgo/cardano-serialization-lib-browser": ^15.0.0
