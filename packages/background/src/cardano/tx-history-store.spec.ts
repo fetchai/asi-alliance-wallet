@@ -8,7 +8,10 @@ describe("CardanoTxHistoryStore", () => {
     const kv = {
       get: jest.fn(async (key: string) => {
         if (key === "cardano.txHistory:cardano-preview:w1") {
-          return { items: [{ id: "stale", timestamp: 1 }], mightHaveMore: false };
+          return {
+            items: [{ id: "stale", timestamp: 1 }],
+            mightHaveMore: false,
+          };
         }
         return undefined;
       }),
@@ -20,7 +23,9 @@ describe("CardanoTxHistoryStore", () => {
     expect(kv.get).toHaveBeenCalledWith(
       `cardano.txHistory.v${CARDANO_TX_HISTORY_STORE_VERSION}:cardano-preview:w1`
     );
-    expect(kv.get).not.toHaveBeenCalledWith("cardano.txHistory:cardano-preview:w1");
+    expect(kv.get).not.toHaveBeenCalledWith(
+      "cardano.txHistory:cardano-preview:w1"
+    );
     expect(res).toBeUndefined();
   });
 

@@ -55,7 +55,7 @@ export const LockPage: FunctionComponent = observer(() => {
           setLoading(true);
           try {
             await keyRingStore.unlock(data.password);
-            
+
             // Add delay before starting auto-lock monitoring
             setTimeout(async () => {
               try {
@@ -64,7 +64,7 @@ export const LockPage: FunctionComponent = observer(() => {
                 // Make sure to notify that auto lock service to start check locking after duration.
                 await requester.sendMessage(BACKGROUND_PORT, msg);
               } catch (error) {
-                console.warn('Failed to start auto-lock monitoring:', error);
+                console.warn("Failed to start auto-lock monitoring:", error);
               }
             }, 200);
 

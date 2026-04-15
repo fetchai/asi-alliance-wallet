@@ -105,8 +105,8 @@ describe("WalletActions native bridge entry", () => {
       <WalletActions isOpen={true} setIsOpen={() => undefined} />
     );
 
-    expect(html).not.toContain("data-testid=\"card-Bridge\"");
-    expect(html).not.toContain("data-heading=\"Bridge\"");
+    expect(html).not.toContain('data-testid="card-Bridge"');
+    expect(html).not.toContain('data-heading="Bridge"');
     mockLogEvent.mockClear();
   });
 
@@ -116,6 +116,6 @@ describe("WalletActions native bridge entry", () => {
       <WalletActions isOpen={true} setIsOpen={() => undefined} />
     );
 
-    expect(html).toContain("data-heading=\"Bridge\"");
+    expect(html).toContain('data-heading="Bridge"');
   });
 });

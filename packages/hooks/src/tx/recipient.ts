@@ -263,31 +263,35 @@ export class RecipientConfig
       if (!rawRecipient) {
         return undefined;
       }
-      
+
       let isValid: boolean;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-extraneous-dependencies, @typescript-eslint/no-var-requires
         const { Cardano } = require("@cardano-sdk/core");
-        if (Cardano && Cardano.isAddress && typeof Cardano.isAddress === "function") {
+        if (
+          Cardano &&
+          Cardano.isAddress &&
+          typeof Cardano.isAddress === "function"
+        ) {
           isValid = Cardano.isAddress(rawRecipient);
         } else {
           // Fallback to format check if SDK function not available
-          isValid = 
-            rawRecipient.startsWith("addr1") ||           // Shelley mainnet
-            rawRecipient.startsWith("addr_test") ||      // Shelley testnet
-            rawRecipient.startsWith("Ae2") ||            // Byron Icarus mainnet
-            rawRecipient.startsWith("DdzFF") ||          // Byron Daedalus mainnet
-            rawRecipient.startsWith("$");                // Handle
+          isValid =
+            rawRecipient.startsWith("addr1") || // Shelley mainnet
+            rawRecipient.startsWith("addr_test") || // Shelley testnet
+            rawRecipient.startsWith("Ae2") || // Byron Icarus mainnet
+            rawRecipient.startsWith("DdzFF") || // Byron Daedalus mainnet
+            rawRecipient.startsWith("$"); // Handle
         }
       } catch (error) {
-        isValid = 
-          rawRecipient.startsWith("addr1") ||           // Shelley mainnet
-          rawRecipient.startsWith("addr_test") ||      // Shelley testnet
-          rawRecipient.startsWith("Ae2") ||            // Byron Icarus mainnet
-          rawRecipient.startsWith("DdzFF") ||          // Byron Daedalus mainnet
-          rawRecipient.startsWith("$");                // Handle
+        isValid =
+          rawRecipient.startsWith("addr1") || // Shelley mainnet
+          rawRecipient.startsWith("addr_test") || // Shelley testnet
+          rawRecipient.startsWith("Ae2") || // Byron Icarus mainnet
+          rawRecipient.startsWith("DdzFF") || // Byron Daedalus mainnet
+          rawRecipient.startsWith("$"); // Handle
       }
-      
+
       if (!isValid) {
         return new InvalidBech32Error("Invalid Cardano address format");
       }

@@ -181,7 +181,15 @@ export const CardanoTransactionsTab = observer(() => {
     ) {
       loadMore();
     }
-  }, [error, isLoading, isLoadingMore, items.length, loadMore, mightHaveMore, pageSize]);
+  }, [
+    error,
+    isLoading,
+    isLoadingMore,
+    items.length,
+    loadMore,
+    mightHaveMore,
+    pageSize,
+  ]);
 
   // If user opens Activity quickly, Cardano wallet may still be syncing; poll and retry fetch when settled.
   useEffect(() => {
@@ -211,7 +219,13 @@ export const CardanoTransactionsTab = observer(() => {
           }
           return;
         }
-        if (settled && items.length === 0 && !isLoading && !error && !hasFetchedHistory) {
+        if (
+          settled &&
+          items.length === 0 &&
+          !isLoading &&
+          !error &&
+          !hasFetchedHistory
+        ) {
           fetchHistory();
         }
         if (settled && interval) {
@@ -247,7 +261,8 @@ export const CardanoTransactionsTab = observer(() => {
     hasFetchedHistory,
   ]);
 
-  const shouldShowSyncing = isSyncingDueToTimeout || (!hasFetchedHistory && isSyncing);
+  const shouldShowSyncing =
+    isSyncingDueToTimeout || (!hasFetchedHistory && isSyncing);
 
   if (isLoading && isSyncingDueToTimeout) {
     return <NoActivity label={syncingOrOfflineLabel} />;
@@ -275,7 +290,10 @@ export const CardanoTransactionsTab = observer(() => {
         const amountAda = lovelacesToAdaString(item.amount);
         const hasAssets = item.assets && item.assets.length > 0;
         const assetName = (a: CardanoTxHistoryAsset) =>
-          a.ticker || a.displayName || a.fingerprint?.slice(0, 12) || a.assetId.slice(0, 12);
+          a.ticker ||
+          a.displayName ||
+          a.fingerprint?.slice(0, 12) ||
+          a.assetId.slice(0, 12);
 
         // Main row always shows ADA (so pending token sends show "0 tADA" + tokens below)
         const stakeCur = chainStore.current.stakeCurrency;
@@ -285,12 +303,16 @@ export const CardanoTransactionsTab = observer(() => {
         };
 
         const assetIcon = (a: CardanoTxHistoryAsset) => {
-          const url = getCardanoAssetIconUrl(chainStore.current.currencies, a.assetId);
+          const url = getCardanoAssetIconUrl(
+            chainStore.current.currencies,
+            a.assetId
+          );
           const letter = assetName(a)[0]?.toUpperCase() || "T";
           return { url, letter };
         };
 
-        const directionIcon = item.direction === "sent" ? sendIcon : receiveIcon;
+        const directionIcon =
+          item.direction === "sent" ? sendIcon : receiveIcon;
 
         return (
           <div
@@ -309,34 +331,55 @@ export const CardanoTransactionsTab = observer(() => {
                 alt={item.direction}
               />
               <div className={styles["middleSection"]}>
-              <div className={styles["rowTitle"]}>{directionLabel(item.direction)}</div>
-              <div className={styles["rowSubtitle"]}>
-                {item.status === "pending"
-                  ? "Pending"
-                  : item.blockNo != null
+                <div className={styles["rowTitle"]}>
+                  {directionLabel(item.direction)}
+                </div>
+                <div className={styles["rowSubtitle"]}>
+                  {item.status === "pending"
+                    ? "Pending"
+                    : item.blockNo != null
                     ? `Block ${item.blockNo}`
                     : "Confirmed"}
+                </div>
               </div>
             </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
-              <div className={styles["amountWrapper"]} style={{ alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: "2px",
+              }}
+            >
+              <div
+                className={styles["amountWrapper"]}
+                style={{ alignItems: "center" }}
+              >
                 {adaIcon.url ? (
                   <img
                     src={adaIcon.url}
                     alt={adaIcon.letter}
                     style={{
-                      width: 20, height: 20, borderRadius: "50%",
-                      objectFit: "contain", flexShrink: 0,
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      objectFit: "contain",
+                      flexShrink: 0,
                     }}
                   />
                 ) : (
                   <div
                     style={{
-                      width: 20, height: 20, borderRadius: "50%",
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
                       background: "rgba(255,255,255,0.1)",
-                      display: "flex", justifyContent: "center", alignItems: "center",
-                      fontSize: "10px", fontWeight: 600, flexShrink: 0,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      flexShrink: 0,
                     }}
                   >
                     {adaIcon.letter}
@@ -346,21 +389,61 @@ export const CardanoTransactionsTab = observer(() => {
                 <div className={styles["amountAlphabetic"]}>{denom}</div>
               </div>
               {hasAssets && (
-                <div className={styles["rowSubtitle"]} style={{ fontSize: "12px", textAlign: "right", display: "flex", flexWrap: "wrap", gap: "6px 10px", justifyContent: "flex-end" }}>
+                <div
+                  className={styles["rowSubtitle"]}
+                  style={{
+                    fontSize: "12px",
+                    textAlign: "right",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "6px 10px",
+                    justifyContent: "flex-end",
+                  }}
+                >
                   {item.assets!.slice(0, 3).map((a) => {
                     const ico = assetIcon(a);
                     return (
-                      <span key={a.assetId} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <span
+                        key={a.assetId}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
                         {ico.url ? (
-                          <img src={ico.url} alt="" style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "contain" }} />
+                          <img
+                            src={ico.url}
+                            alt=""
+                            style={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: "50%",
+                              objectFit: "contain",
+                            }}
+                          />
                         ) : (
-                          <span style={{ width: 14, height: 14, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>{ico.letter}</span>
+                          <span
+                            style={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: "50%",
+                              background: "rgba(255,255,255,0.1)",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 9,
+                            }}
+                          >
+                            {ico.letter}
+                          </span>
                         )}
                         {formatAssetAmount(a.amount, a.decimals)} {assetName(a)}
                       </span>
                     );
                   })}
-                  {item.assets!.length > 3 && ` +${item.assets!.length - 3} more`}
+                  {item.assets!.length > 3 &&
+                    ` +${item.assets!.length - 3} more`}
                 </div>
               )}
             </div>
@@ -369,7 +452,9 @@ export const CardanoTransactionsTab = observer(() => {
       })}
 
       {mightHaveMore && (
-        <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+        <div
+          style={{ marginTop: 12, display: "flex", justifyContent: "center" }}
+        >
           <button
             type="button"
             disabled={isLoadingMore}
@@ -390,5 +475,3 @@ export const CardanoTransactionsTab = observer(() => {
     </div>
   );
 });
-
-

@@ -16,11 +16,12 @@ export function getCardanoAssetIconUrl(
       const denom = c?.coinMinimalDenom;
       if (!denom || typeof denom !== "string") return false;
       const h = new DenomHelper(denom);
-      return h.type === CARDANO_NATIVE_TOKEN_TYPE && h.contractAddress === assetId;
+      return (
+        h.type === CARDANO_NATIVE_TOKEN_TYPE && h.contractAddress === assetId
+      );
     });
     return found?.coinImageUrl;
   } catch {
     return undefined;
   }
 }
-

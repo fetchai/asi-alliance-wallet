@@ -56,7 +56,7 @@ export const BridgeSupportedContent: FunctionComponent<{
     mode === "ethereum" ? isEvmCapReached : isFetCapReached;
 
   return (
-    <>
+    <React.Fragment>
       {isLoading ? (
         <p className={style["loaderScreen"]}>
           Fetching Bridge details <i className="fa fa-spinner fa-spin fa-fw" />{" "}
@@ -130,6 +130,6 @@ export const BridgeSupportedContent: FunctionComponent<{
           />
         </div>
       )}
-    </>
+    </React.Fragment>
   );
 });

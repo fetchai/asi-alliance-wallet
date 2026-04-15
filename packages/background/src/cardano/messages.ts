@@ -224,7 +224,11 @@ export class IsCardanoReadyMsg extends Message<boolean> {
 /**
  * Message for estimating Cardano transaction fee
  */
-export class EstimateSendAdaMsg extends Message<{ fee: string; total: string; minAdaForTokens?: string }> {
+export class EstimateSendAdaMsg extends Message<{
+  fee: string;
+  total: string;
+  minAdaForTokens?: string;
+}> {
   public static type() {
     return "cardano-estimate-send-ada";
   }
@@ -496,7 +500,11 @@ export class GetCardanoTxHistoryMsg extends Message<CardanoTxHistoryStateRespons
   }
 
   validateBasic(): void {
-    if (!this.pageSize || isNaN(Number(this.pageSize)) || Number(this.pageSize) <= 0) {
+    if (
+      !this.pageSize ||
+      isNaN(Number(this.pageSize)) ||
+      Number(this.pageSize) <= 0
+    ) {
       throw new Error("pageSize must be a positive number");
     }
   }
@@ -523,10 +531,7 @@ export class GetCardanoTrackedTxStatusMsg extends Message<CardanoTrackedTxStatus
     return "cardano-get-tracked-tx-status";
   }
 
-  constructor(
-    public readonly txId: string,
-    public readonly chainId: string
-  ) {
+  constructor(public readonly txId: string, public readonly chainId: string) {
     super();
   }
 
@@ -609,7 +614,11 @@ export class LoadMoreCardanoTxHistoryMsg extends Message<CardanoTxHistoryStateRe
   }
 
   validateBasic(): void {
-    if (!this.pageSize || isNaN(Number(this.pageSize)) || Number(this.pageSize) <= 0) {
+    if (
+      !this.pageSize ||
+      isNaN(Number(this.pageSize)) ||
+      Number(this.pageSize) <= 0
+    ) {
       throw new Error("pageSize must be a positive number");
     }
   }

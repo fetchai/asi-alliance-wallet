@@ -12,8 +12,7 @@ describe("resolveWalletPickerItemState", () => {
   };
 
   it("returns address from wallet-bound data only (same for selected semantics — no global store)", () => {
-    const addr =
-      "fetch1abcdefghijklmnopqrstuvwxyz1234567890abcdefghijkl";
+    const addr = "fetch1abcdefghijklmnopqrstuvwxyz1234567890abcdefghijkl";
     const a = resolveWalletPickerItemState({
       ...base,
       walletBoundAddress: addr,

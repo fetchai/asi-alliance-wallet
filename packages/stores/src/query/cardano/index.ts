@@ -1,11 +1,9 @@
 export {
   ObservableQueryCardanoBalance,
-  ObservableQueryCardanoBalanceInner
+  ObservableQueryCardanoBalanceInner,
 } from "./balance";
 
-export {
-  ObservableQueryCardanoBalanceRegistry
-} from "./balance-registry";
+export { ObservableQueryCardanoBalanceRegistry } from "./balance-registry";
 
 export {
   ObservableQueryCardanoTokenBalance,
@@ -18,12 +16,10 @@ export {
   CARDANO_NATIVE_TOKEN_TYPE,
 } from "./token-balance-registry";
 
-export {
-  ObservableQueryCardanoAssetInfo,
+export { ObservableQueryCardanoAssetInfo } from "./asset-info";
+export type {
+  KoiosAssetInfoItem,
+  KoiosTokenRegistryMetadata,
 } from "./asset-info";
-export type { KoiosAssetInfoItem, KoiosTokenRegistryMetadata } from "./asset-info";
 
-export {
-  CardanoQueries,
-  CardanoQueriesImpl
-} from "./queries";
+export { CardanoQueries, CardanoQueriesImpl } from "./queries";

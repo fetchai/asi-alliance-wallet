@@ -3,10 +3,8 @@ import { createRoot } from "react-dom/client";
 import { act } from "react-dom/test-utils";
 import { SetKeyRingPage } from "./index";
 
-const wA =
-  "fetch1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const wB =
-  "fetch1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const wA = "fetch1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const wB = "fetch1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 const shortA = wA.slice(0, 8).toLowerCase();
 const shortB = wB.slice(0, 8).toLowerCase();
@@ -81,9 +79,9 @@ jest.mock("react-intl", () => ({
 }));
 
 jest.mock("../../utils", () => ({
-  ensureChainCompatibleBeforeSelectKeyStore: jest.fn().mockResolvedValue(
-    undefined
-  ),
+  ensureChainCompatibleBeforeSelectKeyStore: jest
+    .fn()
+    .mockResolvedValue(undefined),
   requestKeyringSurfacesSyncBroadcast: jest.fn().mockResolvedValue(undefined),
   isCardanoChain: jest.fn(() => false),
   walletSupportsCardano: jest.fn(() => true),
@@ -120,7 +118,9 @@ jest.mock("../../stores", () => ({
 
 function countSubstring(haystack: string, needle: string): number {
   if (!needle) return 0;
-  const m = haystack.match(new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"));
+  const m = haystack.match(
+    new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")
+  );
   return m ? m.length : 0;
 }
 

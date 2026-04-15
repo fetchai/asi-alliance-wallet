@@ -45,10 +45,8 @@ jest.mock("../card", () => ({
 }));
 
 jest.mock("../dropdown", () => ({
-  Dropdown: (props: {
-    isOpen: boolean;
-    children: React.ReactNode;
-  }) => (props.isOpen ? <div data-testid="dropdown">{props.children}</div> : null),
+  Dropdown: (props: { isOpen: boolean; children: React.ReactNode }) =>
+    props.isOpen ? <div data-testid="dropdown">{props.children}</div> : null,
 }));
 
 const mockStore = {
@@ -269,7 +267,9 @@ describe("CoinInput display formatting behavior", () => {
     expect(container.textContent).toContain("Available: 0.001");
     expect(container.textContent).not.toContain("Available: 0.000999999");
 
-    const selectorCard = container.querySelector("[data-testid='card']") as HTMLElement;
+    const selectorCard = container.querySelector(
+      "[data-testid='card']"
+    ) as HTMLElement;
     await act(async () => {
       selectorCard.click();
     });
@@ -278,6 +278,8 @@ describe("CoinInput display formatting behavior", () => {
       ...container.querySelectorAll("[data-testid='card-right-content']"),
     ].map((el) => el.textContent ?? "");
     expect(rightContents.some((text) => text.includes("0.001"))).toBe(true);
-    expect(rightContents.some((text) => text.includes("0.000999999"))).toBe(false);
+    expect(rightContents.some((text) => text.includes("0.000999999"))).toBe(
+      false
+    );
   });
 });

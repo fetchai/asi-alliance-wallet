@@ -275,7 +275,9 @@ const isZeroDecimalString = (value: string) => {
   if (normalized === "") return false;
   if (normalized === "0") return true;
 
-  const unsigned = normalized.startsWith("-") ? normalized.slice(1) : normalized;
+  const unsigned = normalized.startsWith("-")
+    ? normalized.slice(1)
+    : normalized;
   const [integerPart, fractionPart = ""] = unsigned.split(".");
   return integerPart === "0" && /^[0]*$/.test(fractionPart);
 };
@@ -322,7 +324,9 @@ const roundDownDecimalString = (value: string, decimals: number) => {
   }
 
   const [integerPart, fractionPart = ""] = value.split(".");
-  const truncatedFraction = fractionPart.slice(0, decimals).padEnd(decimals, "0");
+  const truncatedFraction = fractionPart
+    .slice(0, decimals)
+    .padEnd(decimals, "0");
   return `${integerPart}.${truncatedFraction}`;
 };
 
@@ -361,7 +365,10 @@ export const formatDisplayAmount = (
   options: FormatDisplayAmountOptions = {}
 ) => {
   const actualCoinDecimals = clampIntegerOption(options.coinDecimals ?? 18, 18);
-  const toFixedCoinDecimals = Math.min(actualCoinDecimals, MAX_TO_FIXED_DECIMALS);
+  const toFixedCoinDecimals = Math.min(
+    actualCoinDecimals,
+    MAX_TO_FIXED_DECIMALS
+  );
   const maxDecimals = clampIntegerOption(options.maxDecimals ?? 6, 6);
   const minExtraDecimalsAfterFirstSignificant = clampIntegerOption(
     options.minExtraDecimalsAfterFirstSignificant ?? 2,
@@ -385,9 +392,13 @@ export const formatDisplayAmount = (
 
   if (!fractionPart) return normalized;
 
-  const safeMaxDecimals = Math.max(0, Math.min(maxDecimals, actualCoinDecimals));
+  const safeMaxDecimals = Math.max(
+    0,
+    Math.min(maxDecimals, actualCoinDecimals)
+  );
   const roundedDefault = roundHalfUpDecimalString(normalized, safeMaxDecimals);
-  const normalizedRoundedDefault = normalizeDisplayDecimalString(roundedDefault);
+  const normalizedRoundedDefault =
+    normalizeDisplayDecimalString(roundedDefault);
 
   const normalizedValue = isZeroDecimalString(normalized);
   const roundedToZero = isZeroDecimalString(normalizedRoundedDefault);
@@ -403,12 +414,16 @@ export const formatDisplayAmount = (
     return normalizedRoundedDefault;
   }
 
-  const minPrecision = firstSignificantIndex + 1 + minExtraDecimalsAfterFirstSignificant;
+  const minPrecision =
+    firstSignificantIndex + 1 + minExtraDecimalsAfterFirstSignificant;
   const extendedPrecision = Math.min(
     actualCoinDecimals,
     Math.max(safeMaxDecimals, minPrecision)
   );
-  const roundedExtended = roundHalfUpDecimalString(normalized, extendedPrecision);
+  const roundedExtended = roundHalfUpDecimalString(
+    normalized,
+    extendedPrecision
+  );
   const normalizedExtended = normalizeDisplayDecimalString(roundedExtended);
 
   if (normalizedExtended === "0" && normalized !== "0") {

@@ -121,4 +121,3 @@ describe("selectChainAndPersistWiring", () => {
     expect(local).toBe("fetchhub-4");
   });
 });
-

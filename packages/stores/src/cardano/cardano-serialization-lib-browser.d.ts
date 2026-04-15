@@ -1,1 +1,1 @@
-declare module '@emurgo/cardano-serialization-lib-browser'; 
+declare module "@emurgo/cardano-serialization-lib-browser";

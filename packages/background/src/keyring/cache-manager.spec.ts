@@ -61,22 +61,27 @@ describe("AddressCacheManager security", () => {
       wallet1: { address: "cosmos1...", name: "Wallet 1", pubKey: "pub2" },
     };
 
-    await kvStore.set("cardano_addr_cache:cardano-mainnet", cardanoPlain as any);
+    await kvStore.set(
+      "cardano_addr_cache:cardano-mainnet",
+      cardanoPlain as any
+    );
     await kvStore.set("addr_cache:cosmoshub-4", genericPlain as any);
 
-    jest.spyOn(Crypto, "encryptBlob").mockImplementation(async (_c, _k, data) => {
-      return {
-        version: "1.0",
-        crypto: {
-          cipher: "aes-128-ctr",
-          cipherparams: { iv: "a".repeat(32) },
-          kdf: "scrypt",
-          kdfparams: { salt: "b".repeat(32) },
-          ciphertext: Buffer.from(data).toString("hex"),
-          mac: "c".repeat(64),
-        },
-      } as any;
-    });
+    jest
+      .spyOn(Crypto, "encryptBlob")
+      .mockImplementation(async (_c, _k, data) => {
+        return {
+          version: "1.0",
+          crypto: {
+            cipher: "aes-128-ctr",
+            cipherparams: { iv: "a".repeat(32) },
+            kdf: "scrypt",
+            kdfparams: { salt: "b".repeat(32) },
+            ciphertext: Buffer.from(data).toString("hex"),
+            mac: "c".repeat(64),
+          },
+        } as any;
+      });
 
     jest.spyOn(Crypto, "decryptBlob").mockImplementation(async (_c, data) => {
       const ciphertext = (data as any).crypto?.ciphertext;
@@ -85,7 +90,9 @@ describe("AddressCacheManager security", () => {
 
     await manager.migrateToEncrypted();
 
-    const migratedCardano = await kvStore.get("cardano_addr_cache:cardano-mainnet");
+    const migratedCardano = await kvStore.get(
+      "cardano_addr_cache:cardano-mainnet"
+    );
     const migratedGeneric = await kvStore.get("addr_cache:cosmoshub-4");
     const cardanoBackup = await kvStore.get(
       "cardano_addr_cache:backup_v1:cardano-mainnet"
@@ -96,7 +103,9 @@ describe("AddressCacheManager security", () => {
     expect(typeof migratedGeneric).toBe("string");
     expect(cardanoBackup).toBeUndefined();
     expect(genericBackup).toBeUndefined();
-    expect(await manager.loadCardanoCache("cardano-mainnet")).toEqual(cardanoPlain);
+    expect(await manager.loadCardanoCache("cardano-mainnet")).toEqual(
+      cardanoPlain
+    );
     expect(await manager.loadGenericCache("cosmoshub-4")).toEqual(genericPlain);
   });
 });

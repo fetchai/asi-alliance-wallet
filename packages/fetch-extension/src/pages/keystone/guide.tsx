@@ -30,10 +30,7 @@ export function Guide({ onScan }: { onScan(): void }) {
         >
           {[1, 2, 3, 4].map((e: number) => (
             <SwiperSlide className={style["item"]} key={e}>
-              <img
-                src={KEYSTONE_TUTORIAL_IMAGES[e]}
-                width="285"
-              />
+              <img src={KEYSTONE_TUTORIAL_IMAGES[e]} width="285" />
             </SwiperSlide>
           ))}
           <div id="swiper-prev" className={style["prev"]}>

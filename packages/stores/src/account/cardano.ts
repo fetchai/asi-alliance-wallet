@@ -27,10 +27,15 @@ export class CardanoAccountImpl {
     protected readonly messageRequester: MessageRequester
   ) {
     this.sendAdapter = new CardanoSendAdapter(messageRequester, chainId);
-    
+
     // Register send token transaction handler for Cardano
     this.base.registerMakeSendTokenFn((amount, currency, recipient) => {
-      return this.processMakeSendTokenTx(amount, currency, recipient, this.sendAdapter);
+      return this.processMakeSendTokenTx(
+        amount,
+        currency,
+        recipient,
+        this.sendAdapter
+      );
     });
   }
 
@@ -42,16 +47,19 @@ export class CardanoAccountImpl {
   ) {
     const chainInfo = this.chainGetter.getChain(this.chainId);
     const isCardano = chainInfo.features?.includes("cardano") ?? false;
-    
+
     // Only handle if this is a Cardano chain
     if (!isCardano) {
       return undefined;
     }
 
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
-    
+
     // Handle both native ADA and cardanonative tokens
-    if (denomHelper.type !== "native" && denomHelper.type !== CARDANO_NATIVE_TOKEN_TYPE) {
+    if (
+      denomHelper.type !== "native" &&
+      denomHelper.type !== CARDANO_NATIVE_TOKEN_TYPE
+    ) {
       return undefined;
     }
 
@@ -64,7 +72,11 @@ export const CardanoAccount = {
   use(options: {
     messageRequester: MessageRequester;
   }): (
-    base: AccountSetBaseSuper & CosmosAccount & CosmwasmAccount & SecretAccount & EthereumAccount,
+    base: AccountSetBaseSuper &
+      CosmosAccount &
+      CosmwasmAccount &
+      SecretAccount &
+      EthereumAccount,
     chainGetter: ChainGetter,
     chainId: string,
     _activityStore: ActivityStore,
@@ -78,9 +90,9 @@ export const CardanoAccount = {
         chainId,
         options.messageRequester
       );
-      
-      return { 
-        isCardano: true
+
+      return {
+        isCardano: true,
       };
     };
   },
@@ -91,37 +103,50 @@ export interface CardanoAccountMixin {
 }
 
 export const CardanoAccountMixin = {
-  use(
-    options?: { mnemonicWords: string[]; accountIndex?: number; network?: CardanoNetwork; blockfrostApiKey?: string }
-  ): (
-    _base: AccountSetBaseSuper & CosmosAccount & CosmwasmAccount & SecretAccount & EthereumAccount,
+  use(options?: {
+    mnemonicWords: string[];
+    accountIndex?: number;
+    network?: CardanoNetwork;
+    blockfrostApiKey?: string;
+  }): (
+    _base: AccountSetBaseSuper &
+      CosmosAccount &
+      CosmwasmAccount &
+      SecretAccount &
+      EthereumAccount,
     _chainGetter: ChainGetter,
     _chainId: string,
     _activityStore: ActivityStore,
     _tokenGraphStore: TokenGraphStore
   ) => Promise<CardanoAccountMixin> {
-    return async (_base, _chainGetter, _chainId, _activityStore, _tokenGraphStore) => {
+    return async (
+      _base,
+      _chainGetter,
+      _chainId,
+      _activityStore,
+      _tokenGraphStore
+    ) => {
       let cardanoWalletManager;
       if (options) {
         const { CardanoWalletManager } = await import("@keplr-wallet/cardano");
-        
 
-        let network: CardanoNetwork = 'mainnet';
+        let network: CardanoNetwork = "mainnet";
         if (options.network) {
           network = options.network;
         } else {
-
-          const { getCardanoNetworkFromChainId } = await import("@keplr-wallet/cardano");
+          const { getCardanoNetworkFromChainId } = await import(
+            "@keplr-wallet/cardano"
+          );
           network = getCardanoNetworkFromChainId(_chainId);
         }
-        
+
         cardanoWalletManager = await CardanoWalletManager.create({
           mnemonicWords: options.mnemonicWords,
           accountIndex: options.accountIndex,
-          network
+          network,
         });
       }
       return { cardanoWalletManager };
     };
   },
-}; 
+};

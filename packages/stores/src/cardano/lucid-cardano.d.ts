@@ -1,1 +1,1 @@
-declare module 'lucid-cardano'; 
+declare module "lucid-cardano";

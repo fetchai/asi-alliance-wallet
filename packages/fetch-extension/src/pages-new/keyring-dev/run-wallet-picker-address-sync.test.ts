@@ -10,9 +10,7 @@ describe("runWalletPickerAddressSyncAttempt", () => {
     const canCommitForRun1 = (): boolean => loadRunId === 1;
 
     const listAccounts = jest.fn(async () => ({
-      accounts: [
-        { bech32Address: "fetch_stale", EVMAddress: "" },
-      ] as any[],
+      accounts: [{ bech32Address: "fetch_stale", EVMAddress: "" }] as any[],
     }));
 
     const atomicCacheUpdate = jest.fn(
@@ -67,7 +65,12 @@ describe("runWalletPickerAddressSyncAttempt", () => {
         getChain: () => ({}),
         current: { features: [] },
       } as any,
-      keyRingStore: { multiKeyStoreInfo: [{ meta: { __id__: "a" } }, { meta: { __id__: "b" } }] } as any,
+      keyRingStore: {
+        multiKeyStoreInfo: [
+          { meta: { __id__: "a" } },
+          { meta: { __id__: "b" } },
+        ],
+      } as any,
       ports: {
         getCache: () => ({}),
         atomicCacheUpdate,

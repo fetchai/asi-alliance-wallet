@@ -17,8 +17,9 @@ export function* selectChainAndPersistWiring(
     deps.setDeferChainIdSelect(chainId);
   }
 
-  yield* toGenerator(ensureSelectedChainAck(deps.sendSetSelectedChain, chainId));
+  yield* toGenerator(
+    ensureSelectedChainAck(deps.sendSetSelectedChain, chainId)
+  );
   deps.setSelectedChainIdLocal(chainId);
   yield* toGenerator(Promise.resolve(deps.saveLastViewChainId()));
 }
-

@@ -23,7 +23,12 @@ export const NameServiceQueries = {
       chainGetter: ChainGetter
     ) => {
       return {
-        icns: new ICNSQueriesImpl(queriesSetBase, kvStore, chainId, chainGetter),
+        icns: new ICNSQueriesImpl(
+          queriesSetBase,
+          kvStore,
+          chainId,
+          chainGetter
+        ),
         fns: new FNSQueriesImpl(queriesSetBase, kvStore, chainId, chainGetter),
       };
     };

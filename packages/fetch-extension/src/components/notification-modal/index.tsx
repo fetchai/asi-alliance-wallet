@@ -186,12 +186,13 @@ export const NotificationModal: FunctionComponent = () => {
         <React.Fragment>
           <div className={style["notifyContainer"]}>
             <div className={style["greyCircle"]}>
-              {notificationPayload.image && NOTIFICATION_IMAGES[notificationPayload.image] && (
-                <img
-                  draggable={false}
-                  src={NOTIFICATION_IMAGES[notificationPayload.image]}
-                />
-              )}
+              {notificationPayload.image &&
+                NOTIFICATION_IMAGES[notificationPayload.image] && (
+                  <img
+                    draggable={false}
+                    src={NOTIFICATION_IMAGES[notificationPayload.image]}
+                  />
+                )}
             </div>
             <p
               className={style["notifyHeading"]}

@@ -1,4 +1,5 @@
 import type { Observable } from "rxjs";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { firstValueFrom, of } from "rxjs";
 import { parseAssetId } from "@keplr-wallet/cardano";
 import type { CardanoTxHistoryAsset, CardanoTxHistoryItem } from "./messages";
@@ -6,7 +7,12 @@ import type { CardanoTxHistoryAsset, CardanoTxHistoryItem } from "./messages";
 /** Minimal wallet shape for pending tx history (SDK ObservableWallet compatibility). */
 export interface WalletForPendingHistory {
   addresses$: Observable<{ address?: string }[]>;
-  transactions?: { outgoing?: { inFlight$: Observable<unknown[]>; signed$: Observable<unknown[]> } };
+  transactions?: {
+    outgoing?: {
+      inFlight$: Observable<unknown[]>;
+      signed$: Observable<unknown[]>;
+    };
+  };
   assetInfo$?: Observable<Map<string, AssetInfoLike>>;
 }
 
@@ -34,32 +40,48 @@ export function getAssetsFromValue(value: unknown): Map<string, bigint> {
   return map;
 }
 
-export async function getWalletAddressSet(wallet: WalletForPendingHistory): Promise<Set<string>> {
-  const addressObjects = (await firstValueFrom(wallet.addresses$).catch(() => [])) || [];
+export async function getWalletAddressSet(
+  wallet: WalletForPendingHistory
+): Promise<Set<string>> {
+  const addressObjects =
+    (await firstValueFrom(wallet.addresses$).catch(() => [])) || [];
   return new Set(addressObjects.map((a) => String(a.address ?? a)));
 }
 
 export type ResolveAssetMetadata = (
   assetId: string,
   assetInfoMap: Map<string, AssetInfoLike> | undefined
-) => { displayName?: string; ticker?: string; decimals?: number; fingerprint?: string };
+) => {
+  displayName?: string;
+  ticker?: string;
+  decimals?: number;
+  fingerprint?: string;
+};
 
 export async function transformPendingTxsToItems(
   wallet: WalletForPendingHistory,
   walletAddresses: Set<string>,
   resolveAssetMetadata: ResolveAssetMetadata
 ): Promise<CardanoTxHistoryItem[]> {
-  const inFlight = (await firstValueFrom(wallet?.transactions?.outgoing?.inFlight$ ?? of([])).catch(() => [])) as unknown[];
-  const signed = (await firstValueFrom(wallet?.transactions?.outgoing?.signed$ ?? of([])).catch(() => [])) as unknown[];
+  const inFlight = (await firstValueFrom(
+    wallet?.transactions?.outgoing?.inFlight$ ?? of([])
+  ).catch(() => [])) as unknown[];
+  const signed = (await firstValueFrom(
+    wallet?.transactions?.outgoing?.signed$ ?? of([])
+  ).catch(() => [])) as unknown[];
   const pendingTxs = [...(inFlight || []), ...(signed || [])];
   if (!pendingTxs.length) return [];
 
   let assetInfoMap: Map<string, AssetInfoLike> | undefined;
   try {
     if (wallet.assetInfo$) {
-      assetInfoMap = await firstValueFrom(wallet.assetInfo$).catch(() => undefined) as Map<string, AssetInfoLike> | undefined;
+      assetInfoMap = (await firstValueFrom(wallet.assetInfo$).catch(
+        () => undefined
+      )) as Map<string, AssetInfoLike> | undefined;
     }
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 
   const getCoins = (value: unknown): bigint => {
     const coins = (value as { coins?: unknown })?.coins ?? value;
@@ -70,7 +92,12 @@ export async function transformPendingTxsToItems(
   };
 
   const items: CardanoTxHistoryItem[] = [];
-  type PendingTx = { id?: string; body?: { outputs?: unknown[]; fee?: unknown }; outputs?: unknown[]; fee?: unknown };
+  type PendingTx = {
+    id?: string;
+    body?: { outputs?: unknown[]; fee?: unknown };
+    outputs?: unknown[];
+    fee?: unknown;
+  };
   type PendingItem = { tx?: PendingTx; id?: string };
   type TxOutput = { address?: string; value?: unknown };
 

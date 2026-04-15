@@ -18,8 +18,12 @@ export const createQueriesSetBase = (
   chainId: string,
   chainGetter: ChainGetter
 ): QueriesSetBase => {
-  const queryBalances = new ObservableQueryBalances(kvStore, chainId, chainGetter);
-  
+  const queryBalances = new ObservableQueryBalances(
+    kvStore,
+    chainId,
+    chainGetter
+  );
+
   return {
     queryBalances,
   };
@@ -73,9 +77,10 @@ export class QueriesStore<Injects extends Array<IObject>> {
         this.chainGetter
       );
       runInAction(() => {
-        const merged = mergeStores.apply(
-          null,
-          [queriesSetBase, [this.kvStore, chainId, this.chainGetter], ...this.queriesCreators] as any
+        const merged = mergeStores(
+          queriesSetBase,
+          [this.kvStore, chainId, this.chainGetter],
+          ...this.queriesCreators
         ) as QueriesSetBase & UnionToIntersection<Injects[number]>;
 
         this.queriesMap.set(chainId, merged);

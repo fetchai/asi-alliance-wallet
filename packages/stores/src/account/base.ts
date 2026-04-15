@@ -164,7 +164,7 @@ export class AccountSetBase {
         await this.suggestChain(keplr, chainInfo);
       }
     }
-    
+
     // Check if KeyRing is ready before calling enable
     // This prevents "No keys available" errors during initialization
     try {
@@ -172,11 +172,12 @@ export class AccountSetBase {
     } catch (e) {
       // If enable fails due to no keys, don't throw - just return
       // The getKey call below will handle the error appropriately
-      if (e.message && (
-        e.message.includes("No keys available") || 
-        e.message.includes("key doesn't exist") ||
-        e.message.includes("Please create a wallet first")
-      )) {
+      if (
+        e.message &&
+        (e.message.includes("No keys available") ||
+          e.message.includes("key doesn't exist") ||
+          e.message.includes("Please create a wallet first"))
+      ) {
         return; // Don't throw, let getKey handle it
       }
       throw e; // Re-throw other errors
@@ -280,12 +281,13 @@ export class AccountSetBase {
         return;
       }
       console.log(e);
-      
-      if (e.message && (
-        e.message.includes("No keys available") || 
-        e.message.includes("key doesn't exist") ||
-        e.message.includes("Please create a wallet first")
-      )) {
+
+      if (
+        e.message &&
+        (e.message.includes("No keys available") ||
+          e.message.includes("key doesn't exist") ||
+          e.message.includes("Please create a wallet first"))
+      ) {
         this._bech32Address = "";
         this._isNanoLedger = false;
         this._isKeystone = false;

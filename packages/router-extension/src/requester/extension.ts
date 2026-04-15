@@ -27,7 +27,7 @@ export class InExtensionMessageRequester implements MessageRequester {
       type: msg.type(),
       msg: JSONUint8Array.wrap(msg),
     });
-    
+
     if (!rawResult) {
       throw new Error("Null result");
     }

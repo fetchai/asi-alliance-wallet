@@ -6,7 +6,8 @@ const mockMapCardanoMinimumViolation = jest.fn(
     minimumOutputLovelace: string;
     coinMissingLovelace?: string;
   }) =>
-    /^\d+$/.test(minimumOutputLovelace) && BigInt(minimumOutputLovelace) > BigInt(0)
+    /^\d+$/.test(minimumOutputLovelace) &&
+    BigInt(minimumOutputLovelace) > BigInt(0)
       ? {
           classification: "minimum_violation" as const,
           minimumOutputLovelace,
@@ -78,7 +79,8 @@ jest.mock("@keplr-wallet/cardano", () => ({
     return String(value);
   },
   mapCardanoMinimumViolation: mockMapCardanoMinimumViolation,
-  formatCardanoMinimumViolationMessage: mockFormatCardanoMinimumViolationMessage,
+  formatCardanoMinimumViolationMessage:
+    mockFormatCardanoMinimumViolationMessage,
 }));
 
 import { EmptyAddressError } from "@keplr-wallet/hooks";
@@ -510,7 +512,9 @@ describe("normalizeCardanoDraftError", () => {
 describe("Cardano error classification", () => {
   it("parses structured cardano ui error messages", () => {
     expect(
-      parseCardanoUiErrorMessage("cardano_ui_error:invalid_password:Invalid password")
+      parseCardanoUiErrorMessage(
+        "cardano_ui_error:invalid_password:Invalid password"
+      )
     ).toEqual({
       code: "invalid_password",
       message: "Invalid password",
@@ -538,15 +542,13 @@ describe("Cardano error classification", () => {
       )
     ).toBe(true);
     expect(isCardanoModalLevelErrorMessage("Invalid password")).toBe(true);
-    expect(
-      isCardanoModalLevelErrorMessage("Password is required")
-    ).toBe(true);
+    expect(isCardanoModalLevelErrorMessage("Password is required")).toBe(true);
     expect(
       isCardanoModalLevelErrorMessage("Wallet is syncing. Please wait")
     ).toBe(true);
-    expect(
-      isCardanoModalLevelErrorMessage("Please unlock wallet first")
-    ).toBe(true);
+    expect(isCardanoModalLevelErrorMessage("Please unlock wallet first")).toBe(
+      true
+    );
   });
 
   it("does not treat generic submit failures as modal-level", () => {

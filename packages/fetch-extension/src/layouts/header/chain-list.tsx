@@ -123,12 +123,12 @@ export const ChainList: FunctionComponent = observer(() => {
       !chainInfo.features?.includes("cardano")
   );
 
-  const evmChainList = chainStore.chainInfosInUI.filter(
-    (chainInfo) => chainInfo.features?.includes("evm")
+  const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+    chainInfo.features?.includes("evm")
   );
 
-  const cardanoChainList = chainStore.chainInfosInUI.filter(
-    (chainInfo) => chainInfo.features?.includes("cardano")
+  const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+    chainInfo.features?.includes("cardano")
   );
 
   return (

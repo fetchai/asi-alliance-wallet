@@ -3,6 +3,7 @@
  * Kept separate from service.security.spec.ts (draft/minimum-violation contracts).
  */
 import { CardanoService } from "./service";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { of } from "rxjs";
 
 jest.mock("@keplr-wallet/cardano", () => {
@@ -32,7 +33,8 @@ jest.mock("@keplr-wallet/cardano", () => {
         minimumOutputLovelace: string;
         coinMissingLovelace?: string;
       }) =>
-        /^\d+$/.test(minimumOutputLovelace) && BigInt(minimumOutputLovelace) > BigInt(0)
+        /^\d+$/.test(minimumOutputLovelace) &&
+        BigInt(minimumOutputLovelace) > BigInt(0)
           ? {
               classification: "minimum_violation" as const,
               minimumOutputLovelace,
@@ -58,7 +60,9 @@ jest.mock("@keplr-wallet/cardano", () => {
 
 describe("CardanoService slot → timestamp", () => {
   const slotToMs = (slot: number, chainKey: string) =>
-    (CardanoService as any).slotToTimestampMs(slot, chainKey) as number | undefined;
+    (CardanoService as any).slotToTimestampMs(slot, chainKey) as
+      | number
+      | undefined;
 
   beforeEach(() => {
     (CardanoService as any).warnedUnknownSlotTimeChainKeys?.clear();

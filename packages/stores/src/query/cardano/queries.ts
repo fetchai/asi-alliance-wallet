@@ -2,7 +2,10 @@ import { QueriesSetBase } from "../queries";
 import { KVStore } from "@keplr-wallet/common";
 import { ChainGetter } from "../../common";
 import { ObservableQueryCardanoBalanceRegistry } from "./balance-registry";
-import { ObservableQueryCardanoTokenBalanceRegistry, CARDANO_NATIVE_TOKEN_TYPE } from "./token-balance-registry";
+import {
+  ObservableQueryCardanoTokenBalanceRegistry,
+  CARDANO_NATIVE_TOKEN_TYPE,
+} from "./token-balance-registry";
 import { ObservableQueryCardanoTokenBalance } from "./token-balance";
 import { ObservableQueryCardanoAssetInfo } from "./asset-info";
 import type { KoiosAssetInfoItem } from "./asset-info";
@@ -18,8 +21,10 @@ export class CardanoQueriesImpl {
   public readonly cardanoTokenBalanceRegistry: ObservableQueryCardanoTokenBalanceRegistry;
 
   // Shared token balance queries per address (used by both discovery and balance registry)
-  private tokenBalanceQueries: Map<string, ObservableQueryCardanoTokenBalance> = new Map();
-  private assetInfoQueries: Map<string, ObservableQueryCardanoAssetInfo> = new Map();
+  private tokenBalanceQueries: Map<string, ObservableQueryCardanoTokenBalance> =
+    new Map();
+  private assetInfoQueries: Map<string, ObservableQueryCardanoAssetInfo> =
+    new Map();
   private registeredTokenDenoms: Set<string> = new Set();
 
   private readonly kvStore: KVStore;
@@ -40,10 +45,10 @@ export class CardanoQueriesImpl {
     );
 
     // Token balance registry shares query instances with discovery to avoid duplicate Koios calls.
-    this.cardanoTokenBalanceRegistry = new ObservableQueryCardanoTokenBalanceRegistry(
-      kvStore,
-      (cId, address) => this.getOrCreateTokenBalanceQuery(cId, address)
-    );
+    this.cardanoTokenBalanceRegistry =
+      new ObservableQueryCardanoTokenBalanceRegistry(kvStore, (cId, address) =>
+        this.getOrCreateTokenBalanceQuery(cId, address)
+      );
 
     queriesSetBase.queryBalances.addBalanceRegistry(
       this.cardanoBalanceRegistry
@@ -89,7 +94,10 @@ export class CardanoQueriesImpl {
     // Use shared query; check if discovery was already started for this key
     if (this.tokenBalanceQueries.has(key)) return;
 
-    const tokenBalanceQuery = this.getOrCreateTokenBalanceQuery(chainId, address);
+    const tokenBalanceQuery = this.getOrCreateTokenBalanceQuery(
+      chainId,
+      address
+    );
     this.fetchAndRegisterTokens(tokenBalanceQuery, chainId);
   }
 
@@ -101,8 +109,13 @@ export class CardanoQueriesImpl {
     if (!address) return;
 
     const chainId = this.chainId;
-    const tokenBalanceQuery = this.getOrCreateTokenBalanceQuery(chainId, address);
-    this.fetchAndRegisterTokens(tokenBalanceQuery, chainId, { forceRefresh: true });
+    const tokenBalanceQuery = this.getOrCreateTokenBalanceQuery(
+      chainId,
+      address
+    );
+    this.fetchAndRegisterTokens(tokenBalanceQuery, chainId, {
+      forceRefresh: true,
+    });
   }
 
   /**
@@ -126,7 +139,9 @@ export class CardanoQueriesImpl {
       const newAssetTuples: Array<[string, string]> = [];
       for (const asset of assets) {
         const assetId = asset.policy_id + asset.asset_name;
-        const denom = `${CARDANO_NATIVE_TOKEN_TYPE}:${assetId}:${asset.asset_name || assetId}`;
+        const denom = `${CARDANO_NATIVE_TOKEN_TYPE}:${assetId}:${
+          asset.asset_name || assetId
+        }`;
         if (!this.registeredTokenDenoms.has(denom)) {
           newAssetTuples.push([asset.policy_id, asset.asset_name]);
         }
@@ -134,7 +149,10 @@ export class CardanoQueriesImpl {
 
       if (newAssetTuples.length === 0) return;
 
-      const infoKey = newAssetTuples.map((t) => t[0] + t[1]).sort().join(",");
+      const infoKey = newAssetTuples
+        .map((t) => t[0] + t[1])
+        .sort()
+        .join(",");
       let infoQuery = this.assetInfoQueries.get(infoKey);
       if (!infoQuery) {
         infoQuery = new ObservableQueryCardanoAssetInfo(
@@ -159,7 +177,13 @@ export class CardanoQueriesImpl {
   }
 
   private registerTokenCurrencies(
-    assets: Array<{ policy_id: string; asset_name: string; fingerprint: string; decimals: number; quantity: string }>,
+    assets: Array<{
+      policy_id: string;
+      asset_name: string;
+      fingerprint: string;
+      decimals: number;
+      quantity: string;
+    }>,
     infoMap: Map<string, KoiosAssetInfoItem>
   ) {
     const chainInfo = this.chainGetter.getChain(this.chainId);
@@ -174,7 +198,9 @@ export class CardanoQueriesImpl {
 
     for (const asset of assets) {
       const assetId = asset.policy_id + asset.asset_name;
-      const denom = `${CARDANO_NATIVE_TOKEN_TYPE}:${assetId}:${asset.asset_name || assetId}`;
+      const denom = `${CARDANO_NATIVE_TOKEN_TYPE}:${assetId}:${
+        asset.asset_name || assetId
+      }`;
       if (this.registeredTokenDenoms.has(denom)) continue;
 
       const info = infoMap.get(assetId);
@@ -183,9 +209,15 @@ export class CardanoQueriesImpl {
       const ticker = info?.token_registry_metadata?.ticker;
       const registryName = info?.token_registry_metadata?.name;
       const asciiName = info?.asset_name_ascii;
-      const displayName = ticker || registryName || asciiName || asset.fingerprint || assetId.slice(0, 12);
+      const displayName =
+        ticker ||
+        registryName ||
+        asciiName ||
+        asset.fingerprint ||
+        assetId.slice(0, 12);
 
-      const decimals = info?.token_registry_metadata?.decimals ?? asset.decimals ?? 0;
+      const decimals =
+        info?.token_registry_metadata?.decimals ?? asset.decimals ?? 0;
       const logo = info?.token_registry_metadata?.logo;
 
       newCurrencies.push({
@@ -223,7 +255,12 @@ export const CardanoQueries = {
       chainGetter: ChainGetter
     ) => {
       return {
-        cardano: new CardanoQueriesImpl(queriesSetBase, kvStore, chainId, chainGetter),
+        cardano: new CardanoQueriesImpl(
+          queriesSetBase,
+          kvStore,
+          chainId,
+          chainGetter
+        ),
       };
     };
   },

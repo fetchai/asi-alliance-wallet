@@ -24,4 +24,3 @@ describe("ensureSelectedChainAck", () => {
     expect(calls).toEqual(["ack:fail"]);
   });
 });
-

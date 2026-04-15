@@ -29,5 +29,7 @@ export const computeDraftSummaryHash = (draft: {
     sender: draft.selectedAccountAddress,
   });
 
-  return Buffer.from(Hash.sha256(Buffer.from(normalizedPayload))).toString("hex");
+  return Buffer.from(Hash.sha256(Buffer.from(normalizedPayload))).toString(
+    "hex"
+  );
 };

@@ -423,10 +423,7 @@ export const BuyModalContent: FunctionComponent<{
           >
             <div className={styleTxButton["serviceLogoContainer"]}>
               {FIAT_ON_RAMP_ICONS[serviceInfo.serviceId] && (
-                <img
-                  src={FIAT_ON_RAMP_ICONS[serviceInfo.serviceId]}
-                  alt=""
-                />
+                <img src={FIAT_ON_RAMP_ICONS[serviceInfo.serviceId]} alt="" />
               )}
             </div>
             <div className={styleTxButton["serviceName"]}>

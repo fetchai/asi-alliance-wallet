@@ -221,7 +221,10 @@ export const DeleteWallet: FunctionComponent = () => {
                   analyticsStore.logEvent("delete_account_click", {
                     action: "Remove",
                   });
-                  await syncKeyringSurfacesFromBackground(chainStore, keyRingStore);
+                  await syncKeyringSurfacesFromBackground(
+                    chainStore,
+                    keyRingStore
+                  );
                   await requestKeyringSurfacesSyncBroadcast();
                   navigate("/");
                 } catch (e) {

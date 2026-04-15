@@ -102,7 +102,7 @@ export class ObservableQueryCosmosBalances extends ObservableQueryTendermint<Bal
     also avoid fetching the endpoint for evm and cardano networks*/
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
-      this.bech32Address.length > 0 && 
+      this.bech32Address.length > 0 &&
       !chainInfo?.features?.includes("evm") &&
       !chainInfo?.features?.includes("cardano")
     );

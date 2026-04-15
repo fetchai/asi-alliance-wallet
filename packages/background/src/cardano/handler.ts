@@ -674,7 +674,10 @@ const toTrackedTxServiceState = (
 const handleGetCardanoTrackedTxStatusMsg: (
   service: CardanoService,
   keyRingService: KeyRingService
-) => InternalHandler<GetCardanoTrackedTxStatusMsg> = (service, keyRingService) => {
+) => InternalHandler<GetCardanoTrackedTxStatusMsg> = (
+  service,
+  keyRingService
+) => {
   return async (env, msg) => {
     if (!env.isInternalMsg) {
       throw new Error("This message is only supported for internal requests");

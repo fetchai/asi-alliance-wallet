@@ -269,7 +269,9 @@ describe("TransxStatus Cardano tracking poll", () => {
     expect(sendMessageMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      container.querySelector<HTMLButtonElement>('[data-testid="close-drawer"]')?.click();
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="close-drawer"]')
+        ?.click();
       await flushMicrotasks();
     });
 
@@ -300,7 +302,9 @@ describe("TransxStatus Cardano tracking poll", () => {
     });
 
     await act(async () => {
-      container.querySelector<HTMLButtonElement>('[data-testid="close-drawer"]')?.click();
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="close-drawer"]')
+        ?.click();
       await flushMicrotasks();
     });
 

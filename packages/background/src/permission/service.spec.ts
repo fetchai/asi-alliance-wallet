@@ -40,8 +40,12 @@ describe("PermissionService EMPTY wallet behavior", () => {
   });
 
   it("checkOrGrantPermission is no-op when wallet is empty", async () => {
-    const grantSpy = jest.spyOn(service, "grantPermission").mockResolvedValue(undefined);
-    const checkSpy = jest.spyOn(service, "checkPermission").mockImplementation(() => {});
+    const grantSpy = jest
+      .spyOn(service, "grantPermission")
+      .mockResolvedValue(undefined);
+    const checkSpy = jest
+      .spyOn(service, "checkPermission")
+      .mockImplementation(() => {});
 
     await service.checkOrGrantPermission(
       env,
@@ -59,7 +63,9 @@ describe("PermissionService EMPTY wallet behavior", () => {
     const grantSpy = jest
       .spyOn(service, "grantGlobalPermission")
       .mockResolvedValue(undefined);
-    const checkSpy = jest.spyOn(service, "checkGlobalPermission").mockImplementation(() => {});
+    const checkSpy = jest
+      .spyOn(service, "checkGlobalPermission")
+      .mockImplementation(() => {});
 
     await service.checkOrGrantGlobalPermission(
       env,

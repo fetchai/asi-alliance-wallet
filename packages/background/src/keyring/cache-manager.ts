@@ -29,7 +29,8 @@ export interface CacheManagerConfig {
 export class AddressCacheManager {
   private static readonly CARDANO_CACHE_PREFIX = "cardano_addr_cache:";
   private static readonly GENERIC_CACHE_PREFIX = "addr_cache:";
-  private static readonly ENCRYPTION_FAILURE_PREFIX = "cache_encryption_failed:";
+  private static readonly ENCRYPTION_FAILURE_PREFIX =
+    "cache_encryption_failed:";
   private static readonly LOCK_TIMEOUT_MS = 5000;
 
   private kvStore: KVStore;

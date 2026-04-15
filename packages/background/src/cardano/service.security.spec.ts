@@ -1,5 +1,6 @@
 import { computeDraftSummaryHash } from "./draft-summary-hash";
 import { CardanoService } from "./service";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { of } from "rxjs";
 import * as cardanoUtils from "@keplr-wallet/cardano";
 
@@ -30,7 +31,8 @@ jest.mock("@keplr-wallet/cardano", () => {
         minimumOutputLovelace: string;
         coinMissingLovelace?: string;
       }) =>
-        /^\d+$/.test(minimumOutputLovelace) && BigInt(minimumOutputLovelace) > BigInt(0)
+        /^\d+$/.test(minimumOutputLovelace) &&
+        BigInt(minimumOutputLovelace) > BigInt(0)
           ? {
               classification: "minimum_violation" as const,
               minimumOutputLovelace,
@@ -181,7 +183,9 @@ describe("CardanoService buildSendAdaTxDraft minimum_violation contract", () => 
         coinMissingLovelace: "969999",
       })),
     } as any;
-    jest.spyOn(service as any, "getWalletManager").mockReturnValue(walletManager);
+    jest
+      .spyOn(service as any, "getWalletManager")
+      .mockReturnValue(walletManager);
     const payloadSpy = jest.spyOn(service as any, "computeDraftPayloadHash");
 
     const res = await service.buildSendAdaTxDraft(baseParams);
@@ -215,7 +219,9 @@ describe("CardanoService estimateSendAda minimum_violation parity", () => {
 
   beforeEach(() => {
     (cardanoUtils.mapCardanoMinimumViolation as jest.Mock).mockClear();
-    (cardanoUtils.formatLegacyMinimumViolationLovelaceError as jest.Mock).mockClear();
+    (
+      cardanoUtils.formatLegacyMinimumViolationLovelaceError as jest.Mock
+    ).mockClear();
   });
 
   it("uses draft outcome source and throws legacy-compatible lovelace error for estimate", async () => {
@@ -253,7 +259,9 @@ describe("CardanoService estimateSendAda minimum_violation parity", () => {
       })),
     };
     const service = mountServiceWithWalletManager(walletManager);
-    jest.spyOn(service as any, "getWalletManager").mockReturnValue(walletManager);
+    jest
+      .spyOn(service as any, "getWalletManager")
+      .mockReturnValue(walletManager);
 
     const draftRes = await service.buildSendAdaTxDraft({
       to: "addr_test1qrecipient",
@@ -275,7 +283,9 @@ describe("CardanoService estimateSendAda minimum_violation parity", () => {
       minimumOutputLovelace: "970000",
       coinMissingLovelace: "969999",
     });
-    expect(cardanoUtils.formatLegacyMinimumViolationLovelaceError).toHaveBeenCalledWith({
+    expect(
+      cardanoUtils.formatLegacyMinimumViolationLovelaceError
+    ).toHaveBeenCalledWith({
       violation: {
         classification: "minimum_violation",
         minimumOutputLovelace: "970000",
@@ -321,9 +331,9 @@ describe("CardanoService estimateSendAda minimum_violation parity", () => {
       })),
     };
     const service = mountServiceWithWalletManager(walletManager);
-    jest.spyOn(service as any, "toSdkAssetMap").mockReturnValue(
-      new Map([["policy.asset", "1"]])
-    );
+    jest
+      .spyOn(service as any, "toSdkAssetMap")
+      .mockReturnValue(new Map([["policy.asset", "1"]]));
 
     const res = await service.estimateSendAda({
       to: "addr_test1qrecipient",
@@ -351,9 +361,9 @@ describe("CardanoService estimateSendAda minimum_violation parity", () => {
       })),
     };
     const service = mountServiceWithWalletManager(walletManager);
-    jest.spyOn(service as any, "toSdkAssetMap").mockReturnValue(
-      new Map([["policy.asset", "1"]])
-    );
+    jest
+      .spyOn(service as any, "toSdkAssetMap")
+      .mockReturnValue(new Map([["policy.asset", "1"]]));
 
     const res = await service.estimateSendAda({
       to: "addr_test1qrecipient",

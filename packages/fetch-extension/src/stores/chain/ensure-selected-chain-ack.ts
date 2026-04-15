@@ -4,4 +4,3 @@ export async function ensureSelectedChainAck(
 ): Promise<void> {
   await sendSetSelectedChain(chainId);
 }
-

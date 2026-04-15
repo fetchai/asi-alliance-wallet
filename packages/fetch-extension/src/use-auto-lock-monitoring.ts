@@ -43,7 +43,7 @@ export const useAutoLockMonitoring = () => {
           const requester = new InExtensionMessageRequester();
           await requester.sendMessage(BACKGROUND_PORT, msg);
         } catch (error) {
-          console.warn('Failed to send auto-lock monitoring message:', error);
+          console.warn("Failed to send auto-lock monitoring message:", error);
         }
       };
 

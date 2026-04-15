@@ -20,9 +20,22 @@ import type {
   CardanoTrackedTxServiceState,
 } from "./messages";
 import type { BuildSendAdaTxDraftResult } from "./messages";
-import { createObservableTransactionsByAddressesProvider, createTxHistoryLoader, getTxInputsValueAndAddress, parseAssetId } from "@keplr-wallet/cardano";
-import { firstValueFrom, of, ReplaySubject, Subscription } from "rxjs";
-import { skip, take, timeout } from "rxjs/operators";
+import {
+  createObservableTransactionsByAddressesProvider,
+  createTxHistoryLoader,
+  getTxInputsValueAndAddress,
+  parseAssetId,
+} from "@keplr-wallet/cardano";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import {
+  firstValueFrom,
+  of,
+  ReplaySubject,
+  Subscription,
+  skip,
+  take,
+  timeout,
+} from "rxjs";
 import type { KVStore } from "@keplr-wallet/common";
 import { CardanoTxHistoryStore } from "./tx-history-store";
 import { computeDraftSummaryHash } from "./draft-summary-hash";
@@ -51,9 +64,17 @@ export class CardanoService {
       walletId: string;
       walletManagerRef: unknown;
       hasRealEmission: boolean;
-      last: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean };
+      last: {
+        items: CardanoTxHistoryItem[];
+        mightHaveMore: boolean;
+        hasDegradedItems?: boolean;
+      };
       loader: ReturnType<typeof createTxHistoryLoader>;
-      latest$: ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean }>;
+      latest$: ReplaySubject<{
+        items: CardanoTxHistoryItem[];
+        mightHaveMore: boolean;
+        hasDegradedItems?: boolean;
+      }>;
       sub: Subscription;
       errorSub: Subscription;
     }
@@ -86,7 +107,7 @@ export class CardanoService {
       ? (keyStore: KeyStore, pwd: string) =>
           Crypto.decrypt(crypto, keyStore as KeyringKeyStore, pwd)
       : undefined;
-    
+
     try {
       await this.keyRing.restore(
         store as KeyStore,
@@ -128,8 +149,7 @@ export class CardanoService {
       try {
         controller.sub?.unsubscribe();
         controller.errorSub?.unsubscribe();
-      } catch {
-      }
+      } catch {}
     }
     this.txHistoryControllers.clear();
     this.sendAdaTxDrafts.clear();
@@ -142,9 +162,9 @@ export class CardanoService {
 
   getCurrentRuntimeSessionId(): string {
     if (!this.runtimeSessionId) {
-      this.runtimeSessionId = `cad_sess_${Date.now().toString(36)}_${Math.random()
-        .toString(36)
-        .slice(2)}`;
+      this.runtimeSessionId = `cad_sess_${Date.now().toString(
+        36
+      )}_${Math.random().toString(36).slice(2)}`;
     }
     return this.runtimeSessionId;
   }
@@ -181,7 +201,9 @@ export class CardanoService {
     }
 
     try {
-      const sdkAssets = params.assets ? this.toSdkAssetMap(params.assets) : undefined;
+      const sdkAssets = params.assets
+        ? this.toSdkAssetMap(params.assets)
+        : undefined;
       const txId = await this.keyRing.sendAda({
         to: params.to,
         amount: params.amount,
@@ -207,7 +229,16 @@ export class CardanoService {
 
   private readonly locallyPendingSentTxs: Map<
     string,
-    Map<string, { createdAt: number; amount: string; fee?: string; minAdaForTokens?: string; assets?: CardanoAssetAmount[] }>
+    Map<
+      string,
+      {
+        createdAt: number;
+        amount: string;
+        fee?: string;
+        minAdaForTokens?: string;
+        assets?: CardanoAssetAmount[];
+      }
+    >
   > = new Map();
 
   /**
@@ -222,7 +253,12 @@ export class CardanoService {
   private static readonly TRACKED_TX_DEEP_SCAN_COOLDOWN_MS = 45_000;
 
   private registerLocallyPendingSentTx(
-    params: { amount: string; fee?: string; minAdaForTokens?: string; assets?: CardanoAssetAmount[] },
+    params: {
+      amount: string;
+      fee?: string;
+      minAdaForTokens?: string;
+      assets?: CardanoAssetAmount[];
+    },
     txId: string,
     chainId?: string
   ) {
@@ -231,12 +267,25 @@ export class CardanoService {
     }
     const chainKey = chainId;
     const perChain =
-      this.locallyPendingSentTxs.get(chainKey) ?? new Map<string, { createdAt: number; amount: string; fee?: string; minAdaForTokens?: string; assets?: CardanoAssetAmount[] }>();
+      this.locallyPendingSentTxs.get(chainKey) ??
+      new Map<
+        string,
+        {
+          createdAt: number;
+          amount: string;
+          fee?: string;
+          minAdaForTokens?: string;
+          assets?: CardanoAssetAmount[];
+        }
+      >();
     perChain.set(txId, {
       createdAt: Date.now(),
       amount: params.amount,
       fee: params.fee != null ? String(params.fee) : undefined,
-      minAdaForTokens: params.minAdaForTokens != null ? String(params.minAdaForTokens) : undefined,
+      minAdaForTokens:
+        params.minAdaForTokens != null
+          ? String(params.minAdaForTokens)
+          : undefined,
       assets: params.assets,
     });
     this.locallyPendingSentTxs.set(chainKey, perChain);
@@ -260,7 +309,9 @@ export class CardanoService {
     return `draft-pending:${draftId}`;
   }
 
-  private async runWithSubmitAdaTxDraftLock<T>(fn: () => Promise<T>): Promise<T> {
+  private async runWithSubmitAdaTxDraftLock<T>(
+    fn: () => Promise<T>
+  ): Promise<T> {
     const previous = this.submitAdaTxDraftSerial;
     let release!: () => void;
     this.submitAdaTxDraftSerial = new Promise<void>((resolve) => {
@@ -323,7 +374,9 @@ export class CardanoService {
   }
 
   /** Internal: used by build/submit enforcement (errors propagate). */
-  private async hasConflictingOutgoingSpend(chainId?: string): Promise<boolean> {
+  private async hasConflictingOutgoingSpend(
+    chainId?: string
+  ): Promise<boolean> {
     if (await this.hasSdkOutgoingPending()) {
       return true;
     }
@@ -380,12 +433,15 @@ export class CardanoService {
       );
     }
 
-    const walletManager: CardanoWalletManager | undefined = this.keyRing.getWalletManager();
+    const walletManager: CardanoWalletManager | undefined =
+      this.keyRing.getWalletManager();
     if (!walletManager) {
       throw new Error("Wallet manager not initialized");
     }
 
-    const sdkAssets = params.assets ? this.toSdkAssetMap(params.assets) : undefined;
+    const sdkAssets = params.assets
+      ? this.toSdkAssetMap(params.assets)
+      : undefined;
     const outcome = await walletManager.buildSendAdaTxDraftOutcome({
       to: params.to,
       amount: params.amount,
@@ -541,7 +597,8 @@ export class CardanoService {
     unlockSessionId: string;
     source?: string;
   }): Promise<BuildSendAdaTxDraftResult> {
-    const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+    const walletManager: CardanoWalletManager | undefined =
+      this.getWalletManager();
     if (!walletManager) {
       throw new Error("Wallet manager not initialized");
     }
@@ -550,7 +607,9 @@ export class CardanoService {
       throw new Error(CARDANO_SEND_CONFLICT_PENDING_MESSAGE);
     }
 
-    const sdkAssets = params.assets ? this.toSdkAssetMap(params.assets) : undefined;
+    const sdkAssets = params.assets
+      ? this.toSdkAssetMap(params.assets)
+      : undefined;
     const outcome = await walletManager.buildSendAdaTxDraftOutcome({
       to: params.to,
       amount: params.amount,
@@ -628,19 +687,25 @@ export class CardanoService {
     return await this.runWithSubmitAdaTxDraftLock(async () => {
       const draft = this.sendAdaTxDrafts.get(params.draftId);
       if (!draft) {
-        throw new Error("Transaction draft not found. Please rebuild and try again.");
+        throw new Error(
+          "Transaction draft not found. Please rebuild and try again."
+        );
       }
 
       // Keep draft lifetime short to avoid stale context reuse.
       const ttlMs = 10 * 60 * 1000; // 10 minutes
       if (Date.now() - draft.createdAt > ttlMs) {
         this.sendAdaTxDrafts.delete(params.draftId);
-        throw new Error("Transaction draft expired. Please rebuild and try again.");
+        throw new Error(
+          "Transaction draft expired. Please rebuild and try again."
+        );
       }
 
       // Optional safety: ensure the draft is used on the intended chain.
       if (draft.chainId && params.chainId && draft.chainId !== params.chainId) {
-        throw new Error("Transaction draft chain mismatch. Please rebuild and try again.");
+        throw new Error(
+          "Transaction draft chain mismatch. Please rebuild and try again."
+        );
       }
       if (
         draft.walletId !== params.walletId ||
@@ -650,19 +715,27 @@ export class CardanoService {
         draft.unlockSessionId !== params.unlockSessionId
       ) {
         this.sendAdaTxDrafts.delete(params.draftId);
-        throw new Error("Transaction draft context mismatch. Please rebuild and try again.");
+        throw new Error(
+          "Transaction draft context mismatch. Please rebuild and try again."
+        );
       }
       if (this.getDraftSummaryHash(draft) !== params.approvedSummaryHash) {
         this.sendAdaTxDrafts.delete(params.draftId);
-        throw new Error("Transaction draft summary mismatch. Please rebuild and try again.");
+        throw new Error(
+          "Transaction draft summary mismatch. Please rebuild and try again."
+        );
       }
       if (draft.payloadHash !== params.approvedPayloadHash) {
         this.sendAdaTxDrafts.delete(params.draftId);
-        throw new Error("Transaction draft payload mismatch. Please rebuild and try again.");
+        throw new Error(
+          "Transaction draft payload mismatch. Please rebuild and try again."
+        );
       }
       if (this.computeDraftPayloadHash(draft) !== draft.payloadHash) {
         this.sendAdaTxDrafts.delete(params.draftId);
-        throw new Error("Transaction draft payload changed. Please rebuild and try again.");
+        throw new Error(
+          "Transaction draft payload changed. Please rebuild and try again."
+        );
       }
 
       if (await this.hasConflictingOutgoingSpend(params.chainId)) {
@@ -682,7 +755,8 @@ export class CardanoService {
       );
 
       try {
-        const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+        const walletManager: CardanoWalletManager | undefined =
+          this.getWalletManager();
         if (!walletManager) {
           throw new Error("Wallet manager not initialized");
         }
@@ -750,16 +824,22 @@ export class CardanoService {
   } {
     const draft = this.sendAdaTxDrafts.get(params.draftId);
     if (!draft) {
-      throw new Error("Transaction draft not found. Please rebuild and try again.");
+      throw new Error(
+        "Transaction draft not found. Please rebuild and try again."
+      );
     }
 
     const ttlMs = 10 * 60 * 1000;
     if (Date.now() - draft.createdAt > ttlMs) {
       this.sendAdaTxDrafts.delete(params.draftId);
-      throw new Error("Transaction draft expired. Please rebuild and try again.");
+      throw new Error(
+        "Transaction draft expired. Please rebuild and try again."
+      );
     }
     if (draft.chainId && params.chainId && draft.chainId !== params.chainId) {
-      throw new Error("Transaction draft chain mismatch. Please rebuild and try again.");
+      throw new Error(
+        "Transaction draft chain mismatch. Please rebuild and try again."
+      );
     }
     if (
       draft.walletId !== params.walletId ||
@@ -769,7 +849,9 @@ export class CardanoService {
       draft.unlockSessionId !== params.unlockSessionId
     ) {
       this.sendAdaTxDrafts.delete(params.draftId);
-      throw new Error("Transaction draft context mismatch. Please rebuild and try again.");
+      throw new Error(
+        "Transaction draft context mismatch. Please rebuild and try again."
+      );
     }
 
     return {
@@ -935,7 +1017,9 @@ export class CardanoService {
     // Wait for first real emission from history loader. Do not treat seed/fallback as valid empty history.
     if (!controller.hasRealEmission) {
       try {
-        const res = await firstValueFrom(controller.latest$.pipe(take(1), timeout(10000)));
+        const res = await firstValueFrom(
+          controller.latest$.pipe(take(1), timeout(10000))
+        );
         return await this.withPendingTxs(res, params.chainId);
       } catch {
         throw new Error("syncing: tx_history_initial_load_timeout");
@@ -967,7 +1051,9 @@ export class CardanoService {
       return await this.withPendingTxs(controller.last, params.chainId);
     }
     // ReplaySubject emits current immediately; skip it and wait for the next update after loadMore().
-    const next = firstValueFrom(controller.latest$.pipe(skip(1), take(1), timeout(10000))).catch(() => {
+    const next = firstValueFrom(
+      controller.latest$.pipe(skip(1), take(1), timeout(10000))
+    ).catch(() => {
       throw new Error("syncing: tx_history_load_more_timeout");
     });
     controller.loader.loadMore();
@@ -989,7 +1075,10 @@ export class CardanoService {
   /**
    * Same TTL semantics as locally pending rows merged in {@link withPendingTxs}.
    */
-  private hasActiveLocallyPendingTx(txIdNorm: string, chainId: string): boolean {
+  private hasActiveLocallyPendingTx(
+    txIdNorm: string,
+    chainId: string
+  ): boolean {
     const perChain = this.locallyPendingSentTxs.get(chainId);
     if (!perChain) {
       return false;
@@ -1015,8 +1104,11 @@ export class CardanoService {
     return items.find((i) => this.normalizeCardanoTxId(i.id) === txIdNorm);
   }
 
-  private mapTrackedTxErrorToState(error: unknown): CardanoTrackedTxServiceState {
-    const message = error instanceof Error ? error.message : String(error ?? "");
+  private mapTrackedTxErrorToState(
+    error: unknown
+  ): CardanoTrackedTxServiceState {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "");
     const m = message.toLowerCase();
     if (m.includes("provider_unavailable") || m.includes("provider_error")) {
       return "provider_error";
@@ -1045,8 +1137,7 @@ export class CardanoService {
       txIdNorm
     );
 
-    const cooldownUntil =
-      this.trackedTxDeepScanCooldownUntil.get(deepKey) ?? 0;
+    const cooldownUntil = this.trackedTxDeepScanCooldownUntil.get(deepKey) ?? 0;
     const inDeepCooldown = Date.now() < cooldownUntil;
 
     let res: CardanoTxHistoryResponse;
@@ -1076,13 +1167,12 @@ export class CardanoService {
       return { state: "ready_with_data", txStatus: "pending" };
     }
 
-    if (
-      !found &&
-      res.mightHaveMore &&
-      !inDeepCooldown
-    ) {
+    if (!found && res.mightHaveMore && !inDeepCooldown) {
       let pages = 0;
-      while (res.mightHaveMore && pages < CardanoService.TRACKED_TX_MAX_LOAD_MORE_PAGES) {
+      while (
+        res.mightHaveMore &&
+        pages < CardanoService.TRACKED_TX_MAX_LOAD_MORE_PAGES
+      ) {
         try {
           res = await this.loadMoreTxHistory({
             pageSize: CardanoService.TRACKED_TX_HISTORY_PAGE_SIZE,
@@ -1105,7 +1195,8 @@ export class CardanoService {
       }
       if (
         !found &&
-        (!res.mightHaveMore || pages >= CardanoService.TRACKED_TX_MAX_LOAD_MORE_PAGES)
+        (!res.mightHaveMore ||
+          pages >= CardanoService.TRACKED_TX_MAX_LOAD_MORE_PAGES)
       ) {
         this.trackedTxDeepScanCooldownUntil.set(
           deepKey,
@@ -1125,16 +1216,23 @@ export class CardanoService {
   }
 
   private async withPendingTxs(
-    res: { items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean },
+    res: {
+      items: CardanoTxHistoryItem[];
+      mightHaveMore: boolean;
+      hasDegradedItems?: boolean;
+    },
     chainId?: string
   ): Promise<CardanoTxHistoryResponse> {
-    const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+    const walletManager: CardanoWalletManager | undefined =
+      this.getWalletManager();
     if (!walletManager || !walletManager.hasWallet()) {
       return res;
     }
 
     const wallet = walletManager.getWallet();
-    const walletAddresses = await getWalletAddressSet(wallet as WalletForPendingHistory);
+    const walletAddresses = await getWalletAddressSet(
+      wallet as WalletForPendingHistory
+    );
     const pending = await transformPendingTxsToItems(
       wallet as WalletForPendingHistory,
       walletAddresses,
@@ -1144,8 +1242,12 @@ export class CardanoService {
     // Resolve asset metadata for locally pending txs (same as for confirmed/SDK-pending txs)
     let assetInfoMap: Map<string, AssetInfoLike> | undefined;
     try {
-      assetInfoMap = await firstValueFrom(wallet.assetInfo$).catch(() => undefined) as Map<string, AssetInfoLike> | undefined;
-    } catch { /* non-critical */ }
+      assetInfoMap = (await firstValueFrom(wallet.assetInfo$).catch(
+        () => undefined
+      )) as Map<string, AssetInfoLike> | undefined;
+    } catch {
+      /* non-critical */
+    }
 
     const locallyPending = (() => {
       if (!chainId) return [] as CardanoTxHistoryItem[];
@@ -1161,20 +1263,21 @@ export class CardanoService {
           perChain.delete(id);
           continue;
         }
-        const historyAssets: CardanoTxHistoryAsset[] | undefined = v.assets?.map((a) => {
-          const { policyId, assetName } = parseAssetId(a.assetId);
-          const meta = this.resolveAssetMetadata(a.assetId, assetInfoMap);
-          return {
-            policyId,
-            assetName,
-            assetId: a.assetId,
-            amount: a.amount,
-            displayName: meta.displayName,
-            ticker: meta.ticker,
-            decimals: meta.decimals,
-            fingerprint: meta.fingerprint,
-          };
-        });
+        const historyAssets: CardanoTxHistoryAsset[] | undefined =
+          v.assets?.map((a) => {
+            const { policyId, assetName } = parseAssetId(a.assetId);
+            const meta = this.resolveAssetMetadata(a.assetId, assetInfoMap);
+            return {
+              policyId,
+              assetName,
+              assetId: a.assetId,
+              amount: a.amount,
+              displayName: meta.displayName,
+              ticker: meta.ticker,
+              decimals: meta.decimals,
+              fingerprint: meta.fingerprint,
+            };
+          });
         // For token sends, amount is 0; show total ADA (amount + minAdaForTokens) so user sees non-zero
         const amountDisplay =
           v.minAdaForTokens && v.amount !== undefined
@@ -1187,7 +1290,10 @@ export class CardanoService {
           direction: "sent",
           amount: amountDisplay,
           fee: v.fee,
-          assets: historyAssets && historyAssets.length > 0 ? historyAssets : undefined,
+          assets:
+            historyAssets && historyAssets.length > 0
+              ? historyAssets
+              : undefined,
         });
       }
 
@@ -1199,7 +1305,9 @@ export class CardanoService {
 
     const confirmedIds = new Set((res.items || []).map((i) => i.id));
     const pendingFiltered = pending.filter((p) => !confirmedIds.has(p.id));
-    const locallyPendingFiltered = locallyPending.filter((p) => !confirmedIds.has(p.id));
+    const locallyPendingFiltered = locallyPending.filter(
+      (p) => !confirmedIds.has(p.id)
+    );
 
     // Remove confirmed txs from local pending cache.
     if (confirmedIds.size > 0 && chainId) {
@@ -1229,7 +1337,9 @@ export class CardanoService {
     return {
       items: [...Array.from(mergedPendingById.values()), ...(res.items || [])],
       mightHaveMore: res.mightHaveMore,
-      hasDegradedItems: res.hasDegradedItems || (res.items || []).some((item) => item.isDegraded === true),
+      hasDegradedItems:
+        res.hasDegradedItems ||
+        (res.items || []).some((item) => item.isDegraded === true),
     };
   }
 
@@ -1240,7 +1350,8 @@ export class CardanoService {
   ) {
     const key = `${chainKey}:${walletId}`;
     const existing = this.txHistoryControllers.get(key);
-    const walletManager: CardanoWalletManager | undefined = this.getWalletManager();
+    const walletManager: CardanoWalletManager | undefined =
+      this.getWalletManager();
     if (!walletManager) {
       throw new Error("Wallet manager not initialized");
     }
@@ -1261,44 +1372,61 @@ export class CardanoService {
     }
 
     if (!walletManager || !walletManager.hasWallet()) {
-      throw new Error("Transaction features unavailable without Blockfrost API key");
+      throw new Error(
+        "Transaction features unavailable without Blockfrost API key"
+      );
     }
 
     const wallet = walletManager.getWallet();
     const chainHistoryProvider = walletManager.getChainHistoryProvider();
 
     // lace-style provider with polling/backoff
+    // eslint-disable-next-line import/no-extraneous-dependencies
     const { DEFAULT_POLLING_CONFIG } = await import("@cardano-sdk/wallet");
     const retryBackoffConfig = {
       initialInterval: DEFAULT_POLLING_CONFIG.pollInterval,
-      maxInterval: DEFAULT_POLLING_CONFIG.pollInterval * DEFAULT_POLLING_CONFIG.maxIntervalMultiplier
+      maxInterval:
+        DEFAULT_POLLING_CONFIG.pollInterval *
+        DEFAULT_POLLING_CONFIG.maxIntervalMultiplier,
     };
 
-    const provider = createObservableTransactionsByAddressesProvider(chainHistoryProvider, retryBackoffConfig, console);
+    const provider = createObservableTransactionsByAddressesProvider(
+      chainHistoryProvider,
+      retryBackoffConfig,
+      console
+    );
 
     const loader = createTxHistoryLoader(
       provider,
       {
         addresses$: wallet.addresses$,
         transactions: { history$: wallet.transactions.history$ },
-        syncStatus: { isSettled$: wallet.syncStatus.isSettled$ }
+        syncStatus: { isSettled$: wallet.syncStatus.isSettled$ },
       },
       pageSize
     );
 
-    const latest$ = new ReplaySubject<{ items: CardanoTxHistoryItem[]; mightHaveMore: boolean; hasDegradedItems?: boolean }>(1);
+    const latest$ = new ReplaySubject<{
+      items: CardanoTxHistoryItem[];
+      mightHaveMore: boolean;
+      hasDegradedItems?: boolean;
+    }>(1);
 
     const controller = {
       pageSize,
       walletId,
       walletManagerRef: walletManager,
       hasRealEmission: false,
-      last: { items: [] as CardanoTxHistoryItem[], mightHaveMore: true, hasDegradedItems: false },
+      last: {
+        items: [] as CardanoTxHistoryItem[],
+        mightHaveMore: true,
+        hasDegradedItems: false,
+      },
       loader,
       latest$,
       // will be assigned below
       sub: undefined as unknown as Subscription,
-      errorSub: undefined as unknown as Subscription
+      errorSub: undefined as unknown as Subscription,
     };
 
     const sub = loader.loadedHistory$.subscribe(async (loaded) => {
@@ -1343,12 +1471,18 @@ export class CardanoService {
   private resolveAssetMetadata(
     assetId: string,
     assetInfoMap: Map<string, AssetInfoLike> | undefined
-  ): { displayName?: string; ticker?: string; decimals?: number; fingerprint?: string } {
+  ): {
+    displayName?: string;
+    ticker?: string;
+    decimals?: number;
+    fingerprint?: string;
+  } {
     if (!assetInfoMap) return {};
     const info = assetInfoMap.get(assetId);
     if (!info) return {};
     return {
-      displayName: info?.nftMetadata?.name ?? info?.tokenMetadata?.name ?? info?.name,
+      displayName:
+        info?.nftMetadata?.name ?? info?.tokenMetadata?.name ?? info?.name,
       ticker: info?.tokenMetadata?.ticker ?? info?.ticker,
       decimals: info?.tokenMetadata?.decimals ?? info?.decimals ?? 0,
       fingerprint: info?.fingerprint ? String(info.fingerprint) : undefined,
@@ -1361,7 +1495,10 @@ export class CardanoService {
   // Cardano genesis constants used to convert absolute slot → wall-clock Unix ms.
   // Byron: 20s/slot. Shelley and later: 1s/slot.
   // Mainnet + testnet systemStart values must match book.world.dev shelley-genesis.json (not environments.html summaries).
-  private static slotToTimestampMs(slot: number, chainKey: string): number | undefined {
+  private static slotToTimestampMs(
+    slot: number,
+    chainKey: string
+  ): number | undefined {
     switch (chainKey) {
       case "cardano-mainnet": {
         // Byron/system start: 2017-09-23T21:44:51Z = 1506203091s
@@ -1404,9 +1541,13 @@ export class CardanoService {
     let assetInfoMap: Map<string, AssetInfoLike> | undefined;
     try {
       if (wallet.assetInfo$) {
-        assetInfoMap = await firstValueFrom(wallet.assetInfo$).catch(() => undefined) as Map<string, AssetInfoLike> | undefined;
+        assetInfoMap = (await firstValueFrom(wallet.assetInfo$).catch(
+          () => undefined
+        )) as Map<string, AssetInfoLike> | undefined;
       }
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
 
     const getCoins = (value: any): bigint => {
       const coins = value?.coins ?? value;
@@ -1421,7 +1562,8 @@ export class CardanoService {
       return getCoins(fee);
     };
 
-    const getOutputs = (tx: any): any[] => tx?.body?.outputs ?? tx?.outputs ?? [];
+    const getOutputs = (tx: any): any[] =>
+      tx?.body?.outputs ?? tx?.outputs ?? [];
     const getInputs = (tx: any): any[] => tx?.body?.inputs ?? tx?.inputs ?? [];
 
     const items: CardanoTxHistoryItem[] = [];
@@ -1440,7 +1582,10 @@ export class CardanoService {
         if (walletAddresses.has(addr)) {
           ownedOutputsCoins += getCoins(out?.value);
           for (const [assetId, qty] of getAssetsFromValue(out?.value)) {
-            ownedOutputAssets.set(assetId, (ownedOutputAssets.get(assetId) ?? BigInt(0)) + qty);
+            ownedOutputAssets.set(
+              assetId,
+              (ownedOutputAssets.get(assetId) ?? BigInt(0)) + qty
+            );
           }
         } else if (addr) {
           nonOwnOutputAddrs.push(addr);
@@ -1464,7 +1609,10 @@ export class CardanoService {
             if (walletAddresses.has(addr)) {
               ownedInputsCoins += getCoins(input.value);
               for (const [assetId, qty] of getAssetsFromValue(input.value)) {
-                ownedInputAssets.set(assetId, (ownedInputAssets.get(assetId) ?? BigInt(0)) + qty);
+                ownedInputAssets.set(
+                  assetId,
+                  (ownedInputAssets.get(assetId) ?? BigInt(0)) + qty
+                );
               }
             } else {
               nonOwnInputAddrs.push(addr);
@@ -1475,7 +1623,11 @@ export class CardanoService {
         }
 
         if (missingInputs.length > 0) {
-          const resolvedInputs = await getTxInputsValueAndAddress(missingInputs, chainHistoryProvider, wallet as any);
+          const resolvedInputs = await getTxInputsValueAndAddress(
+            missingInputs,
+            chainHistoryProvider,
+            wallet as any
+          );
           if (resolvedInputs.length < missingInputs.length) {
             isInputResolutionDegraded = true;
           }
@@ -1488,7 +1640,10 @@ export class CardanoService {
             if (walletAddresses.has(addr)) {
               ownedInputsCoins += getCoins(input?.value);
               for (const [assetId, qty] of getAssetsFromValue(input?.value)) {
-                ownedInputAssets.set(assetId, (ownedInputAssets.get(assetId) ?? BigInt(0)) + qty);
+                ownedInputAssets.set(
+                  assetId,
+                  (ownedInputAssets.get(assetId) ?? BigInt(0)) + qty
+                );
               }
             } else if (addr) {
               nonOwnInputAddrs.push(addr);
@@ -1525,12 +1680,25 @@ export class CardanoService {
       // Deduplicate counterparty addresses and assign based on direction.
       const uniqueNonOwnOutputAddrs = [...new Set(nonOwnOutputAddrs)];
       const uniqueNonOwnInputAddrs = [...new Set(nonOwnInputAddrs)];
-      const fromAddresses = direction === "sent" || direction === "self" ? undefined : (uniqueNonOwnInputAddrs.length > 0 ? uniqueNonOwnInputAddrs : undefined);
-      const toAddresses = direction === "received" || direction === "self" ? undefined : (uniqueNonOwnOutputAddrs.length > 0 ? uniqueNonOwnOutputAddrs : undefined);
+      const fromAddresses =
+        direction === "sent" || direction === "self"
+          ? undefined
+          : uniqueNonOwnInputAddrs.length > 0
+          ? uniqueNonOwnInputAddrs
+          : undefined;
+      const toAddresses =
+        direction === "received" || direction === "self"
+          ? undefined
+          : uniqueNonOwnOutputAddrs.length > 0
+          ? uniqueNonOwnOutputAddrs
+          : undefined;
 
       // Compute per-asset net transfers
       const assetTransfers: CardanoTxHistoryAsset[] = [];
-      const allAssetIds = new Set([...ownedOutputAssets.keys(), ...ownedInputAssets.keys()]);
+      const allAssetIds = new Set([
+        ...ownedOutputAssets.keys(),
+        ...ownedInputAssets.keys(),
+      ]);
       for (const assetId of allAssetIds) {
         const outQty = ownedOutputAssets.get(assetId) ?? BigInt(0);
         const inQty = ownedInputAssets.get(assetId) ?? BigInt(0);
@@ -1559,9 +1727,15 @@ export class CardanoService {
 
       items.push({
         id: txId,
-        blockNo: tx?.blockHeader?.blockNo != null ? Number(tx.blockHeader.blockNo) : undefined,
+        blockNo:
+          tx?.blockHeader?.blockNo != null
+            ? Number(tx.blockHeader.blockNo)
+            : undefined,
         slot,
-        status: tx?.blockHeader?.blockNo != null || tx?.blockHeader?.slot != null ? "confirmed" : "pending",
+        status:
+          tx?.blockHeader?.blockNo != null || tx?.blockHeader?.slot != null
+            ? "confirmed"
+            : "pending",
         direction,
         amount: amount.toString(),
         fee: fee.toString(),
@@ -1569,7 +1743,10 @@ export class CardanoService {
           isInputResolutionDegraded || assetTransfers.length === 0
             ? undefined
             : assetTransfers,
-        timestamp: slot != null ? CardanoService.slotToTimestampMs(slot, chainKey) : undefined,
+        timestamp:
+          slot != null
+            ? CardanoService.slotToTimestampMs(slot, chainKey)
+            : undefined,
         fromAddresses,
         toAddresses,
         isDegraded: isInputResolutionDegraded || undefined,
@@ -1637,25 +1814,27 @@ export class CardanoService {
     if (!this.keyRing) {
       throw new Error("CardanoKeyRing not initialized");
     }
-    
+
     const config = {
-      maxAttempts: 100,        // 1 second maximum
-      initialDelay: 5,         // Start with 5ms
-      maxDelay: 50,            // Maximum 50ms between attempts
-      backoffMultiplier: 1.2   // Increase delay by 20%
+      maxAttempts: 100, // 1 second maximum
+      initialDelay: 5, // Start with 5ms
+      maxDelay: 50, // Maximum 50ms between attempts
+      backoffMultiplier: 1.2, // Increase delay by 20%
     };
-    
+
     let attempts = 0;
     let delay = config.initialDelay;
-    
+
     while (!this.keyRing.isKeyAgentReady() && attempts < config.maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
       attempts++;
       delay = Math.min(delay * config.backoffMultiplier, config.maxDelay);
     }
-    
+
     if (!this.keyRing.isKeyAgentReady()) {
-      throw new Error(`CardanoKeyRing keyAgent failed to initialize after ${attempts} attempts`);
+      throw new Error(
+        `CardanoKeyRing keyAgent failed to initialize after ${attempts} attempts`
+      );
     }
   }
 }

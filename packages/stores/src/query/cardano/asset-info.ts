@@ -40,7 +40,9 @@ export interface KoiosAssetInfoItem {
  * Fetches metadata for a batch of Cardano native assets via Koios /asset_info.
  * Keyed by a stable string derived from the requested asset list so we can cache.
  */
-export class ObservableQueryCardanoAssetInfo extends ObservableChainQuery<KoiosAssetInfoItem[]> {
+export class ObservableQueryCardanoAssetInfo extends ObservableChainQuery<
+  KoiosAssetInfoItem[]
+> {
   // asset list as [policyId, assetName] tuples
   private readonly assetList: Array<[string, string]>;
 

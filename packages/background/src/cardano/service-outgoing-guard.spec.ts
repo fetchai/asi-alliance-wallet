@@ -1,4 +1,5 @@
 import { CARDANO_SEND_CONFLICT_PENDING_MESSAGE } from "@keplr-wallet/cardano";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { of } from "rxjs";
 import { CardanoService } from "./service";
 
@@ -42,7 +43,9 @@ describe("CardanoService outgoing spend guard", () => {
     const walletManager = {
       buildSendAdaTxDraftOutcome: jest.fn(),
     };
-    jest.spyOn(service as any, "getWalletManager").mockReturnValue(walletManager);
+    jest
+      .spyOn(service as any, "getWalletManager")
+      .mockReturnValue(walletManager);
 
     await expect(service.buildSendAdaTxDraft(baseBuildParams)).rejects.toThrow(
       CARDANO_SEND_CONFLICT_PENDING_MESSAGE
@@ -110,9 +113,7 @@ describe("CardanoService outgoing spend guard", () => {
   it("after submitTx failure removes draft-pending, draft, and leaves no blocking local guard", async () => {
     const service = new CardanoService();
     const draftId = "cad_fail_cleanup";
-    const submitTx = jest
-      .fn()
-      .mockRejectedValue(new Error("submit failed"));
+    const submitTx = jest.fn().mockRejectedValue(new Error("submit failed"));
     const sign = jest.fn().mockResolvedValue({ cbor: "00" });
 
     const draftBase = {

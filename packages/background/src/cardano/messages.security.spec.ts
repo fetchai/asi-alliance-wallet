@@ -37,7 +37,10 @@ describe("Cardano message security boundaries", () => {
     expect(new GetCardanoBalanceMsg().approveExternal()).toBe(false);
     expect(new GetCardanoTxHistoryMsg(20).approveExternal()).toBe(false);
     expect(
-      new GetCardanoTrackedTxStatusMsg("txid", "cardano-mainnet").approveExternal()
+      new GetCardanoTrackedTxStatusMsg(
+        "txid",
+        "cardano-mainnet"
+      ).approveExternal()
     ).toBe(false);
     expect(
       new GetMaxSpendableAdaMsg(
@@ -278,7 +281,12 @@ describe("Cardano handler security boundaries", () => {
 
     const pending = handler(
       { isInternalMsg: true, requestInteraction: jest.fn() },
-      new EstimateSendAdaMsg("addr_test1q...", "1", undefined, "cardano-mainnet")
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "1",
+        undefined,
+        "cardano-mainnet"
+      )
     );
     expect(service.estimateSendAda).not.toHaveBeenCalled();
 
@@ -316,7 +324,12 @@ describe("Cardano handler security boundaries", () => {
     try {
       await handler(
         { isInternalMsg: true, requestInteraction: jest.fn() },
-        new EstimateSendAdaMsg("addr_test1q...", "1", undefined, "cardano-mainnet")
+        new EstimateSendAdaMsg(
+          "addr_test1q...",
+          "1",
+          undefined,
+          "cardano-mainnet"
+        )
       );
     } catch (error: any) {
       thrownMessage = String(error?.message ?? "");
@@ -325,10 +338,8 @@ describe("Cardano handler security boundaries", () => {
     expect(thrownMessage).not.toContain("amount must be a positive number");
   });
 
-  it(
-    "estimate handler throws syncing error when wallet is explicitly unsettled",
-    async () => {
-      const sync$ = of(false);
+  it("estimate handler throws syncing error when wallet is explicitly unsettled", async () => {
+    const sync$ = of(false);
     const service = {
       isReady: jest.fn(() => true),
       estimateSendAda: jest.fn(async () => ({ fee: "1", total: "2" })),
@@ -344,12 +355,16 @@ describe("Cardano handler security boundaries", () => {
 
     const pending = handler(
       { isInternalMsg: true, requestInteraction: jest.fn() },
-      new EstimateSendAdaMsg("addr_test1q...", "1", undefined, "cardano-mainnet")
+      new EstimateSendAdaMsg(
+        "addr_test1q...",
+        "1",
+        undefined,
+        "cardano-mainnet"
+      )
     );
-      await expect(pending).rejects.toThrow("syncing: wallet_sync_in_progress");
-      expect(service.estimateSendAda).not.toHaveBeenCalled();
-    }
-  );
+    await expect(pending).rejects.toThrow("syncing: wallet_sync_in_progress");
+    expect(service.estimateSendAda).not.toHaveBeenCalled();
+  });
 
   it("rejects external estimate requests", async () => {
     const service = {

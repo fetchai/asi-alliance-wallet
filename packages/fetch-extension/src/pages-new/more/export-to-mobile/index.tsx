@@ -364,10 +364,8 @@ const QRCodeView: FunctionComponent<{
 
     const sid = reqParams.sessionId;
     const tok = reqParams.requestToken;
-    const hasSid =
-      sid !== undefined && sid !== null && String(sid).length > 0;
-    const hasTok =
-      tok !== undefined && tok !== null && String(tok).length > 0;
+    const hasSid = sid !== undefined && sid !== null && String(sid).length > 0;
+    const hasTok = tok !== undefined && tok !== null && String(tok).length > 0;
 
     let handshakeOk = false;
     if (!hasSid && !hasTok) {
@@ -439,8 +437,7 @@ const QRCodeView: FunctionComponent<{
         } = {};
 
         if (payload.params && payload.params.length > 0) {
-          for (const chainId of payload.params[0].addressBookChainIds ??
-            []) {
+          for (const chainId of payload.params[0].addressBookChainIds ?? []) {
             if (typeof chainId !== "string" || !chainStore.hasChain(chainId)) {
               continue;
             }

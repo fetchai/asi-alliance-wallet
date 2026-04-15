@@ -37,7 +37,7 @@ describe("KeyRing security hardening", () => {
       __id__: "1",
       name: "Wallet 1",
       cardano: "true",
-      cardanoSerializedAgent: "{\"secret\":true}",
+      cardanoSerializedAgent: '{"secret":true}',
       unknownField: "should-not-leak",
     });
 
@@ -64,7 +64,7 @@ describe("KeyRing security hardening", () => {
       __id__: "2",
       name: "Wallet 2",
       cardano: "true",
-      cardanoSerializedAgent: "{\"legacy\":true}",
+      cardanoSerializedAgent: '{"legacy":true}',
     });
 
     await kvStore.set("key-store", keyStore as any);

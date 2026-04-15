@@ -415,7 +415,11 @@ export const SendPhase2: FunctionComponent<{
             backgroundColor: "rgba(255, 193, 7, 0.15)",
           }}
         >
-          <Text style={style.flatten(["text-caption1", "color-white@80%"]) as ViewStyle}>
+          <Text
+            style={
+              style.flatten(["text-caption1", "color-white@80%"]) as ViewStyle
+            }
+          >
             {intl.formatMessage({
               id: "send.self-send-warning",
               defaultMessage:

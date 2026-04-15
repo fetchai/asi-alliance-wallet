@@ -651,11 +651,9 @@ export class ChainsService {
         this.selectedChainId = oldChainId;
         throw error;
       }
-      this.interactionService.dispatchEvent(
-        WEBPAGE_PORT,
-        "network-changed",
-        { seq: Date.now() }
-      );
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "network-changed", {
+        seq: Date.now(),
+      });
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,
         "keystore-changed",

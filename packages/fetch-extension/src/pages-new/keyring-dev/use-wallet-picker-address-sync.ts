@@ -34,8 +34,7 @@ export function useWalletPickerAddressSync(options: {
 
   const chainId = chainStore.current.chainId;
   const currentWalletIds = useMemo(
-    () =>
-      keyRingStore.multiKeyStoreInfo.map((ks) => ks.meta?.["__id__"] || ""),
+    () => keyRingStore.multiKeyStoreInfo.map((ks) => ks.meta?.["__id__"] || ""),
     [keyRingStore.multiKeyStoreInfo]
   );
   const walletIdsKey = useMemo(
@@ -62,10 +61,9 @@ export function useWalletPickerAddressSync(options: {
     const runId = ++loadRunIdRef.current;
     const startChainId = chainId;
     const startWalletIdsKey = walletIdsKey;
-    const snapshotWalletIds =
-      keyRingStoreRef.current.multiKeyStoreInfo.map(
-        (ks) => ks.meta?.["__id__"] || ""
-      );
+    const snapshotWalletIds = keyRingStoreRef.current.multiKeyStoreInfo.map(
+      (ks) => ks.meta?.["__id__"] || ""
+    );
 
     const getCurrentWalletIdsKey = () =>
       keyRingStoreRef.current.multiKeyStoreInfo

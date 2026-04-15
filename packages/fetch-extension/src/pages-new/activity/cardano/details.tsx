@@ -14,8 +14,12 @@ const formatTimestamp = (ms: number): string => {
   const d = new Date(ms);
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
-    `${pad(d.getUTCMonth() + 1)}/${pad(d.getUTCDate())}/${d.getUTCFullYear()} ` +
-    `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`
+    `${pad(d.getUTCMonth() + 1)}/${pad(
+      d.getUTCDate()
+    )}/${d.getUTCFullYear()} ` +
+    `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(
+      d.getUTCSeconds()
+    )} UTC`
   );
 };
 
@@ -47,31 +51,47 @@ export const CardanoActivityDetails = () => {
   const intl = useIntl();
   const { chainStore } = useStore();
   const denom = chainStore.current.stakeCurrency.coinDenom;
-  const adaIcon = chainStore.current.stakeCurrency?.coinImageUrl || denom[0]?.toUpperCase() || "A";
+  const adaIcon =
+    chainStore.current.stakeCurrency?.coinImageUrl ||
+    denom[0]?.toUpperCase() ||
+    "A";
   const chainName = chainStore.current.chainName;
   const txExplorer = chainStore.current.txExplorer;
 
-  const amountAda = useMemo(() => (item ? lovelacesToAdaString(item.amount) : "0"), [item]);
-  const feeAda = useMemo(() => (item?.fee ? lovelacesToAdaString(item.fee) : "0"), [item]);
-  const dateTimeStr = useMemo(() => (item?.timestamp != null ? formatTimestamp(item.timestamp) : null), [item]);
+  const amountAda = useMemo(
+    () => (item ? lovelacesToAdaString(item.amount) : "0"),
+    [item]
+  );
+  const feeAda = useMemo(
+    () => (item?.fee ? lovelacesToAdaString(item.fee) : "0"),
+    [item]
+  );
+  const dateTimeStr = useMemo(
+    () => (item?.timestamp != null ? formatTimestamp(item.timestamp) : null),
+    [item]
+  );
   const fromAddr = item?.fromAddresses?.[0] ?? null;
   const toAddr = item?.toAddresses?.[0] ?? null;
   const explorerUrl = useMemo(() => {
-    if (!txExplorer?.txUrl || !item?.id || item.status === "pending") return null;
+    if (!txExplorer?.txUrl || !item?.id || item.status === "pending")
+      return null;
     return txExplorer.txUrl.replace("{txHash}", item.id);
   }, [txExplorer, item?.id, item?.status]);
 
-  const copyToClipboard = useCallback(async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    notification.push({
-      placement: "top-center",
-      type: "success",
-      duration: 2,
-      content: intl.formatMessage({ id: "main.address.copied" }),
-      canDelete: true,
-      transition: { duration: 0.25 },
-    });
-  }, [intl, notification]);
+  const copyToClipboard = useCallback(
+    async (text: string) => {
+      await navigator.clipboard.writeText(text);
+      notification.push({
+        placement: "top-center",
+        type: "success",
+        duration: 2,
+        content: intl.formatMessage({ id: "main.address.copied" }),
+        canDelete: true,
+        transition: { duration: 0.25 },
+      });
+    },
+    [intl, notification]
+  );
 
   const copyTxId = useCallback(async () => {
     if (!item?.id) return;
@@ -88,14 +108,23 @@ export const CardanoActivityDetails = () => {
       {!item ? (
         <div className={style["container"]}>No transaction selected</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px", paddingBottom: "12px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            paddingBottom: "12px",
+          }}
+        >
           <div className={style["topBar"]}>
             <img
               src={require("@assets/svg/wireframe/asi-black-circle.svg")}
               alt="tx"
             />
             <div className={style["topBar-details"]}>
-              <div className={style["verb"]}>{directionLabel(item.direction)}</div>
+              <div className={style["verb"]}>
+                {directionLabel(item.direction)}
+              </div>
               <div className={style["status"]}>
                 {item.status === "pending" ? "Pending" : "Confirmed"}
               </div>
@@ -104,7 +133,12 @@ export const CardanoActivityDetails = () => {
 
           <Card
             leftImage={require("@assets/svg/wireframe/wallet.svg")}
-            leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+            leftImageStyle={{
+              height: "32px",
+              width: "32px",
+              background: "white",
+              padding: 0,
+            }}
             heading={"Network"}
             subheading={chainName}
           />
@@ -112,7 +146,12 @@ export const CardanoActivityDetails = () => {
           {dateTimeStr && (
             <Card
               leftImage={require("@assets/svg/wireframe/wallet.svg")}
-              leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+              leftImageStyle={{
+                height: "32px",
+                width: "32px",
+                background: "white",
+                padding: 0,
+              }}
               heading={"Date"}
               subheading={dateTimeStr}
             />
@@ -120,14 +159,26 @@ export const CardanoActivityDetails = () => {
 
           <Card
             leftImage={adaIcon}
-            leftImageStyle={{ height: "32px", width: "32px", background: "rgba(255,255,255,0.1)", padding: 2, borderRadius: "50%" }}
+            leftImageStyle={{
+              height: "32px",
+              width: "32px",
+              background: "rgba(255,255,255,0.1)",
+              padding: 2,
+              borderRadius: "50%",
+            }}
             heading={"Amount"}
             subheading={`${amountAda} ${denom}`}
           />
 
           <Card
             leftImage={adaIcon}
-            leftImageStyle={{ height: "32px", width: "32px", background: "rgba(255,255,255,0.1)", padding: 2, borderRadius: "50%" }}
+            leftImageStyle={{
+              height: "32px",
+              width: "32px",
+              background: "rgba(255,255,255,0.1)",
+              padding: 2,
+              borderRadius: "50%",
+            }}
             heading={"Fee"}
             subheading={`${feeAda} ${denom}`}
           />
@@ -135,33 +186,66 @@ export const CardanoActivityDetails = () => {
           {item.assets && item.assets.length > 0 && (
             <Card
               leftImage={require("@assets/svg/wireframe/wallet.svg")}
-              leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+              leftImageStyle={{
+                height: "32px",
+                width: "32px",
+                background: "white",
+                padding: 0,
+              }}
               heading={"Token Transfers"}
               subheading={
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
                   {item.assets.map((a) => {
-                    const name = a.ticker || a.displayName || a.fingerprint?.slice(0, 16) || a.assetId.slice(0, 16);
-                    const formattedAmount = formatAssetAmount(a.amount, a.decimals);
-                    const iconUrl = getCardanoAssetIconUrl(chainStore.current.currencies, a.assetId);
+                    const name =
+                      a.ticker ||
+                      a.displayName ||
+                      a.fingerprint?.slice(0, 16) ||
+                      a.assetId.slice(0, 16);
+                    const formattedAmount = formatAssetAmount(
+                      a.amount,
+                      a.decimals
+                    );
+                    const iconUrl = getCardanoAssetIconUrl(
+                      chainStore.current.currencies,
+                      a.assetId
+                    );
 
                     return (
-                      <div key={a.assetId} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div
+                        key={a.assetId}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
                         {iconUrl ? (
                           <img
                             src={iconUrl}
                             alt={name}
                             style={{
-                              width: 20, height: 20, borderRadius: "50%",
-                              objectFit: "contain", flexShrink: 0,
+                              width: 20,
+                              height: 20,
+                              borderRadius: "50%",
+                              objectFit: "contain",
+                              flexShrink: 0,
                             }}
                           />
                         ) : (
                           <div
                             style={{
-                              width: 20, height: 20, borderRadius: "50%",
+                              width: 20,
+                              height: 20,
+                              borderRadius: "50%",
                               background: "rgba(255,255,255,0.1)",
-                              display: "flex", justifyContent: "center", alignItems: "center",
-                              fontSize: "10px", fontWeight: 600, flexShrink: 0,
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              fontSize: "10px",
+                              fontWeight: 600,
+                              flexShrink: 0,
                             }}
                           >
                             {name[0]?.toUpperCase() || "?"}
@@ -180,7 +264,12 @@ export const CardanoActivityDetails = () => {
 
           <Card
             leftImage={require("@assets/svg/wireframe/wallet.svg")}
-            leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+            leftImageStyle={{
+              height: "32px",
+              width: "32px",
+              background: "white",
+              padding: 0,
+            }}
             heading={"Transaction id"}
             subheading={
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -217,20 +306,40 @@ export const CardanoActivityDetails = () => {
           {(item.blockNo != null || item.slot != null) && (
             <Card
               leftImage={require("@assets/svg/wireframe/wallet.svg")}
-              leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+              leftImageStyle={{
+                height: "32px",
+                width: "32px",
+                background: "white",
+                padding: 0,
+              }}
               heading={"Block"}
-              subheading={`${item.blockNo != null ? `#${item.blockNo}` : ""}${item.slot != null ? ` • slot ${item.slot}` : ""}`}
+              subheading={`${item.blockNo != null ? `#${item.blockNo}` : ""}${
+                item.slot != null ? ` • slot ${item.slot}` : ""
+              }`}
             />
           )}
 
           {fromAddr && (
             <Card
               leftImage={require("@assets/svg/wireframe/wallet.svg")}
-              leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+              leftImageStyle={{
+                height: "32px",
+                width: "32px",
+                background: "white",
+                padding: 0,
+              }}
               heading={"From"}
               subheading={
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ wordBreak: "break-all", whiteSpace: "normal", lineHeight: "1.4" }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <div
+                    style={{
+                      wordBreak: "break-all",
+                      whiteSpace: "normal",
+                      lineHeight: "1.4",
+                    }}
+                  >
                     {truncateAddr(fromAddr)}
                   </div>
                   <div>
@@ -257,11 +366,24 @@ export const CardanoActivityDetails = () => {
           {toAddr && (
             <Card
               leftImage={require("@assets/svg/wireframe/wallet.svg")}
-              leftImageStyle={{ height: "32px", width: "32px", background: "white", padding: 0 }}
+              leftImageStyle={{
+                height: "32px",
+                width: "32px",
+                background: "white",
+                padding: 0,
+              }}
               heading={"To"}
               subheading={
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ wordBreak: "break-all", whiteSpace: "normal", lineHeight: "1.4" }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <div
+                    style={{
+                      wordBreak: "break-all",
+                      whiteSpace: "normal",
+                      lineHeight: "1.4",
+                    }}
+                  >
                     {truncateAddr(toAddr)}
                   </div>
                   <div>
@@ -286,7 +408,13 @@ export const CardanoActivityDetails = () => {
           )}
 
           {explorerUrl && (
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                paddingTop: 4,
+              }}
+            >
               <a
                 href={explorerUrl}
                 target="_blank"
@@ -311,5 +439,3 @@ export const CardanoActivityDetails = () => {
     </HeaderLayout>
   );
 };
-
-

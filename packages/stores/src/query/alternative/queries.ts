@@ -24,7 +24,12 @@ export const AlternativeQueries = {
     ) => {
       return {
         evm: new EvmQueriesImpl(queriesSetBase, kvStore, chainId, chainGetter),
-        cardano: CardanoQueries.use()(queriesSetBase, kvStore, chainId, chainGetter),
+        cardano: CardanoQueries.use()(
+          queriesSetBase,
+          kvStore,
+          chainId,
+          chainGetter
+        ),
       };
     };
   },

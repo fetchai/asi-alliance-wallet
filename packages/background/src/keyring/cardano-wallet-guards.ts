@@ -1,9 +1,6 @@
 /** True if the key store is a 24-word mnemonic (Cardano-capable). */
 export function walletSupportsCardano(
-  ks:
-    | { type?: string; meta?: Record<string, unknown> }
-    | null
-    | undefined
+  ks: { type?: string; meta?: Record<string, unknown> } | null | undefined
 ): boolean {
   return (
     ks?.type === "mnemonic" && String(ks.meta?.["mnemonicLength"]) === "24"
@@ -17,10 +14,7 @@ export function walletSupportsCardano(
  migration runs (see `calculateMnemonicLengthInBackground`), matching `getKeysForCardano`.
  */
 export function walletShouldLeaveCardanoChain(
-  ks:
-    | { type?: string; meta?: Record<string, unknown> }
-    | null
-    | undefined
+  ks: { type?: string; meta?: Record<string, unknown> } | null | undefined
 ): boolean {
   if (walletSupportsCardano(ks)) {
     return false;

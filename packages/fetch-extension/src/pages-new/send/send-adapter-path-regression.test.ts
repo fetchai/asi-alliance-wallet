@@ -1,6 +1,9 @@
-jest.mock("../../../../stores/src/query/cardano/token-balance-registry", () => ({
-  CARDANO_NATIVE_TOKEN_TYPE: "native-token",
-}));
+jest.mock(
+  "../../../../stores/src/query/cardano/token-balance-registry",
+  () => ({
+    CARDANO_NATIVE_TOKEN_TYPE: "native-token",
+  })
+);
 
 const mockMapCardanoMinimumViolation = jest.fn(
   ({
@@ -10,15 +13,16 @@ const mockMapCardanoMinimumViolation = jest.fn(
     minimumOutputLovelace: string;
     coinMissingLovelace?: string;
   }) =>
-    /^\d+$/.test(minimumOutputLovelace) && BigInt(minimumOutputLovelace) > BigInt(0)
-      ? ({
+    /^\d+$/.test(minimumOutputLovelace) &&
+    BigInt(minimumOutputLovelace) > BigInt(0)
+      ? {
           classification: "minimum_violation" as const,
           minimumOutputLovelace,
           coinMissingLovelace:
             coinMissingLovelace && /^\d+$/.test(coinMissingLovelace)
               ? coinMissingLovelace
               : undefined,
-        })
+        }
       : null
 );
 const mockFormatCardanoMinimumViolationMessage = jest.fn(
@@ -46,7 +50,8 @@ jest.mock("@keplr-wallet/cardano", () => {
   );
   return {
     mapCardanoMinimumViolation: mockMapCardanoMinimumViolation,
-    formatCardanoMinimumViolationMessage: mockFormatCardanoMinimumViolationMessage,
+    formatCardanoMinimumViolationMessage:
+      mockFormatCardanoMinimumViolationMessage,
     cardanoMalformedMinimumPayloadError,
   };
 });
@@ -63,7 +68,10 @@ jest.mock("@keplr-wallet/background", () => {
     ) {}
   }
   class SubmitSendAdaTxDraftMsg {
-    constructor(public readonly draftId: string, public readonly chainId?: string) {}
+    constructor(
+      public readonly draftId: string,
+      public readonly chainId?: string
+    ) {}
   }
   class SubmitSendAdaTxDraftWithPasswordMsg {
     constructor(
@@ -113,8 +121,15 @@ describe("CardanoSendAdapter regression path", () => {
       })
       .mockResolvedValueOnce(undefined);
 
-    const adapter = new CardanoSendAdapter({ sendMessage } as any, "cardano-preview");
-    const tx = adapter.makeSendTokenTx("0.0000001", currency, "addr_test1qrecipient");
+    const adapter = new CardanoSendAdapter(
+      { sendMessage } as any,
+      "cardano-preview"
+    );
+    const tx = adapter.makeSendTokenTx(
+      "0.0000001",
+      currency,
+      "addr_test1qrecipient"
+    );
     expect(tx).toBeDefined();
 
     await expect(tx!.simulate()).rejects.toThrow(
@@ -145,8 +160,15 @@ describe("CardanoSendAdapter regression path", () => {
       coinMissingLovelace: "969999",
     });
 
-    const adapter = new CardanoSendAdapter({ sendMessage } as any, "cardano-preview");
-    const tx = adapter.makeSendTokenTx("0.000001", currency, "addr_test1qrecipient");
+    const adapter = new CardanoSendAdapter(
+      { sendMessage } as any,
+      "cardano-preview"
+    );
+    const tx = adapter.makeSendTokenTx(
+      "0.000001",
+      currency,
+      "addr_test1qrecipient"
+    );
     expect(tx).toBeDefined();
 
     let thrownMessage = "";
@@ -155,7 +177,9 @@ describe("CardanoSendAdapter regression path", () => {
     } catch (error: any) {
       thrownMessage = String(error?.message ?? "");
     }
-    expect(thrownMessage).toContain("Amount too small. Minimum required is 0.97 tADA");
+    expect(thrownMessage).toContain(
+      "Amount too small. Minimum required is 0.97 tADA"
+    );
     expect(thrownMessage).not.toContain("amount must be a positive number");
 
     const build = sendMessage.mock.calls[0][1];
@@ -176,18 +200,28 @@ describe("CardanoSendAdapter regression path", () => {
     });
 
     const onBroadcastFailed = jest.fn();
-    const adapter = new CardanoSendAdapter({ sendMessage } as any, "cardano-preview");
-    const tx = adapter.makeSendTokenTx("0.000001", currency, "addr_test1qrecipient");
+    const adapter = new CardanoSendAdapter(
+      { sendMessage } as any,
+      "cardano-preview"
+    );
+    const tx = adapter.makeSendTokenTx(
+      "0.000001",
+      currency,
+      "addr_test1qrecipient"
+    );
     expect(tx).toBeDefined();
 
     await expect(
-      tx!.send({ amount: [], gas: "0" } as any, undefined, undefined, { onBroadcastFailed })
+      tx!.send({ amount: [], gas: "0" } as any, undefined, undefined, {
+        onBroadcastFailed,
+      })
     ).rejects.toThrow("Amount too small. Minimum required is 0.97 tADA");
 
     const submitCalls = sendMessage.mock.calls.filter((c) =>
-      ["SubmitSendAdaTxDraftMsg", "SubmitSendAdaTxDraftWithPasswordMsg"].includes(
-        c[1]?.constructor?.name
-      )
+      [
+        "SubmitSendAdaTxDraftMsg",
+        "SubmitSendAdaTxDraftWithPasswordMsg",
+      ].includes(c[1]?.constructor?.name)
     );
     expect(submitCalls).toHaveLength(0);
     expect(onBroadcastFailed).toHaveBeenCalledTimes(1);
@@ -200,11 +234,17 @@ describe("CardanoSendAdapter regression path", () => {
       coinMissingLovelace: "1",
     });
 
-    const adapter = new CardanoSendAdapter({ sendMessage } as any, "cardano-preview");
-    const tx = adapter.makeSendTokenTx("0.000001", currency, "addr_test1qrecipient");
+    const adapter = new CardanoSendAdapter(
+      { sendMessage } as any,
+      "cardano-preview"
+    );
+    const tx = adapter.makeSendTokenTx(
+      "0.000001",
+      currency,
+      "addr_test1qrecipient"
+    );
     expect(tx).toBeDefined();
 
     await expect(tx!.simulate()).rejects.toThrow("Failed to build transaction");
   });
 });
-

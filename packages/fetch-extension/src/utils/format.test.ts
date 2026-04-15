@@ -12,9 +12,9 @@ describe("formatDisplayAmount", () => {
   });
 
   it("never renders tiny non-zero value as zero", () => {
-    expect(formatDisplayAmount("0.00000000012345", { coinDecimals: 18 })).not.toBe(
-      "0"
-    );
+    expect(
+      formatDisplayAmount("0.00000000012345", { coinDecimals: 18 })
+    ).not.toBe("0");
     expect(formatDisplayAmount("0.00000000012345", { coinDecimals: 18 })).toBe(
       "0.000000000123"
     );
@@ -96,7 +96,9 @@ describe("formatDisplayAmount", () => {
   });
 
   it("enforces coinDecimals ceiling on normal decimal input", () => {
-    expect(formatDisplayAmount("1.23456789", { coinDecimals: 3 })).toBe("1.235");
+    expect(formatDisplayAmount("1.23456789", { coinDecimals: 3 })).toBe(
+      "1.235"
+    );
   });
 
   it("normalizes invalid option values", () => {
@@ -110,7 +112,9 @@ describe("formatDisplayAmount", () => {
   });
 
   it("clamps very large coinDecimals to avoid toFixed range errors", () => {
-    expect(formatDisplayAmount("1e-7", { coinDecimals: 9999 })).toBe("0.0000001");
+    expect(formatDisplayAmount("1e-7", { coinDecimals: 9999 })).toBe(
+      "0.0000001"
+    );
   });
 
   it("does not throw on exponential path with oversized precision", () => {
@@ -120,13 +124,15 @@ describe("formatDisplayAmount", () => {
   });
 
   it("safely handles extremely small exponential input with oversized precision", () => {
-    expect(() => formatDisplayAmount("1e-150", { coinDecimals: 9999 })).not.toThrow();
+    expect(() =>
+      formatDisplayAmount("1e-150", { coinDecimals: 9999 })
+    ).not.toThrow();
   });
 
   it("rounds with carry across digit boundary", () => {
-    expect(formatDisplayAmount("9.999", { coinDecimals: 18, maxDecimals: 2 })).toBe(
-      "10"
-    );
+    expect(
+      formatDisplayAmount("9.999", { coinDecimals: 18, maxDecimals: 2 })
+    ).toBe("10");
     expect(
       formatDisplayAmount("0.9999999", { coinDecimals: 18, maxDecimals: 6 })
     ).toBe("1");

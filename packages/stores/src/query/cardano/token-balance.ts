@@ -19,7 +19,9 @@ export interface KoiosAddressAsset {
  * Fetches all native assets held by a Cardano address via Koios /address_assets.
  * Shared across all token balance queries for the same address.
  */
-export class ObservableQueryCardanoTokenBalance extends ObservableChainQuery<KoiosAddressAsset[]> {
+export class ObservableQueryCardanoTokenBalance extends ObservableChainQuery<
+  KoiosAddressAsset[]
+> {
   constructor(
     kvStore: KVStore,
     chainId: string,
@@ -73,8 +75,26 @@ export class ObservableQueryCardanoTokenBalance extends ObservableChainQuery<Koi
 
   /** Map from assetId (policyId + assetName) to quantity string. */
   @computed
-  get assetBalanceMap(): Map<string, { quantity: string; decimals: number; fingerprint: string; policyId: string; assetName: string }> {
-    const map = new Map<string, { quantity: string; decimals: number; fingerprint: string; policyId: string; assetName: string }>();
+  get assetBalanceMap(): Map<
+    string,
+    {
+      quantity: string;
+      decimals: number;
+      fingerprint: string;
+      policyId: string;
+      assetName: string;
+    }
+  > {
+    const map = new Map<
+      string,
+      {
+        quantity: string;
+        decimals: number;
+        fingerprint: string;
+        policyId: string;
+        assetName: string;
+      }
+    >();
     for (const asset of this.assets) {
       const assetId = asset.policy_id + asset.asset_name;
       map.set(assetId, {

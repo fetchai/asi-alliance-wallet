@@ -103,7 +103,7 @@ export class PermissionService {
     // Else, remove all permissions granted to origin (In this case, permissions that are not assigned to each chain, such as getChainInfosWithoutEndpoints(), are also deleted).
 
     const status = await this.keyRingService.checkReadiness(env);
-    
+
     if (status === KeyRingStatus.EMPTY) {
       return;
     }
@@ -132,7 +132,7 @@ export class PermissionService {
     // TODO: Merge with `checkOrGrantBasicAccessPermission` method
 
     const status = await this.keyRingService.checkReadiness(env);
-    
+
     if (status === KeyRingStatus.EMPTY) {
       return;
     }
@@ -160,7 +160,7 @@ export class PermissionService {
     origin: string
   ) {
     const status = await this.keyRingService.checkReadiness(env);
-    
+
     if (status === KeyRingStatus.EMPTY) {
       return;
     }

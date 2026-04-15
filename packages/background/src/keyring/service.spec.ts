@@ -20,22 +20,22 @@ describe("KeyRingService", () => {
       {} as any,
       mockCardanoService
     );
-    
+
     // Mock keyRing property
-    service['keyRing'] = {
+    service["keyRing"] = {
       status: KeyRingStatus.NOTLOADED,
-      restore: jest.fn()
+      restore: jest.fn(),
     } as any;
-    
+
     mockEnv = {};
   });
 
   describe("checkReadiness", () => {
     it("should return EMPTY status when keyring is empty", async () => {
       // Mock keyring status
-      service['keyRing'] = {
+      service["keyRing"] = {
         status: KeyRingStatus.EMPTY,
-        restore: jest.fn()
+        restore: jest.fn(),
       } as any;
 
       const result = await service.checkReadiness(mockEnv);
@@ -48,10 +48,12 @@ describe("KeyRingService", () => {
       const mockRestore = jest.fn().mockImplementation(() => {
         status = KeyRingStatus.EMPTY;
       });
-      
-      service['keyRing'] = {
-        get status() { return status; },
-        restore: mockRestore
+
+      service["keyRing"] = {
+        get status() {
+          return status;
+        },
+        restore: mockRestore,
       } as any;
 
       const result = await service.checkReadiness(mockEnv);
@@ -61,23 +63,28 @@ describe("KeyRingService", () => {
 
     it("should request unlock when status is LOCKED", async () => {
       // Mock keyring status and interaction service
-      service['keyRing'] = {
+      service["keyRing"] = {
         status: KeyRingStatus.LOCKED,
-        restore: jest.fn()
+        restore: jest.fn(),
       } as any;
-      
+
       const mockWaitApprove = jest.fn();
-      service['interactionService'] = { waitApprove: mockWaitApprove } as any;
+      service["interactionService"] = { waitApprove: mockWaitApprove } as any;
 
       await service.checkReadiness(mockEnv);
-      expect(mockWaitApprove).toHaveBeenCalledWith(mockEnv, "/unlock", "unlock", {});
+      expect(mockWaitApprove).toHaveBeenCalledWith(
+        mockEnv,
+        "/unlock",
+        "unlock",
+        {}
+      );
     });
 
     it("should return UNLOCKED status when keyring is already unlocked", async () => {
       // Mock keyring status
-      service['keyRing'] = {
+      service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
-        restore: jest.fn()
+        restore: jest.fn(),
       } as any;
 
       const result = await service.checkReadiness(mockEnv);
@@ -88,19 +95,21 @@ describe("KeyRingService", () => {
   describe("enable", () => {
     it("should throw error when keyring is empty", async () => {
       // Mock keyring status
-      service['keyRing'] = {
+      service["keyRing"] = {
         status: KeyRingStatus.EMPTY,
-        restore: jest.fn()
+        restore: jest.fn(),
       } as any;
 
-      await expect(service.enable(mockEnv)).rejects.toThrow("key doesn't exist");
+      await expect(service.enable(mockEnv)).rejects.toThrow(
+        "key doesn't exist"
+      );
     });
 
     it("should not throw error when keyring is not empty", async () => {
       // Mock keyring status
-      service['keyRing'] = {
+      service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
-        restore: jest.fn()
+        restore: jest.fn(),
       } as any;
 
       const result = await service.enable(mockEnv);
@@ -121,7 +130,7 @@ describe("KeyRingService", () => {
         createMetaFromMnemonic: jest.fn().mockResolvedValue({
           cardano: "true",
           coinType: "1815",
-          cardanoSerializedAgent: "{\"secret\":true}",
+          cardanoSerializedAgent: '{"secret":true}',
         }),
       } as any;
 
@@ -134,7 +143,10 @@ describe("KeyRingService", () => {
       );
 
       expect(mockCreateMnemonicKey).toHaveBeenCalledTimes(1);
-      const mergedMeta = mockCreateMnemonicKey.mock.calls[0][3] as Record<string, string>;
+      const mergedMeta = mockCreateMnemonicKey.mock.calls[0][3] as Record<
+        string,
+        string
+      >;
       expect(mergedMeta["cardano"]).toBe("true");
       expect(mergedMeta["coinType"]).toBe("1815");
       expect(mergedMeta["cardanoSerializedAgent"]).toBeUndefined();
@@ -223,11 +235,11 @@ describe("KeyRingService", () => {
   describe("network switch rollback degradation paths", () => {
     it("resets touched cardano runtime when critical switch step fails", async () => {
       const restoreOld = jest.fn().mockResolvedValue(undefined);
-      const mockGetChainInfo = jest
-        .fn()
-        .mockImplementation((chainId: string) =>
-          Promise.resolve({ features: chainId.startsWith("cardano") ? ["cardano"] : [] })
-        );
+      const mockGetChainInfo = jest.fn().mockImplementation((chainId: string) =>
+        Promise.resolve({
+          features: chainId.startsWith("cardano") ? ["cardano"] : [],
+        })
+      );
       service["chainsService"] = {
         getSelectedChain: jest.fn().mockResolvedValue("cardano-new"),
         getChainInfo: mockGetChainInfo,
@@ -259,14 +271,16 @@ describe("KeyRingService", () => {
     });
 
     it("keeps deterministic degraded state when old-context restore fails", async () => {
-      const restoreOld = jest.fn().mockRejectedValue(new Error("old_restore_failed"));
+      const restoreOld = jest
+        .fn()
+        .mockRejectedValue(new Error("old_restore_failed"));
       service["chainsService"] = {
         getSelectedChain: jest.fn().mockResolvedValue("cardano-new"),
-        getChainInfo: jest
-          .fn()
-          .mockImplementation((chainId: string) =>
-            Promise.resolve({ features: chainId.startsWith("cardano") ? ["cardano"] : [] })
-          ),
+        getChainInfo: jest.fn().mockImplementation((chainId: string) =>
+          Promise.resolve({
+            features: chainId.startsWith("cardano") ? ["cardano"] : [],
+          })
+        ),
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
@@ -302,7 +316,9 @@ describe("KeyRingService", () => {
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
       } as any;
-      service["ensureCardanoServiceReady"] = jest.fn().mockResolvedValue(undefined);
+      service["ensureCardanoServiceReady"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
       service["runAddressCacheRepairBestEffort"] = jest
         .fn()
         .mockRejectedValue(new Error("cache_repair_failed"));
@@ -327,7 +343,9 @@ describe("KeyRingService", () => {
       const ensureReady = jest.fn().mockResolvedValue(undefined);
       service["ensureCardanoServiceReady"] = ensureReady;
       const repair = jest.spyOn(service as any, "ensureAndRepairAddressCaches");
-      service["runAddressCacheRepairBestEffort"] = (service as any).runAddressCacheRepairBestEffort.bind(service);
+      service["runAddressCacheRepairBestEffort"] = (
+        service as any
+      ).runAddressCacheRepairBestEffort.bind(service);
 
       await expect(
         service["onNetworkSwitch"]("cardano-old", "cardano-new")
@@ -361,7 +379,9 @@ describe("KeyRingService", () => {
         .mockRejectedValueOnce(new Error("first_failed"))
         .mockResolvedValueOnce(undefined);
       service["ensureCardanoServiceReady"] = ensure;
-      service["runAddressCacheRepairBestEffort"] = jest.fn().mockResolvedValue(undefined);
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
 
       await expect(
         service["onNetworkSwitch"]("cardano-old", "cardano-new")

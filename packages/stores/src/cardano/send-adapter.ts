@@ -43,7 +43,8 @@ function displayAmountToBaseUnits(amount: string, decimals: number): string {
 function getCardanoSpendingPassword(
   signOptions?: KeplrSignOptions
 ): string | undefined {
-  return (signOptions as CardanoSignOptions | undefined)?.cardano?.spendingPassword;
+  return (signOptions as CardanoSignOptions | undefined)?.cardano
+    ?.spendingPassword;
 }
 
 function isPositiveDecimalString(value: string): boolean {
@@ -83,7 +84,10 @@ export class CardanoSendAdapter {
     const normalizedRecipient = recipient.trim();
 
     // Convert display amount to base units
-    const actualAmount = displayAmountToBaseUnits(amount, currency.coinDecimals);
+    const actualAmount = displayAmountToBaseUnits(
+      amount,
+      currency.coinDecimals
+    );
 
     // Build assets array for native token sends
     let assets: CardanoAssetAmount[] | undefined;
@@ -106,7 +110,9 @@ export class CardanoSendAdapter {
         coinMissingLovelace: params.coinMissingLovelace,
       });
       if (!violation) {
-        throw cardanoMalformedMinimumPayloadError("Failed to build transaction");
+        throw cardanoMalformedMinimumPayloadError(
+          "Failed to build transaction"
+        );
       }
       throw new Error(
         formatCardanoMinimumViolationMessage({
@@ -163,7 +169,7 @@ export class CardanoSendAdapter {
         draftId = draftResult.draftId;
 
         const spendingPassword = getCardanoSpendingPassword(_signOptions);
-        const txHash = await this.messageRequester.sendMessage(
+        const txHash = (await this.messageRequester.sendMessage(
           BACKGROUND_PORT,
           spendingPassword
             ? new SubmitSendAdaTxDraftWithPasswordMsg(
@@ -172,7 +178,7 @@ export class CardanoSendAdapter {
                 this.chainId
               )
             : new SubmitSendAdaTxDraftMsg(draftId, this.chainId)
-        ) as string;
+        )) as string;
 
         if (onTxEvents?.onBroadcasted) {
           onTxEvents.onBroadcasted(Buffer.from(txHash));
@@ -218,15 +224,30 @@ export class CardanoSendAdapter {
         await safeDiscardDraft(draftResult.draftId);
         return { gasUsed: parseInt(draftResult.fee, 10) };
       },
-      send: async (_fee: any, _memo?: string, _signOptions?: KeplrSignOptions, onTxEvents?: any) => {
+      send: async (
+        _fee: any,
+        _memo?: string,
+        _signOptions?: KeplrSignOptions,
+        onTxEvents?: any
+      ) => {
         await executeSend(_memo, _signOptions, onTxEvents);
       },
-      simulateAndSend: async (_feeOptions: any, _memo?: string, _signOptions?: KeplrSignOptions, onTxEvents?: any) => {
+      simulateAndSend: async (
+        _feeOptions: any,
+        _memo?: string,
+        _signOptions?: KeplrSignOptions,
+        onTxEvents?: any
+      ) => {
         await executeSend(_memo, _signOptions, onTxEvents);
       },
-      sendWithGasPrice: async (_gasInfo: any, _memo?: string, _signOptions?: KeplrSignOptions, onTxEvents?: any) => {
+      sendWithGasPrice: async (
+        _gasInfo: any,
+        _memo?: string,
+        _signOptions?: KeplrSignOptions,
+        onTxEvents?: any
+      ) => {
         await executeSend(_memo, _signOptions, onTxEvents);
-      }
+      },
     };
   }
 }

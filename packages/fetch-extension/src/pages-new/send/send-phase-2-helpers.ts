@@ -51,10 +51,11 @@ export function isCardanoSendDraftInputsReady(params: {
   );
 }
 
-const MIN_OUTPUT_LOVELACE_REGEX =
-  /minimum output value is (\d+) lovelace/i;
+const MIN_OUTPUT_LOVELACE_REGEX = /minimum output value is (\d+) lovelace/i;
 
-export const getMinimumDisplayAmountFromDecimals = (decimals: number): string => {
+export const getMinimumDisplayAmountFromDecimals = (
+  decimals: number
+): string => {
   if (decimals <= 0) {
     return "1";
   }
@@ -192,8 +193,8 @@ export function getHighestPriorityNonRecipientBlockingError(params: {
       ? params.cardanoOperationalGuard
         ? undefined
         : params.cardanoDraftInputsReady
-          ? new Error("Transaction is not ready")
-          : undefined
+        ? new Error("Transaction is not ready")
+        : undefined
       : undefined
     : params.gasError ?? params.feeError;
 

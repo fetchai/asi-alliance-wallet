@@ -38,9 +38,10 @@ describe("Cardano derivation regressions", () => {
     keyAgentFactory.mockReset();
     keyAgentFactory.mockImplementation(async (args: any) => ({
       chainId: args.chainId,
-      deriveAddress: jest
-        .fn()
-        .mockResolvedValue({ address: "addr_test1xyz", rewardAccount: "stake_test1xyz" }),
+      deriveAddress: jest.fn().mockResolvedValue({
+        address: "addr_test1xyz",
+        rewardAccount: "stake_test1xyz",
+      }),
     }));
   });
 
@@ -50,7 +51,12 @@ describe("Cardano derivation regressions", () => {
       .mockResolvedValue({ hasWallet: () => true } as any);
 
     const ring = new CardanoKeyRing();
-    await ring.restore(keyStore as any, "wallet-password", undefined, "cardano-mainnet");
+    await ring.restore(
+      keyStore as any,
+      "wallet-password",
+      undefined,
+      "cardano-mainnet"
+    );
 
     const keyAgentArgs = keyAgentFactory.mock.calls[0][0];
     expect(await keyAgentArgs.getPassphrase()).toEqual(new Uint8Array());
@@ -65,12 +71,19 @@ describe("Cardano derivation regressions", () => {
       .mockResolvedValue({ hasWallet: () => true, dispose: jest.fn() } as any);
 
     const ring = new CardanoKeyRing();
-    await ring.restore(keyStore as any, "wallet-password", undefined, "cardano-mainnet");
+    await ring.restore(
+      keyStore as any,
+      "wallet-password",
+      undefined,
+      "cardano-mainnet"
+    );
     await ring.getKey("cardano-preprod");
 
     expect(keyAgentFactory).toHaveBeenCalledTimes(2);
-    const initialPassphrase = await keyAgentFactory.mock.calls[0][0].getPassphrase();
-    const switchedPassphrase = await keyAgentFactory.mock.calls[1][0].getPassphrase();
+    const initialPassphrase =
+      await keyAgentFactory.mock.calls[0][0].getPassphrase();
+    const switchedPassphrase =
+      await keyAgentFactory.mock.calls[1][0].getPassphrase();
     expect(initialPassphrase).toEqual(switchedPassphrase);
     expect(switchedPassphrase).toEqual(new Uint8Array());
   });

@@ -60,9 +60,7 @@ export function walletPickerRowIsClickable(input: {
     return false;
   }
   if (input.isCardanoNetwork) {
-    return (
-      input.isCardanoSupportedWallet && input.item.kind === "address"
-    );
+    return input.isCardanoSupportedWallet && input.item.kind === "address";
   }
   return true;
 }

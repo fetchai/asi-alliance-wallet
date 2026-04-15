@@ -241,8 +241,7 @@ export const AssetView = observer(() => {
         <div>
           <div className={style["balance-field"]}>
             <div className={style["balance"]}>
-              {totalNumber}{" "}
-              <div className={style["denom"]}>{totalDenom}</div>
+              {totalNumber} <div className={style["denom"]}>{totalDenom}</div>
             </div>
             <div className={style["inUsd"]}>
               {balances?.balanceInUsd
@@ -475,7 +474,9 @@ export const AssetView = observer(() => {
             !isSendDisabled
               ? () => {
                   const search = tokenInfo?.coinMinimalDenom
-                    ? `?defaultDenom=${encodeURIComponent(tokenInfo.coinMinimalDenom)}`
+                    ? `?defaultDenom=${encodeURIComponent(
+                        tokenInfo.coinMinimalDenom
+                      )}`
                     : "";
                   navigate({ pathname: "/send", search });
                   analyticsStore.logEvent("send_click", {

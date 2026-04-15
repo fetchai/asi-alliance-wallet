@@ -380,7 +380,9 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                       return;
                     }
 
-                    if (resolvedIndex >= keyRingStore.multiKeyStoreInfo.length) {
+                    if (
+                      resolvedIndex >= keyRingStore.multiKeyStoreInfo.length
+                    ) {
                       notification.push({
                         placement: "top-center",
                         type: "danger",

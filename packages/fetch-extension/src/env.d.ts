@@ -2,7 +2,7 @@ declare namespace NodeJS {
   interface ProcessEnv {
     /** node environment */
     NODE_ENV: "production" | "development" | undefined;
-    
+
     // Cardano Blockfrost API Keys
     BLOCKFROST_API_KEY?: string;
     BLOCKFROST_PROJECT_ID_MAINNET?: string;

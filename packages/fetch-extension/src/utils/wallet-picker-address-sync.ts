@@ -9,7 +9,9 @@ import type { AddressCacheById } from "./address-cache-store";
 const LOG_PREFIX = "[WalletPickerAddressSync]";
 
 /** Compact fingerprint for logs (avoid leaking full wallet id list in telemetry). */
-export function walletPickerWalletIdsKeyFingerprint(walletIdsKey: string): string {
+export function walletPickerWalletIdsKeyFingerprint(
+  walletIdsKey: string
+): string {
   let h = 2166136261;
   for (let i = 0; i < walletIdsKey.length; i++) {
     h ^= walletIdsKey.charCodeAt(i);

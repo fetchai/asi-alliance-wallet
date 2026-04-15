@@ -49,7 +49,7 @@ export class ObservableQueryUnbondingDelegationsInner extends ObservableQueryTen
     also avoid fetching the endpoint for evm networks*/
     const chainInfo = this.chainGetter.getChain(this.chainId);
     return (
-      this.bech32Address.length > 0 && 
+      this.bech32Address.length > 0 &&
       !chainInfo?.features?.includes("evm") &&
       !chainInfo?.features?.includes("cardano")
     );

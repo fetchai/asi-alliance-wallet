@@ -1,17 +1,24 @@
 import { DenomHelper, KVStore } from "@keplr-wallet/common";
 import { ChainGetter } from "../../common";
-import { ObservableQueryCardanoBalanceInner, ObservableQueryCardanoBalance } from "./balance";
+import {
+  ObservableQueryCardanoBalanceInner,
+  ObservableQueryCardanoBalance,
+} from "./balance";
 import { ObservableQueryBalanceInner, BalanceRegistry } from "../balances";
 
 export class ObservableQueryCardanoBalanceRegistry implements BalanceRegistry {
-  protected cardanoBalances: Map<string, ObservableQueryCardanoBalance> = new Map();
+  protected cardanoBalances: Map<string, ObservableQueryCardanoBalance> =
+    new Map();
   // Addresses for which token discovery has already been triggered
   private discoveryTriggered: Set<string> = new Set();
 
   constructor(
     protected readonly kvStore: KVStore,
     // Called when a Cardano address balance is first accessed; triggers native token discovery
-    private readonly onAddressAccessed?: (chainId: string, bech32Address: string) => void
+    private readonly onAddressAccessed?: (
+      chainId: string,
+      bech32Address: string
+    ) => void
   ) {}
 
   getBalanceInner(
@@ -21,7 +28,8 @@ export class ObservableQueryCardanoBalanceRegistry implements BalanceRegistry {
     minimalDenom: string
   ): ObservableQueryBalanceInner | undefined {
     const denomHelper = new DenomHelper(minimalDenom);
-    const isCardano = chainGetter.getChain(chainId).features?.includes("cardano") ?? false;
+    const isCardano =
+      chainGetter.getChain(chainId).features?.includes("cardano") ?? false;
 
     if (!(isCardano && denomHelper.type === "native")) {
       return undefined;
