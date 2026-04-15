@@ -145,7 +145,7 @@
   flex: 1 1 auto;
   min-width: 0;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .wallet-detail-main--rejected {
@@ -156,7 +156,7 @@
 .wallet-detail-body {
   flex: 1 1 auto;
   width: 100%;
-  min-width: 0;
+  // min-width: 0;
 }
 
 .wallet-address-row {
@@ -169,8 +169,8 @@
 }
 
 .wallet-address-content {
-  flex: 1 1 auto;
-  min-width: 0;
+  // flex: 1 1 auto;
+  // min-width: 0;
   overflow: hidden;
 }
 
@@ -315,11 +315,11 @@
 }
 
 .wallet-address-text {
-  flex: 1 1 auto;
+  // flex: 1 1 auto;
   font-size: 14px;
   font-weight: bold;
   color: rgba($font-dark, 0.8);
-  min-width: 0;
+  // min-width: 0;
   overflow: hidden;
 }
 

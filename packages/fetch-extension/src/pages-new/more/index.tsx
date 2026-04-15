@@ -194,7 +194,8 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!chainStore.current.features?.includes("evm") && (
+      {!chainStore.current.features?.includes("evm") &&
+      !chainStore.current.features?.includes("cardano") ? (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "5px" }}
@@ -212,6 +213,8 @@ export const MorePage: FunctionComponent = () => {
           heading="Manual Sign & Broadcast"
           subheading={!isRunningInSidePanel() ? "Opens in side panel" : ""}
         />
+      ) : (
+        ""
       )}
       <Card
         leftImageStyle={{ background: "transparent", height: "18px" }}

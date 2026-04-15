@@ -161,7 +161,7 @@ export class RegisterConfig {
           mnemonic,
           password,
           {
-            name: finalName,
+            name: defaultName,
             ...meta,
           },
           bip44HDPath,
@@ -172,7 +172,7 @@ export class RegisterConfig {
         yield this.keyRingStore.addMnemonicKey(
           mnemonic,
           {
-            name: finalName,
+            name: defaultName,
             ...meta,
           },
           bip44HDPath
@@ -241,7 +241,7 @@ export class RegisterConfig {
         yield this.keyRingStore.createLedgerKey(
           password,
           {
-            name: finalName,
+            name: defaultName,
             ...meta,
           },
           bip44HDPath,
@@ -250,7 +250,7 @@ export class RegisterConfig {
       } else {
         yield this.keyRingStore.addLedgerKey(
           {
-            name: finalName,
+            name: defaultName,
             ...meta,
           },
           bip44HDPath,
@@ -290,12 +290,12 @@ export class RegisterConfig {
     try {
       if (this.mode === "create") {
         yield this.keyRingStore.createPrivateKey(privateKey, password, {
-          name: finalName,
+          name: defaultName,
           ...meta,
         });
       } else {
         yield this.keyRingStore.addPrivateKey(privateKey, {
-          name: finalName,
+          name: defaultName,
           ...meta,
         });
       }

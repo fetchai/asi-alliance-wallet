@@ -44,8 +44,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   const accountInfo = accountStore.getAccount(current.chainId);
 
   const selectedWalletId =
-    keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.["__id__"] ||
-    "";
+    keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.[
+      "__id__"
+    ] || "";
   const cachedSelectedAddress =
     selectedWalletId && current.chainId
       ? addressCacheStore.getCache(current.chainId)[selectedWalletId] || ""
@@ -68,11 +69,19 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const currency = current.feeCurrencies?.[0];
-  const zero = currency ? new CoinPretty(currency, new Int(0)).ready(false) : undefined;
+  const zero = currency
+    ? new CoinPretty(currency, new Int(0)).ready(false)
+    : undefined;
 
   const stakable = (() => {
     if (!effectiveAddress || !balanceQuery || !balanceStakableQuery) {
-      return zero ?? new CoinPretty({ coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any, new Int(0)).ready(false);
+      return (
+        zero ??
+        new CoinPretty(
+          { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+          new Int(0)
+        ).ready(false)
+      );
     }
     if (isNoble && hasUSDC) {
       return balanceQuery.getBalanceFromCurrency(hasUSDC);
@@ -84,13 +93,21 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     ? queries.cosmos.queryDelegations
         .getQueryBech32Address(effectiveAddress)
         .total.upperCase(true)
-    : zero ?? new CoinPretty({ coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any, new Int(0)).ready(false);
+    : zero ??
+      new CoinPretty(
+        { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+        new Int(0)
+      ).ready(false);
 
   const unbonding = effectiveAddress
     ? queries.cosmos.queryUnbondingDelegations
         .getQueryBech32Address(effectiveAddress)
         .total.upperCase(true)
-    : zero ?? new CoinPretty({ coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any, new Int(0)).ready(false);
+    : zero ??
+      new CoinPretty(
+        { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+        new Int(0)
+      ).ready(false);
 
   const accountOrChainChanged =
     activityStore.getAddress !== effectiveAddress ||
@@ -102,9 +119,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     queryKey: ["rewards", effectiveAddress, current.chainId],
     queryFn: async () => {
       if (effectiveAddress && current.chainId) {
-        const rewards = queries.cosmos.queryRewards.getQueryBech32Address(
-          effectiveAddress
-        );
+        const rewards =
+          queries.cosmos.queryRewards.getQueryBech32Address(effectiveAddress);
         await rewards.waitFreshResponse();
         const stakableRewards = rewards.stakableReward;
         return stakableRewards;
@@ -129,7 +145,14 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   );
 
   const stakableReward =
-    rewards?.data || (currency ? new CoinPretty(currency, new Int(0)).ready(false) : (zero ?? new CoinPretty({ coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any, new Int(0)).ready(false)));
+    rewards?.data ||
+    (currency
+      ? new CoinPretty(currency, new Int(0)).ready(false)
+      : zero ??
+        new CoinPretty(
+          { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+          new Int(0)
+        ).ready(false));
   const stakedSum = delegated.add(unbonding);
   const total = stakable.add(stakedSum).add(stakableReward);
 

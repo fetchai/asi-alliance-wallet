@@ -37,8 +37,13 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
     const intl = useIntl();
     const navigate = useNavigate();
     const notification = useNotification();
-    const { chainStore, keyRingStore, analyticsStore, chatStore, proposalStore } =
-      useStore();
+    const {
+      chainStore,
+      keyRingStore,
+      analyticsStore,
+      chatStore,
+      proposalStore,
+    } = useStore();
 
     const chainId = chainStore.current.chainId;
     const loadingIndicator = useLoadingIndicator();

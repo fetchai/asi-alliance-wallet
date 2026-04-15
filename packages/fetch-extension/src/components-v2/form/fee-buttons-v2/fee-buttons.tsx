@@ -271,14 +271,23 @@ export const FeeButtonsInner: FunctionComponent<
                 : feeConfig.feeType === "low"
                 ? isCardano
                   ? lowFee.hideIBCMetadata(true).trim(true).toString()
-                  : lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+                  : lowFee
+                      .hideIBCMetadata(true)
+                      .trim(true)
+                      .toMetricPrefix(isEvm)
                 : feeConfig.feeType === "average"
                 ? isCardano
                   ? averageFee.hideIBCMetadata(true).trim(true).toString()
-                  : averageFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+                  : averageFee
+                      .hideIBCMetadata(true)
+                      .trim(true)
+                      .toMetricPrefix(isEvm)
                 : isCardano
                 ? highFee.hideIBCMetadata(true).trim(true).toString()
-                : highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+                : highFee
+                    .hideIBCMetadata(true)
+                    .trim(true)
+                    .toMetricPrefix(isEvm)}
             </div>
 
             <button
@@ -335,7 +344,7 @@ export const FeeButtonsInner: FunctionComponent<
                     style={{
                       opacity: "0.6",
                       fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
+                      color: "var(--font-secondary, #F3F3F3)",
                       fontSize: "12px",
                       marginLeft: "5px",
                       whiteSpace: "nowrap",
@@ -369,16 +378,28 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {(isCardano
-                      ? lowFee.hideIBCMetadata(true).trim(true).toString()
-                      : lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
-                    ).split(" ")[0]}
+                    {
+                      (isCardano
+                        ? lowFee.hideIBCMetadata(true).trim(true).toString()
+                        : lowFee
+                            .hideIBCMetadata(true)
+                            .trim(true)
+                            .toMetricPrefix(isEvm)
+                            .toString()
+                      ).split(" ")[0]
+                    }
                   </div>
                   <div>
-                    {(isCardano
-                      ? lowFee.hideIBCMetadata(true).trim(true).toString()
-                      : lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
-                    ).split(" ")[1]}
+                    {
+                      (isCardano
+                        ? lowFee.hideIBCMetadata(true).trim(true).toString()
+                        : lowFee
+                            .hideIBCMetadata(true)
+                            .trim(true)
+                            .toMetricPrefix(isEvm)
+                            .toString()
+                      ).split(" ")[1]
+                    }
                   </div>
                 </div>
               }
@@ -397,7 +418,7 @@ export const FeeButtonsInner: FunctionComponent<
                     style={{
                       opacity: "0.6",
                       fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
+                      color: "var(--font-secondary, #F3F3F3)",
                       fontSize: "12px",
                       marginLeft: "5px",
                       whiteSpace: "nowrap",
@@ -442,16 +463,28 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {(isCardano
-                      ? averageFee.hideIBCMetadata(true).trim(true).toString()
-                      : averageFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
-                    ).split(" ")[0]}
+                    {
+                      (isCardano
+                        ? averageFee.hideIBCMetadata(true).trim(true).toString()
+                        : averageFee
+                            .hideIBCMetadata(true)
+                            .trim(true)
+                            .toMetricPrefix(isEvm)
+                            .toString()
+                      ).split(" ")[0]
+                    }
                   </div>
                   <div>
-                    {(isCardano
-                      ? averageFee.hideIBCMetadata(true).trim(true).toString()
-                      : averageFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
-                    ).split(" ")[1]}
+                    {
+                      (isCardano
+                        ? averageFee.hideIBCMetadata(true).trim(true).toString()
+                        : averageFee
+                            .hideIBCMetadata(true)
+                            .trim(true)
+                            .toMetricPrefix(isEvm)
+                            .toString()
+                      ).split(" ")[1]
+                    }
                   </div>
                 </div>
               }
@@ -470,7 +503,7 @@ export const FeeButtonsInner: FunctionComponent<
                     style={{
                       opacity: "0.6",
                       fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
+                      color: "var(--font-secondary, #F3F3F3)",
                       fontSize: "12px",
                       marginLeft: "5px",
                       whiteSpace: "nowrap",
@@ -515,16 +548,28 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {(isCardano
-                      ? highFee.hideIBCMetadata(true).trim(true).toString()
-                      : highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
-                    ).split(" ")[0]}
+                    {
+                      (isCardano
+                        ? highFee.hideIBCMetadata(true).trim(true).toString()
+                        : highFee
+                            .hideIBCMetadata(true)
+                            .trim(true)
+                            .toMetricPrefix(isEvm)
+                            .toString()
+                      ).split(" ")[0]
+                    }
                   </div>
                   <div>
-                    {(isCardano
-                      ? highFee.hideIBCMetadata(true).trim(true).toString()
-                      : highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm).toString()
-                    ).split(" ")[1]}
+                    {
+                      (isCardano
+                        ? highFee.hideIBCMetadata(true).trim(true).toString()
+                        : highFee
+                            .hideIBCMetadata(true)
+                            .trim(true)
+                            .toMetricPrefix(isEvm)
+                            .toString()
+                      ).split(" ")[1]
+                    }
                   </div>
                 </div>
               }
