@@ -163,6 +163,8 @@ export const getHandler: (service: KeyRingService) => Handler = (
           env,
           msg as ExportKeyRingDatasMsg
         );
+      case UpdatePasswordMsg.type():
+        return handleUpdatePasswordMsg(service)(env, msg as UpdatePasswordMsg);
       case InitNonDefaultLedgerAppMsg.type():
         return handleInitNonDefaultLedgerAppMsg(service)(
           env,

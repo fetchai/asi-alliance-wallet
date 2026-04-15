@@ -235,7 +235,9 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                 }
 
                 // parse the private key
-                const parsedKey = parseEthPrivateKey(privateKeyData);
+                const parsedKey = parseEthPrivateKey(
+                  privateKeyData as Uint8Array
+                );
                 if (parsedKey === undefined) {
                   return "Invalid ETH private key";
                 }
