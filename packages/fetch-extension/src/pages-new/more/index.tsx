@@ -81,6 +81,9 @@ export const MorePage: FunctionComponent = () => {
       )
     : false;
 
+  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+
   return (
     <HeaderLayout
       innerStyle={{
@@ -132,7 +135,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!currentChain.features?.includes("evm") && (
+      {!isEvm && !isCardano && (
         <Card
           leftImageStyle={{ background: "transparent", height: "16px" }}
           style={{ marginBottom: "8px" }}
@@ -166,36 +169,37 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {!chainStore.current.features?.includes("evm") &&
-        chainId !== "noble-1" && (
-          <Card
-            leftImageStyle={{ background: "transparent" }}
-            style={{ marginBottom: "8px" }}
-            leftImage={require("@assets/svg/wireframe/voting-power.svg")}
-            heading={"Proposals"}
-            onClick={(e: any) => {
-              e.preventDefault();
-              analyticsStore.logEvent("proposal_view_click", {
-                pageName: "More",
-              });
-              navigate("/proposal");
-            }}
-          />
-        )}
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
-        heading={"Manage Tokens"}
-        onClick={() => {
-          navigate("/more/token/manage");
-          analyticsStore.logEvent("manage_tokens_click", {
-            pageName: "More",
-          });
-        }}
-      />
-      {!chainStore.current.features?.includes("evm") &&
-      !chainStore.current.features?.includes("cardano") ? (
+      {!isEvm && !isCardano && chainId !== "noble-1" && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/voting-power.svg")}
+          heading={"Proposals"}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("proposal_view_click", {
+              pageName: "More",
+            });
+            navigate("/proposal");
+          }}
+        />
+      )}
+
+      {!isCardano && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "6px" }}
+          leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+          heading={"Manage Tokens"}
+          onClick={() => {
+            navigate("/more/token/manage");
+            analyticsStore.logEvent("manage_tokens_click", {
+              pageName: "More",
+            });
+          }}
+        />
+      )}
+      {!isEvm && !isCardano ? (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "5px" }}
