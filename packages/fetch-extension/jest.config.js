@@ -10,7 +10,11 @@ module.exports = {
         isolatedModules: true,
       },
     ],
+    "^.+\\.jsx?$": "babel-jest",
   },
+  transformIgnorePatterns: [
+    "node_modules/(?!(?:@cosmjs|@scure|@keplr-wallet|@keystonehq|uuid)/)",
+  ],
   moduleNameMapper: {
     "^@keplr-wallet/background/cardano-chain-policy$":
       "<rootDir>/../background/src/keyring/cardano-chain-policy.ts",
@@ -31,6 +35,7 @@ module.exports = {
     "/src/pages-new/send/send-phase-2-display.test.tsx$",
     "/src/components-v2/form/coin-input.flow.test.tsx$",
     "/src/pages-new/keyring-dev/set-key-ring-page.test.tsx$",
+    "/src/components-v2/transx-status/index.tracking.test.tsx$",
   ],
   testMatch: ["**/src/**/?(*.)+(spec|test).[jt]s?(x)"],
 };

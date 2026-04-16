@@ -228,7 +228,14 @@ const makeSendConfigs = (overrides?: {
   feeConfig: {
     error: undefined,
     feeType: "average",
-    fee: { toString: () => "0.17 tADA" },
+    fee: new CoinPretty(
+      {
+        coinDenom: "tADA",
+        coinMinimalDenom: "ulovelace",
+        coinDecimals: 6,
+      },
+      new Int("170000")
+    ),
     toStdFee: jest.fn(),
   },
 });
