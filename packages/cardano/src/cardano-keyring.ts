@@ -1,15 +1,19 @@
-import { CardanoWalletManager } from './wallet-manager';
+import { CardanoWalletManager } from "./wallet-manager";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { makeObservable, observable } from "mobx";
 import { KeyCurve } from "@keplr-wallet/crypto";
-import { getCardanoNetworkFromChainId, getCardanoChainIdFromNetwork } from './utils/network';
-import { logApiKeyStatus } from './adapters/env-adapter';
-import type { CardanoNetwork } from './utils/network';
+import {
+  getCardanoNetworkFromChainId,
+  getCardanoChainIdFromNetwork,
+} from "./utils/network";
+import { logApiKeyStatus } from "./adapters/env-adapter";
+import type { CardanoNetwork } from "./utils/network";
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
 export const CARDANO_COIN_TYPE = 1815;
 
- // Local types to avoid circular dependency with background package
+// Local types to avoid circular dependency with background package
 export interface KeyStore {
   version: "1.2";
   type: "mnemonic" | "privateKey" | "ledger" | "keystone";
@@ -75,9 +79,9 @@ export class CardanoKeyRing {
       return {};
     }
 
-    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
-    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
-    
+    const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
+    const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
+
     const network = this.resolveNetworkOrThrow(chainId);
     const cardanoChainId = await getCardanoChainIdFromNetwork(network);
 
@@ -101,13 +105,13 @@ export class CardanoKeyRing {
   }
 
   public async restore(
-    keyStore: KeyStore, 
-    password: string, 
+    keyStore: KeyStore,
+    password: string,
     decryptFn?: (keyStore: KeyStore, password: string) => Promise<Uint8Array>,
     chainId?: string
   ): Promise<void> {
     const accountIndex = keyStore.bip44HDPath?.account ?? 0;
-    
+
     // Get mnemonic from keyStore
     let decryptedMnemonic: string;
     if (decryptFn) {
@@ -115,17 +119,19 @@ export class CardanoKeyRing {
       decryptedMnemonic = Buffer.from(decrypted).toString();
     } else {
       if (!keyStore.key) {
-        throw new Error("keyStore.key is undefined for Cardano restore and no decryptFn provided");
+        throw new Error(
+          "keyStore.key is undefined for Cardano restore and no decryptFn provided"
+        );
       }
       decryptedMnemonic = keyStore.key;
     }
-    
+
     const mnemonicWords = decryptedMnemonic.trim().split(/\s+/);
-    
+
     if (mnemonicWords.length !== 24) {
       throw new Error("Cardano requires 24-word mnemonic");
     }
-    
+
     const network = this.resolveNetworkOrThrow(chainId);
     this.mnemonicWords = mnemonicWords;
     this.accountIndex = accountIndex;
@@ -134,23 +140,27 @@ export class CardanoKeyRing {
     this.currentNetwork = network;
 
     await this.rebuildAgentsForNetwork(network);
-    
+
     logApiKeyStatus(network);
-    
   }
 
   public async getKey(chainId?: string): Promise<Key> {
     if (!this.keyAgent) {
-      throw new Error("Cardano key agent not initialized. Please unlock wallet first.");
+      throw new Error(
+        "Cardano key agent not initialized. Please unlock wallet first."
+      );
     }
 
     if (chainId) {
       await this.updateNetworkIfNeeded(chainId);
     }
-    
+
     try {
-      const addrObj = await this.keyAgent.deriveAddress({ index: 0, type: 0 }, 0);
-      
+      const addrObj = await this.keyAgent.deriveAddress(
+        { index: 0, type: 0 },
+        0
+      );
+
       return {
         // Cardano account/address is available, but shared crypto pubKey bytes are not guaranteed here.
         // Keep this separate from generic ed25519 key semantics.
@@ -166,7 +176,6 @@ export class CardanoKeyRing {
     }
   }
 
-
   private async updateNetworkIfNeeded(chainId: string): Promise<void> {
     const network = getCardanoNetworkFromChainId(chainId);
     if (this.currentNetwork === network) {
@@ -175,13 +184,15 @@ export class CardanoKeyRing {
     await this.rebuildAgentsForNetwork(network);
   }
 
-  private async rebuildAgentsForNetwork(network: CardanoNetwork): Promise<void> {
+  private async rebuildAgentsForNetwork(
+    network: CardanoNetwork
+  ): Promise<void> {
     if (!this.mnemonicWords) {
       throw new Error("Cardano mnemonic is not available for agent rebuild");
     }
 
-    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
-    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
+    const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
+    const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
     const cardanoChainId = await getCardanoChainIdFromNetwork(network);
     const bip32Ed25519 = await SodiumBip32Ed25519.create();
 
@@ -208,14 +219,15 @@ export class CardanoKeyRing {
         passphrase: this.passphrase,
       });
     } catch (error) {
-      console.error("[CardanoKeyRing] Failed to create CardanoWalletManager:", error);
+      console.error(
+        "[CardanoKeyRing] Failed to create CardanoWalletManager:",
+        error
+      );
       this.walletManager = undefined;
     }
 
     this.currentNetwork = network;
   }
-
-
 
   public async getAddresses(): Promise<string[]> {
     if (!this.walletManager) {
@@ -226,12 +238,12 @@ export class CardanoKeyRing {
       return (addresses as any[]).map((a: any) => a.address);
     } catch (error) {
       throw new Error(
-        `provider_error: addresses_unavailable: ${error instanceof Error ? error.message : String(error)}`
+        `provider_error: addresses_unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
     }
   }
-
-
 
   /**
    * Gets CardanoWalletManager for transaction operations
@@ -248,7 +260,7 @@ export class CardanoKeyRing {
     const keyAgentExists = !!this.keyAgent;
     const walletManagerExists = !!this.walletManager;
     const hasWallet = this.walletManager?.hasWallet() ?? false;
-    
+
     return keyAgentExists && walletManagerExists && hasWallet;
   }
 
@@ -271,13 +283,17 @@ export class CardanoKeyRing {
     assets?: Map<string, string>;
   }): Promise<string> {
     if (!this.walletManager) {
-      throw new Error("CardanoWalletManager not initialized - transaction features unavailable without API key");
+      throw new Error(
+        "CardanoWalletManager not initialized - transaction features unavailable without API key"
+      );
     }
-    
+
     try {
       return await this.walletManager.sendAda(params);
     } catch (error) {
-      throw new Error(`Transaction failed: ${error.message || 'Unknown error'}`);
+      throw new Error(
+        `Transaction failed: ${error.message || "Unknown error"}`
+      );
     }
   }
 
@@ -291,4 +307,4 @@ export class CardanoKeyRing {
 
     return await this.walletManager.getBalance();
   }
-} 
+}
