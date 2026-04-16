@@ -54,15 +54,15 @@ export const hasRequiredAddresses = (
 ): boolean => {
   const result = requiredIds.every((id) => {
     const hasAddress = Boolean(cacheData[id]);
-    console.log(
-      `[hasRequiredAddresses] Wallet ${id}: hasAddress=${hasAddress}, address="${
-        cacheData[id] || "EMPTY"
-      }"`
-    );
+    // console.log(
+    //   `[hasRequiredAddresses] Wallet ${id}: hasAddress=${hasAddress}, address="${
+    //     cacheData[id] || "EMPTY"
+    //   }"`
+    // );
     return hasAddress;
   });
-  console.log(
-    `[hasRequiredAddresses] Result: ${result} for ${requiredIds.length} wallets`
-  );
+  // console.log(
+  //   `[hasRequiredAddresses] Result: ${result} for ${requiredIds.length} wallets`
+  // );
   return result;
 };

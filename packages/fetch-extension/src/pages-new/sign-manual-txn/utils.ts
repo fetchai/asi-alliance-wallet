@@ -347,11 +347,6 @@ export function buildProtoSignDoc(
 ): SignDoc {
   const body: any = snakeToCamelDeep(protoTx.body);
   const authInfo: any = snakeToCamelDeep(protoTx.auth_info);
-  console.log({
-    body,
-    authInfo,
-    messages: convertProtoJsontoProtoMsgs(protoTx.body.messages),
-  });
   return {
     bodyBytes: TxBody.encode({
       ...body,

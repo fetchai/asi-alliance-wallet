@@ -57,6 +57,19 @@ import {
   shouldPushCardanoFailedWarningFromModal,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
+import { removeComma } from "@utils/format";
+
+interface SendPhase2Props {
+  sendConfigs?: any;
+  setIsNext?: any;
+  isDetachedPage: any;
+  trnsxStatus: string;
+  fromPhase1: boolean;
+  configs: any;
+  setFromPhase1: any;
+  gasSimulator: any;
+  balance: CoinPretty;
+}
 
 type CardanoSignOptions = KeplrSignOptions & {
   cardano?: { spendingPassword?: string };
@@ -363,19 +376,6 @@ const CardanoPasswordConfirmModal: React.FC<
     </Modal>
   );
 };
-import { removeComma } from "@utils/format";
-
-interface SendPhase2Props {
-  sendConfigs?: any;
-  setIsNext?: any;
-  isDetachedPage: any;
-  trnsxStatus: string;
-  fromPhase1: boolean;
-  configs: any;
-  setFromPhase1: any;
-  gasSimulator: any;
-  balance: CoinPretty;
-}
 
 export const SendPhase2: React.FC<SendPhase2Props> = observer(
   ({
