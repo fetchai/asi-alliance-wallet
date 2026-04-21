@@ -5,7 +5,7 @@ import type { CardanoTxHistoryItem } from "./messages";
  * Increment when persisted snapshots must be dropped (e.g. wrong derived timestamps).
  * KV key includes this so older versions are never read again.
  */
-export const CARDANO_TX_HISTORY_STORE_VERSION = 2;
+export const CARDANO_TX_HISTORY_STORE_VERSION = 3;
 
 export type CardanoTxHistorySnapshot = {
   items: CardanoTxHistoryItem[];

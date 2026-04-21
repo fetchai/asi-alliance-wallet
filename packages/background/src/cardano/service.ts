@@ -22,6 +22,7 @@ import type {
 import type { BuildSendAdaTxDraftResult } from "./messages";
 import {
   createObservableTransactionsByAddressesProvider,
+  createSlotTimeCalc,
   createTxHistoryLoader,
   getTxInputsValueAndAddress,
   parseAssetId,
@@ -1492,6 +1493,64 @@ export class CardanoService {
   /** Dedup console noise when history contains many txs for an unsupported chain id. */
   private static warnedUnknownSlotTimeChainKeys = new Set<string>();
 
+  private static resolveSlotFromTx(tx: any): number | undefined {
+    const slotParsed =
+      tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : NaN;
+    return Number.isFinite(slotParsed) ? slotParsed : undefined;
+  }
+
+  private static preprodCompatibilityTimestampMs(slot: number): number {
+    // Release compatibility shim derived from live explorer parity evidence.
+    // NOTE: This intentionally differs from legacy slotToTimestampMs(preprod) fallback base.
+    // TODO(cardano-time): remove after era-summary primary path is fully validated.
+    return (1_655_683_200 + slot) * 1000;
+  }
+
+  private async createCardanoTimestampResolver(params: {
+    wallet: WalletForPendingHistory;
+    chainKey: string;
+  }): Promise<{
+    resolveTimestampMs: (slot: number | undefined) => number | undefined;
+  }> {
+    const chainKey = params.chainKey;
+    let slotTimeCalc: ((slot: number) => Date) | undefined;
+    try {
+      const eraSummaries$ = (params.wallet as any)?.eraSummaries$;
+      if (eraSummaries$) {
+        const eraSummaries = await firstValueFrom(
+          eraSummaries$.pipe(take(1), timeout(1000))
+        ).catch(() => undefined);
+        if (Array.isArray(eraSummaries) && eraSummaries.length > 0) {
+          slotTimeCalc = createSlotTimeCalc(eraSummaries as any);
+        }
+      }
+    } catch {
+      // Non-critical: fallback to compatibility/manual derivation below.
+    }
+
+    const resolveTimestampMs = (slot: number | undefined): number | undefined => {
+      if (slot != null && slotTimeCalc) {
+        try {
+          const dt = slotTimeCalc(slot);
+          const ms = dt?.getTime?.();
+          if (Number.isFinite(ms)) return ms;
+        } catch {
+          // Fallback below.
+        }
+      }
+
+      if (slot == null) return undefined;
+
+      if (chainKey === "cardano-preprod") {
+        return CardanoService.preprodCompatibilityTimestampMs(slot);
+      }
+
+      return CardanoService.slotToTimestampMs(slot, chainKey);
+    };
+
+    return { resolveTimestampMs };
+  }
+
   // Cardano genesis constants used to convert absolute slot → wall-clock Unix ms.
   // Byron: 20s/slot. Shelley and later: 1s/slot.
   // Mainnet + testnet systemStart values must match book.world.dev shelley-genesis.json (not environments.html summaries).
@@ -1536,6 +1595,10 @@ export class CardanoService {
     chainKey: string
   ): Promise<CardanoTxHistoryItem[]> {
     const walletAddresses = await getWalletAddressSet(wallet);
+    const { resolveTimestampMs } = await this.createCardanoTimestampResolver({
+      wallet,
+      chainKey,
+    });
 
     // Try to load asset metadata for display names
     let assetInfoMap: Map<string, AssetInfoLike> | undefined;
@@ -1721,9 +1784,8 @@ export class CardanoService {
         });
       }
 
-      const slotParsed =
-        tx?.blockHeader?.slot != null ? Number(tx.blockHeader.slot) : NaN;
-      const slot = Number.isFinite(slotParsed) ? slotParsed : undefined;
+      const slot = CardanoService.resolveSlotFromTx(tx);
+      const timestamp = resolveTimestampMs(slot);
 
       items.push({
         id: txId,
@@ -1743,10 +1805,7 @@ export class CardanoService {
           isInputResolutionDegraded || assetTransfers.length === 0
             ? undefined
             : assetTransfers,
-        timestamp:
-          slot != null
-            ? CardanoService.slotToTimestampMs(slot, chainKey)
-            : undefined,
+        timestamp,
         fromAddresses,
         toAddresses,
         isDegraded: isInputResolutionDegraded || undefined,

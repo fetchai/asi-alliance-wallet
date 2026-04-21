@@ -14,6 +14,7 @@ jest.mock("@keplr-wallet/cardano", () => {
   return {
     CardanoKeyRing: class {},
     CardanoWalletManager: class {},
+    createSlotTimeCalc: jest.fn(),
     createObservableTransactionsByAddressesProvider: jest.fn(),
     createTxHistoryLoader: jest.fn(),
     parseAssetId: jest.fn((assetId: string) => ({
