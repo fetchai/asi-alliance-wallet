@@ -132,8 +132,7 @@ describe("CardanoService slot → timestamp", () => {
       evidence: {
         chainKey: "cardano-preprod",
         source: "explorer parity reference",
-        txId:
-          "a7599e25b9ecf8f4f110c4d9197db770abbbacef27781269180f2b3aae200103",
+        txId: "a7599e25b9ecf8f4f110c4d9197db770abbbacef27781269180f2b3aae200103",
         rawBlockHeader: { slot: 120_985_372, blockNo: 4_626_218 },
         slot: 120_985_372,
         expectedUtc: "2026-04-20T07:02:52.000Z",

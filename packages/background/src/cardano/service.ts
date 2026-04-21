@@ -1528,7 +1528,9 @@ export class CardanoService {
       // Non-critical: fallback to compatibility/manual derivation below.
     }
 
-    const resolveTimestampMs = (slot: number | undefined): number | undefined => {
+    const resolveTimestampMs = (
+      slot: number | undefined
+    ): number | undefined => {
       if (slot != null && slotTimeCalc) {
         try {
           const dt = slotTimeCalc(slot);
