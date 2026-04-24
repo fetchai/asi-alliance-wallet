@@ -1,18 +1,18 @@
-import { Serialization, Cardano } from '@cardano-sdk/core';
-import { minAdaRequired as minAdaRequiredSDK } from '@cardano-sdk/tx-construction';
-import { crc8 } from 'crc';
+import { Serialization, Cardano } from "@cardano-sdk/core";
+import { minAdaRequired as minAdaRequiredSDK } from "@cardano-sdk/tx-construction";
+import { crc8 } from "crc";
 
 /** Cardano metadata properties can hold a max of 64 bytes. The alternative is to use an array of strings. */
 export const convertMetadataPropToString = (
-  src: Readonly<any[] | string | undefined>,
+  src: Readonly<any[] | string | undefined>
 ) => {
-  if (typeof src === 'string') return src;
-  else if (Array.isArray(src)) return src.join('');
+  if (typeof src === "string") return src;
+  else if (Array.isArray(src)) return src.join("");
   return null;
 };
 
 const looksLikeIpfsUrlWithoutProtocol = (uri: string) => {
-  const [cid] = uri.split('/');
+  const [cid] = uri.split("/");
   if (!cid) return false;
   return cid.length > 0;
 };
@@ -20,40 +20,40 @@ const looksLikeIpfsUrlWithoutProtocol = (uri: string) => {
 export const linkToSrc = (link: string, base64 = false) => {
   const base64regex =
     /^([\d+/A-Za-z]{4})*(([\d+/A-Za-z]{2}==)|([\d+/A-Za-z]{3}=))?$/;
-  if (link.startsWith('https://')) return link;
-  else if (link.startsWith('ipfs://'))
+  if (link.startsWith("https://")) return link;
+  else if (link.startsWith("ipfs://"))
     return (
-      'https://ipfs.io/ipfs/' +
-      link.split('ipfs://')[1].split('ipfs/').slice(-1)[0]
+      "https://ipfs.io/ipfs/" +
+      link.split("ipfs://")[1].split("ipfs/").slice(-1)[0]
     );
   else if (looksLikeIpfsUrlWithoutProtocol(link)) {
-    return 'https://ipfs.io/ipfs/' + link;
+    return "https://ipfs.io/ipfs/" + link;
   } else if (base64 && base64regex.test(link))
-    return 'data:image/png;base64,' + link;
-  else if (link.startsWith('data:image')) return link;
+    return "data:image/png;base64," + link;
+  else if (link.startsWith("data:image")) return link;
   return undefined;
 };
 
 export const assetsToValue = (assets: readonly any[]) => {
   const tokenMap = new Map();
   const lovelace = assets.find(
-    (asset: Readonly<{ unit: string }>) => asset.unit === 'lovelace',
+    (asset: Readonly<{ unit: string }>) => asset.unit === "lovelace"
   );
   const policies = [
     ...new Set(
       assets
         .filter(
-          (asset: Readonly<{ unit: string }>) => asset.unit !== 'lovelace',
+          (asset: Readonly<{ unit: string }>) => asset.unit !== "lovelace"
         )
         .map((asset: Readonly<{ unit: any[] | string }>) =>
-          asset.unit.slice(0, 56),
-        ),
+          asset.unit.slice(0, 56)
+        )
     ),
   ];
   for (const policy of policies) {
     const policyAssets = assets.filter(
       (asset: Readonly<{ unit: any[] | string }>) =>
-        asset.unit.slice(0, 56) === policy,
+        asset.unit.slice(0, 56) === policy
     );
     for (const asset of policyAssets) {
       if (tokenMap.has(asset.unit)) {
@@ -65,7 +65,7 @@ export const assetsToValue = (assets: readonly any[]) => {
     }
   }
   const value = new Serialization.Value(
-    BigInt(lovelace ? lovelace.quantity : '0'),
+    BigInt(lovelace ? lovelace.quantity : "0")
   );
   if (assets.length > 1 || !lovelace) value.setMultiasset(tokenMap);
   return value;
@@ -73,12 +73,12 @@ export const assetsToValue = (assets: readonly any[]) => {
 
 export const minAdaRequired = (
   output: Serialization.TransactionOutput | Cardano.TxOut,
-  coinsPerUtxoWord: bigint,
+  coinsPerUtxoWord: bigint
 ) => {
   // Modern lace pattern: prefer Cardano.TxOut directly (as in balance.ts:55-61, useInitializeTx.ts:96)
   // This avoids issues with Serialization.TransactionOutput.toCore() and asByron
   let txOut: Cardano.TxOut;
-  if ('toCore' in output && typeof output.toCore === 'function') {
+  if ("toCore" in output && typeof output.toCore === "function") {
     // Old lace pattern: Serialization.TransactionOutput with toCore() method (send.tsx:270-278)
     // NOTE: This may fail with "asByron is not a function" error in some CSL versions
     // Prefer passing Cardano.TxOut directly instead
@@ -86,8 +86,13 @@ export const minAdaRequired = (
       txOut = output.toCore();
     } catch (error) {
       // If toCore() fails, suggest using Cardano.TxOut directly
-      console.error('[minAdaRequired] toCore() failed - prefer passing Cardano.TxOut directly:', error);
-      throw new Error('Failed to convert TransactionOutput to TxOut. Use Cardano.TxOut directly instead.');
+      console.error(
+        "[minAdaRequired] toCore() failed - prefer passing Cardano.TxOut directly:",
+        error
+      );
+      throw new Error(
+        "Failed to convert TransactionOutput to TxOut. Use Cardano.TxOut directly instead."
+      );
     }
   } else {
     // Modern pattern: already Cardano.TxOut (preferred from useInitializeTx.ts:96)
@@ -97,10 +102,10 @@ export const minAdaRequired = (
 };
 
 const checksum = (num: string) =>
-  crc8(Buffer.from(num, 'hex')).toString(16).padStart(2, '0');
+  crc8(Buffer.from(num, "hex")).toString(16).padStart(2, "0");
 
 export const fromLabel = (label: Readonly<string>) => {
-  if (label.length !== 8 || !(label.startsWith('0') && label[7] === '0')) {
+  if (label.length !== 8 || !(label.startsWith("0") && label[7] === "0")) {
     return null;
   }
   const numHex = label.slice(1, 5);
@@ -114,7 +119,7 @@ export const fromAssetUnit = (unit: Readonly<string>) => {
   const label = fromLabel(unit.slice(56, 64));
   const name = (() => {
     const hexName = Number.isInteger(label) ? unit.slice(64) : unit.slice(56);
-    return unit.length === 56 ? '' : hexName || '';
+    return unit.length === 56 ? "" : hexName || "";
   })();
   return { policyId, name, label };
 };

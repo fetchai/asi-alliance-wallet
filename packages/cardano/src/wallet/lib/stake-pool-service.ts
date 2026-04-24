@@ -3,7 +3,7 @@
 /* eslint-disable unicorn/no-array-callback-reference */
 /** Stake pool service adapted from lace implementation. */
 
-import { BlockfrostClient } from '@cardano-sdk/cardano-services-client';
+import { BlockfrostClient } from "@cardano-sdk/cardano-services-client";
 import {
   Cardano,
   NetworkInfoProvider,
@@ -11,12 +11,16 @@ import {
   QueryStakePoolsArgs,
   StakePoolProvider,
   StakePoolSortOptions,
-  StakePoolStats
-} from '@cardano-sdk/core';
-import { fromSerializableObject, Percent, toSerializableObject } from '@cardano-sdk/util';
-import { Storage } from 'webextension-polyfill';
-import type { Responses } from '@blockfrost/blockfrost-js';
-import Fuse from 'fuse.js';
+  StakePoolStats,
+} from "@cardano-sdk/core";
+import {
+  fromSerializableObject,
+  Percent,
+  toSerializableObject,
+} from "@cardano-sdk/util";
+import { Storage } from "webextension-polyfill";
+import type { Responses } from "@blockfrost/blockfrost-js";
+import Fuse from "fuse.js";
 
 export type ChainName = keyof typeof Cardano.ChainIds;
 
@@ -25,25 +29,25 @@ const SECONDS_PER_YEAR = 31_536_000; // 365 * 24 * 60 * 60
 const ONE_DAY = 86_400_000; // One day in milliseconds
 
 // The empty text placeholders used to make the stake pools with empty names or tickers to be sorted at the end of the list
-const EMPTY_TEXT_PLACEHOLDER_ASC_ORDER = '\uFFFD';
-const EMPTY_TEXT_PLACEHOLDER_DESC_ORDER = '';
+const EMPTY_TEXT_PLACEHOLDER_ASC_ORDER = "\uFFFD";
+const EMPTY_TEXT_PLACEHOLDER_DESC_ORDER = "";
 
 const FUZZY_SEARCH_OPTIONS = {
   distance: 255,
   fieldNormWeight: 1,
   ignoreFieldNorm: false,
   keys: [
-    { name: 'description', weight: 4 },
-    { name: 'homepage', weight: 1 },
-    { name: 'name', weight: 6 },
-    { name: 'id', weight: 1 },
-    { name: 'ticker', weight: 10 }
+    { name: "description", weight: 4 },
+    { name: "homepage", weight: 1 },
+    { name: "name", weight: 6 },
+    { name: "id", weight: 1 },
+    { name: "ticker", weight: 10 },
   ],
   location: 0,
   minMatchCharLength: 1,
   threshold: 0.3,
   useExtendedSearch: false,
-  weights: { description: 4, homepage: 1, name: 6, poolId: 1, ticker: 10 }
+  weights: { description: 4, homepage: 1, name: 6, poolId: 1, ticker: 10 },
 };
 
 // API response actually includes more attributes than Responses['pool_list_extended']
@@ -70,16 +74,17 @@ interface BlockFrostPool {
 interface StakePoolCachedData {
   networkData: {
     genesisParameters: Cardano.CompactGenesis;
-    network: Responses['network'];
+    network: Responses["network"];
     protocolParameters: Cardano.ProtocolParameters;
   };
   lastFetchTime: number;
-  poolDetails: Map<Cardano.PoolId, Responses['pool']>;
+  poolDetails: Map<Cardano.PoolId, Responses["pool"]>;
   stakePools: Cardano.StakePool[];
   stats: StakePoolStats;
 }
 
-export const getCacheKey = (chainName: ChainName): string => `stake-pool-service-${chainName}`;
+export const getCacheKey = (chainName: ChainName): string =>
+  `stake-pool-service-${chainName}`;
 
 const toCore = (pool: BlockFrostPool): Cardano.StakePool => ({
   cost: BigInt(pool.fixed_cost),
@@ -95,38 +100,48 @@ const toCore = (pool: BlockFrostPool): Cardano.StakePool => ({
     size: { active: Percent(0), live: Percent(0) },
     stake: { active: BigInt(pool.active_stake), live: BigInt(pool.live_stake) },
     lastRos: Percent(0),
-    ros: Percent(0)
+    ros: Percent(0),
   },
   owners: [],
   pledge: BigInt(pool.declared_pledge),
   relays: [],
-  rewardAccount: '' as Cardano.RewardAccount,
+  rewardAccount: "" as Cardano.RewardAccount,
   status: Cardano.StakePoolStatus.Active,
-  vrf: '' as Cardano.VrfVkHex
+  vrf: "" as Cardano.VrfVkHex,
 });
 
-type Identifier = Required<Required<QueryStakePoolsArgs>['filters']>['identifier'];
-type IdentifierValues = Identifier['values'];
+type Identifier = Required<
+  Required<QueryStakePoolsArgs>["filters"]
+>["identifier"];
+type IdentifierValues = Identifier["values"];
 
-const filterByIdentifier = (identifier: Identifier) => (pool: Cardano.StakePool) =>
-  identifier.values.some((value: { id?: Cardano.PoolId; name?: string; ticker?: string }) => {
-    if (value.id) return pool.id === value.id;
+const filterByIdentifier =
+  (identifier: Identifier) => (pool: Cardano.StakePool) =>
+    identifier.values.some(
+      (value: { id?: Cardano.PoolId; name?: string; ticker?: string }) => {
+        if (value.id) return pool.id === value.id;
 
-    return value.name
-      ? pool.metadata?.name.toLowerCase() === value.name.toLowerCase()
-      : pool.metadata?.ticker.toLowerCase() === value.ticker?.toLowerCase();
-  });
+        return value.name
+          ? pool.metadata?.name.toLowerCase() === value.name.toLowerCase()
+          : pool.metadata?.ticker.toLowerCase() === value.ticker?.toLowerCase();
+      }
+    );
 
 interface enrichStakePoolParams {
-  details: Responses['pool'];
-  networkData: StakePoolCachedData['networkData'];
+  details: Responses["pool"];
+  networkData: StakePoolCachedData["networkData"];
   id: Cardano.PoolId;
   stakePools: Cardano.StakePool[];
 }
 
-type StakePoolWithMetrics = Cardano.StakePool & { metrics: Cardano.StakePoolMetrics };
+type StakePoolWithMetrics = Cardano.StakePool & {
+  metrics: Cardano.StakePoolMetrics;
+};
 
-const estimateROS = (stakePool: StakePoolWithMetrics, networkData: StakePoolCachedData['networkData']) => {
+const estimateROS = (
+  stakePool: StakePoolWithMetrics,
+  networkData: StakePoolCachedData["networkData"]
+) => {
   // If the live pledge is less than the declared pledge, the ROS is 0
   if (stakePool.metrics.livePledge < stakePool.pledge) return 0;
 
@@ -151,11 +166,13 @@ const estimateROS = (stakePool: StakePoolWithMetrics, networkData: StakePoolCach
   const s1 = Math.min(s, z0);
   const R = reserves * monetaryExpansion;
 
-  const maxPool = (R / (1 + a0)) * (s1 + (p1 * a0 * (s1 - (p1 * (z0 - s1)) / z0)) / z0);
+  const maxPool =
+    (R / (1 + a0)) * (s1 + (p1 * a0 * (s1 - (p1 * (z0 - s1)) / z0)) / z0);
 
   // Estimated Fig. 46.2 inputs
 
-  const blocksPerEpoch = genesisParameters.epochLength * genesisParameters.activeSlotsCoefficient;
+  const blocksPerEpoch =
+    genesisParameters.epochLength * genesisParameters.activeSlotsCoefficient;
   const poolBlocks = (blocksPerEpoch * liveStake) / totalStake;
 
   // Estimated Fig. 46.2
@@ -195,7 +212,8 @@ const estimateROS = (stakePool: StakePoolWithMetrics, networkData: StakePoolCach
 
   // Annualized ROS
 
-  const secondsPerEpoch = genesisParameters.epochLength * genesisParameters.slotLength;
+  const secondsPerEpoch =
+    genesisParameters.epochLength * genesisParameters.slotLength;
   const epochsPerYear = SECONDS_PER_YEAR / secondsPerEpoch;
 
   const poolBlocksFloor = Math.floor(poolBlocks);
@@ -207,10 +225,19 @@ const estimateROS = (stakePool: StakePoolWithMetrics, networkData: StakePoolCach
   const epochsAtFloor = epochsPerYear * epochsAtFloorWeight;
   const epochsAtCeil = epochsPerYear * epochsAtCeilWeight;
 
-  return Math.pow(1 + epochROSFloor, epochsAtFloor) * Math.pow(1 + epochROSCeil, epochsAtCeil) - 1;
+  return (
+    Math.pow(1 + epochROSFloor, epochsAtFloor) *
+      Math.pow(1 + epochROSCeil, epochsAtCeil) -
+    1
+  );
 };
 
-const enrichStakePool = ({ details, networkData, id, stakePools }: enrichStakePoolParams) => {
+const enrichStakePool = ({
+  details,
+  networkData,
+  id,
+  stakePools,
+}: enrichStakePoolParams) => {
   const stakePool = stakePools.find((pool) => pool.id === id);
 
   if (stakePool) {
@@ -218,17 +245,25 @@ const enrichStakePool = ({ details, networkData, id, stakePools }: enrichStakePo
       stakePool.metrics.livePledge = BigInt(details.live_pledge);
       stakePool.metrics.delegators = details.live_delegators;
       // The `if` containing this branch makes the stakePool a StakePoolWithMetrics
-      stakePool.metrics.ros = Percent(estimateROS(stakePool as StakePoolWithMetrics, networkData));
+      stakePool.metrics.ros = Percent(
+        estimateROS(stakePool as StakePoolWithMetrics, networkData)
+      );
     }
-    stakePool.owners = details.owners.map((owner: string) => Cardano.RewardAccount(owner));
+    stakePool.owners = details.owners.map((owner: string) =>
+      Cardano.RewardAccount(owner)
+    );
   }
 };
 
 type Sorter = (a: Cardano.StakePool, b: Cardano.StakePool) => number;
-type SorterCreator = (asc: boolean, field: StakePoolSortOptions['field'], placeholder: string) => Sorter;
+type SorterCreator = (
+  asc: boolean,
+  field: StakePoolSortOptions["field"],
+  placeholder: string
+) => Sorter;
 
 const createSorterByText: SorterCreator = (asc, field, placeholder) => {
-  if (field !== 'name' && field !== 'ticker') throw new Error('Invalid field');
+  if (field !== "name" && field !== "ticker") throw new Error("Invalid field");
 
   return (a, b) => {
     const valueA = a.metadata?.[field] || placeholder;
@@ -237,7 +272,8 @@ const createSorterByText: SorterCreator = (asc, field, placeholder) => {
   };
 };
 
-const createSorterByCost: SorterCreator = (asc) => (a, b) => asc ? Number(a.cost - b.cost) : Number(b.cost - a.cost);
+const createSorterByCost: SorterCreator = (asc) => (a, b) =>
+  asc ? Number(a.cost - b.cost) : Number(b.cost - a.cost);
 
 const createSorterByMargin: SorterCreator = (asc) => (a, b) => {
   const marginA = Cardano.FractionUtils.toNumber(a.margin);
@@ -255,29 +291,39 @@ const createSorterByBlocks: SorterCreator = (asc) => (a, b) =>
 
 const createSorterByLiveStake: SorterCreator = (asc) => (a, b) =>
   asc
-    ? Number((a.metrics?.stake.live || BigInt(0)) - (b.metrics?.stake.live || BigInt(0)))
-    : Number((b.metrics?.stake.live || BigInt(0)) - (a.metrics?.stake.live || BigInt(0)));
+    ? Number(
+        (a.metrics?.stake.live || BigInt(0)) -
+          (b.metrics?.stake.live || BigInt(0))
+      )
+    : Number(
+        (b.metrics?.stake.live || BigInt(0)) -
+          (a.metrics?.stake.live || BigInt(0))
+      );
 
 const createSorterBySaturation: SorterCreator = (asc) => (a, b) =>
   asc
     ? (a.metrics?.saturation || 0) - (b.metrics?.saturation || 0)
     : (b.metrics?.saturation || 0) - (a.metrics?.saturation || 0);
 
-const sorterFactoryMap = new Map<StakePoolSortOptions['field'], SorterCreator>([
-  ['name', createSorterByText],
-  ['ticker', createSorterByText],
-  ['cost', createSorterByCost],
-  ['margin', createSorterByMargin],
-  ['pledge', createSorterByPledge],
-  ['blocks', createSorterByBlocks],
-  ['liveStake', createSorterByLiveStake],
-  ['saturation', createSorterBySaturation]
+const sorterFactoryMap = new Map<StakePoolSortOptions["field"], SorterCreator>([
+  ["name", createSorterByText],
+  ["ticker", createSorterByText],
+  ["cost", createSorterByCost],
+  ["margin", createSorterByMargin],
+  ["pledge", createSorterByPledge],
+  ["blocks", createSorterByBlocks],
+  ["liveStake", createSorterByLiveStake],
+  ["saturation", createSorterBySaturation],
 ]);
 
-const getSorter = (sort: Exclude<QueryStakePoolsArgs['sort'], undefined>): Sorter => {
+const getSorter = (
+  sort: Exclude<QueryStakePoolsArgs["sort"], undefined>
+): Sorter => {
   const { field, order } = sort;
-  const asc = order === 'asc';
-  const placeholder = asc ? EMPTY_TEXT_PLACEHOLDER_ASC_ORDER : EMPTY_TEXT_PLACEHOLDER_DESC_ORDER;
+  const asc = order === "asc";
+  const placeholder = asc
+    ? EMPTY_TEXT_PLACEHOLDER_ASC_ORDER
+    : EMPTY_TEXT_PLACEHOLDER_DESC_ORDER;
   const factory = sorterFactoryMap.get(field);
 
   if (!factory) throw new Error(`${field}: Sort field not supported`);
@@ -317,8 +363,15 @@ interface StakePoolServiceProps {
  * enough to make the _Browse pools_ page to work. It is responsibility of `StakePoolProvider.queryStakePools` to fetch (and cache)
  * the missing data when it is called querying stake pools by id.
  */
-export const initStakePoolService = (props: StakePoolServiceProps): StakePoolProvider => {
-  const { blockfrostClient, chainName, extensionLocalStorage, networkInfoProvider } = props;
+export const initStakePoolService = (
+  props: StakePoolServiceProps
+): StakePoolProvider => {
+  const {
+    blockfrostClient,
+    chainName,
+    extensionLocalStorage,
+    networkInfoProvider,
+  } = props;
   const cacheKey = getCacheKey(chainName);
 
   /**
@@ -345,19 +398,27 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
       return { description, homepage, id, name, ticker };
     });
 
-    fuzzyIndex = new Fuse(data, FUZZY_SEARCH_OPTIONS, Fuse.createIndex(FUZZY_SEARCH_OPTIONS.keys, data));
+    fuzzyIndex = new Fuse(
+      data,
+      FUZZY_SEARCH_OPTIONS,
+      Fuse.createIndex(FUZZY_SEARCH_OPTIONS.keys, data)
+    );
   };
 
   const saveData = (data: StakePoolCachedData) => {
     // Save data in a fire and forget way.
     // Errors while saving data should not prevent the StakePoolProvider from working.
-    extensionLocalStorage.set({ [cacheKey]: toSerializableObject(data) }).catch(console.error);
+    extensionLocalStorage
+      .set({ [cacheKey]: toSerializableObject(data) })
+      .catch(console.error);
   };
 
   const fetchNetworkData = async () => {
     const genesisParameters = await networkInfoProvider.genesisParameters();
     const protocolParameters = await networkInfoProvider.protocolParameters();
-    const network = await blockfrostClient.request<Responses['network']>('network');
+    const network = await blockfrostClient.request<Responses["network"]>(
+      "network"
+    );
 
     return { genesisParameters, network, protocolParameters };
   };
@@ -365,7 +426,10 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
   const fetchPages = async (firstPage = 1): Promise<Cardano.StakePool[]> => {
     const url = `pools/extended?count=${BF_API_PAGE_SIZE}&page=${firstPage}`;
     const response = await blockfrostClient.request<BlockFrostPool[]>(url);
-    const nextPages = response.length === BF_API_PAGE_SIZE ? fetchPages(firstPage + 1) : Promise.resolve([]);
+    const nextPages =
+      response.length === BF_API_PAGE_SIZE
+        ? fetchPages(firstPage + 1)
+        : Promise.resolve([]);
     const stakePools = response.map(toCore);
 
     return [...stakePools, ...(await nextPages)];
@@ -396,18 +460,31 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
     try {
       const stakePools = await fetchPages();
       const networkData = await fetchNetworkData();
-      const retiringPools = await blockfrostClient.request<Responses['pool_list_retire']>('pools/retiring');
-      const retiringPoolIds = new Set(retiringPools.map(({ pool_id }: { pool_id: string }) => pool_id));
+      const retiringPools = await blockfrostClient.request<
+        Responses["pool_list_retire"]
+      >("pools/retiring");
+      const retiringPoolIds = new Set(
+        retiringPools.map(({ pool_id }: { pool_id: string }) => pool_id)
+      );
       const active = stakePools.length - retiringPools.length;
 
-      for (const pool of stakePools) if (retiringPoolIds.has(pool.id)) pool.status = Cardano.StakePoolStatus.Retiring;
+      for (const pool of stakePools)
+        if (retiringPoolIds.has(pool.id))
+          pool.status = Cardano.StakePoolStatus.Retiring;
 
       data = {
         networkData,
         lastFetchTime: Date.now(),
         poolDetails: new Map(),
         stakePools,
-        stats: { qty: { activating: 0, active, retired: 0, retiring: retiringPools.length } }
+        stats: {
+          qty: {
+            activating: 0,
+            active,
+            retired: 0,
+            retiring: retiringPools.length,
+          },
+        },
       };
 
       createFuzzyIndex(stakePools);
@@ -435,18 +512,28 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
     try {
       data = await cachedData;
     } finally {
-      if (!data || data.lastFetchTime < Date.now() - ONE_DAY) fetchData().catch(console.error);
+      if (!data || data.lastFetchTime < Date.now() - ONE_DAY)
+        fetchData().catch(console.error);
     }
 
     return data;
   };
 
-  const queryForSpecificStakePools = async (values: IdentifierValues): Promise<Paginated<Cardano.StakePool>> => {
-    const result: Paginated<Cardano.StakePool> = { pageResults: [], totalResultCount: 0 };
+  const queryForSpecificStakePools = async (
+    values: IdentifierValues
+  ): Promise<Paginated<Cardano.StakePool>> => {
+    const result: Paginated<Cardano.StakePool> = {
+      pageResults: [],
+      totalResultCount: 0,
+    };
 
     for (const { id } of values) {
-      const pool = await blockfrostClient.request<Responses['pool']>(`pools/${id}`);
-      const metadata = await blockfrostClient.request<Responses['pool_metadata']>(`pools/${id}/metadata`);
+      const pool = await blockfrostClient.request<Responses["pool"]>(
+        `pools/${id}`
+      );
+      const metadata = await blockfrostClient.request<
+        Responses["pool_metadata"]
+      >(`pools/${id}/metadata`);
 
       result.pageResults.push(toCore({ ...pool, metadata } as BlockFrostPool));
     }
@@ -456,14 +543,19 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
     return result;
   };
 
-  const fetchAndEnrichStakePools = async (data: StakePoolCachedData, values: IdentifierValues) => {
+  const fetchAndEnrichStakePools = async (
+    data: StakePoolCachedData,
+    values: IdentifierValues
+  ) => {
     const { networkData, poolDetails, stakePools } = data;
 
     // Check if some pool is queried by id
     for (const { id } of values)
       if (id && !poolDetails.has(id)) {
         // If the pool is queried by id and details are not present in the cache, fetch them
-        const details = await blockfrostClient.request<Responses['pool']>(`pools/${id}`);
+        const details = await blockfrostClient.request<Responses["pool"]>(
+          `pools/${id}`
+        );
 
         poolDetails.set(id, details);
         enrichStakePool({ details, networkData, id, stakePools });
@@ -471,14 +563,23 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
       }
   };
 
-  const filterResultWithFuzzySearch = (result: Cardano.StakePool[], text: string) => {
+  const filterResultWithFuzzySearch = (
+    result: Cardano.StakePool[],
+    text: string
+  ) => {
     const fuzzyResult = fuzzyIndex.search(text);
     const idMap = new Map(result.map((pool) => [pool.id, pool]));
 
-    return fuzzyResult.map(({ item: { id } }: { item: { id: Cardano.PoolId } }) => idMap.get(id)).filter(Boolean) as Cardano.StakePool[];
+    return fuzzyResult
+      .map(({ item: { id } }: { item: { id: Cardano.PoolId } }) =>
+        idMap.get(id)
+      )
+      .filter(Boolean) as Cardano.StakePool[];
   };
 
-  const queryStakePools = async (args: QueryStakePoolsArgs): Promise<Paginated<Cardano.StakePool>> => {
+  const queryStakePools = async (
+    args: QueryStakePoolsArgs
+  ): Promise<Paginated<Cardano.StakePool>> => {
     const { filters, pagination, sort } = args;
     const { identifier, pledgeMet, text } = filters || {};
 
@@ -491,11 +592,17 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
 
     if (identifier) await fetchAndEnrichStakePools(data, identifier.values);
 
-    let result = identifier && !text ? stakePools.filter(filterByIdentifier(identifier)) : [...stakePools];
+    let result =
+      identifier && !text
+        ? stakePools.filter(filterByIdentifier(identifier))
+        : [...stakePools];
 
     // This mitigates the lack of live pledge in the BF bulk API response
     // If the live stake is lower than the declared pledge, the pledge is not met as well
-    if (pledgeMet) result = result.filter((pool) => pool.pledge <= (pool.metrics?.stake.live || BigInt(0)));
+    if (pledgeMet)
+      result = result.filter(
+        (pool) => pool.pledge <= (pool.metrics?.stake.live || BigInt(0))
+      );
 
     if (text) result = filterResultWithFuzzySearch(result, text);
 
@@ -503,20 +610,26 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
 
     return {
       totalResultCount: result.length,
-      pageResults: result.slice(pagination.startAt, pagination.startAt + pagination.limit)
+      pageResults: result.slice(
+        pagination.startAt,
+        pagination.startAt + pagination.limit
+      ),
     };
   };
 
   const init = async () => {
     const storageObject = await extensionLocalStorage.get(cacheKey);
-    let data = fromSerializableObject<StakePoolCachedData>(storageObject[cacheKey]);
+    let data = fromSerializableObject<StakePoolCachedData>(
+      storageObject[cacheKey]
+    );
 
     // The very first time the extension runs, nothing can be done rather than fetching the data synchronously.
     // In this case there is no need to create the index, because it will be created by `fetchData` function.
     if (!data) data = await fetchData();
     else {
       // If the cache is present but expired, fetch the data in a fire and forget way.
-      if (data.lastFetchTime < Date.now() - ONE_DAY) fetchData().catch(console.error);
+      if (data.lastFetchTime < Date.now() - ONE_DAY)
+        fetchData().catch(console.error);
 
       // If the cache is present, create the index to make the fuzzy search to work against cached data.
       // The fuzzy index is an in memory Fuse object which can't be serialized and saved in the local storage with the cache.
@@ -533,7 +646,6 @@ export const initStakePoolService = (props: StakePoolServiceProps): StakePoolPro
   return {
     healthCheck: () => Promise.resolve({ ok: healthStatus }),
     queryStakePools,
-    stakePoolStats: async () => (await getCachedData()).stats
+    stakePoolStats: async () => (await getCachedData()).stats,
   };
 };
-

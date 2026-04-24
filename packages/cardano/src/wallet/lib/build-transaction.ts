@@ -1,6 +1,10 @@
-import { createWalletUtil } from '@cardano-sdk/wallet';
-import { InitializeTxProps, InitializeTxResult, MinimumCoinQuantityPerOutput } from '@cardano-sdk/tx-construction';
-import { CardanoWalletManager } from '../../wallet-manager';
+import { createWalletUtil } from "@cardano-sdk/wallet";
+import {
+  InitializeTxProps,
+  InitializeTxResult,
+  MinimumCoinQuantityPerOutput,
+} from "@cardano-sdk/tx-construction";
+import { CardanoWalletManager } from "../../wallet-manager";
 
 export interface InitializedCardanoTransaction {
   transaction: InitializeTxResult;
@@ -19,11 +23,13 @@ export const buildTransaction = async (
 ): Promise<InitializedCardanoTransaction> => {
   const wallet = walletManager.getWallet();
   if (!wallet) {
-    throw new Error('Wallet not initialized');
+    throw new Error("Wallet not initialized");
   }
 
   const util = createWalletUtil(wallet);
-  const minimumCoinQuantities = await util.validateOutputs(txProps.outputs || []);
+  const minimumCoinQuantities = await util.validateOutputs(
+    txProps.outputs || []
+  );
   const transaction = await wallet.initializeTx(txProps);
 
   return { transaction, minimumCoinQuantities };

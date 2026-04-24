@@ -10,7 +10,10 @@ export function formatAssetAmount(amount: string, decimals?: number): string {
     const d = decimals ?? 0;
     if (d === 0) return amount;
     const minimalAssetInfo = { tokenMetadata: { decimals: d } };
-    return calculateAssetBalance(amount, minimalAssetInfo as Parameters<typeof calculateAssetBalance>[1]);
+    return calculateAssetBalance(
+      amount,
+      minimalAssetInfo as Parameters<typeof calculateAssetBalance>[1]
+    );
   } catch {
     return amount;
   }

@@ -13549,7 +13549,9 @@ __metadata:
     fuse.js: ^7.1.0
     lodash: ^4.17.21
     rxjs: ^7.8.2
+    ts-log: ^3.0.0
     typescript: ^4.9.5
+    webextension-polyfill: ^0.12.0
   languageName: unknown
   linkType: soft
 
@@ -59927,6 +59929,13 @@ __metadata:
   version: 2.2.7
   resolution: "ts-log@npm:2.2.7"
   checksum: c423a5eb54abb9471578902953814d3d0c88b3f237db016998f8998ecf982cb0f748bb8ebf93670eeba9b836ff0ce407d8065a340f3ab218ea7b9442c255b3d4
+  languageName: node
+  linkType: hard
+
+"ts-log@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "ts-log@npm:3.0.0"
+  checksum: 4dde847df4f4cf51eb1c57227dc22bd39ebcd1aab129c6d360a33c64b18760970ad0437888f6c5e943c353d1d7d1ecce83fdf30ab5c6f9e8e73b7fd3aee30028
   languageName: node
   linkType: hard
 

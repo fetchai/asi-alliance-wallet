@@ -1,10 +1,10 @@
-import { Cardano, ChainHistoryProvider } from '@cardano-sdk/core';
-import { createWalletUtil, ObservableWallet } from '@cardano-sdk/wallet';
+import { Cardano, ChainHistoryProvider } from "@cardano-sdk/core";
+import { createWalletUtil, ObservableWallet } from "@cardano-sdk/wallet";
 
-export type TxInput = { value?: Cardano.Value; address?: Cardano.HydratedTxIn['address'] } & Pick<
-  Cardano.HydratedTxIn,
-  'index' | 'txId'
->;
+export type TxInput = {
+  value?: Cardano.Value;
+  address?: Cardano.HydratedTxIn["address"];
+} & Pick<Cardano.HydratedTxIn, "index" | "txId">;
 
 export const getTxInputsValueAndAddress = async (
   inputs: Cardano.HydratedTxIn[] | Cardano.TxIn[],
@@ -16,12 +16,13 @@ export const getTxInputsValueAndAddress = async (
     utxo: wallet.utxo,
     transactions: wallet.transactions,
     protocolParameters$: wallet.protocolParameters$,
-    chainHistoryProvider: chainProviderInstance
+    chainHistoryProvider: chainProviderInstance,
   });
 
   for (const input of inputs) {
     const output = await util.resolveInput(input);
-    if (output) resolvedInputs.push([{ address: output.address, ...input }, output]);
+    if (output)
+      resolvedInputs.push([{ address: output.address, ...input }, output]);
   }
 
   return resolvedInputs.map((utxo) => {
@@ -30,7 +31,7 @@ export const getTxInputsValueAndAddress = async (
     return {
       ...utxo[0],
       value,
-      address
+      address,
     };
   });
 };

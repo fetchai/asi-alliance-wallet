@@ -1,5 +1,5 @@
-import { InitializeTxPropsValidationResult } from '@cardano-sdk/tx-construction';
-import BigNumber from 'bignumber.js';
+import { InitializeTxPropsValidationResult } from "@cardano-sdk/tx-construction";
+import BigNumber from "bignumber.js";
 
 export interface TxMinimumCoinQuantity {
   coinMissing: string;
@@ -7,9 +7,9 @@ export interface TxMinimumCoinQuantity {
 }
 
 export const getTotalMinimumCoins = (
-  minCoins: InitializeTxPropsValidationResult['minimumCoinQuantities']
+  minCoins: InitializeTxPropsValidationResult["minimumCoinQuantities"]
 ): TxMinimumCoinQuantity => {
-  if (!minCoins) return { coinMissing: '0', minimumCoin: '0' };
+  if (!minCoins) return { coinMissing: "0", minimumCoin: "0" };
   let coinMissing = new BigNumber(0);
   let minimumCoin = new BigNumber(0);
 
@@ -20,6 +20,6 @@ export const getTotalMinimumCoins = (
   }
   return {
     coinMissing: coinMissing.toString(),
-    minimumCoin: minimumCoin.toString()
+    minimumCoin: minimumCoin.toString(),
   };
 };

@@ -1,4 +1,4 @@
-import { lovelacesToAdaString } from "./lovelacesToAdaString";
+import { lovelacesToAdaString } from "./lovelaces-to-ada-string";
 
 export type CardanoMinimumViolationInput = {
   minimumOutputLovelace: string;
@@ -27,7 +27,8 @@ export const cardanoMalformedMinimumPayloadError = (
   return err;
 };
 
-const trimTrailingZeros = (value: string): string => value.replace(/\.?0+$/, "");
+const trimTrailingZeros = (value: string): string =>
+  value.replace(/\.?0+$/, "");
 
 const isDigitsOnly = (value: string): boolean => /^\d+$/.test(value);
 const isPositiveIntegerString = (value: string): boolean =>
@@ -42,7 +43,10 @@ export const mapCardanoMinimumViolation = (
 ): CardanoMinimumViolation | null => {
   const minimumOutputLovelace = input.minimumOutputLovelace?.trim();
   const coinMissingLovelace = input.coinMissingLovelace?.trim();
-  if (!minimumOutputLovelace || !isPositiveIntegerString(minimumOutputLovelace)) {
+  if (
+    !minimumOutputLovelace ||
+    !isPositiveIntegerString(minimumOutputLovelace)
+  ) {
     return null;
   }
   const validCoinMissing =

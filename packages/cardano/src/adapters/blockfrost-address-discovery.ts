@@ -5,16 +5,23 @@
  * Full Lace-compliant implementation with gap-based discovery
  */
 
-import { Cardano } from '@cardano-sdk/core';
-import { BlockfrostClient, BlockfrostError } from '@cardano-sdk/cardano-services-client';
-import { Logger } from 'ts-log';
-import type { Responses } from '@blockfrost/blockfrost-js';
-import { AddressDiscovery } from '@cardano-sdk/wallet';
-import { AddressType, GroupedAddress, KeyRole } from '@cardano-sdk/key-management';
+import { Cardano } from "@cardano-sdk/core";
+import {
+  BlockfrostClient,
+  BlockfrostError,
+} from "@cardano-sdk/cardano-services-client";
+import { Logger } from "ts-log";
+import type { Responses } from "@blockfrost/blockfrost-js";
+import { AddressDiscovery } from "@cardano-sdk/wallet";
+import {
+  AddressType,
+  GroupedAddress,
+  KeyRole,
+} from "@cardano-sdk/key-management";
 // Use the same Bip32Account type that AddressDiscovery interface expects
 // This avoids type conflicts when @cardano-sdk/wallet has nested key-management dependency
-type Bip32Account = Parameters<AddressDiscovery['discover']>[0];
-import uniqBy from 'lodash/uniqBy';
+type Bip32Account = Parameters<AddressDiscovery["discover"]>[0];
+import uniqBy from "lodash/uniqBy";
 
 /**
  * How far we search for stake keys before concluding there are no more stake credentials.
@@ -50,7 +57,9 @@ const fetchAllAddressesForAccount = async (
 
   while (true) {
     try {
-      const response = await client.request<Responses['account_addresses_content']>(
+      const response = await client.request<
+        Responses["account_addresses_content"]
+      >(
         `accounts/${rewardAccount}/addresses?count=${BLOCKFROST_PAGE_SIZE}&page=${page}`
       );
 
@@ -68,24 +77,40 @@ const fetchAllAddressesForAccount = async (
 
       ++page;
     } catch (error: unknown) {
-      if (error instanceof BlockfrostError && error?.status === NOT_FOUND_STATUS) {
-        logger.debug(`No addresses found for stake ${rewardAccount}. 404 from Blockfrost.`);
+      if (
+        error instanceof BlockfrostError &&
+        error?.status === NOT_FOUND_STATUS
+      ) {
+        logger.debug(
+          `No addresses found for stake ${rewardAccount}. 404 from Blockfrost.`
+        );
         break;
       }
-      logger.error(`Error fetching addresses for stake ${rewardAccount}:`, error);
+      logger.error(
+        `Error fetching addresses for stake ${rewardAccount}:`,
+        error
+      );
       throw error;
     }
   }
 
-  logger.debug(`Fetched ${allAddresses.length} addresses for stake ${rewardAccount}`);
+  logger.debug(
+    `Fetched ${allAddresses.length} addresses for stake ${rewardAccount}`
+  );
   return allAddresses;
 };
 
 /**
  * Derive the reward account (stake address) at a given stakeIndex.
  */
-const deriveRewardAccount = async (account: Bip32Account, stakeIndex: number): Promise<Cardano.RewardAccount> => {
-  const address = await account.deriveAddress({ type: AddressType.External, index: 0 }, stakeIndex);
+const deriveRewardAccount = async (
+  account: Bip32Account,
+  stakeIndex: number
+): Promise<Cardano.RewardAccount> => {
+  const address = await account.deriveAddress(
+    { type: AddressType.External, index: 0 },
+    stakeIndex
+  );
 
   return address.rewardAccount;
 };
@@ -115,7 +140,10 @@ const discoverAddressesForStakeKey = async (
   logger: Logger,
   stakeIndex: number,
   allAddressesForStake: Cardano.PaymentAddress[]
-): Promise<{ discovered: GroupedAddress[]; unknown: Cardano.PaymentAddress[] }> => {
+): Promise<{
+  discovered: GroupedAddress[];
+  unknown: Cardano.PaymentAddress[];
+}> => {
   const discovered: GroupedAddress[] = [];
   const uniqueAddressesForStake = new Set(allAddressesForStake);
 
@@ -125,30 +153,50 @@ const discoverAddressesForStakeKey = async (
   // Keep deriving payment addresses until we reach PAYMENT_CREDENTIAL_GAP consecutive misses
   while (true) {
     if (gapCount >= PAYMENT_CREDENTIAL_GAP) {
-      logger.debug(`Hit payment gap of ${PAYMENT_CREDENTIAL_GAP} for stakeIndex ${stakeIndex}. Stopping.`);
+      logger.debug(
+        `Hit payment gap of ${PAYMENT_CREDENTIAL_GAP} for stakeIndex ${stakeIndex}. Stopping.`
+      );
       break;
     }
 
-    const externalAddr = await derivePaymentAddress(account, paymentIndex, stakeIndex, false);
-    const externalInSet = uniqueAddressesForStake.has(externalAddr.address as Cardano.PaymentAddress);
+    const externalAddr = await derivePaymentAddress(
+      account,
+      paymentIndex,
+      stakeIndex,
+      false
+    );
+    const externalInSet = uniqueAddressesForStake.has(
+      externalAddr.address as Cardano.PaymentAddress
+    );
 
-    const internalAddr = await derivePaymentAddress(account, paymentIndex, stakeIndex, true);
-    const internalInSet = uniqueAddressesForStake.has(internalAddr.address as Cardano.PaymentAddress);
+    const internalAddr = await derivePaymentAddress(
+      account,
+      paymentIndex,
+      stakeIndex,
+      true
+    );
+    const internalInSet = uniqueAddressesForStake.has(
+      internalAddr.address as Cardano.PaymentAddress
+    );
 
     if (externalInSet) {
       discovered.push({
         ...externalAddr,
-        stakeKeyDerivationPath: { index: stakeIndex, role: KeyRole.Stake }
+        stakeKeyDerivationPath: { index: stakeIndex, role: KeyRole.Stake },
       });
-      uniqueAddressesForStake.delete(externalAddr.address as Cardano.PaymentAddress);
+      uniqueAddressesForStake.delete(
+        externalAddr.address as Cardano.PaymentAddress
+      );
     }
 
     if (internalInSet) {
       discovered.push({
         ...internalAddr,
-        stakeKeyDerivationPath: { index: stakeIndex, role: KeyRole.Stake }
+        stakeKeyDerivationPath: { index: stakeIndex, role: KeyRole.Stake },
       });
-      uniqueAddressesForStake.delete(internalAddr.address as Cardano.PaymentAddress);
+      uniqueAddressesForStake.delete(
+        internalAddr.address as Cardano.PaymentAddress
+      );
     }
 
     if (!externalInSet && !internalInSet) {
@@ -186,7 +234,11 @@ const discoverAddresses = async (
     const rewardAccount = await deriveRewardAccount(account, stakeIndex);
 
     logger.debug(`Fetching addresses for stake credential ${rewardAccount}...`);
-    const allAddressesForStake = await fetchAllAddressesForAccount(client, rewardAccount, logger);
+    const allAddressesForStake = await fetchAllAddressesForAccount(
+      client,
+      rewardAccount,
+      logger
+    );
 
     if (allAddressesForStake.length === 0) {
       stakeGapCount++;
@@ -207,7 +259,10 @@ const discoverAddresses = async (
 
     // Any leftover addresses are unknown / "franken"
     if (unknown.length > 0) {
-      logger.warn(`The following addresses under stakeIndex ${stakeIndex} were not matched:`, unknown);
+      logger.warn(
+        `The following addresses under stakeIndex ${stakeIndex} were not matched:`,
+        unknown
+      );
     }
 
     ++stakeIndex;
@@ -234,14 +289,23 @@ export class BlockfrostAddressDiscovery implements AddressDiscovery {
 
   // Use Parameters utility to extract Bip32Account type from AddressDiscovery interface
   // This ensures compatibility with @cardano-sdk/wallet's expected type
-  public async discover(addressManager: Parameters<AddressDiscovery['discover']>[0]): Promise<GroupedAddress[]> {
-    this.#logger.debug('Discovering addresses using Blockfrost...');
+  public async discover(
+    addressManager: Parameters<AddressDiscovery["discover"]>[0]
+  ): Promise<GroupedAddress[]> {
+    this.#logger.debug("Discovering addresses using Blockfrost...");
 
-    const firstAddress = await addressManager.deriveAddress({ index: 0, type: AddressType.External }, 0);
+    const firstAddress = await addressManager.deriveAddress(
+      { index: 0, type: AddressType.External },
+      0
+    );
 
-    const discoveredAddresses = await discoverAddresses(addressManager, this.#client, this.#logger);
+    const discoveredAddresses = await discoverAddresses(
+      addressManager,
+      this.#client,
+      this.#logger
+    );
 
-    const addresses = uniqBy([firstAddress, ...discoveredAddresses], 'address');
+    const addresses = uniqBy([firstAddress, ...discoveredAddresses], "address");
 
     // We need to make sure the addresses are sorted since the wallet assumes that the first address
     // in the list is the change address (payment cred 0 and stake cred 0).

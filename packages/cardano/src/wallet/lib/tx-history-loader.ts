@@ -1,5 +1,14 @@
-import { Cardano, ChainHistoryProvider, TransactionsByAddressesArgs } from '@cardano-sdk/core';
-import { ObservableWallet, pollProvider, PollProviderProps, txEquals } from '@cardano-sdk/wallet';
+import {
+  Cardano,
+  ChainHistoryProvider,
+  TransactionsByAddressesArgs,
+} from "@cardano-sdk/core";
+import {
+  ObservableWallet,
+  pollProvider,
+  PollProviderProps,
+  txEquals,
+} from "@cardano-sdk/wallet";
 import {
   catchError,
   concat,
@@ -14,9 +23,9 @@ import {
   of,
   Subject,
   switchMap,
-  take
-} from 'rxjs';
-import { Logger } from 'ts-log';
+  take,
+} from "rxjs";
+import { Logger } from "ts-log";
 
 /**
  * Reused from lace:
@@ -48,21 +57,31 @@ export type TxHistoryLoader = {
 };
 
 export type TxHistoryLoaderObservableWallet = {
-  addresses$: ObservableWallet['addresses$'];
+  addresses$: ObservableWallet["addresses$"];
   transactions: {
-    history$: ObservableWallet['transactions']['history$'];
+    history$: ObservableWallet["transactions"]["history$"];
   };
   syncStatus: {
-    isSettled$: ObservableWallet['syncStatus']['isSettled$'];
+    isSettled$: ObservableWallet["syncStatus"]["isSettled$"];
   };
 };
 
 // eslint-disable-next-line consistent-return
-const findIntersection = (storedHistory: Cardano.HydratedTx[], localHistory: Cardano.HydratedTx[]) => {
-  for (let storedHistoryIndex = storedHistory.length - 1; storedHistoryIndex >= 0; storedHistoryIndex--) {
+const findIntersection = (
+  storedHistory: Cardano.HydratedTx[],
+  localHistory: Cardano.HydratedTx[]
+) => {
+  for (
+    let storedHistoryIndex = storedHistory.length - 1;
+    storedHistoryIndex >= 0;
+    storedHistoryIndex--
+  ) {
     const storedHistoryTx = storedHistory[storedHistoryIndex];
     for (const [localHistoryIndex, localTx] of localHistory.entries()) {
-      if (storedHistoryTx.id === localTx.id && storedHistoryTx.blockHeader.hash === localTx.blockHeader.hash) {
+      if (
+        storedHistoryTx.id === localTx.id &&
+        storedHistoryTx.blockHeader.hash === localTx.blockHeader.hash
+      ) {
         return { storedHistoryIndex, localHistoryIndex };
       }
     }
@@ -111,7 +130,11 @@ const deduplicateSortedArray = (
 
 export const createTxHistoryLoader = (
   provider: ObservableTransactionsByAddressesProvider,
-  { addresses$, syncStatus: { isSettled$ }, transactions: { history$ } }: TxHistoryLoaderObservableWallet,
+  {
+    addresses$,
+    syncStatus: { isSettled$ },
+    transactions: { history$ },
+  }: TxHistoryLoaderObservableWallet,
   minimumPageSize: number
 ): TxHistoryLoader => {
   const requestMore$ = new Subject<void>();
@@ -121,7 +144,9 @@ export const createTxHistoryLoader = (
   let emittedHistory: Cardano.HydratedTx[];
   let isFirstFetch = true;
 
-  const initialPage = (storedHistory: Cardano.HydratedTx[]): LoadedTxHistory => {
+  const initialPage = (
+    storedHistory: Cardano.HydratedTx[]
+  ): LoadedTxHistory => {
     fullLocalHistory = [...storedHistory].reverse();
     // Always try to fetch more for the first page.
     // The first page is limited to 10 elements and the viewPort height might fit more
@@ -129,7 +154,7 @@ export const createTxHistoryLoader = (
     emittedHistory = fullLocalHistory.slice(0, minimumPageSize);
     return {
       transactions: emittedHistory,
-      mightHaveMore
+      mightHaveMore,
     };
   };
 
@@ -138,44 +163,60 @@ export const createTxHistoryLoader = (
     history$.pipe(take(1), map(initialPage))
   );
 
-  const loadMore = (addresses: Cardano.PaymentAddress[]): Observable<LoadedTxHistory> => {
-    const lastEmittedTxIndex = fullLocalHistory.indexOf(emittedHistory[emittedHistory.length - 1]);
+  const loadMore = (
+    addresses: Cardano.PaymentAddress[]
+  ): Observable<LoadedTxHistory> => {
+    const lastEmittedTxIndex = fullLocalHistory.indexOf(
+      emittedHistory[emittedHistory.length - 1]
+    );
     if (lastEmittedTxIndex < 0) {
-      throw new Error('assertion failed: last emitted tx not found in full local history');
+      throw new Error(
+        "assertion failed: last emitted tx not found in full local history"
+      );
     }
     const nextPageStartAt = lastEmittedTxIndex + 1;
-    const moreLocalTxs = fullLocalHistory.slice(nextPageStartAt, nextPageStartAt + minimumPageSize);
+    const moreLocalTxs = fullLocalHistory.slice(
+      nextPageStartAt,
+      nextPageStartAt + minimumPageSize
+    );
     let missingNumberOfTxs = minimumPageSize - moreLocalTxs.length;
     if (missingNumberOfTxs === 0) {
       emittedHistory = [...emittedHistory, ...moreLocalTxs];
       return of({
         transactions: emittedHistory,
-        mightHaveMore
+        mightHaveMore,
       });
     }
-    const lastTx = moreLocalTxs[moreLocalTxs.length - 1] || emittedHistory[emittedHistory.length - 1];
+    const lastTx =
+      moreLocalTxs[moreLocalTxs.length - 1] ||
+      emittedHistory[emittedHistory.length - 1];
     let upperBound = Cardano.BlockNo(lastTx.blockHeader.blockNo - 1);
     if (isFirstFetch) {
       upperBound = Cardano.BlockNo(lastTx.blockHeader.blockNo);
-      missingNumberOfTxs += fullLocalHistory.filter((tx) => tx.blockHeader.blockNo === lastTx.blockHeader.blockNo).length;
+      missingNumberOfTxs += fullLocalHistory.filter(
+        (tx) => tx.blockHeader.blockNo === lastTx.blockHeader.blockNo
+      ).length;
     }
 
     return provider({
       addresses,
-      pagination: { startAt: 0, limit: missingNumberOfTxs, order: 'desc' },
-      blockRange: { upperBound }
+      pagination: { startAt: 0, limit: missingNumberOfTxs, order: "desc" },
+      blockRange: { upperBound },
     }).pipe(
       map((fetchedTxs) => {
         fullLocalHistory = [...emittedHistory, ...moreLocalTxs, ...fetchedTxs];
         if (isFirstFetch) {
           isFirstFetch = false;
-          fullLocalHistory = deduplicateSortedArray(fullLocalHistory.sort(compareTxOrder).reverse(), txEquals);
+          fullLocalHistory = deduplicateSortedArray(
+            fullLocalHistory.sort(compareTxOrder).reverse(),
+            txEquals
+          );
         }
         emittedHistory = fullLocalHistory;
         mightHaveMore = fetchedTxs.length >= missingNumberOfTxs;
         return {
           transactions: emittedHistory,
-          mightHaveMore
+          mightHaveMore,
         };
       }),
       catchError((error) => {
@@ -191,7 +232,9 @@ export const createTxHistoryLoader = (
       if (!intersection) {
         return of(initialPage(storedHistory));
       }
-      const newTransactions = storedHistory.slice(intersection.storedHistoryIndex + 1).reverse();
+      const newTransactions = storedHistory
+        .slice(intersection.storedHistoryIndex + 1)
+        .reverse();
       if (intersection.localHistoryIndex === 0) {
         // prepend transactions if there are any new ones
         if (newTransactions.length > 0) {
@@ -199,17 +242,23 @@ export const createTxHistoryLoader = (
           fullLocalHistory = [...newTransactions, ...fullLocalHistory];
           return of({
             transactions: emittedHistory,
-            mightHaveMore
+            mightHaveMore,
           });
         }
         return EMPTY;
       }
       // local history intersection is not at the tip - need to roll back
-      fullLocalHistory = [...newTransactions, ...fullLocalHistory.slice(intersection.localHistoryIndex)];
-      emittedHistory = [...newTransactions, ...emittedHistory.slice(intersection.localHistoryIndex)];
+      fullLocalHistory = [
+        ...newTransactions,
+        ...fullLocalHistory.slice(intersection.localHistoryIndex),
+      ];
+      emittedHistory = [
+        ...newTransactions,
+        ...emittedHistory.slice(intersection.localHistoryIndex),
+      ];
       return of({
         transactions: emittedHistory,
-        mightHaveMore
+        mightHaveMore,
       });
     })
   );
@@ -224,7 +273,14 @@ export const createTxHistoryLoader = (
       switchMap((addresses) =>
         concat(
           initialPage$,
-          merge(watchTip$, requestMore$.pipe(exhaustMap(() => loadMore(addresses.map(({ address }) => address)))))
+          merge(
+            watchTip$,
+            requestMore$.pipe(
+              exhaustMap(() =>
+                loadMore(addresses.map(({ address }) => address))
+              )
+            )
+          )
         )
       )
     ),
@@ -234,14 +290,14 @@ export const createTxHistoryLoader = (
       error$.next(null);
       triggerLoadingMore();
     },
-    loadMore: triggerLoadingMore
+    loadMore: triggerLoadingMore,
   };
 };
 
 export const createObservableTransactionsByAddressesProvider =
   (
-    provider: Pick<ChainHistoryProvider, 'transactionsByAddresses'>,
-    retryBackoffConfig: PollProviderProps<unknown>['retryBackoffConfig'],
+    provider: Pick<ChainHistoryProvider, "transactionsByAddresses">,
+    retryBackoffConfig: PollProviderProps<unknown>["retryBackoffConfig"],
     logger: Logger
   ): ObservableTransactionsByAddressesProvider =>
   (args) =>
@@ -249,16 +305,24 @@ export const createObservableTransactionsByAddressesProvider =
       logger,
       retryBackoffConfig,
       sample: async () => {
-        if (args.pagination.order !== 'desc' || args.pagination.startAt !== 0) {
-          throw new Error("assertion failed: provider supports only {order: 'desc', startAt: 0}");
+        if (args.pagination.order !== "desc" || args.pagination.startAt !== 0) {
+          throw new Error(
+            "assertion failed: provider supports only {order: 'desc', startAt: 0}"
+          );
         }
         const response = await provider.transactionsByAddresses(args);
         const fetchedTransactions = response.pageResults;
-        const transactionsToEmit = fetchedTransactions.slice(0, args.pagination.limit);
+        const transactionsToEmit = fetchedTransactions.slice(
+          0,
+          args.pagination.limit
+        );
         if (transactionsToEmit.length === 0) return transactionsToEmit;
-        const lastBlockHeight = transactionsToEmit[transactionsToEmit.length - 1].blockHeader.blockNo;
+        const lastBlockHeight =
+          transactionsToEmit[transactionsToEmit.length - 1].blockHeader.blockNo;
         // add transactions from the same block as last tx in the slice that we're going to emit
-        const droppedTransactions = fetchedTransactions.slice(args.pagination.limit);
+        const droppedTransactions = fetchedTransactions.slice(
+          args.pagination.limit
+        );
         for (const tx of droppedTransactions) {
           if (tx.blockHeader.blockNo >= lastBlockHeight) {
             transactionsToEmit.push(tx);
@@ -273,20 +337,18 @@ export const createObservableTransactionsByAddressesProvider =
             // supports up to 100 transactions in 1 block
             limit: 100,
             startAt: 0,
-            order: 'desc'
+            order: "desc",
           },
           blockRange: {
             lowerBound: lastBlockHeight,
-            upperBound: lastBlockHeight
-          }
+            upperBound: lastBlockHeight,
+          },
         });
         return [
           ...transactionsToEmit,
           ...lastTxBlockTransactions.pageResults.filter(
             (extraTx) => !transactionsToEmit.some((tx) => tx.id === extraTx.id)
-          )
+          ),
         ];
-      }
+      },
     });
-
-

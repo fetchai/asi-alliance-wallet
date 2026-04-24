@@ -7,7 +7,7 @@ export async function getCardanoBalance(): Promise<CardanoBalance> {
   const response = await browser.runtime.sendMessage({
     port: "background-cardano",
     type: CARDANO_MESSAGES.GET_BALANCE,
-    msg: {}
+    msg: {},
   });
 
   if (response.error) {
@@ -24,7 +24,7 @@ export async function isCardanoReady(): Promise<boolean> {
   const response = await browser.runtime.sendMessage({
     port: "background-cardano",
     type: CARDANO_MESSAGES.IS_READY,
-    msg: {}
+    msg: {},
   });
 
   if (response.error) {
@@ -41,13 +41,13 @@ export async function isCardanoReady(): Promise<boolean> {
 export function handleCardanoError(error: any): string {
   if (error?.code) {
     switch (error.code) {
-      case 'InvalidRequest':
+      case "InvalidRequest":
         return "Invalid transaction request";
-      case 'TxFailure':
+      case "TxFailure":
         return "Transaction failed to submit";
-      case 'InsufficientFunds':
+      case "InsufficientFunds":
         return "Insufficient funds for transaction";
-      case 'NetworkError':
+      case "NetworkError":
         return "Network error. Please try again";
       default:
         return error.message || "Transaction failed";

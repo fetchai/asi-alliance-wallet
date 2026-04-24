@@ -22,9 +22,12 @@ export const isCardanoUiErrorCode = (
 export const encodeCardanoUiError = (
   code: CardanoUiErrorCode,
   message: string
-): string => `${CARDANO_UI_ERROR_PREFIX}${code}${CARDANO_UI_ERROR_SEPARATOR}${message}`;
+): string =>
+  `${CARDANO_UI_ERROR_PREFIX}${code}${CARDANO_UI_ERROR_SEPARATOR}${message}`;
 
-export const parseCardanoUiError = (message: string): {
+export const parseCardanoUiError = (
+  message: string
+): {
   code?: CardanoUiErrorCode;
   message: string;
 } => {

@@ -1,5 +1,3 @@
-
-
 export type CardanoAccountOptions = {
   mnemonicWords: string[];
   accountIndex?: number;
@@ -13,19 +11,26 @@ export class CardanoAccount {
     this.keyAgent = keyAgent;
   }
 
-  static async create({ mnemonicWords, accountIndex = 0, chainId }: CardanoAccountOptions): Promise<CardanoAccount> {
-    const { SodiumBip32Ed25519 } = await import('@cardano-sdk/crypto');
-    const { InMemoryKeyAgent } = await import('@cardano-sdk/key-management');
-    const { Cardano } = await import('@cardano-sdk/core');
+  static async create({
+    mnemonicWords,
+    accountIndex = 0,
+    chainId,
+  }: CardanoAccountOptions): Promise<CardanoAccount> {
+    const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
+    const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
+    const { Cardano } = await import("@cardano-sdk/core");
 
     const bip32Ed25519 = await SodiumBip32Ed25519.create();
-    const keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords({
-      mnemonicWords,
-      accountIndex,
-      purpose: 1852,
-      chainId: chainId || Cardano.ChainIds.Mainnet,
-      getPassphrase: async () => Buffer.from('')
-    }, { bip32Ed25519, logger: console });
+    const keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
+      {
+        mnemonicWords,
+        accountIndex,
+        purpose: 1852,
+        chainId: chainId || Cardano.ChainIds.Mainnet,
+        getPassphrase: async () => Buffer.from(""),
+      },
+      { bip32Ed25519, logger: console }
+    );
     return new CardanoAccount(keyAgent);
   }
 
@@ -37,4 +42,4 @@ export class CardanoAccount {
   getKeyAgent(): any {
     return this.keyAgent;
   }
-} 
+}

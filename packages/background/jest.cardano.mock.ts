@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import { InMemoryKeyAgent } from "@cardano-sdk/key-management";
 
 type WalletLike = { hasWallet: () => boolean; dispose?: () => void };
@@ -63,7 +64,9 @@ export const getTxInputsValueAndAddress = async () => ({
   inputAddresses: [],
 });
 
-export const parseAssetId = (assetId: string): {
+export const parseAssetId = (
+  assetId: string
+): {
   policyId: string;
   assetName: string;
 } => ({

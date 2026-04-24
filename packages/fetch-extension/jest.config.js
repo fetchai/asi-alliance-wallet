@@ -21,7 +21,7 @@ module.exports = {
     "^@fetchai/wallet-types$": "<rootDir>/../wallet-types/src",
     "^@keplr-wallet/([^/]+)$": "<rootDir>/../$1/src",
     "\\.(css|scss|sass)$": "identity-obj-proxy",
-    "\\.(svg|png|jpg|jpeg|gif)$": "<rootDir>/jest.fileMock.js",
+    "\\.(svg|png|jpg|jpeg|gif)$": "<rootDir>/jest.file-mock.js",
     "^@layouts-v2/(.*)$": "<rootDir>/src/layouts-v2/$1",
     "^@utils/(.*)$": "<rootDir>/src/utils/$1",
     "^@components-v2/(.*)$": "<rootDir>/src/components-v2/$1",

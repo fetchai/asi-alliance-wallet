@@ -1,15 +1,15 @@
-import { Cardano, Handle, HandleResolution } from '@cardano-sdk/core';
-import { InitializeTxProps } from '@cardano-sdk/tx-construction';
-import { Assets } from '@cardano-sdk/wallet';
-import isEmpty from 'lodash/isEmpty';
-import { assetBalanceToBigInt } from '../util/asset-balance';
-import { getAuxiliaryData } from './get-auxiliary-data';
-import { ADA_HANDLE_POLICY_ID } from './config';
+import { Cardano, Handle, HandleResolution } from "@cardano-sdk/core";
+import { InitializeTxProps } from "@cardano-sdk/tx-construction";
+import { Assets } from "@cardano-sdk/wallet";
+import isEmpty from "lodash/isEmpty";
+import { assetBalanceToBigInt } from "../util/asset-balance";
+import { getAuxiliaryData } from "./get-auxiliary-data";
+import { ADA_HANDLE_POLICY_ID } from "./config";
 
 type CardanoOutput = {
-  address?: Cardano.TxOut['address'];
+  address?: Cardano.TxOut["address"];
   value?: { coins: string; assets?: Map<Cardano.AssetId, string> };
-  datum?: Cardano.TxOut['datum'];
+  datum?: Cardano.TxOut["datum"];
   handle?: Handle;
 };
 
@@ -41,14 +41,21 @@ export const buildTransactionProps = (props: {
   metadata?: string;
   assetsInfo?: Assets;
 }): InitializeTxProps => {
-  const txSet = new Set<Cardano.TxOut & { handleResolution?: HandleResolution }>();
+  const txSet = new Set<
+    Cardano.TxOut & { handleResolution?: HandleResolution }
+  >();
   for (const output of props.outputsMap.values()) {
     if (output?.address && output?.value?.coins) {
       txSet.add({
         address: output.address,
         value: {
           coins: BigInt(output.value.coins),
-          ...(output?.value?.assets && { assets: convertAssetsToBigInt(output.value.assets, props.assetsInfo) })
+          ...(output?.value?.assets && {
+            assets: convertAssetsToBigInt(
+              output.value.assets,
+              props.assetsInfo
+            ),
+          }),
         },
         handleResolution: output.handle
           ? {
@@ -56,9 +63,9 @@ export const buildTransactionProps = (props: {
               handle: output.handle,
               cardanoAddress: output.address,
               hasDatum: !!output.datum,
-              policyId: ADA_HANDLE_POLICY_ID
+              policyId: ADA_HANDLE_POLICY_ID,
             }
-          : undefined
+          : undefined,
       });
     }
   }
@@ -66,7 +73,7 @@ export const buildTransactionProps = (props: {
   return {
     outputs: txSet,
     ...(props.metadata && {
-      auxiliaryData: getAuxiliaryData({ metadataString: props.metadata })
-    })
+      auxiliaryData: getAuxiliaryData({ metadataString: props.metadata }),
+    }),
   };
 };

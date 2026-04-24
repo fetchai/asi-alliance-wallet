@@ -1,6 +1,6 @@
 /** Blockfrost providers for wallet operations. */
 
-import { Logger } from 'ts-log';
+import { Logger } from "ts-log";
 import {
   AssetProvider,
   ChainHistoryProvider,
@@ -10,8 +10,8 @@ import {
   RewardsProvider,
   StakePoolProvider,
   TxSubmitProvider,
-  UtxoProvider
-} from '@cardano-sdk/core';
+  UtxoProvider,
+} from "@cardano-sdk/core";
 
 import {
   BlockfrostClient,
@@ -25,15 +25,16 @@ import {
   BlockfrostUtxoProvider,
   BlockfrostDRepProvider,
   CreateHttpProviderConfig,
-  RateLimiter
-} from '@cardano-sdk/cardano-services-client';
-import Bottleneck from 'bottleneck';
-import { createPersistentCacheStorage } from '@cardano-sdk/web-extension';
-import type { Storage } from 'webextension-polyfill';
-import { BlockfrostAddressDiscovery } from '../../adapters/blockfrost-address-discovery';
-import { BlockfrostInputResolver } from '../../adapters/blockfrost-input-resolver';
-import { initStakePoolService, type ChainName } from './stakePoolService';
-import type { BlockfrostConfig } from '../../adapters/env-adapter';
+  RateLimiter,
+  TxSubmitApiProvider,
+} from "@cardano-sdk/cardano-services-client";
+import Bottleneck from "bottleneck";
+import { createPersistentCacheStorage } from "@cardano-sdk/web-extension";
+import type { Storage } from "webextension-polyfill";
+import { BlockfrostAddressDiscovery } from "../../adapters/blockfrost-address-discovery";
+import { BlockfrostInputResolver } from "../../adapters/blockfrost-input-resolver";
+import { initStakePoolService, type ChainName } from "./stake-pool-service";
+import type { BlockfrostConfig } from "../../adapters/env-adapter";
 
 export interface WalletProvidersDependencies {
   assetProvider: AssetProvider;
@@ -63,8 +64,9 @@ const createTxSubmitProvider = (
   customSubmitTxUrl?: string
 ): TxSubmitProvider => {
   if (customSubmitTxUrl) {
-    httpProviderConfig.logger.debug(`Using custom TxSubmit api URL ${customSubmitTxUrl}`);
-    const { TxSubmitApiProvider } = require('@cardano-sdk/cardano-services-client');
+    httpProviderConfig.logger.debug(
+      `Using custom TxSubmit api URL ${customSubmitTxUrl}`
+    );
     const url = new URL(customSubmitTxUrl);
     return new TxSubmitApiProvider(
       { baseUrl: url, path: url.pathname },
@@ -72,13 +74,16 @@ const createTxSubmitProvider = (
     );
   }
 
-  return new BlockfrostTxSubmitProvider(blockfrostClient, httpProviderConfig.logger);
+  return new BlockfrostTxSubmitProvider(
+    blockfrostClient,
+    httpProviderConfig.logger
+  );
 };
 
 enum CacheName {
-  chainHistoryProvider = 'chain-history-provider-cache',
-  inputResolver = 'input-resolver-cache',
-  utxoProvider = 'utxo-provider-cache'
+  chainHistoryProvider = "chain-history-provider-cache",
+  inputResolver = "input-resolver-cache",
+  utxoProvider = "utxo-provider-cache",
 }
 
 // eslint-disable-next-line no-magic-numbers
@@ -88,89 +93,108 @@ const cacheAssignment: Record<CacheName, { count: number; size: number }> = {
   [CacheName.chainHistoryProvider]: {
     count: 5_180_160_021,
     // eslint-disable-next-line no-magic-numbers
-    size: 30 * sizeOf1mb
+    size: 30 * sizeOf1mb,
   },
   [CacheName.inputResolver]: {
     count: 65_529_512_340,
     // eslint-disable-next-line no-magic-numbers
-    size: 30 * sizeOf1mb
+    size: 30 * sizeOf1mb,
   },
   [CacheName.utxoProvider]: {
     count: 6_530_251_302,
     // eslint-disable-next-line no-magic-numbers
-    size: 30 * sizeOf1mb
-  }
+    size: 30 * sizeOf1mb,
+  },
 };
 
 export const createBlockfrostProviders = ({
   blockfrostConfig,
   logger,
   extensionLocalStorage,
-  chainName
+  chainName,
 }: ProvidersConfig): WalletProvidersDependencies => {
-  const rateLimiter: RateLimiter = blockfrostConfig.rateLimiter || new Bottleneck({
-    reservoir: 500,
-    reservoirIncreaseAmount: 100,
-    reservoirIncreaseInterval: 1000,
-    reservoirIncreaseMaximum: 500
-  });
+  const rateLimiter: RateLimiter =
+    blockfrostConfig.rateLimiter ||
+    new Bottleneck({
+      reservoir: 500,
+      reservoirIncreaseAmount: 100,
+      reservoirIncreaseInterval: 1000,
+      reservoirIncreaseMaximum: 500,
+    });
 
   const blockfrostClientConfig: BlockfrostClientConfig = {
     projectId: blockfrostConfig.projectId,
-    baseUrl: blockfrostConfig.baseUrl
+    baseUrl: blockfrostConfig.baseUrl,
   };
 
-  const blockfrostClient = new BlockfrostClient(blockfrostClientConfig, { rateLimiter });
+  const blockfrostClient = new BlockfrostClient(blockfrostClientConfig, {
+    rateLimiter,
+  });
 
   const httpProviderConfig: CreateHttpProviderConfig<Provider> = {
     baseUrl: blockfrostConfig.baseUrl,
     logger,
-    adapter: undefined // Will use default fetch adapter
+    adapter: undefined, // Will use default fetch adapter
   };
 
   const assetProvider = new BlockfrostAssetProvider(blockfrostClient, logger);
-  const networkInfoProvider = new BlockfrostNetworkInfoProvider(blockfrostClient, logger);
-  const rewardsProvider = new BlockfrostRewardsProvider(blockfrostClient, logger);
-  
-  const stakePoolProvider = extensionLocalStorage && chainName
-    ? initStakePoolService({
-        blockfrostClient,
-        chainName,
-        extensionLocalStorage,
-        networkInfoProvider
-      })
-    : {
-        queryStakePools: async () => {
-          throw new Error('Stake pool queries require extensionLocalStorage and chainName');
-        },
-        stakePoolStats: async () => {
-          throw new Error('Stake pool stats require extensionLocalStorage and chainName');
-        },
-        healthCheck: async () => ({ ok: false })
-      } as StakePoolProvider;
+  const networkInfoProvider = new BlockfrostNetworkInfoProvider(
+    blockfrostClient,
+    logger
+  );
+  const rewardsProvider = new BlockfrostRewardsProvider(
+    blockfrostClient,
+    logger
+  );
 
-  const txSubmitProvider = createTxSubmitProvider(blockfrostClient, httpProviderConfig);
+  const stakePoolProvider =
+    extensionLocalStorage && chainName
+      ? initStakePoolService({
+          blockfrostClient,
+          chainName,
+          extensionLocalStorage,
+          networkInfoProvider,
+        })
+      : ({
+          queryStakePools: async () => {
+            throw new Error(
+              "Stake pool queries require extensionLocalStorage and chainName"
+            );
+          },
+          stakePoolStats: async () => {
+            throw new Error(
+              "Stake pool stats require extensionLocalStorage and chainName"
+            );
+          },
+          healthCheck: async () => ({ ok: false }),
+        } as StakePoolProvider);
+
+  const txSubmitProvider = createTxSubmitProvider(
+    blockfrostClient,
+    httpProviderConfig
+  );
 
   const chainHistoryCache = extensionLocalStorage
     ? createPersistentCacheStorage({
         extensionLocalStorage,
-        fallbackMaxCollectionItemsGuard: cacheAssignment[CacheName.chainHistoryProvider].count,
+        fallbackMaxCollectionItemsGuard:
+          cacheAssignment[CacheName.chainHistoryProvider].count,
         resourceName: CacheName.chainHistoryProvider,
-        quotaInBytes: cacheAssignment[CacheName.chainHistoryProvider].size
+        quotaInBytes: cacheAssignment[CacheName.chainHistoryProvider].size,
       })
     : {
         get: async (_key: string) => undefined,
         set: async (_key: string, _value: any) => {},
         has: async (_key: string) => false,
         delete: async (_key: string) => {},
-        clear: async () => {}
+        clear: async () => {},
       };
-  
+
   const chainHistoryProvider = new BlockfrostChainHistoryProvider({
     client: blockfrostClient,
     cache: chainHistoryCache as any,
     networkInfoProvider,
-    logger
+    logger,
   });
 
   const dRepProvider = new BlockfrostDRepProvider(blockfrostClient, logger);
@@ -179,51 +203,56 @@ export const createBlockfrostProviders = ({
     client: blockfrostClient,
     dRepProvider,
     logger,
-    stakePoolProvider
+    stakePoolProvider,
   });
 
-  const addressDiscovery = new BlockfrostAddressDiscovery(blockfrostClient, logger);
+  const addressDiscovery = new BlockfrostAddressDiscovery(
+    blockfrostClient,
+    logger
+  );
 
   const inputResolverCache = extensionLocalStorage
     ? createPersistentCacheStorage({
         extensionLocalStorage,
-        fallbackMaxCollectionItemsGuard: cacheAssignment[CacheName.inputResolver].count,
+        fallbackMaxCollectionItemsGuard:
+          cacheAssignment[CacheName.inputResolver].count,
         resourceName: CacheName.inputResolver,
-        quotaInBytes: cacheAssignment[CacheName.inputResolver].size
+        quotaInBytes: cacheAssignment[CacheName.inputResolver].size,
       })
     : {
         get: async (_key: string) => undefined,
         set: async (_key: string, _value: any) => {},
         has: async (_key: string) => false,
         delete: async (_key: string) => {},
-        clear: async () => {}
+        clear: async () => {},
       };
-  
+
   const inputResolver = new BlockfrostInputResolver({
     cache: inputResolverCache as any,
     client: blockfrostClient,
-    logger
+    logger,
   });
 
   const utxoCache = extensionLocalStorage
     ? createPersistentCacheStorage({
         extensionLocalStorage,
-        fallbackMaxCollectionItemsGuard: cacheAssignment[CacheName.utxoProvider].count,
+        fallbackMaxCollectionItemsGuard:
+          cacheAssignment[CacheName.utxoProvider].count,
         resourceName: CacheName.utxoProvider,
-        quotaInBytes: cacheAssignment[CacheName.utxoProvider].size
+        quotaInBytes: cacheAssignment[CacheName.utxoProvider].size,
       })
     : {
         get: async (_key: string) => undefined,
         set: async (_key: string, _value: any) => {},
         has: async (_key: string) => false,
         delete: async (_key: string) => {},
-        clear: async () => {}
+        clear: async () => {},
       };
-  
+
   const utxoProvider = new BlockfrostUtxoProvider({
     cache: utxoCache as any,
     client: blockfrostClient,
-    logger
+    logger,
   });
 
   return {
@@ -237,7 +266,6 @@ export const createBlockfrostProviders = ({
     rewardsProvider,
     addressDiscovery,
     inputResolver,
-    drepProvider: dRepProvider
+    drepProvider: dRepProvider,
   };
 };
-

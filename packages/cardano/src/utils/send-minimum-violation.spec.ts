@@ -89,7 +89,9 @@ describe("send minimum violation helpers", () => {
   });
 
   it("tags malformed-payload estimate/draft failures with a stable cause id", () => {
-    const err = cardanoMalformedMinimumPayloadError("Failed to build transaction");
+    const err = cardanoMalformedMinimumPayloadError(
+      "Failed to build transaction"
+    );
     expect(err.message).toBe("Failed to build transaction");
     expect((err as Error & { cause?: Error }).cause?.message).toBe(
       CARDANO_MINIMUM_VIOLATION_MALFORMED_PAYLOAD

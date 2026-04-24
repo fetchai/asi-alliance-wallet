@@ -1,12 +1,12 @@
-import { Cardano } from '@cardano-sdk/core';
-import { firstValueFrom } from 'rxjs';
+import { Cardano } from "@cardano-sdk/core";
+import { firstValueFrom } from "rxjs";
 
-import { TX } from '../../config';
+import { TX } from "../../config";
 
-import { submitTx } from '.';
+import { submitTx } from ".";
 
-import type { UnwitnessedTx } from '@cardano-sdk/tx-construction';
-import type { CardanoWalletManager } from '../../wallet-manager';
+import type { UnwitnessedTx } from "@cardano-sdk/tx-construction";
+import type { CardanoWalletManager } from "../../wallet-manager";
 
 /**
  * Builds Cardano transaction using lace-style pattern
@@ -24,14 +24,15 @@ export const buildTx = async ({
 }>): Promise<UnwitnessedTx> => {
   const txBuilder = walletManager.createTxBuilder();
   // Extract metadata from auxiliaryData (lace-style: auxiliaryData.metadata()?.toCore())
-  const metadata = auxiliaryData?.metadata?.()?.toCore?.() || auxiliaryData?.blob;
+  const metadata =
+    auxiliaryData?.metadata?.()?.toCore?.() || auxiliaryData?.blob;
 
   const tip = await firstValueFrom(walletManager.tip$);
-  
+
   // Add output: prefer Cardano.TxOut directly (modern lace pattern from useInitializeTx.ts:96)
   // Old lace pattern: Serialization.TransactionOutput → output.toCore()
   // Modern lace pattern: Cardano.TxOut → txBuilder.addOutput() directly
-  if (output.toCore && typeof output.toCore === 'function') {
+  if (output.toCore && typeof output.toCore === "function") {
     // Old pattern: Serialization.TransactionOutput with toCore() method
     txBuilder.addOutput(output.toCore());
   } else {
