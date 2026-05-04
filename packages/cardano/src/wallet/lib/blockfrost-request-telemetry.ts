@@ -30,7 +30,7 @@ interface FailureRecord {
   kind: RequestKind;
   ms: number;
   sourceTag: string;
-  status: number | "unknown";
+  status: number | "unknown" | "ok";
   timestamp: number;
 }
 
@@ -40,7 +40,7 @@ interface RequestRecord {
   kind: RequestKind;
   ms: number;
   sourceTag: string;
-  status: number | "unknown";
+  status: number | "unknown" | "ok";
   timestamp: number;
 }
 
@@ -59,6 +59,8 @@ interface AggregatedStats {
 interface TelemetryGlobalApi {
   getAllSnapshots: () => Record<string, AggregatedStats>;
   getRequestCountsByType: () => Record<string, Record<RequestKind, number>>;
+  captureBaseline: (label: string) => Record<string, AggregatedStats>;
+  getBaselines: () => Record<string, Record<string, AggregatedStats>>;
   printAll: () => Record<string, AggregatedStats>;
   printRequestCountsByType: () => Record<string, Record<RequestKind, number>>;
   reset: () => void;
@@ -104,7 +106,14 @@ const getRequestKind = (endpoint: string): RequestKind => {
   if (endpoint.startsWith("accounts/") && endpoint.includes("/addresses"))
     return "address_discovery";
   if (endpoint.startsWith("accounts/")) return "rewards";
-  if (endpoint.startsWith("addresses/")) return "utxo";
+  if (endpoint.startsWith("addresses/") && endpoint.includes("/utxos"))
+    return "utxo";
+  if (
+    endpoint.startsWith("addresses/") &&
+    (endpoint.includes("/transactions") || endpoint.includes("/txs"))
+  )
+    return "chain_history";
+  if (endpoint.startsWith("addresses/")) return "other";
   if (endpoint.startsWith("tx/submit")) return "submit_tx";
   if (endpoint.startsWith("txs/")) return "tx";
   if (endpoint.startsWith("epochs/") || endpoint.startsWith("blocks/"))
@@ -151,14 +160,38 @@ const getCallerTag = (): string => {
 };
 
 const globalKey = "__cardanoBlockfrostTelemetryRegistry";
+const baselineGlobalKey = "__cardanoBlockfrostTelemetryBaselines";
 
-const getRegistry = (): Map<string, () => AggregatedStats> => {
+interface TelemetryCollector {
+  getSnapshot: () => AggregatedStats;
+  reset: () => void;
+}
+
+const getRegistry = (): Map<string, TelemetryCollector> => {
   const globalScope = globalThis as Record<string, unknown>;
   if (!globalScope[globalKey]) {
-    globalScope[globalKey] = new Map<string, () => AggregatedStats>();
+    globalScope[globalKey] = new Map<string, TelemetryCollector>();
   }
-  return globalScope[globalKey] as Map<string, () => AggregatedStats>;
+  return globalScope[globalKey] as Map<string, TelemetryCollector>;
 };
+
+const getBaselinesStore = (): Map<string, Record<string, AggregatedStats>> => {
+  const globalScope = globalThis as Record<string, unknown>;
+  if (!globalScope[baselineGlobalKey]) {
+    globalScope[baselineGlobalKey] = new Map<
+      string,
+      Record<string, AggregatedStats>
+    >();
+  }
+  return globalScope[baselineGlobalKey] as Map<
+    string,
+    Record<string, AggregatedStats>
+  >;
+};
+
+// Telemetry snapshots are JSON-only by design (no BigInt/Map/Date/functions).
+const cloneSnapshot = <T>(value: T): T =>
+  JSON.parse(JSON.stringify(value)) as T;
 
 export const installBlockfrostRequestTelemetry = ({
   blockfrostClient,
@@ -181,14 +214,14 @@ export const installBlockfrostRequestTelemetry = ({
   };
   if (clientWithPatchedRequest.__telemetryPatched) return;
 
-  const startedAt = Date.now();
-  const totals = createBucket();
-  const byEndpoint = new Map<string, StatsBucket>();
-  const byKind = new Map<RequestKind, StatsBucket>();
-  const byCallerTag = new Map<string, StatsBucket>();
-  const bySourceTag = new Map<string, StatsBucket>();
-  const failures: FailureRecord[] = [];
-  const recentRequests: RequestRecord[] = [];
+  let startedAt = Date.now();
+  let totals = createBucket();
+  let byEndpoint = new Map<string, StatsBucket>();
+  let byKind = new Map<RequestKind, StatsBucket>();
+  let byCallerTag = new Map<string, StatsBucket>();
+  let bySourceTag = new Map<string, StatsBucket>();
+  let failures: FailureRecord[] = [];
+  let recentRequests: RequestRecord[] = [];
 
   const rawRequest = clientWithPatchedRequest.request.bind(blockfrostClient);
 
@@ -236,7 +269,7 @@ export const installBlockfrostRequestTelemetry = ({
         kind,
         ms,
         sourceTag,
-        status: 200,
+        status: "ok",
       });
 
       if (ms >= SLOW_REQUEST_MS) {
@@ -332,21 +365,33 @@ export const installBlockfrostRequestTelemetry = ({
   clientWithPatchedRequest.__telemetryPatched = true;
 
   const registry = getRegistry();
-  registry.set(chainName, () =>
-    clientWithPatchedRequest.__telemetrySnapshot!()
-  );
+  const collector: TelemetryCollector = {
+    getSnapshot: () => clientWithPatchedRequest.__telemetrySnapshot!(),
+    reset: () => {
+      startedAt = Date.now();
+      totals = createBucket();
+      byEndpoint = new Map<string, StatsBucket>();
+      byKind = new Map<RequestKind, StatsBucket>();
+      byCallerTag = new Map<string, StatsBucket>();
+      bySourceTag = new Map<string, StatsBucket>();
+      failures = [];
+      recentRequests = [];
+    },
+  };
+  registry.set(chainName, collector);
   const globalScope = globalThis as Record<string, unknown>;
+  const baselinesStore = getBaselinesStore();
   const getAllSnapshots = () =>
     Object.fromEntries(
-      [...registry.entries()].map(([name, getSnapshot]) => [
+      [...registry.entries()].map(([name, telemetryCollector]) => [
         name,
-        getSnapshot(),
+        telemetryCollector.getSnapshot(),
       ])
     );
   const getRequestCountsByType = () =>
     Object.fromEntries(
-      [...registry.entries()].map(([name, getSnapshot]) => {
-        const snapshot = getSnapshot();
+      [...registry.entries()].map(([name, telemetryCollector]) => {
+        const snapshot = telemetryCollector.getSnapshot();
         return [name, toKindCounts(snapshot.byKind)];
       })
     );
@@ -354,6 +399,21 @@ export const installBlockfrostRequestTelemetry = ({
     const telemetryGlobalApi: TelemetryGlobalApi = {
       getAllSnapshots: () => getAllSnapshots(),
       getRequestCountsByType: () => getRequestCountsByType(),
+      captureBaseline: (label: string) => {
+        const key = label.trim();
+        if (!key) {
+          throw new Error("Baseline label must be non-empty");
+        }
+        const snapshot = cloneSnapshot(getAllSnapshots());
+        baselinesStore.set(key, snapshot);
+        logger.debug("[Blockfrost telemetry] baseline captured", {
+          label: key,
+          chains: Object.keys(snapshot),
+        });
+        return snapshot;
+      },
+      getBaselines: () =>
+        cloneSnapshot(Object.fromEntries(baselinesStore.entries())),
       printAll: () => {
         const data = getAllSnapshots();
         logger.debug("[Blockfrost telemetry] snapshots", data);
@@ -365,7 +425,9 @@ export const installBlockfrostRequestTelemetry = ({
         return data;
       },
       reset: () => {
-        registry.clear();
+        for (const telemetryCollector of registry.values()) {
+          telemetryCollector.reset();
+        }
       },
     };
     globalScope["__cardanoBlockfrostTelemetry"] = telemetryGlobalApi;

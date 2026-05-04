@@ -20,6 +20,7 @@ import type {
   CardanoTrackedTxServiceState,
   CardanoTelemetryRequestCountsByTypeResponse,
   CardanoTelemetrySnapshotResponse,
+  CardanoTelemetryBaselinesResponse,
 } from "./messages";
 import type { BuildSendAdaTxDraftResult } from "./messages";
 import {
@@ -445,6 +446,34 @@ export class CardanoService {
       return {};
     }
     return telemetry.getAllSnapshots();
+  }
+
+  captureTelemetryBaseline(label: string): CardanoTelemetrySnapshotResponse {
+    const telemetry = (globalThis as Record<string, unknown>)[
+      "__cardanoBlockfrostTelemetry"
+    ] as
+      | {
+          captureBaseline?: (label: string) => CardanoTelemetrySnapshotResponse;
+        }
+      | undefined;
+    if (!telemetry?.captureBaseline) {
+      return {};
+    }
+    return telemetry.captureBaseline(label);
+  }
+
+  getTelemetryBaselines(): CardanoTelemetryBaselinesResponse {
+    const telemetry = (globalThis as Record<string, unknown>)[
+      "__cardanoBlockfrostTelemetry"
+    ] as
+      | {
+          getBaselines?: () => CardanoTelemetryBaselinesResponse;
+        }
+      | undefined;
+    if (!telemetry?.getBaselines) {
+      return {};
+    }
+    return telemetry.getBaselines();
   }
 
   /**

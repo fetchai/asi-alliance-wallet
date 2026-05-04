@@ -194,11 +194,18 @@ export const createBlockfrostProviders = ({
       get(target: T, prop: string | symbol) {
         if (prop in target) return target[prop as keyof T];
         return async () => {
-          logger.debug("[Cardano] no-op provider call", {
+          logger.warn("[Cardano] no-op provider unknown method", {
             provider: label,
             method: String(prop),
           });
-          return undefined;
+          if (process.env["NODE_ENV"] !== "production") {
+            throw new Error(
+              `[Cardano] no-op provider '${label}' called unknown method '${String(
+                prop
+              )}'`
+            );
+          }
+          return null;
         };
       },
     });

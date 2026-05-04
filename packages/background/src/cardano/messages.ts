@@ -201,7 +201,7 @@ export interface CardanoTelemetrySnapshotResponse {
       kind: CardanoTelemetryRequestKind;
       ms: number;
       sourceTag: string;
-      status: number | "unknown";
+      status: number | "unknown" | "ok";
       timestamp: number;
     }>;
     recentRequests: Array<{
@@ -210,12 +210,16 @@ export interface CardanoTelemetrySnapshotResponse {
       kind: CardanoTelemetryRequestKind;
       ms: number;
       sourceTag: string;
-      status: number | "unknown";
+      status: number | "unknown" | "ok";
       timestamp: number;
     }>;
     startedAt: number;
     totals: CardanoTelemetryStatsBucket;
   };
+}
+
+export interface CardanoTelemetryBaselinesResponse {
+  [label: string]: CardanoTelemetrySnapshotResponse;
 }
 
 /**
@@ -664,6 +668,62 @@ export class GetCardanoTelemetrySnapshotMsg extends Message<CardanoTelemetrySnap
 
   type(): string {
     return GetCardanoTelemetrySnapshotMsg.type();
+  }
+}
+
+/** Internal-only: capture telemetry baseline under a label. */
+export class CaptureCardanoTelemetryBaselineMsg extends Message<CardanoTelemetrySnapshotResponse> {
+  public static type() {
+    return "cardano-capture-telemetry-baseline";
+  }
+
+  constructor(public readonly label: string) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.label || !this.label.trim()) {
+      throw new Error("label is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return CaptureCardanoTelemetryBaselineMsg.type();
+  }
+}
+
+/** Internal-only: read captured telemetry baselines. */
+export class GetCardanoTelemetryBaselinesMsg extends Message<CardanoTelemetryBaselinesResponse> {
+  public static type() {
+    return "cardano-get-telemetry-baselines";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // No parameters to validate
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetCardanoTelemetryBaselinesMsg.type();
   }
 }
 
