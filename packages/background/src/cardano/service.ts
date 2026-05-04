@@ -18,6 +18,8 @@ import type {
   CardanoAssetAmount,
   CardanoTrackedTxStatusResponse,
   CardanoTrackedTxServiceState,
+  CardanoTelemetryRequestCountsByTypeResponse,
+  CardanoTelemetrySnapshotResponse,
 } from "./messages";
 import type { BuildSendAdaTxDraftResult } from "./messages";
 import {
@@ -156,6 +158,7 @@ export class CardanoService {
     this.sendAdaTxDrafts.clear();
     this.locallyPendingSentTxs.clear();
     this.trackedTxDeepScanCooldownUntil.clear();
+    this.trackedTxStatusInFlight.clear();
     this.submitAdaTxDraftSerial = Promise.resolve();
     this.keyRing = undefined;
     this.runtimeSessionId = "";
@@ -247,6 +250,10 @@ export class CardanoService {
    * then deep paging is allowed again (avoids forever-exhausted and periodic retry after history updates).
    */
   private readonly trackedTxDeepScanCooldownUntil = new Map<string, number>();
+  private readonly trackedTxStatusInFlight = new Map<
+    string,
+    Promise<CardanoTrackedTxStatusResponse>
+  >();
 
   private static readonly TRACKED_TX_HISTORY_PAGE_SIZE = 25;
   private static readonly TRACKED_TX_MAX_LOAD_MORE_PAGES = 5;
@@ -410,6 +417,34 @@ export class CardanoService {
     }
 
     return this.keyRing.getBalance();
+  }
+
+  getTelemetryRequestCountsByType(): CardanoTelemetryRequestCountsByTypeResponse {
+    const telemetry = (globalThis as Record<string, unknown>)[
+      "__cardanoBlockfrostTelemetry"
+    ] as
+      | {
+          getRequestCountsByType?: () => CardanoTelemetryRequestCountsByTypeResponse;
+        }
+      | undefined;
+    if (!telemetry?.getRequestCountsByType) {
+      return {};
+    }
+    return telemetry.getRequestCountsByType();
+  }
+
+  getTelemetrySnapshot(): CardanoTelemetrySnapshotResponse {
+    const telemetry = (globalThis as Record<string, unknown>)[
+      "__cardanoBlockfrostTelemetry"
+    ] as
+      | {
+          getAllSnapshots?: () => CardanoTelemetrySnapshotResponse;
+        }
+      | undefined;
+    if (!telemetry?.getAllSnapshots) {
+      return {};
+    }
+    return telemetry.getAllSnapshots();
   }
 
   /**
@@ -1073,6 +1108,16 @@ export class CardanoService {
     return `${walletId}:${chainId}:${txIdNorm}`;
   }
 
+  private trackedTxStatusInFlightKey(params: {
+    txId: string;
+    chainId: string;
+    walletId: string;
+  }): string {
+    return `${params.walletId}:${params.chainId}:${this.normalizeCardanoTxId(
+      params.txId
+    )}`;
+  }
+
   /**
    * Same TTL semantics as locally pending rows merged in {@link withPendingTxs}.
    */
@@ -1127,6 +1172,24 @@ export class CardanoService {
    * On transient getTxHistory/loadMore errors, txStatus stays "pending" (send-flow contract).
    */
   async getTrackedTxStatus(params: {
+    txId: string;
+    chainId: string;
+    walletId: string;
+  }): Promise<CardanoTrackedTxStatusResponse> {
+    const inFlightKey = this.trackedTxStatusInFlightKey(params);
+    const existing = this.trackedTxStatusInFlight.get(inFlightKey);
+    if (existing) {
+      return existing;
+    }
+
+    const runPromise = this.getTrackedTxStatusInternal(params).finally(() => {
+      this.trackedTxStatusInFlight.delete(inFlightKey);
+    });
+    this.trackedTxStatusInFlight.set(inFlightKey, runPromise);
+    return runPromise;
+  }
+
+  private async getTrackedTxStatusInternal(params: {
     txId: string;
     chainId: string;
     walletId: string;

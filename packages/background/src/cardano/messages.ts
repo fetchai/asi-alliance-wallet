@@ -162,6 +162,62 @@ export interface CardanoTrackedTxStatusResponse {
   error?: string;
 }
 
+export type CardanoTelemetryRequestKind =
+  | "address_discovery"
+  | "chain_history"
+  | "network"
+  | "pool"
+  | "rewards"
+  | "submit_tx"
+  | "tx"
+  | "utxo"
+  | "other";
+
+export interface CardanoTelemetryRequestCountsByTypeResponse {
+  [chainName: string]: {
+    [kind in CardanoTelemetryRequestKind]: number;
+  };
+}
+
+export interface CardanoTelemetryStatsBucket {
+  avgMs: number;
+  count: number;
+  errorCount: number;
+  maxMs: number;
+  okCount: number;
+  totalMs: number;
+}
+
+export interface CardanoTelemetrySnapshotResponse {
+  [chainName: string]: {
+    byCallerTag: Record<string, CardanoTelemetryStatsBucket>;
+    byEndpoint: Record<string, CardanoTelemetryStatsBucket>;
+    byKind: Record<CardanoTelemetryRequestKind, CardanoTelemetryStatsBucket>;
+    bySourceTag: Record<string, CardanoTelemetryStatsBucket>;
+    chainName: string;
+    failures: Array<{
+      callerTag: string;
+      endpoint: string;
+      kind: CardanoTelemetryRequestKind;
+      ms: number;
+      sourceTag: string;
+      status: number | "unknown";
+      timestamp: number;
+    }>;
+    recentRequests: Array<{
+      callerTag: string;
+      endpoint: string;
+      kind: CardanoTelemetryRequestKind;
+      ms: number;
+      sourceTag: string;
+      status: number | "unknown";
+      timestamp: number;
+    }>;
+    startedAt: number;
+    totals: CardanoTelemetryStatsBucket;
+  };
+}
+
 /**
  * Message for getting Cardano balance
  */
@@ -554,6 +610,60 @@ export class GetCardanoTrackedTxStatusMsg extends Message<CardanoTrackedTxStatus
 
   type(): string {
     return GetCardanoTrackedTxStatusMsg.type();
+  }
+}
+
+/** Internal-only: lightweight request count summary by telemetry kind. */
+export class GetCardanoTelemetryRequestCountsByTypeMsg extends Message<CardanoTelemetryRequestCountsByTypeResponse> {
+  public static type() {
+    return "cardano-get-telemetry-request-counts-by-type";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // No parameters to validate
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetCardanoTelemetryRequestCountsByTypeMsg.type();
+  }
+}
+
+/** Internal-only: full telemetry snapshot for diagnostics. */
+export class GetCardanoTelemetrySnapshotMsg extends Message<CardanoTelemetrySnapshotResponse> {
+  public static type() {
+    return "cardano-get-telemetry-snapshot";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // No parameters to validate
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetCardanoTelemetrySnapshotMsg.type();
   }
 }
 

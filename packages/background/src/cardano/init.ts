@@ -10,6 +10,8 @@ import {
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
   GetCardanoTrackedTxStatusMsg,
+  GetCardanoTelemetryRequestCountsByTypeMsg,
+  GetCardanoTelemetrySnapshotMsg,
   LoadMoreCardanoTxHistoryMsg,
   GetMaxSpendableAdaMsg,
 } from "./messages";
@@ -33,6 +35,8 @@ export function init(
   router.registerMessage(GetCardanoSyncStatusMsg);
   router.registerMessage(GetCardanoTxHistoryMsg);
   router.registerMessage(GetCardanoTrackedTxStatusMsg);
+  router.registerMessage(GetCardanoTelemetryRequestCountsByTypeMsg);
+  router.registerMessage(GetCardanoTelemetrySnapshotMsg);
   router.registerMessage(LoadMoreCardanoTxHistoryMsg);
   router.registerMessage(GetMaxSpendableAdaMsg);
 
