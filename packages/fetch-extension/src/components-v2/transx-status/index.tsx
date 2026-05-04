@@ -9,7 +9,10 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { GetCardanoTrackedTxStatusMsg } from "@keplr-wallet/background";
 import { useStore } from "../../stores";
 
-const CARDANO_TRACKED_TX_POLL_MS = 2500;
+const CARDANO_TRACKED_TX_POLL_FAST_MS = 2500;
+const CARDANO_TRACKED_TX_POLL_NORMAL_MS = 6000;
+const CARDANO_TRACKED_TX_POLL_HIDDEN_MS = 12000;
+const CARDANO_TRACKED_TX_AGGRESSIVE_WINDOW_MS = 2 * 60_000;
 
 /** Optional: poll Cardano merged history until this submitted tx is confirmed. */
 export type CardanoSendTxTracking = {
@@ -57,6 +60,17 @@ export const TransxStatus = ({
     const generation = ++pollGenerationRef.current;
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let isPolling = false;
+    const startedAt = Date.now();
+
+    const getPollDelayMs = () => {
+      if (document.hidden) return CARDANO_TRACKED_TX_POLL_HIDDEN_MS;
+      const withinAggressiveWindow =
+        Date.now() - startedAt < CARDANO_TRACKED_TX_AGGRESSIVE_WINDOW_MS;
+      return withinAggressiveWindow
+        ? CARDANO_TRACKED_TX_POLL_FAST_MS
+        : CARDANO_TRACKED_TX_POLL_NORMAL_MS;
+    };
 
     const clearTimer = () => {
       if (timeoutId != null) {
@@ -76,10 +90,13 @@ export const TransxStatus = ({
       timeoutId = setTimeout(() => {
         timeoutId = null;
         void runPoll();
-      }, CARDANO_TRACKED_TX_POLL_MS);
+      }, getPollDelayMs());
     };
 
     const runPoll = async () => {
+      if (isPolling) {
+        return;
+      }
       if (
         cancelled ||
         generation !== pollGenerationRef.current ||
@@ -88,11 +105,12 @@ export const TransxStatus = ({
       ) {
         return;
       }
-      if (chainStore.current.chainId !== chainId) {
-        return;
-      }
+      isPolling = true;
 
       try {
+        if (chainStore.current.chainId !== chainId) {
+          return;
+        }
         const requester = new InExtensionMessageRequester();
         const res = await requester.sendMessage(
           BACKGROUND_PORT,
@@ -124,15 +142,28 @@ export const TransxStatus = ({
         }
       } catch {
         // Keep pending UX; retry on next tick.
+      } finally {
+        isPolling = false;
       }
 
       scheduleNextPoll();
     };
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        return;
+      }
+      clearTimer();
+      void runPoll();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     void runPoll();
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearTimer();
     };
     // chainStore is read inside runPoll for secondary chain mismatch guard (no subscription needed).

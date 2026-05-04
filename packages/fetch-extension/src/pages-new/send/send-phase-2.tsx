@@ -59,6 +59,10 @@ import {
 } from "./send-phase-2-helpers";
 import { removeComma } from "@utils/format";
 
+const CARDANO_SYNC_POLL_FAST_MS = 2000;
+const CARDANO_SYNC_POLL_NORMAL_MS = 6000;
+const CARDANO_SYNC_POLL_HIDDEN_MS = 12000;
+
 interface SendPhase2Props {
   sendConfigs?: any;
   setIsNext?: any;
@@ -493,6 +497,19 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       let isSubscribed = true;
       let pollEpoch = 0;
       let pollTimeout: ReturnType<typeof setTimeout> | null = null;
+      let lastKnownHasPending = false;
+      let isPolling = false;
+      const getPollDelayMs = (
+        state: CardanoServiceState | undefined,
+        hasOutgoingPendingSpend: boolean
+      ) => {
+        if (document.hidden) return CARDANO_SYNC_POLL_HIDDEN_MS;
+        if (hasOutgoingPendingSpend) return CARDANO_SYNC_POLL_FAST_MS;
+        if (state === "syncing" || state === "temporarily_unavailable") {
+          return CARDANO_SYNC_POLL_FAST_MS;
+        }
+        return CARDANO_SYNC_POLL_NORMAL_MS;
+      };
 
       const clearPollTimeout = () => {
         if (pollTimeout != null) {
@@ -502,7 +519,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       };
 
       const runPoll = async () => {
+        if (isPolling) {
+          return;
+        }
         const myEpoch = ++pollEpoch;
+        isPolling = true;
         try {
           if (!isSubscribed) return;
           const messageRequester = new InExtensionMessageRequester();
@@ -516,6 +537,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           const state = syncStatus?.state;
           setCardanoSyncState(state ?? null);
           const hasPending = syncStatus?.hasOutgoingPendingSpend === true;
+          lastKnownHasPending = hasPending;
           setHasCardanoOutgoingPending(hasPending);
           if (
             state === "ready_with_data" &&
@@ -533,7 +555,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             pollTimeout = setTimeout(() => {
               pollTimeout = null;
               void runPoll();
-            }, 2000);
+            }, getPollDelayMs(state, hasPending));
           }
         } catch {
           if (!isSubscribed || myEpoch !== pollEpoch) return;
@@ -542,9 +564,21 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           pollTimeout = setTimeout(() => {
             pollTimeout = null;
             void runPoll();
-          }, 2000);
+          }, getPollDelayMs(undefined, lastKnownHasPending));
+        } finally {
+          isPolling = false;
         }
       };
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          return;
+        }
+        clearPollTimeout();
+        void runPoll();
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
 
       setIsCardanoSyncing(true);
       void runPoll();
@@ -553,6 +587,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         isSubscribed = false;
         pollEpoch++;
         setHasCardanoOutgoingPending(false);
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
         clearPollTimeout();
       };
     }, [isCardano, chainStore.current.chainId]);
