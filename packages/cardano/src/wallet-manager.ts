@@ -1,6 +1,7 @@
 import { firstValueFrom } from "rxjs";
 import {
   getNetworkConfig,
+  isCardanoStakingEnabled,
   type BlockfrostConfig,
 } from "./adapters/env-adapter";
 import type { CardanoNetwork } from "./utils/network";
@@ -18,18 +19,21 @@ export class CardanoWalletManager {
   private readonly maxReconnectAttempts = 5;
   private keyAgent: any;
   private chainHistoryProvider: any;
+  private readonly cardanoStakingEnabled: boolean;
   private runtimeStatus: CardanoRuntimeStatus = "not_initialized";
 
   private constructor(
     wallet: any,
     keyAgent: any,
     wsProvider?: any,
-    runtimeStatus: CardanoRuntimeStatus = "not_initialized"
+    runtimeStatus: CardanoRuntimeStatus = "not_initialized",
+    cardanoStakingEnabled = false
   ) {
     this.wallet = wallet;
     this.keyAgent = keyAgent;
     this.wsProvider = wsProvider;
     this.runtimeStatus = runtimeStatus;
+    this.cardanoStakingEnabled = cardanoStakingEnabled;
     if (this.wallet) {
       this.setupWSErrorHandling();
     }
@@ -105,13 +109,18 @@ export class CardanoWalletManager {
     );
 
     // Check if Blockfrost is available
+    const cardanoStakingEnabled = isCardanoStakingEnabled();
     const networkConfig = getNetworkConfig(network);
     let wallet: any = undefined;
     let chainHistoryProvider: any = undefined;
 
     if (networkConfig?.projectId) {
       try {
-        const created = await this.createFullWallet(networkConfig, keyAgent);
+        const created = await this.createFullWallet(
+          networkConfig,
+          keyAgent,
+          cardanoStakingEnabled
+        );
         wallet = created.wallet;
         chainHistoryProvider = created.providers?.chainHistoryProvider;
       } catch (error) {
@@ -126,7 +135,8 @@ export class CardanoWalletManager {
         undefined,
         keyAgent,
         undefined,
-        "provider_unavailable"
+        "provider_unavailable",
+        cardanoStakingEnabled
       );
       manager.chainHistoryProvider = undefined;
       return manager;
@@ -136,7 +146,8 @@ export class CardanoWalletManager {
       wallet,
       keyAgent,
       undefined,
-      wallet ? "ready" : "provider_unavailable"
+      wallet ? "ready" : "provider_unavailable",
+      cardanoStakingEnabled
     );
     manager.chainHistoryProvider = chainHistoryProvider;
     return manager;
@@ -144,7 +155,8 @@ export class CardanoWalletManager {
 
   private static async createFullWallet(
     networkConfig: BlockfrostConfig,
-    keyAgent: any
+    keyAgent: any,
+    cardanoStakingEnabled: boolean
   ): Promise<{ wallet: any; providers: any }> {
     // Import necessary SDK modules
     const walletModule = await import("@cardano-sdk/wallet");
@@ -184,6 +196,7 @@ export class CardanoWalletManager {
 
     const providers = createBlockfrostProviders({
       blockfrostConfig: networkConfig,
+      cardanoStakingEnabled,
       logger: console,
       extensionLocalStorage,
       chainName,
@@ -229,8 +242,12 @@ export class CardanoWalletManager {
         firstValueFrom(this.wallet.balance.utxo.available$),
         firstValueFrom(this.wallet.balance.utxo.total$),
         firstValueFrom(this.wallet.balance.utxo.unspendable$),
-        firstValueFrom(this.wallet.balance.rewardAccounts.rewards$),
-        firstValueFrom(this.wallet.balance.rewardAccounts.deposit$),
+        this.cardanoStakingEnabled
+          ? firstValueFrom(this.wallet.balance.rewardAccounts.rewards$)
+          : Promise.resolve(BigInt(0)),
+        this.cardanoStakingEnabled
+          ? firstValueFrom(this.wallet.balance.rewardAccounts.deposit$)
+          : Promise.resolve(BigInt(0)),
         firstValueFrom(this.wallet.assetInfo$).catch(() => new Map()),
       ]);
 

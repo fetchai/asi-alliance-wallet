@@ -129,3 +129,7 @@ export function logApiKeyStatus(network: CardanoNetwork): void {
     );
   }
 }
+
+export function isCardanoStakingEnabled(): boolean {
+  return process.env["CARDANO_STAKING_ENABLED"] === "true";
+}

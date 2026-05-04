@@ -30,6 +30,7 @@ import {
 } from "@cardano-sdk/cardano-services-client";
 import Bottleneck from "bottleneck";
 import { createPersistentCacheStorage } from "@cardano-sdk/web-extension";
+import { AddressType } from "@cardano-sdk/key-management";
 import type { Storage } from "webextension-polyfill";
 import { BlockfrostAddressDiscovery } from "../../adapters/blockfrost-address-discovery";
 import { BlockfrostInputResolver } from "../../adapters/blockfrost-input-resolver";
@@ -57,6 +58,7 @@ export interface WalletProvidersDependencies {
 
 interface ProvidersConfig {
   blockfrostConfig: BlockfrostConfig & { rateLimiter?: RateLimiter };
+  cardanoStakingEnabled?: boolean;
   logger: Logger;
   extensionLocalStorage?: Storage.LocalStorageArea;
   chainName?: ChainName;
@@ -113,6 +115,7 @@ const cacheAssignment: Record<CacheName, { count: number; size: number }> = {
 
 export const createBlockfrostProviders = ({
   blockfrostConfig,
+  cardanoStakingEnabled = false,
   logger,
   extensionLocalStorage,
   chainName,
@@ -183,6 +186,22 @@ export const createBlockfrostProviders = ({
     blockfrostClient,
     "utxoProvider"
   );
+  const createNoOpAsyncProvider = <T extends object>(
+    base: object,
+    label: string
+  ): T =>
+    new Proxy(base as T, {
+      get(target: T, prop: string | symbol) {
+        if (prop in target) return target[prop as keyof T];
+        return async () => {
+          logger.debug("[Cardano] no-op provider call", {
+            provider: label,
+            method: String(prop),
+          });
+          return undefined;
+        };
+      },
+    });
 
   const httpProviderConfig: CreateHttpProviderConfig<Provider> = {
     baseUrl: blockfrostConfig.baseUrl,
@@ -195,29 +214,51 @@ export const createBlockfrostProviders = ({
     networkClient,
     logger
   );
-  const rewardsProvider = new BlockfrostRewardsProvider(rewardsClient, logger);
+  const rewardsProvider = cardanoStakingEnabled
+    ? new BlockfrostRewardsProvider(rewardsClient, logger)
+    : createNoOpAsyncProvider<RewardsProvider>(
+        {
+          healthCheck: async () => ({ ok: true }),
+          rewardAccountBalance: async () => BigInt(0),
+          rewardsHistory: async () => [],
+        },
+        "rewardsProvider"
+      );
 
-  const stakePoolProvider =
-    extensionLocalStorage && chainName
+  const stakePoolProvider = cardanoStakingEnabled
+    ? extensionLocalStorage && chainName
       ? initStakePoolService({
           blockfrostClient: stakePoolClient,
           chainName,
           extensionLocalStorage,
           networkInfoProvider,
         })
-      : ({
-          queryStakePools: async () => {
-            throw new Error(
-              "Stake pool queries require extensionLocalStorage and chainName"
-            );
+      : createNoOpAsyncProvider<StakePoolProvider>(
+          {
+            healthCheck: async () => ({ ok: true }),
+            queryStakePools: async () => ({
+              pageResults: [],
+              totalResultCount: 0,
+            }),
+            stakePoolStats: async () => ({
+              qty: { activating: 0, active: 0, retired: 0, retiring: 0 },
+            }),
           },
-          stakePoolStats: async () => {
-            throw new Error(
-              "Stake pool stats require extensionLocalStorage and chainName"
-            );
-          },
-          healthCheck: async () => ({ ok: false }),
-        } as StakePoolProvider);
+          "stakePoolProvider"
+        )
+    : createNoOpAsyncProvider<StakePoolProvider>(
+        {
+          healthCheck: async () => ({ ok: true }),
+          queryStakePools: async () => ({
+            pageResults: [],
+            totalResultCount: 0,
+          }),
+          stakePoolStats: async () => ({
+            qty: { activating: 0, active: 0, retired: 0, retiring: 0 },
+          }),
+        },
+        "stakePoolProvider"
+      );
 
   const txSubmitProvider = createTxSubmitProvider(
     txSubmitClient,
@@ -247,19 +288,45 @@ export const createBlockfrostProviders = ({
     logger,
   });
 
-  const dRepProvider = new BlockfrostDRepProvider(dRepClient, logger);
+  const dRepProvider = cardanoStakingEnabled
+    ? new BlockfrostDRepProvider(dRepClient, logger)
+    : createNoOpAsyncProvider<any>(
+        {
+          healthCheck: async () => ({ ok: true }),
+        },
+        "drepProvider"
+      );
 
-  const rewardAccountInfoProvider = new BlockfrostRewardAccountInfoProvider({
-    client: rewardAccountInfoClient,
-    dRepProvider,
-    logger,
-    stakePoolProvider,
-  });
+  const rewardAccountInfoProvider = cardanoStakingEnabled
+    ? new BlockfrostRewardAccountInfoProvider({
+        client: rewardAccountInfoClient,
+        dRepProvider,
+        logger,
+        stakePoolProvider,
+      })
+    : createNoOpAsyncProvider<RewardAccountInfoProvider>(
+        {
+          healthCheck: async () => ({ ok: true }),
+          rewardAccountInfo: async () => [],
+        },
+        "rewardAccountInfoProvider"
+      );
 
-  const addressDiscovery = new BlockfrostAddressDiscovery(
-    addressDiscoveryClient,
-    logger
-  );
+  const addressDiscovery = cardanoStakingEnabled
+    ? new BlockfrostAddressDiscovery(addressDiscoveryClient, logger)
+    : {
+        discover: async (addressManager: any) => {
+          logger.debug(
+            "[Cardano] minimal address discovery enabled (staking disabled)"
+          );
+          return [
+            await addressManager.deriveAddress(
+              { index: 0, type: AddressType.External },
+              0
+            ),
+          ];
+        },
+      };
 
   const inputResolverCache = extensionLocalStorage
     ? createPersistentCacheStorage({
