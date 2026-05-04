@@ -2,8 +2,10 @@
 
 import { Logger } from "ts-log";
 import {
+  Cardano,
   AssetProvider,
   ChainHistoryProvider,
+  DRepProvider,
   NetworkInfoProvider,
   Provider,
   RewardAccountInfoProvider,
@@ -53,7 +55,7 @@ export interface WalletProvidersDependencies {
   handleProvider?: any; // Optional for now
   addressDiscovery: any; // BlockfrostAddressDiscovery
   inputResolver?: any; // BlockfrostInputResolver
-  drepProvider?: any; // Optional for now
+  drepProvider?: DRepProvider; // Optional for now
 }
 
 interface ProvidersConfig {
@@ -187,7 +189,7 @@ export const createBlockfrostProviders = ({
     "utxoProvider"
   );
   const createNoOpAsyncProvider = <T extends object>(
-    base: object,
+    base: Partial<{ [K in keyof T]: T[K] }>,
     label: string
   ): T =>
     new Proxy(base as T, {
@@ -209,6 +211,70 @@ export const createBlockfrostProviders = ({
         };
       },
     });
+  const noOpHealthCheck = { healthCheck: async () => ({ ok: true }) };
+  const createNoOpRewardsProvider = () =>
+    createNoOpAsyncProvider<RewardsProvider>(
+      {
+        ...noOpHealthCheck,
+        rewardAccountBalance: async (_args) => BigInt(0),
+        rewardsHistory: async (_args) => new Map(),
+      },
+      "rewardsProvider"
+    );
+  const createNoOpStakePoolProvider = () =>
+    createNoOpAsyncProvider<StakePoolProvider>(
+      {
+        ...noOpHealthCheck,
+        queryStakePools: async () => ({
+          pageResults: [],
+          totalResultCount: 0,
+        }),
+        stakePoolStats: async () => ({
+          qty: { activating: 0, active: 0, retired: 0, retiring: 0 },
+        }),
+      },
+      "stakePoolProvider"
+    );
+  const createNoOpRewardAccountInfoProvider = () =>
+    createNoOpAsyncProvider<RewardAccountInfoProvider>(
+      {
+        ...noOpHealthCheck,
+        rewardAccountInfo: async (args) => {
+          const rewardAccount =
+            args && typeof args === "object" && "rewardAccount" in args
+              ? args.rewardAccount
+              : args;
+          return {
+            address: rewardAccount,
+            credentialStatus: Cardano.StakeCredentialStatus.Unregistered,
+            rewardBalance: BigInt(0),
+          };
+        },
+        // Non-staking flow should not call it; return explicit no-portfolio value.
+        delegationPortfolio: async (_rewardAccount) => null,
+      },
+      "rewardAccountInfoProvider"
+    );
+  const createNoOpDRepProvider = () =>
+    createNoOpAsyncProvider<DRepProvider>(
+      {
+        ...noOpHealthCheck,
+        getDRepInfo: async (args) => ({
+          id: args.id,
+          amount: BigInt(0),
+          active: false,
+          hasScript: false,
+        }),
+        getDRepsInfo: async (args) =>
+          args.ids.map((id) => ({
+            id,
+            amount: BigInt(0),
+            active: false,
+            hasScript: false,
+          })),
+      },
+      "drepProvider"
+    );
 
   const httpProviderConfig: CreateHttpProviderConfig<Provider> = {
     baseUrl: blockfrostConfig.baseUrl,
@@ -223,14 +289,7 @@ export const createBlockfrostProviders = ({
   );
   const rewardsProvider = cardanoStakingEnabled
     ? new BlockfrostRewardsProvider(rewardsClient, logger)
-    : createNoOpAsyncProvider<RewardsProvider>(
-        {
-          healthCheck: async () => ({ ok: true }),
-          rewardAccountBalance: async () => BigInt(0),
-          rewardsHistory: async () => [],
-        },
-        "rewardsProvider"
-      );
+    : createNoOpRewardsProvider();
 
   const stakePoolProvider = cardanoStakingEnabled
     ? extensionLocalStorage && chainName
@@ -240,32 +299,8 @@ export const createBlockfrostProviders = ({
           extensionLocalStorage,
           networkInfoProvider,
         })
-      : createNoOpAsyncProvider<StakePoolProvider>(
-          {
-            healthCheck: async () => ({ ok: true }),
-            queryStakePools: async () => ({
-              pageResults: [],
-              totalResultCount: 0,
-            }),
-            stakePoolStats: async () => ({
-              qty: { activating: 0, active: 0, retired: 0, retiring: 0 },
-            }),
-          },
-          "stakePoolProvider"
-        )
-    : createNoOpAsyncProvider<StakePoolProvider>(
-        {
-          healthCheck: async () => ({ ok: true }),
-          queryStakePools: async () => ({
-            pageResults: [],
-            totalResultCount: 0,
-          }),
-          stakePoolStats: async () => ({
-            qty: { activating: 0, active: 0, retired: 0, retiring: 0 },
-          }),
-        },
-        "stakePoolProvider"
-      );
+      : createNoOpStakePoolProvider()
+    : createNoOpStakePoolProvider();
 
   const txSubmitProvider = createTxSubmitProvider(
     txSubmitClient,
@@ -297,12 +332,7 @@ export const createBlockfrostProviders = ({
 
   const dRepProvider = cardanoStakingEnabled
     ? new BlockfrostDRepProvider(dRepClient, logger)
-    : createNoOpAsyncProvider<any>(
-        {
-          healthCheck: async () => ({ ok: true }),
-        },
-        "drepProvider"
-      );
+    : createNoOpDRepProvider();
 
   const rewardAccountInfoProvider = cardanoStakingEnabled
     ? new BlockfrostRewardAccountInfoProvider({
@@ -311,13 +341,7 @@ export const createBlockfrostProviders = ({
         logger,
         stakePoolProvider,
       })
-    : createNoOpAsyncProvider<RewardAccountInfoProvider>(
-        {
-          healthCheck: async () => ({ ok: true }),
-          rewardAccountInfo: async () => [],
-        },
-        "rewardAccountInfoProvider"
-      );
+    : createNoOpRewardAccountInfoProvider();
 
   const addressDiscovery = cardanoStakingEnabled
     ? new BlockfrostAddressDiscovery(addressDiscoveryClient, logger)
