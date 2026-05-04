@@ -35,6 +35,10 @@ import { BlockfrostAddressDiscovery } from "../../adapters/blockfrost-address-di
 import { BlockfrostInputResolver } from "../../adapters/blockfrost-input-resolver";
 import { initStakePoolService, type ChainName } from "./stake-pool-service";
 import type { BlockfrostConfig } from "../../adapters/env-adapter";
+import {
+  createTelemetryTaggedClient,
+  installBlockfrostRequestTelemetry,
+} from "./blockfrost-request-telemetry";
 
 export interface WalletProvidersDependencies {
   assetProvider: AssetProvider;
@@ -130,6 +134,55 @@ export const createBlockfrostProviders = ({
   const blockfrostClient = new BlockfrostClient(blockfrostClientConfig, {
     rateLimiter,
   });
+  installBlockfrostRequestTelemetry({
+    blockfrostClient,
+    chainName: chainName || "unknown",
+    logger,
+  });
+  const assetClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "assetProvider"
+  );
+  const networkClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "networkInfoProvider"
+  );
+  const rewardsClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "rewardsProvider"
+  );
+  const stakePoolClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "stakePoolProvider"
+  );
+  const txSubmitClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "txSubmitProvider"
+  );
+  const chainHistoryClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "chainHistoryProvider"
+  );
+  const dRepClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "drepProvider"
+  );
+  const rewardAccountInfoClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "rewardAccountInfoProvider"
+  );
+  const addressDiscoveryClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "addressDiscovery"
+  );
+  const inputResolverClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "inputResolver"
+  );
+  const utxoClient = createTelemetryTaggedClient(
+    blockfrostClient,
+    "utxoProvider"
+  );
 
   const httpProviderConfig: CreateHttpProviderConfig<Provider> = {
     baseUrl: blockfrostConfig.baseUrl,
@@ -137,20 +190,17 @@ export const createBlockfrostProviders = ({
     adapter: undefined, // Will use default fetch adapter
   };
 
-  const assetProvider = new BlockfrostAssetProvider(blockfrostClient, logger);
+  const assetProvider = new BlockfrostAssetProvider(assetClient, logger);
   const networkInfoProvider = new BlockfrostNetworkInfoProvider(
-    blockfrostClient,
+    networkClient,
     logger
   );
-  const rewardsProvider = new BlockfrostRewardsProvider(
-    blockfrostClient,
-    logger
-  );
+  const rewardsProvider = new BlockfrostRewardsProvider(rewardsClient, logger);
 
   const stakePoolProvider =
     extensionLocalStorage && chainName
       ? initStakePoolService({
-          blockfrostClient,
+          blockfrostClient: stakePoolClient,
           chainName,
           extensionLocalStorage,
           networkInfoProvider,
@@ -170,7 +220,7 @@ export const createBlockfrostProviders = ({
         } as StakePoolProvider);
 
   const txSubmitProvider = createTxSubmitProvider(
-    blockfrostClient,
+    txSubmitClient,
     httpProviderConfig
   );
 
@@ -191,23 +241,23 @@ export const createBlockfrostProviders = ({
       };
 
   const chainHistoryProvider = new BlockfrostChainHistoryProvider({
-    client: blockfrostClient,
+    client: chainHistoryClient,
     cache: chainHistoryCache as any,
     networkInfoProvider,
     logger,
   });
 
-  const dRepProvider = new BlockfrostDRepProvider(blockfrostClient, logger);
+  const dRepProvider = new BlockfrostDRepProvider(dRepClient, logger);
 
   const rewardAccountInfoProvider = new BlockfrostRewardAccountInfoProvider({
-    client: blockfrostClient,
+    client: rewardAccountInfoClient,
     dRepProvider,
     logger,
     stakePoolProvider,
   });
 
   const addressDiscovery = new BlockfrostAddressDiscovery(
-    blockfrostClient,
+    addressDiscoveryClient,
     logger
   );
 
@@ -229,7 +279,7 @@ export const createBlockfrostProviders = ({
 
   const inputResolver = new BlockfrostInputResolver({
     cache: inputResolverCache as any,
-    client: blockfrostClient,
+    client: inputResolverClient,
     logger,
   });
 
@@ -251,7 +301,7 @@ export const createBlockfrostProviders = ({
 
   const utxoProvider = new BlockfrostUtxoProvider({
     cache: utxoCache as any,
-    client: blockfrostClient,
+    client: utxoClient,
     logger,
   });
 
