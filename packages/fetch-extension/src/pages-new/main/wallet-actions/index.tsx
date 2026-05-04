@@ -52,7 +52,10 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
           const requester = new InExtensionMessageRequester();
           const res = await requester.sendMessage(
             BACKGROUND_PORT,
-            new GetCardanoSyncStatusMsg(chainId)
+            new GetCardanoSyncStatusMsg(
+              chainId,
+              document.hidden ? "background" : "foreground"
+            )
           );
           if (!cancelled) {
             setCardanoOutgoingPending(

@@ -162,6 +162,8 @@ export interface CardanoTrackedTxStatusResponse {
   error?: string;
 }
 
+export type CardanoPollingVisibility = "foreground" | "background";
+
 export type CardanoTelemetryRequestKind =
   | "address_discovery"
   | "chain_history"
@@ -521,7 +523,10 @@ export class GetCardanoSyncStatusMsg extends Message<CardanoSyncStatusResponse> 
     return "cardano-get-sync-status";
   }
 
-  constructor(public readonly chainId?: string) {
+  constructor(
+    public readonly chainId?: string,
+    public readonly pollingVisibility: CardanoPollingVisibility = "foreground"
+  ) {
     super();
   }
 
@@ -591,7 +596,11 @@ export class GetCardanoTrackedTxStatusMsg extends Message<CardanoTrackedTxStatus
     return "cardano-get-tracked-tx-status";
   }
 
-  constructor(public readonly txId: string, public readonly chainId: string) {
+  constructor(
+    public readonly txId: string,
+    public readonly chainId: string,
+    public readonly pollingVisibility: CardanoPollingVisibility = "foreground"
+  ) {
     super();
   }
 

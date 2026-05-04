@@ -114,7 +114,11 @@ export const TransxStatus = ({
         const requester = new InExtensionMessageRequester();
         const res = await requester.sendMessage(
           BACKGROUND_PORT,
-          new GetCardanoTrackedTxStatusMsg(txId, chainId)
+          new GetCardanoTrackedTxStatusMsg(
+            txId,
+            chainId,
+            document.hidden ? "background" : "foreground"
+          )
         );
 
         if (

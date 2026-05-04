@@ -529,7 +529,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           const messageRequester = new InExtensionMessageRequester();
           const syncStatus = (await messageRequester.sendMessage(
             BACKGROUND_PORT,
-            new GetCardanoSyncStatusMsg(chainStore.current.chainId)
+            new GetCardanoSyncStatusMsg(
+              chainStore.current.chainId,
+              document.hidden ? "background" : "foreground"
+            )
           )) as CardanoSyncStatusResponse;
 
           if (!isSubscribed || myEpoch !== pollEpoch) return;

@@ -568,45 +568,55 @@ const handleGetCardanoSyncStatusMsg: (
       };
     }
 
-    try {
-      const walletManager = service.getWalletManager();
-      if (!walletManager || !walletManager.hasWallet()) {
-        const runtimeState = service.getRuntimeState();
-        return {
-          state:
-            runtimeState === "provider_unavailable"
-              ? "provider_error"
-              : "temporarily_unavailable",
-          isSettled: false,
-          hasOutgoingPendingSpend: false,
-          error:
-            runtimeState === "provider_unavailable"
-              ? "provider_unavailable"
-              : "wallet_not_ready",
-        };
-      }
+    const visibility =
+      msg.pollingVisibility === "background" ? "background" : "foreground";
 
-      // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
-      const { firstValueFrom } = await import("rxjs");
-      const isSettled = (await firstValueFrom(walletManager.syncStatus$).catch(
-        () => false
-      )) as boolean;
-      const hasOutgoingPendingSpend = await service.getHasOutgoingPendingSpend(
-        msg.chainId
-      );
-      return {
-        state: isSettled ? "ready_with_data" : "syncing",
-        isSettled,
-        hasOutgoingPendingSpend,
-      };
-    } catch (error) {
-      return {
-        state: stateFromError(error),
-        isSettled: false,
-        hasOutgoingPendingSpend: false,
-        error: errorMessage(error),
-      };
-    }
+    return service.runOwnedPolling({
+      scope: "sync-status",
+      key: msg.chainId ?? "default",
+      chainId: msg.chainId,
+      visibility,
+      compute: async () => {
+        try {
+          const walletManager = service.getWalletManager();
+          if (!walletManager || !walletManager.hasWallet()) {
+            const runtimeState = service.getRuntimeState();
+            return {
+              state:
+                runtimeState === "provider_unavailable"
+                  ? "provider_error"
+                  : "temporarily_unavailable",
+              isSettled: false,
+              hasOutgoingPendingSpend: false,
+              error:
+                runtimeState === "provider_unavailable"
+                  ? "provider_unavailable"
+                  : "wallet_not_ready",
+            };
+          }
+
+          // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
+          const { firstValueFrom } = await import("rxjs");
+          const isSettled = (await firstValueFrom(
+            walletManager.syncStatus$
+          ).catch(() => false)) as boolean;
+          const hasOutgoingPendingSpend =
+            await service.getHasOutgoingPendingSpend(msg.chainId);
+          return {
+            state: isSettled ? "ready_with_data" : "syncing",
+            isSettled,
+            hasOutgoingPendingSpend,
+          };
+        } catch (error) {
+          return {
+            state: stateFromError(error),
+            isSettled: false,
+            hasOutgoingPendingSpend: false,
+            error: errorMessage(error),
+          };
+        }
+      },
+    });
   };
 };
 
@@ -757,19 +767,30 @@ const handleGetCardanoTrackedTxStatusMsg: (
       };
     }
 
-    try {
-      return await service.getTrackedTxStatus({
-        txId: msg.txId,
-        chainId: msg.chainId,
-        walletId,
-      });
-    } catch (error) {
-      return {
-        state: toTrackedTxServiceState(stateFromError(error)),
-        txStatus: "pending",
-        error: errorMessage(error),
-      };
-    }
+    const visibility =
+      msg.pollingVisibility === "background" ? "background" : "foreground";
+
+    return service.runOwnedPolling({
+      scope: "tracked-tx-status",
+      key: `${walletId}:${msg.chainId}:${msg.txId}`,
+      chainId: msg.chainId,
+      visibility,
+      compute: async () => {
+        try {
+          return await service.getTrackedTxStatus({
+            txId: msg.txId,
+            chainId: msg.chainId,
+            walletId,
+          });
+        } catch (error) {
+          return {
+            state: toTrackedTxServiceState(stateFromError(error)),
+            txStatus: "pending",
+            error: errorMessage(error),
+          };
+        }
+      },
+    });
   };
 };
 

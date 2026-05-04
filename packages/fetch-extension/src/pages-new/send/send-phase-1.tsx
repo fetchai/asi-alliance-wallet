@@ -64,7 +64,10 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
               try {
                 const syncStatus = (await requester.sendMessage(
                   BACKGROUND_PORT,
-                  new GetCardanoSyncStatusMsg(chainStore.current.chainId)
+                  new GetCardanoSyncStatusMsg(
+                    chainStore.current.chainId,
+                    document.hidden ? "background" : "foreground"
+                  )
                 )) as CardanoSyncStatusResponse | undefined;
 
                 if (

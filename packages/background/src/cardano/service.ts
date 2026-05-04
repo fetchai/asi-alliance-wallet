@@ -21,6 +21,7 @@ import type {
   CardanoTelemetryRequestCountsByTypeResponse,
   CardanoTelemetrySnapshotResponse,
   CardanoTelemetryBaselinesResponse,
+  CardanoPollingVisibility,
 } from "./messages";
 import type { BuildSendAdaTxDraftResult } from "./messages";
 import {
@@ -160,6 +161,8 @@ export class CardanoService {
     this.locallyPendingSentTxs.clear();
     this.trackedTxDeepScanCooldownUntil.clear();
     this.trackedTxStatusInFlight.clear();
+    this.ownedPollingStates.clear();
+    this.aggressivePollingUntilByChain.clear();
     this.submitAdaTxDraftSerial = Promise.resolve();
     this.keyRing = undefined;
     this.runtimeSessionId = "";
@@ -255,11 +258,26 @@ export class CardanoService {
     string,
     Promise<CardanoTrackedTxStatusResponse>
   >();
+  private readonly ownedPollingStates = new Map<
+    string,
+    {
+      inFlight?: Promise<unknown>;
+      lastResult?: unknown;
+      lastUpdatedAt?: number;
+    }
+  >();
+  private readonly aggressivePollingUntilByChain = new Map<string, number>();
 
   private static readonly TRACKED_TX_HISTORY_PAGE_SIZE = 25;
   private static readonly TRACKED_TX_MAX_LOAD_MORE_PAGES = 5;
   /** Cooldown before repeating bounded loadMore for the same wallet/chain/tx key. */
   private static readonly TRACKED_TX_DEEP_SCAN_COOLDOWN_MS = 45_000;
+  private static readonly OWNED_POLLING_FOREGROUND_MS = 6_000;
+  private static readonly OWNED_POLLING_BACKGROUND_MS = 12_000;
+  private static readonly OWNED_POLLING_AGGRESSIVE_MS = 2_000;
+  private static readonly OWNED_POLLING_AGGRESSIVE_WINDOW_MS = 2 * 60_000;
+  private static readonly OWNED_POLLING_TRACKED_TX_TTL_MS = 10 * 60_000;
+  private static readonly OWNED_POLLING_TRACKED_TX_MAX_ENTRIES = 300;
 
   private registerLocallyPendingSentTx(
     params: {
@@ -298,6 +316,17 @@ export class CardanoService {
       assets: params.assets,
     });
     this.locallyPendingSentTxs.set(chainKey, perChain);
+    this.markCriticalPollingWindow(chainId);
+  }
+
+  private markCriticalPollingWindow(chainId?: string) {
+    if (!chainId) return;
+    this.aggressivePollingUntilByChain.set(
+      chainId,
+      Date.now() + CardanoService.OWNED_POLLING_AGGRESSIVE_WINDOW_MS
+    );
+    this.ownedPollingStates.delete(`sync-status:${chainId}`);
+    this.ownedPollingStates.delete("sync-status:default");
   }
 
   private removeLocallyPendingSentTx(txId: string, chainId?: string) {
@@ -312,6 +341,8 @@ export class CardanoService {
     if (perChain.size === 0) {
       this.locallyPendingSentTxs.delete(chainId);
     }
+    this.ownedPollingStates.delete(`sync-status:${chainId}`);
+    this.ownedPollingStates.delete("sync-status:default");
   }
 
   private createDraftPendingTxId(draftId: string): string {
@@ -380,6 +411,116 @@ export class CardanoService {
       }
     }
     return false;
+  }
+
+  private getOwnedPollingInterval(
+    chainId: string | undefined,
+    visibility: CardanoPollingVisibility
+  ): number {
+    if (visibility === "background") {
+      return CardanoService.OWNED_POLLING_BACKGROUND_MS;
+    }
+    if (!chainId) {
+      return CardanoService.OWNED_POLLING_FOREGROUND_MS;
+    }
+    const aggressiveUntil =
+      this.aggressivePollingUntilByChain.get(chainId) ?? 0;
+    if (
+      Date.now() < aggressiveUntil ||
+      this.hasFreshLocalOutgoingGuard(chainId)
+    ) {
+      return CardanoService.OWNED_POLLING_AGGRESSIVE_MS;
+    }
+    return CardanoService.OWNED_POLLING_FOREGROUND_MS;
+  }
+
+  async runOwnedPolling<T>(params: {
+    scope: "sync-status" | "tracked-tx-status";
+    key: string;
+    chainId?: string;
+    visibility: CardanoPollingVisibility;
+    compute: () => Promise<T>;
+  }): Promise<T> {
+    const mapKey = `${params.scope}:${params.key}`;
+    if (params.scope === "tracked-tx-status") {
+      this.cleanupTrackedTxOwnedPollingStates();
+    }
+    const current = this.ownedPollingStates.get(mapKey) ?? {};
+    if (current.inFlight) {
+      return current.inFlight as Promise<T>;
+    }
+    const minInterval = this.getOwnedPollingInterval(
+      params.chainId,
+      params.visibility
+    );
+    if (
+      current.lastResult !== undefined &&
+      current.lastUpdatedAt !== undefined &&
+      Date.now() - current.lastUpdatedAt < minInterval
+    ) {
+      return current.lastResult as T;
+    }
+    const inFlight = params
+      .compute()
+      .then((result) => {
+        if (
+          params.scope === "tracked-tx-status" &&
+          (result as { txStatus?: string })?.txStatus === "confirmed"
+        ) {
+          this.ownedPollingStates.delete(mapKey);
+          return result;
+        }
+        this.ownedPollingStates.set(mapKey, {
+          lastResult: result,
+          lastUpdatedAt: Date.now(),
+        });
+        return result;
+      })
+      .finally(() => {
+        const latest = this.ownedPollingStates.get(mapKey);
+        if (latest) {
+          delete latest.inFlight;
+          this.ownedPollingStates.set(mapKey, latest);
+        }
+      });
+    this.ownedPollingStates.set(mapKey, {
+      ...current,
+      inFlight,
+    });
+    return inFlight;
+  }
+
+  private cleanupTrackedTxOwnedPollingStates() {
+    const now = Date.now();
+    for (const [key, state] of this.ownedPollingStates) {
+      if (!key.startsWith("tracked-tx-status:")) {
+        continue;
+      }
+      if (state.inFlight) {
+        continue;
+      }
+      if (
+        state.lastUpdatedAt !== undefined &&
+        now - state.lastUpdatedAt >
+          CardanoService.OWNED_POLLING_TRACKED_TX_TTL_MS
+      ) {
+        this.ownedPollingStates.delete(key);
+      }
+    }
+
+    const trackedKeys = Array.from(this.ownedPollingStates.entries())
+      .filter(
+        ([key, state]) =>
+          key.startsWith("tracked-tx-status:") && !state.inFlight
+      )
+      .sort((a, b) => (a[1].lastUpdatedAt ?? 0) - (b[1].lastUpdatedAt ?? 0));
+    const overflow =
+      trackedKeys.length - CardanoService.OWNED_POLLING_TRACKED_TX_MAX_ENTRIES;
+    if (overflow > 0) {
+      for (let i = 0; i < overflow; i++) {
+        this.ownedPollingStates.delete(trackedKeys[i][0]);
+      }
+    }
   }
 
   /** Internal: used by build/submit enforcement (errors propagate). */

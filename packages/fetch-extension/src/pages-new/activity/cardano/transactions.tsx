@@ -200,7 +200,10 @@ export const CardanoTransactionsTab = observer(() => {
       try {
         const syncStatus = (await requester.sendMessage(
           BACKGROUND_PORT,
-          new GetCardanoSyncStatusMsg(chainId)
+          new GetCardanoSyncStatusMsg(
+            chainId,
+            document.hidden ? "background" : "foreground"
+          )
         )) as CardanoSyncStatusResponse;
         if (!isSubscribed) return;
 
