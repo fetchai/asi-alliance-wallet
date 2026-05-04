@@ -202,7 +202,20 @@ export class CardanoWalletManager {
       chainName,
     });
 
-    const stores = storage.createInMemoryWalletStores();
+    const { mode: walletStoresMode, stores } = this.createWalletStores(
+      storage,
+      extensionLocalStorage
+    );
+    const pollingConfig = this.createPollingConfig(
+      DEFAULT_POLLING_CONFIG,
+      cardanoStakingEnabled
+    );
+    console.debug("[Cardano] wallet runtime config", {
+      cardanoStakingEnabled,
+      pollInterval:
+        (pollingConfig as any).interval ?? (pollingConfig as any).pollInterval,
+      walletStoresMode,
+    });
     const asyncKeyAgent = KeyManagement.util.createAsyncKeyAgent(keyAgent);
     const witnesser =
       KeyManagement.util.createBip32Ed25519Witnesser(asyncKeyAgent);
@@ -213,7 +226,7 @@ export class CardanoWalletManager {
     const wallet = createPersonalWallet(
       {
         name: "Cardano Wallet",
-        polling: DEFAULT_POLLING_CONFIG,
+        polling: pollingConfig,
       },
       {
         logger: console,
@@ -225,6 +238,69 @@ export class CardanoWalletManager {
     );
 
     return { wallet, providers };
+  }
+
+  private static createWalletStores(storage: any, extensionLocalStorage: any) {
+    const createPersistentWalletStores = (storage as any)
+      .createPersistentWalletStores;
+    if (createPersistentWalletStores && extensionLocalStorage) {
+      try {
+        const persistentStores = createPersistentWalletStores({
+          extensionLocalStorage,
+        });
+        if (persistentStores) {
+          return {
+            mode: "persistent",
+            stores: persistentStores,
+          };
+        }
+        console.warn(
+          "[Cardano] persistent wallet stores returned empty value, falling back to in-memory"
+        );
+      } catch (error) {
+        console.warn(
+          "[Cardano] persistent wallet stores unavailable, falling back to in-memory",
+          error
+        );
+      }
+    }
+    return {
+      mode: "memory",
+      stores: storage.createInMemoryWalletStores(),
+    };
+  }
+
+  private static createPollingConfig(
+    defaultPollingConfig: any,
+    cardanoStakingEnabled: boolean
+  ) {
+    const intervalKey =
+      typeof defaultPollingConfig.pollInterval === "number"
+        ? "pollInterval"
+        : typeof defaultPollingConfig.interval === "number"
+        ? "interval"
+        : undefined;
+    if (!intervalKey) {
+      console.warn("[Cardano] unexpected polling config shape", {
+        defaultPollingConfig,
+      });
+      return defaultPollingConfig;
+    }
+
+    const baseInterval = defaultPollingConfig[intervalKey];
+    const envInterval = Number(process.env["CARDANO_POLL_INTERVAL_MS"] || "");
+    const hasEnvInterval = Number.isFinite(envInterval) && envInterval > 0;
+
+    const nextInterval = hasEnvInterval
+      ? envInterval
+      : !cardanoStakingEnabled
+      ? Math.max(baseInterval * 2, 60_000)
+      : baseInterval;
+
+    return {
+      ...defaultPollingConfig,
+      [intervalKey]: nextInterval,
+    };
   }
 
   async getBalance() {

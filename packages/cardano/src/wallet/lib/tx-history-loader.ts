@@ -27,6 +27,9 @@ import {
 } from "rxjs";
 import { Logger } from "ts-log";
 
+const LAST_BLOCK_TRANSACTIONS_CACHE_TTL_MS = 30_000;
+const LAST_BLOCK_TRANSACTIONS_CACHE_MAX_ITEMS = 200;
+
 /**
  * Reused from lace:
  * `third_party/lace/v1/packages/cardano/src/wallet/lib/tx-history-loader.ts`
@@ -294,13 +297,38 @@ export const createTxHistoryLoader = (
   };
 };
 
-export const createObservableTransactionsByAddressesProvider =
-  (
-    provider: Pick<ChainHistoryProvider, "transactionsByAddresses">,
-    retryBackoffConfig: PollProviderProps<unknown>["retryBackoffConfig"],
-    logger: Logger
-  ): ObservableTransactionsByAddressesProvider =>
-  (args) =>
+export const createObservableTransactionsByAddressesProvider = (
+  provider: Pick<ChainHistoryProvider, "transactionsByAddresses">,
+  retryBackoffConfig: PollProviderProps<unknown>["retryBackoffConfig"],
+  logger: Logger
+): ObservableTransactionsByAddressesProvider => {
+  const lastBlockTransactionsCache = new Map<
+    string,
+    { cachedAt: number; transactions: Cardano.HydratedTx[] }
+  >();
+  const lastBlockTransactionsInFlight = new Map<
+    string,
+    Promise<Cardano.HydratedTx[]>
+  >();
+
+  const cleanupLastBlockCache = (now: number) => {
+    for (const [key, value] of lastBlockTransactionsCache.entries()) {
+      if (now - value.cachedAt >= LAST_BLOCK_TRANSACTIONS_CACHE_TTL_MS) {
+        lastBlockTransactionsCache.delete(key);
+      }
+    }
+    while (
+      lastBlockTransactionsCache.size > LAST_BLOCK_TRANSACTIONS_CACHE_MAX_ITEMS
+    ) {
+      const firstKey = lastBlockTransactionsCache.keys().next().value as
+        | string
+        | undefined;
+      if (firstKey === undefined) break;
+      lastBlockTransactionsCache.delete(firstKey);
+    }
+  };
+
+  return (args) =>
     pollProvider({
       logger,
       retryBackoffConfig,
@@ -330,25 +358,60 @@ export const createObservableTransactionsByAddressesProvider =
             break;
           }
         }
-        // PERF: this could be optimized to not re-fetch last tx details
-        const lastTxBlockTransactions = await provider.transactionsByAddresses({
-          ...args,
-          pagination: {
-            // supports up to 100 transactions in 1 block
-            limit: 100,
-            startAt: 0,
-            order: "desc",
-          },
-          blockRange: {
-            lowerBound: lastBlockHeight,
-            upperBound: lastBlockHeight,
-          },
-        });
+        const cacheKey = `${addressesKey(
+          args.addresses
+        )}:${lastBlockHeight.toString()}`;
+        const cachedLastBlock = lastBlockTransactionsCache.get(cacheKey);
+        const now = Date.now();
+        cleanupLastBlockCache(now);
+        const lastTxBlockTransactionsPageResults =
+          cachedLastBlock &&
+          now - cachedLastBlock.cachedAt < LAST_BLOCK_TRANSACTIONS_CACHE_TTL_MS
+            ? cachedLastBlock.transactions
+            : await (() => {
+                const existing = lastBlockTransactionsInFlight.get(cacheKey);
+                if (existing) {
+                  return existing;
+                }
+                const requestPromise = provider
+                  .transactionsByAddresses({
+                    ...args,
+                    pagination: {
+                      // supports up to 100 transactions in 1 block
+                      limit: 100,
+                      startAt: 0,
+                      order: "desc",
+                    },
+                    blockRange: {
+                      lowerBound: lastBlockHeight,
+                      upperBound: lastBlockHeight,
+                    },
+                  })
+                  .then((response) => response.pageResults)
+                  .finally(() => {
+                    lastBlockTransactionsInFlight.delete(cacheKey);
+                  });
+                lastBlockTransactionsInFlight.set(cacheKey, requestPromise);
+                return requestPromise;
+              })();
+        if (
+          !cachedLastBlock ||
+          now - cachedLastBlock.cachedAt >= LAST_BLOCK_TRANSACTIONS_CACHE_TTL_MS
+        ) {
+          lastBlockTransactionsCache.set(cacheKey, {
+            cachedAt: Date.now(),
+            transactions: lastTxBlockTransactionsPageResults,
+          });
+        }
         return [
           ...transactionsToEmit,
-          ...lastTxBlockTransactions.pageResults.filter(
+          ...lastTxBlockTransactionsPageResults.filter(
             (extraTx) => !transactionsToEmit.some((tx) => tx.id === extraTx.id)
           ),
         ];
       },
     });
+};
+
+const addressesKey = (addresses: Cardano.PaymentAddress[]): string =>
+  [...addresses].map(String).sort().join("|");
