@@ -923,12 +923,7 @@ export class CosmosAccountImpl {
       signDoc,
       signature: Buffer.from(
         // combine all signatures as one base64 string
-        Uint8Array.from(
-          multisignedTx.signatures.reduce(
-            (prev: any, curr: any) => [...prev, ...curr],
-            [] as number[]
-          )
-        )
+        Uint8Array.from(multisignedTx.signatures[0])
       ).toString("base64"),
     };
   }
