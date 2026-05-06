@@ -42,7 +42,12 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
       enabled: !offlineSigning,
     });
 
-    const createSignedTxn = (sequence: any, txnPayload: any, pubKey: any) => {
+    const createSignedTxn = (
+      sequence: any,
+      txnPayload: any,
+      pubKey: any,
+      signature: any
+    ) => {
       return formatJson(
         JSON.stringify(
           buildSignedTxnPayload({
@@ -50,6 +55,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
             signingMode: "amino",
             sequence: sequence,
             pubKey,
+            signature,
           })
         )
       );
@@ -67,15 +73,17 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
     };
 
     const onSignSuccess = (signDocParams: any, result: any, fileNames: any) => {
+      const signature = createSignature(result, signDocParams.sequence);
       navigate("/more/sign-manual-txn", {
         replace: true,
         state: {
           signed: true,
-          txSignature: createSignature(result, signDocParams.sequence),
+          txSignature: signature,
           signedTxn: createSignedTxn(
             signDocParams?.sequence,
             txnPayload,
-            result.signature.pub_key
+            result.signature.pub_key,
+            JSON.parse(signature).signatures
           ),
           signatureFileName: fileNames.signature,
           txnFileName: fileNames.transaction,
@@ -141,7 +149,8 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
                   signedTxn: createSignedTxn(
                     signDocParams?.sequence,
                     txnPayload,
-                    accountData?.account?.pub_key
+                    accountData?.account?.pub_key,
+                    tx.signature
                   ),
                   txnFileName: fileNames.transaction,
                 },

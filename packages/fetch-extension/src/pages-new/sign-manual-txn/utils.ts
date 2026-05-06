@@ -154,6 +154,7 @@ export function buildSignedTxnPayload({
   signingMode,
   sequence,
   pubKey,
+  signature,
   isMultisig = false,
   signerIndex,
 }: {
@@ -163,6 +164,7 @@ export function buildSignedTxnPayload({
   pubKey: any;
   isMultisig?: boolean;
   signerIndex?: number;
+  signature?: any;
 }) {
   const updatedSignerInfos = updateSignerInfosForSigning({
     signerInfos: txnPayload.auth_info?.signer_infos,
@@ -179,6 +181,11 @@ export function buildSignedTxnPayload({
       ...txnPayload.auth_info,
       signer_infos: updatedSignerInfos,
     },
+    signatures: signature
+      ? Array.isArray(signature)
+        ? [...signature]
+        : [signature]
+      : [],
   };
 }
 

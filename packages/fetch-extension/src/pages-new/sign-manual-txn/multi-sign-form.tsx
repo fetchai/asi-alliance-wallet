@@ -108,7 +108,11 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       setAllSignaturesCollected(collectedCount >= threshold);
     }, [multiSignatures, threshold]);
 
-    const createSignedTxn = (sequence: any, parsedTxnPayload: any) => {
+    const createSignedTxn = (
+      sequence: any,
+      parsedTxnPayload: any,
+      signature?: any
+    ) => {
       const protoJsonPubKey = multiSigPubKeys
         ? JSON.parse(multiSigPubKeys)
         : convertToProtoJsonPubKey(accountData?.account?.pub_key);
@@ -131,6 +135,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             pubKey: protoJsonPubKey,
             isMultisig: true,
             signerIndex,
+            signature,
           })
         )
       );
@@ -138,12 +143,18 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
 
     const onSignSuccess = (signDocParams: any, result: any, fileNames: any) => {
       const parsedTxnPayload = JSON.parse(txnPayload);
+      const signature = createSignature(result, signDocParams.sequence);
+
       navigate("/more/sign-manual-txn", {
         replace: true,
         state: {
           signed: true,
-          txSignature: createSignature(result, signDocParams.sequence),
-          signedTxn: createSignedTxn(signDocParams?.sequence, parsedTxnPayload),
+          txSignature: signature,
+          signedTxn: createSignedTxn(
+            signDocParams?.sequence,
+            parsedTxnPayload,
+            JSON.parse(signature).signatures
+          ),
           signatureFileName: fileNames.signature,
           txnFileName: fileNames.transaction,
         },
@@ -240,7 +251,8 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
               txSignature: tx.signature,
               signedTxn: createSignedTxn(
                 signDocParams?.sequence,
-                JSON.parse(txnPayload)
+                JSON.parse(txnPayload),
+                tx.signature
               ),
               txnFileName: fileNames.transaction,
               txHash: tx.txHash,
