@@ -60,7 +60,6 @@ export const BROADCAST_SUPPORTED_MSG_TYPES = [
   "/cosmos.staking.v1beta1.MsgBeginRedelegate",
   "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
   "/cosmos.gov.v1beta1.MsgVote",
-  "/cosmwasm.wasm.v1.MsgExecuteContract",
   "/cosmos.gov.v1beta1.MsgSubmitProposal",
 ];
 
@@ -800,6 +799,7 @@ export const CosmosMsgTypesAmino: Record<string, string> = {
   "cosmos-sdk/MsgBeginRedelegate": "redelegate",
   "cosmos-sdk/MsgWithdrawDelegationReward": "withdrawRewards",
   "cosmos-sdk/MsgVote": "govVote",
+  "cosmos-sdk/MsgSubmitProposal": "govSubmitProposal",
 };
 
 export const CosmosMsgTypesProto: Record<string, string> = {
@@ -809,6 +809,7 @@ export const CosmosMsgTypesProto: Record<string, string> = {
   "/cosmos.staking.v1beta1.MsgBeginRedelegate": "redelegate",
   "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward": "withdrawRewards",
   "/cosmos.gov.v1beta1.MsgVote": "govVote",
+  "/cosmos.gov.v1beta1.MsgSubmitProposal": "govSubmitProposal",
 };
 
 export const convertAminoToProtoMsgs = (aminoDocMsgs: any[]) => {
