@@ -61,7 +61,7 @@ export const BROADCAST_SUPPORTED_MSG_TYPES = [
   "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
   "/cosmos.gov.v1beta1.MsgVote",
   "/cosmwasm.wasm.v1.MsgExecuteContract",
-  // "/cosmos.gov.v1beta1.MsgSubmitProposal",
+  "/cosmos.gov.v1beta1.MsgSubmitProposal",
 ];
 
 export function getMultisigAccountError({

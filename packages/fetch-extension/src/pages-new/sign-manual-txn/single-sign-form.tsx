@@ -36,7 +36,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
       accountNumber: "",
       sequence: "",
     });
-
+    const [ovverrideSigner, setOverrideSigner] = useState(false);
     const address = account.bech32Address;
     const accountName = account.name;
 
@@ -191,6 +191,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
       setTxnPayload(value);
       setPayloadError("");
       setDisableBroadcast(false);
+      setOverrideSigner(false);
       try {
         const formatted = formatJson(value);
         const signDoc = JSON.parse(formatted);
@@ -219,6 +220,9 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
           setAccountInfo={setAccountInfo}
           onTxnSignDocChange={onTxnSignDocChange}
           payloadError={payloadError}
+          setPayloadError={setPayloadError}
+          overrideSigner={ovverrideSigner}
+          setOverrideSigner={setOverrideSigner}
           showNotification={showNotification}
           txnPayload={txnPayload}
         />

@@ -56,6 +56,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
     const [payloadError, setPayloadError] = useState("");
     const [multiSignatures, setMultiSignatures] = useState<string[]>([""]);
     const [multisigAccount, setMultiSigAccount] = useState<string>("");
+    const [ovverrideSigner, setOverrideSigner] = useState(false);
     const [disableBroadcast, setDisableBroadcast] = useState(false);
     const [allSignaturesCollected, setAllSignaturesCollected] = useState(false);
     const [multiSigTransactionAssembled, setMultiSigTransactionAssembled] =
@@ -305,6 +306,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       setTxnPayload(value);
       setPayloadError("");
       setDisableBroadcast(false);
+      setOverrideSigner(false);
       try {
         const formatted = formatJson(value);
         const signDoc = JSON.parse(formatted);
@@ -401,6 +403,9 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             multisigAccount={multisigAccount}
             multiSigAccountError={multiSigAccountError}
             payloadError={payloadError}
+            setPayloadError={setPayloadError}
+            overrideSigner={ovverrideSigner}
+            setOverrideSigner={setOverrideSigner}
             showNotification={showNotification}
             txnPayload={txnPayload}
             onMultisigAccountChange={(value) => setMultiSigAccount(value)}
