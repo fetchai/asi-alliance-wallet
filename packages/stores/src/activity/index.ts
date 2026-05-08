@@ -39,6 +39,7 @@ export class ActivityStore {
     [TXNTYPE.redelegate]: false,
     [TXNTYPE.undelegate]: false,
     [TXNTYPE.withdrawRewards]: false,
+    [TXNTYPE.govSubmitProposal]: false,
   };
 
   // updates or adds new nodes to the list

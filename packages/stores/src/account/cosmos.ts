@@ -186,6 +186,7 @@ export interface CosmosMsgOpts {
   // The gas multiplication per rewards.
   readonly withdrawRewards: MsgOpt;
   readonly govVote: MsgOpt;
+  readonly govSubmitProposal: MsgOpt;
 }
 
 /**
@@ -221,6 +222,10 @@ export const defaultCosmosMsgOpts: CosmosMsgOpts = {
   },
   govVote: {
     type: "cosmos-sdk/MsgVote",
+    gas: 300000,
+  },
+  govSubmitProposal: {
+    type: "cosmos-sdk/MsgSubmitProposal",
     gas: 300000,
   },
 };
