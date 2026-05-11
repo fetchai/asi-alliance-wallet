@@ -39,7 +39,11 @@ export const ActivityRow = ({ node, setDate }: { node: any; setDate: any }) => {
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div className={style["leftImage"]}>
             <img
-              className={style["img"]}
+              className={
+                details.verb !== "Governance Proposal"
+                  ? style["img"]
+                  : style["imgProposal"]
+              }
               src={getActivityIcon(typeUrl, details.verb)}
               alt={typeUrl}
             />

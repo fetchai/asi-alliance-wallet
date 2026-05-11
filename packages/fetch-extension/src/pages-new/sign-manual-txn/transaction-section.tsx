@@ -25,8 +25,11 @@ export const TransactionSection: React.FC<TransactionSectionProps> = ({
   onMultisigAccountChange,
   txnPayload,
   payloadError,
+  setPayloadError,
   onTxnSignDocChange,
   showNotification,
+  overrideSigner,
+  setOverrideSigner,
 }) => {
   useEffect(() => {
     if (broadcastTxn) {
@@ -146,7 +149,27 @@ export const TransactionSection: React.FC<TransactionSectionProps> = ({
         onBlur={(e: any) => {
           onTxnSignDocChange(e.target.value);
         }}
-        error={payloadError}
+        error={
+          payloadError && (
+            <div className={style["errorContainer"]}>
+              <span className={style["errorMessage"]}>{payloadError}</span>
+              {payloadError.includes(
+                "no message signed by the signer address"
+              ) &&
+                !overrideSigner && (
+                  <a
+                    className={style["signAnywayLink"]}
+                    onClick={() => {
+                      setOverrideSigner(true);
+                      setPayloadError("");
+                    }}
+                  >
+                    Sign anyway (Might fail due to signer mismatch)
+                  </a>
+                )}
+            </div>
+          )
+        }
       />
       <JsonUploadButton
         text="Upload Transaction"

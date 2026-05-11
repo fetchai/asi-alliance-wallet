@@ -21,12 +21,14 @@ import {
   MsgTransfer,
   MsgUndelegate,
   MsgVote,
+  MsgSubmitProposal,
   MsgWithdrawDelegatorReward,
   renderMsgBeginRedelegate,
   renderMsgDelegate,
   renderMsgExecuteContract,
   renderMsgInstantiateContract,
   renderMsgSend,
+  renderMsgSubmitProposal,
   renderMsgTransfer,
   renderMsgUndelegate,
   renderMsgVote,
@@ -110,6 +112,16 @@ export function renderAminoMessage(
     if (msg.type === msgOpts.cosmos.msgOpts.govVote.type) {
       const value = msg.value as MsgVote["value"];
       return renderMsgVote(intl, value.proposal_id, value.option);
+    }
+
+    if (msg.type === msgOpts.cosmos.msgOpts.govSubmitProposal.type) {
+      const value = msg.value as MsgSubmitProposal["value"];
+      return renderMsgSubmitProposal(
+        intl,
+        value.proposer,
+        value.content,
+        value.initial_deposit
+      );
     }
 
     if (msg.type === "wasm/MsgInstantiateContract") {

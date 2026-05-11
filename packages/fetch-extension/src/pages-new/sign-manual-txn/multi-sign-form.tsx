@@ -14,6 +14,7 @@ import {
 } from "./types";
 import {
   assembleMultisigTx,
+  BROADCAST_SUPPORTED_MSG_TYPES,
   buildSignedTxnPayload,
   convertProtoJsontoProtoMsgs,
   convertToProtoJsonPubKey,
@@ -55,6 +56,8 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
     const [payloadError, setPayloadError] = useState("");
     const [multiSignatures, setMultiSignatures] = useState<string[]>([""]);
     const [multisigAccount, setMultiSigAccount] = useState<string>("");
+    const [ovverrideSigner, setOverrideSigner] = useState(false);
+    const [disableBroadcast, setDisableBroadcast] = useState(false);
     const [allSignaturesCollected, setAllSignaturesCollected] = useState(false);
     const [multiSigTransactionAssembled, setMultiSigTransactionAssembled] =
       useState(false);
@@ -302,10 +305,17 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
     const onTxnSignDocChange = (value: string) => {
       setTxnPayload(value);
       setPayloadError("");
-      const formatted = formatJson(value);
+      setDisableBroadcast(false);
+      setOverrideSigner(false);
       try {
+        const formatted = formatJson(value);
         const signDoc = JSON.parse(formatted);
         validateProtoJsonSignDoc(signDoc, multisigAccount);
+        const messages = signDoc?.body?.messages ?? [];
+        const isSupportedMessage = messages.some((msg: any) =>
+          BROADCAST_SUPPORTED_MSG_TYPES.includes(msg?.["@type"])
+        );
+        setDisableBroadcast(!isSupportedMessage);
       } catch (err) {
         setPayloadError(err.message);
       }
@@ -393,6 +403,9 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             multisigAccount={multisigAccount}
             multiSigAccountError={multiSigAccountError}
             payloadError={payloadError}
+            setPayloadError={setPayloadError}
+            overrideSigner={ovverrideSigner}
+            setOverrideSigner={setOverrideSigner}
             showNotification={showNotification}
             txnPayload={txnPayload}
             onMultisigAccountChange={(value) => setMultiSigAccount(value)}
@@ -412,11 +425,13 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             setPubKeyError={setPubKeyError}
             showNotification={showNotification}
           />
-          <Checkbox
-            isChecked={broadcastTxn}
-            setIsChecked={setBroadcastTxn}
-            label="Assemble Signatures and Broadcast Transaction"
-          />
+          {!disableBroadcast && (
+            <Checkbox
+              isChecked={broadcastTxn}
+              setIsChecked={setBroadcastTxn}
+              label="Assemble Signatures and Broadcast Transaction"
+            />
+          )}
         </div>
       );
     };

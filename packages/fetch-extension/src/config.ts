@@ -3262,6 +3262,7 @@ export enum TXNTYPE {
   undelegate = "undelegate",
   redelegate = "redelegate",
   govVote = "govVote",
+  govSubmitProposal = "govSubmitProposal",
   nativeBridgeSend = "nativeBridgeSend",
   approval = "approval",
   createSecret20ViewingKey = "createSecret20ViewingKey",

@@ -98,6 +98,16 @@ export const DetailRows = ({ details }: { details: any }) => {
         onClick={() => copyAddress(details.hash)}
       />
       <DetailRow label="Chain ID" value={details.chainId} />
+      {details.verb === "Governance Proposal" && (
+        <React.Fragment>
+          {details.proposalType && (
+            <DetailRow label="Proposal Type" value={details.proposalType} />
+          )}
+          {details.proposalTitle && (
+            <DetailRow label="Proposal Title" value={details.proposalTitle} />
+          )}
+        </React.Fragment>
+      )}
       {details.verb !== "Sent" &&
         details.verb !== "Unstaked" &&
         details.verb !== "Smart Contract Interaction" && (
@@ -119,7 +129,13 @@ export const DetailRows = ({ details }: { details: any }) => {
         value={details.memo.length > 0 ? details.memo : "-"}
       />
       <DetailRow
-        label={`Total ${details.verb === "Sent" ? "estimated" : "amount"}`}
+        label={`Total ${
+          details.verb === "Sent"
+            ? "estimated"
+            : details.verb === "Governance Proposal"
+            ? "deposit"
+            : "amount"
+        }`}
         value={`${details.amountNumber} ${details.amountAlphabetic}`}
       />
       <div

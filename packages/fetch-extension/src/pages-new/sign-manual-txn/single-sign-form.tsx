@@ -4,10 +4,13 @@ import { SignMode } from "@keplr-wallet/background";
 import { observer } from "mobx-react-lite";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
+import { buttonStyles } from ".";
 import style from "./styles.module.scss";
 import { TransactionSection } from "./transaction-section";
 import { SignAction, SignDocData, SignerFormProps } from "./types";
+import { useAccountQuery } from "./use-account-query";
 import {
+  BROADCAST_SUPPORTED_MSG_TYPES,
   CosmosMsgTypesAmino,
   CosmosMsgTypesProto,
   buildSignedTxnPayload,
@@ -19,8 +22,6 @@ import {
   prepareSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
-import { buttonStyles } from ".";
-import { useAccountQuery } from "./use-account-query";
 
 export const SingleSignForm: React.FC<SignerFormProps> = observer(
   ({ chainId, account, signManualTxn, showNotification }) => {
@@ -30,11 +31,12 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
     const [broadcastTxn, setBroadcastTxn] = useState(false);
     const [payloadError, setPayloadError] = useState("");
     const [offlineSigning, setOfflineSigning] = useState(false);
+    const [disableBroadcast, setDisableBroadcast] = useState(false);
     const [accountInfo, setAccountInfo] = useState({
       accountNumber: "",
       sequence: "",
     });
-
+    const [ovverrideSigner, setOverrideSigner] = useState(false);
     const address = account.bech32Address;
     const accountName = account.name;
 
@@ -188,10 +190,17 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
     const onTxnSignDocChange = (value: string) => {
       setTxnPayload(value);
       setPayloadError("");
-      const formatted = formatJson(value);
+      setDisableBroadcast(false);
+      setOverrideSigner(false);
       try {
+        const formatted = formatJson(value);
         const signDoc = JSON.parse(formatted);
         validateProtoJsonSignDoc(signDoc, address);
+        const messages = signDoc?.body?.messages ?? [];
+        const isSupportedMessage = messages.some((msg: any) =>
+          BROADCAST_SUPPORTED_MSG_TYPES.includes(msg?.["@type"])
+        );
+        setDisableBroadcast(!isSupportedMessage);
       } catch (err) {
         setPayloadError(err.message);
       }
@@ -211,14 +220,19 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
           setAccountInfo={setAccountInfo}
           onTxnSignDocChange={onTxnSignDocChange}
           payloadError={payloadError}
+          setPayloadError={setPayloadError}
+          overrideSigner={ovverrideSigner}
+          setOverrideSigner={setOverrideSigner}
           showNotification={showNotification}
           txnPayload={txnPayload}
         />
-        <Checkbox
-          isChecked={broadcastTxn}
-          setIsChecked={setBroadcastTxn}
-          label="Broadcast Transaction"
-        />
+        {!disableBroadcast && (
+          <Checkbox
+            isChecked={broadcastTxn}
+            setIsChecked={setBroadcastTxn}
+            label="Broadcast Transaction"
+          />
+        )}
         <ButtonV2
           variant="dark"
           styleProps={{
