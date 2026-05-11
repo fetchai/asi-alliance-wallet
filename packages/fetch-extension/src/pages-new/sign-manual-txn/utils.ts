@@ -61,6 +61,7 @@ export const BROADCAST_SUPPORTED_MSG_TYPES = [
   "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
   "/cosmos.gov.v1beta1.MsgVote",
   "/cosmos.gov.v1beta1.MsgSubmitProposal",
+  "/cosmwasm.wasm.v1.MsgExecuteContract",
 ];
 
 export function getMultisigAccountError({
@@ -1197,7 +1198,7 @@ const protoTypeToAminoContent = (content: any) => {
   }
 };
 
-export function protoJsonToAminoMsg(messages: any[]) {
+export function protoJsonToAminoMsg(messages: any[]): any[] {
   return messages.map((msg: any) => {
     try {
       switch (msg["@type"]) {
@@ -1279,6 +1280,145 @@ export function protoJsonToAminoMsg(messages: any[]) {
               content: protoTypeToAminoContent(msg.content),
               initial_deposit: msg.initial_deposit,
               proposer: msg.proposer,
+            },
+          };
+
+        case "/cosmos.bank.v1beta1.MsgMultiSend":
+          return {
+            type: "cosmos-sdk/MsgMultiSend",
+            value: {
+              inputs: msg.inputs,
+              outputs: msg.outputs,
+            },
+          };
+
+        case "/cosmos.staking.v1beta1.MsgCreateValidator":
+          return {
+            type: "cosmos-sdk/MsgCreateValidator",
+            value: {
+              description: msg.description,
+              commission: msg.commission,
+              min_self_delegation: msg.min_self_delegation,
+              delegator_address: msg.delegator_address,
+              validator_address: msg.validator_address,
+              pubkey: msg.pubkey,
+              value: msg.value,
+            },
+          };
+
+        case "/cosmos.staking.v1beta1.MsgEditValidator":
+          return {
+            type: "cosmos-sdk/MsgEditValidator",
+            value: {
+              description: msg.description,
+              validator_address: msg.validator_address,
+              commission_rate: msg.commission_rate,
+              min_self_delegation: msg.min_self_delegation,
+            },
+          };
+
+        case "/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission":
+          return {
+            type: "cosmos-sdk/MsgWithdrawValidatorCommission",
+            value: {
+              validator_address: msg.validator_address,
+            },
+          };
+
+        case "/cosmos.distribution.v1beta1.MsgSetWithdrawAddress":
+          return {
+            type: "cosmos-sdk/MsgSetWithdrawAddress",
+            value: {
+              delegator_address: msg.delegator_address,
+              withdraw_address: msg.withdraw_address,
+            },
+          };
+
+        case "/cosmos.gov.v1beta1.MsgVoteWeighted":
+          return {
+            type: "cosmos-sdk/MsgVoteWeighted",
+            value: {
+              proposal_id: msg.proposal_id,
+              voter: msg.voter,
+              options: msg.options,
+            },
+          };
+
+        case "/cosmos.gov.v1beta1.MsgDeposit":
+          return {
+            type: "cosmos-sdk/MsgDeposit",
+            value: {
+              proposal_id: msg.proposal_id,
+              depositor: msg.depositor,
+              amount: msg.amount,
+            },
+          };
+
+        case "/ibc.applications.transfer.v1.MsgTransfer":
+          return {
+            type: "cosmos-sdk/MsgTransfer",
+            value: {
+              source_port: msg.source_port,
+              source_channel: msg.source_channel,
+              token: msg.token,
+              sender: msg.sender,
+              receiver: msg.receiver,
+              timeout_height: msg.timeout_height,
+              timeout_timestamp: msg.timeout_timestamp,
+              memo: msg.memo,
+            },
+          };
+
+        case "/cosmos.authz.v1beta1.MsgGrant":
+          return {
+            type: "cosmos-sdk/MsgGrant",
+            value: {
+              granter: msg.granter,
+              grantee: msg.grantee,
+              grant: msg.grant,
+            },
+          };
+
+        case "/cosmos.authz.v1beta1.MsgRevoke":
+          return {
+            type: "cosmos-sdk/MsgRevoke",
+            value: {
+              granter: msg.granter,
+              grantee: msg.grantee,
+              msg_type_url: msg.msg_type_url,
+            },
+          };
+
+        case "/cosmos.authz.v1beta1.MsgExec":
+          return {
+            type: "cosmos-sdk/MsgExec",
+            value: {
+              grantee: msg.grantee,
+              msgs: protoJsonToAminoMsg(msg.msgs ?? []),
+            },
+          };
+
+        case "/cosmwasm.wasm.v1.MsgInstantiateContract":
+          return {
+            type: "wasm/MsgInstantiateContract",
+            value: {
+              sender: msg.sender,
+              admin: msg.admin,
+              code_id: msg.code_id,
+              label: msg.label,
+              msg: msg.msg,
+              funds: msg.funds,
+            },
+          };
+
+        case "/cosmwasm.wasm.v1.MsgMigrateContract":
+          return {
+            type: "wasm/MsgMigrateContract",
+            value: {
+              sender: msg.sender,
+              contract: msg.contract,
+              code_id: msg.code_id,
+              msg: msg.msg,
             },
           };
         default:
