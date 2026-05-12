@@ -76,10 +76,8 @@ export const NativeTokens = observer(() => {
   const language = useLanguage();
   const fiatCurrency = language.fiatCurrency;
 
-  const { numericPart: _totalNumber, denomPart: totalDenom } =
-    separateNumericAndDenom(
-      total.shrink(true).trim(true).maxDecimals(6).toString()
-    );
+  const { numericPart: totalNumber, denomPart: totalDenom } =
+    separateNumericAndDenom(total.shrink(true).trim(true).toString());
   const totalPrice = priceStore.calculatePrice(total, fiatCurrency);
 
   const NativeTokenDetailsString = encodeURIComponent(
@@ -92,6 +90,16 @@ export const NativeTokens = observer(() => {
   const NativeTokenBalanceString = encodeURIComponent(
     JSON.stringify(NativeTokenBalance)
   );
+
+  const numericValue = Number(totalNumber);
+
+  const formattedValue =
+    numericValue !== 0 && numericValue < 0.000001
+      ? `< 0.000001 ${totalDenom}`
+      : `${numericValue.toLocaleString("en-US", {
+          maximumFractionDigits: 6,
+        })} ${totalDenom}`;
+
   return (
     <React.Fragment>
       {isEvm ? (
@@ -104,7 +112,7 @@ export const NativeTokens = observer(() => {
           }}
           leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
           heading={totalDenom}
-          subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}
+          subheading={formattedValue}
           rightContent={totalPrice && <div>{totalPrice.toString()}</div>}
           onClick={() => {
             navigate({
@@ -119,7 +127,7 @@ export const NativeTokens = observer(() => {
           style={{ marginBottom: "8px" }}
           leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
           heading={totalDenom}
-          subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}
+          subheading={formattedValue}
           onClick={() => {
             analyticsStore.logEvent("native_token_click", {
               pageName: "Portfolio",

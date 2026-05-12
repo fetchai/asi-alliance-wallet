@@ -8,7 +8,7 @@ import { useLoadingIndicator } from "@components/loading-indicator";
 import { useLanguage } from "../../../languages";
 import { Card } from "@components-v2/card";
 import { ToolTip } from "@components/tooltip";
-import { formatTokenName } from "@utils/format";
+import { formatTokenName, separateNumericAndDenom } from "@utils/format";
 import { WrongViewingKeyError } from "@keplr-wallet/stores";
 import { UncontrolledTooltip } from "reactstrap";
 import { useNotification } from "@components/notification";
@@ -124,6 +124,16 @@ export const Tokens = observer(() => {
         const tokenBalanceString = encodeURIComponent(
           JSON.stringify(tokenBalance)
         );
+        const { numericPart: totalNumber, denomPart: totalDenom } =
+          separateNumericAndDenom(token.balance.hideDenom(false).toString());
+        const numericValue = Number(totalNumber);
+        const formattedValue =
+          numericValue !== 0 && numericValue < 0.000001
+            ? `< 0.000001 ${totalDenom}`
+            : `${numericValue.toLocaleString("en-US", {
+                maximumFractionDigits: 6,
+              })} ${totalDenom}`;
+
         return (
           <React.Fragment key={token.currency.coinDenom}>
             <Card
@@ -144,7 +154,7 @@ export const Tokens = observer(() => {
                 token.isFetching ? (
                   <i className="fas fa-spinner fa-spin ml-1" />
                 ) : (
-                  token.balance.maxDecimals(6).hideDenom(false).toString()
+                  formattedValue
                 )
               }
               subheadingStyle={{ fontSize: "14px" }}
