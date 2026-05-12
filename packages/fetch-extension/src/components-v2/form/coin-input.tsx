@@ -15,6 +15,7 @@ import {
 import { AppCurrency } from "@keplr-wallet/types";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import {
+  formatBalance,
   hasValidDecimals,
   parseDollarAmount,
   parseExponential,
@@ -355,6 +356,10 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
     setInputInFiatCurrency(valueInUsd);
   }, [amountConfig.sendCurrency]);
 
+  const displayBalanceEvm = formatBalance(balanceETH);
+  const displayBalanceCosmos = formatBalance(balance);
+  const availableBalance = isEvm ? displayBalanceEvm : displayBalanceCosmos;
+
   return (
     <React.Fragment>
       <Label className={styleCoinInput["label"]}>Asset</Label>
@@ -380,12 +385,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
               fontSize: "12px",
             }}
           >
-            {" "}
-            {`Available: ${
-              isEvm
-                ? balanceETH.shrink(true).maxDecimals(6).toString()
-                : balance.shrink(true).maxDecimals(6).toString()
-            } `}
+            {`Available: ${availableBalance}`}
             {inputInFiatCurrency &&
               `(${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`}
           </div>
