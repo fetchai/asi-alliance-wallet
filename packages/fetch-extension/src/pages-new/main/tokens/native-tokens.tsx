@@ -82,7 +82,7 @@ export const NativeTokens = observer(() => {
     JSON.stringify(nativeToken.balance?.currency)
   );
   const NativeTokenBalance = {
-    balance: total.shrink(true).trim(true).maxDecimals(6).toString(),
+    balance: total.shrink(true).trim(true).toString(),
     balanceInUsd: totalPrice && totalPrice.toString(),
   };
   const NativeTokenBalanceString = encodeURIComponent(

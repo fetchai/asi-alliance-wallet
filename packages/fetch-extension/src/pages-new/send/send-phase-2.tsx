@@ -205,29 +205,22 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       balance,
     ]);
 
+    const sendAmount = new CoinPretty(
+      sendConfigs.amountConfig?.sendCurrency,
+      sendConfigs.amountConfig
+        ? parseAmount(sendConfigs.amountConfig.amount, decimals)
+        : new Int(0)
+    );
+
     return (
       <div>
         <div className={style["editCard"]}>
           <div>
             <div className={style["amountInUsd"]}>
-              {convertToUsd(
-                sendConfigs.amountConfig
-                  ? new CoinPretty(
-                      sendConfigs.amountConfig?.sendCurrency,
-                      parseAmount(sendConfigs.amountConfig.amount, decimals)
-                    )
-                  : new CoinPretty(
-                      sendConfigs.amountConfig?.sendCurrency,
-                      new Int(0)
-                    )
-              )}{" "}
-              {fiatCurrency.toUpperCase()}
+              {convertToUsd(sendAmount)} {fiatCurrency.toUpperCase()}
             </div>
             <div className={style["amount"]}>
-              {parseFloat(sendConfigs.amountConfig.amount)
-                .toFixed(6)
-                .toString()}{" "}
-              {sendConfigs.amountConfig.sendCurrency.coinDenom}
+              {sendAmount.shrink(true).trim(true).toString()}
             </div>
           </div>
           <button onClick={() => setIsNext(false)} className={style["edit"]}>

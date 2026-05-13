@@ -118,7 +118,7 @@ export const Tokens = observer(() => {
         const tokenInUsd = convertToUsd(inputValue);
         const tokenString = encodeURIComponent(JSON.stringify(tokenInfo));
         const tokenBalance = {
-          balance: token.balance.maxDecimals(6).hideDenom(false).toString(),
+          balance: token.balance.hideDenom(false).toString(),
           balanceInUsd: tokenInUsd ? tokenInUsd : "",
         };
         const tokenBalanceString = encodeURIComponent(
