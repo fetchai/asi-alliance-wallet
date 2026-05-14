@@ -300,14 +300,13 @@ export const RecoverMnemonicPage: FunctionComponent<{
       // 12/24 words are treated specially.
       // Regardless of where it is pasted from, if it is a valid seed, it will be processed directly.
       if (bip39.validateMnemonic(words.join(" "))) {
-        if (words.length === 12) {
-          setSeedType(SeedType.WORDS12);
-        } else {
-          setSeedType(SeedType.WORDS24);
-        }
-
+        setSeedType(words.length === 12 ? SeedType.WORDS12 : SeedType.WORDS24);
         setSeedWords(words);
-
+        setActiveTab(
+          words.length === 12
+            ? NewMnemonicStep.WORDS12
+            : NewMnemonicStep.WORDS24
+        );
         return;
       }
     }
@@ -398,6 +397,16 @@ export const RecoverMnemonicPage: FunctionComponent<{
     handleTabChange(activeTab);
   }, [activeTab]);
 
+  const handleTabsClick = (activeTab: any) => {
+    if (activeTab === NewMnemonicStep.WORDS12) {
+      setSeedWords(new Array<string>(12).fill(""));
+    } else if (activeTab === NewMnemonicStep.WORDS24) {
+      setSeedWords(new Array<string>(24).fill(""));
+    } else if (activeTab === NewMnemonicStep.PRIVATEKEY) {
+      setSeedWords(new Array<string>(1).fill(""));
+    }
+  };
+
   useEffect(() => {
     if (confirmPassword) {
       trigger("confirmPassword");
@@ -430,7 +439,12 @@ export const RecoverMnemonicPage: FunctionComponent<{
           <h1 className={styleRecoverMnemonic["title"]}>Import your wallet</h1>
           <div className={styleRecoverMnemonic["container"]}>
             <div className={styleRecoverMnemonic["tabsContainer"]}>
-              <TabsPanel tabs={tabs} setActiveTab={setActiveTab} />
+              <TabsPanel
+                activeTabId={activeTab}
+                tabs={tabs}
+                setActiveTab={setActiveTab}
+                onTabClick={handleTabsClick}
+              />
             </div>
             <div
               className={classnames(
