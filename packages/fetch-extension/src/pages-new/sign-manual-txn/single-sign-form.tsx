@@ -10,9 +10,6 @@ import { TransactionSection } from "./transaction-section";
 import { SignAction, SignDocData, SignerFormProps } from "./types";
 import { useAccountQuery } from "./use-account-query";
 import {
-  BROADCAST_SUPPORTED_MSG_TYPES,
-  CosmosMsgTypesAmino,
-  CosmosMsgTypesProto,
   buildSignedTxnPayload,
   convertAminoToProtoMsgs,
   convertProtoJsontoProtoMsgs,
@@ -22,6 +19,11 @@ import {
   prepareSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
+import {
+  COSMOS_MSG_TYPES_AMINO,
+  COSMOS_MSG_TYPES_PROTO,
+  BROADCAST_SUPPORTED_MSG_TYPES,
+} from "./constants";
 
 export const SingleSignForm: React.FC<SignerFormProps> = observer(
   ({ chainId, account, signManualTxn, showNotification }) => {
@@ -124,9 +126,10 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
         const fee = signDoc.fee;
         const msgType =
           (signDocType === "amino"
-            ? CosmosMsgTypesAmino[payloadObj?.msgs[0]?.type]
-            : CosmosMsgTypesProto[payloadObj?.body?.messages?.[0]["@type"]]) ||
-          "unknown";
+            ? COSMOS_MSG_TYPES_AMINO[payloadObj?.msgs[0]?.type]
+            : COSMOS_MSG_TYPES_PROTO[
+                payloadObj?.body?.messages?.[0]["@type"]
+              ]) || "unknown";
         await account.cosmos.sendMsgs(
           msgType,
           {
