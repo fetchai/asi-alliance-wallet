@@ -23,7 +23,13 @@ import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
+import {
+  ensureCompatibleChainForUpcomingWallet,
+  getNextDefaultAccountName,
+  requestKeyringSurfacesSyncBroadcast,
+  supportsCardanoFromMnemonicWordCount,
+  validateAccountName,
+} from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RefreshAccountList } from "@keplr-wallet/background";
@@ -220,7 +226,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const intl = useIntl();
 
   const bip44Option = useBIP44Option();
-  const { analyticsStore, keyRingStore } = useStore();
+  const { analyticsStore, keyRingStore, chainStore, accountStore } = useStore();
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const accountList = keyRingStore.multiKeyStoreInfo;
   const defaultAccountName = getNextDefaultAccountName(accountList);
@@ -432,6 +438,11 @@ export const RecoverMnemonicPage: FunctionComponent<{
             <div className={styleRecoverMnemonic["tabsContainer"]}>
               <TabsPanel tabs={tabs} setActiveTab={setActiveTab} />
             </div>
+            {activeTab === NewMnemonicStep.WORDS12 && (
+              <div className={style["cardanoHint"]}>
+                <FormattedMessage id="register.cardano.hint.24words" />
+              </div>
+            )}
             <div
               className={classnames(
                 style["title"],
@@ -453,6 +464,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
 
                 handleSubmit(async (data: FormData) => {
                   try {
+                    let supportsCardano = false;
                     if (seedWords.length === 1 && isPrivateKey(seedWords[0])) {
                       const privateKey = Buffer.from(
                         seedWords[0].replace("0x", ""),
@@ -480,20 +492,36 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         data.password,
                         bip44Option.bip44HDPath,
                         {},
-                        selectedNetworks
+                        selectedNetworks,
+                        chainStore.chainInfos,
+                        accountStore
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
                         accountType: "mnemonic",
                       });
+                      const mnemonicWords = seedWords
+                        .join(" ")
+                        .trim()
+                        .split(/\s+/);
+                      supportsCardano = supportsCardanoFromMnemonicWordCount(
+                        mnemonicWords.length
+                      );
                     }
-                    await keyRingStore.changeKeyRing(
-                      keyRingStore.multiKeyStoreInfo.length - 1
-                    );
+                    // Add/import only: align chain before changeKeyRing so keystore-changed/getKey is not on Cardano.
+                    if (registerConfig.mode !== "create") {
+                      await ensureCompatibleChainForUpcomingWallet(chainStore, {
+                        supportsCardano,
+                      });
+                    }
+                    const newWalletIndex =
+                      keyRingStore.multiKeyStoreInfo.length - 1;
+                    await keyRingStore.changeKeyRing(newWalletIndex);
                     await new InExtensionMessageRequester().sendMessage(
                       BACKGROUND_PORT,
                       new RefreshAccountList()
                     );
+                    await requestKeyringSurfacesSyncBroadcast();
                   } catch (e) {
                     alert(e.message ? e.message : e.toString());
                     registerConfig.clear();

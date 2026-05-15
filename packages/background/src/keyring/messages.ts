@@ -939,6 +939,7 @@ export class RequestSignDirectMsg extends Message<{
 }
 
 export class GetMultiKeyStoreInfoMsg extends Message<{
+  status: KeyRingStatus;
   multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
 }> {
   public static type() {
@@ -1309,7 +1310,13 @@ export class SwitchAccountMsg extends Message<void> {
   }
 }
 
-export class ListAccountsMsg extends Message<Account[]> {
+/** ListAccountsResult must stay in sync with packages/provider/src/types/msgs.ts when changing the contract. */
+export type ListAccountsResult = {
+  accounts: Account[];
+  error?: string;
+};
+
+export class ListAccountsMsg extends Message<ListAccountsResult> {
   public static type() {
     return "list-account-msg";
   }
@@ -1350,6 +1357,35 @@ export class RefreshAccountList extends Message<boolean> {
 
   type(): string {
     return RefreshAccountList.type();
+  }
+}
+
+/**
+ * Plain-runtime broadcast payload (via browser.runtime.sendMessage from background)
+ * so all extension UI surfaces can refresh keyring/chain state. Not the router Message envelope.
+ */
+export const KEYRING_SURFACES_SYNC_MESSAGE_TYPE =
+  "fetchwallet-keyring-surfaces-sync";
+
+export class BroadcastKeyringSurfacesSyncMsg extends Message<boolean> {
+  public static type() {
+    return "broadcast-keyring-surfaces-sync";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return BroadcastKeyringSurfacesSyncMsg.type();
   }
 }
 

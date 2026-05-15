@@ -120,8 +120,8 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
           }
         );
       }
-    } catch (e) {
-      console.log(e);
+    } catch {
+      console.warn("Import from extension failed");
       setIsLoading(false);
       smartNavigation.goBack();
     }

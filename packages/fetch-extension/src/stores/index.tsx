@@ -1,5 +1,6 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 
+import "../utils/list-accounts-result-contract";
 import { createRootStore, RootStore } from "./root";
 import { getKeplrFromWindow } from "@keplr-wallet/stores";
 import { Keplr } from "@keplr-wallet/types";
@@ -12,6 +13,12 @@ const storeContext = React.createContext<RootStore | null>(null);
 
 export const StoreProvider: FunctionComponent = ({ children }) => {
   const [stores] = useState(() => createRootStore());
+
+  useEffect(() => {
+    return () => {
+      stores.dispose?.();
+    };
+  }, [stores]);
 
   useEffect(() => {
     getKeplrFromWindow().then(

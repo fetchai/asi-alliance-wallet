@@ -1,4 +1,10 @@
-import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
+import React, {
+  FunctionComponent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button, FormText } from "reactstrap";
 import { ContactBookPage } from "../../pages-new/contact-book";
 
@@ -41,6 +47,10 @@ export interface AddressInputProps {
   pageName?: string;
   disabled?: boolean;
   value: string;
+  /** Fires when the recipient input loses focus (e.g. Send phase touched state). */
+  onRecipientBlur?: () => void;
+  /** Optional non-blocking warning shown under the field (e.g. self-send). */
+  warningText?: string;
 }
 
 function numOfCharacter(str: string, c: string): number {
@@ -57,6 +67,8 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
     disabled = false,
     value,
     pageName,
+    onRecipientBlur,
+    warningText,
   }) => {
     const intl = useIntl();
     const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
@@ -130,6 +142,7 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
     };
 
     const [isFNSFecthing, setIsFNSFecthing] = useState(false);
+    const fnsRequestTokenRef = useRef(0);
     const getFETOwner = async (
       chainId: string,
       domainName: string
@@ -162,27 +175,35 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
       return value;
     };
 
-    const updateFNSValue = async (value: string) => {
-      if (
+    const isEligibleFNSValue = (value: string): boolean => {
+      return (
         [CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_ERIDANUS].includes(
           recipientConfig.chainId
         ) &&
         value.length > 5 &&
         value.endsWith(".fet") &&
         numOfCharacter(value, ".") === 1
-      ) {
-        setIsFNSFecthing(true);
+      );
+    };
 
-        recipientConfig.setRawRecipient(value);
-
+    const resolveFNSIfNeeded = async (value: string, requestId: number) => {
+      setIsFNSFecthing(true);
+      try {
         const FETOwner: any = await getFETOwner(recipientConfig.chainId, value);
+        // Apply only if request is still current and input hasn't diverged.
+        if (fnsRequestTokenRef.current !== requestId) return;
+        if (recipientConfig.rawRecipient !== value) return;
         if (FETOwner) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          value = FETOwner;
+          recipientConfig.setRawRecipient(FETOwner);
         }
-        setIsFNSFecthing(false);
+      } catch {
+        // Ignore resolution errors and keep user-entered value untouched.
+      } finally {
+        // Only the latest request can clear the fetching state.
+        if (fnsRequestTokenRef.current === requestId) {
+          setIsFNSFecthing(false);
+        }
       }
-      return value;
     };
 
     const tabs = [
@@ -207,6 +228,17 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
       },
     ];
 
+    const showInvalidAgentAddress =
+      recipientConfig.rawRecipient.startsWith("agent") &&
+      validateAgentAddress(recipientConfig.rawRecipient);
+
+    const shouldShowWarning =
+      Boolean(warningText) &&
+      !errorText &&
+      !isFNSFecthing &&
+      !isICNSfetching &&
+      !showInvalidAgentAddress;
+
     return (
       <React.Fragment>
         <div className={styleAddressInput["label"]}>{label}</div>
@@ -223,18 +255,22 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
               id={inputId}
               className={styleAddressInput["input"]}
               value={recipientConfig.rawRecipient}
-              onChange={async (e) => {
+              onChange={(e) => {
                 let value = e.target.value;
 
                 // If ICNS is availabe and users enters ".", complete postfix automatically.
                 value = updateICNSvalue(value);
 
-                // If FET owner is availabe and users enters ".", complete postfix automatically.
-                value = await updateFNSValue(value);
-
                 recipientConfig.setRawRecipient(value);
-                e.preventDefault();
+                const requestId = ++fnsRequestTokenRef.current;
+                if (isEligibleFNSValue(value)) {
+                  // Resolve FNS asynchronously without blocking controlled input updates.
+                  void resolveFNSIfNeeded(value, requestId);
+                } else {
+                  setIsFNSFecthing(false);
+                }
               }}
+              onBlur={() => onRecipientBlur?.()}
               autoComplete="off"
               disabled={disabled}
             />
@@ -293,12 +329,14 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
         !recipientConfig.rawRecipient.startsWith("agent") ? (
           <div className={styleAddressInput["errorText"]}>{errorText}</div>
         ) : null}
-        {recipientConfig.rawRecipient.startsWith("agent") &&
-          validateAgentAddress(recipientConfig.rawRecipient) && (
-            <div className={styleAddressInput["errorText"]}>
-              Invalid agent address
-            </div>
-          )}
+        {showInvalidAgentAddress ? (
+          <div className={styleAddressInput["errorText"]}>
+            Invalid agent address
+          </div>
+        ) : null}
+        {shouldShowWarning ? (
+          <div className={styleAddressInput["warningText"]}>{warningText}</div>
+        ) : null}
 
         <Dropdown
           isOpen={isAddressBookOpen}

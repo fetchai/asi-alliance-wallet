@@ -1,9 +1,16 @@
 import {
-  Key,
   KeyRing,
   KeyRingStatus,
   MultiKeyStoreInfoWithSelected,
 } from "./keyring";
+import { Key, KeyStoreMetaKnown } from "./types";
+import { CardanoService } from "../cardano/service";
+import {
+  CARDANO_ENSURE_MESSAGE,
+  formatNetworkContextInvalidForCardano,
+  formatProviderUnavailableError,
+  formatWalletNotReadyError,
+} from "../cardano/ensure-errors";
 
 import {
   Bech32Address,
@@ -45,28 +52,57 @@ import {
   TxBody,
 } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import Long from "long";
-import { KeyCurve, KeyCurves } from "@keplr-wallet/crypto";
+import { SupportedCurve } from "./types";
 import { Buffer } from "buffer/";
 import { trimAminoSignDoc } from "./amino-sign-doc";
 import { KeystoneService } from "../keystone";
-import { RequestICNSAdr36SignaturesMsg, SwitchAccountMsg } from "./messages";
-import { PubKeySecp256k1 } from "@keplr-wallet/crypto";
+import {
+  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+  RequestICNSAdr36SignaturesMsg,
+  SwitchAccountMsg,
+} from "./messages";
+import {
+  walletShouldLeaveCardanoChain,
+  walletSupportsCardano,
+} from "./keyring";
+import { getDefaultFallbackChainId } from "./default-chain";
+import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
 
 export class KeyRingService {
+  private static isCardanoAddressCapableAlgo(algo: string): boolean {
+    return algo === "ed25519" || algo === "cardano_address_only";
+  }
+
+  private static sanitizeCardanoMeta(
+    meta: Record<string, string>
+  ): Record<string, string> {
+    const sanitized = { ...meta };
+    delete sanitized["cardanoSerializedAgent"];
+    return sanitized;
+  }
+
   private keyRing!: KeyRing;
 
   protected analyticsSerice!: AnalyticsService;
   protected interactionService!: InteractionService;
   public chainsService!: ChainsService;
   public permissionService!: PermissionService;
+  private cardanoService: CardanoService;
 
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly embedChainInfos: ChainInfo[],
-    protected readonly crypto: CommonCrypto
-  ) {}
+    protected readonly crypto: CommonCrypto,
+    cardanoService: CardanoService
+  ) {
+    this.cardanoService = cardanoService;
+  }
+
+  public getKeyRing(): KeyRing {
+    return this.keyRing;
+  }
 
   init(
     interactionService: InteractionService,
@@ -86,16 +122,125 @@ export class KeyRingService {
       ledgerService,
       keystoneService,
       interactionService,
-      this.crypto
+      this.crypto,
+      this.chainsService
     );
 
     this.chainsService.addChainRemovedHandler(this.onChainRemoved);
+    this.chainsService.addNetworkSwitchHandler(this.onNetworkSwitch);
     this.analyticsSerice = analyticsSerice;
   }
 
   protected readonly onChainRemoved = (chainId: string) => {
     this.keyRing.removeAllKeyStoreCoinType(chainId);
   };
+
+  private async isCardanoChain(chainId: string): Promise<boolean> {
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    return chainInfo.features?.includes("cardano") ?? false;
+  }
+
+  /**
+   * Runs in background after setSelectedChain (fire-and-forget).
+   * First ListAccounts/getKey for the new chain may wait for restore or cache fill in background;
+   * ensureCardanoServiceReady restores when needed so correctness is preserved.
+   */
+  protected readonly onNetworkSwitch = async (
+    oldChainId: string | undefined,
+    newChainId: string
+  ): Promise<void> => {
+    let cardanoRuntimeTouched = false;
+    try {
+      if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
+        return;
+      }
+
+      const targetChainId = newChainId;
+      const currentChainId = await this.chainsService.getSelectedChain();
+      if (currentChainId !== targetChainId) {
+        return;
+      }
+
+      const chainInfo = await this.chainsService.getChainInfo(newChainId);
+      const isCardano = chainInfo.features?.includes("cardano") ?? false;
+
+      if (isCardano) {
+        const stillCurrent = await this.chainsService.getSelectedChain();
+        if (stillCurrent !== targetChainId) {
+          return;
+        }
+        cardanoRuntimeTouched = true;
+        await this.ensureCardanoServiceReady(newChainId);
+      }
+    } catch (error) {
+      if (cardanoRuntimeTouched) {
+        // Cleanup touched Cardano runtime state to avoid cross-chain stale side effects
+        // when selected chain rollback is triggered by ChainsService.
+        this.cardanoService.reset();
+        this.cardanoRestoreByChainId.clear();
+
+        // Best-effort restore old Cardano context after rollback.
+        try {
+          if (
+            oldChainId &&
+            (await this.isCardanoChain(oldChainId)) &&
+            this.keyRing.status === KeyRingStatus.UNLOCKED
+          ) {
+            const ks = this.keyRing.getCurrentKeyStore();
+            if (ks && walletSupportsCardano(ks)) {
+              await this.cardanoService.restoreFromKeyStore(
+                ks,
+                this.keyRing.currentPassword,
+                this.crypto,
+                oldChainId
+              );
+            }
+          }
+        } catch (rollbackError) {
+          console.error(
+            "[KeyRingService] Failed to restore old Cardano context after switch failure:",
+            rollbackError
+          );
+        }
+      }
+      console.error(
+        `Network switch consistency check failed for ${newChainId}:`,
+        error
+      );
+      throw error;
+    }
+
+    // Non-critical post-commit step: cache repair should not fail network switch commit.
+    this.runAddressCacheRepairBestEffort(newChainId).catch((error) => {
+      console.error(
+        `[KeyRingService] Post-switch cache repair failed for ${newChainId}:`,
+        error
+      );
+    });
+  };
+
+  private async runAddressCacheRepairBestEffort(
+    chainId: string
+  ): Promise<void> {
+    if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
+      return;
+    }
+    const currentChainId = await this.chainsService.getSelectedChain();
+    if (currentChainId !== chainId) {
+      return;
+    }
+
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    const isCardano = chainInfo.features?.includes("cardano") ?? false;
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
+    const keys = isCardano
+      ? await this.keyRing.getKeysForCardano(chainId)
+      : await this.keyRing.getKeys(chainId, isEvm);
+    await this.ensureAndRepairAddressCaches(chainId, keys, {
+      isCardano,
+      isEvm,
+    });
+  }
 
   async restore(): Promise<{
     status: KeyRingStatus;
@@ -106,6 +251,22 @@ export class KeyRingService {
       status: this.keyRing.status,
       multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo(),
     };
+  }
+
+  async checkReadiness(env: Env): Promise<KeyRingStatus> {
+    if (this.keyRing.status === KeyRingStatus.EMPTY) {
+      return KeyRingStatus.EMPTY;
+    }
+
+    if (this.keyRing.status === KeyRingStatus.NOTLOADED) {
+      await this.keyRing.restore();
+    }
+
+    if (this.keyRing.status === KeyRingStatus.LOCKED) {
+      await this.interactionService.waitApprove(env, "/unlock", "unlock", {});
+    }
+
+    return this.keyRing.status;
   }
 
   async enable(env: Env): Promise<KeyRingStatus> {
@@ -141,8 +302,15 @@ export class KeyRingService {
     try {
       const result = await this.keyRing.deleteKeyRing(index, password);
       keyStoreChanged = result.keyStoreChanged;
+
+      if (keyStoreChanged) {
+        this.cardanoService.reset();
+        this.cardanoRestoreByChainId.clear();
+        await this.alignSelectedChainWithCurrentWalletIfNeeded();
+      }
+
       return {
-        multiKeyStoreInfo: result.multiKeyStoreInfo,
+        multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo(),
         status: this.keyRing.status,
       };
     } finally {
@@ -153,6 +321,63 @@ export class KeyRingService {
           {}
         );
       }
+    }
+  }
+
+  /**
+   * When the current chain is Cardano but the selected wallet cannot use Cardano,
+   * move to the same non-Cardano fallback policy as the rest of keyring (see default-chain).
+   */
+  private async alignSelectedChainWithCurrentWalletIfNeeded(): Promise<void> {
+    try {
+      const ks = this.keyRing.getCurrentKeyStore();
+      const currentChainId = await this.chainsService.getSelectedChain();
+      if (currentChainId && ks && walletShouldLeaveCardanoChain(ks)) {
+        const chainInfo = await this.chainsService.getChainInfo(currentChainId);
+        const isCardano = chainInfo.features?.includes("cardano") ?? false;
+        if (isCardano) {
+          const chainInfos = await this.chainsService.getChainInfos();
+          const fallbackId = getDefaultFallbackChainId(chainInfos);
+          if (fallbackId) {
+            await this.chainsService.setSelectedChain(fallbackId);
+          }
+        }
+      }
+    } catch (e) {
+      console.error(
+        "[KeyRingService] Failed to align chain with wallet after key store change:",
+        e
+      );
+    }
+  }
+
+  /**
+   * Fan-out to all extension UI contexts so each surface refreshes MobX state.
+   */
+  broadcastKeyringSurfacesSync(): void {
+    try {
+      const g = globalThis as {
+        browser?: { runtime?: typeof browser.runtime };
+        chrome?: { runtime?: typeof chrome.runtime };
+      };
+      const rt = g.browser?.runtime ?? g.chrome?.runtime;
+      if (!rt?.sendMessage) {
+        return;
+      }
+      const payload = {
+        type: KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+        seq: Date.now(),
+      };
+      // browser/chrome runtime typings union yields non-callable intersection; narrow at call site.
+      const sendMessage = rt.sendMessage as (
+        message: unknown
+      ) => void | Promise<unknown>;
+      const out = sendMessage(payload);
+      if (out != null && typeof (out as Promise<unknown>).then === "function") {
+        void (out as Promise<unknown>).catch(() => {});
+      }
+    } catch {
+      // noop
     }
   }
 
@@ -187,15 +412,34 @@ export class KeyRingService {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    // TODO: Check mnemonic checksum.
-    return await this.keyRing.createMnemonicKey(
+    let currentChainId: string | undefined;
+    try {
+      const { ExtensionKVStore } = await import("@keplr-wallet/common");
+      const kvStore = new ExtensionKVStore("store_chain_config");
+      currentChainId = await kvStore.get<string>(
+        "extension_last_view_chain_id"
+      );
+    } catch (error) {
+      console.warn("Failed to get current chainId for Cardano meta:", error);
+    }
+
+    const cardanoMeta = await this.cardanoService
+      .createMetaFromMnemonic(mnemonic, password, currentChainId)
+      .catch((error) => {
+        console.error("Failed to create Cardano meta:", error);
+        return {};
+      });
+    const safeCardanoMeta = KeyRingService.sanitizeCardanoMeta(cardanoMeta);
+
+    const keyStoreInfo = await this.keyRing.createMnemonicKey(
       kdf,
       mnemonic,
       password,
-      meta,
+      { ...meta, ...safeCardanoMeta },
       bip44HDPath,
-      KeyCurves.secp256k1
+      "secp256k1"
     );
+    return keyStoreInfo;
   }
 
   async createPrivateKey(
@@ -258,22 +502,58 @@ export class KeyRingService {
 
   lock(): KeyRingStatus {
     this.keyRing.lock();
+    this.cardanoService.reset();
+    this.cardanoRestoreByChainId.clear();
     return this.keyRing.status;
   }
 
   async unlock(password: string): Promise<KeyRingStatus> {
     await this.keyRing.unlock(password);
 
+    const ks = this.keyRing.getCurrentKeyStore();
+
+    if (ks && walletSupportsCardano(ks)) {
+      try {
+        const currentChainId = await this.chainsService.getSelectedChain();
+        if (!currentChainId) {
+          throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
+        }
+        const shouldInitCardano = await this.isCardanoChain(currentChainId);
+        if (shouldInitCardano) {
+          await this.cardanoService.restoreFromKeyStore(
+            ks,
+            this.keyRing.currentPassword,
+            this.crypto,
+            currentChainId
+          );
+        } else {
+          // Keep Cardano detached when active chain is non-Cardano.
+          this.cardanoService.reset();
+          this.cardanoRestoreByChainId.clear();
+        }
+      } catch (error) {
+        console.error(
+          "[KeyRingService] Failed to initialize CardanoService:",
+          error
+        );
+        throw error;
+      }
+    }
+
     return this.keyRing.status;
   }
 
   async getKey(chainId: string): Promise<Key> {
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+
+    if (chainInfo.features?.includes("cardano")) {
+      await this.ensureCardanoServiceReady(chainId);
+      return await this.cardanoService.getKey(chainId);
+    }
+
     const ethereumKeyFeatures =
       await this.chainsService.getChainEthereumKeyFeatures(chainId);
-    const isEvm =
-      (await this.chainsService.getChainInfo(chainId)).features?.includes(
-        "evm"
-      ) ?? false;
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
 
     if (ethereumKeyFeatures.address || ethereumKeyFeatures.signing) {
       // Check the comment on the method itself.
@@ -287,6 +567,127 @@ export class KeyRingService {
       await this.chainsService.getChainCoinType(chainId),
       ethereumKeyFeatures.address
     );
+  }
+
+  private cardanoServiceInitPromise: Promise<void> | null = null;
+  /** Deduplicates restore-by-chainId so parallel ListAccountsMsg for the same chain share one promise. */
+  private cardanoRestoreByChainId: Map<string, Promise<void>> = new Map();
+
+  public async ensureCardanoServiceReady(chainId?: string): Promise<void> {
+    // If service is initialized but not ready, try to restore with chainId.
+    // Restore/init errors are fail-closed and must reject.
+    if (this.cardanoService.isInitialized() && !this.cardanoService.isReady()) {
+      if (!chainId) {
+        throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
+      }
+      if (!(await this.isCardanoChain(chainId))) {
+        throw new Error(formatNetworkContextInvalidForCardano(chainId));
+      }
+      // Deduplication: get then create then set in the same sync turn; no await/then between get and set
+      // so concurrent callers always see the same promise.
+      const existing = this.cardanoRestoreByChainId.get(chainId);
+      if (existing) {
+        await existing;
+        this.assertCardanoServiceReady(chainId);
+        return;
+      }
+      const promise = new Promise<void>((resolve, reject) => {
+        (async () => {
+          try {
+            const ks = this.keyRing.getCurrentKeyStore();
+            if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
+              await this.cardanoService.restoreFromKeyStore(
+                ks,
+                this.keyRing.currentPassword,
+                this.crypto,
+                chainId
+              );
+            }
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        })();
+      });
+      // Set must run in the same sync turn after creating the promise.
+      this.cardanoRestoreByChainId.set(chainId, promise);
+      promise.finally(() => this.cardanoRestoreByChainId.delete(chainId));
+      await promise;
+      this.assertCardanoServiceReady(chainId);
+      return;
+    }
+
+    if (!this.cardanoService.isInitialized()) {
+      if (this.cardanoServiceInitPromise) {
+        await this.cardanoServiceInitPromise;
+        this.assertCardanoServiceReady(chainId);
+        return;
+      }
+
+      const ks = this.keyRing.getCurrentKeyStore();
+
+      if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
+        const promise = this.initializeCardanoService(ks, chainId);
+        this.cardanoServiceInitPromise = promise;
+        try {
+          await promise;
+          this.assertCardanoServiceReady(chainId);
+        } catch (error) {
+          console.error(
+            "[KeyRingService] Failed to initialize CardanoService:",
+            error
+          );
+          throw error;
+        } finally {
+          this.cardanoServiceInitPromise = null;
+        }
+      } else {
+        throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
+      }
+    }
+
+    this.assertCardanoServiceReady(chainId);
+  }
+
+  private assertCardanoServiceReady(chainId?: string): void {
+    const runtimeState = this.cardanoService.getRuntimeState();
+    if (runtimeState === "provider_unavailable") {
+      throw new Error(formatProviderUnavailableError(chainId));
+    }
+    if (!this.cardanoService.isReady()) {
+      throw new Error(formatWalletNotReadyError(chainId));
+    }
+  }
+
+  private async initializeCardanoService(
+    ks: any,
+    chainId?: string
+  ): Promise<void> {
+    if (walletShouldLeaveCardanoChain(ks)) {
+      throw new Error(CARDANO_ENSURE_MESSAGE.MNEMONIC_24);
+    }
+    try {
+      const currentChainId =
+        chainId || (await this.chainsService.getSelectedChain());
+      if (!currentChainId) {
+        throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
+      }
+      if (!(await this.isCardanoChain(currentChainId))) {
+        throw new Error(formatNetworkContextInvalidForCardano(currentChainId));
+      }
+      await this.cardanoService.restoreFromKeyStore(
+        ks,
+        this.keyRing.currentPassword,
+        this.crypto,
+        currentChainId
+      );
+    } catch (error) {
+      console.error(
+        "[KeyRingService] Failed to initialize CardanoService:",
+        error
+      );
+      throw error;
+    }
   }
 
   getKeyStoreMeta(key: string): string {
@@ -892,22 +1293,37 @@ Salt: ${salt}`;
     mnemonic: string,
     meta: Record<string, string>,
     bip44HDPath: BIP44HDPath,
-    curve: KeyCurve = KeyCurves.secp256k1
+    curve: SupportedCurve = KeyCurves.secp256k1
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    return this.keyRing.addMnemonicKey(kdf, mnemonic, meta, bip44HDPath, curve);
+    const result = await this.keyRing.addMnemonicKey(
+      kdf,
+      mnemonic,
+      meta,
+      bip44HDPath,
+      curve
+    );
+
+    return result;
   }
 
   async addPrivateKey(
     kdf: "scrypt" | "sha256" | "pbkdf2",
     privateKey: Uint8Array,
     meta: Record<string, string>,
-    curve: KeyCurve = KeyCurves.secp256k1
+    curve: SupportedCurve = KeyCurves.secp256k1
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    return this.keyRing.addPrivateKey(kdf, privateKey, meta, curve);
+    const result = await this.keyRing.addPrivateKey(
+      kdf,
+      privateKey,
+      meta,
+      curve
+    );
+
+    return result;
   }
 
   async addKeystoneKey(
@@ -918,7 +1334,14 @@ Salt: ${salt}`;
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    return this.keyRing.addKeystoneKey(env, kdf, meta, bip44HDPath);
+    const result = await this.keyRing.addKeystoneKey(
+      env,
+      kdf,
+      meta,
+      bip44HDPath
+    );
+
+    return result;
   }
 
   async addLedgerKey(
@@ -930,21 +1353,29 @@ Salt: ${salt}`;
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    return this.keyRing.addLedgerKey(
+    const result = await this.keyRing.addLedgerKey(
       env,
       kdf,
       meta,
       bip44HDPath,
       cosmosLikeApp
     );
+
+    return result;
   }
 
   public async changeKeyStoreFromMultiKeyStore(index: number): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     try {
-      return await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
+      const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
+      this.cardanoService.reset();
+      this.cardanoRestoreByChainId.clear();
+      await this.alignSelectedChainWithCurrentWalletIfNeeded();
+      return result;
     } finally {
+      // Note: if fallback `setSelectedChain` ran above, it also dispatches
+      // `keystore-changed` — duplicate event is benign but can trigger extra UI refresh.
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,
         "keystore-changed",
@@ -955,6 +1386,19 @@ Salt: ${salt}`;
 
   public checkPassword(password: string): boolean {
     return this.keyRing.checkPassword(password);
+  }
+
+  public getCurrentUnlockSessionId(): string {
+    return this.keyRing.getCurrentUnlockSessionId();
+  }
+
+  public async waitApprove(
+    env: Env,
+    url: string,
+    type: string,
+    data: unknown
+  ): Promise<unknown> {
+    return await this.interactionService.waitApprove(env, url, type, data);
   }
 
   async updatePassword(oldPassword: string, newPassword: string) {
@@ -1059,11 +1503,191 @@ Salt: ${salt}`;
   }
 
   async getKeys(chainId: string): Promise<(Key & { name: string })[]> {
-    const isEvm =
-      (await this.chainsService.getChainInfo(chainId)).features?.includes(
-        "evm"
-      ) ?? false;
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
+    const isCardano = chainInfo.features?.includes("cardano") ?? false;
 
-    return await this.keyRing.getKeys(chainId, isEvm);
+    if (!isCardano) {
+      const keys = await this.keyRing.getKeys(chainId, isEvm);
+      // Skip ensureAndRepairAddressCaches for performance - getKeys() already handles caching
+      return keys;
+    }
+
+    if (isCardano) {
+      const keys = await this.keyRing.getKeysForCardano(chainId);
+      // Skip ensureAndRepairAddressCaches for performance - getKeysForCardano() already handles caching
+      return keys;
+    }
+
+    const keys = await this.keyRing.getKeys(chainId, isEvm);
+    // Skip ensureAndRepairAddressCaches for performance - getKeys() already handles caching
+    return keys;
+  }
+
+  private async ensureAndRepairAddressCaches(
+    chainId: string,
+    keys: (Key & { name: string })[],
+    flags: { isCardano: boolean; isEvm: boolean }
+  ): Promise<void> {
+    // This prevents returning empty cache and recalculating addresses on extension startup
+    if (!this.keyRing.addressCacheManager.hasPassword()) {
+      console.warn(
+        `[ensureAndRepairAddressCaches] Password not set in cache manager for ${chainId}, skipping cache operations. ` +
+          `This can happen during extension startup before unlock completes.`
+      );
+      return;
+    }
+
+    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    const walletInfos = this.keyRing.getMultiKeyStoreInfo();
+    const walletIds = walletInfos.map(
+      (w) => (w.meta as KeyStoreMetaKnown)?.["__id__"] || ""
+    );
+    const walletNames = walletInfos.map(
+      (w) => (w.meta as KeyStoreMetaKnown)?.["name"] || "Unnamed Account"
+    );
+    const selectedIndex = walletInfos.findIndex((w) => w.selected);
+    const activeWalletId =
+      selectedIndex >= 0 ? walletIds[selectedIndex] : walletIds[0] || "";
+
+    const displayAddresses = keys.map((key) => {
+      if (flags.isCardano) {
+        return KeyRingService.isCardanoAddressCapableAlgo(key.algo)
+          ? Buffer.from(key.address).toString("utf8")
+          : "";
+      }
+      if (flags.isEvm) {
+        return `0x${Buffer.from(key.address).toString("hex")}`;
+      }
+      const bech32Add = new Bech32Address(key.address).toBech32(
+        chainInfo.bech32Config.bech32PrefixAccAddr
+      );
+      return bech32Add;
+    });
+
+    if (flags.isCardano) {
+      const cache = await this.keyRing.loadCardanoChainCache(chainId);
+      if (Object.keys(cache).length === 0) {
+        const next: Record<string, { address: string; pubKey: string }> = {};
+        walletIds.forEach((id, idx) => {
+          const key = keys[idx];
+          const addr = key ? displayAddresses[idx] || "" : "";
+          const pub =
+            key && KeyRingService.isCardanoAddressCapableAlgo(key.algo)
+              ? Buffer.from(key.pubKey).toString("hex")
+              : "";
+          next[id] = { address: addr, pubKey: pub };
+        });
+        await this.keyRing.saveCardanoChainCache(chainId, next);
+        return;
+      }
+    }
+
+    if (!flags.isCardano) {
+      const cache = await this.keyRing.loadGenericChainCache(chainId);
+      if (Object.keys(cache).length === 0) {
+        const next: Record<
+          string,
+          {
+            address: string;
+            name?: string;
+            pubKey?: string;
+            mnemonicLength?: string;
+          }
+        > = {};
+        walletIds.forEach((id, idx) => {
+          const key = keys[idx];
+          const walletInfo = walletInfos[idx];
+          const addressHex = key
+            ? Buffer.from(key.address).toString("hex")
+            : "";
+          const pubKeyHex = key ? Buffer.from(key.pubKey).toString("hex") : "";
+          const mnemonicLength = walletInfo?.meta?.["mnemonicLength"];
+          next[id] = {
+            address: addressHex,
+            name: walletNames[idx],
+            pubKey: pubKeyHex,
+            mnemonicLength: mnemonicLength,
+          };
+        });
+        await this.keyRing.saveGenericChainCache(chainId, next);
+        return;
+      }
+    }
+
+    // For consistency check, use display address (matches cache format)
+    const activeKey = selectedIndex >= 0 ? keys[selectedIndex] : null;
+    const activeAddressForCheck =
+      activeKey && selectedIndex >= 0 ? displayAddresses[selectedIndex] : "";
+
+    const consistencyResult =
+      await this.keyRing.addressCacheManager.checkConsistency(
+        chainId,
+        walletIds,
+        walletNames,
+        activeWalletId,
+        activeAddressForCheck,
+        flags.isCardano
+      );
+
+    if (!consistencyResult.isConsistent) {
+      console.warn(
+        `Cache inconsistency detected for ${chainId}:`,
+        consistencyResult.issues
+      );
+
+      await this.keyRing.clearAllAddressCaches();
+
+      if (flags.isCardano) {
+        const next: Record<string, { address: string; pubKey: string }> = {};
+        walletIds.forEach((id, idx) => {
+          const key = keys[idx];
+          const addr = key ? displayAddresses[idx] || "" : "";
+          const pub =
+            key && KeyRingService.isCardanoAddressCapableAlgo(key.algo)
+              ? Buffer.from(key.pubKey).toString("hex")
+              : "";
+          next[id] = { address: addr, pubKey: pub };
+        });
+        await this.keyRing.saveCardanoChainCache(chainId, next);
+      } else {
+        const next: Record<
+          string,
+          {
+            address: string;
+            name?: string;
+            pubKey?: string;
+            mnemonicLength?: string;
+          }
+        > = {};
+        walletIds.forEach((id, idx) => {
+          const key = keys[idx];
+          const walletInfo = walletInfos[idx];
+          const addressHex = key
+            ? Buffer.from(key.address).toString("hex")
+            : "";
+          const pubKeyHex = key ? Buffer.from(key.pubKey).toString("hex") : "";
+          const mnemonicLength = walletInfo?.meta?.["mnemonicLength"];
+          next[id] = {
+            address: addressHex,
+            name: walletNames[idx],
+            pubKey: pubKeyHex,
+            mnemonicLength: mnemonicLength,
+          };
+        });
+        await this.keyRing.saveGenericChainCache(chainId, next);
+      }
+
+      try {
+        this.interactionService.dispatchEvent(WEBPAGE_PORT, "clear-cache", {
+          seq: Date.now(),
+        });
+      } catch (e) {
+        console.error(
+          `[KeyRingService] Failed to dispatch clear-cache event:`,
+          e
+        );
+      }
+    }
   }
 }

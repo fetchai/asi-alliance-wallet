@@ -41,6 +41,7 @@ import {
   GetAccountMsg,
   RestoreWalletMsg,
   RefreshAccountList,
+  BroadcastKeyringSurfacesSyncMsg,
   UpdatePasswordMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
@@ -89,6 +90,7 @@ export function init(router: Router, service: KeyRingService): void {
   router.registerMessage(GetAccountMsg);
   router.registerMessage(RestoreWalletMsg);
   router.registerMessage(RefreshAccountList);
+  router.registerMessage(BroadcastKeyringSurfacesSyncMsg);
   router.registerMessage(UpdatePasswordMsg);
   router.addHandler(ROUTE, getHandler(service));
 }

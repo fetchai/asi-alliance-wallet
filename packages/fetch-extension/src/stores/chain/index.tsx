@@ -1,4 +1,11 @@
-import { observable, action, computed, makeObservable, flow } from "mobx";
+import {
+  observable,
+  action,
+  computed,
+  makeObservable,
+  flow,
+  flowResult,
+} from "mobx";
 
 import {
   ChainInfoInner,
@@ -23,6 +30,7 @@ import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { MessageRequester } from "@keplr-wallet/router";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
 
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @observable
@@ -169,6 +177,32 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     this._selectedChainId = chainId;
     const msg = new SetSelectedChainMsg(this._selectedChainId);
     this.requester.sendMessage(BACKGROUND_PORT, msg);
+  }
+
+  /**
+   * Awaitable network switch: local selection, background SetSelectedChain, then persist last-view chain.
+   * Prefer this (with MobX flow/flowResult) before changeKeyRing in add/import so keystore-changed handlers
+   * that call getKey already see a non-Cardano chain, avoiding Cardano-24w race with a newly added wallet.
+   */
+  @flow
+  *selectChainAndPersist(chainId: string) {
+    yield* selectChainAndPersistWiring(
+      {
+        isInitializing: this._isInitializing,
+        setDeferChainIdSelect: (id) => {
+          this.deferChainIdSelect = id;
+        },
+        sendSetSelectedChain: (id) => {
+          const msg = new SetSelectedChainMsg(id);
+          return this.requester.sendMessage(BACKGROUND_PORT, msg);
+        },
+        setSelectedChainIdLocal: (id) => {
+          this._selectedChainId = id;
+        },
+        saveLastViewChainId: () => flowResult(this.saveLastViewChainId()),
+      },
+      chainId
+    );
   }
 
   @action

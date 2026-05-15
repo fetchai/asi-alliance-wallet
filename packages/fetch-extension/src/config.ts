@@ -3241,6 +3241,189 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
   // },
 ];
 
+export const CardanoChainInfos: ChainInfo[] = [
+  // Cardano Mainnet
+  {
+    rpc: "https://api.koios.rest/api/v1",
+    rest: "https://api.koios.rest/api/v1",
+    chainId: "cardano-mainnet",
+    chainName: "Cardano Mainnet",
+    stakeCurrency: {
+      coinDenom: "ADA",
+      coinMinimalDenom: "lovelace",
+      coinDecimals: 6,
+      coinGeckoId: "cardano",
+      coinImageUrl:
+        "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    },
+    bip44: {
+      coinType: 1815,
+    },
+    bech32Config: {
+      bech32PrefixAccAddr: "addr",
+      bech32PrefixAccPub: "addrpub",
+      bech32PrefixValAddr: "stake",
+      bech32PrefixValPub: "stakepub",
+      bech32PrefixConsAddr: "",
+      bech32PrefixConsPub: "",
+    },
+    currencies: [
+      {
+        coinDenom: "ADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl:
+          "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+      },
+    ],
+    feeCurrencies: [
+      {
+        coinDenom: "ADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl:
+          "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+        gasPriceStep: {
+          // Cardano doesn't have "gas price" semantics like Cosmos/EVM.
+          // We use the unified feeConfig pipeline in the UI, and our Cardano simulate() returns
+          // the estimated fee in lovelace as `gasUsed`. Setting gasPriceStep=1 makes feeConfig
+          // treat that value as the final fee (lovelace) without scaling.
+          low: 1,
+          average: 1,
+          high: 1,
+        },
+      },
+    ],
+    features: ["cardano"],
+    chainSymbolImageUrl:
+      "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    txExplorer: {
+      name: "Cardanoscan",
+      txUrl: "https://cardanoscan.io/transaction/{txHash}",
+    },
+  },
+  // Cardano Testnet (Preview)
+  {
+    rpc: "https://preview.koios.rest/api/v1",
+    rest: "https://preview.koios.rest/api/v1",
+    chainId: "cardano-preview",
+    chainName: "Cardano Preview",
+    stakeCurrency: {
+      coinDenom: "tADA",
+      coinMinimalDenom: "lovelace",
+      coinDecimals: 6,
+      coinGeckoId: "cardano",
+      coinImageUrl:
+        "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    },
+    bip44: {
+      coinType: 1815,
+    },
+    bech32Config: {
+      bech32PrefixAccAddr: "addr_test",
+      bech32PrefixAccPub: "addr_testpub",
+      bech32PrefixValAddr: "stake_test",
+      bech32PrefixValPub: "stake_testpub",
+      bech32PrefixConsAddr: "",
+      bech32PrefixConsPub: "",
+    },
+    currencies: [
+      {
+        coinDenom: "tADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl:
+          "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+      },
+    ],
+    feeCurrencies: [
+      {
+        coinDenom: "tADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl:
+          "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+        gasPriceStep: {
+          low: 1,
+          average: 1,
+          high: 1,
+        },
+      },
+    ],
+    features: ["cardano"],
+    chainSymbolImageUrl:
+      "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    type: "testnet",
+    txExplorer: {
+      name: "Cardanoscan",
+      txUrl: "https://preview.cardanoscan.io/transaction/{txHash}",
+    },
+  },
+  // Cardano Testnet (Preprod)
+  {
+    rpc: "https://preprod.koios.rest/api/v1",
+    rest: "https://preprod.koios.rest/api/v1",
+    chainId: "cardano-preprod",
+    chainName: "Cardano Preprod",
+    stakeCurrency: {
+      coinDenom: "tADA",
+      coinMinimalDenom: "lovelace",
+      coinDecimals: 6,
+      coinGeckoId: "cardano",
+      coinImageUrl:
+        "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    },
+    bip44: {
+      coinType: 1815,
+    },
+    bech32Config: {
+      bech32PrefixAccAddr: "addr_test",
+      bech32PrefixAccPub: "addr_testpub",
+      bech32PrefixValAddr: "stake_test",
+      bech32PrefixValPub: "stake_testpub",
+      bech32PrefixConsAddr: "",
+      bech32PrefixConsPub: "",
+    },
+    currencies: [
+      {
+        coinDenom: "tADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl:
+          "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+      },
+    ],
+    feeCurrencies: [
+      {
+        coinDenom: "tADA",
+        coinMinimalDenom: "lovelace",
+        coinDecimals: 6,
+        coinGeckoId: "cardano",
+        coinImageUrl:
+          "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+        gasPriceStep: {
+          low: 1,
+          average: 1,
+          high: 1,
+        },
+      },
+    ],
+    features: ["cardano"],
+    chainSymbolImageUrl:
+      "https://assets.coingecko.com/coins/images/975/thumb/cardano.png",
+    type: "testnet",
+    txExplorer: {
+      name: "Cardanoscan",
+      txUrl: "https://preprod.cardanoscan.io/transaction/{txHash}",
+    },
+  },
+];
+
 // The origins that are able to pass any permission that external webpages can have.
 export const PrivilegedOrigins: string[] = [
   "https://wallet.keplr.app",
@@ -3268,8 +3451,12 @@ export enum TXNTYPE {
   createSecret20ViewingKey = "createSecret20ViewingKey",
 }
 
-if (process.env.NODE_ENV !== "production") {
-  EmbedChainInfos.push(LOCAL_TEST_NETWORK_CONFIG, REMOTE_TEST_NETWORK_CONFIG);
+if (true) {
+  EmbedChainInfos.push(
+    LOCAL_TEST_NETWORK_CONFIG,
+    REMOTE_TEST_NETWORK_CONFIG,
+    ...CardanoChainInfos
+  );
 }
 
 export { EmbedChainInfos };

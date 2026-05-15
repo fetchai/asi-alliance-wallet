@@ -9,8 +9,34 @@ import {
 } from "../config.ui.var";
 import { formatAddress } from "./format";
 import { GroupEvent } from "./group-events";
-import { MultiKeyStoreInfoWithSelected } from "@keplr-wallet/background";
+import {
+  MultiKeyStoreInfoWithSelected,
+  walletShouldLeaveCardanoChain,
+  walletSupportsCardano,
+} from "@keplr-wallet/background";
+export { isCardanoChain } from "./is-cardano-chain";
+
+export {
+  ensureCompatibleChainForUpcomingWallet,
+  ensureChainCompatibleBeforeSelectKeyStore,
+  type ChainStoreForCardanoAwaitableSwitch,
+} from "./cardano-awaitable-alignment";
+
+export { walletShouldLeaveCardanoChain, walletSupportsCardano };
+
+export {
+  requestKeyringSurfacesSyncBroadcast,
+  syncKeyringSurfacesFromBackground,
+  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+} from "./keyring-surfaces-sync";
 import { RegisterMode } from "@keplr-wallet/hooks";
+
+/** Pre-keystore UI: word count that will yield Cardano-capable mnemonic after import (matches persisted `mnemonicLength` / `walletSupportsCardano`). */
+export function supportsCardanoFromMnemonicWordCount(
+  wordCount: number
+): boolean {
+  return wordCount === 24;
+}
 
 // translate the contact address into the address book name if it exists
 export function getUserName(

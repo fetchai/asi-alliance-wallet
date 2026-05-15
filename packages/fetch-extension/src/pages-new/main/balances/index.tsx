@@ -16,6 +16,7 @@ import {
   useMoonpayCurrency,
 } from "@utils/moonpay-currency";
 import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
+import { addressCacheStore } from "../../../utils/address-cache-store";
 
 interface Props {
   tokenState: any;
@@ -42,10 +43,23 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
 
   const accountInfo = accountStore.getAccount(current.chainId);
 
-  const balanceQuery = queries.queryBalances.getQueryBech32Address(
-    accountInfo.bech32Address
-  );
-  const balanceStakableQuery = balanceQuery.stakable;
+  const selectedWalletId =
+    keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.[
+      "__id__"
+    ] || "";
+  const cachedSelectedAddress =
+    selectedWalletId && current.chainId
+      ? addressCacheStore.getCache(current.chainId)[selectedWalletId] || ""
+      : "";
+  const effectiveAddress =
+    accountInfo.walletStatus === WalletStatus.Loaded
+      ? accountInfo.bech32Address
+      : cachedSelectedAddress;
+
+  const balanceQuery = effectiveAddress
+    ? queries.queryBalances.getQueryBech32Address(effectiveAddress)
+    : undefined;
+  const balanceStakableQuery = balanceQuery ? balanceQuery.stakable : undefined;
 
   const isNoble =
     ChainIdHelper.parse(chainStore.current.chainId).identifier === "noble";
@@ -54,35 +68,59 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   );
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const currency = current.feeCurrencies?.[0];
+  const zero = currency
+    ? new CoinPretty(currency, new Int(0)).ready(false)
+    : undefined;
+
   const stakable = (() => {
+    if (!effectiveAddress || !balanceQuery || !balanceStakableQuery) {
+      return (
+        zero ??
+        new CoinPretty(
+          { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+          new Int(0)
+        ).ready(false)
+      );
+    }
     if (isNoble && hasUSDC) {
       return balanceQuery.getBalanceFromCurrency(hasUSDC);
     }
-
     return balanceStakableQuery.balance;
   })();
 
-  const delegated = queries.cosmos.queryDelegations
-    .getQueryBech32Address(accountInfo.bech32Address)
-    .total.upperCase(true);
+  const delegated = effectiveAddress
+    ? queries.cosmos.queryDelegations
+        .getQueryBech32Address(effectiveAddress)
+        .total.upperCase(true)
+    : zero ??
+      new CoinPretty(
+        { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+        new Int(0)
+      ).ready(false);
 
-  const unbonding = queries.cosmos.queryUnbondingDelegations
-    .getQueryBech32Address(accountInfo.bech32Address)
-    .total.upperCase(true);
+  const unbonding = effectiveAddress
+    ? queries.cosmos.queryUnbondingDelegations
+        .getQueryBech32Address(effectiveAddress)
+        .total.upperCase(true)
+    : zero ??
+      new CoinPretty(
+        { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+        new Int(0)
+      ).ready(false);
 
   const accountOrChainChanged =
-    activityStore.getAddress !== accountInfo.bech32Address ||
+    activityStore.getAddress !== effectiveAddress ||
     activityStore.getChainId !== current.chainId;
 
   const { data } = useMoonpayCurrency();
 
   const rewards = useQuery({
-    queryKey: ["rewards", accountInfo.bech32Address, current.chainId],
+    queryKey: ["rewards", effectiveAddress, current.chainId],
     queryFn: async () => {
-      if (accountInfo.bech32Address && current.chainId) {
-        const rewards = queries.cosmos.queryRewards.getQueryBech32Address(
-          accountInfo.bech32Address
-        );
+      if (effectiveAddress && current.chainId) {
+        const rewards =
+          queries.cosmos.queryRewards.getQueryBech32Address(effectiveAddress);
         await rewards.waitFreshResponse();
         const stakableRewards = rewards.stakableReward;
         return stakableRewards;
@@ -91,7 +129,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     },
     refetchInterval: 3600 * 1000,
     refetchOnMount: false,
-    enabled: !current?.features?.includes("evm"),
+    enabled: !current?.features?.includes("evm") && Boolean(effectiveAddress),
     staleTime: accountOrChainChanged ? 0 : 3600 * 1000,
   });
 
@@ -106,8 +144,15 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     chainStore.chainInfos
   );
 
-  const currency = current.feeCurrencies?.[0];
-  const stakableReward = rewards?.data || new CoinPretty(currency, new Int(0));
+  const stakableReward =
+    rewards?.data ||
+    (currency
+      ? new CoinPretty(currency, new Int(0)).ready(false)
+      : zero ??
+        new CoinPretty(
+          { coinDecimals: 0, coinDenom: "", coinMinimalDenom: "" } as any,
+          new Int(0)
+        ).ready(false));
   const stakedSum = delegated.add(unbonding);
   const total = stakable.add(stakedSum).add(stakableReward);
 
@@ -129,11 +174,11 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
       : style["increaseInDollarsOrange"];
 
   // check if address is whitelisted for Buy/Sell feature
-  const isAddressWhitelisted = accountInfo?.bech32Address
+  const isAddressWhitelisted = effectiveAddress
     ? checkAddressIsBuySellWhitelisted(
         current.chainId === "1" || current.chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
-          : accountInfo.bech32Address
+          : effectiveAddress
       )
     : false;
 
@@ -178,9 +223,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
       ) : (
         <div className={style["balance-field"]}>
           <div className={style["balance"]}>
-            {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === 0 ||
-            rewards.isFetching ? (
+            {keyRingStore.status === 0 || !effectiveAddress ? (
               <Skeleton height="37.5px" width="100px" />
             ) : (
               <React.Fragment>
@@ -190,9 +233,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
             )}
           </div>
           <div className={style["inUsd"]}>
-            {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === 0 ||
-            rewards.isFetching ? (
+            {keyRingStore.status === 0 || !effectiveAddress ? (
               <Skeleton height="21px" width="100px" />
             ) : totalPrice ? (
               ` ${totalPrice.toString()} ${fiatCurrency.toUpperCase()}`

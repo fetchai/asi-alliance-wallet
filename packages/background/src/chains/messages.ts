@@ -198,6 +198,33 @@ export class SwitchNetworkByChainIdMsg extends Message<void> {
   }
 }
 
+export class GetSelectedChainIdMsg extends Message<{ chainId: string }> {
+  public static type() {
+    return "get-selected-chain-id";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  // Exposes selected chain id to callers; keep `approveExternal` aligned with product/security review (fingerprinting surface).
+  override approveExternal(): boolean {
+    return true;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetSelectedChainIdMsg.type();
+  }
+}
+
 export class SetSelectedChainMsg extends Message<void> {
   public static type() {
     return "set-selected-chain";

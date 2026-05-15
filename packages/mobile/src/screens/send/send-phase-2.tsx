@@ -33,6 +33,7 @@ import { GearIcon } from "components/new/icon/gear-icon";
 import { IconButton } from "components/new/button/icon";
 import { clearDecimals } from "modals/sign/messages";
 import { numberLocalFormat } from "utils/format/format";
+import { useIntl } from "react-intl";
 
 interface SendConfigs {
   amountConfig: AmountConfig;
@@ -41,6 +42,31 @@ interface SendConfigs {
   feeConfig: FeeConfig;
   recipientConfig: RecipientConfig;
 }
+
+const isSelfSendRecipient = ({
+  recipient,
+  isEvm,
+  bech32Address,
+  ethereumHexAddress,
+}: {
+  recipient: string;
+  isEvm: boolean;
+  bech32Address?: string | null;
+  ethereumHexAddress?: string | null;
+}): boolean => {
+  if (recipient.length === 0) {
+    return false;
+  }
+
+  if (isEvm) {
+    return (
+      ethereumHexAddress != null &&
+      recipient.toLowerCase() === ethereumHexAddress.trim().toLowerCase()
+    );
+  }
+
+  return bech32Address != null && recipient === bech32Address.trim();
+};
 
 export const SendPhase2: FunctionComponent<{
   sendConfigs: SendConfigs;
@@ -73,6 +99,7 @@ export const SendPhase2: FunctionComponent<{
   >();
 
   const style = useStyle();
+  const intl = useIntl();
 
   const smartNavigation = useSmartNavigation();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -154,6 +181,16 @@ export const SendPhase2: FunctionComponent<{
     sendConfigs.gasConfig.error ??
     sendConfigs.feeConfig.error;
   const txStateIsValid = sendConfigError == null;
+  const recipient = sendConfigs.recipientConfig.recipient?.trim() ?? "";
+  const hasNoRecipientError = sendConfigs.recipientConfig.error == null;
+  const isSelfSend =
+    hasNoRecipientError &&
+    isSelfSendRecipient({
+      recipient,
+      isEvm,
+      bech32Address: account.bech32Address,
+      ethereumHexAddress: account.ethereumHexAddress,
+    });
 
   async function onSubmit() {
     if (!networkIsConnected) {
@@ -367,6 +404,30 @@ export const SendPhase2: FunctionComponent<{
             : sendConfigs.feeConfig.error.message}
         </Text>
       ) : null}
+      {isSelfSend ? (
+        <View
+          style={{
+            marginTop: 8,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: "rgba(255, 193, 7, 0.4)",
+            borderRadius: 8,
+            backgroundColor: "rgba(255, 193, 7, 0.15)",
+          }}
+        >
+          <Text
+            style={
+              style.flatten(["text-caption1", "color-white@80%"]) as ViewStyle
+            }
+          >
+            {intl.formatMessage({
+              id: "send.self-send-warning",
+              defaultMessage:
+                "You are sending to your own address. Only fees will be deducted.",
+            })}
+          </Text>
+        </View>
+      ) : null}
       <View style={style.flatten(["flex-1"])} />
       <Button
         text="Review transaction"
@@ -385,7 +446,7 @@ export const SendPhase2: FunctionComponent<{
         disabled={
           !account.isReadyToSendTx ||
           !txStateIsValid ||
-          account.bech32Address == sendConfigs.recipientConfig.recipient
+          activityStore.getPendingTxnTypes[txnTypeKey.send]
         }
         loading={activityStore.getPendingTxnTypes[txnTypeKey.send]}
         onPress={onSubmit}

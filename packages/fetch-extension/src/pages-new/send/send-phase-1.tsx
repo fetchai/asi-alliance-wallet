@@ -10,10 +10,19 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { Label } from "reactstrap";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { CoinPretty, Dec } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { removeComma } from "@utils/format";
 import style from "./style.module.scss";
 import { SendConfigs } from "./types";
+import {
+  CardanoSyncStatusResponse,
+  GetCardanoSyncStatusMsg,
+  GetMaxSpendableAdaMsg,
+} from "@keplr-wallet/background";
+import { lovelacesToAdaString } from "@keplr-wallet/cardano";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
 
 interface SendPhase1Props {
   sendConfigs: SendConfigs;
@@ -35,17 +44,90 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
       setFromPhase1(true);
     }, []);
 
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+
     return (
       <div>
         <CoinInput
-          onPress={() => {
+          onPress={async () => {
+            const denomHelper = new DenomHelper(
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom
+            );
+            const isTokenSend = denomHelper.type === CARDANO_NATIVE_TOKEN_TYPE;
+
+            if (isCardano && !isTokenSend) {
+              const decimals =
+                sendConfigs.amountConfig.sendCurrency.coinDecimals ?? 6;
+              const requester = new InExtensionMessageRequester();
+
+              // Lace-like: use GetMaxSpendableAda only when wallet is synced
+              try {
+                const syncStatus = (await requester.sendMessage(
+                  BACKGROUND_PORT,
+                  new GetCardanoSyncStatusMsg(
+                    chainStore.current.chainId,
+                    document.hidden ? "background" : "foreground"
+                  )
+                )) as CardanoSyncStatusResponse | undefined;
+
+                if (
+                  syncStatus?.state === "ready_with_data" &&
+                  syncStatus?.isSettled
+                ) {
+                  const maxLovelace = (await requester.sendMessage(
+                    BACKGROUND_PORT,
+                    new GetMaxSpendableAdaMsg(
+                      chainStore.current.chainId,
+                      accountInfo.bech32Address,
+                      sendConfigs.recipientConfig.recipient || undefined,
+                      sendConfigs.memoConfig.memo || undefined
+                    )
+                  )) as string;
+
+                  if (maxLovelace && maxLovelace !== "0") {
+                    sendConfigs.amountConfig.setAmount(
+                      lovelacesToAdaString(maxLovelace, decimals)
+                    );
+                    return;
+                  }
+                }
+              } catch {
+                // Fall through to REST fallback
+              }
+
+              // Fallback: use last known balance (REST) when not synced or GetMaxSpendableAda fails
+              const feeBuffer = new CoinPretty(
+                sendConfigs.amountConfig.sendCurrency,
+                new Int(500_000) // 0.5 ADA conservative buffer for fees
+              );
+              const maxAmount = balance.sub(feeBuffer);
+              const safeMaxAmount = maxAmount.toDec().isNegative()
+                ? new CoinPretty(
+                    sendConfigs.amountConfig.sendCurrency,
+                    new Int(0)
+                  )
+                : maxAmount;
+              const actualAmount = safeMaxAmount
+                .shrink(true)
+                .hideDenom(true)
+                .toString();
+              sendConfigs.amountConfig.setAmount(removeComma(actualAmount));
+              return;
+            }
+
+            // Cosmos / EVM: subtract fee from spendable balance
             const fees = sendConfigs.feeConfig.getFeeTypePrettyForFeeCurrency(
               sendConfigs?.feeConfig?.feeCurrencies?.[0],
-              sendConfigs.feeConfig.feeType ?? "average" // fee type is not set at this point, so default to average
+              sendConfigs.feeConfig.feeType ?? "average"
             );
-            // subtract fee from balance to set max amount to avoid insufficient balance error
-            const actualAmount = balance
-              .sub(fees)
+            const maxAmount = balance.sub(fees);
+            const safeMaxAmount = maxAmount.toDec().isNegative()
+              ? new CoinPretty(
+                  sendConfigs.amountConfig.sendCurrency,
+                  new Int(0)
+                )
+              : maxAmount;
+            const actualAmount = safeMaxAmount
               .shrink(true)
               .hideDenom(true)
               .toString();

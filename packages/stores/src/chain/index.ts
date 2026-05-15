@@ -293,6 +293,12 @@ export class ChainInfoInner<C extends ChainInfo = ChainInfo>
   get explorerUrl(): string | undefined {
     return this.raw.explorerUrl;
   }
+
+  get txExplorer():
+    | { readonly name: string; readonly txUrl: string }
+    | undefined {
+    return this.raw.txExplorer;
+  }
 }
 
 export type ChainInfoOverrider<C extends ChainInfo = ChainInfo> = (

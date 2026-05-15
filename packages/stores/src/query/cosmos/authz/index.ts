@@ -8,8 +8,9 @@ import {
 } from "../../../common";
 import { Granter } from "./types";
 import { setupAuthzExtension } from "@cosmjs/stargate";
-import { AuthzExtension } from "@cosmjs/stargate/build/modules/authz/queries";
 import { QueryGranterGrantsResponse } from "cosmjs-types/cosmos/authz/v1beta1/query";
+
+type AuthzExtension = ReturnType<typeof setupAuthzExtension>;
 
 export class ObservableQueryAuthZGranterInner extends ObservableQueryTendermint<Granter> {
   constructor(

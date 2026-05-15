@@ -1,4 +1,6 @@
 import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
+import { walletSupportsCardano } from "./keyring";
+import type { KeyStoreMetaKnown } from "./types";
 import {
   CreateMnemonicKeyMsg,
   CreatePrivateKeyMsg,
@@ -41,166 +43,181 @@ import {
   RestoreWalletMsg,
   GetKeyMsgFetchSigning,
   RefreshAccountList,
+  BroadcastKeyringSurfacesSyncMsg,
   UpdatePasswordMsg,
 } from "./messages";
 import { KeyRingService } from "./service";
 import { Bech32Address } from "@keplr-wallet/cosmos";
+import { isValidCardanoAddress } from "@keplr-wallet/cardano";
 import { SignDoc } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import { KeyRingStatus } from "./keyring";
 import { ExtensionKVStore } from "@keplr-wallet/common";
 import { Account, WalletStatus } from "@fetchai/wallet-types";
+import { formatErrorForLog } from "../logging/safe-error";
+
+const isCardanoAddressCapableAlgo = (algo: string): boolean => {
+  return algo === "ed25519" || algo === "cardano_address_only";
+};
 
 export const getHandler: (service: KeyRingService) => Handler = (
   service: KeyRingService
 ) => {
   return (env: Env, msg: Message<unknown>) => {
-    switch (msg.constructor) {
-      case RestoreKeyRingMsg:
+    const msgType = msg.type();
+    switch (msgType) {
+      case RestoreKeyRingMsg.type():
         return handleRestoreKeyRingMsg(service)(env, msg as RestoreKeyRingMsg);
-      case DeleteKeyRingMsg:
+      case DeleteKeyRingMsg.type():
         return handleDeleteKeyRingMsg(service)(env, msg as DeleteKeyRingMsg);
-      case UpdateNameKeyRingMsg:
+      case UpdateNameKeyRingMsg.type():
         return handleUpdateNameKeyRingMsg(service)(
           env,
           msg as UpdateNameKeyRingMsg
         );
-      case ShowKeyRingMsg:
+      case ShowKeyRingMsg.type():
         return handleShowKeyRingMsg(service)(env, msg as ShowKeyRingMsg);
-      case CreateMnemonicKeyMsg:
+      case CreateMnemonicKeyMsg.type():
         return handleCreateMnemonicKeyMsg(service)(
           env,
           msg as CreateMnemonicKeyMsg
         );
-      case AddMnemonicKeyMsg:
+      case AddMnemonicKeyMsg.type():
         return handleAddMnemonicKeyMsg(service)(env, msg as AddMnemonicKeyMsg);
-      case CreatePrivateKeyMsg:
+      case CreatePrivateKeyMsg.type():
         return handleCreatePrivateKeyMsg(service)(
           env,
           msg as CreatePrivateKeyMsg
         );
-      case AddPrivateKeyMsg:
+      case AddPrivateKeyMsg.type():
         return handleAddPrivateKeyMsg(service)(env, msg as AddPrivateKeyMsg);
-      case CreateKeystoneKeyMsg:
+      case CreateKeystoneKeyMsg.type():
         return handleCreateKeystoneKeyMsg(service)(
           env,
           msg as CreateKeystoneKeyMsg
         );
-      case CreateLedgerKeyMsg:
+      case CreateLedgerKeyMsg.type():
         return handleCreateLedgerKeyMsg(service)(
           env,
           msg as CreateLedgerKeyMsg
         );
-      case AddKeystoneKeyMsg:
+      case AddKeystoneKeyMsg.type():
         return handleAddKeystoneKeyMsg(service)(env, msg as AddKeystoneKeyMsg);
-      case AddLedgerKeyMsg:
+      case AddLedgerKeyMsg.type():
         return handleAddLedgerKeyMsg(service)(env, msg as AddLedgerKeyMsg);
-      case LockKeyRingMsg:
+      case LockKeyRingMsg.type():
         return handleLockKeyRingMsg(service)(env, msg as LockKeyRingMsg);
-      case UnlockKeyRingMsg:
+      case UnlockKeyRingMsg.type():
         return handleUnlockKeyRingMsg(service)(env, msg as UnlockKeyRingMsg);
-      case GetKeyMsg:
+      case GetKeyMsg.type():
         return handleGetKeyMsg(service)(env, msg as GetKeyMsg);
-      case GetAccountMsg:
+      case GetAccountMsg.type():
         return handleGetAccountMsg(service)(env, msg as GetAccountMsg);
-      case RequestSignAminoMsg:
+      case RequestSignAminoMsg.type():
         return handleRequestSignAminoMsg(service)(
           env,
           msg as RequestSignAminoMsg
         );
-      case RequestSignEIP712CosmosTxMsg_v0:
+      case RequestSignEIP712CosmosTxMsg_v0.type():
         return handleRequestSignEIP712CosmosTxMsg_v0(service)(
           env,
           msg as RequestSignEIP712CosmosTxMsg_v0
         );
-      case RequestVerifyADR36AminoSignDoc:
+      case RequestVerifyADR36AminoSignDoc.type():
         return handleRequestVerifyADR36AminoSignDoc(service)(
           env,
           msg as RequestVerifyADR36AminoSignDoc
         );
-      case RequestSignDirectMsg:
+      case RequestSignDirectMsg.type():
         return handleRequestSignDirectMsg(service)(
           env,
           msg as RequestSignDirectMsg
         );
-      case RequestICNSAdr36SignaturesMsg:
+      case RequestICNSAdr36SignaturesMsg.type():
         return handleRequestICNSAdr36SignaturesMsg(service)(
           env,
           msg as RequestICNSAdr36SignaturesMsg
         );
-      case GetMultiKeyStoreInfoMsg:
+      case GetMultiKeyStoreInfoMsg.type():
         return handleGetMultiKeyStoreInfoMsg(service)(
           env,
           msg as GetMultiKeyStoreInfoMsg
         );
-      case ChangeKeyRingMsg:
+      case ChangeKeyRingMsg.type():
         return handleChangeKeyRingMsg(service)(env, msg as ChangeKeyRingMsg);
-      case GetIsKeyStoreCoinTypeSetMsg:
+      case GetIsKeyStoreCoinTypeSetMsg.type():
         return handleGetIsKeyStoreCoinTypeSetMsg(service)(
           env,
           msg as GetIsKeyStoreCoinTypeSetMsg
         );
-      case SetKeyStoreCoinTypeMsg:
+      case SetKeyStoreCoinTypeMsg.type():
         return handleSetKeyStoreCoinTypeMsg(service)(
           env,
           msg as SetKeyStoreCoinTypeMsg
         );
-      case CheckPasswordMsg:
+      case CheckPasswordMsg.type():
         return handleCheckPasswordMsg(service)(env, msg as CheckPasswordMsg);
-      case UpdatePasswordMsg:
+      case UpdatePasswordMsg.type():
         return handleUpdatePasswordMsg(service)(env, msg as UpdatePasswordMsg);
-      case ExportKeyRingDatasMsg:
+      case ExportKeyRingDatasMsg.type():
         return handleExportKeyRingDatasMsg(service)(
           env,
           msg as ExportKeyRingDatasMsg
         );
-      case InitNonDefaultLedgerAppMsg:
+      case UpdatePasswordMsg.type():
+        return handleUpdatePasswordMsg(service)(env, msg as UpdatePasswordMsg);
+      case InitNonDefaultLedgerAppMsg.type():
         return handleInitNonDefaultLedgerAppMsg(service)(
           env,
           msg as InitNonDefaultLedgerAppMsg
         );
-      case ChangeKeyRingNameMsg:
+      case ChangeKeyRingNameMsg.type():
         return handleChangeKeyNameMsg(service)(
           env,
           msg as ChangeKeyRingNameMsg
         );
-      case StatusMsg:
+      case StatusMsg.type():
         return handleStatusMsg(service)(env, msg as StatusMsg);
-      case RestoreWalletMsg:
+      case RestoreWalletMsg.type():
         return handleRestoreWalletMsg(service)(env, msg as StatusMsg);
-      case LockWalletMsg:
+      case LockWalletMsg.type():
         return handleLockWallet(service)(env, msg as LockWalletMsg);
-      case UnlockWalletMsg:
+      case UnlockWalletMsg.type():
         return handleUnlockWallet(service)(env, msg as UnlockWalletMsg);
-      case CurrentAccountMsg:
+      case CurrentAccountMsg.type():
         return handleCurrentAccountMsg(service)(env, msg as CurrentAccountMsg);
-      case SwitchAccountMsg:
+      case SwitchAccountMsg.type():
         return handleSwitchAccountMsg(service)(env, msg as SwitchAccountMsg);
-      case ListAccountsMsg:
+      case ListAccountsMsg.type():
         return handleListAccountsMsg(service)(env, msg as ListAccountsMsg);
-      case GetKeyMsgFetchSigning:
+      case GetKeyMsgFetchSigning.type():
         return handleGetKeyMsgFetchSigning(service)(
           env,
           msg as GetKeyMsgFetchSigning
         );
-      case RequestSignAminoMsgFetchSigning:
+      case RequestSignAminoMsgFetchSigning.type():
         return handleRequestSignAminoMsgFetchSigning(service)(
           env,
           msg as RequestSignAminoMsgFetchSigning
         );
-      case RequestSignDirectMsgFetchSigning:
+      case RequestSignDirectMsgFetchSigning.type():
         return handleRequestSignDirectMsgFetchSigning(service)(
           env,
           msg as RequestSignDirectMsgFetchSigning
         );
-      case RequestVerifyADR36AminoSignDocFetchSigning:
+      case RequestVerifyADR36AminoSignDocFetchSigning.type():
         return handleRequestVerifyADR36AminoSignDocFetchSigning(service)(
           env,
           msg as RequestVerifyADR36AminoSignDocFetchSigning
         );
-      case RefreshAccountList:
+      case RefreshAccountList.type():
         return handleRefreshAccountListMsg(service)(
           env,
           msg as RefreshAccountList
+        );
+      case BroadcastKeyringSurfacesSyncMsg.type():
+        return handleBroadcastKeyringSurfacesSyncMsg(service)(
+          env,
+          msg as BroadcastKeyringSurfacesSyncMsg
         );
       default:
         throw new Error("Unknown msg type");
@@ -221,6 +238,15 @@ const handleRefreshAccountListMsg: (
   service: KeyRingService
 ) => InternalHandler<RefreshAccountList> = (_service) => {
   return async (_env, _msg) => {
+    return true;
+  };
+};
+
+const handleBroadcastKeyringSurfacesSyncMsg: (
+  service: KeyRingService
+) => InternalHandler<BroadcastKeyringSurfacesSyncMsg> = (service) => {
+  return async (_env, _msg) => {
+    service.broadcastKeyringSurfacesSync();
     return true;
   };
 };
@@ -383,6 +409,16 @@ const handleGetKeyMsg: (
   service: KeyRingService
 ) => InternalHandler<GetKeyMsg> = (service) => {
   return async (env, msg) => {
+    const status = service.keyRingStatus;
+
+    if (status === KeyRingStatus.EMPTY) {
+      throw new Error("No keys available. Please create a wallet first.");
+    }
+
+    if (status === KeyRingStatus.LOCKED) {
+      throw new Error("Keyring is locked. Please unlock first.");
+    }
+
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,
       msg.chainId,
@@ -399,15 +435,22 @@ const handleGetKeyMsg: (
       nameByChain = {};
     }
 
+    const chainInfo = await service.chainsService.getChainInfo(msg.chainId);
+    let bech32Address: string;
+    if (chainInfo.features?.includes("cardano")) {
+      bech32Address = Buffer.from(key.address).toString("utf8");
+    } else {
+      bech32Address = new Bech32Address(key.address).toBech32(
+        chainInfo.bech32Config.bech32PrefixAccAddr
+      );
+    }
+
     return {
       name: nameByChain?.[msg.chainId] || service.getKeyStoreMeta("name"),
-      algo: "secp256k1",
+      algo: key.algo || "secp256k1",
       pubKey: key.pubKey,
       address: key.address,
-      bech32Address: new Bech32Address(key.address).toBech32(
-        (await service.chainsService.getChainInfo(msg.chainId)).bech32Config
-          .bech32PrefixAccAddr
-      ),
+      bech32Address: bech32Address,
       isNanoLedger: key.isNanoLedger,
       isKeystone: key.isKeystone,
     };
@@ -538,8 +581,13 @@ const handleRequestICNSAdr36SignaturesMsg: (
 const handleGetMultiKeyStoreInfoMsg: (
   service: KeyRingService
 ) => InternalHandler<GetMultiKeyStoreInfoMsg> = (service) => {
-  return () => {
+  return async () => {
+    if (service.keyRingStatus === KeyRingStatus.NOTLOADED) {
+      await service.restore();
+    }
+
     return {
+      status: service.keyRingStatus,
       multiKeyStoreInfo: service.getMultiKeyStoreInfo(),
     };
   };
@@ -607,7 +655,13 @@ const handleChangeKeyNameMsg: (
 ) => InternalHandler<ChangeKeyRingNameMsg> = (service) => {
   return async (env, msg) => {
     // Ensure that keyring is unlocked and selected.
-    await service.enable(env);
+    // Don't call enable() if wallet is empty or status is undefined to avoid "key doesn't exist" errors
+    if (
+      service.keyRingStatus !== KeyRingStatus.EMPTY &&
+      service.keyRingStatus !== undefined
+    ) {
+      await service.enable(env);
+    }
 
     let index = -1;
     service.getMultiKeyStoreInfo().forEach(({ selected }, idx) => {
@@ -673,7 +727,13 @@ const handleUnlockWallet: (
   service: KeyRingService
 ) => InternalHandler<UnlockWalletMsg> = (service) => {
   return async (env, _) => {
-    await service.enable(env);
+    // Don't call enable() if wallet is empty or status is undefined to avoid "key doesn't exist" errors
+    if (
+      service.keyRingStatus !== KeyRingStatus.EMPTY &&
+      service.keyRingStatus !== undefined
+    ) {
+      await service.enable(env);
+    }
   };
 };
 
@@ -692,14 +752,22 @@ const handleCurrentAccountMsg: (
 
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
-    const bech32Add = new Bech32Address(key.address).toBech32(
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    );
+    const isCardano = chainInfo.features?.includes("cardano");
+    const bech32Add = isCardano
+      ? isCardanoAddressCapableAlgo(key.algo)
+        ? Buffer.from(key.address).toString("utf8")
+        : ""
+      : new Bech32Address(key.address).toBech32(
+          chainInfo.bech32Config.bech32PrefixAccAddr
+        );
 
-    const hexadd = Bech32Address.fromBech32(
-      bech32Add,
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    ).toHex(true);
+    const hexadd =
+      isEVM && bech32Add
+        ? Bech32Address.fromBech32(
+            bech32Add,
+            chainInfo.bech32Config.bech32PrefixAccAddr
+          ).toHex(true)
+        : "";
 
     const acc: Account = {
       name: service.getKeyStoreMeta("name"),
@@ -735,21 +803,178 @@ const handleListAccountsMsg: (
 ) => InternalHandler<ListAccountsMsg> = (service) => {
   return async (env, msg) => {
     const chainId = await service.chainsService.getSelectedChain();
+
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,
       [chainId],
       msg.origin
     );
 
-    const keys = await service.getKeys(chainId);
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
+    const isCardano = chainInfo.features?.includes("cardano");
+
+    // First ListAccounts for a new Cardano chain may block here until restore/init completes,
+    // because network-changed is dispatched before onNetworkSwitch handlers finish.
+    if (isCardano) {
+      try {
+        await service.ensureCardanoServiceReady(chainId);
+      } catch (error) {
+        console.error(
+          "[KeyRingService] ensureCardanoServiceReady failed in ListAccountsMsg:",
+          formatErrorForLog(error, { chainId, source: "ListAccountsMsg" })
+        );
+        return {
+          accounts: [],
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+
+    const walletInfos = service.getKeyRing().getMultiKeyStoreInfo();
+    const walletIds = walletInfos.map(
+      (w) => (w.meta as KeyStoreMetaKnown)?.["__id__"] || ""
+    );
+    const walletNames = walletInfos.map((w) => {
+      const meta = w.meta as KeyStoreMetaKnown;
+      if (!meta) return "Unnamed Account";
+      try {
+        const nameByChain = meta["nameByChain"]
+          ? JSON.parse(meta["nameByChain"])
+          : {};
+        return nameByChain?.[chainId] || meta["name"] || "Unnamed Account";
+      } catch {
+        return meta["name"] || "Unnamed Account";
+      }
+    });
+
+    const tryBuildFromCache = async (): Promise<Account[] | null> => {
+      try {
+        if (walletIds.some((id) => !id)) return null;
+
+        if (isCardano) {
+          const cache = await service
+            .getKeyRing()
+            .loadCardanoChainCache(chainId);
+
+          const supportedFlags = walletInfos.map((w) => {
+            const meta = w.meta as KeyStoreMetaKnown;
+            if (meta?.["cardano"] === "true") return true;
+            return walletSupportsCardano(w);
+          });
+
+          const hasAll = walletIds.every((id, idx) => {
+            if (!supportedFlags[idx]) return true;
+            const entry = cache[id];
+            return Boolean(
+              entry?.address && isValidCardanoAddress(entry.address)
+            );
+          });
+
+          if (!hasAll) return null;
+
+          return walletIds.map((id, idx) => {
+            const entry = cache[id];
+            const address = entry?.address || "";
+            const pubKey = entry?.pubKey || "";
+            const isSupported = supportedFlags[idx];
+            const keyStoreType = walletInfos[idx]?.type;
+            const addressBytes = isSupported
+              ? Buffer.from(address, "utf8")
+              : new Uint8Array(0);
+            const isHexPubKey =
+              /^[0-9a-fA-F]+$/.test(pubKey) && pubKey.length % 2 === 0;
+            const pubKeyBytes = isSupported
+              ? pubKey
+                ? Buffer.from(pubKey, isHexPubKey ? "hex" : "utf8")
+                : new Uint8Array(0)
+              : new Uint8Array(0);
+
+            return {
+              name: walletNames[idx],
+              algo: isSupported
+                ? "cardano_address_only"
+                : "cardano_unsupported",
+              pubKey: pubKeyBytes,
+              address: addressBytes,
+              bech32Address: address,
+              isNanoLedger: keyStoreType === "ledger",
+              isKeystone: keyStoreType === "keystone",
+              EVMAddress: "",
+            };
+          });
+        }
+
+        const cache = await service.getKeyRing().loadGenericChainCache(chainId);
+        const hasAll = walletIds.every((id) => Boolean(cache[id]?.address));
+        if (!hasAll) return null;
+
+        return walletIds.map((id, idx) => {
+          const entry = cache[id];
+          const addressHex = entry?.address || "";
+          const pubKeyHex = entry?.pubKey || "";
+          const keyStoreType = walletInfos[idx]?.type;
+          let bech32Add = "";
+
+          try {
+            if (addressHex) {
+              bech32Add = new Bech32Address(
+                Buffer.from(addressHex, "hex")
+              ).toBech32(chainInfo.bech32Config.bech32PrefixAccAddr);
+            }
+          } catch {
+            bech32Add = "";
+          }
+
+          return {
+            name: entry?.name || walletNames[idx],
+            algo: "secp256k1",
+            pubKey: pubKeyHex
+              ? Buffer.from(pubKeyHex, "hex")
+              : new Uint8Array(0),
+            address: addressHex
+              ? Buffer.from(addressHex, "hex")
+              : new Uint8Array(0),
+            bech32Address: isEVM ? "" : bech32Add,
+            isNanoLedger: keyStoreType === "ledger",
+            isKeystone: keyStoreType === "keystone",
+            EVMAddress:
+              isEVM && bech32Add
+                ? Bech32Address.fromBech32(
+                    bech32Add,
+                    chainInfo.bech32Config.bech32PrefixAccAddr
+                  ).toHex(true)
+                : "",
+          };
+        });
+      } catch {
+        return null;
+      }
+    };
+
+    const cachedAccounts = await tryBuildFromCache();
+    if (cachedAccounts) {
+      return { accounts: cachedAccounts };
+    }
+
+    const keys = await service.getKeys(chainId);
+
     const returnData: Account[] = [];
 
-    keys.forEach((key) => {
-      const bech32Add = new Bech32Address(key.address).toBech32(
-        chainInfo.bech32Config.bech32PrefixAccAddr
-      );
+    keys.forEach((key, _idx) => {
+      let bech32Add: string;
+      if (isCardano) {
+        if (isCardanoAddressCapableAlgo(key.algo)) {
+          bech32Add = Buffer.from(key.address).toString("utf8");
+        } else {
+          bech32Add = "";
+        }
+      } else {
+        bech32Add = new Bech32Address(key.address).toBech32(
+          chainInfo.bech32Config.bech32PrefixAccAddr
+        );
+      }
+
       returnData.push({
         name: key.name,
         algo: key.algo,
@@ -767,7 +992,7 @@ const handleListAccountsMsg: (
       });
     });
 
-    return returnData;
+    return { accounts: returnData };
   };
 };
 
@@ -878,15 +1103,23 @@ const handleGetAccountMsg: (
 
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
+    const isCardano = chainInfo.features?.includes("cardano");
     let foundAccount: Account | null = null;
     keys.forEach((key) => {
-      const bech32Add = new Bech32Address(key.address).toBech32(
-        chainInfo.bech32Config.bech32PrefixAccAddr
-      );
-      const hexAdd = Bech32Address.fromBech32(
-        bech32Add,
-        chainInfo.bech32Config.bech32PrefixAccAddr
-      ).toHex(true);
+      const bech32Add = isCardano
+        ? isCardanoAddressCapableAlgo(key.algo)
+          ? Buffer.from(key.address).toString("utf8")
+          : ""
+        : new Bech32Address(key.address).toBech32(
+            chainInfo.bech32Config.bech32PrefixAccAddr
+          );
+      const hexAdd =
+        isEVM && bech32Add
+          ? Bech32Address.fromBech32(
+              bech32Add,
+              chainInfo.bech32Config.bech32PrefixAccAddr
+            ).toHex(true)
+          : "";
       if (msg.address === bech32Add || msg.address === hexAdd) {
         foundAccount = {
           name: key.name,
@@ -908,6 +1141,12 @@ const handleGetKeyMsgFetchSigning: (
   service: KeyRingService
 ) => InternalHandler<GetKeyMsgFetchSigning> = (service) => {
   return async (env, msg) => {
+    const status = await service.checkReadiness(env);
+
+    if (status === KeyRingStatus.EMPTY) {
+      throw new Error("No keys available. Please create a wallet first.");
+    }
+
     const chainId = await service.chainsService.getSelectedChain();
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,
@@ -919,14 +1158,22 @@ const handleGetKeyMsgFetchSigning: (
 
     const chainInfo = await service.chainsService.getChainInfo(chainId);
     const isEVM = chainInfo.features?.includes("evm");
-    const bech32Add = new Bech32Address(key.address).toBech32(
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    );
+    const isCardano = chainInfo.features?.includes("cardano");
+    const bech32Add = isCardano
+      ? isCardanoAddressCapableAlgo(key.algo)
+        ? Buffer.from(key.address).toString("utf8")
+        : ""
+      : new Bech32Address(key.address).toBech32(
+          chainInfo.bech32Config.bech32PrefixAccAddr
+        );
 
-    const hexadd = Bech32Address.fromBech32(
-      bech32Add,
-      chainInfo.bech32Config.bech32PrefixAccAddr
-    ).toHex(true);
+    const hexadd =
+      isEVM && bech32Add
+        ? Bech32Address.fromBech32(
+            bech32Add,
+            chainInfo.bech32Config.bech32PrefixAccAddr
+          ).toHex(true)
+        : "";
 
     const acc: Account = {
       name: service.getKeyStoreMeta("name"),

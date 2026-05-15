@@ -103,6 +103,18 @@
   "setting.export.input.password.error.invalid": "잘못된 비밀번호입니다",
   "setting.export.button.confirm": "확인",
 
+  "setting.export-to-mobile": "ASI Alliance 모바일 지갑 연결",
+  "setting.export-to-mobile.input.password": "비밀번호",
+  "setting.export-to-mobile.input.password.error.required": "비밀번호를 입력하세요",
+  "setting.export-to-mobile.input.password.error.invalid": "잘못된 비밀번호입니다",
+  "setting.export-to-mobile.button.confirm": "확인",
+  "setting.export-to-mobile.qr-code-view.session-expired": "세션 만료",
+  "setting.export-to-mobile.qr-code-view.session-expired-cta": "다시 스캔",
+  "setting.export-to-mobile.qr-code-view.expired": "만료됨",
+  "setting.export-to-mobile.qr-code-view.message": "ASI Mobile Wallet에서 이 QR 코드를 스캔하여 계정을 내보냅니다.",
+  "setting.export-to-mobile.qr-code-view.warning-title": "ASI Mobile Wallet에서만 스캔하세요",
+  "setting.export-to-mobile.qr-code-view.warning-description": "ASI Mobile Wallet 앱 안에서만 스캔하세요. 다른 QR 스캐너 앱을 사용하거나 QR 내용을 복사하지 마세요. 세션이 노출되어 자금을 잃을 수 있습니다.",
+
   "setting.clear": "계정 삭제",
   "setting.clear.alert": "계정을 삭제하기 전에 니모닉 시드를 가지고 있는지 확인하세요",
   "setting.clear.button.back-up": "니모닉 시드 보기",
@@ -163,6 +175,7 @@
   "register.create.title": "니모닉 단어",
   "register.create.toggle.word12": "12 단어",
   "register.create.toggle.word24": "24 단어",
+  "register.cardano.hint.24words": "Cardano 네트워크 접근에는 24단어 시드 문구가 필요합니다.",
   "register.create.input.password": "새로운 비밀번호 (최소 8자리 이상)",
   "register.create.input.password.error.required": "비밀번호를 입력하세요",
   "register.create.input.password.error.too-short": "비밀번호가 너무 짧습니다",
@@ -226,6 +239,7 @@
 
   "send.input.recipient": "받는 주소",
   "send.input.recipient.error.invalid": "잘못된 주소입니다",
+  "error.failed-to-compute-max-ada": "최대 ADA 금액 계산에 실패했습니다",
   "send.input.amount": "수량",
   "send.input.amount.error.insufficient": "자산이 부족합니다",
   "send.input.memo": "메모 (선택사항)",
@@ -234,6 +248,8 @@
   "send.input.gas": "가스",
   "send.input-button.balance": "잔고",
   "send.button.send": "보내기",
+  "send.self-send-warning": "자신의 주소로 보내고 있습니다. 수수료만 차감됩니다.",
+  "cardano.status.offline": "인터넷 연결이 끊어졌습니다. 네트워크를 확인한 후 다시 시도하세요.",
 
   "ibc.transfer.next": "다음",
   "ibc.transfer.submit": "보내기",

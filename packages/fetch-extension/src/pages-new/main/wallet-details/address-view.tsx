@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { debounce } from "lodash";
 
 interface ResponsiveAddressProps {
@@ -6,45 +12,78 @@ interface ResponsiveAddressProps {
   containerRef: React.RefObject<HTMLElement>;
 }
 
+function buildMiddleEllipsis(address: string, k: number): string {
+  const len = address.length;
+  if (k >= len) {
+    return address;
+  }
+  if (k <= 0) {
+    return "...";
+  }
+  const head = Math.floor(k / 2);
+  const tail = k - head;
+  return `${address.slice(0, head)}...${address.slice(-tail)}`;
+}
+
 export const ResponsiveAddressView: React.FC<ResponsiveAddressProps> = ({
   address,
   containerRef: externalContainerRef,
 }) => {
   const internalRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLSpanElement>(null);
+  const fitMeasureRef = useRef<HTMLSpanElement>(null);
   const [displayText, setDisplayText] = useState(address);
 
-  const recompute = () => {
+  const recompute = useCallback(() => {
     const container = externalContainerRef?.current || internalRef?.current;
-    const measure = measureRef.current;
+    const measureEl = fitMeasureRef.current;
 
-    if (!container || !measure) return;
+    if (!container || !measureEl) return;
 
-    // measure full address width from hidden span
-    const fullWidth = measure.scrollWidth;
-    const availableWidth = (container.offsetWidth || 0) - 50;
+    const availableWidth = container.offsetWidth || 0;
+    const measureWidth = (text: string): number => {
+      measureEl.textContent = text;
+      return measureEl.scrollWidth;
+    };
 
-    if (availableWidth >= fullWidth) {
-      setDisplayText(address); // always reset to full address
+    const len = address.length;
+    if (len === 0) {
+      setDisplayText("");
       return;
     }
 
-    const ratio = availableWidth / fullWidth;
-    const visibleChars = Math.max(Math.floor(address.length * ratio) - 4, 6);
+    const fullWidth = measureWidth(address);
+    if (availableWidth >= fullWidth) {
+      setDisplayText(address);
+      return;
+    }
 
-    const head = Math.floor(visibleChars / 2);
-    const tail = Math.floor(visibleChars / 2);
+    let best = "...";
+    let lo = 0;
+    let hi = len;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const candidate = buildMiddleEllipsis(address, mid);
+      const w = measureWidth(candidate);
+      if (w <= availableWidth) {
+        best = candidate;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
 
-    setDisplayText(`${address.slice(0, head)}...${address.slice(-tail)}`);
-  };
+    setDisplayText(best);
+  }, [address, externalContainerRef]);
 
-  const debouncedRecompute = debounce(recompute, 30);
+  const debouncedRecompute = useMemo(
+    () => debounce(recompute, 30),
+    [recompute]
+  );
 
   useEffect(() => {
     const container = externalContainerRef?.current || internalRef.current;
     if (!container) return;
 
-    // initial compute immediately
     recompute();
 
     const observer = new ResizeObserver(() => {
@@ -52,8 +91,11 @@ export const ResponsiveAddressView: React.FC<ResponsiveAddressProps> = ({
     });
     observer.observe(container);
 
-    return () => observer.disconnect();
-  }, [address, externalContainerRef]);
+    return () => {
+      debouncedRecompute.cancel();
+      observer.disconnect();
+    };
+  }, [address, externalContainerRef, debouncedRecompute, recompute]);
 
   return (
     <div
@@ -65,20 +107,18 @@ export const ResponsiveAddressView: React.FC<ResponsiveAddressProps> = ({
         maxWidth: "100%",
       }}
     >
-      {/* Hidden full address for measurement */}
       <span
-        ref={measureRef}
+        ref={fitMeasureRef}
+        aria-hidden={true}
         style={{
-          opacity: 0,
           position: "absolute",
+          left: -9999,
+          top: 0,
           whiteSpace: "nowrap",
           pointerEvents: "none",
+          visibility: "hidden",
         }}
-      >
-        {address}
-      </span>
-
-      {/* Display truncated address */}
+      />
       <span style={{ whiteSpace: "nowrap" }}>{displayText}</span>
     </div>
   );

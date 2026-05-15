@@ -8,7 +8,7 @@ export const formatAddress = (address: string) => {
     return (
       address.substring(0, 8).toLowerCase() +
       "..." +
-      address.substring(36, 44).toLowerCase()
+      address.substring(Math.max(0, address.length - 8)).toLowerCase()
     );
   else return address;
 };
@@ -227,6 +227,210 @@ export const removeComma = (value: string) => value.replace(/,/g, "");
 export const validateDecimalPlaces = (value: string, maxDigits = 20) => {
   const decimalRegex = new RegExp(`^\\d+(\\.\\d{0,${maxDigits}})?$`);
   return decimalRegex.test(value);
+};
+
+type FormatDisplayAmountOptions = {
+  maxDecimals?: number;
+  coinDecimals?: number;
+  minExtraDecimalsAfterFirstSignificant?: number;
+};
+
+const MAX_TO_FIXED_DECIMALS = 100;
+// Exponential normalization is intentionally clamped for `toFixed` safety.
+// Very small exponent values that need precision beyond this clamp are handled
+// as safe fallback display (no throw), not guaranteed non-zero preservation.
+
+const normalizeDisplayDecimalString = (value: string) => {
+  const trimmed = value.trim();
+  if (trimmed === "") return "";
+
+  const isNegative = trimmed.startsWith("-");
+  const unsigned = isNegative ? trimmed.slice(1) : trimmed;
+
+  if (unsigned === "" || !/^\d*\.?\d*$/.test(unsigned)) {
+    return "";
+  }
+
+  const [rawInteger = "0", rawFraction = ""] = unsigned.split(".");
+  const integerPart = rawInteger.replace(/^0+(?=\d)/, "") || "0";
+  const fractionPart = rawFraction.replace(/0+$/, "");
+
+  if (!fractionPart) {
+    if (integerPart === "0") {
+      return "0";
+    }
+    return `${isNegative ? "-" : ""}${integerPart}`;
+  }
+
+  return `${isNegative ? "-" : ""}${integerPart}.${fractionPart}`;
+};
+
+const clampIntegerOption = (value: number, fallback: number) => {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.floor(value));
+};
+
+const isZeroDecimalString = (value: string) => {
+  const normalized = normalizeDisplayDecimalString(value);
+  if (normalized === "") return false;
+  if (normalized === "0") return true;
+
+  const unsigned = normalized.startsWith("-")
+    ? normalized.slice(1)
+    : normalized;
+  const [integerPart, fractionPart = ""] = unsigned.split(".");
+  return integerPart === "0" && /^[0]*$/.test(fractionPart);
+};
+
+const addOneIntegerString = (value: string) => {
+  const digits = (value || "0").split("");
+  let carry = 1;
+
+  for (let i = digits.length - 1; i >= 0; i--) {
+    const current = Number(digits[i]);
+    const next = current + carry;
+    digits[i] = String(next % 10);
+    carry = next >= 10 ? 1 : 0;
+    if (!carry) break;
+  }
+
+  if (carry) {
+    digits.unshift("1");
+  }
+
+  return digits.join("").replace(/^0+(?=\d)/, "") || "0";
+};
+
+const incrementDecimalString = (value: string) => {
+  const [integerPart, fractionPart = ""] = value.split(".");
+
+  if (fractionPart.length === 0) {
+    return addOneIntegerString(integerPart || "0");
+  }
+
+  const combined = `${integerPart}${fractionPart}`;
+  const incremented = addOneIntegerString(combined || "0");
+  const targetLength = fractionPart.length;
+
+  const padded = incremented.padStart(targetLength + 1, "0");
+  const nextInteger = padded.slice(0, -targetLength) || "0";
+  const nextFraction = padded.slice(-targetLength);
+  return `${nextInteger}.${nextFraction}`;
+};
+
+const roundDownDecimalString = (value: string, decimals: number) => {
+  if (decimals <= 0) {
+    return value.split(".")[0];
+  }
+
+  const [integerPart, fractionPart = ""] = value.split(".");
+  const truncatedFraction = fractionPart
+    .slice(0, decimals)
+    .padEnd(decimals, "0");
+  return `${integerPart}.${truncatedFraction}`;
+};
+
+const roundHalfUpDecimalString = (value: string, decimals: number) => {
+  const normalized = normalizeDisplayDecimalString(value);
+  if (normalized === "") return "";
+
+  const isNegative = normalized.startsWith("-");
+  const unsigned = isNegative ? normalized.slice(1) : normalized;
+  const [integerPart, fractionPart = ""] = unsigned.split(".");
+
+  if (decimals <= 0) {
+    if (!fractionPart) return normalized;
+    const roundedInt =
+      Number(fractionPart[0] || "0") >= 5
+        ? addOneIntegerString(integerPart || "0")
+        : integerPart || "0";
+    return `${isNegative ? "-" : ""}${roundedInt}`;
+  }
+
+  if (fractionPart.length <= decimals) {
+    return normalized;
+  }
+
+  const nextDigit = Number(fractionPart[decimals] || "0");
+  let rounded = roundDownDecimalString(unsigned, decimals);
+  if (nextDigit >= 5) {
+    rounded = incrementDecimalString(rounded);
+  }
+
+  return normalizeDisplayDecimalString(`${isNegative ? "-" : ""}${rounded}`);
+};
+
+export const formatDisplayAmount = (
+  amount: string,
+  options: FormatDisplayAmountOptions = {}
+) => {
+  const actualCoinDecimals = clampIntegerOption(options.coinDecimals ?? 18, 18);
+  const toFixedCoinDecimals = Math.min(
+    actualCoinDecimals,
+    MAX_TO_FIXED_DECIMALS
+  );
+  const maxDecimals = clampIntegerOption(options.maxDecimals ?? 6, 6);
+  const minExtraDecimalsAfterFirstSignificant = clampIntegerOption(
+    options.minExtraDecimalsAfterFirstSignificant ?? 2,
+    2
+  );
+
+  if (amount == null) return "";
+
+  const normalizedInput = amount.trim();
+  if (normalizedInput === "") return "";
+
+  const parsedAmount = /e/i.test(normalizedInput)
+    ? parseExponential(normalizedInput.toLowerCase(), toFixedCoinDecimals)
+    : normalizedInput;
+  const normalized = normalizeDisplayDecimalString(parsedAmount);
+  if (normalized === "") return "";
+
+  const isNegative = normalized.startsWith("-");
+  const unsigned = isNegative ? normalized.slice(1) : normalized;
+  const [, fractionPart = ""] = unsigned.split(".");
+
+  if (!fractionPart) return normalized;
+
+  const safeMaxDecimals = Math.max(
+    0,
+    Math.min(maxDecimals, actualCoinDecimals)
+  );
+  const roundedDefault = roundHalfUpDecimalString(normalized, safeMaxDecimals);
+  const normalizedRoundedDefault =
+    normalizeDisplayDecimalString(roundedDefault);
+
+  const normalizedValue = isZeroDecimalString(normalized);
+  const roundedToZero = isZeroDecimalString(normalizedRoundedDefault);
+
+  // `maxDecimals = 0` is an explicit integer-like display mode.
+  // In this mode tiny-value protection is intentionally disabled.
+  if (safeMaxDecimals === 0 || normalizedValue || !roundedToZero) {
+    return normalizedRoundedDefault;
+  }
+
+  const firstSignificantIndex = fractionPart.search(/[1-9]/);
+  if (firstSignificantIndex < 0) {
+    return normalizedRoundedDefault;
+  }
+
+  const minPrecision =
+    firstSignificantIndex + 1 + minExtraDecimalsAfterFirstSignificant;
+  const extendedPrecision = Math.min(
+    actualCoinDecimals,
+    Math.max(safeMaxDecimals, minPrecision)
+  );
+  const roundedExtended = roundHalfUpDecimalString(
+    normalized,
+    extendedPrecision
+  );
+  const normalizedExtended = normalizeDisplayDecimalString(roundedExtended);
+
+  if (normalizedExtended === "0" && normalized !== "0") {
+    return "0";
+  }
+
+  return normalizedExtended;
 };
 
 export const hasValidDecimals = (value: string) => {
