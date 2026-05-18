@@ -2,9 +2,11 @@ import { firstValueFrom } from "rxjs";
 import {
   getNetworkConfig,
   isCardanoStakingEnabled,
+  isValidApiKey,
   type BlockfrostConfig,
 } from "./adapters/env-adapter";
 import type { CardanoNetwork } from "./utils/network";
+import { getBlockfrostChainNameFromNetwork } from "./utils/blockfrost-network-mapper";
 import { Cardano } from "@cardano-sdk/core";
 
 export type CardanoRuntimeStatus =
@@ -78,11 +80,14 @@ export class CardanoWalletManager {
     network,
     accountIndex = 0,
     passphrase = new Uint8Array(),
+    blockfrostConfig,
   }: {
     mnemonicWords: string[];
     network: CardanoNetwork;
     accountIndex?: number;
     passphrase?: Uint8Array;
+    /** undefined = built-in env config; null = provider unavailable without throw */
+    blockfrostConfig?: BlockfrostConfig | null;
   }): Promise<CardanoWalletManager> {
     // Create key agent
     const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
@@ -108,29 +113,15 @@ export class CardanoWalletManager {
       { bip32Ed25519, logger: console }
     );
 
-    // Check if Blockfrost is available
     const cardanoStakingEnabled = isCardanoStakingEnabled();
-    const networkConfig = getNetworkConfig(network);
-    let wallet: any = undefined;
-    let chainHistoryProvider: any = undefined;
+    const resolvedConfig =
+      blockfrostConfig === undefined
+        ? getNetworkConfig(network)
+        : blockfrostConfig;
 
-    if (networkConfig?.projectId) {
-      try {
-        const created = await this.createFullWallet(
-          networkConfig,
-          keyAgent,
-          cardanoStakingEnabled
-        );
-        wallet = created.wallet;
-        chainHistoryProvider = created.providers?.chainHistoryProvider;
-      } catch (error) {
-        throw new Error(
-          `[CardanoWalletManager] provider_unavailable: wallet_init_failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    } else {
+    const normalizedProjectId = resolvedConfig?.projectId?.trim();
+
+    if (!resolvedConfig || !isValidApiKey(normalizedProjectId)) {
       const manager = new CardanoWalletManager(
         undefined,
         keyAgent,
@@ -140,6 +131,29 @@ export class CardanoWalletManager {
       );
       manager.chainHistoryProvider = undefined;
       return manager;
+    }
+
+    const normalizedConfig: BlockfrostConfig = {
+      ...resolvedConfig,
+      projectId: normalizedProjectId!,
+    };
+
+    let wallet: any = undefined;
+    let chainHistoryProvider: any = undefined;
+
+    try {
+      const created = await this.createFullWallet(
+        normalizedConfig,
+        keyAgent,
+        cardanoStakingEnabled,
+        network
+      );
+      wallet = created.wallet;
+      chainHistoryProvider = created.providers?.chainHistoryProvider;
+    } catch {
+      throw new Error(
+        "[CardanoWalletManager] provider_unavailable: wallet_init_failed"
+      );
     }
 
     const manager = new CardanoWalletManager(
@@ -156,7 +170,8 @@ export class CardanoWalletManager {
   private static async createFullWallet(
     networkConfig: BlockfrostConfig,
     keyAgent: any,
-    cardanoStakingEnabled: boolean
+    cardanoStakingEnabled: boolean,
+    network: CardanoNetwork
   ): Promise<{ wallet: any; providers: any }> {
     // Import necessary SDK modules
     const walletModule = await import("@cardano-sdk/wallet");
@@ -166,7 +181,6 @@ export class CardanoWalletManager {
     const { createBlockfrostProviders } = await import(
       "./wallet/lib/providers"
     );
-    const { Cardano } = await import("@cardano-sdk/core");
 
     let extensionLocalStorage: any = undefined;
     try {
@@ -180,19 +194,7 @@ export class CardanoWalletManager {
       // If webextension-polyfill not available, use in-memory cache fallback
     }
 
-    const chainId = keyAgent.chainId;
-    let chainName: "Mainnet" | "Preview" | "Preprod" | "Sanchonet" | undefined;
-    if (chainId) {
-      if (chainId.networkMagic === Cardano.NetworkMagics.Mainnet) {
-        chainName = "Mainnet";
-      } else if (chainId.networkMagic === Cardano.NetworkMagics.Preview) {
-        chainName = "Preview";
-      } else if (chainId.networkMagic === Cardano.NetworkMagics.Preprod) {
-        chainName = "Preprod";
-      } else if (chainId.networkMagic === Cardano.NetworkMagics.Sanchonet) {
-        chainName = "Sanchonet";
-      }
-    }
+    const chainName = getBlockfrostChainNameFromNetwork(network);
 
     const providers = createBlockfrostProviders({
       blockfrostConfig: networkConfig,

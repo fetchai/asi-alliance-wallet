@@ -16,6 +16,7 @@ export type {
   CoinTypeForChain,
   BIP44HDPath,
   SupportedCurve,
+  ResolveBlockfrostConfig,
 } from "./cardano-keyring";
 
 export * from "./background-api";
@@ -39,3 +40,5 @@ export {
 } from "./utils/validators/address-book";
 
 export * from "./adapters/env-adapter";
+export * from "./adapters/blockfrost-config-resolver";
+export * from "./utils/blockfrost-network-mapper";

@@ -6,8 +6,15 @@ import {
   getCardanoNetworkFromChainId,
   getCardanoChainIdFromNetwork,
 } from "./utils/network";
-import { logApiKeyStatus } from "./adapters/env-adapter";
+import {
+  logBlockfrostProviderStatus,
+  type BlockfrostConfig,
+} from "./adapters/env-adapter";
 import type { CardanoNetwork } from "./utils/network";
+
+export type ResolveBlockfrostConfig = (
+  network: CardanoNetwork
+) => Promise<BlockfrostConfig | null>;
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
@@ -55,6 +62,7 @@ export class CardanoKeyRing {
   private accountIndex = 0;
   private passphrase: Uint8Array = new Uint8Array();
   private currentNetwork: CardanoNetwork | undefined;
+  private resolveBlockfrostConfig?: ResolveBlockfrostConfig;
 
   private resolveNetworkOrThrow(chainId?: string): CardanoNetwork {
     if (!chainId) {
@@ -108,7 +116,8 @@ export class CardanoKeyRing {
     keyStore: KeyStore,
     password: string,
     decryptFn?: (keyStore: KeyStore, password: string) => Promise<Uint8Array>,
-    chainId?: string
+    chainId?: string,
+    options?: { resolveBlockfrostConfig?: ResolveBlockfrostConfig }
   ): Promise<void> {
     const accountIndex = keyStore.bip44HDPath?.account ?? 0;
 
@@ -137,11 +146,14 @@ export class CardanoKeyRing {
     this.accountIndex = accountIndex;
     // Keep Cardano derivation independent from extension unlock password.
     this.passphrase = new Uint8Array();
-    this.currentNetwork = network;
+    this.resolveBlockfrostConfig = options?.resolveBlockfrostConfig;
 
     await this.rebuildAgentsForNetwork(network);
 
-    logApiKeyStatus(network);
+    logBlockfrostProviderStatus(network, {
+      providerReady: this.walletManager?.getRuntimeStatus() === "ready",
+      usesCustomResolver: !!this.resolveBlockfrostConfig,
+    });
   }
 
   public async getKey(chainId?: string): Promise<Key> {
@@ -191,12 +203,24 @@ export class CardanoKeyRing {
       throw new Error("Cardano mnemonic is not available for agent rebuild");
     }
 
+    let blockfrostConfig: BlockfrostConfig | null | undefined = undefined;
+    try {
+      if (this.resolveBlockfrostConfig) {
+        blockfrostConfig = await this.resolveBlockfrostConfig(network);
+      }
+    } catch {
+      console.error("[CardanoKeyRing] Failed to resolve Blockfrost config");
+      throw new Error("cardano_blockfrost_config_resolve_failed");
+    }
+
     const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
     const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
     const cardanoChainId = await getCardanoChainIdFromNetwork(network);
     const bip32Ed25519 = await SodiumBip32Ed25519.create();
 
-    this.keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
+    const previousWalletManager = this.walletManager;
+
+    const newKeyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
       {
         mnemonicWords: this.mnemonicWords,
         accountIndex: this.accountIndex,
@@ -207,26 +231,30 @@ export class CardanoKeyRing {
       { bip32Ed25519, logger: console }
     );
 
-    if (this.walletManager?.dispose) {
-      this.walletManager.dispose();
-    }
-
     try {
-      this.walletManager = await CardanoWalletManager.create({
+      const newWalletManager = await CardanoWalletManager.create({
         mnemonicWords: this.mnemonicWords,
         network,
         accountIndex: this.accountIndex,
         passphrase: this.passphrase,
+        blockfrostConfig,
       });
-    } catch (error) {
-      console.error(
-        "[CardanoKeyRing] Failed to create CardanoWalletManager:",
-        error
-      );
-      this.walletManager = undefined;
-    }
 
-    this.currentNetwork = network;
+      this.keyAgent = newKeyAgent;
+      this.walletManager = newWalletManager;
+      this.currentNetwork = network;
+
+      try {
+        previousWalletManager?.dispose?.();
+      } catch {
+        console.warn(
+          "[CardanoKeyRing] Failed to dispose previous CardanoWalletManager"
+        );
+      }
+    } catch {
+      console.error("[CardanoKeyRing] Failed to create CardanoWalletManager");
+      throw new Error("cardano_wallet_manager_create_failed");
+    }
   }
 
   public async getAddresses(): Promise<string[]> {

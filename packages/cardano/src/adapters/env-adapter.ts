@@ -98,7 +98,8 @@ export function getApiKeyForNetwork(network: CardanoNetwork): string | null {
 }
 
 export function isValidApiKey(key: string | null | undefined): boolean {
-  return !!(key && key !== "" && key !== "<API_KEY>" && key !== "undefined");
+  const trimmed = key?.trim();
+  return !!(trimmed && trimmed !== "<API_KEY>" && trimmed !== "undefined");
 }
 
 export function getNetworkConfig(
@@ -107,7 +108,16 @@ export function getNetworkConfig(
   const configs = getBlockfrostConfigs();
 
   const config = configs[network];
-  return config && isValidApiKey(config.projectId) ? config : null;
+  const trimmedProjectId = config?.projectId?.trim();
+
+  if (!config || !isValidApiKey(trimmedProjectId)) {
+    return null;
+  }
+
+  return {
+    ...config,
+    projectId: trimmedProjectId!,
+  };
 }
 
 export function getCardanoServicesConfig(
@@ -118,16 +128,40 @@ export function getCardanoServicesConfig(
   return configs[network] ?? null;
 }
 
-export function logApiKeyStatus(network: CardanoNetwork): void {
-  const config = getNetworkConfig(network);
+export function logBlockfrostProviderStatus(
+  network: CardanoNetwork,
+  options: {
+    providerReady: boolean;
+    usesCustomResolver?: boolean;
+  }
+): void {
+  if (options.providerReady) {
+    return;
+  }
 
-  if (config && isValidApiKey(config.projectId)) {
-    // Blockfrost API key found
-  } else {
+  if (options.usesCustomResolver) {
+    console.warn(
+      `Blockfrost provider unavailable for ${network} network - limited functionality`
+    );
+    return;
+  }
+
+  const config = getNetworkConfig(network);
+  if (!config || !isValidApiKey(config.projectId)) {
     console.warn(
       `Blockfrost API key not found for ${network} network - limited functionality`
     );
   }
+}
+
+/** Legacy built-in-only logging; kept for package API compatibility. */
+export function logApiKeyStatus(network: CardanoNetwork): void {
+  const config = getNetworkConfig(network);
+
+  logBlockfrostProviderStatus(network, {
+    providerReady: !!config && isValidApiKey(config.projectId),
+    usesCustomResolver: false,
+  });
 }
 
 export function isCardanoStakingEnabled(): boolean {
