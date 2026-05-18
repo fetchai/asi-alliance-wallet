@@ -121,7 +121,9 @@ export function init(
 
   const cardanoService = new Cardano.CardanoService(
     notification,
-    storeCreator("cardano.tx-history")
+    storeCreator("cardano.tx-history"),
+    storeCreator("cardano.blockfrost-credentials"),
+    commonCrypto
   );
 
   const keyRingService = new KeyRing.KeyRingService(

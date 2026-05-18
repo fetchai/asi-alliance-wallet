@@ -1,5 +1,6 @@
 import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
+import type { CardanoNetwork } from "@keplr-wallet/cardano";
 
 const validateLovelaceAmountFormat = (amount: string): bigint => {
   if (!/^[0-9]+$/.test(amount)) {
@@ -812,5 +813,126 @@ export class LoadMoreCardanoTxHistoryMsg extends Message<CardanoTxHistoryStateRe
 
   type(): string {
     return LoadMoreCardanoTxHistoryMsg.type();
+  }
+}
+
+export type GetBlockfrostCredentialsResponse =
+  | {
+      locked: true;
+      hasCustomKey: boolean;
+      network: CardanoNetwork;
+      chainId: string;
+    }
+  | {
+      locked: false;
+      hasCustomKey: boolean;
+      network: CardanoNetwork;
+      chainId: string;
+      useCustomKey: boolean;
+      maskedProjectId?: string;
+    };
+
+export class GetBlockfrostCredentialsMsg extends Message<GetBlockfrostCredentialsResponse> {
+  public static type() {
+    return "cardano-get-blockfrost-credentials";
+  }
+
+  constructor(
+    public readonly chainId: string,
+    public readonly network: CardanoNetwork
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.chainId) {
+      throw new Error("chainId is empty");
+    }
+    if (!this.network) {
+      throw new Error("network is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetBlockfrostCredentialsMsg.type();
+  }
+}
+
+export class SetBlockfrostCredentialsMsg extends Message<void> {
+  public static type() {
+    return "cardano-set-blockfrost-credentials";
+  }
+
+  constructor(
+    public readonly chainId: string,
+    public readonly network: CardanoNetwork,
+    public readonly useCustomKey: boolean,
+    public readonly projectId?: string,
+    public readonly allowUnverifiedSave?: boolean
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.chainId) {
+      throw new Error("chainId is empty");
+    }
+    if (!this.network) {
+      throw new Error("network is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return SetBlockfrostCredentialsMsg.type();
+  }
+}
+
+export class ClearBlockfrostCredentialsMsg extends Message<void> {
+  public static type() {
+    return "cardano-clear-blockfrost-credentials";
+  }
+
+  constructor(
+    public readonly chainId: string,
+    public readonly network: CardanoNetwork
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.chainId) {
+      throw new Error("chainId is empty");
+    }
+    if (!this.network) {
+      throw new Error("network is empty");
+    }
+  }
+
+  override approveExternal(): boolean {
+    return false;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return ClearBlockfrostCredentialsMsg.type();
   }
 }

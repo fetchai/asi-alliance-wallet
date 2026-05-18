@@ -83,10 +83,56 @@ export const isValidCardanoAddress = (address: string): boolean =>
 export const isCardanoChainId = (chainId: string): boolean =>
   typeof chainId === "string" && chainId.includes("cardano");
 
+export type CardanoNetwork = "mainnet" | "preview" | "preprod" | "sanchonet";
+
+export function getCardanoNetworkFromChainId(chainId: string): CardanoNetwork {
+  switch (chainId) {
+    case "cardano-mainnet":
+      return "mainnet";
+    case "cardano-preview":
+      return "preview";
+    case "cardano-preprod":
+      return "preprod";
+    case "cardano-sanchonet":
+      return "sanchonet";
+    default:
+      throw new Error(`network_context_invalid_chain: ${chainId}`);
+  }
+}
+
+export function isUsableProjectIdString(
+  projectId: string | undefined | null
+): boolean {
+  const trimmed = projectId?.trim();
+  return !!(trimmed && trimmed !== "<API_KEY>" && trimmed !== "undefined");
+}
+
 export const getBlockfrostConfigs = () => ({
+  mainnet: {
+    baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
+    projectId:
+      process.env["BLOCKFROST_PROJECT_ID_MAINNET"] ??
+      process.env["BLOCKFROST_API_KEY"] ??
+      "",
+  },
+  preview: {
+    baseUrl: "https://cardano-preview.blockfrost.io/api/v0",
+    projectId:
+      process.env["BLOCKFROST_PROJECT_ID_PREVIEW"] ??
+      process.env["BLOCKFROST_API_KEY"] ??
+      "",
+  },
   preprod: {
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0",
     projectId:
       process.env["BLOCKFROST_PROJECT_ID_PREPROD"] ??
+      process.env["BLOCKFROST_API_KEY"] ??
+      "",
+  },
+  sanchonet: {
+    baseUrl: "https://cardano-sanchonet.blockfrost.io/api/v0",
+    projectId:
+      process.env["BLOCKFROST_PROJECT_ID_SANCHONET"] ??
       process.env["BLOCKFROST_API_KEY"] ??
       "",
   },

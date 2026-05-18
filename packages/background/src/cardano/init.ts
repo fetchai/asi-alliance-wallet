@@ -16,6 +16,9 @@ import {
   GetCardanoTelemetryBaselinesMsg,
   LoadMoreCardanoTxHistoryMsg,
   GetMaxSpendableAdaMsg,
+  GetBlockfrostCredentialsMsg,
+  SetBlockfrostCredentialsMsg,
+  ClearBlockfrostCredentialsMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
@@ -43,6 +46,9 @@ export function init(
   router.registerMessage(GetCardanoTelemetryBaselinesMsg);
   router.registerMessage(LoadMoreCardanoTxHistoryMsg);
   router.registerMessage(GetMaxSpendableAdaMsg);
+  router.registerMessage(GetBlockfrostCredentialsMsg);
+  router.registerMessage(SetBlockfrostCredentialsMsg);
+  router.registerMessage(ClearBlockfrostCredentialsMsg);
 
   router.addHandler(ROUTE, getHandler(service, keyRingService));
 }

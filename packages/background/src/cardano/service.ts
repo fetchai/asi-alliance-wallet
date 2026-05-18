@@ -43,6 +43,8 @@ import {
 } from "rxjs";
 import type { KVStore } from "@keplr-wallet/common";
 import { CardanoTxHistoryStore } from "./tx-history-store";
+import { BlockfrostCredentialsStore } from "./blockfrost-credentials-store";
+import type { CommonCrypto } from "../keyring/types";
 import { computeDraftSummaryHash } from "./draft-summary-hash";
 import { createHash } from "crypto";
 import {
@@ -62,6 +64,7 @@ export class CardanoService {
   private keyRing?: CardanoKeyRing;
   private notification?: Notification;
   private txHistoryStore?: CardanoTxHistoryStore;
+  private blockfrostCredentialsStore?: BlockfrostCredentialsStore;
   private txHistoryControllers = new Map<
     string,
     {
@@ -88,11 +91,26 @@ export class CardanoService {
   /** Serializes Cardano ADA draft submit (sign + broadcast + pending bookkeeping). */
   private submitAdaTxDraftSerial: Promise<void> = Promise.resolve();
 
-  constructor(notification?: Notification, kvStore?: KVStore) {
+  constructor(
+    notification?: Notification,
+    txHistoryKvStore?: KVStore,
+    blockfrostCredentialsKvStore?: KVStore,
+    crypto?: CommonCrypto
+  ) {
     this.notification = notification;
-    if (kvStore) {
-      this.txHistoryStore = new CardanoTxHistoryStore(kvStore);
+    if (txHistoryKvStore) {
+      this.txHistoryStore = new CardanoTxHistoryStore(txHistoryKvStore);
     }
+    if (blockfrostCredentialsKvStore && crypto) {
+      this.blockfrostCredentialsStore = new BlockfrostCredentialsStore(
+        blockfrostCredentialsKvStore,
+        crypto
+      );
+    }
+  }
+
+  getBlockfrostCredentialsStore(): BlockfrostCredentialsStore | undefined {
+    return this.blockfrostCredentialsStore;
   }
 
   /**

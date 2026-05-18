@@ -16,6 +16,9 @@ import {
   GetCardanoTelemetryBaselinesMsg,
   LoadMoreCardanoTxHistoryMsg,
   GetMaxSpendableAdaMsg,
+  GetBlockfrostCredentialsMsg,
+  SetBlockfrostCredentialsMsg,
+  ClearBlockfrostCredentialsMsg,
   CardanoServiceState,
   type CardanoTrackedTxServiceState,
 } from "./messages";
@@ -28,6 +31,11 @@ import {
   classifyEnsureCardanoServiceReadyError,
   stateFromErrorMessage,
 } from "./ensure-errors";
+import {
+  applyClearBlockfrostCredentials,
+  applySetBlockfrostCredentials,
+  getBlockfrostCredentialsResponse,
+} from "./blockfrost-credentials-ops";
 
 const stateFromError = (error: unknown): CardanoServiceState => {
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -179,6 +187,21 @@ export const getHandler: (
         return handleGetMaxSpendableAdaMsg(service, keyRingService)(
           env,
           msg as GetMaxSpendableAdaMsg
+        );
+      case GetBlockfrostCredentialsMsg.type():
+        return handleGetBlockfrostCredentialsMsg(service, keyRingService)(
+          env,
+          msg as GetBlockfrostCredentialsMsg
+        );
+      case SetBlockfrostCredentialsMsg.type():
+        return handleSetBlockfrostCredentialsMsg(service, keyRingService)(
+          env,
+          msg as SetBlockfrostCredentialsMsg
+        );
+      case ClearBlockfrostCredentialsMsg.type():
+        return handleClearBlockfrostCredentialsMsg(service, keyRingService)(
+          env,
+          msg as ClearBlockfrostCredentialsMsg
         );
       default:
         console.error(
@@ -944,5 +967,81 @@ const handleGetMaxSpendableAdaMsg: (
       recipient: msg.recipient,
       memo: msg.memo,
     });
+  };
+};
+
+const handleGetBlockfrostCredentialsMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<GetBlockfrostCredentialsMsg> = (
+  service,
+  keyRingService
+) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    const keyRing = keyRingService.getKeyRing();
+    const locked = keyRing.isLocked();
+
+    return getBlockfrostCredentialsResponse(
+      service.getBlockfrostCredentialsStore(),
+      {
+        chainId: msg.chainId,
+        network: msg.network,
+        locked,
+        password: locked ? undefined : keyRing.currentPassword,
+      }
+    );
+  };
+};
+
+const handleSetBlockfrostCredentialsMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<SetBlockfrostCredentialsMsg> = (
+  service,
+  keyRingService
+) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    const keyRing = keyRingService.getKeyRing();
+
+    await applySetBlockfrostCredentials(
+      service.getBlockfrostCredentialsStore(),
+      msg,
+      {
+        isLocked: keyRing.isLocked(),
+        password: keyRing.isLocked() ? undefined : keyRing.currentPassword,
+      }
+    );
+  };
+};
+
+const handleClearBlockfrostCredentialsMsg: (
+  service: CardanoService,
+  keyRingService: KeyRingService
+) => InternalHandler<ClearBlockfrostCredentialsMsg> = (
+  service,
+  keyRingService
+) => {
+  return async (env, msg) => {
+    if (!env.isInternalMsg) {
+      throw new Error("This message is only supported for internal requests");
+    }
+
+    const keyRing = keyRingService.getKeyRing();
+
+    await applyClearBlockfrostCredentials(
+      service.getBlockfrostCredentialsStore(),
+      msg,
+      {
+        isLocked: keyRing.isLocked(),
+      }
+    );
   };
 };
