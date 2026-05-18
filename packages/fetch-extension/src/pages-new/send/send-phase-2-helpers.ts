@@ -97,6 +97,14 @@ export const normalizeCardanoDraftError = (params: {
     return null;
   }
 
+  const parsedLimit = parseCardanoUiError(rawError);
+  if (
+    parsedLimit.code === "blockfrost_builtin_limit" ||
+    parsedLimit.code === "blockfrost_user_limit"
+  ) {
+    return null;
+  }
+
   if (rawError === CARDANO_SEND_CONFLICT_PENDING_MESSAGE) {
     return CARDANO_SEND_CONFLICT_PENDING_MESSAGE;
   }

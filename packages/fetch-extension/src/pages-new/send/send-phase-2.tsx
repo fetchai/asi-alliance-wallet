@@ -31,7 +31,10 @@ import {
   SubmitSendAdaTxDraftMsg,
   SubmitSendAdaTxDraftWithPasswordMsg,
 } from "@keplr-wallet/background";
-import type { BuildSendAdaTxDraftResult } from "@keplr-wallet/background";
+import type {
+  BlockfrostLimitPresentation,
+  BuildSendAdaTxDraftResult,
+} from "@keplr-wallet/background";
 import { DenomHelper } from "@keplr-wallet/common";
 import { CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
 import {
@@ -58,6 +61,8 @@ import {
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 import { removeComma } from "@utils/format";
+import { CardanoBlockfrostRateLimitBanner } from "@components-v2/cardano/blockfrost-rate-limit-banner";
+import { blockfrostLimitPresentationFromUiError } from "../../utils/cardano-blockfrost";
 
 const CARDANO_SYNC_POLL_FAST_MS = 2000;
 const CARDANO_SYNC_POLL_NORMAL_MS = 6000;
@@ -445,6 +450,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       coinMissingLovelace: string;
     } | null>(null);
     const [isBuildingCardanoDraft, setIsBuildingCardanoDraft] = useState(false);
+    const [cardanoBlockfrostLimit, setCardanoBlockfrostLimit] = useState<
+      BlockfrostLimitPresentation | undefined
+    >();
     const [recipientTouched, setRecipientTouched] = useState(false);
     const [reviewAttempted, setReviewAttempted] = useState(false);
     const isCardano = chainStore.current.features?.includes("cardano") ?? false;
@@ -539,6 +547,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
           const state = syncStatus?.state;
           setCardanoSyncState(state ?? null);
+          setCardanoBlockfrostLimit(syncStatus?.blockfrostLimit);
           const hasPending = syncStatus?.hasOutgoingPendingSpend === true;
           lastKnownHasPending = hasPending;
           setHasCardanoOutgoingPending(hasPending);
@@ -839,6 +848,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
 
           safeDiscardDraft(requester, cardanoDraft?.draftId);
 
+          if (res?.blockfrostLimit) {
+            setCardanoBlockfrostLimit(res.blockfrostLimit);
+          }
+
           if (res?.kind === "minimum_violation") {
             setCardanoDraft(null);
             setCardanoMinViolation({
@@ -867,6 +880,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             setCardanoDraft(null);
             setCardanoMinViolation(null);
             const message = e?.message ?? "Failed to build transaction";
+            const limitFromError =
+              blockfrostLimitPresentationFromUiError(message);
+            if (limitFromError) {
+              setCardanoBlockfrostLimit(limitFromError);
+            }
             setCardanoDraftError(
               normalizeCardanoDraftError({
                 rawError: message,
@@ -1282,6 +1300,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             />
           )}
         </div>
+        {isCardano ? (
+          <CardanoBlockfrostRateLimitBanner
+            presentation={cardanoBlockfrostLimit}
+          />
+        ) : null}
         {bannerValidationError && !isBuildingCardanoDraft && (
           <div
             style={{

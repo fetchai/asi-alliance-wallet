@@ -135,6 +135,18 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
+      {isCardano ? (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "6px" }}
+          leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+          heading="Blockfrost API"
+          subheading="Use your own API key for Cardano"
+          onClick={() => {
+            navigate("/setting/cardano/blockfrost-api");
+          }}
+        />
+      ) : null}
       {!isEvm && !isCardano && (
         <Card
           leftImageStyle={{ background: "transparent", height: "16px" }}

@@ -11,12 +11,14 @@ import {
   GetCardanoSyncStatusMsg,
 } from "@keplr-wallet/background";
 import type {
+  BlockfrostLimitPresentation,
   CardanoServiceState,
   CardanoSyncStatusResponse,
   CardanoTxHistoryAsset,
   CardanoTxHistoryItem,
   CardanoTxHistoryStateResponse,
 } from "@keplr-wallet/background";
+import { CardanoBlockfrostRateLimitBanner } from "@components-v2/cardano/blockfrost-rate-limit-banner";
 import { NoActivity } from "../no-activity";
 import styles from "../native/style.module.scss";
 import { useNavigate } from "react-router";
@@ -57,6 +59,9 @@ export const CardanoTransactionsTab = observer(() => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
   const [isSyncingDueToTimeout, setIsSyncingDueToTimeout] = useState(false);
+  const [blockfrostLimit, setBlockfrostLimit] = useState<
+    BlockfrostLimitPresentation | undefined
+  >();
 
   const pageSize = 20;
 
@@ -95,6 +100,7 @@ export const CardanoTransactionsTab = observer(() => {
         return;
       }
       const typedRes = res as CardanoTxHistoryStateResponse;
+      setBlockfrostLimit(typedRes?.blockfrostLimit);
       const state = typedRes?.state as CardanoServiceState | undefined;
       if (state && state !== "ready_with_data" && state !== "empty_valid") {
         const transient =
@@ -137,6 +143,7 @@ export const CardanoTransactionsTab = observer(() => {
         new LoadMoreCardanoTxHistoryMsg(pageSize, chainId)
       );
       const typedRes = res as CardanoTxHistoryStateResponse;
+      setBlockfrostLimit(typedRes?.blockfrostLimit);
       const state = typedRes?.state as CardanoServiceState | undefined;
       if (state && state !== "ready_with_data" && state !== "empty_valid") {
         const transient =
@@ -166,6 +173,7 @@ export const CardanoTransactionsTab = observer(() => {
   useEffect(() => {
     setHasFetchedHistory(false);
     setIsSyncingDueToTimeout(false);
+    setBlockfrostLimit(undefined);
   }, [chainId]);
 
   // Lace behavior: if first page has fewer txs than the viewport/pageSize (local store is often small),
@@ -208,6 +216,7 @@ export const CardanoTransactionsTab = observer(() => {
         if (!isSubscribed) return;
 
         const state = syncStatus?.state;
+        setBlockfrostLimit(syncStatus?.blockfrostLimit);
         const settled = state === "ready_with_data" && !!syncStatus?.isSettled;
         const transient =
           state === "syncing" || state === "temporarily_unavailable";
@@ -267,28 +276,58 @@ export const CardanoTransactionsTab = observer(() => {
   const shouldShowSyncing =
     isSyncingDueToTimeout || (!hasFetchedHistory && isSyncing);
 
+  const limitBanner = (
+    <CardanoBlockfrostRateLimitBanner presentation={blockfrostLimit} />
+  );
+
   if (isLoading && isSyncingDueToTimeout) {
-    return <NoActivity label={syncingOrOfflineLabel} />;
+    return (
+      <React.Fragment>
+        {limitBanner}
+        <NoActivity label={syncingOrOfflineLabel} />
+      </React.Fragment>
+    );
   }
 
   if (isLoading) {
-    return <NoActivity label="Loading..." />;
+    return (
+      <React.Fragment>
+        {limitBanner}
+        <NoActivity label="Loading..." />
+      </React.Fragment>
+    );
   }
 
   if (error) {
-    return <NoActivity label={error} />;
+    return (
+      <React.Fragment>
+        {limitBanner}
+        <NoActivity label={error} />
+      </React.Fragment>
+    );
   }
 
   if (shouldShowSyncing && !items.length) {
-    return <NoActivity label={syncingOrOfflineLabel} />;
+    return (
+      <React.Fragment>
+        {limitBanner}
+        <NoActivity label={syncingOrOfflineLabel} />
+      </React.Fragment>
+    );
   }
 
   if (!items.length) {
-    return <NoActivity label="No Activity Yet" />;
+    return (
+      <React.Fragment>
+        {limitBanner}
+        <NoActivity label="No Activity Yet" />
+      </React.Fragment>
+    );
   }
 
   return (
     <div>
+      {limitBanner}
       {items.map((item) => {
         const amountAda = lovelacesToAdaString(item.amount);
         const hasAssets = item.assets && item.assets.length > 0;

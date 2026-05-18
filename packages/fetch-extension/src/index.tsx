@@ -74,6 +74,7 @@ import { MorePage } from "./pages-new/more";
 import { ExportToMobilePage } from "./pages-new/more/export-to-mobile";
 import { MoreLanguagePage } from "./pages-new/more/language";
 import { ManageNetworks } from "./pages-new/more/manage-networks";
+import { CardanoBlockfrostApiPage } from "./pages-new/more/cardano/blockfrost-api";
 import { MoreNotifications } from "./pages-new/more/notification";
 import { NotificationOrganizations } from "./pages-new/more/notification/notiphy-notification/notification-organizations";
 import { NotificationTopics } from "./pages-new/more/notification/notiphy-notification/notification-topics";
@@ -352,6 +353,10 @@ ReactDOM.render(
                           <Route
                             path="/setting/endpoints"
                             element={<SettingEndpointsPage />}
+                          />
+                          <Route
+                            path="/setting/cardano/blockfrost-api"
+                            element={<CardanoBlockfrostApiPage />}
                           />
                           <Route
                             path="/more/security-privacy/autolock"

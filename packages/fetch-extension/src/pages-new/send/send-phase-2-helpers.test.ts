@@ -418,6 +418,23 @@ describe("normalizeCardanoDraftError", () => {
     ).toBe(CARDANO_SEND_CONFLICT_PENDING_MESSAGE);
   });
 
+  it("returns null for blockfrost limit errors (banner handles UX)", () => {
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError:
+          "cardano_ui_error:blockfrost_builtin_limit:Rate limit exceeded",
+      })
+    ).toBeNull();
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError:
+          "cardano_ui_error:blockfrost_user_limit:Custom key quota reached",
+      })
+    ).toBeNull();
+  });
+
   it("maps legacy positive-number fallback to user-facing zero-amount message", () => {
     expect(
       normalizeCardanoDraftError({
