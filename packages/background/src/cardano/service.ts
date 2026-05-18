@@ -8,6 +8,7 @@ import {
   cardanoMalformedMinimumPayloadError,
   CARDANO_SEND_CONFLICT_PENDING_MESSAGE,
 } from "@keplr-wallet/cardano";
+import { createBlockfrostConfigResolver } from "./blockfrost-credentials-runtime";
 import { Crypto } from "../keyring/crypto";
 import type { KeyStore as KeyringKeyStore } from "../keyring/types";
 import { Notification } from "../tx/types";
@@ -131,16 +132,18 @@ export class CardanoService {
           Crypto.decrypt(crypto, keyStore as KeyringKeyStore, pwd)
       : undefined;
 
-    try {
-      await this.keyRing.restore(
-        store as KeyStore,
-        password,
-        decryptFn,
-        chainId
-      );
-    } catch (error) {
-      throw error;
-    }
+    const resolveBlockfrostConfig = createBlockfrostConfigResolver(
+      this.blockfrostCredentialsStore,
+      password
+    );
+
+    await this.keyRing.restore(
+      store as KeyStore,
+      password,
+      decryptFn,
+      chainId,
+      resolveBlockfrostConfig ? { resolveBlockfrostConfig } : undefined
+    );
 
     await this.waitForKeyAgentReady();
     this.runtimeSessionId = `cad_sess_${Date.now().toString(36)}_${Math.random()

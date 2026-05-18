@@ -36,6 +36,7 @@ import {
   applySetBlockfrostCredentials,
   getBlockfrostCredentialsResponse,
 } from "./blockfrost-credentials-ops";
+import { afterBlockfrostCredentialsChanged } from "./blockfrost-credentials-post-save";
 
 const stateFromError = (error: unknown): CardanoServiceState => {
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -1019,6 +1020,12 @@ const handleSetBlockfrostCredentialsMsg: (
         password: keyRing.isLocked() ? undefined : keyRing.currentPassword,
       }
     );
+
+    await afterBlockfrostCredentialsChanged({
+      chainId: msg.chainId,
+      network: msg.network,
+      keyRingService,
+    });
   };
 };
 
@@ -1043,5 +1050,11 @@ const handleClearBlockfrostCredentialsMsg: (
         isLocked: keyRing.isLocked(),
       }
     );
+
+    await afterBlockfrostCredentialsChanged({
+      chainId: msg.chainId,
+      network: msg.network,
+      keyRingService,
+    });
   };
 };

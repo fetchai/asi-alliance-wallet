@@ -153,6 +153,40 @@ describe("KeyRingService", () => {
     });
   });
 
+  describe("cardano blockfrost runtime reinit", () => {
+    it("reinitializeCardanoService resets runtime and restores selected chain", async () => {
+      const reset = jest.fn();
+      const ensure = jest.fn().mockResolvedValue(undefined);
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      service["chainsService"] = {
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["cardanoService"] = { reset } as any;
+      service["cardanoRestoreByChainId"] = new Map([
+        ["cardano-preprod", Promise.resolve()],
+      ]);
+      service["ensureCardanoServiceReady"] = ensure;
+
+      await service.reinitializeCardanoService("cardano-preprod");
+
+      expect(reset).toHaveBeenCalled();
+      expect((service as any)["cardanoRestoreByChainId"].size).toBe(0);
+      expect(ensure).toHaveBeenCalledWith("cardano-preprod");
+    });
+
+    it("isRegisteredCardanoChain delegates to chain registry features", async () => {
+      service["chainsService"] = {
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+
+      await expect(
+        service.isRegisteredCardanoChain("cardano-preprod")
+      ).resolves.toBe(true);
+    });
+  });
+
   describe("lock lifecycle", () => {
     it("resets cardano runtime state on lock", () => {
       let status = KeyRingStatus.UNLOCKED;

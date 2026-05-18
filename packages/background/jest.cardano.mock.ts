@@ -107,6 +107,16 @@ export function isUsableProjectIdString(
   return !!(trimmed && trimmed !== "<API_KEY>" && trimmed !== "undefined");
 }
 
+export {
+  resolveBlockfrostConfig,
+  getBlockfrostConfigSource,
+} from "../cardano/src/adapters/blockfrost-config-resolver";
+export {
+  getBlockfrostChainNameFromNetwork,
+  getCardanoNetworkFromBlockfrostChainName,
+} from "../cardano/src/utils/blockfrost-network-mapper";
+export { resetBlockfrostRateLimitTelemetry } from "../cardano/src/wallet/lib/blockfrost-request-telemetry";
+
 export const getBlockfrostConfigs = () => ({
   mainnet: {
     baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",

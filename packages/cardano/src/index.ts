@@ -42,3 +42,4 @@ export {
 export * from "./adapters/env-adapter";
 export * from "./adapters/blockfrost-config-resolver";
 export * from "./utils/blockfrost-network-mapper";
+export { resetBlockfrostRateLimitTelemetry } from "./wallet/lib/blockfrost-request-telemetry";

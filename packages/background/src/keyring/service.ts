@@ -140,6 +140,23 @@ export class KeyRingService {
     return chainInfo.features?.includes("cardano") ?? false;
   }
 
+  public async isRegisteredCardanoChain(chainId: string): Promise<boolean> {
+    return this.isCardanoChain(chainId);
+  }
+
+  public async reinitializeCardanoService(chainId: string): Promise<void> {
+    if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
+      throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
+    }
+    if (!(await this.isRegisteredCardanoChain(chainId))) {
+      throw new Error(formatNetworkContextInvalidForCardano(chainId));
+    }
+
+    this.cardanoService.reset();
+    this.cardanoRestoreByChainId.clear();
+    await this.ensureCardanoServiceReady(chainId);
+  }
+
   /**
    * Runs in background after setSelectedChain (fire-and-forget).
    * First ListAccounts/getKey for the new chain may wait for restore or cache fill in background;

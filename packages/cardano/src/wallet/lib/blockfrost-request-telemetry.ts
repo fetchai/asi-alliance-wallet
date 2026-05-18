@@ -434,6 +434,10 @@ export const installBlockfrostRequestTelemetry = ({
   }
 };
 
+export const resetBlockfrostRateLimitTelemetry = (chainName: string): void => {
+  getRegistry().get(chainName)?.reset();
+};
+
 export const createTelemetryTaggedClient = (
   blockfrostClient: BlockfrostClient,
   sourceTag: string
