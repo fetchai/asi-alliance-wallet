@@ -15,26 +15,9 @@ import {
   createWasmAminoConverters,
   wasmTypes,
 } from "@cosmjs/cosmwasm-stargate";
-import { CommunityPoolSpendProposal } from "cosmjs-types/cosmos/distribution/v1beta1/distribution";
-import { MsgExecLegacyContent } from "cosmjs-types/cosmos/gov/v1/tx";
-import { ParameterChangeProposal } from "cosmjs-types/cosmos/params/v1beta1/params";
 import { SignMode } from "@keplr-wallet/background";
 import { sortObjectByKey } from "@keplr-wallet/common";
-import { MsgSend } from "@keplr-wallet/proto-types/cosmos/bank/v1beta1/tx";
-import { MsgWithdrawDelegatorReward } from "@keplr-wallet/proto-types/cosmos/distribution/v1beta1/tx";
-import {
-  TextProposal,
-  VoteOption,
-} from "@keplr-wallet/proto-types/cosmos/gov/v1beta1/gov";
-import {
-  MsgSubmitProposal,
-  MsgVote,
-} from "@keplr-wallet/proto-types/cosmos/gov/v1beta1/tx";
-import {
-  MsgBeginRedelegate,
-  MsgDelegate,
-  MsgUndelegate,
-} from "@keplr-wallet/proto-types/cosmos/staking/v1beta1/tx";
+import { TextProposal } from "@keplr-wallet/proto-types/cosmos/gov/v1beta1/gov";
 import {
   AuthInfo,
   TxBody,
@@ -43,15 +26,21 @@ import {
   CancelSoftwareUpgradeProposal,
   SoftwareUpgradeProposal,
 } from "@keplr-wallet/proto-types/cosmos/upgrade/v1beta1/upgrade";
-import { MsgExecuteContract } from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
 import { Any } from "@keplr-wallet/proto-types/google/protobuf/any";
 import {
   ClientUpdateProposal,
   UpgradeProposal as IbcUpgradeProposal,
 } from "@keplr-wallet/proto-types/ibc/core/client/v1/client";
 import { PubKey, SignDoc, StdSignDoc } from "@keplr-wallet/types";
+import { CommunityPoolSpendProposal } from "cosmjs-types/cosmos/distribution/v1beta1/distribution";
+import { MsgExecLegacyContent } from "cosmjs-types/cosmos/gov/v1/tx";
+import { ParameterChangeProposal } from "cosmjs-types/cosmos/params/v1beta1/params";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Long from "long";
+import {
+  NEEDS_EXPLICIT_PARSING_MESSAGE_TYPES,
+  TRANSACTION_SIGNER_FIELDS,
+} from "./constants";
 import {
   BaseTxnFileParams,
   GetTxnDocFileNameParams,
@@ -65,10 +54,6 @@ import {
   SingleSignature,
   UpdateSignerInfoParams,
 } from "./types";
-import {
-  NEEDS_EXPLICIT_PARSING_MESSAGE_TYPES,
-  TRANSACTION_SIGNER_FIELDS,
-} from "./constants";
 
 const govProposalSubTypes: any = [
   ["/cosmos.gov.v1beta1.TextProposal", TextProposal],
@@ -327,7 +312,10 @@ const parseExplicit = (typeUrl: string, msg: any): any => {
 /**
  * Converts raw proto-json tx msg into EncodeObject
  */
-export const protoJsonToEncodeObject = (msg: any): any => {
+export const protoJsonToEncodeObject = (
+  msg: any,
+  encodeProto: boolean = false
+): any => {
   const typeUrl = msg["@type"];
   if (!typeUrl) {
     throw new Error("Missing @type");
@@ -356,7 +344,9 @@ export const protoJsonToEncodeObject = (msg: any): any => {
     const { "@type": _nestedType, ...contentRest } = normalized.content;
     decoded.content = {
       typeUrl: contentTypeUrl,
-      value: ContentType.fromJSON(contentRest),
+      value: encodeProto
+        ? ContentType.encode(contentRest).finish()
+        : ContentType.fromJSON(contentRest),
     };
   }
 
@@ -385,6 +375,40 @@ export const protoJsonToAmino = (msg: any) => {
   // cosmJS handles other types via AminoTypes registry
   const encodeObject = protoJsonToEncodeObject(msg);
   return aminoTypes.toAmino(encodeObject);
+};
+
+export const convertProtoJsontoProtoMsgs = (msgs: any[]): Any[] => {
+  const encodedMsgs = msgs.map((msg) => {
+    const typeUrl = msg["@type"];
+
+    if (typeUrl === "/cosmos.authz.v1beta1.MsgExec") {
+      const { "@type": _, ...rest } = msg;
+      const normalized = snakeToCamelDeep(rest);
+
+      return {
+        typeUrl,
+        value: registry.encode({
+          typeUrl,
+          value: {
+            grantee: normalized.grantee,
+            msgs: convertProtoJsontoProtoMsgs(normalized.msgs ?? []),
+          },
+        }),
+      };
+    }
+
+    const { typeUrl: encodedTypeUrl, value } = protoJsonToEncodeObject(
+      msg,
+      true
+    );
+
+    return {
+      typeUrl: encodedTypeUrl,
+      value: registry.encode({ typeUrl: encodedTypeUrl, value }),
+    };
+  });
+
+  return encodedMsgs;
 };
 
 /**
@@ -949,9 +973,24 @@ export function validateProtoJsonSignDoc(
   }
 
   if (targetAddress) {
-    const hasMatchingSigner = doc.body.messages.some((msg: any) =>
-      TRANSACTION_SIGNER_FIELDS.some((field) => msg?.[field] === targetAddress)
-    );
+    const hasMatchingSigner = doc.body.messages.some((msg: any) => {
+      if (
+        TRANSACTION_SIGNER_FIELDS.some(
+          (field) => msg?.[field] === targetAddress
+        )
+      ) {
+        return true;
+      }
+
+      // MsgMultiSend signer is in inputs[].address
+      if (msg?.["@type"] === "/cosmos.bank.v1beta1.MsgMultiSend") {
+        return msg.inputs?.some(
+          (input: any) => input.address === targetAddress
+        );
+      }
+
+      return false;
+    });
 
     if (!hasMatchingSigner) {
       throw new Error(
@@ -1042,316 +1081,6 @@ export const formatJson = (value: string): string => {
 
   return value;
 };
-
-export const convertAminoToProtoMsgs = (aminoDocMsgs: any[]) => {
-  return aminoDocMsgs.map((msg: any) => {
-    switch (msg.type) {
-      case "cosmos-sdk/MsgSend":
-        return {
-          typeUrl: "/cosmos.bank.v1beta1.MsgSend",
-          value: MsgSend.encode({
-            fromAddress: msg.value.from_address,
-            toAddress: msg.value.to_address,
-            amount: msg.value.amount,
-          }).finish(),
-        };
-
-      case "cosmos-sdk/MsgDelegate":
-        return {
-          typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
-          value: MsgDelegate.encode({
-            delegatorAddress: msg.value.delegator_address,
-            validatorAddress: msg.value.validator_address,
-            amount: msg.value.amount,
-          }).finish(),
-        };
-
-      case "cosmos-sdk/MsgUndelegate":
-        return {
-          typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
-          value: MsgUndelegate.encode({
-            delegatorAddress: msg.value.delegator_address,
-            validatorAddress: msg.value.validator_address,
-            amount: {
-              denom: msg.value.amount.denom,
-              amount: msg.value.amount.amount,
-            },
-          }).finish(),
-        };
-
-      case "cosmos-sdk/MsgBeginRedelegate":
-        return {
-          typeUrl: "/cosmos.staking.v1beta1.MsgBeginRedelegate",
-          value: MsgBeginRedelegate.encode({
-            delegatorAddress: msg.value.delegator_address,
-            validatorSrcAddress: msg.value.validator_src_address,
-            validatorDstAddress: msg.value.validator_dst_address,
-            amount: {
-              denom: msg.value.amount.denom,
-              amount: msg.value.amount.amount,
-            },
-          }).finish(),
-        };
-
-      case "cosmos-sdk/MsgWithdrawDelegationReward":
-        return {
-          typeUrl: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
-          value: MsgWithdrawDelegatorReward.encode({
-            delegatorAddress: msg.value.delegator_address,
-            validatorAddress: msg.value.validator_address,
-          }).finish(),
-        };
-
-      case "cosmos-sdk/MsgVote":
-        return {
-          typeUrl: "/cosmos.gov.v1beta1.MsgVote",
-          value: MsgVote.encode({
-            proposalId: msg.value.proposal_id,
-            voter: msg.value.voter,
-            option: (() => {
-              switch (msg.value.option) {
-                case 1:
-                  return VoteOption.VOTE_OPTION_YES;
-                case 2:
-                  return VoteOption.VOTE_OPTION_ABSTAIN;
-                case 3:
-                  return VoteOption.VOTE_OPTION_NO;
-                case 4:
-                  return VoteOption.VOTE_OPTION_NO_WITH_VETO;
-                default:
-                  return VoteOption.VOTE_OPTION_UNSPECIFIED;
-              }
-            })(),
-          }).finish(),
-        };
-      case "wasm/MsgExecuteContract":
-        return {
-          typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-          value: MsgExecuteContract.encode({
-            sender: msg.value.sender,
-            contract: msg.value.contract,
-            msg: Buffer.from(JSON.stringify(msg.value.msg)) as any,
-            funds: msg.value.funds,
-          }).finish(),
-        };
-
-      default:
-        throw new Error(`Unsupported amino message type: ${msg.type}`);
-    }
-  });
-};
-
-const encodeProposalContent = (content: any): Any => {
-  try {
-    switch (content["@type"]) {
-      case "/cosmos.gov.v1beta1.TextProposal":
-        return {
-          typeUrl: "/cosmos.gov.v1beta1.TextProposal",
-          value: TextProposal.encode({
-            title: content.title,
-            description: content.description,
-          }).finish(),
-        };
-
-      case "/cosmos.distribution.v1beta1.CommunityPoolSpendProposal":
-        return {
-          typeUrl: "/cosmos.distribution.v1beta1.CommunityPoolSpendProposal",
-          value: CommunityPoolSpendProposal.encode({
-            title: content.title,
-            description: content.description,
-            recipient: content.recipient,
-            amount: content.amount,
-          }).finish(),
-        };
-
-      case "/cosmos.params.v1beta1.ParameterChangeProposal":
-        return {
-          typeUrl: "/cosmos.params.v1beta1.ParameterChangeProposal",
-          value: ParameterChangeProposal.encode({
-            title: content.title,
-            description: content.description,
-            changes: content.changes.map((c: any) => ({
-              subspace: c.subspace,
-              key: c.key,
-              value: c.value,
-            })),
-          }).finish(),
-        };
-
-      case "/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal":
-        return {
-          typeUrl: "/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal",
-          value: SoftwareUpgradeProposal.encode({
-            title: content.title,
-            description: content.description,
-            plan: content.plan
-              ? {
-                  name: content.plan.name,
-                  height: content.plan.height,
-                  info: content.plan.info ?? "",
-                  time: content.plan.time ?? undefined,
-                  upgradedClientState:
-                    content.plan.upgraded_client_state ?? undefined,
-                }
-              : undefined,
-          }).finish(),
-        };
-
-      case "/cosmos.upgrade.v1beta1.CancelSoftwareUpgradeProposal":
-        return {
-          typeUrl: "/cosmos.upgrade.v1beta1.CancelSoftwareUpgradeProposal",
-          value: CancelSoftwareUpgradeProposal.encode({
-            title: content.title,
-            description: content.description,
-          }).finish(),
-        };
-
-      case "/ibc.core.client.v1.ClientUpdateProposal":
-        return {
-          typeUrl: "/ibc.core.client.v1.ClientUpdateProposal",
-          value: ClientUpdateProposal.encode({
-            title: content.title,
-            description: content.description,
-            subjectClientId: content.subject_client_id,
-            substituteClientId: content.substitute_client_id,
-          }).finish(),
-        };
-
-      default: {
-        const { "@type": typeUrl, ...rest } = content;
-
-        // Convert snake_case keys to camelCase for proto encoding
-        const camelCaseMsg = Object.fromEntries(
-          Object.entries(rest).map(([key, value]) => [
-            key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
-            value,
-          ])
-        );
-
-        try {
-          const encoded = registry.encode({ typeUrl, value: camelCaseMsg });
-          return { typeUrl, value: encoded };
-        } catch {
-          // Raw fallback — pass JSON bytes directly
-          return {
-            typeUrl,
-            value: new TextEncoder().encode(JSON.stringify(rest)),
-          };
-        }
-      }
-    }
-  } catch {
-    throw new Error(`Unsupported proposal content type: ${content["@type"]}`);
-  }
-};
-
-export const convertProtoJsontoProtoMsgs = (messages: any[]) => {
-  return messages.map((msg: any) => {
-    switch (msg["@type"]) {
-      case "/cosmos.bank.v1beta1.MsgSend":
-        return {
-          typeUrl: msg["@type"],
-          value: MsgSend.encode({
-            fromAddress: msg.from_address,
-            toAddress: msg.to_address,
-            amount: msg.amount,
-          }).finish(),
-        };
-
-      case "/cosmos.staking.v1beta1.MsgDelegate":
-        return {
-          typeUrl: msg["@type"],
-          value: MsgDelegate.encode({
-            delegatorAddress: msg.delegator_address,
-            validatorAddress: msg.validator_address,
-            amount: msg.amount,
-          }).finish(),
-        };
-
-      case "/cosmos.staking.v1beta1.MsgUndelegate":
-        return {
-          typeUrl: msg["@type"],
-          value: MsgUndelegate.encode({
-            delegatorAddress: msg.delegator_address,
-            validatorAddress: msg.validator_address,
-            amount: {
-              denom: msg.amount.denom,
-              amount: msg.amount.amount,
-            },
-          }).finish(),
-        };
-
-      case "/cosmos.staking.v1beta1.MsgBeginRedelegate":
-        return {
-          typeUrl: msg["@type"],
-          value: MsgBeginRedelegate.encode({
-            delegatorAddress: msg.delegator_address,
-            validatorSrcAddress: msg.validator_src_address,
-            validatorDstAddress: msg.validator_dst_address,
-            amount: {
-              denom: msg.amount.denom,
-              amount: msg.amount.amount,
-            },
-          }).finish(),
-        };
-
-      case "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward":
-        return {
-          typeUrl: msg["@type"],
-          value: MsgWithdrawDelegatorReward.encode({
-            delegatorAddress: msg.delegator_address,
-            validatorAddress: msg.validator_address,
-          }).finish(),
-        };
-
-      case "/cosmos.gov.v1beta1.MsgVote":
-        return {
-          typeUrl: msg["@type"],
-          value: MsgVote.encode({
-            proposalId: msg.proposal_id,
-            voter: msg.voter,
-            option: (() => {
-              switch (msg.option) {
-                case 1:
-                  return VoteOption.VOTE_OPTION_YES;
-                case 2:
-                  return VoteOption.VOTE_OPTION_ABSTAIN;
-                case 3:
-                  return VoteOption.VOTE_OPTION_NO;
-                case 4:
-                  return VoteOption.VOTE_OPTION_NO_WITH_VETO;
-                default:
-                  return VoteOption.VOTE_OPTION_UNSPECIFIED;
-              }
-            })(),
-          }).finish(),
-        };
-      case "/cosmwasm.wasm.v1.MsgExecuteContract":
-        return {
-          typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-          value: MsgExecuteContract.encode({
-            sender: msg.sender,
-            contract: msg.contract,
-            msg: Buffer.from(JSON.stringify(msg.msg)) as any,
-            funds: msg.funds,
-          }).finish(),
-        };
-      case "/cosmos.gov.v1beta1.MsgSubmitProposal":
-        return {
-          typeUrl: "/cosmos.gov.v1beta1.MsgSubmitProposal",
-          value: MsgSubmitProposal.encode({
-            content: encodeProposalContent(msg.content),
-            initialDeposit: msg.initial_deposit,
-            proposer: msg.proposer,
-          }).finish(),
-        };
-
-      default:
-        throw new Error(`Unsupported message type: ${msg["@type"]}`);
-    }
-  });
-};
-
 export const detectTxType = (tx: any): SignMode.Amino | SignMode.Direct => {
   if (!tx || typeof tx !== "object") {
     throw new Error("Invalid tx object");

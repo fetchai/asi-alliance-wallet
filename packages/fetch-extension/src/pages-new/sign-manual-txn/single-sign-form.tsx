@@ -5,13 +5,16 @@ import { observer } from "mobx-react-lite";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { buttonStyles } from ".";
+import {
+  BROADCAST_SUPPORTED_MSG_TYPES,
+  COSMOS_MSG_TYPES_PROTO,
+} from "./constants";
 import style from "./styles.module.scss";
 import { TransactionSection } from "./transaction-section";
 import { SignAction, SignDocData, SignerFormProps } from "./types";
 import { useAccountQuery } from "./use-account-query";
 import {
   buildSignedTxnPayload,
-  convertAminoToProtoMsgs,
   convertProtoJsontoProtoMsgs,
   createSignature,
   formatJson,
@@ -19,11 +22,6 @@ import {
   prepareSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
-import {
-  COSMOS_MSG_TYPES_AMINO,
-  COSMOS_MSG_TYPES_PROTO,
-  BROADCAST_SUPPORTED_MSG_TYPES,
-} from "./constants";
 
 export const SingleSignForm: React.FC<SignerFormProps> = observer(
   ({ chainId, account, signManualTxn, showNotification }) => {
@@ -106,7 +104,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
         fileName: txnFileName,
       });
 
-      const { payloadObj, signDocParams, signDoc, signDocType } = signDocData;
+      const { payloadObj, signDocParams, signDoc } = signDocData;
 
       if (userAction === SignAction.SIGN) {
         await signManualTxn(
@@ -118,18 +116,12 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
         );
       } else {
         const aminoMsgs = signDoc.msgs;
-        const protoMsgs =
-          signDocType === "amino"
-            ? convertAminoToProtoMsgs(signDoc.msgs)
-            : convertProtoJsontoProtoMsgs(payloadObj.body.messages);
+        const protoMsgs = convertProtoJsontoProtoMsgs(payloadObj.body.messages);
         const memo = signDoc.memo;
         const fee = signDoc.fee;
         const msgType =
-          (signDocType === "amino"
-            ? COSMOS_MSG_TYPES_AMINO[payloadObj?.msgs[0]?.type]
-            : COSMOS_MSG_TYPES_PROTO[
-                payloadObj?.body?.messages?.[0]["@type"]
-              ]) || "unknown";
+          COSMOS_MSG_TYPES_PROTO[payloadObj?.body?.messages?.[0]["@type"]] ||
+          "unknown";
         await account.cosmos.sendMsgs(
           msgType,
           {

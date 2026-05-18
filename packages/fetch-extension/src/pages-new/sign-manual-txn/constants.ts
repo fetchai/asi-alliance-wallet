@@ -24,16 +24,6 @@ export const TRANSACTION_SIGNER_FIELDS = [
   "grantee",
 ];
 
-export const COSMOS_MSG_TYPES_AMINO: Record<string, string> = {
-  "cosmos-sdk/MsgSend": "send",
-  "cosmos-sdk/MsgDelegate": "delegate",
-  "cosmos-sdk/MsgUndelegate": "undelegate",
-  "cosmos-sdk/MsgBeginRedelegate": "redelegate",
-  "cosmos-sdk/MsgWithdrawDelegationReward": "withdrawRewards",
-  "cosmos-sdk/MsgVote": "govVote",
-  "cosmos-sdk/MsgSubmitProposal": "govSubmitProposal",
-};
-
 export const COSMOS_MSG_TYPES_PROTO: Record<string, string> = {
   "/cosmos.bank.v1beta1.MsgSend": "send",
   "/cosmos.staking.v1beta1.MsgDelegate": "delegate",
@@ -42,6 +32,8 @@ export const COSMOS_MSG_TYPES_PROTO: Record<string, string> = {
   "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward": "withdrawRewards",
   "/cosmos.gov.v1beta1.MsgVote": "govVote",
   "/cosmos.gov.v1beta1.MsgSubmitProposal": "govSubmitProposal",
+  "/ibc.applications.transfer.v1.MsgTransfer": "ibcTransfer",
+  "/cosmwasm.wasm.v1.MsgExecuteContract": "executeWasm",
 };
 
 export const BROADCAST_SUPPORTED_MSG_TYPES = [
@@ -53,4 +45,5 @@ export const BROADCAST_SUPPORTED_MSG_TYPES = [
   "/cosmos.gov.v1beta1.MsgVote",
   "/cosmos.gov.v1beta1.MsgSubmitProposal",
   "/cosmwasm.wasm.v1.MsgExecuteContract",
+  "/ibc.applications.transfer.v1.MsgTransfer",
 ];
