@@ -6,6 +6,8 @@ export const CARDANO_UI_ERROR_CODES = [
   "password_required",
   "wallet_locked",
   "wallet_syncing",
+  "blockfrost_builtin_limit",
+  "blockfrost_user_limit",
 ] as const;
 
 export type CardanoUiErrorCode = (typeof CARDANO_UI_ERROR_CODES)[number];

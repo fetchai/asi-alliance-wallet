@@ -292,6 +292,14 @@ export function parseCardanoUiErrorMessage(message: string): {
   return parseCardanoUiError(message);
 }
 
+export function isCardanoBlockfrostLimitErrorCode(
+  code: CardanoUiErrorCode | undefined
+): code is "blockfrost_builtin_limit" | "blockfrost_user_limit" {
+  return (
+    code === "blockfrost_builtin_limit" || code === "blockfrost_user_limit"
+  );
+}
+
 export function isCardanoModalLevelErrorMessage(message: string): boolean {
   const parsed = parseCardanoUiErrorMessage(message);
   if (parsed.code) {
@@ -299,7 +307,8 @@ export function isCardanoModalLevelErrorMessage(message: string): boolean {
       parsed.code === "invalid_password" ||
       parsed.code === "password_required" ||
       parsed.code === "wallet_locked" ||
-      parsed.code === "wallet_syncing"
+      parsed.code === "wallet_syncing" ||
+      isCardanoBlockfrostLimitErrorCode(parsed.code)
     );
   }
   const normalizedMessage = parsed.message.toLowerCase();

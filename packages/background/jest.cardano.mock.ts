@@ -115,7 +115,14 @@ export {
   getBlockfrostChainNameFromNetwork,
   getCardanoNetworkFromBlockfrostChainName,
 } from "../cardano/src/utils/blockfrost-network-mapper";
-export { resetBlockfrostRateLimitTelemetry } from "../cardano/src/wallet/lib/blockfrost-request-telemetry";
+export {
+  resetBlockfrostRateLimitTelemetry,
+  wasRateLimitedRecently,
+} from "../cardano/src/wallet/lib/blockfrost-request-telemetry";
+export {
+  isBlockfrostRateLimitError,
+  isBlockfrostRateLimitHttpStatus,
+} from "../cardano/src/adapters/blockfrost-error-classifier";
 
 export const getBlockfrostConfigs = () => ({
   mainnet: {

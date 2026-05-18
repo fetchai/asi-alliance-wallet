@@ -20,6 +20,8 @@ import {
   SetBlockfrostCredentialsMsg,
   ClearBlockfrostCredentialsMsg,
   CardanoServiceState,
+  type CardanoSyncStatusResponse,
+  type CardanoTxHistoryStateResponse,
   type CardanoTrackedTxServiceState,
 } from "./messages";
 import { CardanoService } from "./service";
@@ -37,6 +39,11 @@ import {
   getBlockfrostCredentialsResponse,
 } from "./blockfrost-credentials-ops";
 import { afterBlockfrostCredentialsChanged } from "./blockfrost-credentials-post-save";
+import {
+  encodeCardanoSendError,
+  withBlockfrostLimitPresentation,
+} from "./blockfrost-limit-presentation";
+import { CARDANO_UI_ERROR_PREFIX } from "@keplr-wallet/cardano";
 
 const stateFromError = (error: unknown): CardanoServiceState => {
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -80,6 +87,10 @@ const getSubmitErrorMessage = (error: unknown): string => {
 };
 
 const toCardanoUiSubmitError = (rawMessage: string): string => {
+  if (rawMessage.startsWith(CARDANO_UI_ERROR_PREFIX)) {
+    return rawMessage;
+  }
+
   const normalized = rawMessage.toLowerCase();
   if (
     normalized.includes("invalid password") ||
@@ -409,19 +420,38 @@ const handleBuildSendAdaTxDraftMsg: (
       keyRingService,
       msg.chainId
     );
-    return await service.buildSendAdaTxDraft({
-      to: msg.to,
-      amount: msg.amount,
-      memo: msg.memo,
-      chainId: msg.chainId,
-      assets: msg.assets,
-      walletId: context.walletId,
-      selectedAccountAddress: context.selectedAccountAddress,
-      selectedKeyStoreId: context.selectedKeyStoreId,
-      networkId: context.networkId,
-      unlockSessionId: context.unlockSessionId,
-      source: "wallet-ui",
-    });
+    try {
+      const result = await service.buildSendAdaTxDraft({
+        to: msg.to,
+        amount: msg.amount,
+        memo: msg.memo,
+        chainId: msg.chainId,
+        assets: msg.assets,
+        walletId: context.walletId,
+        selectedAccountAddress: context.selectedAccountAddress,
+        selectedKeyStoreId: context.selectedKeyStoreId,
+        networkId: context.networkId,
+        unlockSessionId: context.unlockSessionId,
+        source: "wallet-ui",
+      });
+
+      return await withBlockfrostLimitPresentation(
+        result,
+        service,
+        keyRingService,
+        msg.chainId
+      );
+    } catch (error) {
+      const rawMessage = errorMessage(error);
+      const encoded = await encodeCardanoSendError(
+        error,
+        rawMessage,
+        service,
+        keyRingService,
+        msg.chainId
+      );
+      throw new Error(toCardanoUiSubmitError(encoded));
+    }
   };
 };
 
@@ -470,7 +500,15 @@ const handleSubmitSendAdaTxDraftMsg: (
         approvedPayloadHash,
       });
     } catch (error) {
-      throw new Error(toCardanoUiSubmitError(getSubmitErrorMessage(error)));
+      const rawMessage = getSubmitErrorMessage(error);
+      const encoded = await encodeCardanoSendError(
+        error,
+        rawMessage,
+        service,
+        keyRingService,
+        msg.chainId
+      );
+      throw new Error(toCardanoUiSubmitError(encoded));
     }
   };
 };
@@ -533,7 +571,15 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
         approvedPayloadHash,
       });
     } catch (error) {
-      throw new Error(toCardanoUiSubmitError(getSubmitErrorMessage(error)));
+      const rawMessage = getSubmitErrorMessage(error);
+      const encoded = await encodeCardanoSendError(
+        error,
+        rawMessage,
+        service,
+        keyRingService,
+        msg.chainId
+      );
+      throw new Error(toCardanoUiSubmitError(encoded));
     }
   };
 };
@@ -558,6 +604,15 @@ const handleGetCardanoSyncStatusMsg: (
     if (!env.isInternalMsg) {
       throw new Error("This message is only supported for internal requests");
     }
+
+    const attachLimit = (response: CardanoSyncStatusResponse) =>
+      withBlockfrostLimitPresentation(
+        response,
+        service,
+        keyRingService,
+        msg.chainId
+      );
+
     // If chainId is provided, ensure service is ready for that network
     if (msg.chainId) {
       try {
@@ -567,18 +622,18 @@ const handleGetCardanoSyncStatusMsg: (
         if (classified === null) {
           throw error;
         }
-        return {
+        return attachLimit({
           state: classified,
           isSettled: false,
           hasOutgoingPendingSpend: false,
           error: errorMessage(error),
-        };
+        });
       }
     }
 
     if (!service.isReady()) {
       const runtimeState = service.getRuntimeState();
-      return {
+      return attachLimit({
         state:
           runtimeState === "provider_unavailable"
             ? "provider_error"
@@ -589,13 +644,13 @@ const handleGetCardanoSyncStatusMsg: (
           runtimeState === "provider_unavailable"
             ? "provider_unavailable"
             : "cardano_not_ready",
-      };
+      });
     }
 
     const visibility =
       msg.pollingVisibility === "background" ? "background" : "foreground";
 
-    return service.runOwnedPolling({
+    const polled = await service.runOwnedPolling({
       scope: "sync-status",
       key: msg.chainId ?? "default",
       chainId: msg.chainId,
@@ -641,6 +696,8 @@ const handleGetCardanoSyncStatusMsg: (
         }
       },
     });
+
+    return attachLimit(polled as CardanoSyncStatusResponse);
   };
 };
 
@@ -654,23 +711,31 @@ const handleGetCardanoTxHistoryMsg: (
       throw new Error("This message is only supported for internal requests");
     }
 
+    const attachLimit = (response: CardanoTxHistoryStateResponse) =>
+      withBlockfrostLimitPresentation(
+        response,
+        service,
+        keyRingService,
+        msg.chainId
+      );
+
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
     }
 
     if (!service.isInitialized()) {
-      return {
+      return attachLimit({
         state: "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
         hasDegradedItems: false,
         error: "cardano_not_initialized",
-      };
+      });
     }
 
     if (!service.isReady()) {
       const runtimeState = service.getRuntimeState();
-      return {
+      return attachLimit({
         state:
           runtimeState === "provider_unavailable"
             ? "provider_error"
@@ -682,7 +747,7 @@ const handleGetCardanoTxHistoryMsg: (
           runtimeState === "provider_unavailable"
             ? "provider_unavailable"
             : "cardano_not_ready",
-      };
+      });
     }
 
     const walletId =
@@ -691,34 +756,34 @@ const handleGetCardanoTxHistoryMsg: (
     try {
       const isSettled = await readCardanoWalletSettled(service);
       if (!isSettled) {
-        return {
+        return attachLimit({
           state: "syncing",
           items: [],
           mightHaveMore: false,
           hasDegradedItems: false,
           error: "wallet_sync_in_progress",
-        };
+        });
       }
       const res = await service.getTxHistory({
         pageSize: msg.pageSize,
         chainId: msg.chainId,
         walletId,
       });
-      return {
+      return attachLimit({
         state: res.items.length > 0 ? "ready_with_data" : "empty_valid",
         items: res.items,
         mightHaveMore: res.mightHaveMore,
         hasDegradedItems: Boolean(res.hasDegradedItems),
         error: res.hasDegradedItems ? "tx_history_partial_data" : undefined,
-      };
+      });
     } catch (error) {
-      return {
+      return attachLimit({
         state: stateFromError(error),
         items: [],
         mightHaveMore: false,
         hasDegradedItems: false,
         error: errorMessage(error),
-      };
+      });
     }
   };
 };
@@ -875,18 +940,26 @@ const handleLoadMoreCardanoTxHistoryMsg: (
       throw new Error("This message is only supported for internal requests");
     }
 
+    const attachLimit = (response: CardanoTxHistoryStateResponse) =>
+      withBlockfrostLimitPresentation(
+        response,
+        service,
+        keyRingService,
+        msg.chainId
+      );
+
     if (msg.chainId) {
       await keyRingService.ensureCardanoServiceReady(msg.chainId);
     }
 
     if (!service.isInitialized()) {
-      return {
+      return attachLimit({
         state: "temporarily_unavailable",
         items: [],
         mightHaveMore: false,
         hasDegradedItems: false,
         error: "cardano_not_initialized",
-      };
+      });
     }
 
     // When wallet is unlocked but walletManager is not ready for this network
@@ -894,7 +967,7 @@ const handleLoadMoreCardanoTxHistoryMsg: (
     // instead of misleading "unlock wallet" so UI shows "No Activity Yet".
     if (!service.isReady()) {
       const runtimeState = service.getRuntimeState();
-      return {
+      return attachLimit({
         state:
           runtimeState === "provider_unavailable"
             ? "provider_error"
@@ -906,7 +979,7 @@ const handleLoadMoreCardanoTxHistoryMsg: (
           runtimeState === "provider_unavailable"
             ? "provider_unavailable"
             : "cardano_not_ready",
-      };
+      });
     }
 
     const walletId =
@@ -915,34 +988,34 @@ const handleLoadMoreCardanoTxHistoryMsg: (
     try {
       const isSettled = await readCardanoWalletSettled(service);
       if (!isSettled) {
-        return {
+        return attachLimit({
           state: "syncing",
           items: [],
           mightHaveMore: false,
           hasDegradedItems: false,
           error: "wallet_sync_in_progress",
-        };
+        });
       }
       const res = await service.loadMoreTxHistory({
         pageSize: msg.pageSize,
         chainId: msg.chainId,
         walletId,
       });
-      return {
+      return attachLimit({
         state: res.items.length > 0 ? "ready_with_data" : "empty_valid",
         items: res.items,
         mightHaveMore: res.mightHaveMore,
         hasDegradedItems: Boolean(res.hasDegradedItems),
         error: res.hasDegradedItems ? "tx_history_partial_data" : undefined,
-      };
+      });
     } catch (error) {
-      return {
+      return attachLimit({
         state: stateFromError(error),
         items: [],
         mightHaveMore: false,
         hasDegradedItems: false,
         error: errorMessage(error),
-      };
+      });
     }
   };
 };

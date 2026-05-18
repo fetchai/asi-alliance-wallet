@@ -1,5 +1,9 @@
 import { Logger } from "ts-log";
 import { BlockfrostClient } from "@cardano-sdk/cardano-services-client";
+import {
+  isBlockfrostRateLimitError,
+  isBlockfrostRateLimitHttpStatus,
+} from "../../adapters/blockfrost-error-classifier";
 
 const SLOW_REQUEST_MS = 1000;
 const MAX_FAILURES_TO_KEEP = 50;
@@ -432,6 +436,34 @@ export const installBlockfrostRequestTelemetry = ({
     };
     globalScope["__cardanoBlockfrostTelemetry"] = telemetryGlobalApi;
   }
+};
+
+export const BLOCKFROST_RATE_LIMIT_RECENT_WINDOW_MS = 15 * 60 * 1000;
+
+const isRateLimitFailureRecord = (failure: FailureRecord): boolean => {
+  if (isBlockfrostRateLimitHttpStatus(failure.status)) {
+    return true;
+  }
+
+  return isBlockfrostRateLimitError({ status: failure.status });
+};
+
+export const wasRateLimitedRecently = (
+  chainName: string,
+  windowMs: number = BLOCKFROST_RATE_LIMIT_RECENT_WINDOW_MS
+): boolean => {
+  const collector = getRegistry().get(chainName);
+  if (!collector) {
+    return false;
+  }
+
+  const cutoff = Date.now() - windowMs;
+  return collector
+    .getSnapshot()
+    .failures.some(
+      (failure) =>
+        failure.timestamp >= cutoff && isRateLimitFailureRecord(failure)
+    );
 };
 
 export const resetBlockfrostRateLimitTelemetry = (chainName: string): void => {

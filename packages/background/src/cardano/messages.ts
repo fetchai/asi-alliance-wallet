@@ -1,6 +1,7 @@
 import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 import type { CardanoNetwork } from "@keplr-wallet/cardano";
+import type { BlockfrostLimitPresentation } from "./blockfrost-limit-presentation";
 
 const validateLovelaceAmountFormat = (amount: string): bigint => {
   if (!/^[0-9]+$/.test(amount)) {
@@ -137,6 +138,7 @@ export interface CardanoSyncStatusResponse {
   /** True while a prior Cardano send is pending (local or SDK outgoing). */
   hasOutgoingPendingSpend?: boolean;
   error?: string;
+  blockfrostLimit?: BlockfrostLimitPresentation;
 }
 
 export interface CardanoTxHistoryStateResponse {
@@ -145,6 +147,7 @@ export interface CardanoTxHistoryStateResponse {
   mightHaveMore: boolean;
   hasDegradedItems?: boolean;
   error?: string;
+  blockfrostLimit?: BlockfrostLimitPresentation;
 }
 
 /** Wallet/history pipeline state for send-flow tx tracking (subset of {@link CardanoServiceState}). */
@@ -347,11 +350,14 @@ export interface CardanoSendAdaTxDraft {
 
 /** Result of building a send draft: success with draft id, or structured ADA-only minimum violation (no draft created). */
 export type BuildSendAdaTxDraftResult =
-  | ({ kind: "draft" } & CardanoSendAdaTxDraft)
+  | ({ kind: "draft" } & CardanoSendAdaTxDraft & {
+        blockfrostLimit?: BlockfrostLimitPresentation;
+      })
   | {
       kind: "minimum_violation";
       minimumOutputLovelace: string;
       coinMissingLovelace: string;
+      blockfrostLimit?: BlockfrostLimitPresentation;
     };
 
 /**

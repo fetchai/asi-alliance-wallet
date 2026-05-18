@@ -69,6 +69,8 @@ jest.mock("@keplr-wallet/cardano", () => ({
       "password_required",
       "wallet_locked",
       "wallet_syncing",
+      "blockfrost_builtin_limit",
+      "blockfrost_user_limit",
     ]);
     return knownCodes.has(code)
       ? { code, message: parsedMessage }
@@ -532,6 +534,25 @@ describe("Cardano error classification", () => {
       parseCardanoUiErrorMessage("cardano_ui_error:unknown_code:Some message")
     ).toEqual({
       message: "Some message",
+    });
+  });
+
+  it("parses blockfrost limit error codes", () => {
+    expect(
+      parseCardanoUiErrorMessage(
+        "cardano_ui_error:blockfrost_builtin_limit:Rate limit exceeded"
+      )
+    ).toEqual({
+      code: "blockfrost_builtin_limit",
+      message: "Rate limit exceeded",
+    });
+    expect(
+      parseCardanoUiErrorMessage(
+        "cardano_ui_error:blockfrost_user_limit:Custom key quota reached"
+      )
+    ).toEqual({
+      code: "blockfrost_user_limit",
+      message: "Custom key quota reached",
     });
   });
 
