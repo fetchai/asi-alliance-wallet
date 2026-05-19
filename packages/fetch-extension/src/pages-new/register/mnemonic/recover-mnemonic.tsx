@@ -292,6 +292,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
       if (isPrivateKey(words[0])) {
         setSeedType(SeedType.PRIVATE_KEY);
         setSeedWords([words[0]]);
+        setActiveTab(NewMnemonicStep.PRIVATEKEY);
         return;
       }
     }
