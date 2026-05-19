@@ -114,9 +114,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   const totalPrice = priceStore.calculatePrice(total, fiatCurrency);
 
   const { numericPart: totalNumber, denomPart: totalDenom } =
-    separateNumericAndDenom(
-      total.shrink(true).trim(true).maxDecimals(6).toString()
-    );
+    separateNumericAndDenom(total.shrink(true).trim(true).toString());
 
   const changeInDollarsValue =
     tokenState.type === "positive"
@@ -137,13 +135,18 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
       )
     : false;
 
+  const numericValue = Number(totalNumber);
+  const formattedValue =
+    numericValue !== 0 && numericValue < 0.000001
+      ? "< 0.000001"
+      : numericValue.toLocaleString("en-US");
+
   return (
     <div className={style["balance-card"]}>
       {isEvm ? (
         <div className={style["balance-field"]}>
           <div className={style["balance"]}>
-            {Number(totalNumber).toLocaleString("en-US")}{" "}
-            <div className={style["denom"]}>{totalDenom}</div>
+            {formattedValue} <div className={style["denom"]}>{totalDenom}</div>
           </div>
           <div className={style["inUsd"]}>
             {totalPrice && ` ${totalPrice.toString()} `}
@@ -184,7 +187,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
               <Skeleton height="37.5px" width="100px" />
             ) : (
               <React.Fragment>
-                {Number(totalNumber).toLocaleString("en-US")}{" "}
+                {formattedValue}{" "}
                 <div className={style["denom"]}>{totalDenom}</div>
               </React.Fragment>
             )}

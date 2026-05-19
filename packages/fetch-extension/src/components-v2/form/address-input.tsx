@@ -217,10 +217,16 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
             border: "1px solid var(--border-grey)",
           }}
           heading={""}
+          middleSectionStyle={{
+            flex: "1",
+          }}
           subheading={
             <input
               placeholder="Wallet Address"
               id={inputId}
+              style={{
+                width: "100%",
+              }}
               className={styleAddressInput["input"]}
               value={recipientConfig.rawRecipient}
               onChange={async (e) => {

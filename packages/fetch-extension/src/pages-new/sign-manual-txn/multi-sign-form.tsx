@@ -14,7 +14,6 @@ import {
 } from "./types";
 import {
   assembleMultisigTx,
-  BROADCAST_SUPPORTED_MSG_TYPES,
   buildSignedTxnPayload,
   convertProtoJsontoProtoMsgs,
   convertToProtoJsonPubKey,
@@ -38,6 +37,7 @@ import { Pubkey, pubkeyToAddress } from "@cosmjs/amino";
 import classNames from "classnames";
 import { useAccountQuery } from "./use-account-query";
 import { MultisigPublicKeySection } from "./multisig-pubkey-section";
+import { BROADCAST_SUPPORTED_MSG_TYPES } from "./constants";
 
 const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.Transaction,

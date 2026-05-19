@@ -5,7 +5,7 @@ import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
 import { useLanguage } from "../../../languages";
 import { useNavigate } from "react-router";
-import { separateNumericAndDenom } from "@utils/format";
+import { formatBalance } from "@utils/format";
 import { getTokenIcon } from "@utils/get-token-icon";
 import { observer } from "mobx-react-lite";
 import styles from "@components-v2/card/style.module.scss";
@@ -76,22 +76,21 @@ export const NativeTokens = observer(() => {
   const language = useLanguage();
   const fiatCurrency = language.fiatCurrency;
 
-  const { numericPart: _totalNumber, denomPart: totalDenom } =
-    separateNumericAndDenom(
-      total.shrink(true).trim(true).maxDecimals(6).toString()
-    );
   const totalPrice = priceStore.calculatePrice(total, fiatCurrency);
 
   const NativeTokenDetailsString = encodeURIComponent(
     JSON.stringify(nativeToken.balance?.currency)
   );
   const NativeTokenBalance = {
-    balance: total.shrink(true).trim(true).maxDecimals(6).toString(),
+    balance: total.shrink(true).trim(true).toString(),
     balanceInUsd: totalPrice && totalPrice.toString(),
   };
   const NativeTokenBalanceString = encodeURIComponent(
     JSON.stringify(NativeTokenBalance)
   );
+
+  const formattedValue = formatBalance(total, 6);
+  const denom = total.currency.coinDenom;
   return (
     <React.Fragment>
       {isEvm ? (
@@ -102,9 +101,9 @@ export const NativeTokens = observer(() => {
           style={{
             marginBottom: "8px",
           }}
-          leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
-          heading={totalDenom}
-          subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}
+          leftImage={tokenIcon ? tokenIcon : denom.toUpperCase()[0]}
+          heading={denom}
+          subheading={formattedValue}
           rightContent={totalPrice && <div>{totalPrice.toString()}</div>}
           onClick={() => {
             navigate({
@@ -117,9 +116,9 @@ export const NativeTokens = observer(() => {
         <Card
           subheadingStyle={{ fontSize: "14px", fontWeight: 400 }}
           style={{ marginBottom: "8px" }}
-          leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
-          heading={totalDenom}
-          subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}
+          leftImage={tokenIcon ? tokenIcon : denom.toUpperCase()[0]}
+          heading={denom}
+          subheading={formattedValue}
           onClick={() => {
             analyticsStore.logEvent("native_token_click", {
               pageName: "Portfolio",
