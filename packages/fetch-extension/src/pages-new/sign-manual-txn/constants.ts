@@ -47,3 +47,10 @@ export const BROADCAST_SUPPORTED_MSG_TYPES = [
   "/cosmwasm.wasm.v1.MsgExecuteContract",
   "/ibc.applications.transfer.v1.MsgTransfer",
 ];
+
+export const FEE_ALLOWANCE_TYPE_MAP: Record<string, string> = {
+  "/cosmos.feegrant.v1beta1.BasicAllowance": "cosmos-sdk/BasicAllowance",
+  "/cosmos.feegrant.v1beta1.PeriodicAllowance": "cosmos-sdk/PeriodicAllowance",
+  "/cosmos.feegrant.v1beta1.AllowedMsgAllowance":
+    "cosmos-sdk/AllowedMsgAllowance",
+};

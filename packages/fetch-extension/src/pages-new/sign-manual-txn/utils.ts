@@ -38,6 +38,7 @@ import { ParameterChangeProposal } from "cosmjs-types/cosmos/params/v1beta1/para
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Long from "long";
 import {
+  FEE_ALLOWANCE_TYPE_MAP,
   NEEDS_EXPLICIT_PARSING_MESSAGE_TYPES,
   TRANSACTION_SIGNER_FIELDS,
 } from "./constants";
@@ -269,6 +270,7 @@ const parseExplicit = (typeUrl: string, msg: any): any => {
 
     case "/cosmos.feegrant.v1beta1.MsgGrantAllowance": {
       const { "@type": allowanceType, ...allowanceRest } = msg.allowance;
+
       return {
         type: "cosmos-sdk/MsgGrantAllowance",
         value: {
@@ -276,7 +278,7 @@ const parseExplicit = (typeUrl: string, msg: any): any => {
           grantee: msg.grantee,
           allowance: msg.allowance
             ? {
-                type: allowanceType,
+                type: FEE_ALLOWANCE_TYPE_MAP?.[allowanceType] || allowanceType,
                 value: allowanceRest,
               }
             : undefined,
@@ -326,8 +328,24 @@ export const protoJsonToEncodeObject = (
     throw new Error(`Unsupported proto type: ${typeUrl}`);
   }
 
-  const normalized = snakeToCamelDeep(msg);
-  const decoded = GeneratedType.fromJSON(normalized);
+  const CONTRACT_MSG_TYPES = [
+    "/cosmwasm.wasm.v1.MsgExecuteContract",
+    "/cosmwasm.wasm.v1.MsgInstantiateContract",
+  ];
+
+  let normalized: any;
+  if (CONTRACT_MSG_TYPES.includes(typeUrl)) {
+    const { msg: contractMsg, ...protoFields } = msg;
+    normalized = {
+      ...snakeToCamelDeep(protoFields),
+      msg: contractMsg, // preserve contract payload
+    };
+  } else {
+    normalized = snakeToCamelDeep(msg);
+  }
+
+  const { "@type": _, ...rest } = normalized;
+  const decoded = !encodeProto ? GeneratedType.fromJSON(rest) : rest;
 
   // Gov proposal handling
   if (
