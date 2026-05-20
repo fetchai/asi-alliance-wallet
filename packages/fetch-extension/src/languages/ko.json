@@ -234,6 +234,7 @@
   "lock.input.password": "비밀번호",
   "lock.input.password.error.required": "비밀번호를 입력하세요",
   "lock.input.password.error.invalid": "잘못된 비밀번호입니다",
+  "lock.error.unlock_non_password": "네트워크 또는 설정 문제로 지갑을 잠금 해제할 수 없습니다. 확장 프로그램을 다시 로드하거나 지원팀에 문의하세요.",
   "lock.alert.capslock": "CapsLock이 켜져 있습니다",
   "lock.button.unlock": "잠금 해제",
 

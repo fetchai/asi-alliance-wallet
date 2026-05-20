@@ -85,13 +85,28 @@ export const LockPage: FunctionComponent = observer(() => {
                 navigate("/", { replace: true });
               }
             }
-          } catch (e) {
-            console.log("Fail to decrypt: " + e.message);
-            setError("password", {
-              message: intl.formatMessage({
-                id: "lock.input.password.error.invalid",
-              }),
-            });
+          } catch (e: unknown) {
+            const message =
+              e instanceof Error
+                ? e.message
+                : typeof e === "object" && e !== null && "message" in e
+                ? String((e as { message?: unknown }).message ?? "")
+                : String(e ?? "unknown error");
+            console.error("[LockPage] unlock failed:", e);
+
+            if (message.includes("Unmatched mac")) {
+              setError("password", {
+                message: intl.formatMessage({
+                  id: "lock.input.password.error.invalid",
+                }),
+              });
+            } else {
+              setError("password", {
+                message: intl.formatMessage({
+                  id: "lock.error.unlock_non_password",
+                }),
+              });
+            }
             setLoading(false);
           }
         })}

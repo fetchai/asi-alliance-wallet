@@ -306,6 +306,7 @@
   "lock.input.password": "Password",
   "lock.input.password.error.required": "Empty password",
   "lock.input.password.error.invalid": "Invalid password",
+  "lock.error.unlock_non_password": "Wallet could not be unlocked due to a network or configuration issue. Try reloading the extension or contact support.",
   "lock.alert.capslock": "CapsLock is on",
   "lock.button.unlock": "Unlock",
 
