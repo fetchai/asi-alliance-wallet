@@ -31,6 +31,7 @@ import { MessageRequester } from "@keplr-wallet/router";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
+import { getDefaultFallbackChainId } from "@keplr-wallet/background/cardano-chain-policy";
 
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @observable
@@ -211,9 +212,17 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     this.saveLastViewShowTestnet();
   }
 
+  private hasChainSafe(chainId: string): boolean {
+    try {
+      return this.hasChain(chainId);
+    } catch {
+      return false;
+    }
+  }
+
   @computed
   get current(): ChainInfoInner<ChainInfoWithCoreTypes> {
-    if (this.hasChain(this._selectedChainId)) {
+    if (this.hasChainSafe(this._selectedChainId)) {
       return this.getChain(this._selectedChainId);
     }
 
@@ -248,8 +257,15 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     );
 
     if (!this.deferChainIdSelect) {
-      if (lastViewChainId) {
-        this.selectChain(lastViewChainId);
+      const chainIdToSelect =
+        lastViewChainId && this.hasChainSafe(lastViewChainId)
+          ? lastViewChainId
+          : getDefaultFallbackChainId(this.chainInfos) ||
+            this.chainInfos[0]?.chainId;
+
+      if (chainIdToSelect) {
+        yield this.kvStore.set("extension_last_view_chain_id", chainIdToSelect);
+        this.selectChain(chainIdToSelect);
       }
     }
     this._isInitializing = false;

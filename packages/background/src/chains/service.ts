@@ -18,6 +18,7 @@ import { InteractionService } from "../interaction";
 import { Env, WEBPAGE_PORT } from "@keplr-wallet/router";
 import { SuggestChainInfoMsg, SwitchNetworkByChainIdMsg } from "./messages";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { getDefaultFallbackChainId } from "./default-chain";
 import { validateBasicChainInfoType } from "@keplr-wallet/chain-validator";
 import { getBasicAccessPermissionType, PermissionService } from "../permission";
 import { Mutable, Optional } from "utility-types";
@@ -159,6 +160,28 @@ export class ChainsService {
 
   clearCachedChainInfos() {
     this.cachedChainInfos = undefined;
+  }
+
+  private getChainIdentifierSafe(chainId: string): string | undefined {
+    try {
+      return ChainIdHelper.parse(chainId).identifier;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async findChainInfo(
+    chainId: string
+  ): Promise<ChainInfoWithCoreTypes | undefined> {
+    const identifier = this.getChainIdentifierSafe(chainId);
+    if (!identifier) {
+      return undefined;
+    }
+
+    return (await this.getChainInfos()).find(
+      (chainInfo) =>
+        this.getChainIdentifierSafe(chainInfo.chainId) === identifier
+    );
   }
 
   async getChainInfo(chainId: string): Promise<ChainInfoWithCoreTypes> {
@@ -411,14 +434,7 @@ export class ChainsService {
   }
 
   async hasChainInfo(chainId: string): Promise<boolean> {
-    return (
-      (await this.getChainInfos()).find((chainInfo) => {
-        return (
-          ChainIdHelper.parse(chainInfo.chainId).identifier ===
-          ChainIdHelper.parse(chainId).identifier
-        );
-      }) != null
-    );
+    return (await this.findChainInfo(chainId)) != null;
   }
 
   async suggestChainInfo(
@@ -662,11 +678,44 @@ export class ChainsService {
     }
   }
 
+  private resolveFallbackChainId(chainInfos: ChainInfoWithCoreTypes[]): string {
+    const fallback = getDefaultFallbackChainId(chainInfos);
+    if (!fallback) {
+      throw new Error("No chain infos available");
+    }
+    return fallback;
+  }
+
   async getSelectedChain(): Promise<string> {
+    const chainInfos = await this.getChainInfos();
+
     if (!this.selectedChainId) {
-      return (await this.getChainInfos())[0].chainId;
+      const fallback = this.resolveFallbackChainId(chainInfos);
+      this.selectedChainId = fallback;
+      return fallback;
     }
 
-    return this.selectedChainId;
+    const selectedIdentifier = this.getChainIdentifierSafe(
+      this.selectedChainId
+    );
+    const exists =
+      selectedIdentifier != null &&
+      chainInfos.some(
+        (chainInfo) =>
+          this.getChainIdentifierSafe(chainInfo.chainId) === selectedIdentifier
+      );
+
+    if (exists) {
+      return this.selectedChainId;
+    }
+
+    const fallback = this.resolveFallbackChainId(chainInfos);
+
+    console.warn(
+      `[ChainsService] selected chain ${this.selectedChainId} is no longer available, fallback to ${fallback}`
+    );
+
+    this.selectedChainId = fallback;
+    return fallback;
   }
 }

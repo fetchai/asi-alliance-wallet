@@ -2,6 +2,18 @@ import {
   getDefaultFallbackChainId,
   PREFERRED_DEFAULT_CHAIN_ID,
 } from "./default-chain";
+import * as keyringDefaultChain from "../keyring/default-chain";
+
+describe("default-chain re-export", () => {
+  it("keeps keyring/default-chain thin re-export working", () => {
+    expect(keyringDefaultChain.PREFERRED_DEFAULT_CHAIN_ID).toBe(
+      PREFERRED_DEFAULT_CHAIN_ID
+    );
+    expect(keyringDefaultChain.getDefaultFallbackChainId).toBe(
+      getDefaultFallbackChainId
+    );
+  });
+});
 
 describe("getDefaultFallbackChainId", () => {
   it("prefers fetchhub-4 when present and non-Cardano", () => {

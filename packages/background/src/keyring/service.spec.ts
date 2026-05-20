@@ -1,7 +1,13 @@
 import { KeyRingService } from "./service";
 import { KeyRingStatus } from "./keyring";
 import { MemoryKVStore } from "@keplr-wallet/common";
-import { CardanoService } from "../cardano/service";
+import type { CardanoService } from "../cardano/service";
+import { ChainInfo } from "@keplr-wallet/types";
+import { PREFERRED_DEFAULT_CHAIN_ID } from "../chains/default-chain";
+import {
+  createTestChainsService,
+  TEST_EMBED_CHAINS,
+} from "../chains/chains-service.test-helpers";
 
 describe("KeyRingService", () => {
   let service: KeyRingService;
@@ -425,6 +431,74 @@ describe("KeyRingService", () => {
       await expect(
         service["onNetworkSwitch"]("cardano-old", "cardano-new")
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("unlock with stale selected chain", () => {
+    let chainsService: ReturnType<typeof createTestChainsService>;
+    let mockCardanoService: CardanoService;
+
+    beforeEach(() => {
+      mockCardanoService = {
+        reset: jest.fn(),
+        restoreFromKeyStore: jest.fn().mockResolvedValue(undefined),
+        isInitialized: jest.fn().mockReturnValue(false),
+        isReady: jest.fn().mockReturnValue(false),
+      } as any as CardanoService;
+
+      chainsService = createTestChainsService();
+      chainsService["selectedChainId"] = "asi-devnet-1";
+
+      service = new KeyRingService(
+        new MemoryKVStore("test-keyring-unlock"),
+        TEST_EMBED_CHAINS,
+        {} as any,
+        mockCardanoService
+      );
+      service.chainsService = chainsService;
+      service["keyRing"] = {
+        unlock: jest.fn().mockResolvedValue(undefined),
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+    });
+
+    it("returns UNLOCKED and reconciles selected chain when stale id was persisted", async () => {
+      const status = await service.unlock("password");
+
+      expect(status).toBe(KeyRingStatus.UNLOCKED);
+      expect(service.keyRingStatus).toBe(KeyRingStatus.UNLOCKED);
+      expect(await chainsService.getSelectedChain()).toBe(
+        PREFERRED_DEFAULT_CHAIN_ID
+      );
+      expect(mockCardanoService.reset).toHaveBeenCalled();
+    });
+
+    it("returns UNLOCKED and resets Cardano when post-unlock init fails", async () => {
+      (mockCardanoService.restoreFromKeyStore as jest.Mock).mockRejectedValue(
+        new Error("cardano_init_failed")
+      );
+      chainsService = createTestChainsService([
+        ...TEST_EMBED_CHAINS,
+        {
+          chainId: "cardano-preview",
+          chainName: "Cardano Preview",
+          features: ["cardano"],
+        } as ChainInfo,
+      ]);
+      chainsService["selectedChainId"] = "cardano-preview";
+      service.chainsService = chainsService;
+
+      const status = await service.unlock("password");
+
+      expect(status).toBe(KeyRingStatus.UNLOCKED);
+      expect(service.keyRingStatus).toBe(KeyRingStatus.UNLOCKED);
+      expect(mockCardanoService.reset).toHaveBeenCalled();
+      expect((service as any)["cardanoRestoreByChainId"].size).toBe(0);
     });
   });
 });

@@ -65,7 +65,7 @@ import {
   walletShouldLeaveCardanoChain,
   walletSupportsCardano,
 } from "./keyring";
-import { getDefaultFallbackChainId } from "./default-chain";
+import { getDefaultFallbackChainId } from "../chains/default-chain";
 import { PubKeySecp256k1, KeyCurves } from "@keplr-wallet/crypto";
 import { closePopupWindow } from "@keplr-wallet/popup";
 import { Msg } from "@keplr-wallet/types/build";
@@ -138,6 +138,11 @@ export class KeyRingService {
   private async isCardanoChain(chainId: string): Promise<boolean> {
     const chainInfo = await this.chainsService.getChainInfo(chainId);
     return chainInfo.features?.includes("cardano") ?? false;
+  }
+
+  private async isCardanoChainSafe(chainId: string): Promise<boolean> {
+    const chainInfo = await this.chainsService.findChainInfo(chainId);
+    return chainInfo?.features?.includes("cardano") ?? false;
   }
 
   public async isRegisteredCardanoChain(chainId: string): Promise<boolean> {
@@ -532,10 +537,7 @@ export class KeyRingService {
     if (ks && walletSupportsCardano(ks)) {
       try {
         const currentChainId = await this.chainsService.getSelectedChain();
-        if (!currentChainId) {
-          throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
-        }
-        const shouldInitCardano = await this.isCardanoChain(currentChainId);
+        const shouldInitCardano = await this.isCardanoChainSafe(currentChainId);
         if (shouldInitCardano) {
           await this.cardanoService.restoreFromKeyStore(
             ks,
@@ -550,10 +552,11 @@ export class KeyRingService {
         }
       } catch (error) {
         console.error(
-          "[KeyRingService] Failed to initialize CardanoService:",
+          "[KeyRingService] Post-unlock Cardano initialization failed:",
           error
         );
-        throw error;
+        this.cardanoService.reset();
+        this.cardanoRestoreByChainId.clear();
       }
     }
 
