@@ -184,6 +184,21 @@ describe("blockfrost credentials ops", () => {
     );
 
     expect(await store.hasPrefs("preprod")).toBe(false);
+
+    const response = await getBlockfrostCredentialsResponse(store, {
+      chainId: "cardano-preprod",
+      network: "preprod",
+      locked: false,
+      password,
+    });
+    expect(response).toMatchObject({
+      locked: false,
+      hasCustomKey: false,
+      useCustomKey: false,
+    });
+    if (!response.locked) {
+      expect(response.maskedProjectId).toBeUndefined();
+    }
   });
 
   it("rejects set when wallet is locked", async () => {

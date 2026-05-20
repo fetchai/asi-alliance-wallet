@@ -62,10 +62,11 @@ export async function getBlockfrostCredentialsResponse(
 
   try {
     const prefs = await store.getPrefs(params.network, params.password);
+    const hasCustomKeyFromPrefs = prefs != null;
 
     return {
       locked: false,
-      hasCustomKey,
+      hasCustomKey: hasCustomKeyFromPrefs,
       network: params.network,
       chainId: params.chainId,
       useCustomKey: prefs?.useCustomKey ?? false,

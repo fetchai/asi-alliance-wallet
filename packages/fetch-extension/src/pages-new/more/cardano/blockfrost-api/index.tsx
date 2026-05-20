@@ -31,6 +31,19 @@ import style from "./style.module.scss";
 const PROJECT_ID_REQUIRED_ERROR =
   "Enter a Blockfrost project ID before enabling your custom key.";
 
+function buildEmptyCredentials(
+  targetNetwork: CardanoNetwork,
+  targetChainId: string
+): GetBlockfrostCredentialsResponse {
+  return {
+    locked: false,
+    hasCustomKey: false,
+    network: targetNetwork,
+    chainId: targetChainId,
+    useCustomKey: false,
+  };
+}
+
 export const CardanoBlockfrostApiPage: React.FC = observer(() => {
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -239,9 +252,11 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
         BACKGROUND_PORT,
         new ClearBlockfrostCredentialsMsg(chainId, network)
       );
-      setProjectId("");
+      setCredentials(buildEmptyCredentials(network, chainId));
       setUseCustomKey(false);
       setLastPersistedUseCustomKey(false);
+      setProjectId("");
+      setProjectIdError(undefined);
       notification.push({
         type: "success",
         placement: "top-center",
@@ -250,7 +265,11 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
         canDelete: true,
         transition: { duration: 0.25 },
       });
-      await loadCredentials();
+      try {
+        await loadCredentials();
+      } catch {
+        setStatusMessage("Could not load Blockfrost settings.");
+      }
     } catch (error) {
       setStatusMessage(mapBlockfrostCredentialsErrorMessage(error));
     } finally {

@@ -40,7 +40,7 @@ export class BlockfrostCredentialsStore {
     password: string
   ): Promise<BlockfrostCredentialsPayload | undefined> {
     const raw = await this.kvStore.get<string>(this.getKey(network));
-    if (!raw) {
+    if (raw == null) {
       return undefined;
     }
 
@@ -81,7 +81,7 @@ export class BlockfrostCredentialsStore {
   }
 
   async clearPrefs(network: CardanoNetwork): Promise<void> {
-    await this.kvStore.set(this.getKey(network), undefined);
+    await this.kvStore.set(this.getKey(network), null);
   }
 
   private async decryptPayload(

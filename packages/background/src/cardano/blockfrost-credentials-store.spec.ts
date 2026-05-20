@@ -84,7 +84,7 @@ describe("BlockfrostCredentialsStore", () => {
     });
   });
 
-  it("clearPrefs removes KV entry", async () => {
+  it("clearPrefs clears prefs contract", async () => {
     const store = createStore();
     await store.savePrefs("preprod", password, {
       projectId: "custom-key-12345",
@@ -92,6 +92,7 @@ describe("BlockfrostCredentialsStore", () => {
     });
     await store.clearPrefs("preprod");
     expect(await store.hasPrefs("preprod")).toBe(false);
+    expect(await store.getPrefs("preprod", password)).toBeUndefined();
   });
 
   it("masks project id for display", () => {
