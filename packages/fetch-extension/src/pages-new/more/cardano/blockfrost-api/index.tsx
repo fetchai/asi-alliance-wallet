@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
+import classnames from "classnames";
 import { Modal, ModalBody, ModalHeader } from "reactstrap";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { Card } from "@components-v2/card";
@@ -22,9 +23,13 @@ import type { GetBlockfrostCredentialsResponse } from "@keplr-wallet/background"
 import type { CardanoNetwork } from "@keplr-wallet/cardano";
 import {
   getCardanoNetworkFromChainId,
+  getRequestErrorMessage,
   mapBlockfrostCredentialsErrorMessage,
 } from "../../../../utils/cardano-blockfrost";
 import style from "./style.module.scss";
+
+const PROJECT_ID_REQUIRED_ERROR =
+  "Enter a Blockfrost project ID before enabling your custom key.";
 
 export const CardanoBlockfrostApiPage: React.FC = observer(() => {
   const navigate = useNavigate();
@@ -52,7 +57,10 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
   const [credentials, setCredentials] =
     useState<GetBlockfrostCredentialsResponse | null>(null);
   const [projectId, setProjectId] = useState("");
+  const [projectIdError, setProjectIdError] = useState<string | undefined>();
   const [useCustomKey, setUseCustomKey] = useState(false);
+  const [lastPersistedUseCustomKey, setLastPersistedUseCustomKey] =
+    useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -76,8 +84,11 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
       );
       setCredentials(response);
       if (!response.locked) {
-        setUseCustomKey(response.useCustomKey);
+        const persistedUseCustomKey = response.useCustomKey ?? false;
+        setUseCustomKey(persistedUseCustomKey);
+        setLastPersistedUseCustomKey(persistedUseCustomKey);
         setProjectId("");
+        setProjectIdError(undefined);
       }
     } catch {
       setStatusMessage("Could not load Blockfrost settings.");
@@ -85,6 +96,46 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
       setIsLoading(false);
     }
   }, [chainId, network, requester]);
+
+  const persistCredentials = useCallback(
+    async (
+      nextUseCustomKey: boolean,
+      nextProjectId?: string,
+      allowUnverifiedSave?: boolean
+    ): Promise<void> => {
+      if (!network) {
+        return;
+      }
+
+      try {
+        await requester.sendMessage(
+          BACKGROUND_PORT,
+          new SetBlockfrostCredentialsMsg(
+            chainId,
+            network,
+            nextUseCustomKey,
+            nextProjectId,
+            allowUnverifiedSave
+          )
+        );
+      } catch (error) {
+        const rawMessage = getRequestErrorMessage(error);
+        if (rawMessage === "blockfrost_credentials_requires_confirmation") {
+          const confirmed = await confirm.confirm({
+            title: "Save without online verification?",
+            paragraph:
+              "We could not verify this Blockfrost project ID online. Save it anyway only if you trust this key.",
+          });
+          if (confirmed) {
+            await persistCredentials(nextUseCustomKey, nextProjectId, true);
+            return;
+          }
+        }
+        throw error;
+      }
+    },
+    [chainId, confirm, network, requester]
+  );
 
   useEffect(() => {
     void loadCredentials();
@@ -96,23 +147,20 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
     credentials.hasCustomKey &&
     !credentials.useCustomKey;
 
-  const saveCredentials = async (allowUnverifiedSave?: boolean) => {
+  const saveCredentials = async () => {
     if (!network) {
       return;
     }
 
+    const trimmedProjectId = projectId.trim();
+
     setIsSaving(true);
     setStatusMessage(undefined);
+    setProjectIdError(undefined);
     try {
-      await requester.sendMessage(
-        BACKGROUND_PORT,
-        new SetBlockfrostCredentialsMsg(
-          chainId,
-          network,
-          useCustomKey,
-          projectId.trim() ? projectId.trim() : undefined,
-          allowUnverifiedSave
-        )
+      await persistCredentials(
+        useCustomKey,
+        trimmedProjectId ? trimmedProjectId : undefined
       );
       notification.push({
         type: "success",
@@ -122,23 +170,47 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
         canDelete: true,
         transition: { duration: 0.25 },
       });
-      await loadCredentials();
-    } catch (error) {
-      const rawMessage =
-        error instanceof Error ? error.message : String(error ?? "");
-      if (rawMessage === "blockfrost_credentials_requires_confirmation") {
-        const confirmed = await confirm.confirm({
-          title: "Save without online verification?",
-          paragraph:
-            "We could not verify this Blockfrost project ID online. Save it anyway only if you trust this key.",
-        });
-        if (confirmed) {
-          await saveCredentials(true);
-        } else {
-          setStatusMessage(mapBlockfrostCredentialsErrorMessage(error));
-        }
-        return;
+      try {
+        await loadCredentials();
+      } catch {
+        setStatusMessage("Could not load Blockfrost settings.");
       }
+    } catch (error) {
+      setStatusMessage(mapBlockfrostCredentialsErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleCustomKey = async () => {
+    const nextUseCustomKey = !useCustomKey;
+    const trimmedProjectId = projectId.trim();
+
+    if (nextUseCustomKey && !credentials?.hasCustomKey && !trimmedProjectId) {
+      setProjectIdError(PROJECT_ID_REQUIRED_ERROR);
+      return;
+    }
+
+    setProjectIdError(undefined);
+    setStatusMessage(undefined);
+    setUseCustomKey(nextUseCustomKey);
+    setIsSaving(true);
+
+    try {
+      await persistCredentials(
+        nextUseCustomKey,
+        trimmedProjectId ? trimmedProjectId : undefined
+      );
+
+      setLastPersistedUseCustomKey(nextUseCustomKey);
+
+      try {
+        await loadCredentials();
+      } catch {
+        setStatusMessage("Could not load Blockfrost settings.");
+      }
+    } catch (error) {
+      setUseCustomKey(lastPersistedUseCustomKey);
       setStatusMessage(mapBlockfrostCredentialsErrorMessage(error));
     } finally {
       setIsSaving(false);
@@ -161,6 +233,7 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
 
     setIsSaving(true);
     setStatusMessage(undefined);
+    setProjectIdError(undefined);
     try {
       await requester.sendMessage(
         BACKGROUND_PORT,
@@ -168,6 +241,7 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
       );
       setProjectId("");
       setUseCustomKey(false);
+      setLastPersistedUseCustomKey(false);
       notification.push({
         type: "success",
         placement: "top-center",
@@ -248,7 +322,13 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
             <Input
               id="blockfrost-project-id"
               value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
+              error={projectIdError}
+              formFeedbackClassName={style["inputFeedback"]}
+              className={classnames(projectIdError && style["inputError"])}
+              onChange={(event) => {
+                setProjectIdError(undefined);
+                setProjectId(event.target.value);
+              }}
               placeholder="Enter your Blockfrost project ID"
               disabled={isSaving}
             />
@@ -266,7 +346,7 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
               <ToggleSwitchButton
                 checked={useCustomKey}
                 disabled={isSaving}
-                onChange={() => setUseCustomKey((value) => !value)}
+                onChange={() => void handleToggleCustomKey()}
               />
             </div>
 

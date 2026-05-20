@@ -8,8 +8,18 @@ export type { BlockfrostLimitPresentation };
 
 export { getCardanoNetworkFromChainId };
 
+export function getRequestErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String((error as { message?: unknown }).message ?? "");
+  }
+  return String(error ?? "");
+}
+
 export function mapBlockfrostCredentialsErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error ?? "");
+  const message = getRequestErrorMessage(error);
 
   switch (message) {
     case "cardano_wallet_locked":

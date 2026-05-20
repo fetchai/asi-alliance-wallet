@@ -32,6 +32,22 @@
   margin-bottom: 8px;
 }
 
+.inputError {
+  border-color: #dc3545 !important;
+
+  &:hover,
+  &:focus {
+    border-color: #dc3545 !important;
+  }
+}
+
+// global.scss sets .invalid-feedback to position:absolute; keep error in document flow
+.inputFeedback {
+  position: relative !important;
+  width: 100% !important;
+  margin-top: 6px;
+}
+
 .toggleRow {
   display: flex;
   align-items: center;
