@@ -175,6 +175,7 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
         useCustomKey,
         trimmedProjectId ? trimmedProjectId : undefined
       );
+      setIsLoading(true);
       notification.push({
         type: "success",
         placement: "top-center",
@@ -257,6 +258,7 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
       setLastPersistedUseCustomKey(false);
       setProjectId("");
       setProjectIdError(undefined);
+      setIsLoading(true);
       notification.push({
         type: "success",
         placement: "top-center",
