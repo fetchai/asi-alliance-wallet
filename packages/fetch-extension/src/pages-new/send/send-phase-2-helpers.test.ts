@@ -91,6 +91,10 @@ import {
   parseCardanoUiErrorMessage,
   getMinimumDisplayAmountFromDecimals,
   getBannerValidationError,
+  getSendPhase2FooterReservePx,
+  isBlockfrostLimitBannerVisible,
+  shouldShowCardanoOperationalStatusBanner,
+  SEND_PHASE_2_FIXED_BUTTON_RESERVE_PX,
   getHighestPriorityNonRecipientBlockingError,
   isCardanoSendDraftInputsReady,
   isCardanoSendOperationalGuard,
@@ -258,6 +262,69 @@ describe("isCardanoSendOperationalGuard", () => {
 
   it("is false when ready and online and not syncing", () => {
     expect(isCardanoSendOperationalGuard(base)).toBe(false);
+  });
+});
+
+describe("Send phase 2 layout helpers", () => {
+  it("detects visible Blockfrost limit banner", () => {
+    expect(isBlockfrostLimitBannerVisible(undefined)).toBe(false);
+    expect(
+      isBlockfrostLimitBannerVisible({
+        showBuiltinLimitCta: true,
+        showUserKeyLimitWarning: false,
+      } as any)
+    ).toBe(true);
+  });
+
+  it("shows operational status banner only for offline or pending conflict", () => {
+    expect(
+      shouldShowCardanoOperationalStatusBanner({
+        isCardano: true,
+        cardanoOperationalGuard: true,
+        isOnline: false,
+        hasCardanoOutgoingPending: false,
+      })
+    ).toBe(true);
+    expect(
+      shouldShowCardanoOperationalStatusBanner({
+        isCardano: true,
+        cardanoOperationalGuard: true,
+        isOnline: true,
+        hasCardanoOutgoingPending: true,
+      })
+    ).toBe(true);
+    expect(
+      shouldShowCardanoOperationalStatusBanner({
+        isCardano: true,
+        cardanoOperationalGuard: true,
+        isOnline: true,
+        hasCardanoOutgoingPending: false,
+      })
+    ).toBe(false);
+  });
+
+  it("reserves extra bottom space per visible alert", () => {
+    expect(
+      getSendPhase2FooterReservePx({
+        showBlockfrostBanner: false,
+        showValidationBanner: false,
+        showOperationalStatusBanner: false,
+      })
+    ).toBe(SEND_PHASE_2_FIXED_BUTTON_RESERVE_PX);
+    expect(
+      getSendPhase2FooterReservePx({
+        showBlockfrostBanner: true,
+        showValidationBanner: false,
+        showOperationalStatusBanner: false,
+      })
+    ).toBe(SEND_PHASE_2_FIXED_BUTTON_RESERVE_PX + 112);
+    expect(
+      getSendPhase2FooterReservePx({
+        showBlockfrostBanner: true,
+        showValidationBanner: true,
+        showOperationalStatusBanner: true,
+      })
+    ).toBe(SEND_PHASE_2_FIXED_BUTTON_RESERVE_PX + 112 + 56 + 56);
   });
 });
 

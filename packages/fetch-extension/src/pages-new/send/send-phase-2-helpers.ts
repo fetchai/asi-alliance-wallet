@@ -1,3 +1,4 @@
+import type { BlockfrostLimitPresentation } from "@keplr-wallet/background";
 import { EmptyAddressError } from "@keplr-wallet/hooks";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
 import {
@@ -7,6 +8,54 @@ import {
   mapCardanoMinimumViolation,
   parseCardanoUiError,
 } from "@keplr-wallet/cardano";
+
+/** Fixed Review button: height 56px + bottom 15px + small gap */
+export const SEND_PHASE_2_FIXED_BUTTON_RESERVE_PX = 88;
+const SEND_PHASE_2_BLOCKFROST_BANNER_RESERVE_PX = 112;
+const SEND_PHASE_2_INLINE_ALERT_RESERVE_PX = 56;
+
+export function isBlockfrostLimitBannerVisible(
+  presentation?: BlockfrostLimitPresentation
+): boolean {
+  return (
+    presentation != null &&
+    (presentation.showBuiltinLimitCta || presentation.showUserKeyLimitWarning)
+  );
+}
+
+/**
+ * Inline yellow status banner (offline / pending conflict). Pure sync is shown on the fixed button only.
+ */
+export function shouldShowCardanoOperationalStatusBanner(params: {
+  isCardano: boolean;
+  cardanoOperationalGuard: boolean;
+  isOnline: boolean;
+  hasCardanoOutgoingPending: boolean;
+}): boolean {
+  return (
+    params.isCardano &&
+    params.cardanoOperationalGuard &&
+    (!params.isOnline || params.hasCardanoOutgoingPending)
+  );
+}
+
+export function getSendPhase2FooterReservePx(params: {
+  showBlockfrostBanner: boolean;
+  showValidationBanner: boolean;
+  showOperationalStatusBanner: boolean;
+}): number {
+  let reserve = SEND_PHASE_2_FIXED_BUTTON_RESERVE_PX;
+  if (params.showBlockfrostBanner) {
+    reserve += SEND_PHASE_2_BLOCKFROST_BANNER_RESERVE_PX;
+  }
+  if (params.showValidationBanner) {
+    reserve += SEND_PHASE_2_INLINE_ALERT_RESERVE_PX;
+  }
+  if (params.showOperationalStatusBanner) {
+    reserve += SEND_PHASE_2_INLINE_ALERT_RESERVE_PX;
+  }
+  return reserve;
+}
 
 /**
  * True during Cardano sync/offline operational window: use status banners and disable review

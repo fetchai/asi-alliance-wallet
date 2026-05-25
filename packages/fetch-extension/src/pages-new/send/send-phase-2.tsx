@@ -47,6 +47,8 @@ import {
   getBannerValidationError,
   getCardanoPasswordModalInlineError,
   getHighestPriorityNonRecipientBlockingError,
+  getSendPhase2FooterReservePx,
+  isBlockfrostLimitBannerVisible,
   isCardanoSendDraftInputsReady,
   isCardanoSendOperationalGuard,
   isPositiveDecimalAmount,
@@ -58,6 +60,7 @@ import {
   parseCardanoUiErrorMessage,
   shouldNavigateCardanoFailedFromError,
   shouldPushCardanoFailedWarningFromModal,
+  shouldShowCardanoOperationalStatusBanner,
   shouldEnableReviewWhenInvalid,
 } from "./send-phase-2-helpers";
 import { removeComma } from "@utils/format";
@@ -707,6 +710,24 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         "You are sending to your own address. Only fees will be deducted.",
     });
 
+    const showBlockfrostLimitBanner = isBlockfrostLimitBannerVisible(
+      cardanoBlockfrostLimit
+    );
+    const showOperationalStatusBanner =
+      shouldShowCardanoOperationalStatusBanner({
+        isCardano,
+        cardanoOperationalGuard,
+        isOnline,
+        hasCardanoOutgoingPending,
+      });
+    const showValidationBanner =
+      bannerValidationError != null && !isBuildingCardanoDraft;
+    const footerReservePx = getSendPhase2FooterReservePx({
+      showBlockfrostBanner: isCardano && showBlockfrostLimitBanner,
+      showValidationBanner,
+      showOperationalStatusBanner,
+    });
+
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
     const formattedDisplayAmount = formatDisplayAmount(
       sendConfigs.amountConfig.amount ?? "",
@@ -1200,7 +1221,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     ]);
 
     return (
-      <div>
+      <div
+        style={{
+          paddingBottom: `${footerReservePx}px`,
+        }}
+      >
         <div className={style["editCard"]}>
           <div>
             <div className={style["amountInUsd"]}>
@@ -1242,12 +1267,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           memoConfig={sendConfigs.memoConfig}
           value={configs ? configs.memo : undefined}
           label={intl.formatMessage({ id: "send.input.memo" })}
-        />
-
-        <div
-          style={{
-            marginTop: "24px",
-          }}
         />
 
         <div className={style["transactionFeeContainer"]}>
@@ -1300,65 +1319,58 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             />
           )}
         </div>
-        {isCardano ? (
-          <CardanoBlockfrostRateLimitBanner
-            presentation={cardanoBlockfrostLimit}
-          />
-        ) : null}
-        {bannerValidationError && !isBuildingCardanoDraft && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "12px",
-              marginBottom: "8px",
-              background: "rgba(220, 53, 69, 0.1)",
-              border: "1px solid rgba(220, 53, 69, 0.3)",
-              borderRadius: "8px",
-              fontSize: "14px",
-              color: "#dc3545",
-            }}
-          >
-            <i
-              className="fas fa-exclamation-circle"
-              style={{ marginRight: "8px" }}
-            />
-            {bannerValidationError.message}
-          </div>
-        )}
-        {isCardano && cardanoOperationalGuard && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "12px",
-              marginBottom: "8px",
-              background: "rgba(255, 193, 7, 0.1)",
-              border: "1px solid rgba(255, 193, 7, 0.3)",
-              borderRadius: "8px",
-              fontSize: "14px",
-              color: "#ffc107",
-            }}
-          >
-            {!isOnline ? (
-              <React.Fragment>
-                <i className="fas fa-wifi" style={{ marginRight: "8px" }} />
-                {cardanoOfflineMessage}
-              </React.Fragment>
-            ) : hasCardanoOutgoingPending ? (
-              <React.Fragment>
-                <i className="fas fa-clock" style={{ marginRight: "8px" }} />
-                {CARDANO_SEND_CONFLICT_PENDING_MESSAGE}
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
+        {showValidationBanner ||
+        (isCardano &&
+          (showBlockfrostLimitBanner || showOperationalStatusBanner)) ? (
+          <div className={style["sendAlertsSection"]}>
+            {isCardano && showBlockfrostLimitBanner ? (
+              <CardanoBlockfrostRateLimitBanner
+                presentation={cardanoBlockfrostLimit}
+              />
+            ) : null}
+            {showValidationBanner ? (
+              <div
+                className={style["sendInlineAlert"]}
+                style={{
+                  background: "rgba(220, 53, 69, 0.1)",
+                  border: "1px solid rgba(220, 53, 69, 0.3)",
+                  color: "#dc3545",
+                }}
+              >
                 <i
-                  className="fas fa-sync fa-spin"
+                  className="fas fa-exclamation-circle"
                   style={{ marginRight: "8px" }}
                 />
-                Syncing Cardano wallet... Please wait
-              </React.Fragment>
-            )}
+                {bannerValidationError.message}
+              </div>
+            ) : null}
+            {isCardano && showOperationalStatusBanner ? (
+              <div
+                className={style["sendInlineAlert"]}
+                style={{
+                  background: "rgba(255, 193, 7, 0.1)",
+                  border: "1px solid rgba(255, 193, 7, 0.3)",
+                  color: "#ffc107",
+                }}
+              >
+                {!isOnline ? (
+                  <React.Fragment>
+                    <i className="fas fa-wifi" style={{ marginRight: "8px" }} />
+                    {cardanoOfflineMessage}
+                  </React.Fragment>
+                ) : (
+                  <React.Fragment>
+                    <i
+                      className="fas fa-clock"
+                      style={{ marginRight: "8px" }}
+                    />
+                    {CARDANO_SEND_CONFLICT_PENDING_MESSAGE}
+                  </React.Fragment>
+                )}
+              </div>
+            ) : null}
           </div>
-        )}
+        ) : null}
         <ButtonV2
           variant="dark"
           type="button"
