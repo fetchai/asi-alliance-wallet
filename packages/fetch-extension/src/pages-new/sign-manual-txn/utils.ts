@@ -55,6 +55,7 @@ import {
   SingleSignature,
   UpdateSignerInfoParams,
 } from "./types";
+import { MsgVote } from "cosmjs-types/cosmos/gov/v1beta1/tx";
 
 const govProposalSubTypes: any = [
   ["/cosmos.gov.v1beta1.TextProposal", TextProposal],
@@ -78,6 +79,13 @@ const registry = new Registry([
   ...wasmTypes,
   ...govProposalSubTypes,
 ]);
+
+function formatAminoTime(time: Date | string | null | undefined): string {
+  if (!time) return "0001-01-01T00:00:00Z";
+  const iso = time instanceof Date ? time.toISOString() : time;
+  // Remove sub-second precision
+  return iso.replace(/\.\d+Z$/, "Z");
+}
 
 const proposalAminoConverters: Record<
   string,
@@ -121,9 +129,12 @@ const proposalAminoConverters: Record<
       plan: content.plan
         ? {
             name: content.plan.name,
-            height: content.plan.height,
-            info: content.plan.info ?? "",
-            time: content.plan.time ?? undefined,
+            time: formatAminoTime(content.plan.time),
+            height:
+              content.plan.height != null
+                ? content.plan.height?.toString?.() ?? content.plan.height
+                : undefined,
+            info: content.plan.info || undefined,
             upgraded_client_state:
               content.plan.upgradedClientState ?? undefined,
           }
@@ -363,7 +374,7 @@ export const protoJsonToEncodeObject = (
     decoded.content = {
       typeUrl: contentTypeUrl,
       value: encodeProto
-        ? ContentType.encode(contentRest).finish()
+        ? ContentType.encode(ContentType.fromJSON(contentRest)).finish()
         : ContentType.fromJSON(contentRest),
     };
   }
@@ -412,6 +423,16 @@ export const convertProtoJsontoProtoMsgs = (msgs: any[]): Any[] => {
             msgs: convertProtoJsontoProtoMsgs(normalized.msgs ?? []),
           },
         }),
+      };
+    }
+
+    if (typeUrl === "/cosmos.gov.v1beta1.MsgVote") {
+      const { "@type": _, ...rest } = msg;
+      const normalized = snakeToCamelDeep(rest);
+
+      return {
+        typeUrl,
+        value: MsgVote.encode(MsgVote.fromJSON(normalized)).finish(),
       };
     }
 
