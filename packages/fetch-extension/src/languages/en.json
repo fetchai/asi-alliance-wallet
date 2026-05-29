@@ -366,7 +366,7 @@
   "sign.list.message.cosmos-sdk/MsgGrant.staking.validatorAllowedLabel": "Allowed",
   "sign.list.message.cosmos-sdk/MsgGrant.staking.validatorDeniedLabel": "Denied",
   "sign.list.message.cosmos-sdk/MsgSubmitProposal.title": "Submit Proposal",
-  "sign.list.message.cosmos-sdk/MsgSubmitProposal.content": "Submit proposal by <b>{proposer}</b>",
+  "sign.list.message.cosmos-sdk/MsgSubmitProposal.content": "Submitting {proposalType} by <b>{proposer}</b>",
   "sign.list.message.cosmos-sdk/MsgRevoke.title": "Revoke",
   "sign.list.message.cosmos-sdk/MsgRevoke.content": "Revoke <b>{revokeType}</b> permission from <b>{grantee}</b>",
 

@@ -473,11 +473,20 @@ export function renderMsgSubmitProposal(
   content: any,
   initialDeposit: CoinPrimitive[] | undefined
 ) {
+  const proposalTitle = content?.value?.title || content?.title;
+  const proposalType = (
+    content?.type?.split("/").pop() || content?.["@type"]?.split(".").pop()
+  )
+    ?.replace(/([A-Z])/g, " $1")
+    .trim();
+
   return {
     icon: "fas fa-file-alt",
-    title: intl.formatMessage({
-      id: "sign.list.message.cosmos-sdk/MsgSubmitProposal.title",
-    }),
+    title:
+      proposalTitle ||
+      intl.formatMessage({
+        id: "sign.list.message.cosmos-sdk/MsgSubmitProposal.title",
+      }),
     content: (
       <React.Fragment>
         <FormattedMessage
@@ -486,6 +495,7 @@ export function renderMsgSubmitProposal(
             b: (...chunks: any[]) => <b>{chunks}</b>,
             br: <br />,
             proposer: Bech32Address.shortenAddress(proposer, 24),
+            proposalType: proposalType || "Proposal",
           }}
         />
         <br />
