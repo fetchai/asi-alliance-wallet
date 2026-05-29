@@ -107,6 +107,14 @@ export interface MsgVote {
   };
 }
 
+export interface MsgSubmitProposal {
+  value: {
+    content: any;
+    initial_deposit: CoinPrimitive[];
+    proposer: string;
+  };
+}
+
 export interface MsgInstantiateContract {
   value: {
     // Admin field can be omitted.
@@ -454,6 +462,81 @@ export function renderMsgInstantiateContract(
         />
         <br />
         <WasmExecutionMsgView msg={initMsg} />
+      </React.Fragment>
+    ),
+  };
+}
+
+export function renderMsgSubmitProposal(
+  intl: IntlShape,
+  proposer: string,
+  content: any,
+  initialDeposit: CoinPrimitive[] | undefined
+) {
+  return {
+    icon: "fas fa-file-alt",
+    title: intl.formatMessage({
+      id: "sign.list.message.cosmos-sdk/MsgSubmitProposal.title",
+    }),
+    content: (
+      <React.Fragment>
+        <FormattedMessage
+          id="sign.list.message.cosmos-sdk/MsgSubmitProposal.content"
+          values={{
+            b: (...chunks: any[]) => <b>{chunks}</b>,
+            br: <br />,
+            proposer: Bech32Address.shortenAddress(proposer, 24),
+          }}
+        />
+        <br />
+        <Label
+          for="sign-value"
+          className="form-control-label"
+          style={{
+            marginTop: "8px",
+            marginBottom: "0",
+            display: "block",
+            fontSize: "14px",
+            color: "inherit",
+          }}
+        >
+          Content:
+        </Label>
+        <pre
+          style={{
+            width: "100%",
+            whiteSpace: "pre-wrap",
+            wordWrap: "break-word",
+          }}
+        >
+          {JSON.stringify(content, null, 2)}
+        </pre>
+        {initialDeposit && initialDeposit.length > 0 && (
+          <React.Fragment>
+            <Label
+              for="sign-value"
+              className="form-control-label"
+              style={{
+                marginTop: "8px",
+                marginBottom: "0",
+                display: "block",
+                fontSize: "14px",
+                color: "inherit",
+              }}
+            >
+              Deposit:
+            </Label>
+            <pre
+              style={{
+                width: "100%",
+                whiteSpace: "pre-wrap",
+                wordWrap: "break-word",
+              }}
+            >
+              {initialDeposit.map((d) => `${d.amount} ${d.denom}`).join(", ")}
+            </pre>
+          </React.Fragment>
+        )}
       </React.Fragment>
     ),
   };

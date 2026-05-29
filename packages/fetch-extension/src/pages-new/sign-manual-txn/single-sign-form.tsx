@@ -4,14 +4,17 @@ import { SignMode } from "@keplr-wallet/background";
 import { observer } from "mobx-react-lite";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
+import { buttonStyles } from ".";
+import {
+  BROADCAST_SUPPORTED_MSG_TYPES,
+  COSMOS_MSG_TYPES_PROTO,
+} from "./constants";
 import style from "./styles.module.scss";
 import { TransactionSection } from "./transaction-section";
 import { SignAction, SignDocData, SignerFormProps } from "./types";
+import { useAccountQuery } from "./use-account-query";
 import {
-  CosmosMsgTypesAmino,
-  CosmosMsgTypesProto,
   buildSignedTxnPayload,
-  convertAminoToProtoMsgs,
   convertProtoJsontoProtoMsgs,
   createSignature,
   formatJson,
@@ -19,8 +22,6 @@ import {
   prepareSignDoc,
   validateProtoJsonSignDoc,
 } from "./utils";
-import { buttonStyles } from ".";
-import { useAccountQuery } from "./use-account-query";
 
 export const SingleSignForm: React.FC<SignerFormProps> = observer(
   ({ chainId, account, signManualTxn, showNotification }) => {
@@ -30,11 +31,12 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
     const [broadcastTxn, setBroadcastTxn] = useState(false);
     const [payloadError, setPayloadError] = useState("");
     const [offlineSigning, setOfflineSigning] = useState(false);
+    const [disableBroadcast, setDisableBroadcast] = useState(false);
     const [accountInfo, setAccountInfo] = useState({
       accountNumber: "",
       sequence: "",
     });
-
+    const [ovverrideSigner, setOverrideSigner] = useState(false);
     const address = account.bech32Address;
     const accountName = account.name;
 
@@ -42,7 +44,12 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
       enabled: !offlineSigning,
     });
 
-    const createSignedTxn = (sequence: any, txnPayload: any, pubKey: any) => {
+    const createSignedTxn = (
+      sequence: any,
+      txnPayload: any,
+      pubKey: any,
+      signature: any
+    ) => {
       return formatJson(
         JSON.stringify(
           buildSignedTxnPayload({
@@ -50,6 +57,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
             signingMode: "amino",
             sequence: sequence,
             pubKey,
+            signature,
           })
         )
       );
@@ -67,15 +75,17 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
     };
 
     const onSignSuccess = (signDocParams: any, result: any, fileNames: any) => {
+      const signature = createSignature(result, signDocParams.sequence);
       navigate("/more/sign-manual-txn", {
         replace: true,
         state: {
           signed: true,
-          txSignature: createSignature(result, signDocParams.sequence),
+          txSignature: signature,
           signedTxn: createSignedTxn(
             signDocParams?.sequence,
             txnPayload,
-            result.signature.pub_key
+            result.signature.pub_key,
+            JSON.parse(signature).signatures
           ),
           signatureFileName: fileNames.signature,
           txnFileName: fileNames.transaction,
@@ -94,7 +104,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
         fileName: txnFileName,
       });
 
-      const { payloadObj, signDocParams, signDoc, signDocType } = signDocData;
+      const { payloadObj, signDocParams, signDoc } = signDocData;
 
       if (userAction === SignAction.SIGN) {
         await signManualTxn(
@@ -106,16 +116,11 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
         );
       } else {
         const aminoMsgs = signDoc.msgs;
-        const protoMsgs =
-          signDocType === "amino"
-            ? convertAminoToProtoMsgs(signDoc.msgs)
-            : convertProtoJsontoProtoMsgs(payloadObj.body.messages);
+        const protoMsgs = convertProtoJsontoProtoMsgs(payloadObj.body.messages);
         const memo = signDoc.memo;
         const fee = signDoc.fee;
         const msgType =
-          (signDocType === "amino"
-            ? CosmosMsgTypesAmino[payloadObj?.msgs[0]?.type]
-            : CosmosMsgTypesProto[payloadObj?.body?.messages?.[0]["@type"]]) ||
+          COSMOS_MSG_TYPES_PROTO[payloadObj?.body?.messages?.[0]["@type"]] ||
           "unknown";
         await account.cosmos.sendMsgs(
           msgType,
@@ -141,7 +146,8 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
                   signedTxn: createSignedTxn(
                     signDocParams?.sequence,
                     txnPayload,
-                    accountData?.account?.pub_key
+                    accountData?.account?.pub_key,
+                    tx.signature
                   ),
                   txnFileName: fileNames.transaction,
                 },
@@ -179,10 +185,17 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
     const onTxnSignDocChange = (value: string) => {
       setTxnPayload(value);
       setPayloadError("");
-      const formatted = formatJson(value);
+      setDisableBroadcast(false);
+      setOverrideSigner(false);
       try {
+        const formatted = formatJson(value);
         const signDoc = JSON.parse(formatted);
         validateProtoJsonSignDoc(signDoc, address);
+        const messages = signDoc?.body?.messages ?? [];
+        const isSupportedMessage = messages.some((msg: any) =>
+          BROADCAST_SUPPORTED_MSG_TYPES.includes(msg?.["@type"])
+        );
+        setDisableBroadcast(!isSupportedMessage);
       } catch (err) {
         setPayloadError(err.message);
       }
@@ -202,14 +215,19 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
           setAccountInfo={setAccountInfo}
           onTxnSignDocChange={onTxnSignDocChange}
           payloadError={payloadError}
+          setPayloadError={setPayloadError}
+          overrideSigner={ovverrideSigner}
+          setOverrideSigner={setOverrideSigner}
           showNotification={showNotification}
           txnPayload={txnPayload}
         />
-        <Checkbox
-          isChecked={broadcastTxn}
-          setIsChecked={setBroadcastTxn}
-          label="Broadcast Transaction"
-        />
+        {!disableBroadcast && (
+          <Checkbox
+            isChecked={broadcastTxn}
+            setIsChecked={setBroadcastTxn}
+            label="Broadcast Transaction"
+          />
+        )}
         <ButtonV2
           variant="dark"
           styleProps={{

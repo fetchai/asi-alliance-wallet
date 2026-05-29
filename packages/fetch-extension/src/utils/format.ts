@@ -1,3 +1,4 @@
+import { CoinPretty } from "@keplr-wallet/unit";
 import { AGENT_ADDRESS } from "../config.ui.var";
 import { isToday, isYesterday, format } from "date-fns";
 import moment from "moment";
@@ -468,4 +469,42 @@ export const formatAddressWithCustom = (
   } else {
     return address;
   }
+};
+
+export const formatBalance = (
+  balance: CoinPretty,
+  maxDecimals = 6,
+  useCoinPrettyFormatting = true
+) => {
+  const minimumValue = 1 / Math.pow(10, maxDecimals);
+
+  const shrunk = useCoinPrettyFormatting
+    ? balance.shrink(true).trim(true).maxDecimals(maxDecimals)
+    : balance.shrink(true);
+
+  const dec = shrunk.toDec();
+  const numericValue = Number(dec.toString());
+
+  // show minimum display value for very small non-zero amounts
+  if (!dec.isZero() && numericValue < minimumValue) {
+    return `< ${minimumValue.toFixed(maxDecimals)} ${
+      balance.currency.coinDenom
+    }`;
+  }
+
+  // if value is zero show no decimals
+  if (dec.isZero()) {
+    return useCoinPrettyFormatting
+      ? shrunk.maxDecimals(0).toString()
+      : `0 ${balance.currency.coinDenom}`;
+  }
+
+  if (useCoinPrettyFormatting) {
+    return shrunk.toString();
+  }
+
+  return `${numericValue.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDecimals,
+  })} ${balance.currency.coinDenom}`;
 };

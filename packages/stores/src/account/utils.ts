@@ -222,6 +222,19 @@ export const getJson = (addresses: any, type: string) => {
     };
   }
 
+  if (type === "govSubmitProposal") {
+    json = {
+      type: addresses.content.type,
+      title: addresses.content.value.title,
+      content: addresses.content,
+      amount: addresses.initial_deposit?.map((deposit: any) => ({
+        denom: deposit.denom,
+        amount: deposit.amount,
+      }))?.[0],
+      proposer: addresses.proposer,
+    };
+  }
+
   return JSON.stringify(json);
 };
 
@@ -235,6 +248,7 @@ export enum TXNTYPE {
   govVote = "govVote",
   nativeBridgeSend = "nativeBridgeSend",
   approval = "approval",
+  govSubmitProposal = "govSubmitProposal",
   createSecret20ViewingKey = "createSecret20ViewingKey",
 }
 
@@ -280,6 +294,11 @@ export const getNodes = (msgs: any, type: string) => {
 
   if (type === TXNTYPE.nativeBridgeSend) {
     signerAddress = msgs.aminoMsgs[0].value.sender;
+  }
+
+  if (type === TXNTYPE.govSubmitProposal) {
+    balanceOffset = `-${msgs.aminoMsgs[0].value.initial_deposit[0].amount}`;
+    signerAddress = msgs.aminoMsgs[0].value.proposer;
   }
 
   return { nodes, balanceOffset, signerAddress };

@@ -65,6 +65,8 @@ export const ActivityDetails = observer(() => {
         );
       case Boolean(details.validatorDstAddress):
         return formatToTruncated(details.validatorDstAddress);
+      case Boolean(details.proposer):
+        return formatToTruncated(details.proposer);
       case details.verb == "IBC transfer":
         return formatAddress(details.receiver);
       default:
@@ -116,7 +118,48 @@ export const ActivityDetails = observer(() => {
         </div>
 
         <div className={style["card"]}>
-          {details.verb == "Smart Contract Interaction" ? (
+          {details.verb === "Governance Proposal" ? (
+            <React.Fragment>
+              <Card
+                leftImage={require("@assets/svg/wireframe/wallet.svg")}
+                leftImageStyle={{
+                  height: "32px",
+                  width: "32px",
+                  background: "white",
+                  padding: 0,
+                }}
+                heading="Proposer"
+                headingStyle={{ fontSize: "14px", fontWeight: 400 }}
+                subheading={formatAddress(details.proposer)}
+              />
+              <div
+                style={{ height: "56px" }}
+                className={style["verticalLine"]}
+              />
+              <Card
+                leftImage={require("@assets/svg/wireframe/proposal.svg")}
+                leftImageStyle={{
+                  height: "24px",
+                  width: "32px",
+                  background: "white",
+                  padding: 0,
+                }}
+                heading={details.proposalType || "Proposal"}
+                headingStyle={{ fontSize: "14px", fontWeight: 400 }}
+                subheading={details.proposalTitle || "—"}
+                rightContent={
+                  <div className={style["cardAmt"]}>
+                    <div className={style["inFET"]}>
+                      {`${details.amountNumber} ${details.amountAlphabetic}`}
+                    </div>
+                    {usdValue && (
+                      <div className={style["inUSD"]}>{usdValue}</div>
+                    )}
+                  </div>
+                }
+              />
+            </React.Fragment>
+          ) : details.verb == "Smart Contract Interaction" ? (
             <Card
               leftImage={require("@assets/svg/wireframe/contract-interaction.svg")}
               style={{
@@ -153,7 +196,7 @@ export const ActivityDetails = observer(() => {
                   background: "white",
                   padding: 0,
                 }}
-                heading={details.signerAddress ? "From" : "deligator address"}
+                heading={details.signerAddress ? "From" : "delegator address"}
                 headingStyle={{
                   fontSize: "14px",
                   fontWeight: 400,
@@ -161,7 +204,7 @@ export const ActivityDetails = observer(() => {
                 subheading={formatAddress(
                   details.signerAddress
                     ? details.signerAddress
-                    : details.deligatorAddress
+                    : details.delegatorAddress
                 )}
               />
               <div

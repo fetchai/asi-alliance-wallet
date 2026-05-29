@@ -3,6 +3,7 @@ import { shortenNumber } from "@utils/format";
 import sendIcon from "@assets/svg/wireframe/asi-send.svg";
 import recieveIcon from "@assets/svg/wireframe/activity-recieve.svg";
 import stakeIcon from "@assets/svg/wireframe/asi-staked.svg";
+import proposalIcon from "@assets/svg/wireframe/proposal.svg";
 import { fetchGovProposalTransactions } from "@graphQL/activity-api";
 
 const getAmount = (denom: string, amount: string, chainStore: any) => {
@@ -31,8 +32,13 @@ export const getDetails = (node: any, chainStore: any): any => {
   const { typeUrl, json } = nodes[0];
   const parsedJson = JSON.parse(json);
   const toAddress = parsedJson.toAddress;
-  const { delegatorAddress, validatorAddress, validatorDstAddress, receiver } =
-    parsedJson;
+  const {
+    delegatorAddress,
+    validatorAddress,
+    validatorDstAddress,
+    receiver,
+    proposer,
+  } = parsedJson;
   const {
     fees,
     memo,
@@ -46,6 +52,15 @@ export const getDetails = (node: any, chainStore: any): any => {
   const amt = parsedJson.amount;
   let currency = "afet";
   const isAmountDeducted = parseFloat(node.balanceOffset) < 0;
+  const proposalTitle =
+    parsedJson.content?.value?.title || parsedJson.title || null;
+  let proposalType = parsedJson.content?.type || null;
+
+  if (proposalType) {
+    proposalType =
+      proposalType.split("/").pop().replace("Proposal", "") + " Proposal";
+  }
+
   if (parsedJson.amount) {
     currency = Array.isArray(parsedJson.amount)
       ? parsedJson.amount[0].denom
@@ -74,6 +89,9 @@ export const getDetails = (node: any, chainStore: any): any => {
       break;
     case "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward":
       verb = "Claimed";
+      break;
+    case "/cosmos.gov.v1beta1.MsgSubmitProposal":
+      verb = "Governance Proposal";
       break;
     case "/cosmos.authz.v1beta1.MsgExec":
     case "/cosmwasm.wasm.v1.MsgExecuteContract":
@@ -112,6 +130,9 @@ export const getDetails = (node: any, chainStore: any): any => {
     validatorAddress,
     delegatorAddress,
     validatorDstAddress,
+    proposer,
+    proposalTitle,
+    proposalType,
     receiver,
     feeNumber,
     feeAlphabetic,
@@ -126,6 +147,8 @@ export const getActivityIcon = (type: string, verb: string): string => {
   switch (type) {
     case "/cosmos.bank.v1beta1.MsgSend":
       return verb === "Sent" ? sendIcon : recieveIcon;
+    case "/cosmos.gov.v1beta1.MsgSubmitProposal":
+      return proposalIcon;
     case "/cosmos.staking.v1beta1.MsgDelegate":
     case "/cosmos.staking.v1beta1.MsgUndelegate":
     case "/cosmos.staking.v1beta1.MsgBeginRedelegate":

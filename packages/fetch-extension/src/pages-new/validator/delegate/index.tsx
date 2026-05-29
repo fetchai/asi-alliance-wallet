@@ -8,6 +8,8 @@ import { useDelegateTxConfig } from "@keplr-wallet/hooks";
 import { Staking } from "@keplr-wallet/stores";
 import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { HeaderLayout } from "@layouts-v2/header-layout";
+import { formatBalance, removeComma } from "@utils/format";
+import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { observer } from "mobx-react-lite";
 import React, {
   FunctionComponent,
@@ -19,11 +21,9 @@ import { useIntl } from "react-intl";
 import { useLocation, useNavigate } from "react-router";
 import { Alert, FormGroup } from "reactstrap";
 import { TXNTYPE } from "../../../config";
-import { useStore } from "../../../stores";
 import { useLanguage } from "../../../languages";
+import { useStore } from "../../../stores";
 import style from "./style.module.scss";
-import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
-import { removeComma } from "@utils/format";
 
 export const Delegate: FunctionComponent = observer(() => {
   const location = useLocation();
@@ -97,12 +97,7 @@ export const Delegate: FunctionComponent = observer(() => {
   const FiatCurrency = inputInFiatCurrency
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
-
-  const availableBalance = `${balance
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${FiatCurrency}`;
+  const availableBalance = `${formatBalance(balance)}${FiatCurrency}`;
 
   const bondedValidators = queries.cosmos.queryValidators.getQueryStatus(
     Staking.BondStatus.Bonded
