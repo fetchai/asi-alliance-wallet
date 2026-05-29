@@ -3450,12 +3450,21 @@ export enum TXNTYPE {
   createSecret20ViewingKey = "createSecret20ViewingKey",
 }
 
-if (true) {
+const isDevelopmentBuild = process.env.NODE_ENV === "development";
+
+if (isDevelopmentBuild) {
   EmbedChainInfos.push(
-    LOCAL_TEST_NETWORK_CONFIG,
-    REMOTE_TEST_NETWORK_CONFIG,
-    ...CardanoChainInfos
+    {
+      ...LOCAL_TEST_NETWORK_CONFIG,
+      hideInUI: false,
+    },
+    {
+      ...REMOTE_TEST_NETWORK_CONFIG,
+      hideInUI: false,
+    }
   );
 }
+
+EmbedChainInfos.push(...CardanoChainInfos);
 
 export { EmbedChainInfos };
