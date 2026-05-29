@@ -28,7 +28,12 @@ import { CardanoService } from "./service";
 import { KeyRingService } from "../keyring/service";
 import { Buffer } from "buffer/";
 import { formatErrorForLog } from "../logging/safe-error";
-import { encodeCardanoUiError } from "@keplr-wallet/cardano";
+import {
+  encodeCardanoUiError,
+  isBlockfrostRateLimitError,
+  isBlockfrostRateLimitMessage,
+  CARDANO_UI_ERROR_PREFIX,
+} from "@keplr-wallet/cardano";
 import {
   classifyEnsureCardanoServiceReadyError,
   stateFromErrorMessage,
@@ -43,10 +48,15 @@ import {
   encodeCardanoSendError,
   withBlockfrostLimitPresentation,
 } from "./blockfrost-limit-presentation";
-import { CARDANO_UI_ERROR_PREFIX } from "@keplr-wallet/cardano";
 
 const stateFromError = (error: unknown): CardanoServiceState => {
+  if (isBlockfrostRateLimitError(error)) {
+    return "blockfrost_rate_limited";
+  }
   const message = error instanceof Error ? error.message : String(error ?? "");
+  if (isBlockfrostRateLimitMessage(message)) {
+    return "blockfrost_rate_limited";
+  }
   return stateFromErrorMessage(message);
 };
 
@@ -619,11 +629,14 @@ const handleGetCardanoSyncStatusMsg: (
         await keyRingService.ensureCardanoServiceReady(msg.chainId);
       } catch (error) {
         const classified = classifyEnsureCardanoServiceReadyError(error);
-        if (classified === null) {
+        const rateLimited = stateFromError(error) === "blockfrost_rate_limited";
+
+        if (classified === null && !rateLimited) {
           throw error;
         }
+
         return attachLimit({
-          state: classified,
+          state: rateLimited ? "blockfrost_rate_limited" : classified!,
           isSettled: false,
           hasOutgoingPendingSpend: false,
           error: errorMessage(error),
@@ -720,7 +733,17 @@ const handleGetCardanoTxHistoryMsg: (
       );
 
     if (msg.chainId) {
-      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+      try {
+        await keyRingService.ensureCardanoServiceReady(msg.chainId);
+      } catch (error) {
+        return attachLimit({
+          state: stateFromError(error),
+          items: [],
+          mightHaveMore: false,
+          hasDegradedItems: false,
+          error: errorMessage(error),
+        });
+      }
     }
 
     if (!service.isInitialized()) {
@@ -788,10 +811,27 @@ const handleGetCardanoTxHistoryMsg: (
   };
 };
 
+const assertNever = (value: never): never => {
+  throw new Error(`Unhandled Cardano service state: ${value}`);
+};
+
 const toTrackedTxServiceState = (
   s: CardanoServiceState
-): CardanoTrackedTxServiceState =>
-  s === "empty_valid" ? "ready_with_data" : (s as CardanoTrackedTxServiceState);
+): CardanoTrackedTxServiceState => {
+  switch (s) {
+    case "empty_valid":
+      return "ready_with_data";
+    case "blockfrost_rate_limited":
+      return "provider_error";
+    case "ready_with_data":
+    case "syncing":
+    case "temporarily_unavailable":
+    case "provider_error":
+      return s;
+    default:
+      return assertNever(s);
+  }
+};
 
 /** Handler for tracked tx send status (internal-only). Does not wait for wallet settled. */
 const handleGetCardanoTrackedTxStatusMsg: (
@@ -949,7 +989,17 @@ const handleLoadMoreCardanoTxHistoryMsg: (
       );
 
     if (msg.chainId) {
-      await keyRingService.ensureCardanoServiceReady(msg.chainId);
+      try {
+        await keyRingService.ensureCardanoServiceReady(msg.chainId);
+      } catch (error) {
+        return attachLimit({
+          state: stateFromError(error),
+          items: [],
+          mightHaveMore: false,
+          hasDegradedItems: false,
+          error: errorMessage(error),
+        });
+      }
     }
 
     if (!service.isInitialized()) {

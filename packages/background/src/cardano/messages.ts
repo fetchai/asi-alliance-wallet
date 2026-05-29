@@ -118,7 +118,8 @@ export type CardanoServiceState =
   | "empty_valid"
   | "temporarily_unavailable"
   | "syncing"
-  | "provider_error";
+  | "provider_error"
+  | "blockfrost_rate_limited";
 
 export interface CardanoBalancePayload {
   available: string;

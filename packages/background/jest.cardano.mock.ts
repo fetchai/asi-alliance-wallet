@@ -122,6 +122,7 @@ export {
 export {
   isBlockfrostRateLimitError,
   isBlockfrostRateLimitHttpStatus,
+  isBlockfrostRateLimitMessage,
 } from "../cardano/src/adapters/blockfrost-error-classifier";
 
 export const getBlockfrostConfigs = () => ({

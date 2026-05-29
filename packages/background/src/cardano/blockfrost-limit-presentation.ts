@@ -53,12 +53,16 @@ export async function withBlockfrostLimitPresentation<T>(
     return response as T & { blockfrostLimit?: BlockfrostLimitPresentation };
   }
 
+  const forceRateLimited =
+    (response as { state?: unknown }).state === "blockfrost_rate_limited";
+
   return {
     ...response,
     blockfrostLimit: await getBlockfrostLimitPresentation(
       cardanoService,
       keyRingService,
-      chainId
+      chainId,
+      { forceRateLimited }
     ),
   } as T & { blockfrostLimit?: BlockfrostLimitPresentation };
 }

@@ -26,6 +26,7 @@ import sendIcon from "@assets/svg/wireframe/asi-send.svg";
 import { lovelacesToAdaString, formatAssetAmount } from "@keplr-wallet/cardano";
 import { getCardanoAssetIconUrl } from "./cardano-asset-utils";
 import receiveIcon from "@assets/svg/wireframe/activity-recieve.svg";
+import { isTransientState, getStateErrorMessage } from "./state-helpers";
 
 const directionLabel = (d: CardanoTxHistoryItem["direction"]) => {
   switch (d) {
@@ -100,11 +101,11 @@ export const CardanoTransactionsTab = observer(() => {
         return;
       }
       const typedRes = res as CardanoTxHistoryStateResponse;
-      setBlockfrostLimit(typedRes?.blockfrostLimit);
+      const presentation = typedRes?.blockfrostLimit;
+      setBlockfrostLimit(presentation);
       const state = typedRes?.state as CardanoServiceState | undefined;
       if (state && state !== "ready_with_data" && state !== "empty_valid") {
-        const transient =
-          state === "syncing" || state === "temporarily_unavailable";
+        const transient = isTransientState(state);
         setIsSyncing(transient);
         setIsSyncingDueToTimeout(false);
         setHasFetchedHistory(!transient);
@@ -113,7 +114,7 @@ export const CardanoTransactionsTab = observer(() => {
         setError(
           transient
             ? undefined
-            : typedRes?.error || "Transaction history unavailable"
+            : getStateErrorMessage(state, typedRes?.error, presentation)
         );
         return;
       }
@@ -143,16 +144,17 @@ export const CardanoTransactionsTab = observer(() => {
         new LoadMoreCardanoTxHistoryMsg(pageSize, chainId)
       );
       const typedRes = res as CardanoTxHistoryStateResponse;
-      setBlockfrostLimit(typedRes?.blockfrostLimit);
+      const presentation = typedRes?.blockfrostLimit;
+      setBlockfrostLimit(presentation);
       const state = typedRes?.state as CardanoServiceState | undefined;
       if (state && state !== "ready_with_data" && state !== "empty_valid") {
-        const transient =
-          state === "syncing" || state === "temporarily_unavailable";
+        const transient = isTransientState(state);
         setIsSyncing(transient);
+        setHasFetchedHistory(!transient);
         setError(
           transient
             ? undefined
-            : typedRes?.error || "Transaction history unavailable"
+            : getStateErrorMessage(state, typedRes?.error, presentation)
         );
         return;
       }
@@ -216,15 +218,19 @@ export const CardanoTransactionsTab = observer(() => {
         if (!isSubscribed) return;
 
         const state = syncStatus?.state;
-        setBlockfrostLimit(syncStatus?.blockfrostLimit);
+        const presentation = syncStatus?.blockfrostLimit;
+        setBlockfrostLimit(presentation);
         const settled = state === "ready_with_data" && !!syncStatus?.isSettled;
-        const transient =
-          state === "syncing" || state === "temporarily_unavailable";
+        const transient = isTransientState(state);
         if (!hasFetchedHistory) {
           setIsSyncing(transient || !settled);
         }
-        if (state === "provider_error") {
-          setError(syncStatus?.error || "Cardano provider unavailable");
+        if (state === "provider_error" || state === "blockfrost_rate_limited") {
+          setIsSyncing(false);
+          setHasFetchedHistory(true);
+          setError(
+            getStateErrorMessage(state, syncStatus?.error, presentation)
+          );
           if (interval) {
             clearInterval(interval);
             interval = null;
