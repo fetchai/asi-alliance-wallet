@@ -156,7 +156,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
           signedTxn: createSignedTxn(
             signDocParams?.sequence,
             parsedTxnPayload,
-            JSON.parse(signature).signatures
+            result.signature?.signature
           ),
           signatureFileName: fileNames.signature,
           txnFileName: fileNames.transaction,

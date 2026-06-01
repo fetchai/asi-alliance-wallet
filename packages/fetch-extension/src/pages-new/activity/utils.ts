@@ -57,8 +57,11 @@ export const getDetails = (node: any, chainStore: any): any => {
   let proposalType = parsedJson.content?.type || null;
 
   if (proposalType) {
-    proposalType =
-      proposalType.split("/").pop().replace("Proposal", "") + " Proposal";
+    proposalType = proposalType
+      .split("/")
+      ?.pop()
+      ?.replace(/([A-Z])/g, " $1")
+      .trim();
   }
 
   if (parsedJson.amount) {

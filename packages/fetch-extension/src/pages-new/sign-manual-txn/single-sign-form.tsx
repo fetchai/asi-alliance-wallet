@@ -85,7 +85,7 @@ export const SingleSignForm: React.FC<SignerFormProps> = observer(
             signDocParams?.sequence,
             txnPayload,
             result.signature.pub_key,
-            JSON.parse(signature).signatures
+            result.signature?.signature
           ),
           signatureFileName: fileNames.signature,
           txnFileName: fileNames.transaction,

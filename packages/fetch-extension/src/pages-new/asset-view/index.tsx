@@ -192,7 +192,9 @@ export const AssetView = observer(() => {
   const formattedValue =
     numericValue !== 0 && numericValue < 0.000001
       ? "< 0.000001"
-      : numericValue.toLocaleString("en-US");
+      : numericValue.toLocaleString("en-US", {
+          maximumFractionDigits: numericValue < 0.001 ? 6 : 3,
+        });
 
   return (
     <HeaderLayout showTopMenu={true} onBackButton={() => navigate(-1)}>
