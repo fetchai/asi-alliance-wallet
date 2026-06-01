@@ -38,8 +38,10 @@ import { ParameterChangeProposal } from "cosmjs-types/cosmos/params/v1beta1/para
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Long from "long";
 import {
+  AUTHZ_TYPE_MAP,
   FEE_ALLOWANCE_TYPE_MAP,
   NEEDS_EXPLICIT_PARSING_MESSAGE_TYPES,
+  PUBKEY_TYPE_MAP,
   TRANSACTION_SIGNER_FIELDS,
 } from "./constants";
 import {
@@ -212,6 +214,33 @@ const customGovConverters = {
   },
 };
 
+function stripEmptyFields(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.length === 0 ? undefined : obj.map(stripEmptyFields);
+  }
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj)
+        .map(([k, v]) => [k, stripEmptyFields(v)])
+        .filter(([_, v]) => v !== null && v !== undefined)
+    );
+  }
+  return obj;
+}
+
+function transformAuthorizationValue(
+  protoType: string,
+  rest: Record<string, unknown>
+): Record<string, unknown> {
+  if (protoType === "/cosmos.authz.v1beta1.GenericAuthorization") {
+    return stripEmptyFields({
+      ...rest,
+      msg: `cosmos-sdk/${(rest?.["msg"] as string)?.split(".")?.pop()}`,
+    });
+  }
+  return stripEmptyFields(rest);
+}
+
 /**
  * Registry for protobuf fromJSON decoders
  */
@@ -233,7 +262,7 @@ const parseExplicit = (typeUrl: string, msg: any): any => {
           delegator_address: msg.delegator_address,
           validator_address: msg.validator_address,
           pubkey: {
-            type: msg.pubkey["@type"],
+            type: PUBKEY_TYPE_MAP[msg.pubkey["@type"]] || msg.pubkey["@type"],
             value: msg.pubkey.key,
           },
           value: msg.value,
@@ -259,15 +288,25 @@ const parseExplicit = (typeUrl: string, msg: any): any => {
           msgs: protoJsonToAminoMsg(msg.msgs ?? []),
         },
       };
-    case "/cosmos.authz.v1beta1.MsgGrant":
+
+    case "/cosmos.authz.v1beta1.MsgGrant": {
+      const { "@type": authType, ...authRest } = msg.grant.authorization;
+
       return {
         type: "cosmos-sdk/MsgGrant",
         value: {
           granter: msg.granter,
           grantee: msg.grantee,
-          grant: msg.grant,
+          grant: {
+            authorization: {
+              type: AUTHZ_TYPE_MAP[authType] ?? authType,
+              value: transformAuthorizationValue(authType, authRest),
+            },
+            expiration: msg.grant.expiration ?? undefined,
+          },
         },
       };
+    }
 
     case "/cosmos.authz.v1beta1.MsgRevoke":
       return {
@@ -290,7 +329,7 @@ const parseExplicit = (typeUrl: string, msg: any): any => {
           allowance: msg.allowance
             ? {
                 type: FEE_ALLOWANCE_TYPE_MAP?.[allowanceType] || allowanceType,
-                value: allowanceRest,
+                value: stripEmptyFields(allowanceRest),
               }
             : undefined,
         },

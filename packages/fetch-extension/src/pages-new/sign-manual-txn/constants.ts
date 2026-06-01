@@ -54,3 +54,20 @@ export const FEE_ALLOWANCE_TYPE_MAP: Record<string, string> = {
   "/cosmos.feegrant.v1beta1.AllowedMsgAllowance":
     "cosmos-sdk/AllowedMsgAllowance",
 };
+
+export const PUBKEY_TYPE_MAP: Record<string, string> = {
+  "/cosmos.crypto.ed25519.PubKey": "tendermint/PubKeyEd25519",
+  "/cosmos.crypto.secp256k1.PubKey": "tendermint/PubKeySecp256k1",
+  "/cosmos.crypto.sr25519.PubKey": "tendermint/PubKeySr25519",
+};
+
+export const AUTHZ_TYPE_MAP: Record<string, string> = {
+  "/cosmos.authz.v1beta1.GenericAuthorization":
+    "cosmos-sdk/GenericAuthorization",
+  "/cosmos.bank.v1beta1.SendAuthorization": "cosmos-sdk/SendAuthorization",
+  "/cosmos.staking.v1beta1.StakeAuthorization": "cosmos-sdk/StakeAuthorization",
+  "/cosmos.feegrant.v1beta1.AllowedMsgAllowance":
+    "cosmos-sdk/AllowedMsgAllowance",
+  "/cosmos.feegrant.v1beta1.BasicAllowance": "cosmos-sdk/BasicAllowance",
+  "/cosmos.feegrant.v1beta1.PeriodicAllowance": "cosmos-sdk/PeriodicAllowance",
+};
