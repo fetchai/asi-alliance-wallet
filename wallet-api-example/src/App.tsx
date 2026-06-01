@@ -44,11 +44,11 @@ function App() {
   useEffect(() => {
     init();
     window.addEventListener("fetchwallet_walletstatuschange", getStatus);
-    window.addEventListener("fetchwallet_keystorechange", getAccountAndNetworkDetails);
+    window.addEventListener("keplr_keystorechange", getAccountAndNetworkDetails);
 
     return () => {
       window.removeEventListener("fetchwallet_walletstatuschange", getStatus);
-      window.removeEventListener("fetchwallet_keystorechange", getAccountAndNetworkDetails);
+      window.removeEventListener("keplr_keystorechange", getAccountAndNetworkDetails);
     }
   }, []);
 

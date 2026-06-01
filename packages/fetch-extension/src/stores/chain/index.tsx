@@ -1,4 +1,11 @@
-import { observable, action, computed, makeObservable, flow } from "mobx";
+import {
+  observable,
+  action,
+  computed,
+  makeObservable,
+  flow,
+  flowResult,
+} from "mobx";
 
 import {
   ChainInfoInner,
@@ -23,6 +30,8 @@ import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { MessageRequester } from "@keplr-wallet/router";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
+import { getDefaultFallbackChainId } from "@keplr-wallet/background/cardano-chain-policy";
 
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @observable
@@ -171,15 +180,49 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     this.requester.sendMessage(BACKGROUND_PORT, msg);
   }
 
+  /**
+   * Awaitable network switch: local selection, background SetSelectedChain, then persist last-view chain.
+   * Prefer this (with MobX flow/flowResult) before changeKeyRing in add/import so keystore-changed handlers
+   * that call getKey already see a non-Cardano chain, avoiding Cardano-24w race with a newly added wallet.
+   */
+  @flow
+  *selectChainAndPersist(chainId: string) {
+    yield* selectChainAndPersistWiring(
+      {
+        isInitializing: this._isInitializing,
+        setDeferChainIdSelect: (id) => {
+          this.deferChainIdSelect = id;
+        },
+        sendSetSelectedChain: (id) => {
+          const msg = new SetSelectedChainMsg(id);
+          return this.requester.sendMessage(BACKGROUND_PORT, msg);
+        },
+        setSelectedChainIdLocal: (id) => {
+          this._selectedChainId = id;
+        },
+        saveLastViewChainId: () => flowResult(this.saveLastViewChainId()),
+      },
+      chainId
+    );
+  }
+
   @action
   toggleShowTestnet(value: boolean) {
     this._showTestnet = value;
     this.saveLastViewShowTestnet();
   }
 
+  private hasChainSafe(chainId: string): boolean {
+    try {
+      return this.hasChain(chainId);
+    } catch {
+      return false;
+    }
+  }
+
   @computed
   get current(): ChainInfoInner<ChainInfoWithCoreTypes> {
-    if (this.hasChain(this._selectedChainId)) {
+    if (this.hasChainSafe(this._selectedChainId)) {
       return this.getChain(this._selectedChainId);
     }
 
@@ -214,8 +257,15 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     );
 
     if (!this.deferChainIdSelect) {
-      if (lastViewChainId) {
-        this.selectChain(lastViewChainId);
+      const chainIdToSelect =
+        lastViewChainId && this.hasChainSafe(lastViewChainId)
+          ? lastViewChainId
+          : getDefaultFallbackChainId(this.chainInfos) ||
+            this.chainInfos[0]?.chainId;
+
+      if (chainIdToSelect) {
+        yield this.kvStore.set("extension_last_view_chain_id", chainIdToSelect);
+        this.selectChain(chainIdToSelect);
       }
     }
     this._isInitializing = false;

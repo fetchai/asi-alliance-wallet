@@ -17,8 +17,6 @@ import {
 } from "@ethereumjs/tx";
 import { computeAddress } from "@ethersproject/transactions";
 import { publicKeyConvert } from "secp256k1";
-import Common from "@ethereumjs/common";
-import { EthermintChainIdHelper } from "@keplr-wallet/cosmos";
 import { Keyring as EvmKeyring } from "@keystonehq/evm-keyring";
 
 export const TYPE_KEYSTONE_GET_PUBKEY = "keystone-get-pubkey";
@@ -233,7 +231,6 @@ export class KeystoneService {
   async signEthereum(
     env: Env,
     coinType: number,
-    chainId: string,
     bip44HDPath: BIP44HDPath,
     key: Key,
     keyringData: KeystoneKeyringData,
@@ -264,10 +261,9 @@ export class KeystoneService {
         // [EIP-2930](https://eips.ethereum.org/EIPS/eip-2930)
         data = new AccessListEIP2930Transaction(msg);
       } else {
-        const ethChainId = EthermintChainIdHelper.parse(chainId);
         data = new Transaction(msg, {
           // TODO: Other properties is need or not, such as "hardfork".
-          common: Common.custom({ chainId: ethChainId.ethChainId }),
+          // common: Common.custom({ chainId: ethChainId.ethChainId }),
         });
       }
     } else if (mode === EthSignType.MESSAGE) {

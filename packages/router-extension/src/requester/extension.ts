@@ -22,13 +22,17 @@ export class InExtensionMessageRequester implements MessageRequester {
       routerId: getKeplrExtensionRouterId(),
     };
 
-    const result = JSONUint8Array.unwrap(
-      await browser.runtime.sendMessage({
-        port,
-        type: msg.type(),
-        msg: JSONUint8Array.wrap(msg),
-      })
-    );
+    const rawResult = await browser.runtime.sendMessage({
+      port,
+      type: msg.type(),
+      msg: JSONUint8Array.wrap(msg),
+    });
+
+    if (!rawResult) {
+      throw new Error("Null result");
+    }
+
+    const result = JSONUint8Array.unwrap(rawResult);
 
     if (!result) {
       throw new Error("Null result");

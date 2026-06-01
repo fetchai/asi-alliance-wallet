@@ -1,9 +1,28 @@
+/**
+ * Account / keyring refresh listens on both KEYRING_SURFACES_SYNC and legacy
+ * RefreshAccountList plus background `keystore-changed`; extra listeners can mean
+ * duplicate UI refresh — consolidate when maintaining this area (see plan / tech debt).
+ */
 import { useEffect, useState } from "react";
-import { RefreshAccountList } from "@keplr-wallet/background";
+import {
+  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+  RefreshAccountList,
+} from "@keplr-wallet/background";
 import { useStore } from "./stores";
+import { syncKeyringSurfacesFromBackground } from "./utils/keyring-surfaces-sync";
+
+function isExtensionUiContext(): boolean {
+  try {
+    return Boolean(
+      typeof browser !== "undefined" && (browser as any).runtime?.id
+    );
+  } catch {
+    return false;
+  }
+}
 
 export const useAccountChangeMonitoring = () => {
-  const { keyRingStore } = useStore();
+  const { keyRingStore, chainStore } = useStore();
   const [isPopupOrSidepanel, setIsPopupOrSidepanel] = useState(false);
 
   useEffect(() => {
@@ -23,11 +42,30 @@ export const useAccountChangeMonitoring = () => {
     init();
   }, []);
 
-  // update keyring store in extension to refresh multikeystore list
-  // when wallet is imported or created
-
+  // Dedicated keyring/chain sync for any extension UI page (popup, side panel, full-page tab).
   useEffect(() => {
-    if (!isPopupOrSidepanel) return; // don't set listener in normal tabs
+    if (!isExtensionUiContext()) {
+      return;
+    }
+
+    const onKeyringSurfacesSync = (message: unknown) => {
+      const m = message as { type?: string };
+      if (m?.type === KEYRING_SURFACES_SYNC_MESSAGE_TYPE) {
+        void syncKeyringSurfacesFromBackground(chainStore, keyRingStore);
+      }
+    };
+
+    browser.runtime.onMessage.addListener(onKeyringSurfacesSync);
+    return () => {
+      browser.runtime.onMessage.removeListener(onKeyringSurfacesSync);
+    };
+  }, [chainStore, keyRingStore]);
+
+  // Legacy: refresh account list and navigate home (popup / sidepanel only).
+  useEffect(() => {
+    if (!isPopupOrSidepanel) {
+      return;
+    }
 
     const messageHandler = (message: any) => {
       const RefreshAccountListMsg = new RefreshAccountList().type();
@@ -42,7 +80,7 @@ export const useAccountChangeMonitoring = () => {
     return () => {
       browser.runtime.onMessage.removeListener(messageHandler);
     };
-  }, [isPopupOrSidepanel]);
+  }, [isPopupOrSidepanel, keyRingStore]);
 
   return null;
 };

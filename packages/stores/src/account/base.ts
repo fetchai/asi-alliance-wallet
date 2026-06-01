@@ -1,4 +1,11 @@
-import { action, computed, flow, makeObservable, observable } from "mobx";
+import {
+  action,
+  computed,
+  flow,
+  makeObservable,
+  observable,
+  runInAction,
+} from "mobx";
 import {
   AppCurrency,
   Keplr,
@@ -68,6 +75,8 @@ export class AccountSetBase {
   protected _txInProgress: string = "";
 
   protected _pubKey: Uint8Array;
+
+  protected initSequence = 0;
 
   protected hasInited = false;
 
@@ -155,7 +164,24 @@ export class AccountSetBase {
         await this.suggestChain(keplr, chainInfo);
       }
     }
-    await keplr.enable(chainId);
+
+    // Check if KeyRing is ready before calling enable
+    // This prevents "No keys available" errors during initialization
+    try {
+      await keplr.enable(chainId);
+    } catch (e) {
+      // If enable fails due to no keys, don't throw - just return
+      // The getKey call below will handle the error appropriately
+      if (
+        e.message &&
+        (e.message.includes("No keys available") ||
+          e.message.includes("key doesn't exist") ||
+          e.message.includes("Please create a wallet first"))
+      ) {
+        return; // Don't throw, let getKey handle it
+      }
+      throw e; // Re-throw other errors
+    }
   }
 
   protected async suggestChain(
@@ -165,10 +191,21 @@ export class AccountSetBase {
     await keplr.experimentalSuggestChain(chainInfo.raw);
   }
 
-  private readonly handleInit = () => this.init();
+  private readonly handleInit = () => {
+    runInAction(() => {
+      if (this._walletStatus === WalletStatus.NotExist) {
+        this._walletStatus = WalletStatus.NotInit;
+      }
+      this._rejectionReason = undefined;
+    });
+    this.init();
+  };
 
   @flow
-  public *init() {
+  public *init(): Generator<any, void, any> {
+    const currentInitSequence = ++this.initSequence;
+    const isCurrentInit = () => currentInitSequence === this.initSequence;
+
     // If wallet status is not exist, there is no need to try to init because it always fails.
     if (this.walletStatus === WalletStatus.NotExist) {
       return;
@@ -188,6 +225,9 @@ export class AccountSetBase {
     this._walletStatus = WalletStatus.Loading;
 
     const keplr = yield* toGenerator(this.getKeplr());
+    if (!isCurrentInit()) {
+      return;
+    }
     if (!keplr) {
       this._walletStatus = WalletStatus.NotExist;
       return;
@@ -197,7 +237,13 @@ export class AccountSetBase {
 
     try {
       yield this.enable(keplr, this.chainId);
+      if (!isCurrentInit()) {
+        return;
+      }
     } catch (e) {
+      if (!isCurrentInit()) {
+        return;
+      }
       console.log(e);
       this._walletStatus = WalletStatus.Rejected;
       this._rejectionReason = e;
@@ -206,6 +252,9 @@ export class AccountSetBase {
 
     try {
       const key = yield* toGenerator(keplr.getKey(this.chainId));
+      if (!isCurrentInit()) {
+        return;
+      }
       this._bech32Address = key.bech32Address;
       this._isNanoLedger = key.isNanoLedger;
       this._isKeystone = key.isKeystone;
@@ -219,21 +268,40 @@ export class AccountSetBase {
               `extension_txn_nonce-${this.bech32Address}-${this.chainId}`
             )
           )) || 0;
+        if (!isCurrentInit()) {
+          return;
+        }
         this._customSequence = new Int(savedTxnNonce);
       }
 
       // Set the wallet status as loaded after getting all necessary infos.
       this._walletStatus = WalletStatus.Loaded;
     } catch (e) {
+      if (!isCurrentInit()) {
+        return;
+      }
       console.log(e);
-      // Caught error loading key
-      // Reset properties, and set status to Rejected
+
+      if (
+        e.message &&
+        (e.message.includes("No keys available") ||
+          e.message.includes("key doesn't exist") ||
+          e.message.includes("Please create a wallet first"))
+      ) {
+        this._bech32Address = "";
+        this._isNanoLedger = false;
+        this._isKeystone = false;
+        this._name = "";
+        this._pubKey = new Uint8Array(0);
+        this._walletStatus = WalletStatus.NotExist;
+        this._rejectionReason = undefined;
+        return;
+      }
       this._bech32Address = "";
       this._isNanoLedger = false;
       this._isKeystone = false;
       this._name = "";
       this._pubKey = new Uint8Array(0);
-
       this._walletStatus = WalletStatus.Rejected;
       this._rejectionReason = e;
     }
@@ -406,10 +474,14 @@ export class AccountSetBase {
       return "";
     }
 
-    return Bech32Address.fromBech32(
-      this.bech32Address,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
-    ).toHex(true);
+    try {
+      return Bech32Address.fromBech32(
+        this.bech32Address,
+        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+      ).toHex(true);
+    } catch {
+      return "";
+    }
   }
 
   @action

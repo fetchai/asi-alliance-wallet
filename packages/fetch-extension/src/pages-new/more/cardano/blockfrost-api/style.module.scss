@@ -1,0 +1,86 @@
+.page {
+  padding: 0 4px 24px;
+}
+
+.intro {
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--font-secondary, #737676);
+  margin-bottom: 16px;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--font-secondary, #737676);
+  margin-bottom: 12px;
+}
+
+.notice {
+  font-size: 13px;
+  line-height: 20px;
+  color: #ffc107;
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.inputError {
+  border-color: #dc3545 !important;
+
+  &:hover,
+  &:focus {
+    border-color: #dc3545 !important;
+  }
+}
+
+// global.scss sets .invalid-feedback to position:absolute; keep error in document flow
+.inputFeedback {
+  position: relative !important;
+  width: 100% !important;
+  margin-top: 6px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.toggleTitle {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.toggleHint {
+  font-size: 12px;
+  color: var(--font-secondary, #737676);
+  margin-top: 4px;
+  max-width: 240px;
+}
+
+.helpLink {
+  margin-top: 20px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--font-dark, #f0f0f0);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.error {
+  margin-top: 12px;
+  color: #dc3545;
+  font-size: 13px;
+}

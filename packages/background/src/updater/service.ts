@@ -7,6 +7,7 @@ import {
   validateBasicChainInfoType,
 } from "@keplr-wallet/chain-validator";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
+import { isCardanoChainId } from "@keplr-wallet/cardano";
 
 export class ChainUpdaterService {
   public chainsService!: ChainsService;
@@ -146,6 +147,10 @@ export class ChainUpdaterService {
       return false;
     }
 
+    if (isCardanoChainId(chainId)) {
+      return false;
+    }
+
     try {
       const chainIdentifier = ChainIdHelper.parse(chainId).identifier;
 
@@ -162,7 +167,7 @@ export class ChainUpdaterService {
           chainInfo.chainId
         ).identifier;
         if (chainIdentifier !== fetchedChainIdentifier) {
-          console.log(
+          console.warn(
             `The chainId is not valid.(${chainId} -> ${fetchedChainIdentifier})`
           );
           return false;
@@ -189,7 +194,7 @@ export class ChainUpdaterService {
         }
       } catch (e) {
         // Proceed logic event if fetching from github failed
-        console.log(e);
+        console.warn(e);
       }
 
       const updatedChainInfo = await this.chainsService.getChainInfo(chainId);
@@ -239,7 +244,7 @@ export class ChainUpdaterService {
 
       return repoUpdated || chainIdUpdated || featuresUpdated;
     } catch (e) {
-      console.log(`Failed to try to update chain info for ${chainId}`, e);
+      console.warn(`Failed to try to update chain info for ${chainId}`, e);
     }
 
     return false;

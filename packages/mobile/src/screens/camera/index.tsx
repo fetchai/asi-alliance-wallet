@@ -189,8 +189,8 @@ export const CameraScreen: FunctionComponent = () => {
               }
 
               setIsCompleted(true);
-            } catch (e) {
-              console.log(e);
+            } catch {
+              console.warn("Scan or link import failed");
             } finally {
               setIsLoading(false);
             }

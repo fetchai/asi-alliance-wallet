@@ -29,7 +29,7 @@ export interface NetworkConfig {
   /**
    * The network type
    */
-  readonly networkType: "cosmos" | "evm";
+  readonly networkType: "cosmos" | "evm" | "cardano";
 
   /**
    * The base RPC used for interacting with the network
@@ -49,7 +49,7 @@ export interface NetworkConfig {
   /**
    * The type of the network, i.e. is it a main network or using for testing
    */
-  readonly type?: "mainnet" | "testnet";
+  readonly type?: "mainnet" | "testnet" | "cardano";
 
   /**
    * The status or maturity of the network. i.e. is it production quality or not

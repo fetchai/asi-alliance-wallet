@@ -14,7 +14,12 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
+import {
+  ensureCompatibleChainForUpcomingWallet,
+  getNextDefaultAccountName,
+  requestKeyringSurfacesSyncBroadcast,
+  validateAccountName,
+} from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RefreshAccountList } from "@keplr-wallet/background";
@@ -42,7 +47,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
   onBack: () => void;
 }> = observer(({ registerConfig, onBack }) => {
   const intl = useIntl();
-  const { keyRingStore } = useStore();
+  const { keyRingStore, chainStore } = useStore();
 
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [passwordCheckbox, setPasswordCheckbox] = useState(false);
@@ -98,7 +103,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
           const privateKey = Buffer.from(
             data.ethPrivateKey.trim().replace("0x", ""),
             "hex"
-          ) as Uint8Array;
+          ) as unknown as Uint8Array;
 
           // attempt to parse the private key information
           const parsedKey = parseEthPrivateKey(privateKey);
@@ -121,13 +126,19 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
             {},
             selectedNetworks
           );
-          await keyRingStore.changeKeyRing(
-            keyRingStore.multiKeyStoreInfo.length - 1
-          );
+          // Add/import only: align chain before changeKeyRing so keystore-changed/getKey is not on Cardano.
+          if (registerConfig.mode !== "create") {
+            await ensureCompatibleChainForUpcomingWallet(chainStore, {
+              supportsCardano: false,
+            });
+          }
+          const newWalletIndex = keyRingStore.multiKeyStoreInfo.length - 1;
+          await keyRingStore.changeKeyRing(newWalletIndex);
           await new InExtensionMessageRequester().sendMessage(
             BACKGROUND_PORT,
             new RefreshAccountList()
           );
+          await requestKeyringSurfacesSyncBroadcast();
         })}
       >
         <Input

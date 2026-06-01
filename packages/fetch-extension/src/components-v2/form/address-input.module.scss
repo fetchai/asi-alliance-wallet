@@ -54,12 +54,19 @@
 .errorText {
   color: #fb8c72;
   font-size: 12px;
+  margin: 8px 0 4px;
 }
 
 .infoText {
   color: grey;
   font-size: 12px;
   margin: 3px;
+}
+
+.warningText {
+  color: $font-secondary;
+  font-size: 12px;
+  margin: 8px 0 4px;
 }
 
 .righContentButtons {

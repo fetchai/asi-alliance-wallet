@@ -86,14 +86,19 @@ export abstract class Router {
     msg.validateBasic();
 
     const route = msg.route();
+
     if (!route) {
       throw new Error("Null router");
     }
+
     const handler = this.registeredHandler.get(route);
+
     if (!handler) {
       throw new Error("Can't get handler");
     }
 
-    return JSONUint8Array.wrap(await handler(env, msg));
+    const result = await handler(env, msg);
+
+    return JSONUint8Array.wrap(result);
   }
 }

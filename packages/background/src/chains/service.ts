@@ -18,6 +18,7 @@ import { InteractionService } from "../interaction";
 import { Env, WEBPAGE_PORT } from "@keplr-wallet/router";
 import { SuggestChainInfoMsg, SwitchNetworkByChainIdMsg } from "./messages";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { getDefaultFallbackChainId } from "./default-chain";
 import { validateBasicChainInfoType } from "@keplr-wallet/chain-validator";
 import { getBasicAccessPermissionType, PermissionService } from "../permission";
 import { Mutable, Optional } from "utility-types";
@@ -32,9 +33,14 @@ import {
 } from "@fetchai/wallet-types";
 
 type ChainRemovedHandler = (chainId: string, identifier: string) => void;
+type NetworkSwitchHandler = (
+  oldChainId: string | undefined,
+  newChainId: string
+) => Promise<void>;
 
 export class ChainsService {
   protected onChainRemovedHandlers: ChainRemovedHandler[] = [];
+  protected onNetworkSwitchHandlers: NetworkSwitchHandler[] = [];
 
   protected cachedChainInfos: ChainInfoWithCoreTypes[] | undefined;
   protected selectedChainId: string | undefined;
@@ -154,6 +160,28 @@ export class ChainsService {
 
   clearCachedChainInfos() {
     this.cachedChainInfos = undefined;
+  }
+
+  private getChainIdentifierSafe(chainId: string): string | undefined {
+    try {
+      return ChainIdHelper.parse(chainId).identifier;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async findChainInfo(
+    chainId: string
+  ): Promise<ChainInfoWithCoreTypes | undefined> {
+    const identifier = this.getChainIdentifierSafe(chainId);
+    if (!identifier) {
+      return undefined;
+    }
+
+    return (await this.getChainInfos()).find(
+      (chainInfo) =>
+        this.getChainIdentifierSafe(chainInfo.chainId) === identifier
+    );
   }
 
   async getChainInfo(chainId: string): Promise<ChainInfoWithCoreTypes> {
@@ -406,14 +434,7 @@ export class ChainsService {
   }
 
   async hasChainInfo(chainId: string): Promise<boolean> {
-    return (
-      (await this.getChainInfos()).find((chainInfo) => {
-        return (
-          ChainIdHelper.parse(chainInfo.chainId).identifier ===
-          ChainIdHelper.parse(chainId).identifier
-        );
-      }) != null
-    );
+    return (await this.findChainInfo(chainId)) != null;
   }
 
   async suggestChainInfo(
@@ -439,16 +460,6 @@ export class ChainsService {
       beta: chainInfo.beta,
       updateFromRepoDisabled: receivedChainInfo.updateFromRepoDisabled,
     };
-
-    if (receivedChainInfo.updateFromRepoDisabled) {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added with updateFromRepoDisabled`
-      );
-    } else {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added`
-      );
-    }
 
     await this.permissionService.addPermission(
       [chainInfo.chainId],
@@ -601,16 +612,6 @@ export class ChainsService {
       updateFromRepoDisabled: receivedChainInfo.updateFromRepoDisabled,
     };
 
-    if (receivedChainInfo.updateFromRepoDisabled) {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added with updateFromRepoDisabled`
-      );
-    } else {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added`
-      );
-    }
-
     await this.permissionService.addPermission(
       [chainInfo.chainId],
       getBasicAccessPermissionType(),
@@ -625,7 +626,7 @@ export class ChainsService {
     chainId: string,
     origin: string
   ): Promise<void> {
-    const receivedChainId = (await this.interactionService.waitApprove(
+    await this.interactionService.waitApprove(
       env,
       "/switch-chain-by-chainid",
       SwitchNetworkByChainIdMsg.type(),
@@ -633,27 +634,42 @@ export class ChainsService {
         chainId,
         origin,
       }
-    )) as string;
+    );
     await this.permissionService.addPermission(
       [chainId],
       getBasicAccessPermissionType(),
       [origin]
     );
-    console.log(`Switched to chain with chainId ${receivedChainId}`);
   }
 
   addChainRemovedHandler(handler: ChainRemovedHandler) {
     this.onChainRemovedHandlers.push(handler);
   }
 
-  setSelectedChain(chainId: string) {
+  addNetworkSwitchHandler(handler: NetworkSwitchHandler) {
+    this.onNetworkSwitchHandlers.push(handler);
+  }
+
+  async setSelectedChain(chainId: string) {
     if (this.selectedChainId !== chainId) {
+      const oldChainId = this.selectedChainId;
       this.selectedChainId = chainId;
-      this.interactionService.dispatchEvent(
-        WEBPAGE_PORT,
-        "network-changed",
-        {}
-      );
+      try {
+        // Complete critical network switch handlers before notifying UI.
+        for (const handler of this.onNetworkSwitchHandlers) {
+          await handler(oldChainId, chainId).catch((error) => {
+            console.error("Network switch handler failed:", error);
+            throw error;
+          });
+        }
+      } catch (error) {
+        // Fail-closed: roll back selected chain when critical switch handlers fail.
+        this.selectedChainId = oldChainId;
+        throw error;
+      }
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "network-changed", {
+        seq: Date.now(),
+      });
       this.interactionService.dispatchEvent(
         WEBPAGE_PORT,
         "keystore-changed",
@@ -662,11 +678,44 @@ export class ChainsService {
     }
   }
 
+  private resolveFallbackChainId(chainInfos: ChainInfoWithCoreTypes[]): string {
+    const fallback = getDefaultFallbackChainId(chainInfos);
+    if (!fallback) {
+      throw new Error("No chain infos available");
+    }
+    return fallback;
+  }
+
   async getSelectedChain(): Promise<string> {
+    const chainInfos = await this.getChainInfos();
+
     if (!this.selectedChainId) {
-      return (await this.getChainInfos())[0].chainId;
+      const fallback = this.resolveFallbackChainId(chainInfos);
+      this.selectedChainId = fallback;
+      return fallback;
     }
 
-    return this.selectedChainId;
+    const selectedIdentifier = this.getChainIdentifierSafe(
+      this.selectedChainId
+    );
+    const exists =
+      selectedIdentifier != null &&
+      chainInfos.some(
+        (chainInfo) =>
+          this.getChainIdentifierSafe(chainInfo.chainId) === selectedIdentifier
+      );
+
+    if (exists) {
+      return this.selectedChainId;
+    }
+
+    const fallback = this.resolveFallbackChainId(chainInfos);
+
+    console.warn(
+      `[ChainsService] selected chain ${this.selectedChainId} is no longer available, fallback to ${fallback}`
+    );
+
+    this.selectedChainId = fallback;
+    return fallback;
   }
 }

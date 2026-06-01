@@ -99,7 +99,11 @@
   "setting.export-to-mobile.input.password.error.invalid": "Invalid password",
   "setting.export-to-mobile.button.confirm": "Confirm",
   "setting.export-to-mobile.qr-code-view.session-expired": "Session expired",
+  "setting.export-to-mobile.qr-code-view.session-expired-cta": "Scan again",
   "setting.export-to-mobile.qr-code-view.expired": "Expired",
+  "setting.export-to-mobile.qr-code-view.message": "Scan this QR code on ASI Mobile Wallet to export your accounts.",
+  "setting.export-to-mobile.qr-code-view.warning-title": "Only scan on ASI Mobile Wallet",
+  "setting.export-to-mobile.qr-code-view.warning-description": "Scan only inside ASI Mobile Wallet. Do not use other QR scanner apps or copy the QR content - this can expose your session and lead to loss of funds.",
 
   "setting.chat": "Chat",
 
@@ -203,6 +207,7 @@
   "register.create.title": "Mnemonic Seed",
   "register.create.toggle.word12": "12 words",
   "register.create.toggle.word24": "24 words",
+  "register.cardano.hint.24words": "For Cardano network access, a 24-word seed phrase is required.",
   "register.create.input.password": "New Password (minimum 8 characters)",
   "register.create.input.password.error.required": "Password is required",
   "register.create.input.password.error.too-short": "Too short password (minimum 8 characters)",
@@ -262,6 +267,7 @@
   "chain.suggested.chain-info-is-from": "Chain info being added is from",
   "chain.manage-networks.evm": "Manage EVM networks",
   "chain.manage-networks.cosmos": "Manage Cosmos networks",
+  "chain.manage-networks.cardano": "Manage Cardano networks",
 
   "chain.remove.confirm.paragraph": "Are you sure to remove the {chainName}?",
 
@@ -300,11 +306,13 @@
   "lock.input.password": "Password",
   "lock.input.password.error.required": "Empty password",
   "lock.input.password.error.invalid": "Invalid password",
+  "lock.error.unlock_non_password": "Wallet could not be unlocked due to a network or configuration issue. Try reloading the extension or contact support.",
   "lock.alert.capslock": "CapsLock is on",
   "lock.button.unlock": "Unlock",
 
   "send.input.recipient": "Recipient",
   "send.input.recipient.error.invalid": "Invalid address",
+  "error.failed-to-compute-max-ada": "Failed to compute max ADA amount",
   "send.input.amount": "Amount",
   "send.input.amount.error.insufficient": "Insufficient asset",
   "send.input.memo": "Memo (Optional)",
@@ -315,6 +323,8 @@
   "send.button.send": "Send",
   "send.button.speedup": "Speed up",
   "send.button.cancel": "Cancel",
+  "send.self-send-warning": "You are sending to your own address. Only fees will be deducted.",
+  "cardano.status.offline": "Internet connection lost. Check your network and try again.",
   "ibc.transfer.next": "Next",
   "ibc.transfer.submit": "Review transaction",
 

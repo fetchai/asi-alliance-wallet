@@ -57,7 +57,7 @@ import {
 import { ExtensionOptionsWeb3Tx } from "@keplr-wallet/proto-types/ethermint/types/v1/web3";
 import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
-import { ActivityStore } from "src/activity";
+import { ActivityStore } from "../activity";
 import { CosmosTxTracer } from "./cosmos-tx-tracer";
 import { makeMultisignedTx } from "@cosmjs/stargate";
 /* eslint-disable import/no-extraneous-dependencies */
@@ -265,10 +265,16 @@ export class CosmosAccountImpl {
     currency: AppCurrency,
     recipient: string
   ) {
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const isCardano = chainInfo.features?.includes("cardano") ?? false;
+
+    // Skip Cosmos validation for Cardano addresses - handled by CardanoAccount
+    if (isCardano) {
+      return undefined;
+    }
+
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
-    const isEvm =
-      this.chainGetter.getChain(this.chainId).features?.includes("evm") ??
-      false;
+    const isEvm = chainInfo.features?.includes("evm") ?? false;
     if (denomHelper.type === "native" && !isEvm) {
       const actualAmount = (() => {
         let dec = new Dec(amount);
@@ -278,7 +284,7 @@ export class CosmosAccountImpl {
 
       Bech32Address.validate(
         recipient,
-        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+        chainInfo.bech32Config.bech32PrefixAccAddr
       );
 
       const msg = {

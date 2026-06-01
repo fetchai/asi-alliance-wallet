@@ -482,7 +482,12 @@ export const AssetView = observer(() => {
           onClick={
             !isSendDisabled
               ? () => {
-                  navigate("/send");
+                  const search = tokenInfo?.coinMinimalDenom
+                    ? `?defaultDenom=${encodeURIComponent(
+                        tokenInfo.coinMinimalDenom
+                      )}`
+                    : "";
+                  navigate({ pathname: "/send", search });
                   analyticsStore.logEvent("send_click", {
                     pageName: "Token Detail",
                   });

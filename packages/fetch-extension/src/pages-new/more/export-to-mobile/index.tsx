@@ -26,9 +26,31 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useNotification } from "@components/notification";
 
+function safeRejectWalletConnectRequest(
+  connector: WalletConnect,
+  requestId: unknown,
+  message: string
+): void {
+  if (requestId == null) {
+    return;
+  }
+  try {
+    connector.rejectRequest({
+      id: requestId as number,
+      error: { message },
+    });
+  } catch {
+    // Best-effort: connector may already be closed.
+  }
+}
+
 export interface QRCodeSharedData {
   // The uri for the wallet connect
   wcURI: string;
+  // Session-bound identifier to prevent cross-session replay.
+  sessionId: string;
+  // One-time token that must be echoed by the importer.
+  requestToken: string;
   // The temporary password for encrypt/descrypt the key datas.
   // This must not be shared the other than the extension and mobile.
   sharedPassword: string;
@@ -157,7 +179,6 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
             }
             onSetExportKeyRingDatas(keyRingData);
           } catch (e) {
-            console.log("Fail to decrypt: " + e.message);
             setError("password", {
               message: intl.formatMessage({
                 id: "setting.export-to-mobile.input.password.error.invalid",
@@ -189,7 +210,7 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
             height: "56px",
           }}
           variant="dark"
-          dataLoading={true}
+          dataLoading={loading}
           disabled={loading}
         />
       </Form>
@@ -231,14 +252,12 @@ const QRCodeView: FunctionComponent<{
 
       confirm
         .confirm({
-          paragraph: intl.formatMessage(
-            {
-              id: "setting.export-to-mobile.qr-code-view.session-expired",
-            },
-            {
-              forceYes: true,
-            }
-          ),
+          paragraph: intl.formatMessage({
+            id: "setting.export-to-mobile.qr-code-view.session-expired",
+          }),
+          yes: intl.formatMessage({
+            id: "setting.export-to-mobile.qr-code-view.session-expired-cta",
+          }),
           hideNoButton: true,
         })
         .then(() => {
@@ -269,7 +288,6 @@ const QRCodeView: FunctionComponent<{
     if (connector) {
       connector.on("display_uri", (error, payload) => {
         if (error) {
-          console.log(error);
           navigate("/");
           return;
         }
@@ -277,10 +295,18 @@ const QRCodeView: FunctionComponent<{
         const bytes = new Uint8Array(32);
         crypto.getRandomValues(bytes);
         const password = Buffer.from(bytes).toString("hex");
+        const sessionBytes = new Uint8Array(16);
+        crypto.getRandomValues(sessionBytes);
+        const sessionId = Buffer.from(sessionBytes).toString("hex");
+        const tokenBytes = new Uint8Array(16);
+        crypto.getRandomValues(tokenBytes);
+        const requestToken = Buffer.from(tokenBytes).toString("hex");
 
         const uri = payload.params[0] as string;
         setQRCodeData({
           wcURI: uri,
+          sessionId,
+          requestToken,
           sharedPassword: password,
         });
       });
@@ -291,7 +317,6 @@ const QRCodeView: FunctionComponent<{
 
   const onConnect = (error: any) => {
     if (error) {
-      console.log(error);
       navigate("/");
     }
   };
@@ -303,39 +328,120 @@ const QRCodeView: FunctionComponent<{
       return;
     }
 
+    const reqParams = payload?.params?.[0] ?? {};
+
+    if (isExpired) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Export request expired"
+      );
+      navigate("/");
+      return;
+    }
+
+    if (error) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Export request failed"
+      );
+      navigate("/");
+      return;
+    }
+
     if (
-      isExpired ||
-      error ||
       payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1"
     ) {
-      console.log(error, payload?.method);
-      navigate("/");
-    } else {
-      if (processOnce.current) {
-        return;
-      }
-      processOnce.current = true;
-
-      const buf = Buffer.from(JSON.stringify(keyRingData));
-
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      const iv = Buffer.from(bytes);
-
-      const counter = new Counter(0);
-      counter.setBytes(iv);
-      const aesCtr = new AES.ModeOfOperation.ctr(
-        Buffer.from(qrCodeData.sharedPassword, "hex"),
-        counter
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Invalid export request method"
       );
+      navigate("/");
+      return;
+    }
 
-      (async () => {
+    const sid = reqParams.sessionId;
+    const tok = reqParams.requestToken;
+    const hasSid = sid !== undefined && sid !== null && String(sid).length > 0;
+    const hasTok = tok !== undefined && tok !== null && String(tok).length > 0;
+
+    let handshakeOk = false;
+    if (!hasSid && !hasTok) {
+      // Legacy mobile: no session-bound fields in the custom request.
+      handshakeOk = true;
+    } else if (hasSid && hasTok) {
+      if (sid === qrCodeData.sessionId && tok === qrCodeData.requestToken) {
+        handshakeOk = true;
+      }
+    }
+
+    if (!handshakeOk) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Invalid export session handshake"
+      );
+      navigate("/");
+      return;
+    }
+
+    if (processOnce.current) {
+      safeRejectWalletConnectRequest(
+        connector,
+        payload?.id,
+        "Export already in progress"
+      );
+      return;
+    }
+    processOnce.current = true;
+
+    const buf = Buffer.from(JSON.stringify(keyRingData));
+
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const iv = Buffer.from(bytes);
+
+    const counter = new Counter(0);
+    counter.setBytes(iv);
+    const aesCtr = new AES.ModeOfOperation.ctr(
+      Buffer.from(qrCodeData.sharedPassword, "hex"),
+      counter
+    );
+
+    (async () => {
+      let approved = false;
+      try {
+        const peerName = connector.peerMeta?.name || "Unknown app";
+        const peerUrl = connector.peerMeta?.url || "unknown";
+        const ok = await confirm.confirm({
+          title: "Confirm export to connected app",
+          paragraph: `Connected app: ${peerName} (${peerUrl}). Export wallet data now?`,
+          yes: "Export",
+          no: "Cancel",
+        });
+
+        if (!ok) {
+          safeRejectWalletConnectRequest(
+            connector,
+            payload?.id,
+            "User cancelled export"
+          );
+          navigate("/");
+          return;
+        }
+
         const addressBooks: {
           [chainId: string]: AddressBookData[] | undefined;
         } = {};
 
         if (payload.params && payload.params.length > 0) {
           for (const chainId of payload.params[0].addressBookChainIds ?? []) {
+            if (typeof chainId !== "string" || !chainStore.hasChain(chainId)) {
+              continue;
+            }
+
             const addressBookConfig =
               addressBookConfigMap.getAddressBookConfig(chainId);
 
@@ -356,14 +462,31 @@ const QRCodeView: FunctionComponent<{
           addressBooks,
         };
 
+        if (payload?.id == null) {
+          navigate("/");
+          return;
+        }
+
         connector.approveRequest({
           id: payload.id,
           result: [response],
         });
 
+        approved = true;
         navigate("/");
-      })();
-    }
+      } catch (e) {
+        safeRejectWalletConnectRequest(
+          connector,
+          payload?.id,
+          e instanceof Error ? e.message : "Export failed"
+        );
+        navigate("/");
+      } finally {
+        if (!approved) {
+          processOnce.current = false;
+        }
+      }
+    })();
   };
   const onCallRequestRef = useRef(onCallRequest);
   onCallRequestRef.current = onCallRequest;
@@ -386,7 +509,7 @@ const QRCodeView: FunctionComponent<{
         // Kill session after 5 seconds.
         // Delay is needed because it is possible for wc to being processing the request.
         setTimeout(() => {
-          connector.killSession().catch(console.log);
+          connector.killSession().catch(() => {});
         }, 5000);
       };
     }
@@ -414,7 +537,7 @@ const QRCodeView: FunctionComponent<{
           })()}
         />
         <div className={style["message"]}>
-          Scan this QR code on ASI Mobile Wallet to export your accounts.
+          <FormattedMessage id="setting.export-to-mobile.qr-code-view.message" />
         </div>
         <Alert className={style["alert"]}>
           <img src={require("@assets/svg/wireframe/alert.svg")} alt="" />
@@ -425,10 +548,11 @@ const QRCodeView: FunctionComponent<{
               gap: "6px",
             }}
           >
-            <div className={style["text"]}>Only scan on ASI Mobile Wallet</div>
+            <div className={style["text"]}>
+              <FormattedMessage id="setting.export-to-mobile.qr-code-view.warning-title" />
+            </div>
             <p className={style["lightText"]}>
-              Scanning the QR code outside of ASI Mobile Wallet can lead to loss
-              of funds
+              <FormattedMessage id="setting.export-to-mobile.qr-code-view.warning-description" />
             </p>
           </div>
         </Alert>

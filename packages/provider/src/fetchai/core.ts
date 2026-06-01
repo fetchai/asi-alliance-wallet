@@ -128,10 +128,14 @@ export class FetchAccount implements AccountsApi {
   }
 
   async listAccounts(): Promise<Account[]> {
-    return await this.requester.sendMessage(
+    const result = await this.requester.sendMessage(
       BACKGROUND_PORT,
       new ListAccountsMsg()
     );
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    return result.accounts;
   }
 
   async getAccount(address: string): Promise<Account | null> {

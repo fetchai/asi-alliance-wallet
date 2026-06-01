@@ -1,5 +1,9 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { ChainStore } from "./chain";
 import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
+import { KeyRingStatus } from "@keplr-wallet/background";
+import { setCacheManager } from "@keplr-wallet/common";
+import { addressCacheStore } from "../utils/address-cache-store";
 import {
   AmplitudeApiKey,
   CoinGeckoAPIEndPoint,
@@ -20,6 +24,8 @@ import {
   CosmwasmAccount,
   CosmwasmQueries,
   EvmQueries,
+  CardanoQueries,
+  NameServiceQueries,
   OsmosisQueries,
   DeferInitialQueryController,
   getKeplrFromWindow,
@@ -38,15 +44,15 @@ import {
   TokensStore,
   WalletStatus,
   ICNSInteractionStore,
-  ICNSQueries,
   GeneralPermissionStore,
-  FNSQueries,
   EthereumAccount,
   ChatStore,
   ProposalStore,
   ActivityStore,
   TokenGraphStore,
 } from "@keplr-wallet/stores";
+
+import { CardanoAccount } from "@keplr-wallet/stores";
 import {
   KeplrETCQueries,
   GravityBridgeCurrencyRegsitrar,
@@ -68,6 +74,10 @@ import { FeeType } from "@keplr-wallet/hooks";
 import { AnalyticsStore, NoopAnalyticsClient } from "@keplr-wallet/analytics";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { ExtensionAnalyticsClient } from "../analytics";
+import { autorun, flowResult, reaction, runInAction } from "mobx";
+import { AddressCacheById } from "../utils/address-cache-store";
+import { AddressCacheSyncManager } from "./address-cache-sync-manager";
+import { getCardanoChainRepairFallbackIfStale } from "../utils/cardano-chain-repair";
 
 export class RootStore {
   public readonly uiConfigStore: UIConfigStore;
@@ -98,13 +108,19 @@ export class RootStore {
       SecretQueries,
       OsmosisQueries,
       KeplrETCQueries,
-      ICNSQueries,
-      FNSQueries,
-      EvmQueries
+      NameServiceQueries,
+      EvmQueries,
+      CardanoQueries
     ]
   >;
   public readonly accountStore: AccountStore<
-    [CosmosAccount, CosmwasmAccount, SecretAccount, EthereumAccount]
+    [
+      CosmosAccount,
+      CosmwasmAccount,
+      SecretAccount,
+      EthereumAccount,
+      CardanoAccount
+    ]
   >;
   public readonly priceStore: CoinGeckoPriceStore;
   public readonly tokensStore: TokensStore<ChainInfoWithCoreTypes>;
@@ -145,6 +161,15 @@ export class RootStore {
       totalAccounts?: number;
     }
   >;
+
+  private readonly _addressCacheSyncManager: AddressCacheSyncManager;
+  private _lastChainType: boolean | undefined = undefined;
+  private _lastWalletIds: Set<string> | undefined = undefined;
+  private _lastWalletStatus: number | undefined = undefined;
+  private _walletListSyncGeneration = 0;
+  /** Prevents stacked repairs if selectChainAndPersist retriggers this reaction mid-flight. */
+  private _cardanoChainRepairInFlight = false;
+  private _disposers: Array<() => void> = [];
 
   constructor() {
     this.chatStore = new ChatStore();
@@ -192,12 +217,44 @@ export class RootStore {
       {
         dispatchEvent: (type: string) => {
           window.dispatchEvent(new Event(type));
+          if (
+            type === "fetchwallet_walletstatuschange" ||
+            type === "keplr_walletstatuschange"
+          ) {
+            try {
+              const currentStatus = this.keyRingStore.status;
+              const lastStatus = this._lastWalletStatus;
+              const isLockUnlockTransition =
+                lastStatus !== currentStatus &&
+                (currentStatus === 1 /* KeyRingStatus.LOCKED */ ||
+                  currentStatus === 2) /* KeyRingStatus.UNLOCKED */ &&
+                (lastStatus === 1 || lastStatus === 2);
+
+              this._lastWalletStatus = currentStatus;
+
+              if (isLockUnlockTransition) {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const {
+                  addressCacheStore,
+                } = require("../utils/address-cache-store");
+                addressCacheStore.clearAllCaches();
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                this.keyRingStore.refreshMultiKeyStoreInfo();
+              }
+            } catch (e) {
+              // no-op
+            }
+          }
         },
       },
       "scrypt",
       this.chainStore,
       new InExtensionMessageRequester(),
       this.interactionStore
+    );
+    this._addressCacheSyncManager = new AddressCacheSyncManager(
+      this.chainStore,
+      this.keyRingStore
     );
 
     this.ibcChannelStore = new IBCChannelStore(
@@ -208,6 +265,18 @@ export class RootStore {
       this.interactionStore,
       new InExtensionMessageRequester()
     );
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("keplr_keystorechange", () => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { addressCacheStore } = require("../utils/address-cache-store");
+          addressCacheStore.bumpEpoch();
+        } catch {
+          // no-op
+        }
+      });
+    }
     this.generalPermissionStore = new GeneralPermissionStore(
       this.interactionStore,
       new InExtensionMessageRequester()
@@ -238,9 +307,9 @@ export class RootStore {
       KeplrETCQueries.use({
         ethereumURL: EthereumEndpoint,
       }),
-      ICNSQueries.use(),
-      FNSQueries.use(),
-      EvmQueries.use()
+      NameServiceQueries.use(),
+      EvmQueries.use(),
+      CardanoQueries.use()
     );
 
     this.activityStore = new ActivityStore(
@@ -255,6 +324,163 @@ export class RootStore {
 
     this.accountBaseStore = new ExtensionKVStore("store_account_config");
 
+    this._disposers.push(
+      reaction(
+        () =>
+          this.keyRingStore.multiKeyStoreInfo
+            .map((ks) => ks.meta?.["__id__"] || "")
+            .filter(Boolean),
+        (currentWalletIds) => {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { addressCacheStore } = require("../utils/address-cache-store");
+          const currentSet = new Set(currentWalletIds);
+
+          if (!this._lastWalletIds) {
+            this._lastWalletIds = new Set(currentSet);
+            return;
+          }
+
+          const lastWalletIds = this._lastWalletIds;
+          const hasWalletListChanged =
+            currentSet.size !== lastWalletIds.size ||
+            !Array.from(currentSet).every((id) => lastWalletIds.has(id));
+
+          if (!hasWalletListChanged) {
+            return;
+          }
+
+          const generation = ++this._walletListSyncGeneration;
+          const allChainIds = Object.keys(addressCacheStore.getAllCaches());
+          (async () => {
+            for (const chainId of allChainIds) {
+              await addressCacheStore.atomicCacheUpdate(
+                chainId,
+                (currentCache: AddressCacheById) => {
+                  const newCache = { ...currentCache };
+                  for (const id of currentSet) {
+                    if (!lastWalletIds.has(id) && !newCache[id]) {
+                      newCache[id] = "";
+                    }
+                  }
+                  for (const id of lastWalletIds) {
+                    if (!currentSet.has(id)) {
+                      delete newCache[id];
+                    }
+                  }
+                  return { newCache, result: newCache };
+                }
+              );
+            }
+            runInAction(() => {
+              if (this._walletListSyncGeneration === generation) {
+                this._lastWalletIds = new Set(currentSet);
+              }
+            });
+          })();
+        },
+        { fireImmediately: true }
+      )
+    );
+
+    // This prevents showing incorrect addresses due to format differences
+    this._disposers.push(
+      autorun(() => {
+        const currentChain = this.chainStore.current;
+        const isEvm = currentChain.features?.includes("evm") ?? false;
+
+        if (!this._lastChainType) {
+          this._lastChainType = isEvm;
+          return;
+        }
+
+        const lastChainType = this._lastChainType;
+        const hasChainTypeChanged = lastChainType !== isEvm;
+
+        if (hasChainTypeChanged) {
+          const { addressCacheStore } = require("../utils/address-cache-store");
+          addressCacheStore.clearAllCaches();
+        }
+
+        this._lastChainType = isEvm;
+      })
+    );
+
+    const addressCacheReactionDisposer = reaction(
+      () => {
+        if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+          return null;
+        }
+        const currentChainId = this.chainStore.selectedChainId;
+        if (!currentChainId) return null;
+        const currentWalletIds = this.keyRingStore.multiKeyStoreInfo
+          .map((ks) => ks.meta?.["__id__"] || "")
+          .filter(Boolean);
+        if (currentWalletIds.length === 0) return null;
+        return {
+          currentChainId,
+          currentWalletIds,
+          retryEpoch: this._addressCacheSyncManager.retryEpoch,
+        };
+      },
+      (descriptor) => {
+        if (descriptor) {
+          this._addressCacheSyncManager.schedule({
+            currentChainId: descriptor.currentChainId,
+            currentWalletIds: descriptor.currentWalletIds,
+          });
+        }
+      },
+      { fireImmediately: true }
+    );
+    this._disposers.push(addressCacheReactionDisposer);
+
+    // Repair layer: recover from stale Cardano selection when the selected wallet must leave Cardano.
+    this._disposers.push(
+      reaction(
+        () => {
+          if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+            return null;
+          }
+          const selected = this.keyRingStore.multiKeyStoreInfo.find(
+            (k) => k.selected
+          );
+          if (!selected) {
+            return null;
+          }
+          return {
+            chainId: this.chainStore.selectedChainId,
+            walletId: selected.meta?.["__id__"] || "",
+          };
+        },
+        (snap) => {
+          if (this._cardanoChainRepairInFlight) {
+            return;
+          }
+          const fallback = getCardanoChainRepairFallbackIfStale(
+            snap ?? undefined,
+            this.keyRingStore.multiKeyStoreInfo,
+            this.chainStore.current,
+            this.chainStore.chainInfos
+          );
+          if (!fallback) {
+            return;
+          }
+          this._cardanoChainRepairInFlight = true;
+          void flowResult(this.chainStore.selectChainAndPersist(fallback))
+            .catch((e) => {
+              console.error(
+                "[RootStore] Cardano chain repair (select fallback) failed:",
+                e
+              );
+            })
+            .finally(() => {
+              this._cardanoChainRepairInFlight = false;
+            });
+        },
+        { fireImmediately: true }
+      )
+    );
+
     this.accountStore = new AccountStore(
       window,
       this.chainStore,
@@ -264,7 +490,7 @@ export class RootStore {
       () => {
         return {
           suggestChain: false,
-          autoInit: true,
+          autoInit: false, // Changed to false to prevent premature initialization
           getKeplr: getKeplrFromWindow,
         };
       },
@@ -388,20 +614,36 @@ export class RootStore {
       }),
       EthereumAccount.use({
         queriesStore: this.queriesStore,
+      }),
+      CardanoAccount.use({
+        messageRequester: new InExtensionMessageRequester(),
       })
     );
 
     if (!window.location.href.includes("#/unlock")) {
-      // Start init for registered chains so that users can see account address more quickly.
-      for (const chainInfo of this.chainStore.chainInfos) {
-        const account = this.accountStore.getAccount(chainInfo.chainId);
-        // Because {autoInit: true} is given as the default option above,
-        // initialization for the account starts at this time just by using getAccount().
-        // However, run safe check on current status and init if status is not inited.
-        if (account.walletStatus === WalletStatus.NotInit) {
-          account.init();
+      // Wait for KeyRing to be fully initialized before initializing accounts
+      // This prevents "No keys available" errors during startup
+      const initAccountsWhenReady = () => {
+        // Only initialize when KeyRing is fully UNLOCKED, not just "not NOTLOADED"
+        // This prevents race conditions with Cardano initialization
+        if (this.keyRingStore.status === KeyRingStatus.UNLOCKED) {
+          const currentChainId = this.chainStore.current.chainId;
+          if (currentChainId) {
+            const account = this.accountStore.getAccount(currentChainId);
+            // Because {autoInit: true} is given as the default option above,
+            // initialization for the account starts at this time just by using getAccount().
+            // However, run safe check on current status and init if status is not inited.
+            if (account.walletStatus === WalletStatus.NotInit) {
+              account.init();
+            }
+          }
+        } else {
+          // If KeyRing is not ready yet, wait a bit and try again
+          setTimeout(initAccountsWhenReady, 100);
         }
-      }
+      };
+
+      initAccountsWhenReady();
     } else {
       // When the unlock request sent from external webpage,
       // it will open the extension popup below the uri "/unlock".
@@ -411,6 +653,22 @@ export class RootStore {
       // To prevent this problem, just check the first uri is "#/unlcok" and
       // if it is "#/unlock", don't use the prefetching option.
     }
+
+    this._disposers.push(
+      autorun(() => {
+        if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+          return;
+        }
+
+        const currentChainId = this.chainStore.current.chainId;
+        if (!currentChainId) return;
+
+        const account = this.accountStore.getAccount(currentChainId);
+        if (account.walletStatus === WalletStatus.NotInit) {
+          account.init();
+        }
+      })
+    );
 
     this.priceStore = new CoinGeckoPriceStore(
       new ExtensionKVStore("store_prices"),
@@ -499,8 +757,16 @@ export class RootStore {
 
     router.listen(APP_PORT);
   }
+
+  dispose(): void {
+    this._addressCacheSyncManager.dispose();
+    this._disposers.forEach((d) => d());
+    this._disposers.length = 0;
+  }
 }
 
 export function createRootStore() {
+  setCacheManager(addressCacheStore);
+
   return new RootStore();
 }

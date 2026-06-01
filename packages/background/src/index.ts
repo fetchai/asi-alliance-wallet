@@ -17,9 +17,10 @@ import * as Analytics from "./analytics/internal";
 import * as Messaging from "./messaging/internal";
 import * as AddressBook from "./address-book/internal";
 import * as SidePanel from "./side-panel/internal";
+import * as Cardano from "./cardano/internal";
 import { KVStore } from "@keplr-wallet/common";
 import { ChainInfo } from "@keplr-wallet/types";
-import { CommonCrypto } from "./keyring";
+import { CommonCrypto } from "./keyring/types";
 import { Notification } from "./tx";
 import { LedgerOptions } from "./ledger/options";
 
@@ -39,6 +40,7 @@ export * from "./auto-lock-account";
 export * from "./analytics";
 export * from "./address-book";
 export * from "./side-panel";
+export * from "./cardano";
 
 export function init(
   router: Router,
@@ -117,10 +119,18 @@ export function init(
     analyticsPrivilegedOrigins
   );
 
+  const cardanoService = new Cardano.CardanoService(
+    notification,
+    storeCreator("cardano.tx-history"),
+    storeCreator("cardano.blockfrost-credentials"),
+    commonCrypto
+  );
+
   const keyRingService = new KeyRing.KeyRingService(
     storeCreator("keyring"),
     embedChainInfos,
-    commonCrypto
+    commonCrypto,
+    cardanoService
   );
 
   const autoLockAccountService = new AutoLocker.AutoLockAccountService(
@@ -169,6 +179,7 @@ export function init(
   Ledger.init(router, ledgerService);
   Messaging.init(router, messagingService);
   SidePanel.init(router, sidePanelService);
+  Cardano.init(router, cardanoService, keyRingService);
 
   return {
     initFn: async () => {
