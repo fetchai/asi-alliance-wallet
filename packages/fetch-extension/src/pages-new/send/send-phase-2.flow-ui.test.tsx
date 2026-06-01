@@ -815,6 +815,10 @@ describe("SendPhase2 real flow guards", () => {
   });
 
   describe("Cardano sync polling recovery", () => {
+    // Keep in sync with send-phase-2.tsx CARDANO_SYNC_POLL_* constants.
+    const CARDANO_SYNC_POLL_FAST_MS = 2000;
+    const CARDANO_SYNC_POLL_NORMAL_MS = 6000;
+
     type SyncQueueItem = "reject" | { state: string; isSettled?: boolean };
 
     let syncQueue: SyncQueueItem[];
@@ -880,7 +884,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(countGetCardanoSyncStatusCalls()).toBe(1);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
@@ -892,7 +896,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(btn?.disabled).toBe(false);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
@@ -910,7 +914,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(countGetCardanoSyncStatusCalls()).toBe(1);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
@@ -922,7 +926,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(btn?.disabled).toBe(false);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
@@ -948,7 +952,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(container.textContent).not.toMatch(/Syncing Cardano wallet/i);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
@@ -959,7 +963,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(container.textContent).not.toMatch(/Syncing Cardano wallet/i);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -989,7 +993,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(container.textContent).not.toContain("Transaction is not ready");
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
@@ -1000,7 +1004,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(container.textContent).not.toContain("Transaction is not ready");
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -1012,7 +1016,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(btn?.disabled).toBe(false);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -1068,13 +1072,13 @@ describe("SendPhase2 real flow guards", () => {
       expect(countGetCardanoSyncStatusCalls()).toBe(1);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -1082,7 +1086,7 @@ describe("SendPhase2 real flow guards", () => {
       await runDraftDebounce();
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -1101,13 +1105,13 @@ describe("SendPhase2 real flow guards", () => {
       expect(countGetCardanoSyncStatusCalls()).toBe(1);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -1115,7 +1119,7 @@ describe("SendPhase2 real flow guards", () => {
       await runDraftDebounce();
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -1137,7 +1141,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(countGetCardanoSyncStatusCalls()).toBe(2);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_NORMAL_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
@@ -1149,7 +1153,7 @@ describe("SendPhase2 real flow guards", () => {
       expect(btn?.disabled).toBe(false);
 
       await act(async () => {
-        jest.advanceTimersByTime(2000);
+        jest.advanceTimersByTime(CARDANO_SYNC_POLL_FAST_MS);
         await flushMicrotasks();
       });
       expect(countGetCardanoSyncStatusCalls()).toBe(3);
