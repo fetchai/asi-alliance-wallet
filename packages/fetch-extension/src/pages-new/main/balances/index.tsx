@@ -139,7 +139,9 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   const formattedValue =
     numericValue !== 0 && numericValue < 0.000001
       ? "< 0.000001"
-      : numericValue.toLocaleString("en-US");
+      : numericValue.toLocaleString("en-US", {
+          maximumFractionDigits: numericValue < 0.001 ? 6 : 3,
+        });
 
   return (
     <div className={style["balance-card"]}>
