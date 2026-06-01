@@ -21,11 +21,15 @@ import {
 // eslint-disable-next-line import/no-extraneous-dependencies -- rxjs is not a direct dependency of this package
 import { BehaviorSubject, of } from "rxjs";
 
-jest.mock("@keplr-wallet/cardano", () => ({
-  encodeCardanoUiError: (code: string, message: string) =>
-    `cardano_ui_error:${code}:${message}`,
-  parseCardanoUiError: (message: string) => ({ message }),
-}));
+jest.mock("@keplr-wallet/cardano", () => {
+  const actual = jest.requireActual("@keplr-wallet/cardano");
+  return {
+    ...actual,
+    encodeCardanoUiError: (code: string, message: string) =>
+      `cardano_ui_error:${code}:${message}`,
+    parseCardanoUiError: (message: string) => ({ message }),
+  };
+});
 
 describe("Cardano message security boundaries", () => {
   it("keeps EstimateSendAda internal-only", () => {
@@ -223,6 +227,15 @@ describe("Cardano message security boundaries", () => {
 });
 
 describe("Cardano handler security boundaries", () => {
+  const cardanoServiceAttachLimitStub = {
+    getBlockfrostCredentialsStore: jest.fn(() => undefined),
+  };
+  const noBlockfrostLimitPresentation = {
+    activeKeySource: "none" as const,
+    showBuiltinLimitCta: false,
+    showUserKeyLimitWarning: false,
+  };
+
   it("allows internal estimate requests", async () => {
     const service = {
       isReady: jest.fn(() => true),
@@ -467,6 +480,7 @@ describe("Cardano handler security boundaries", () => {
 
   it("GetCardanoSyncStatusMsg returns structured response when ensureCardanoServiceReady throws", async () => {
     const service = {
+      ...cardanoServiceAttachLimitStub,
       isReady: jest.fn(() => true),
       getRuntimeState: jest.fn(() => "ok"),
       getWalletManager: jest.fn(() => ({
@@ -491,6 +505,7 @@ describe("Cardano handler security boundaries", () => {
       isSettled: false,
       hasOutgoingPendingSpend: false,
       error: CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY,
+      blockfrostLimit: noBlockfrostLimitPresentation,
     });
     expect(service.getWalletManager).not.toHaveBeenCalled();
   });
@@ -522,6 +537,7 @@ describe("Cardano handler security boundaries", () => {
   it("GetCardanoSyncStatusMsg returns structured provider_error when ensure throws provider_error protocol message", async () => {
     const msgText = formatProviderUnavailableError("cardano-mainnet");
     const service = {
+      ...cardanoServiceAttachLimitStub,
       isReady: jest.fn(() => true),
       getRuntimeState: jest.fn(() => "ok"),
       getWalletManager: jest.fn(() => ({
@@ -546,6 +562,7 @@ describe("Cardano handler security boundaries", () => {
       isSettled: false,
       hasOutgoingPendingSpend: false,
       error: msgText,
+      blockfrostLimit: noBlockfrostLimitPresentation,
     });
     expect(service.getWalletManager).not.toHaveBeenCalled();
   });
@@ -601,6 +618,7 @@ describe("Cardano handler security boundaries", () => {
 
   it("propagates degraded tx history semantics to response", async () => {
     const service = {
+      ...cardanoServiceAttachLimitStub,
       isReady: jest.fn(() => true),
       isInitialized: jest.fn(() => true),
       getTxHistory: jest.fn(async () => ({
@@ -636,6 +654,7 @@ describe("Cardano handler security boundaries", () => {
       mightHaveMore: false,
       hasDegradedItems: true,
       error: "tx_history_partial_data",
+      blockfrostLimit: noBlockfrostLimitPresentation,
     });
   });
 });
