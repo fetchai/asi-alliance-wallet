@@ -268,6 +268,17 @@ export const FeeButtonsInner: FunctionComponent<
       }
     })();
 
+    const displayFee =
+      feeButtonState.isGasInputOpen || feeConfig.isManual
+        ? feeConfig.fee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : feeConfig.feeType === "low"
+        ? lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : feeConfig.feeType === "average"
+        ? averageFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : highFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm);
+
+    const feeDisplayText = displayFee ?? gasConfig.gasRaw ?? "-";
+
     return (
       <FormGroup>
         <div className={feeButtonStyles["transactionFeeContainer"]}>
@@ -277,24 +288,7 @@ export const FeeButtonsInner: FunctionComponent<
 
           <div className={feeButtonStyles["transactionFeeValueContainer"]}>
             <div className={feeButtonStyles["transactionFeeValue"]}>
-              {feeButtonState.isGasInputOpen
-                ? gasConfig.gasRaw
-                : feeConfig.isManual
-                ? feeConfig.fee
-                    ?.hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm) ?? "-"
-                : feeConfig.feeType === "low"
-                ? lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
-                : feeConfig.feeType === "average"
-                ? averageFee
-                    ?.hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)
-                : highFee
-                    ?.hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)}
+              {feeDisplayText}
             </div>
 
             <button

@@ -27,6 +27,10 @@ const headingStyle: React.CSSProperties = {
   alignItems: "center",
 };
 
+const middleSectionStyle: React.CSSProperties = {
+  width: "100%",
+};
+
 export const ManualFeeInput: FunctionComponent<{
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
@@ -46,7 +50,7 @@ export const ManualFeeInput: FunctionComponent<{
     const feeDisplay = feeMinimal / Math.pow(10, coinDecimals);
     return {
       gasPrice: gasPrice.toString(),
-      feeAmount: feeDisplay.toFixed(Math.min(coinDecimals, 10)),
+      feeAmount: feeDisplay.toFixed(coinDecimals),
       gasLimit: gasConfig.gasRaw,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,7 +80,27 @@ export const ManualFeeInput: FunctionComponent<{
     }
   };
 
-  const handleGasPriceChange = (value: string) => {
+  const trimLeadingZeros = (value: string) => {
+    if (!value) return value;
+
+    // Preserve decimals like "0.1", "0.01"
+    if (value.startsWith(".")) {
+      return `0${value}`;
+    }
+
+    return value.replace(/^0+(?=\d)/, "");
+  };
+
+  const handleGasPriceChange = (rawValue: string) => {
+    const value = trimLeadingZeros(rawValue);
+    const regex = new RegExp(
+      `^\\d{0,${coinDecimals}}(\\.\\d{0,${coinDecimals}})?$`
+    );
+
+    if (!regex.test(value)) {
+      return;
+    }
+
     setGasPriceRaw(value);
     setLastEdited("price");
     disableSimulator();
@@ -85,12 +109,21 @@ export const ManualFeeInput: FunctionComponent<{
     const gasLimit = parseInt(gasLimitRaw) || 0;
     const feeMinimal = gasPrice * gasLimit;
     const feeDisplay = feeMinimal / Math.pow(10, coinDecimals);
-    const newFeeAmount = feeDisplay.toFixed(Math.min(coinDecimals, 10));
-    setFeeAmountRaw(newFeeAmount);
+    const newFeeAmount = feeDisplay.toFixed(coinDecimals);
+    setFeeAmountRaw(parseFloat(newFeeAmount) === 0 ? "0" : newFeeAmount);
     applyFee(newFeeAmount, gasLimitRaw);
   };
 
-  const handleFeeAmountChange = (value: string) => {
+  const handleFeeAmountChange = (rawValue: string) => {
+    const value = trimLeadingZeros(rawValue);
+    const regex = new RegExp(
+      `^\\d{0,${coinDecimals}}(\\.\\d{0,${coinDecimals}})?$`
+    );
+
+    if (!regex.test(value)) {
+      return;
+    }
+
     setFeeAmountRaw(value);
     setLastEdited("amount");
     disableSimulator();
@@ -99,11 +132,16 @@ export const ManualFeeInput: FunctionComponent<{
     const gasLimit = parseInt(gasLimitRaw) || 0;
     const feeMinimal = feeDisplay * Math.pow(10, coinDecimals);
     const gasPrice = gasLimit > 0 ? feeMinimal / gasLimit : 0;
-    setGasPriceRaw(gasPrice.toString());
+    setGasPriceRaw(
+      gasPrice === 0
+        ? "0"
+        : parseFloat(gasPrice.toFixed(coinDecimals)).toString()
+    );
     applyFee(value, gasLimitRaw);
   };
 
-  const handleGasLimitChange = (value: string) => {
+  const handleGasLimitChange = (rawValue: string) => {
+    const value = trimLeadingZeros(rawValue);
     setGasLimitRaw(value);
     disableSimulator();
 
@@ -112,8 +150,8 @@ export const ManualFeeInput: FunctionComponent<{
       const gasPrice = parseFloat(gasPriceRaw) || 0;
       const feeMinimal = gasPrice * gasLimit;
       const feeDisplay = feeMinimal / Math.pow(10, coinDecimals);
-      const newFeeAmount = feeDisplay.toFixed(Math.min(coinDecimals, 10));
-      setFeeAmountRaw(newFeeAmount);
+      const newFeeAmount = feeDisplay.toFixed(coinDecimals);
+      setFeeAmountRaw(parseFloat(newFeeAmount) === 0 ? "0" : newFeeAmount);
       applyFee(newFeeAmount, value);
     } else {
       const feeDisplay = parseFloat(feeAmountRaw) || 0;
@@ -135,6 +173,7 @@ export const ManualFeeInput: FunctionComponent<{
       <Card
         style={cardStyle}
         headingStyle={headingStyle}
+        middleSectionStyle={middleSectionStyle}
         heading={
           <Input
             className={styleAuto["input"]}
