@@ -7,7 +7,6 @@ import { AppCurrency } from "@keplr-wallet/types";
 import { DetailRow } from "./detail-row";
 import { useStore } from "../../../stores";
 import { useNotification } from "@components/notification";
-import { useIntl } from "react-intl";
 import {
   CHAIN_ID_DORADO,
   CHAIN_ID_FETCHHUB,
@@ -26,7 +25,6 @@ export const DetailRows = ({ details }: { details: any }) => {
   const { feeNumber, feeAlphabetic } = details;
   const navigate = useNavigate();
   const notification = useNotification();
-  const intl = useIntl();
   const { chainStore, analyticsStore } = useStore();
   const chainId = chainStore.current.chainId;
 
@@ -80,9 +78,7 @@ export const DetailRows = ({ details }: { details: any }) => {
       placement: "top-center",
       type: "success",
       duration: 2,
-      content: intl.formatMessage({
-        id: "Transaction hash copied",
-      }),
+      content: "Transaction hash copied",
       canDelete: true,
       transition: {
         duration: 0.25,
