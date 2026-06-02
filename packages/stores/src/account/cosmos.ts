@@ -59,10 +59,16 @@ import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
 import { ActivityStore } from "src/activity";
 import { CosmosTxTracer } from "./cosmos-tx-tracer";
-import { makeMultisignedTx } from "@cosmjs/stargate";
+import {
+  createProtobufRpcClient,
+  makeMultisignedTx,
+  QueryClient,
+} from "@cosmjs/stargate";
 /* eslint-disable import/no-extraneous-dependencies */
 import { MultisigThresholdPubkey } from "@cosmjs/amino";
 import { pubkeyToAddress } from "@cosmjs/amino";
+import { ServiceClientImpl } from "cosmjs-types/cosmos/tx/v1beta1/service";
+import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 
 export interface TxRawJSON {
   body: TxBody;
@@ -996,29 +1002,57 @@ export class CosmosAccountImpl {
       signatures: [new Uint8Array(64)],
     }).finish();
 
-    // TODO: Add response type
-    const result = await simpleFetch<any>(
-      this.chainGetter.getChain(this.chainId).rest,
-      "/cosmos/tx/v1beta1/simulate",
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          tx_bytes: Buffer.from(unsignedTx).toString("base64"),
-        }),
+    try {
+      const result = await simpleFetch<any>(
+        this.chainGetter.getChain(this.chainId).rest,
+        "/cosmos/tx/v1beta1/simulate",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            tx_bytes: Buffer.from(unsignedTx).toString("base64"),
+          }),
+        }
+      );
+
+      const gasUsed = parseInt(result.data.gas_info.gas_used);
+      if (Number.isNaN(gasUsed)) {
+        throw new Error(
+          `Invalid integer gas: ${result.data.gas_info.gas_used}`
+        );
       }
-    );
 
-    const gasUsed = parseInt(result.data.gas_info.gas_used);
-    if (Number.isNaN(gasUsed)) {
-      throw new Error(`Invalid integer gas: ${result.data.gas_info.gas_used}`);
+      return { gasUsed };
+    } catch {
+      // fallback simulation using RPC if REST simulation fails
+      const tendermintClient = await Tendermint37Client.connect(
+        this.chainGetter.getChain(this.chainId).rpc
+      );
+
+      const queryClient = new QueryClient(tendermintClient);
+      const rpcClient = createProtobufRpcClient(queryClient);
+      const txService = new ServiceClientImpl(rpcClient);
+
+      const simulateResponse = await txService.Simulate({
+        txBytes: unsignedTx,
+      });
+
+      const gasUsedBigInt = simulateResponse.gasInfo?.gasUsed;
+
+      if (!gasUsedBigInt) {
+        throw new Error(`Invalid gas from simulate: ${gasUsedBigInt}`);
+      }
+
+      const gasUsed = parseInt(gasUsedBigInt.toString());
+
+      if (Number.isNaN(gasUsed)) {
+        throw new Error(`Invalid integer gas: ${gasUsedBigInt}`);
+      }
+
+      return { gasUsed };
     }
-
-    return {
-      gasUsed,
-    };
   }
 
   makeTx(

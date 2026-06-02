@@ -18,6 +18,7 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
       crypto.getRandomValues(bytes);
       return `input-${Buffer.from(bytes).toString("hex")}`;
     });
+    const [rawGasInput, setRawGasInput] = useState(gasConfig.gasRaw);
 
     return (
       <React.Fragment>
@@ -37,13 +38,14 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
             <Input
               id={inputId}
               className={style["input"]}
-              type="number"
-              step={1}
-              min={0}
-              value={gasConfig.gasRaw}
+              type="text"
+              inputMode="numeric"
+              value={rawGasInput}
               onChange={(e) => {
-                if (parseFloat(e.target.value) < 10 ** 18) {
-                  gasConfig.setGas(e.target.value);
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                if (value === "" || parseInt(value) < 10 ** 18) {
+                  setRawGasInput(value);
+                  gasConfig.setGas(value);
                 }
 
                 e.preventDefault();

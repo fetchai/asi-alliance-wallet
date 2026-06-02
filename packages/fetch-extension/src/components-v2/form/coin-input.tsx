@@ -170,8 +170,8 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                   { [styleCoinInput["input-error"]]: errorText != null }
                 )}
                 id={`input-${randomId}`}
-                type="number"
-                step="any"
+                type="text"
+                inputMode="decimal"
                 value={
                   isToggleClicked &&
                   amountConfig.sendCurrency["coinGeckoId"] !== undefined
@@ -190,6 +190,9 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
                 onChange={(e: any) => {
                   e.preventDefault();
                   let value = e.target.value.replace(/[^0-9.]/g, "");
+                  if (value.startsWith(".")) {
+                    value = "0" + value;
+                  }
                   onAmountChange?.(value);
 
                   if (value === "") {
