@@ -25,7 +25,7 @@ import { useIntl } from "react-intl";
 import { useLanguage } from "../../../languages";
 import { useStore } from "../../../stores";
 import { GasContainer } from "../gas-form";
-import { GasInput } from "../gas-input";
+import { ManualFeeInput } from "../gas-form/manual";
 import { FeeCurrencySelector } from "./fee-currency-selector";
 import feeButtonStyles from "./fee-buttons.module.scss";
 
@@ -228,14 +228,26 @@ export const FeeButtonsInner: FunctionComponent<
 
     const fiatCurrency = language.fiatCurrency;
 
-    const lowFee = feeConfig.getFeeTypePretty("low");
-    const lowFeePrice = priceStore.calculatePrice(lowFee, fiatCurrency);
+    const lowFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("low")
+      : undefined;
+    const lowFeePrice = lowFee
+      ? priceStore.calculatePrice(lowFee, fiatCurrency)
+      : undefined;
 
-    const averageFee = feeConfig.getFeeTypePretty("average");
-    const averageFeePrice = priceStore.calculatePrice(averageFee, fiatCurrency);
+    const averageFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("average")
+      : undefined;
+    const averageFeePrice = averageFee
+      ? priceStore.calculatePrice(averageFee, fiatCurrency)
+      : undefined;
 
-    const highFee = feeConfig.getFeeTypePretty("high");
-    const highFeePrice = priceStore.calculatePrice(highFee, fiatCurrency);
+    const highFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("high")
+      : undefined;
+    const highFeePrice = highFee
+      ? priceStore.calculatePrice(highFee, fiatCurrency)
+      : undefined;
 
     const error = feeConfig.error;
     const errorText: string | undefined = (() => {
@@ -267,15 +279,20 @@ export const FeeButtonsInner: FunctionComponent<
             <div className={feeButtonStyles["transactionFeeValue"]}>
               {feeButtonState.isGasInputOpen
                 ? gasConfig.gasRaw
+                : feeConfig.isManual
+                ? feeConfig.fee
+                    ?.hideIBCMetadata(true)
+                    .trim(true)
+                    .toMetricPrefix(isEvm) ?? "-"
                 : feeConfig.feeType === "low"
-                ? lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+                ? lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
                 : feeConfig.feeType === "average"
                 ? averageFee
-                    .hideIBCMetadata(true)
+                    ?.hideIBCMetadata(true)
                     .trim(true)
                     .toMetricPrefix(isEvm)
                 : highFee
-                    .hideIBCMetadata(true)
+                    ?.hideIBCMetadata(true)
                     .trim(true)
                     .toMetricPrefix(isEvm)}
             </div>
@@ -370,7 +387,7 @@ export const FeeButtonsInner: FunctionComponent<
                   >
                     {
                       lowFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -380,7 +397,7 @@ export const FeeButtonsInner: FunctionComponent<
                   <div>
                     {
                       lowFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -451,7 +468,7 @@ export const FeeButtonsInner: FunctionComponent<
                   >
                     {
                       averageFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -461,7 +478,7 @@ export const FeeButtonsInner: FunctionComponent<
                   <div>
                     {
                       averageFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -532,7 +549,7 @@ export const FeeButtonsInner: FunctionComponent<
                   >
                     {
                       highFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -542,7 +559,7 @@ export const FeeButtonsInner: FunctionComponent<
                   <div>
                     {
                       highFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -600,6 +617,7 @@ export const FeeButtonsInner: FunctionComponent<
                 <React.Fragment>
                   <GasContainer
                     label={gasLabel}
+                    feeConfig={feeConfig}
                     gasConfig={gasConfig}
                     gasSimulator={gasSimulator}
                   />
@@ -607,6 +625,7 @@ export const FeeButtonsInner: FunctionComponent<
               ) : (
                 <GasContainer
                   label={gasLabel}
+                  feeConfig={feeConfig}
                   gasConfig={gasConfig}
                   gasSimulator={gasSimulator}
                 />
@@ -618,14 +637,11 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{ backgroundColor: "transparent" }}
                   heading={<FeeCurrencySelector feeConfig={feeConfig} />}
                 >
-                  <GasInput label={gasLabel} gasConfig={gasConfig} />
+                  <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
                 </Card>
               </React.Fragment>
             ) : (
-              <Card
-                style={{ backgroundColor: "transparent" }}
-                heading={<GasInput label={gasLabel} gasConfig={gasConfig} />}
-              />
+              <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
             )
           ) : null}
 
