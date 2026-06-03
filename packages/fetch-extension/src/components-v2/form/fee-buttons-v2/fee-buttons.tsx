@@ -268,6 +268,22 @@ export const FeeButtonsInner: FunctionComponent<
       }
     })();
 
+    const displayFee =
+      feeButtonState.isGasInputOpen || feeConfig.isManual
+        ? feeConfig.fee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : feeConfig.feeType === "low"
+        ? lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : feeConfig.feeType === "average"
+        ? averageFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : highFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm);
+
+    const feeDisplayText =
+      displayFee && displayFee !== "0"
+        ? displayFee
+        : feeConfig.fee?.hideIBCMetadata(true).trim(true).toString() ||
+          gasConfig.gasRaw ||
+          "-";
+
     return (
       <FormGroup>
         <div className={feeButtonStyles["transactionFeeContainer"]}>
@@ -277,24 +293,7 @@ export const FeeButtonsInner: FunctionComponent<
 
           <div className={feeButtonStyles["transactionFeeValueContainer"]}>
             <div className={feeButtonStyles["transactionFeeValue"]}>
-              {feeButtonState.isGasInputOpen
-                ? gasConfig.gasRaw
-                : feeConfig.isManual
-                ? feeConfig.fee
-                    ?.hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm) ?? "-"
-                : feeConfig.feeType === "low"
-                ? lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
-                : feeConfig.feeType === "average"
-                ? averageFee
-                    ?.hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)
-                : highFee
-                    ?.hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)}
+              {feeDisplayText}
             </div>
 
             <button
@@ -326,87 +325,90 @@ export const FeeButtonsInner: FunctionComponent<
           }}
         >
           <div>
-            <Card
-              onClick={(e: MouseEvent) => {
-                feeConfig.setFeeType("low");
-                e.preventDefault();
-                analyticsStore.logEvent("fee_type_select", {
-                  pageName: pageName,
-                  feeType: "low",
-                });
-              }}
-              style={{
-                padding: "18px 16px",
-                height: "54px",
-              }}
-              heading={
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  {feeSelectLabels.low}
-                  <span
-                    style={{
-                      opacity: "0.6",
-                      fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
-                      fontSize: "12px",
-                      marginLeft: "5px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      width: "100px",
-                      display: "inline-block",
-                    }}
-                  >
-                    {lowFeePrice && lowFeePrice.trim(true).toString()}
-                  </span>
-                </div>
-              }
-              isActive={feeConfig.feeType === "low"}
-              rightContent={
-                <div
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 400,
-                    opacity: "0.6",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2px",
-                  }}
-                >
+            {/* if low fee price is same as average fee price don't show low fee option */}
+            {lowFeePrice?.toString() !== averageFeePrice?.toString() && (
+              <Card
+                onClick={(e: MouseEvent) => {
+                  feeConfig.setFeeType("low");
+                  e.preventDefault();
+                  analyticsStore.logEvent("fee_type_select", {
+                    pageName: pageName,
+                    feeType: "low",
+                  });
+                }}
+                style={{
+                  padding: "18px 16px",
+                  height: "54px",
+                }}
+                heading={
                   <div
                     style={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: "50px",
+                      display: "flex",
+                      alignItems: "center",
                     }}
                   >
-                    {
-                      lowFee
-                        ?.hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[0]
-                    }
+                    {feeSelectLabels.low}
+                    <span
+                      style={{
+                        opacity: "0.6",
+                        fontWeight: 400,
+                        color: "var(--grey-white, #FFF)",
+                        fontSize: "12px",
+                        marginLeft: "5px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        width: "100px",
+                        display: "inline-block",
+                      }}
+                    >
+                      {lowFeePrice && lowFeePrice.trim(true).toString()}
+                    </span>
                   </div>
-                  <div>
-                    {
-                      lowFee
-                        ?.hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[1]
-                    }
+                }
+                isActive={feeConfig.feeType === "low"}
+                rightContent={
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 400,
+                      opacity: "0.6",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "2px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: "50px",
+                      }}
+                    >
+                      {
+                        lowFee
+                          ?.hideIBCMetadata(true)
+                          .trim(true)
+                          .toMetricPrefix(isEvm)
+                          .toString()
+                          .split(" ")[0]
+                      }
+                    </div>
+                    <div>
+                      {
+                        lowFee
+                          ?.hideIBCMetadata(true)
+                          .trim(true)
+                          .toMetricPrefix(isEvm)
+                          .toString()
+                          .split(" ")[1]
+                      }
+                    </div>
                   </div>
-                </div>
-              }
-            />
+                }
+              />
+            )}
             <Card
               isActive={feeConfig.feeType === "average"}
               heading={
