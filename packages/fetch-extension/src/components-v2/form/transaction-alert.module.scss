@@ -1,0 +1,66 @@
+@import "../../styles/var";
+
+.alert {
+  display: flex;
+  padding: 12px;
+  position: absolute;
+  bottom: 80px;
+  width: 95%;
+  margin: 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  align-self: stretch;
+  border-radius: 12px;
+  background: rgb(177, 233, 255);
+  border: none !important;
+  color: rgb(40, 101, 129);
+  margin-top: 24px;
+
+  .alertText {
+    display: flex;
+    align-items: flex-start;
+    column-gap: 10px;
+  }
+
+  i {
+    font-size: 24px;
+    margin-right: 8px;
+  }
+
+  img {
+    padding-top: 4px;
+  }
+
+  h1 {
+    font-size: 16px;
+    font-weight: bold;
+    color: rgb(40, 101, 129);
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 1.57;
+    margin: 0;
+  }
+
+  .text {
+    color: rgb(40, 101, 129);
+    font-family: $font-family-base;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 160%; /* 22.4px */
+  }
+
+  .lightText {
+    color: rgb(40, 101, 129);
+    font-family: $font-family-base;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 160%;
+    opacity: 0.6;
+  }
+}
