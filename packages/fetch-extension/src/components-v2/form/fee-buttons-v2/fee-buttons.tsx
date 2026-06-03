@@ -277,7 +277,12 @@ export const FeeButtonsInner: FunctionComponent<
         ? averageFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
         : highFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm);
 
-    const feeDisplayText = displayFee ?? gasConfig.gasRaw ?? "-";
+    const feeDisplayText =
+      displayFee && displayFee !== "0"
+        ? displayFee
+        : feeConfig.fee?.hideIBCMetadata(true).trim(true).toString() ||
+          gasConfig.gasRaw ||
+          "-";
 
     return (
       <FormGroup>
