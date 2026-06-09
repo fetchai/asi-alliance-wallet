@@ -11,13 +11,13 @@ export const GasContainer: FunctionComponent<{
   label?: string;
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
-
+  onValidationChange?: (hasError: boolean) => void;
   gasSimulator: IGasSimulator & {
     outdatedCosmosSdk?: boolean;
     forceDisabled?: boolean;
     forceDisableReason?: Error | undefined;
   };
-}> = observer(({ feeConfig, gasConfig, gasSimulator }) => {
+}> = observer(({ feeConfig, gasConfig, gasSimulator, onValidationChange }) => {
   return (
     <div className={styleContainer["container"]}>
       <div className={styleContainer["autoButtonGroup"]}>
@@ -48,6 +48,7 @@ export const GasContainer: FunctionComponent<{
           feeConfig={feeConfig}
           gasConfig={gasConfig}
           gasSimulator={gasSimulator}
+          onValidationChange={onValidationChange}
         />
       )}
     </div>
