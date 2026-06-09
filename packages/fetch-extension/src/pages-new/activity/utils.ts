@@ -79,7 +79,15 @@ export const getDetails = (node: any, chainStore: any): any => {
       verb = "Redelegated";
       break;
     case "/cosmos.bank.v1beta1.MsgSend":
-      verb = isAmountDeducted ? "Sent" : "Received";
+      const isInProgress = ["Pending", "Unconfirmed"].includes(status);
+      verb = isInProgress
+        ? isAmountDeducted
+          ? "Sending"
+          : "Receiving"
+        : isAmountDeducted
+        ? "Sent"
+        : "Received";
+
       break;
     case "/ibc.applications.transfer.v1.MsgTransfer":
       verb = "IBC transfer";
@@ -94,7 +102,7 @@ export const getDetails = (node: any, chainStore: any): any => {
       verb = "Claimed";
       break;
     case "/cosmos.gov.v1beta1.MsgSubmitProposal":
-      verb = "Governance Proposal";
+      verb = "Submit Governance Proposal";
       break;
     case "/cosmos.authz.v1beta1.MsgExec":
     case "/cosmwasm.wasm.v1.MsgExecuteContract":
