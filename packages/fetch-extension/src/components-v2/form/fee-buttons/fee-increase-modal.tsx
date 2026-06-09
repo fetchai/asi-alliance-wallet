@@ -8,6 +8,7 @@ interface FeeIncreaseModalProps {
   feeConfigs: any;
   gasSimulator?: IGasSimulator;
   pendingTransactionFees?: { denom: string; amount: string } | null;
+  isFeeReduction: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -15,33 +16,24 @@ interface FeeIncreaseModalProps {
 export const FeeIncreaseModal: React.FC<FeeIncreaseModalProps> = ({
   isOpen,
   feeConfigs,
-  gasSimulator,
   pendingTransactionFees,
+  isFeeReduction,
   onConfirm,
   onCancel,
 }) => {
-  const _disableSimulator = () => {
-    if (gasSimulator && gasSimulator?.enabled) {
-      gasSimulator.setEnabled(false);
-    }
-  };
-
   const applyOverrideFee = () => {
     if (!pendingTransactionFees) return;
 
-    // disableSimulator();
-    const oldFeeAmount = parseFloat(pendingTransactionFees?.amount || "0");
+    const oldFeeAmount = parseFloat(pendingTransactionFees.amount || "0");
     const currentFeeAmount = parseFloat(feeConfigs.fee?.toCoin().amount) || 0;
 
     // Increment by 10%
     const incrementedFee = Math.round(oldFeeAmount * 1.1);
-    if (incrementedFee > currentFeeAmount) {
-      if (pendingTransactionFees?.denom) {
-        feeConfigs.setManualFee({
-          denom: pendingTransactionFees.denom,
-          amount: incrementedFee.toString(),
-        });
-      }
+    if (incrementedFee > currentFeeAmount && pendingTransactionFees.denom) {
+      feeConfigs.setManualFee({
+        denom: pendingTransactionFees.denom,
+        amount: incrementedFee.toString(),
+      });
     }
   };
 
@@ -57,25 +49,40 @@ export const FeeIncreaseModal: React.FC<FeeIncreaseModalProps> = ({
           src={require("@assets/svg/wireframe/xmark.svg")}
           alt="close"
           onClick={onCancel}
-          style={{ width: 16, height: 16, cursor: "pointer", opacity: 0.5 }}
+          style={{
+            width: 16,
+            height: 16,
+            cursor: "pointer",
+            opacity: 0.5,
+          }}
         />
       </div>
 
       <ModalBody className="px-4 pt-2 pb-0">
         <h6 className="fw-bold text-dark mb-2" style={{ fontSize: 15 }}>
-          Transaction Fee Update
+          {isFeeReduction
+            ? "Recommended Transaction Fee"
+            : "Transaction Fee Update"}
         </h6>
+
         <p
           className="text-muted mb-3"
-          style={{ fontSize: 13, lineHeight: 1.5 }}
+          style={{
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
         >
-          Transaction fees will be temporarily increased to ensure your
-          transaction is processed without delay.
+          {isFeeReduction
+            ? "The manually entered fee is lower than the recommended amount for overriding this pending transaction."
+            : "Transaction fees will be temporarily increased to help ensure your transaction is processed successfully."}
         </p>
 
         <div
           className="d-flex align-items-center gap-2 rounded-3 p-2 mb-1"
-          style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}
+          style={{
+            background: "#fff7ed",
+            border: "1px solid #fed7aa",
+          }}
         >
           <span
             className="badge rounded-2 fw-bold flex-shrink-0"
@@ -88,8 +95,17 @@ export const FeeIncreaseModal: React.FC<FeeIncreaseModalProps> = ({
           >
             +10%
           </span>
-          <span style={{ color: "#92400e", fontSize: 12, fontWeight: 500 }}>
-            Fees will be increased to avoid transaction failures
+
+          <span
+            style={{
+              color: "#92400e",
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
+            {isFeeReduction
+              ? "The fee will be adjusted to the recommended amount to reduce the risk of transaction failure."
+              : "Fees will be increased to avoid transaction failures."}
           </span>
         </div>
       </ModalBody>
@@ -108,6 +124,7 @@ export const FeeIncreaseModal: React.FC<FeeIncreaseModalProps> = ({
           }}
           onClick={onCancel}
         />
+
         <ButtonV2
           variant="dark"
           text="Proceed"

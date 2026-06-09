@@ -15,8 +15,6 @@ export const TransactionOverrideAlert: React.FC<OverrideAlertProps> = observer(
   ({ isAmountInvalid = false, onOverrideClick }) => {
     const { activityStore } = useStore();
 
-    const isPreviousTxnPending =
-      Object.values(activityStore.getPendingTxn).length > 0;
     const previousTxnFees = (activityStore.sortedNodes[0] as any)?.transaction
       ?.fees;
     const currentFees = JSON.parse(previousTxnFees || "[]")?.[0];
@@ -26,8 +24,6 @@ export const TransactionOverrideAlert: React.FC<OverrideAlertProps> = observer(
     const elapsed = previousTxnTime
       ? formatDistanceToNow(new Date(previousTxnTime), { addSuffix: true })
       : "";
-
-    if (!isPreviousTxnPending) return null;
 
     return (
       <Alert className={style["alert"]}>
@@ -45,6 +41,7 @@ export const TransactionOverrideAlert: React.FC<OverrideAlertProps> = observer(
         </div>
         <ButtonV2
           text="Override"
+          type="button"
           disabled={isAmountInvalid || !previousTxnFees}
           styleProps={{
             width: "fit-content",
