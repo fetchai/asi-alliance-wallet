@@ -45,6 +45,13 @@ const errorTextStyle: React.CSSProperties = {
   marginTop: "-10px",
 };
 
+const containerStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  marginBottom: "10px",
+};
+
 export const ManualFeeInput: FunctionComponent<{
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
@@ -63,12 +70,17 @@ export const ManualFeeInput: FunctionComponent<{
         "minimumGasPrice",
         chainStore.current.rpc,
         chainStore.current.chainId,
+        chainStore.current.features,
       ],
       queryFn: async () => {
         const rpc = chainStore.current.rpc;
         const gasPrices = chainStore.current.feeCurrencies?.[0].gasPriceStep;
         const gasPrice = gasPrices?.low || gasPrices?.average || 0;
-        return await getMinimumGasPrice(rpc, gasPrice.toString());
+        return await getMinimumGasPrice(
+          rpc,
+          gasPrice.toString(),
+          chainStore.current.features?.includes("evm") ?? false
+        );
       },
       staleTime: 60 * 1000,
       retry: false,
@@ -122,7 +134,7 @@ export const ManualFeeInput: FunctionComponent<{
       if (minGasPrice <= 0) return "";
       const parsed = parseFloat(value) || 0;
       if (parsed < minGasPrice) {
-        return `Min gas price is ${minGasPrice} ${minimalDenom}/gas`;
+        return `Minimum gas price is ${minGasPrice} ${minimalDenom}/gas`;
       }
       return "";
     };
@@ -131,7 +143,7 @@ export const ManualFeeInput: FunctionComponent<{
       if (minFeeAmount <= 0) return "";
       const parsed = parseFloat(value) || 0;
       if (parsed < minFeeAmount) {
-        return `Min fee is ${minFeeAmount.toFixed(
+        return `Minimum fee is ${minFeeAmount.toFixed(
           coinDecimals
         )} ${displayDenom}`;
       }
@@ -292,7 +304,7 @@ export const ManualFeeInput: FunctionComponent<{
     );
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={containerStyle}>
         {renderField(
           `Gas Price (${minimalDenom}/gas)`,
           gasPriceRaw,

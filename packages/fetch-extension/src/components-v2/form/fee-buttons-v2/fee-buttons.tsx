@@ -200,6 +200,7 @@ export const FeeButtonsInner: FunctionComponent<
     pageName,
   }) => {
     const [isFeeDropdownOpen, setIsFeeDropdownOpen] = useState(false);
+    const [manualFeeError, setManualFeeError] = useState(false);
 
     useEffect(() => {
       if (feeConfig.feeCurrency && !feeConfig.fee) {
@@ -268,6 +269,12 @@ export const FeeButtonsInner: FunctionComponent<
       }
     })();
 
+    useEffect(() => {
+      if (!feeButtonState.isGasInputOpen) {
+        setManualFeeError(false);
+      }
+    }, [feeButtonState.isGasInputOpen]);
+
     const displayFee =
       feeButtonState.isGasInputOpen || feeConfig.isManual
         ? feeConfig.fee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
@@ -283,6 +290,10 @@ export const FeeButtonsInner: FunctionComponent<
         : feeConfig.fee?.hideIBCMetadata(true).trim(true).toString() ||
           gasConfig.gasRaw ||
           "-";
+
+    const onValidationChange = (value: boolean) => {
+      setManualFeeError(value);
+    };
 
     return (
       <FormGroup>
@@ -622,6 +633,7 @@ export const FeeButtonsInner: FunctionComponent<
                     feeConfig={feeConfig}
                     gasConfig={gasConfig}
                     gasSimulator={gasSimulator}
+                    onValidationChange={onValidationChange}
                   />
                 </React.Fragment>
               ) : (
@@ -630,6 +642,7 @@ export const FeeButtonsInner: FunctionComponent<
                   feeConfig={feeConfig}
                   gasConfig={gasConfig}
                   gasSimulator={gasSimulator}
+                  onValidationChange={onValidationChange}
                 />
               )
             ) : feeConfig.feeCurrencies.length > 1 &&
@@ -639,11 +652,19 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{ backgroundColor: "transparent" }}
                   heading={<FeeCurrencySelector feeConfig={feeConfig} />}
                 >
-                  <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
+                  <ManualFeeInput
+                    feeConfig={feeConfig}
+                    gasConfig={gasConfig}
+                    onValidationChange={onValidationChange}
+                  />
                 </Card>
               </React.Fragment>
             ) : (
-              <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
+              <ManualFeeInput
+                feeConfig={feeConfig}
+                gasConfig={gasConfig}
+                onValidationChange={onValidationChange}
+              />
             )
           ) : null}
 
@@ -664,7 +685,11 @@ export const FeeButtonsInner: FunctionComponent<
               setIsFeeDropdownOpen(false);
             }}
             btnBgEnabled={true}
-            disabled={errorText != null || !!gasConfig.error}
+            disabled={
+              errorText != null ||
+              !!gasConfig.error ||
+              (feeButtonState.isGasInputOpen && manualFeeError)
+            }
           />
         </Dropdown>
       </FormGroup>
