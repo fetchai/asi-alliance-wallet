@@ -113,7 +113,7 @@ export const GasAutoContainer: FunctionComponent<{
             fontWeight: 400,
           }}
         >
-          Gas amount
+          Gas Limit
         </div>
         <Card
           style={{

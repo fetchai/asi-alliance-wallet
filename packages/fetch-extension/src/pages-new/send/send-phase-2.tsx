@@ -415,7 +415,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                   type: "warning",
                   placement: "top-center",
                   duration: 5,
-                  content: e.message || `Transaction Failed`,
+                  content: e?.message || `Transaction Failed`,
                   canDelete: true,
                   transition: {
                     duration: 0.25,
