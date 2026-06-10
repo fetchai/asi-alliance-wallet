@@ -411,6 +411,17 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                   message: e?.message ?? "",
                 });
 
+                notification.push({
+                  type: "warning",
+                  placement: "top-center",
+                  duration: 5,
+                  content: e?.message || `Transaction Failed`,
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+
                 const currentPathName = getPathname();
                 if (
                   !isDetachedPage &&
@@ -427,17 +438,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                         recipient: sendConfigs.recipientConfig.recipient,
                         memo: sendConfigs.memoConfig.memo,
                       },
-                    },
-                  });
-                } else {
-                  notification.push({
-                    type: "warning",
-                    placement: "top-center",
-                    duration: 5,
-                    content: `Transaction Failed`,
-                    canDelete: true,
-                    transition: {
-                      duration: 0.25,
                     },
                   });
                 }

@@ -142,9 +142,9 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
         coinImageUrl:
           "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
         gasPriceStep: {
-          low: 0,
-          average: 5000000000,
-          high: 6250000000,
+          low: 0.025,
+          average: 0.025,
+          high: 0.035,
         },
       },
     ],

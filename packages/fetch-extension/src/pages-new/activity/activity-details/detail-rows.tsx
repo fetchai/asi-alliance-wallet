@@ -179,23 +179,25 @@ export const DetailRows = ({ details }: { details: any }) => {
             </ButtonV2>{" "}
             {[CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
               chainId
-            ) && (
-              <ButtonV2
-                styleProps={{
-                  height: "48px",
-                  marginTop: 0,
-                }}
-                text=""
-                onClick={handleClick}
-              >
-                View on explorer
-              </ButtonV2>
-            )}
+            ) &&
+              ["Success", "Failed"].includes(details.status) && (
+                <ButtonV2
+                  styleProps={{
+                    height: "48px",
+                    marginTop: 0,
+                  }}
+                  text=""
+                  onClick={handleClick}
+                >
+                  View on explorer
+                </ButtonV2>
+              )}
           </div>
         ) : (
           [CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
             chainId
-          ) && (
+          ) &&
+          ["Success", "Failed"].includes(details.status) && (
             <ButtonV2
               styleProps={{
                 height: "48px",

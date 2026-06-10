@@ -366,6 +366,19 @@ export class KeyRingService {
       );
     }
 
+    if (signDoc.fee?.amount) {
+      const filteredAmounts = signDoc.fee.amount.filter(
+        (coin) => coin.amount !== "0"
+      );
+      signDoc = sortObjectByKey({
+        ...signDoc,
+        fee: {
+          ...signDoc.fee,
+          amount: filteredAmounts,
+        },
+      });
+    }
+
     let newSignDoc = (await this.interactionService.waitApprove(
       env,
       "/sign",
