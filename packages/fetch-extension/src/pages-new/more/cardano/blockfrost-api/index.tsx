@@ -236,6 +236,32 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
     }
   };
 
+  const copySavedProjectId = useCallback(
+    async (projectId: string) => {
+      try {
+        await navigator.clipboard.writeText(projectId);
+        notification.push({
+          placement: "top-center",
+          type: "success",
+          duration: 2,
+          content: "Blockfrost project ID copied",
+          canDelete: true,
+          transition: { duration: 0.25 },
+        });
+      } catch {
+        notification.push({
+          placement: "top-center",
+          type: "danger",
+          duration: 2,
+          content: "Could not copy project ID",
+          canDelete: true,
+          transition: { duration: 0.25 },
+        });
+      }
+    },
+    [notification]
+  );
+
   const clearCredentials = async () => {
     if (!network) {
       return;
@@ -330,9 +356,32 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
             {credentials &&
             !credentials.locked &&
             credentials.maskedProjectId ? (
-              <p className={style["hint"]}>
-                Saved key: {credentials.maskedProjectId}
-              </p>
+              <Card
+                heading={credentials.maskedProjectId}
+                subheading="Saved Blockfrost project ID"
+                headingStyle={{
+                  fontFamily: "monospace",
+                  fontSize: "15px",
+                  wordBreak: "break-all",
+                }}
+                rightContent={require("@assets/svg/wireframe/copy.svg")}
+                rightContentOnClick={() => {
+                  if (!credentials.projectId) {
+                    notification.push({
+                      placement: "top-center",
+                      type: "danger",
+                      duration: 2,
+                      content: "Could not copy project ID",
+                      canDelete: true,
+                      transition: { duration: 0.25 },
+                    });
+                    return;
+                  }
+
+                  void copySavedProjectId(credentials.projectId);
+                }}
+                style={{ marginBottom: "12px" }}
+              />
             ) : null}
 
             {savedButDisabled ? (
@@ -429,7 +478,7 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
           </p>
           <p>
             Your key is stored encrypted in this wallet. Only a masked version
-            is shown after saving.
+            is shown; use copy to get the full project ID.
           </p>
         </ModalBody>
       </Modal>

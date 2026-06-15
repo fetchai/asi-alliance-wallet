@@ -131,6 +131,7 @@ describe("blockfrost credentials ops", () => {
       hasCustomKey: true,
       useCustomKey: false,
       maskedProjectId: "save...5678",
+      projectId: "saved-key-12345678",
     });
   });
 

@@ -837,6 +837,7 @@ export type GetBlockfrostCredentialsResponse =
       chainId: string;
       useCustomKey: boolean;
       maskedProjectId?: string;
+      projectId?: string;
     };
 
 export class GetBlockfrostCredentialsMsg extends Message<GetBlockfrostCredentialsResponse> {

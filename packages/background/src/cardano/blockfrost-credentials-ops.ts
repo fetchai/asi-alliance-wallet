@@ -73,6 +73,7 @@ export async function getBlockfrostCredentialsResponse(
       maskedProjectId: prefs
         ? maskBlockfrostProjectId(prefs.projectId)
         : undefined,
+      projectId: prefs?.projectId,
     };
   } catch {
     return {
