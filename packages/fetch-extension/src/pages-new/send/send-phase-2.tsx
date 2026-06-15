@@ -652,13 +652,20 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       feeError: sendConfigs.feeConfig.error,
     });
 
+    const suppressOperationalPendingDraftError =
+      cardanoOperationalGuard &&
+      normalizedCardanoDraftError === CARDANO_SEND_CONFLICT_PENDING_MESSAGE;
+    const effectiveCardanoDraftError = suppressOperationalPendingDraftError
+      ? null
+      : normalizedCardanoDraftError;
+
     const sendConfigError =
       sendConfigs.recipientConfig.error ??
       sendConfigs.amountConfig.error ??
       sendConfigs.memoConfig.error ??
       (isCardano
-        ? normalizedCardanoDraftError
-          ? new Error(normalizedCardanoDraftError)
+        ? effectiveCardanoDraftError
+          ? new Error(effectiveCardanoDraftError)
           : !cardanoDraft &&
             !isBuildingCardanoDraft &&
             !cardanoOperationalGuard &&
@@ -759,7 +766,27 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         return;
       }
 
+      const safeDiscardDraft = (
+        requester: InExtensionMessageRequester,
+        draftId: string | undefined
+      ) => {
+        if (!draftId) return;
+        void requester
+          .sendMessage(BACKGROUND_PORT, new DiscardSendAdaTxDraftMsg(draftId))
+          .catch(() => {});
+      };
+
       if (isCardanoSyncing) {
+        return;
+      }
+
+      if (hasCardanoOutgoingPending) {
+        const requesterPending = new InExtensionMessageRequester();
+        safeDiscardDraft(requesterPending, cardanoDraft?.draftId);
+        setCardanoDraft(null);
+        setCardanoDraftError(null);
+        setCardanoMinViolation(null);
+        setIsBuildingCardanoDraft(false);
         return;
       }
 
@@ -776,15 +803,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         ? new DenomHelper(sendCurrency.coinMinimalDenom)
         : null;
       const isTokenSend = denomHelper?.type === CARDANO_NATIVE_TOKEN_TYPE;
-      const safeDiscardDraft = (
-        requester: InExtensionMessageRequester,
-        draftId: string | undefined
-      ) => {
-        if (!draftId) return;
-        void requester
-          .sendMessage(BACKGROUND_PORT, new DiscardSendAdaTxDraftMsg(draftId))
-          .catch(() => {});
-      };
 
       if (!normalizedRecipient || !amountStr || recipientError) {
         const requesterEarly = new InExtensionMessageRequester();
@@ -931,6 +949,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     }, [
       isCardano,
       isCardanoSyncing,
+      hasCardanoOutgoingPending,
       chainStore.current.chainId,
       sendConfigs?.recipientConfig?.recipient,
       sendConfigs?.recipientConfig?.error,
@@ -1375,11 +1394,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           variant="dark"
           type="button"
           text={
-            isCardano && cardanoOperationalGuard
+            isCardano && cardanoOperationalGuard && !hasCardanoOutgoingPending
               ? !isOnline
                 ? cardanoOfflineMessage
-                : hasCardanoOutgoingPending
-                ? CARDANO_SEND_CONFLICT_PENDING_MESSAGE
                 : "Syncing wallet..."
               : "Review Transaction"
           }

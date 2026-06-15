@@ -243,8 +243,12 @@ export function getHighestPriorityNonRecipientBlockingError(params: {
   gasError: Error | undefined;
   feeError: Error | undefined;
 }): Error | undefined {
+  const operationalPendingDraftError =
+    params.cardanoOperationalGuard &&
+    params.normalizedCardanoDraftError ===
+      CARDANO_SEND_CONFLICT_PENDING_MESSAGE;
   const cardanoOrFeeGas = params.isCardano
-    ? params.normalizedCardanoDraftError
+    ? params.normalizedCardanoDraftError && !operationalPendingDraftError
       ? new Error(params.normalizedCardanoDraftError)
       : !params.cardanoDraft && !params.isBuildingCardanoDraft
       ? params.cardanoOperationalGuard
