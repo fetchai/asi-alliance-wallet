@@ -403,10 +403,13 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
       </div>
 
       <Modal isOpen={isHelpOpen} toggle={() => setIsHelpOpen(false)} centered>
-        <ModalHeader toggle={() => setIsHelpOpen(false)}>
+        <ModalHeader
+          className={style["helpModalHeader"]}
+          toggle={() => setIsHelpOpen(false)}
+        >
           Blockfrost API key
         </ModalHeader>
-        <ModalBody>
+        <ModalBody className={style["helpModalBody"]}>
           <p>
             Create a free project at{" "}
             <a

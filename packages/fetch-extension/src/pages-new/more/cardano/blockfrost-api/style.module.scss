@@ -84,3 +84,21 @@
   color: #dc3545;
   font-size: 13px;
 }
+
+.helpModalHeader {
+  align-items: center;
+
+  :global(.close) {
+    margin: 0 0 0 auto;
+    padding: 0;
+    line-height: 1;
+  }
+}
+
+.helpModalBody {
+  padding-top: 12px;
+
+  p:first-child {
+    margin-top: 0;
+  }
+}
