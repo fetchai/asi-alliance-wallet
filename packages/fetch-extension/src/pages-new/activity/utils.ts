@@ -72,37 +72,55 @@ export const getDetails = (node: any, chainStore: any): any => {
     currency = parsedJson.token.denom;
   }
 
+  const isInProgress = ["Pending", "Unconfirmed"].includes(status);
+
   let verb = "Spent";
 
   switch (typeUrl) {
     case "/cosmos.staking.v1beta1.MsgBeginRedelegate":
-      verb = "Redelegated";
+      verb = isInProgress ? "Redelegating" : "Redelegated";
       break;
+
     case "/cosmos.bank.v1beta1.MsgSend":
-      verb = isAmountDeducted ? "Sent" : "Received";
+      if (isInProgress) {
+        verb = isAmountDeducted ? "Sending" : "Receiving";
+      } else {
+        verb = isAmountDeducted ? "Sent" : "Received";
+      }
       break;
+
     case "/ibc.applications.transfer.v1.MsgTransfer":
-      verb = "IBC transfer";
+      verb = "IBC Transfer";
       break;
+
     case "/cosmos.staking.v1beta1.MsgDelegate":
-      verb = "Staked";
+      verb = isInProgress ? "Staking" : "Staked";
       break;
+
     case "/cosmos.staking.v1beta1.MsgUndelegate":
-      verb = "Unstaked";
+      verb = isInProgress ? "Unstaking" : "Unstaked";
       break;
+
     case "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward":
-      verb = "Claimed";
+      verb = isInProgress ? "Claiming" : "Claimed";
       break;
+
     case "/cosmos.gov.v1beta1.MsgSubmitProposal":
-      verb = "Governance Proposal";
+      verb = isInProgress ? "Submitting Proposal" : "Submitted Proposal";
       break;
+
     case "/cosmos.authz.v1beta1.MsgExec":
     case "/cosmwasm.wasm.v1.MsgExecuteContract":
     case "/cosmos.authz.v1beta1.MsgRevoke":
       verb = "Smart Contract Interaction";
       break;
+
     default:
-      verb = isAmountDeducted ? "Transferred" : "Received";
+      if (isInProgress) {
+        verb = isAmountDeducted ? "Transferring" : "Receiving";
+      } else {
+        verb = isAmountDeducted ? "Transferred" : "Received";
+      }
   }
   const amount = getAmount(currency, node.balanceOffset, chainStore);
   const [amountNumber, amountAlphabetic] = parseAmount(amount);

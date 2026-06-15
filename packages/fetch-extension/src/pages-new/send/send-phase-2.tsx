@@ -1464,50 +1464,93 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 await doSend();
               } catch (e: any) {
                 const errorMessage = getErrorMessage(e);
-                const limitFromError =
-                  blockfrostLimitPresentationFromUiError(errorMessage);
-                if (limitFromError) {
-                  setCardanoBlockfrostLimit(limitFromError);
-                }
-                const normalizedSubmitError =
-                  normalizeCardanoSubmitError(errorMessage);
-                analyticsStore.logEvent("send_txn_broadcasted_fail", {
-                  chainId: chainStore.current.chainId,
-                  chainName: chainStore.current.chainName,
-                  feeType: sendConfigs.feeConfig.feeType,
-                  message: errorMessage,
-                });
 
-                const currentPathName = getPathname();
-                if (
-                  !isDetachedPage &&
-                  (currentPathName === "send" || currentPathName === "sign")
-                ) {
-                  navigate("/send", {
-                    replace: true,
-                    state: {
-                      isNext: true,
-                      isFromPhase1: false,
-                      configs: {
-                        amount: sendConfigs.amountConfig.amount,
-                        sendCurr: sendConfigs.amountConfig.sendCurrency,
-                        recipient: sendConfigs.recipientConfig.recipient,
-                        memo: sendConfigs.memoConfig.memo,
-                      },
-                    },
+                if (isCardano) {
+                  const limitFromError =
+                    blockfrostLimitPresentationFromUiError(errorMessage);
+                  if (limitFromError) {
+                    setCardanoBlockfrostLimit(limitFromError);
+                  }
+                  const normalizedSubmitError =
+                    normalizeCardanoSubmitError(errorMessage);
+                  analyticsStore.logEvent("send_txn_broadcasted_fail", {
+                    chainId: chainStore.current.chainId,
+                    chainName: chainStore.current.chainName,
+                    feeType: sendConfigs.feeConfig.feeType,
+                    message: errorMessage,
                   });
-                }
-                if (normalizedSubmitError) {
+
+                  const currentPathName = getPathname();
+                  if (
+                    !isDetachedPage &&
+                    (currentPathName === "send" || currentPathName === "sign")
+                  ) {
+                    navigate("/send", {
+                      replace: true,
+                      state: {
+                        isNext: true,
+                        isFromPhase1: false,
+                        configs: {
+                          amount: sendConfigs.amountConfig.amount,
+                          sendCurr: sendConfigs.amountConfig.sendCurrency,
+                          recipient: sendConfigs.recipientConfig.recipient,
+                          memo: sendConfigs.memoConfig.memo,
+                        },
+                      },
+                    });
+                  }
+                  if (normalizedSubmitError) {
+                    notification.push({
+                      type: "warning",
+                      placement: "top-center",
+                      duration: 5,
+                      content: `Transaction Failed: ${normalizedSubmitError}`,
+                      canDelete: true,
+                      transition: {
+                        duration: 0.25,
+                      },
+                    });
+                  }
+                } else {
+                  analyticsStore.logEvent("send_txn_broadcasted_fail", {
+                    chainId: chainStore.current.chainId,
+                    chainName: chainStore.current.chainName,
+                    feeType: sendConfigs.feeConfig.feeType,
+                    message: errorMessage,
+                  });
+
+                  const currentPathName = getPathname();
+                  if (
+                    !isDetachedPage &&
+                    (currentPathName === "send" || currentPathName === "sign")
+                  ) {
+                    navigate("/send", {
+                      replace: true,
+                      state: {
+                        isNext: true,
+                        isFromPhase1: false,
+                        configs: {
+                          amount: sendConfigs.amountConfig.amount,
+                          sendCurr: sendConfigs.amountConfig.sendCurrency,
+                          recipient: sendConfigs.recipientConfig.recipient,
+                          memo: sendConfigs.memoConfig.memo,
+                        },
+                      },
+                    });
+                  }
                   notification.push({
                     type: "warning",
                     placement: "top-center",
                     duration: 5,
-                    content: `Transaction Failed: ${normalizedSubmitError}`,
+                    content: errorMessage || "Transaction Failed",
                     canDelete: true,
                     transition: {
                       duration: 0.25,
                     },
                   });
+                  if (isDetachedPage) {
+                    window.close();
+                  }
                 }
               }
             }

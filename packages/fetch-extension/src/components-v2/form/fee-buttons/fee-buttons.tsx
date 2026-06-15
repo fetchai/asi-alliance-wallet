@@ -20,9 +20,9 @@ import {
 import { CoinGeckoPriceStore } from "@keplr-wallet/stores";
 import { useLanguage } from "../../../languages";
 import { useIntl } from "react-intl";
-import { GasInput } from "../gas-input";
 import { action, autorun, makeObservable, observable } from "mobx";
 import { GasContainer } from "../gas-form";
+import { ManualFeeInput } from "../gas-form/manual";
 import { useStore } from "../../../stores";
 import { Card } from "@components-v2/card";
 import { FeeCurrencySelector } from "./fee-currency-selector";
@@ -168,6 +168,7 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
               <React.Fragment>
                 <GasContainer
                   label={gasLabel}
+                  feeConfig={feeConfig}
                   gasConfig={gasConfig}
                   gasSimulator={gasSimulator}
                 />
@@ -175,6 +176,7 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
             ) : (
               <GasContainer
                 label={gasLabel}
+                feeConfig={feeConfig}
                 gasConfig={gasConfig}
                 gasSimulator={gasSimulator}
               />
@@ -185,17 +187,12 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
               <Card
                 style={{ background: "rgba(255, 255, 255, 0.10)" }}
                 heading={<FeeCurrencySelector feeConfig={feeConfig} />}
-                rightContent={
-                  <GasInput label={gasLabel} gasConfig={gasConfig} />
-                }
-              />
+              >
+                <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
+              </Card>
             </React.Fragment>
           ) : (
-            <Card
-              style={{ background: "rgba(255, 255, 255, 0.10)" }}
-              heading={""}
-              rightContent={<GasInput label={gasLabel} gasConfig={gasConfig} />}
-            />
+            <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
           )
         ) : null}
       </React.Fragment>
@@ -255,14 +252,26 @@ export const FeeButtonsInner: FunctionComponent<
 
     const fiatCurrency = language.fiatCurrency;
 
-    const lowFee = feeConfig.getFeeTypePretty("low");
-    const lowFeePrice = priceStore.calculatePrice(lowFee, fiatCurrency);
+    const lowFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("low")
+      : undefined;
+    const lowFeePrice = lowFee
+      ? priceStore.calculatePrice(lowFee, fiatCurrency)
+      : undefined;
 
-    const averageFee = feeConfig.getFeeTypePretty("average");
-    const averageFeePrice = priceStore.calculatePrice(averageFee, fiatCurrency);
+    const averageFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("average")
+      : undefined;
+    const averageFeePrice = averageFee
+      ? priceStore.calculatePrice(averageFee, fiatCurrency)
+      : undefined;
 
-    const highFee = feeConfig.getFeeTypePretty("high");
-    const highFeePrice = priceStore.calculatePrice(highFee, fiatCurrency);
+    const highFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("high")
+      : undefined;
+    const highFeePrice = highFee
+      ? priceStore.calculatePrice(highFee, fiatCurrency)
+      : undefined;
 
     const error = feeConfig.error;
     const errorText: string | undefined = (() => {
@@ -332,7 +341,7 @@ export const FeeButtonsInner: FunctionComponent<
               <div
                 style={{ fontSize: "12px", fontWeight: 400, opacity: "0.6" }}
               >
-                {lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+                {lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
               </div>
             }
             inActiveBackground={"transparent"}
@@ -372,7 +381,7 @@ export const FeeButtonsInner: FunctionComponent<
                 style={{ fontSize: "12px", fontWeight: 400, opacity: "0.6" }}
               >
                 {averageFee
-                  .hideIBCMetadata(true)
+                  ?.hideIBCMetadata(true)
                   .trim(true)
                   .toMetricPrefix(isEvm)}
               </div>
@@ -413,7 +422,10 @@ export const FeeButtonsInner: FunctionComponent<
               <div
                 style={{ fontSize: "12px", fontWeight: 400, opacity: "0.6" }}
               >
-                {highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+                {highFee
+                  ?.hideIBCMetadata(true)
+                  .trim(true)
+                  .toMetricPrefix(isEvm)}
               </div>
             }
             inActiveBackground={"transparent"}
