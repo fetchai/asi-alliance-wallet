@@ -55,6 +55,7 @@ import {
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
   normalizeCardanoDraftError,
+  normalizeCardanoSubmitError,
   formatAdaMinimumViolationMessageFromRawFields,
   parseAmountToBaseUnits,
   parseCardanoUiErrorMessage,
@@ -158,6 +159,7 @@ type CardanoPasswordConfirmModalProps = {
   onConfirm: (password: string) => Promise<void>;
   onCancel: () => void;
   onNotifyWarning: (content: string) => void;
+  onBlockfrostLimit: (presentation: BlockfrostLimitPresentation) => void;
 };
 
 const CardanoPasswordConfirmModal: React.FC<
@@ -306,9 +308,8 @@ const CardanoPasswordConfirmModal: React.FC<
               await props.onConfirm(password);
               props.onCancel();
             } catch (err: any) {
-              const parsedError = parseCardanoUiErrorMessage(
-                getErrorMessage(err)
-              );
+              const errorMessage = getErrorMessage(err);
+              const parsedError = parseCardanoUiErrorMessage(errorMessage);
               const messageText = parsedError.message;
               const inlineError = getCardanoPasswordModalInlineError({
                 parsedCode: parsedError.code,
@@ -325,7 +326,20 @@ const CardanoPasswordConfirmModal: React.FC<
                     message: messageText,
                   })
                 ) {
-                  props.onNotifyWarning(`Transaction Failed: ${messageText}`);
+                  const limitFromError =
+                    blockfrostLimitPresentationFromUiError(errorMessage);
+                  if (limitFromError) {
+                    props.onBlockfrostLimit(limitFromError);
+                    props.onCancel();
+                    return;
+                  }
+                  const normalizedSubmitError =
+                    normalizeCardanoSubmitError(errorMessage);
+                  if (normalizedSubmitError) {
+                    props.onNotifyWarning(
+                      `Transaction Failed: ${normalizedSubmitError}`
+                    );
+                  }
                 }
               }
             } finally {
@@ -1180,7 +1194,6 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       } catch (e: any) {
         if (isCardano) {
           const errorMessage = getErrorMessage(e);
-          const parsedError = parseCardanoUiErrorMessage(errorMessage);
           const shouldNavigateToFailed = shouldNavigateCardanoFailedFromError({
             isFromPasswordModal: options?.cardanoSpendingPassword !== undefined,
             errorMessage: errorMessage,
@@ -1188,6 +1201,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           if (!shouldNavigateToFailed) {
             throw e;
           }
+          const limitFromError =
+            blockfrostLimitPresentationFromUiError(errorMessage);
+          if (limitFromError) {
+            setCardanoBlockfrostLimit(limitFromError);
+          }
+          const normalizedSubmitError =
+            normalizeCardanoSubmitError(errorMessage);
           analyticsStore.logEvent("send_txn_broadcasted_fail", {
             chainId: chainStore.current.chainId,
             chainName: chainStore.current.chainName,
@@ -1206,16 +1226,18 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             });
           }
 
-          notification.push({
-            type: "warning",
-            placement: "top-center",
-            duration: 5,
-            content: `Transaction Failed: ${parsedError.message}`,
-            canDelete: true,
-            transition: {
-              duration: 0.25,
-            },
-          });
+          if (normalizedSubmitError) {
+            notification.push({
+              type: "warning",
+              placement: "top-center",
+              duration: 5,
+              content: `Transaction Failed: ${normalizedSubmitError}`,
+              canDelete: true,
+              transition: {
+                duration: 0.25,
+              },
+            });
+          }
           return;
         }
         throw e;
@@ -1438,6 +1460,13 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 await doSend();
               } catch (e: any) {
                 const errorMessage = getErrorMessage(e);
+                const limitFromError =
+                  blockfrostLimitPresentationFromUiError(errorMessage);
+                if (limitFromError) {
+                  setCardanoBlockfrostLimit(limitFromError);
+                }
+                const normalizedSubmitError =
+                  normalizeCardanoSubmitError(errorMessage);
                 analyticsStore.logEvent("send_txn_broadcasted_fail", {
                   chainId: chainStore.current.chainId,
                   chainName: chainStore.current.chainName,
@@ -1464,16 +1493,18 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                     },
                   });
                 }
-                notification.push({
-                  type: "warning",
-                  placement: "top-center",
-                  duration: 5,
-                  content: `Transaction Failed: ${errorMessage}`,
-                  canDelete: true,
-                  transition: {
-                    duration: 0.25,
-                  },
-                });
+                if (normalizedSubmitError) {
+                  notification.push({
+                    type: "warning",
+                    placement: "top-center",
+                    duration: 5,
+                    content: `Transaction Failed: ${normalizedSubmitError}`,
+                    canDelete: true,
+                    transition: {
+                      duration: 0.25,
+                    },
+                  });
+                }
               }
             }
           }}
@@ -1507,6 +1538,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           onCancel={() => {
             setIsCardanoPasswordConfirmOpen(false);
           }}
+          onBlockfrostLimit={setCardanoBlockfrostLimit}
           onNotifyWarning={(content) => {
             notification.push({
               type: "warning",

@@ -104,6 +104,7 @@ import {
   formatAdaMinimumViolationMessageFromRawFields,
   getCardanoAdaBelowMinimumError,
   normalizeCardanoDraftError,
+  normalizeCardanoSubmitError,
   parseAmountToBaseUnits,
   isCardanoModalLevelErrorMessage,
   shouldNavigateCardanoFailedFromError,
@@ -673,6 +674,49 @@ describe("normalizeCardanoDraftError", () => {
         sendCurrencyCoinDecimals: 4,
       })
     ).toBe("Amount too small. Minimum sendable amount is 0.0001 TOKEN");
+  });
+});
+
+describe("normalizeCardanoSubmitError", () => {
+  it("returns null for blockfrost limit errors (banner handles UX)", () => {
+    expect(
+      normalizeCardanoSubmitError(
+        "cardano_ui_error:blockfrost_builtin_limit:Rate limit exceeded"
+      )
+    ).toBeNull();
+    expect(
+      normalizeCardanoSubmitError(
+        "cardano_ui_error:blockfrost_user_limit:Custom key quota reached"
+      )
+    ).toBeNull();
+  });
+
+  it("normalizes BAD_REQUEST submit payloads with embedded JSON", () => {
+    const raw =
+      'BAD_REQUEST {"error":"Bad Request","message":{"error":["ConwayMempoolFailure \\"All inputs are spent. Transaction has probably already been included\\""],"kind":"ShelleyTxValidationError"},"status_code":400} Blockfrost error with status \'400\'';
+    expect(normalizeCardanoSubmitError(raw)).toBe(
+      "This transaction may have already been submitted. Check your activity or wait before retrying."
+    );
+  });
+
+  it("normalizes generic Blockfrost BAD_REQUEST blobs", () => {
+    expect(
+      normalizeCardanoSubmitError(
+        'BAD_REQUEST {"error":"Bad Request","status_code":400} Blockfrost error with status \'400\''
+      )
+    ).toBe("Transaction failed to submit. Please try again.");
+  });
+
+  it("passes through short plain submit errors", () => {
+    expect(
+      normalizeCardanoSubmitError("submit tx failed: provider unavailable")
+    ).toBe("submit tx failed: provider unavailable");
+  });
+
+  it("normalizes very long plain submit errors", () => {
+    expect(normalizeCardanoSubmitError("x".repeat(500))).toBe(
+      "Transaction failed to submit. Please try again."
+    );
   });
 });
 

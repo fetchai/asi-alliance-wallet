@@ -202,6 +202,56 @@ export const normalizeCardanoDraftError = (params: {
   return rawError;
 };
 
+const CARDANO_SUBMIT_RAW_JSON_ERROR_HINTS = [
+  "bad_request",
+  "conwaymempoolfailure",
+  "shelleytxvalidationerror",
+  "blockfrost error with status",
+];
+const MAX_CARDANO_SUBMIT_ERROR_LENGTH = 180;
+
+/**
+ * User-facing submit/broadcast error. Returns null for blockfrost limit codes (banner handles UX).
+ */
+export function normalizeCardanoSubmitError(
+  rawError: string | null | undefined
+): string | null {
+  const trimmed = rawError?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsedLimit = parseCardanoUiError(trimmed);
+  if (isCardanoBlockfrostLimitErrorCode(parsedLimit.code)) {
+    return null;
+  }
+
+  if (trimmed === CARDANO_SEND_CONFLICT_PENDING_MESSAGE) {
+    return CARDANO_SEND_CONFLICT_PENDING_MESSAGE;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes("all inputs are spent") ||
+    lower.includes("already been included")
+  ) {
+    return "This transaction may have already been submitted. Check your activity or wait before retrying.";
+  }
+
+  if (
+    CARDANO_SUBMIT_RAW_JSON_ERROR_HINTS.some((hint) => lower.includes(hint)) ||
+    (trimmed.includes("{") && lower.includes("blockfrost"))
+  ) {
+    return "Transaction failed to submit. Please try again.";
+  }
+
+  if (trimmed.length > MAX_CARDANO_SUBMIT_ERROR_LENGTH) {
+    return "Transaction failed to submit. Please try again.";
+  }
+
+  return trimmed;
+}
+
 /** Client-side ADA minimum check using protocol min output lovelace (from draft probe). */
 export function getCardanoAdaBelowMinimumError(params: {
   amountStr: string;
