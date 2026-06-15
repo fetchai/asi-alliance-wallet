@@ -116,9 +116,14 @@ export async function applySetBlockfrostCredentials(
     throw new Error("blockfrost_invalid_project_id");
   }
 
-  const existing = (await store.hasPrefs(msg.network))
-    ? await store.getPrefs(msg.network, params.password)
-    : undefined;
+  let existing: BlockfrostCredentialsPayload | undefined;
+  if (await store.hasPrefs(msg.network)) {
+    try {
+      existing = await store.getPrefs(msg.network, params.password);
+    } catch {
+      existing = undefined;
+    }
+  }
 
   const nextProjectId =
     msg.projectId !== undefined ? normalizedProjectId : existing?.projectId;

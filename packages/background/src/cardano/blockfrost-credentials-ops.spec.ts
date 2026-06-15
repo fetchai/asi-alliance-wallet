@@ -273,6 +273,40 @@ describe("blockfrost credentials ops", () => {
     );
   });
 
+  it("allows saving a new projectId when existing prefs cannot be read", async () => {
+    await applySetBlockfrostCredentials(
+      store,
+      new SetBlockfrostCredentialsMsg(
+        "cardano-preprod",
+        "preprod",
+        true,
+        "original-key-12345678"
+      ),
+      { isLocked: false, password }
+    );
+
+    const savePrefsSpy = jest.spyOn(store, "savePrefs");
+    jest.spyOn(store, "getPrefs").mockRejectedValue(new Error("Unmatched mac"));
+
+    await expect(
+      applySetBlockfrostCredentials(
+        store,
+        new SetBlockfrostCredentialsMsg(
+          "cardano-preprod",
+          "preprod",
+          true,
+          "replacement-key-12345678"
+        ),
+        { isLocked: false, password }
+      )
+    ).resolves.toBeUndefined();
+
+    expect(savePrefsSpy).toHaveBeenCalledWith("preprod", password, {
+      projectId: "replacement-key-12345678",
+      useCustomKey: true,
+    });
+  });
+
   it("returns sanitized unlocked response when prefs decrypt fails", async () => {
     await applySetBlockfrostCredentials(
       store,
