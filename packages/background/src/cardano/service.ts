@@ -185,6 +185,9 @@ export class CardanoService {
     this.ownedPollingStates.clear();
     this.aggressivePollingUntilByChain.clear();
     this.submitAdaTxDraftSerial = Promise.resolve();
+    try {
+      this.keyRing?.getWalletManager()?.dispose?.();
+    } catch {}
     this.keyRing = undefined;
     this.runtimeSessionId = "";
   }
