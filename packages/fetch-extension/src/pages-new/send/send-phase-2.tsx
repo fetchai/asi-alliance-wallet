@@ -1433,6 +1433,10 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             bottom: "15px",
             left: "0px",
             right: "0px",
+            visibility:
+              isCardanoPasswordConfirmOpen && shouldRequireCardanoPassword
+                ? "hidden"
+                : undefined,
           }}
           onClick={async (e: any) => {
             e.preventDefault();
