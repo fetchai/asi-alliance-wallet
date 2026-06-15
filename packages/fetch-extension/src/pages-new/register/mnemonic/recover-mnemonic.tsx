@@ -574,72 +574,70 @@ export const RecoverMnemonicPage: FunctionComponent<{
                       key={index}
                       className={styleRecoverMnemonic["mnemonicWordContainer"]}
                     >
-                      <Input
-                        maxLength={seedType === SeedType.PRIVATE_KEY ? 50 : 16}
-                        style={
-                          seedType === SeedType.PRIVATE_KEY
-                            ? {
-                                width: "335px",
-                                height: "53px",
-                              }
-                            : {}
+                      <div
+                        className={
+                          styleRecoverMnemonic["mnemonicWordInputWrapper"]
                         }
-                        type={
-                          shownMnemonicIndex === index ? "text" : "password"
-                        }
-                        formGroupClassName={
-                          styleRecoverMnemonic["mnemonicWordFormGroup"]
-                        }
-                        className={styleRecoverMnemonic["mnemonicWord"]}
-                        onPaste={(e) => {
-                          e.preventDefault();
-
-                          handlePaste(index, e.clipboardData.getData("text"));
-                        }}
-                        onChange={(e) => {
-                          e.preventDefault();
-
-                          if (
-                            shownMnemonicIndex >= 0 &&
-                            shownMnemonicIndex !== index
-                          ) {
-                            setShownMnemonicIndex(-1);
+                      >
+                        <Input
+                          maxLength={
+                            seedType === SeedType.PRIVATE_KEY ? 50 : 16
                           }
-
-                          const newSeedWords = seedWords.slice();
-                          newSeedWords[index] = e.target.value.trim();
-                          setSeedWords(newSeedWords);
-                        }}
-                        value={word}
-                        append={
-                          <div
-                            style={{
-                              position: "absolute",
-                              right: "18px",
-                              height: "100%",
-                              display: "flex",
-                              alignItems: "center",
-                              cursor: "pointer",
-                              zIndex: 1000,
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setShownMnemonicIndex((prev) => {
-                                if (prev === index) {
-                                  return -1;
+                          style={
+                            seedType === SeedType.PRIVATE_KEY
+                              ? {
+                                  width: "335px",
+                                  height: "53px",
                                 }
-                                return index;
-                              });
-                            }}
-                          >
-                            {shownMnemonicIndex === index ? (
-                              <IconOpenEye height={16} width={16} />
-                            ) : (
-                              <IconClosedEye height={16} width={16} />
-                            )}
-                          </div>
-                        }
-                      />
+                              : {}
+                          }
+                          type={
+                            shownMnemonicIndex === index ? "text" : "password"
+                          }
+                          formGroupClassName={
+                            styleRecoverMnemonic["mnemonicWordFormGroup"]
+                          }
+                          className={styleRecoverMnemonic["mnemonicWord"]}
+                          onPaste={(e) => {
+                            e.preventDefault();
+
+                            handlePaste(index, e.clipboardData.getData("text"));
+                          }}
+                          onChange={(e) => {
+                            e.preventDefault();
+
+                            if (
+                              shownMnemonicIndex >= 0 &&
+                              shownMnemonicIndex !== index
+                            ) {
+                              setShownMnemonicIndex(-1);
+                            }
+
+                            const newSeedWords = seedWords.slice();
+                            newSeedWords[index] = e.target.value.trim();
+                            setSeedWords(newSeedWords);
+                          }}
+                          value={word}
+                        />
+                        <div
+                          className={styleRecoverMnemonic["mnemonicWordToggle"]}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShownMnemonicIndex((prev) => {
+                              if (prev === index) {
+                                return -1;
+                              }
+                              return index;
+                            });
+                          }}
+                        >
+                          {shownMnemonicIndex === index ? (
+                            <IconOpenEye height={16} width={16} />
+                          ) : (
+                            <IconClosedEye height={16} width={16} />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
