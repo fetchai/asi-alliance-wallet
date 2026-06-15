@@ -628,10 +628,10 @@ describe("normalizeCardanoDraftError", () => {
     ).toBe("some random failure");
   });
 
-  it("normalizes UTxO fully depleted SDK error to user-friendly message", () => {
+  it("normalizes UTxO coin-selection SDK errors to user-friendly message", () => {
     const expected =
-      "Insufficient balance to cover amount + fees. " +
-      "Try reducing the amount or leaving some balance for transaction fees.";
+      "Unable to build transaction with the selected amount and available UTxOs. " +
+      "Try reducing the amount or leaving more tADA for fees/change.";
     expect(
       normalizeCardanoDraftError({
         ...params,
@@ -648,6 +648,18 @@ describe("normalizeCardanoDraftError", () => {
       normalizeCardanoDraftError({
         ...params,
         rawError: "Transaction build failed: UTxO Fully Depleted",
+      })
+    ).toBe(expected);
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "UTxO Balance Insufficient",
+      })
+    ).toBe(expected);
+    expect(
+      normalizeCardanoDraftError({
+        ...params,
+        rawError: "utxo balance insufficient",
       })
     ).toBe(expected);
   });

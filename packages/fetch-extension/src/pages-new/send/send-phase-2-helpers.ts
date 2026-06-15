@@ -191,11 +191,11 @@ export const normalizeCardanoDraftError = (params: {
     });
   }
 
-  // Cardano SDK coin-selection error (e.g. when "max" leaves no UTxO for fee/change).
-  if (/\butxo fully depleted\b/i.test(rawError)) {
+  // Cardano SDK coin-selection errors (e.g. when "max" leaves no UTxO for fee/change).
+  if (/\butxo (fully depleted|balance insufficient)\b/i.test(rawError)) {
     return (
-      "Insufficient balance to cover amount + fees. " +
-      "Try reducing the amount or leaving some balance for transaction fees."
+      "Unable to build transaction with the selected amount and available UTxOs. " +
+      `Try reducing the amount or leaving more ${params.cardanoDenom} for fees/change.`
     );
   }
 
