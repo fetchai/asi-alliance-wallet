@@ -689,7 +689,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     });
 
     const reviewOperationalDisabled =
-      !accountInfo.isReadyToSendMsgs || (isCardano && cardanoOperationalGuard);
+      !accountInfo.isReadyToSendMsgs ||
+      (isCardano && (cardanoOperationalGuard || isBuildingCardanoDraft));
 
     const reviewButtonDisabled = isReviewTransactionButtonDisabled({
       operationalDisabled: reviewOperationalDisabled,
@@ -857,6 +858,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           setIsBuildingCardanoDraft(true);
           setCardanoDraftError(null);
           setCardanoMinViolation(null);
+          clearCurrentDraft();
           const baseAmount = baseAmountBigInt.toString();
           // For token sends, ADA amount is "0" and token goes into assets
           const lovelaceAmount = isTokenSend ? "0" : baseAmount;

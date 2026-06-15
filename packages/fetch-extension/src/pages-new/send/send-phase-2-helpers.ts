@@ -202,6 +202,40 @@ export const normalizeCardanoDraftError = (params: {
   return rawError;
 };
 
+/** Client-side ADA minimum check using protocol min output lovelace (from draft probe). */
+export function getCardanoAdaBelowMinimumError(params: {
+  amountStr: string;
+  minimumOutputLovelace: string | null | undefined;
+  sendCurrencyCoinDecimals: number;
+  cardanoDenom: string;
+  nativeAdaCoinDecimals: number;
+  amountError?: Error;
+}): string | null {
+  const minimumOutputLovelace = params.minimumOutputLovelace?.trim();
+  if (!minimumOutputLovelace || params.amountError != null) {
+    return null;
+  }
+
+  const amountStr = params.amountStr.trim();
+  if (!amountStr || !isPositiveDecimalAmount(amountStr)) {
+    return null;
+  }
+
+  const baseAmount = parseAmountToBaseUnits(
+    amountStr,
+    params.sendCurrencyCoinDecimals
+  );
+  if (baseAmount === BigInt(0) || baseAmount < BigInt(minimumOutputLovelace)) {
+    return formatAdaMinimumViolationMessageFromRawFields({
+      minimumOutputLovelace,
+      cardanoDenom: params.cardanoDenom,
+      nativeAdaCoinDecimals: params.nativeAdaCoinDecimals,
+    });
+  }
+
+  return null;
+}
+
 /** User-facing message for structured minimum_violation from BuildSendAdaTxDraftMsg (protocol min UTxO). */
 export function formatAdaMinimumViolationMessageFromRawFields(params: {
   minimumOutputLovelace: string;

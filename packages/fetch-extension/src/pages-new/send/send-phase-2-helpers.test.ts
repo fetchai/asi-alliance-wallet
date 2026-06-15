@@ -102,6 +102,7 @@ import {
   isOnlyEmptyRecipientBlocking,
   isReviewTransactionButtonDisabled,
   formatAdaMinimumViolationMessageFromRawFields,
+  getCardanoAdaBelowMinimumError,
   normalizeCardanoDraftError,
   parseAmountToBaseUnits,
   isCardanoModalLevelErrorMessage,
@@ -445,6 +446,74 @@ describe("isPositiveDecimalAmount", () => {
     expect(isPositiveDecimalAmount("0.1")).toBe(true);
     expect(isPositiveDecimalAmount("0")).toBe(false);
     expect(isPositiveDecimalAmount("abc")).toBe(false);
+  });
+});
+
+describe("getCardanoAdaBelowMinimumError", () => {
+  const base = {
+    minimumOutputLovelace: "970000",
+    sendCurrencyCoinDecimals: 6,
+    cardanoDenom: "tADA",
+    nativeAdaCoinDecimals: 6,
+  };
+
+  it("returns message when amount is below protocol minimum", () => {
+    expect(getCardanoAdaBelowMinimumError({ ...base, amountStr: "0.5" })).toBe(
+      "Amount too small. Minimum required is 0.97 tADA"
+    );
+  });
+
+  it("returns message when amount is below minimum in lovelace", () => {
+    expect(
+      getCardanoAdaBelowMinimumError({ ...base, amountStr: "0.000012" })
+    ).toBe("Amount too small. Minimum required is 0.97 tADA");
+  });
+
+  it("returns message for sub-lovelace positive decimal", () => {
+    expect(
+      getCardanoAdaBelowMinimumError({ ...base, amountStr: "0.0000001" })
+    ).toBe("Amount too small. Minimum required is 0.97 tADA");
+  });
+
+  it("returns null when amount equals minimum", () => {
+    expect(
+      getCardanoAdaBelowMinimumError({ ...base, amountStr: "0.97" })
+    ).toBeNull();
+  });
+
+  it("returns null when amount is above minimum", () => {
+    expect(
+      getCardanoAdaBelowMinimumError({ ...base, amountStr: "2" })
+    ).toBeNull();
+  });
+
+  it("returns null without cached minimum", () => {
+    expect(
+      getCardanoAdaBelowMinimumError({
+        ...base,
+        amountStr: "0.1",
+        minimumOutputLovelace: null,
+      })
+    ).toBeNull();
+  });
+
+  it("returns null when amountConfig already has an error", () => {
+    expect(
+      getCardanoAdaBelowMinimumError({
+        ...base,
+        amountStr: "0.1",
+        amountError: new Error("insufficient"),
+      })
+    ).toBeNull();
+  });
+
+  it("returns null for empty or invalid amount", () => {
+    expect(
+      getCardanoAdaBelowMinimumError({ ...base, amountStr: "" })
+    ).toBeNull();
+    expect(
+      getCardanoAdaBelowMinimumError({ ...base, amountStr: "abc" })
+    ).toBeNull();
   });
 });
 
