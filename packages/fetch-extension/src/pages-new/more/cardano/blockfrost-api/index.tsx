@@ -174,6 +174,10 @@ export const CardanoBlockfrostApiPage: React.FC = observer(() => {
       return;
     }
 
+    if (!trimmedProjectId && useCustomKey && credentials?.hasCustomKey) {
+      return;
+    }
+
     setIsSaving(true);
     try {
       await persistCredentials(
