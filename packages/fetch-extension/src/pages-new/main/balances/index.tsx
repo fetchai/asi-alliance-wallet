@@ -1,7 +1,7 @@
 import React from "react";
 import style from "./style.module.scss";
 import { useStore } from "../../../stores";
-import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { Bech32Address, ChainIdHelper } from "@keplr-wallet/cosmos";
 import { useLanguage } from "../../../languages";
 import { AppCurrency } from "@keplr-wallet/types";
 import { observer } from "mobx-react-lite";
@@ -21,6 +21,32 @@ import { addressCacheStore } from "../../../utils/address-cache-store";
 interface Props {
   tokenState: any;
 }
+
+// EVM wallet-picker cache stores 0x hex addresses, but EVM balance queries
+// still expect the chain bech32 address and convert it to hex internally.
+const resolveQueryBech32Address = (
+  address: string,
+  bech32Prefix: string
+): string => {
+  if (!address) {
+    return "";
+  }
+  if (!/^0x/i.test(address)) {
+    return address;
+  }
+  const hex = address.replace(/^0x/i, "");
+  if (!/^[0-9a-fA-F]{40}$/.test(hex)) {
+    return "";
+  }
+  try {
+    const bytes = new Uint8Array(
+      hex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) ?? []
+    );
+    return new Bech32Address(bytes).toBech32(bech32Prefix);
+  } catch {
+    return "";
+  }
+};
 
 export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   const {
@@ -51,10 +77,18 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     selectedWalletId && current.chainId
       ? addressCacheStore.getCache(current.chainId)[selectedWalletId] || ""
       : "";
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const cachedSelectedQueryAddress =
+    isEvm && cachedSelectedAddress
+      ? resolveQueryBech32Address(
+          cachedSelectedAddress,
+          current.bech32Config.bech32PrefixAccAddr
+        )
+      : cachedSelectedAddress;
   const effectiveAddress =
     accountInfo.walletStatus === WalletStatus.Loaded
       ? accountInfo.bech32Address
-      : cachedSelectedAddress;
+      : cachedSelectedQueryAddress;
 
   const balanceQuery = effectiveAddress
     ? queries.queryBalances.getQueryBech32Address(effectiveAddress)
@@ -67,7 +101,6 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     (currency: AppCurrency) => currency.coinMinimalDenom === "uusdc"
   );
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const currency = current.feeCurrencies?.[0];
   const zero = currency
     ? new CoinPretty(currency, new Int(0)).ready(false)
