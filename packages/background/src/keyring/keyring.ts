@@ -1768,6 +1768,10 @@ export class KeyRing {
         this.embedChainInfos
           .find((c) => c.chainId === currentChainId)
           ?.features?.includes("cardano") ?? false;
+      const isEvm =
+        this.embedChainInfos
+          .find((c) => c.chainId === currentChainId)
+          ?.features?.includes("evm") ?? false;
       const walletIds = this.multiKeyStore.map((ks) =>
         KeyRing.getKeyStoreId(ks)
       );
@@ -1812,7 +1816,7 @@ export class KeyRing {
             let keys: Key[] | undefined;
 
             if (!activeWalletAddress || !hasFullCache) {
-              keys = await this.getKeys(currentChainId, false);
+              keys = await this.getKeys(currentChainId, isEvm);
               const activeWalletIndex = walletIds.indexOf(activeWalletId);
               activeWalletAddress =
                 activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
