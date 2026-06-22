@@ -567,7 +567,7 @@ export class KeyRingService {
     const chainInfo = await this.chainsService.getChainInfo(chainId);
 
     if (chainInfo.features?.includes("cardano")) {
-      await this.ensureCardanoServiceReady(chainId);
+      await this.ensureCardanoServiceReady(chainId, { mode: "key" });
       return await this.cardanoService.getKey(chainId);
     }
 
@@ -593,7 +593,13 @@ export class KeyRingService {
   /** Deduplicates restore-by-chainId so parallel ListAccountsMsg for the same chain share one promise. */
   private cardanoRestoreByChainId: Map<string, Promise<void>> = new Map();
 
-  public async ensureCardanoServiceReady(chainId?: string): Promise<void> {
+  public async ensureCardanoServiceReady(
+    chainId?: string,
+    options?: { mode?: "transaction" | "key" }
+  ): Promise<void> {
+    const mode = options?.mode ?? "transaction";
+    const assertReady = () => this.assertCardanoReadyForMode(chainId, mode);
+
     // If service is initialized but not ready, try to restore with chainId.
     // Restore/init errors are fail-closed and must reject.
     if (this.cardanoService.isInitialized() && !this.cardanoService.isReady()) {
@@ -608,7 +614,7 @@ export class KeyRingService {
       const existing = this.cardanoRestoreByChainId.get(chainId);
       if (existing) {
         await existing;
-        this.assertCardanoServiceReady(chainId);
+        assertReady();
         return;
       }
       const promise = new Promise<void>((resolve, reject) => {
@@ -633,14 +639,14 @@ export class KeyRingService {
       this.cardanoRestoreByChainId.set(chainId, promise);
       promise.finally(() => this.cardanoRestoreByChainId.delete(chainId));
       await promise;
-      this.assertCardanoServiceReady(chainId);
+      assertReady();
       return;
     }
 
     if (!this.cardanoService.isInitialized()) {
       if (this.cardanoServiceInitPromise) {
         await this.cardanoServiceInitPromise;
-        this.assertCardanoServiceReady(chainId);
+        assertReady();
         return;
       }
 
@@ -651,7 +657,7 @@ export class KeyRingService {
         this.cardanoServiceInitPromise = promise;
         try {
           await promise;
-          this.assertCardanoServiceReady(chainId);
+          assertReady();
         } catch (error) {
           console.error(
             "[KeyRingService] Failed to initialize CardanoService:",
@@ -666,7 +672,27 @@ export class KeyRingService {
       }
     }
 
-    this.assertCardanoServiceReady(chainId);
+    assertReady();
+  }
+
+  private assertCardanoReadyForMode(
+    chainId: string | undefined,
+    mode: "transaction" | "key"
+  ): void {
+    if (mode === "key") {
+      this.assertCardanoKeyAgentReady(chainId);
+    } else {
+      this.assertCardanoServiceReady(chainId);
+    }
+  }
+
+  private assertCardanoKeyAgentReady(chainId?: string): void {
+    if (!this.cardanoService.isInitialized()) {
+      throw new Error(formatWalletNotReadyError(chainId));
+    }
+    if (!this.cardanoService.isKeyAgentReady()) {
+      throw new Error(formatWalletNotReadyError(chainId));
+    }
   }
 
   private assertCardanoServiceReady(chainId?: string): void {

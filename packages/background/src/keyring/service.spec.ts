@@ -270,6 +270,39 @@ describe("KeyRingService", () => {
         service.ensureCardanoServiceReady("cardano-mainnet")
       ).rejects.toThrow("temporarily_unavailable: wallet_not_ready");
     });
+
+    it("getKey succeeds when keyAgent is ready but transaction is not", async () => {
+      const mockGetKey = jest.fn().mockResolvedValue({
+        algo: "cardano_address_only",
+        pubKey: new Uint8Array(),
+        address: Buffer.from("addr_test1qq"),
+        isNanoLedger: false,
+        isKeystone: false,
+      });
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({}),
+      } as any;
+      service["chainsService"] = {
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["cardanoService"] = {
+        isInitialized: jest.fn().mockReturnValue(true),
+        isReady: jest.fn().mockReturnValue(false),
+        isKeyAgentReady: jest.fn().mockReturnValue(true),
+        restoreFromKeyStore: jest.fn().mockResolvedValue(undefined),
+        getKey: mockGetKey,
+      } as any;
+
+      await expect(service.getKey("cardano-preprod")).resolves.toEqual({
+        algo: "cardano_address_only",
+        pubKey: new Uint8Array(),
+        address: Buffer.from("addr_test1qq"),
+        isNanoLedger: false,
+        isKeystone: false,
+      });
+      expect(mockGetKey).toHaveBeenCalledWith("cardano-preprod");
+    });
   });
 
   describe("network switch rollback degradation paths", () => {

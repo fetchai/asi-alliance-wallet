@@ -1197,6 +1197,11 @@ export class CardanoService {
     return !!(this.keyRing && this.keyRing.isTransactionReady());
   }
 
+  /** True when the Cardano key agent can derive addresses (no Blockfrost wallet required). */
+  isKeyAgentReady(): boolean {
+    return this.keyRing?.isKeyAgentReady() ?? false;
+  }
+
   getRuntimeState(): "not_initialized" | "provider_unavailable" | "ready" {
     if (!this.keyRing) return "not_initialized";
     const walletManager = this.keyRing.getWalletManager();
