@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useIntl } from "react-intl";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
@@ -43,10 +49,18 @@ const directionLabel = (d: CardanoTxHistoryItem["direction"]) => {
 
 export const CardanoTransactionsTab = observer(() => {
   const navigate = useNavigate();
-  const { chainStore } = useStore();
+  const { chainStore, keyRingStore } = useStore();
   const { isOnline } = useNetwork();
   const intl = useIntl();
   const chainId = chainStore.current.chainId;
+  const selectedWalletId =
+    keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.[
+      "__id__"
+    ] || "";
+  const hasOutgoingPendingSpendRef = useRef(false);
+  const fetchGenerationRef = useRef(0);
+  const isRefreshingHistoryRef = useRef(false);
+  const [needsPendingRefresh, setNeedsPendingRefresh] = useState(false);
   const syncingOrOfflineLabel = !isOnline
     ? intl.formatMessage({ id: "cardano.status.offline" })
     : "Wallet is syncing. Please wait...";
@@ -83,59 +97,119 @@ export const CardanoTransactionsTab = observer(() => {
     []
   );
 
-  const fetchHistory = useCallback(async () => {
-    setIsLoading(true);
-    setError(undefined);
-    try {
-      const res = await sendWithTimeout(
-        requester.sendMessage(
-          BACKGROUND_PORT,
-          new GetCardanoTxHistoryMsg(pageSize, chainId)
-        ),
-        12000
-      );
-      if (res === "timeout") {
-        // If background is still syncing/initializing, don't lock the UI in "Loading..." forever.
-        setIsSyncing(true);
-        setIsSyncingDueToTimeout(true);
-        return;
+  const fetchHistory = useCallback(
+    async (showLoading = true) => {
+      if (!showLoading) {
+        if (isRefreshingHistoryRef.current) {
+          return;
+        }
+        isRefreshingHistoryRef.current = true;
       }
-      const typedRes = res as CardanoTxHistoryStateResponse;
-      const presentation = typedRes?.blockfrostLimit;
-      setBlockfrostLimit(presentation);
-      const state = typedRes?.state as CardanoServiceState | undefined;
-      if (state && state !== "ready_with_data" && state !== "empty_valid") {
-        const transient = isTransientState(state);
-        setIsSyncing(transient);
-        setIsSyncingDueToTimeout(false);
-        setHasFetchedHistory(!transient);
-        setItems([]);
-        setMightHaveMore(false);
-        setError(
-          transient
-            ? undefined
-            : getStateErrorMessage(state, typedRes?.error, presentation)
+
+      const generation = fetchGenerationRef.current;
+      const isStale = () => generation !== fetchGenerationRef.current;
+
+      if (showLoading) {
+        if (isStale()) {
+          return;
+        }
+        setIsLoading(true);
+        setError(undefined);
+      }
+      try {
+        const res = await sendWithTimeout(
+          requester.sendMessage(
+            BACKGROUND_PORT,
+            new GetCardanoTxHistoryMsg(pageSize, chainId)
+          ),
+          12000
         );
-        return;
+        if (isStale()) {
+          return;
+        }
+        if (res === "timeout") {
+          // If background is still syncing/initializing, don't lock the UI in "Loading..." forever.
+          if (showLoading) {
+            setIsSyncing(true);
+            setIsSyncingDueToTimeout(true);
+          }
+          return;
+        }
+        const typedRes = res as CardanoTxHistoryStateResponse;
+        const presentation = typedRes?.blockfrostLimit;
+        setBlockfrostLimit(presentation);
+        const state = typedRes?.state as CardanoServiceState | undefined;
+        if (state && state !== "ready_with_data" && state !== "empty_valid") {
+          const transient = isTransientState(state);
+          if (showLoading) {
+            setIsSyncing(transient);
+            setIsSyncingDueToTimeout(false);
+            setHasFetchedHistory(!transient);
+            setItems([]);
+            setMightHaveMore(false);
+            setError(
+              transient
+                ? undefined
+                : getStateErrorMessage(state, typedRes?.error, presentation)
+            );
+          }
+          return;
+        }
+        const nextItems = (typedRes?.items ?? []) as CardanoTxHistoryItem[];
+        setItems(nextItems);
+        setMightHaveMore(!!typedRes?.mightHaveMore);
+        setHasFetchedHistory(true);
+        setIsSyncing(false);
+        setIsSyncingDueToTimeout(false);
+
+        if (showLoading) {
+          try {
+            const syncStatus = (await requester.sendMessage(
+              BACKGROUND_PORT,
+              new GetCardanoSyncStatusMsg(
+                chainId,
+                document.hidden ? "background" : "foreground"
+              )
+            )) as CardanoSyncStatusResponse;
+            if (isStale()) {
+              return;
+            }
+            hasOutgoingPendingSpendRef.current =
+              !!syncStatus?.hasOutgoingPendingSpend;
+            if (hasOutgoingPendingSpendRef.current) {
+              setNeedsPendingRefresh(true);
+            }
+          } catch {
+            // Outgoing-pending discovery is best-effort; polling covers the rest.
+          }
+        }
+      } catch (e: any) {
+        if (isStale()) {
+          return;
+        }
+        if (showLoading) {
+          setError(e?.message || "Failed to load transaction history");
+          setItems([]);
+          setMightHaveMore(false);
+          setHasFetchedHistory(true);
+          setIsSyncingDueToTimeout(false);
+        }
+      } finally {
+        if (!showLoading) {
+          isRefreshingHistoryRef.current = false;
+        }
+        if (showLoading && !isStale()) {
+          setIsLoading(false);
+        }
       }
-      const nextItems = (typedRes?.items ?? []) as CardanoTxHistoryItem[];
-      setItems(nextItems);
-      setMightHaveMore(!!typedRes?.mightHaveMore);
-      setHasFetchedHistory(true);
-      setIsSyncing(false);
-      setIsSyncingDueToTimeout(false);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load transaction history");
-      setItems([]);
-      setMightHaveMore(false);
-      setHasFetchedHistory(true);
-      setIsSyncingDueToTimeout(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [chainId, requester, sendWithTimeout]);
+    },
+    [chainId, requester, sendWithTimeout]
+  );
 
   const loadMore = useCallback(async () => {
+    const generation = fetchGenerationRef.current;
+    const isStale = () => generation !== fetchGenerationRef.current;
+
     setIsLoadingMore(true);
     setError(undefined);
     try {
@@ -143,6 +217,9 @@ export const CardanoTransactionsTab = observer(() => {
         BACKGROUND_PORT,
         new LoadMoreCardanoTxHistoryMsg(pageSize, chainId)
       );
+      if (isStale()) {
+        return;
+      }
       const typedRes = res as CardanoTxHistoryStateResponse;
       const presentation = typedRes?.blockfrostLimit;
       setBlockfrostLimit(presentation);
@@ -162,21 +239,35 @@ export const CardanoTransactionsTab = observer(() => {
       setItems(nextItems);
       setMightHaveMore(!!typedRes?.mightHaveMore);
     } catch (e: any) {
+      if (isStale()) {
+        return;
+      }
       setError(e?.message || "Failed to load more transactions");
     } finally {
-      setIsLoadingMore(false);
+      if (!isStale()) {
+        setIsLoadingMore(false);
+      }
     }
   }, [chainId, requester]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  const hasPendingItems = items.some((item) => item.status === "pending");
 
   useEffect(() => {
+    fetchGenerationRef.current += 1;
+    hasOutgoingPendingSpendRef.current = false;
+    isRefreshingHistoryRef.current = false;
+    setNeedsPendingRefresh(false);
+    setItems([]);
+    setMightHaveMore(false);
+    setIsLoadingMore(false);
+    setError(undefined);
+    setIsSyncing(false);
     setHasFetchedHistory(false);
     setIsSyncingDueToTimeout(false);
     setBlockfrostLimit(undefined);
-  }, [chainId]);
+
+    fetchHistory();
+  }, [chainId, selectedWalletId, fetchHistory]);
 
   // Lace behavior: if first page has fewer txs than the viewport/pageSize (local store is often small),
   // auto-load more once to confirm whether there are more transactions and to fill the page.
@@ -204,7 +295,11 @@ export const CardanoTransactionsTab = observer(() => {
   // If user opens Activity quickly, Cardano wallet may still be syncing; poll and retry fetch when settled.
   useEffect(() => {
     let isSubscribed = true;
-    let interval: any = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const pollGeneration = fetchGenerationRef.current;
+
+    const isPollStale = () =>
+      !isSubscribed || pollGeneration !== fetchGenerationRef.current;
 
     const checkSyncAndMaybeRefetch = async () => {
       try {
@@ -215,11 +310,16 @@ export const CardanoTransactionsTab = observer(() => {
             document.hidden ? "background" : "foreground"
           )
         )) as CardanoSyncStatusResponse;
-        if (!isSubscribed) return;
+        if (isPollStale()) return;
 
         const state = syncStatus?.state;
         const presentation = syncStatus?.blockfrostLimit;
         setBlockfrostLimit(presentation);
+        const hadOutgoingPending = hasOutgoingPendingSpendRef.current;
+        const hasOutgoingPending = !!syncStatus?.hasOutgoingPendingSpend;
+        hasOutgoingPendingSpendRef.current = hasOutgoingPending;
+        const outgoingPendingJustCleared =
+          hadOutgoingPending && !hasOutgoingPending;
         const settled = state === "ready_with_data" && !!syncStatus?.isSettled;
         const transient = isTransientState(state);
         if (!hasFetchedHistory) {
@@ -231,36 +331,62 @@ export const CardanoTransactionsTab = observer(() => {
           setError(
             getStateErrorMessage(state, syncStatus?.error, presentation)
           );
+          setNeedsPendingRefresh(false);
           if (interval) {
             clearInterval(interval);
             interval = null;
           }
           return;
         }
-        if (
+        const shouldRefetch =
           settled &&
-          items.length === 0 &&
           !isLoading &&
           !error &&
-          !hasFetchedHistory
-        ) {
-          fetchHistory();
+          ((!hasFetchedHistory && items.length === 0) ||
+            hasPendingItems ||
+            hasOutgoingPending ||
+            needsPendingRefresh ||
+            outgoingPendingJustCleared);
+        if (shouldRefetch) {
+          await fetchHistory(false);
+
+          if (isPollStale()) {
+            return;
+          }
+
+          if (
+            !hasOutgoingPending &&
+            (needsPendingRefresh || outgoingPendingJustCleared)
+          ) {
+            setNeedsPendingRefresh(false);
+          }
         }
-        if (settled && interval) {
-          clearInterval(interval);
-          interval = null;
+        const shouldStopPolling =
+          settled &&
+          !hasPendingItems &&
+          !hasOutgoingPending &&
+          !outgoingPendingJustCleared;
+        if (shouldStopPolling) {
+          setNeedsPendingRefresh(false);
+          if (interval) {
+            clearInterval(interval);
+            interval = null;
+          }
         }
       } catch {
         // If sync status can't be fetched, don't block UI.
-        if (!isSubscribed) return;
+        if (isPollStale()) return;
         if (!hasFetchedHistory) {
           setIsSyncing(false);
         }
       }
     };
 
-    // Start polling only when we have no items yet.
-    if (items.length === 0 && !hasFetchedHistory) {
+    const shouldPoll =
+      (items.length === 0 && !hasFetchedHistory) ||
+      hasPendingItems ||
+      needsPendingRefresh;
+    if (shouldPoll) {
       checkSyncAndMaybeRefetch();
       interval = setInterval(checkSyncAndMaybeRefetch, 2000);
     }
@@ -274,6 +400,8 @@ export const CardanoTransactionsTab = observer(() => {
     requester,
     fetchHistory,
     items.length,
+    hasPendingItems,
+    needsPendingRefresh,
     isLoading,
     error,
     hasFetchedHistory,

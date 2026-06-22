@@ -818,7 +818,7 @@ const handleListAccountsMsg: (
     // because network-changed is dispatched before onNetworkSwitch handlers finish.
     if (isCardano) {
       try {
-        await service.ensureCardanoServiceReady(chainId);
+        await service.ensureCardanoServiceReady(chainId, { mode: "key" });
       } catch (error) {
         console.error(
           "[KeyRingService] ensureCardanoServiceReady failed in ListAccountsMsg:",
