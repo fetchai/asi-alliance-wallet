@@ -1,20 +1,30 @@
-const RATE_LIMIT_HTTP_STATUSES = new Set([402, 429]);
+const QUOTA_EXCEEDED_HTTP_STATUSES = new Set([402]);
 
-const RATE_LIMIT_MESSAGE_HINTS = [
-  "rate limit",
-  "rate-limit",
-  "too many requests",
+const QUOTA_EXCEEDED_MESSAGE_HINTS = [
   "quota",
   "usage limit",
   "usage quota",
   "project limit",
+  "daily limit",
 ];
+
+const BURST_THROTTLE_HTTP_STATUSES = new Set([429]);
 
 export function isBlockfrostRateLimitHttpStatus(
   status: number | "unknown" | "ok" | undefined
 ): boolean {
-  return typeof status === "number" && RATE_LIMIT_HTTP_STATUSES.has(status);
+  return typeof status === "number" && QUOTA_EXCEEDED_HTTP_STATUSES.has(status);
 }
+
+const getErrorStatus = (error: unknown): number | undefined => {
+  const record = error as {
+    status?: number;
+    statusCode?: number;
+    response?: { status?: number };
+  };
+
+  return record?.status ?? record?.statusCode ?? record?.response?.status;
+};
 
 const collectErrorStrings = (error: unknown): string[] => {
   if (error == null) {
@@ -51,21 +61,22 @@ const collectErrorStrings = (error: unknown): string[] => {
 
 export function isBlockfrostRateLimitMessage(message: string): boolean {
   const normalized = message.toLowerCase();
-  return RATE_LIMIT_MESSAGE_HINTS.some((hint) => normalized.includes(hint));
+  return QUOTA_EXCEEDED_MESSAGE_HINTS.some((hint) => normalized.includes(hint));
 }
 
 /**
- * Detect Blockfrost quota / rate-limit failures using HTTP status and error text.
+ * Detect Blockfrost daily API key quota exhaustion (HTTP 402 and quota text).
+ * Burst throttling (HTTP 429) is never treated as quota exceeded, even when
+ * the error message contains generic "rate limit" wording.
  */
 export function isBlockfrostRateLimitError(error: unknown): boolean {
-  if (isBlockfrostRateLimitHttpStatus((error as { status?: number })?.status)) {
-    return true;
+  const status = getErrorStatus(error);
+
+  if (typeof status === "number" && BURST_THROTTLE_HTTP_STATUSES.has(status)) {
+    return false;
   }
 
-  const statusCode =
-    (error as { statusCode?: number })?.statusCode ??
-    (error as { response?: { status?: number } })?.response?.status;
-  if (isBlockfrostRateLimitHttpStatus(statusCode)) {
+  if (typeof status === "number" && QUOTA_EXCEEDED_HTTP_STATUSES.has(status)) {
     return true;
   }
 

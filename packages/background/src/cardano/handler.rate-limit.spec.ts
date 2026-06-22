@@ -86,7 +86,7 @@ describe("Cardano tx history handler — Blockfrost rate limit", () => {
   });
 
   describe("GetCardanoTxHistoryMsg", () => {
-    it("returns state blockfrost_rate_limited and does not throw when ensureCardanoServiceReady throws HTTP 429", async () => {
+    it("does not classify HTTP 429 burst throttle as blockfrost_rate_limited", async () => {
       const rateLimitError = { status: 429 };
       const service = makeService();
       const keyRingService = makeKeyRingService(rateLimitError);
@@ -98,7 +98,7 @@ describe("Cardano tx history handler — Blockfrost rate limit", () => {
         msg
       )) as CardanoTxHistoryStateResponse;
 
-      expect(result.state).toBe("blockfrost_rate_limited");
+      expect(result.state).toBe("temporarily_unavailable");
       expect(result.items).toEqual([]);
     });
 
@@ -139,7 +139,7 @@ describe("Cardano tx history handler — Blockfrost rate limit", () => {
   });
 
   describe("LoadMoreCardanoTxHistoryMsg", () => {
-    it("returns state blockfrost_rate_limited and does not throw when ensureCardanoServiceReady throws HTTP 429", async () => {
+    it("does not classify HTTP 429 burst throttle as blockfrost_rate_limited", async () => {
       const rateLimitError = { status: 429 };
       const service = makeService();
       const keyRingService = makeKeyRingService(rateLimitError);
@@ -151,7 +151,7 @@ describe("Cardano tx history handler — Blockfrost rate limit", () => {
         msg
       )) as CardanoTxHistoryStateResponse;
 
-      expect(result.state).toBe("blockfrost_rate_limited");
+      expect(result.state).toBe("temporarily_unavailable");
       expect(result.items).toEqual([]);
     });
 
@@ -172,20 +172,14 @@ describe("Cardano tx history handler — Blockfrost rate limit", () => {
   });
 
   describe("GetCardanoSyncStatusMsg", () => {
-    it("returns state blockfrost_rate_limited when ensureCardanoServiceReady throws HTTP 429", async () => {
+    it("propagates HTTP 429 burst throttle instead of blockfrost_rate_limited", async () => {
       const rateLimitError = { status: 429 };
       const service = makeService();
       const keyRingService = makeKeyRingService(rateLimitError);
       const handler = getHandler(service, keyRingService);
       const msg = new GetCardanoSyncStatusMsg("cardano-preprod");
 
-      const result = (await handler(
-        internalEnv,
-        msg
-      )) as CardanoSyncStatusResponse;
-
-      expect(result.state).toBe("blockfrost_rate_limited");
-      expect(result.isSettled).toBe(false);
+      await expect(handler(internalEnv, msg)).rejects.toEqual(rateLimitError);
     });
 
     it("returns state blockfrost_rate_limited when ensureCardanoServiceReady throws quota message", async () => {

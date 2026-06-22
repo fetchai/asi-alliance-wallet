@@ -10,7 +10,7 @@ describe("wasRateLimitedRecently", () => {
     delete (globalThis as Record<string, unknown>)[registryKey];
   });
 
-  it("returns true when a recent failure has a rate-limit HTTP status", () => {
+  it("returns false when a recent failure has burst-throttle HTTP 429", () => {
     const globalScope = globalThis as Record<string, unknown>;
     globalScope[registryKey] = new Map([
       [
@@ -25,6 +25,33 @@ describe("wasRateLimitedRecently", () => {
                 ms: 10,
                 sourceTag: "direct-client",
                 status: 429,
+                timestamp: Date.now(),
+              },
+            ],
+          }),
+          reset: jest.fn(),
+        },
+      ],
+    ]);
+
+    expect(wasRateLimitedRecently("Preprod")).toBe(false);
+  });
+
+  it("returns true when a recent failure has quota-exceeded HTTP 402", () => {
+    const globalScope = globalThis as Record<string, unknown>;
+    globalScope[registryKey] = new Map([
+      [
+        "Preprod",
+        {
+          getSnapshot: () => ({
+            failures: [
+              {
+                callerTag: "test",
+                endpoint: "network",
+                kind: "network",
+                ms: 10,
+                sourceTag: "direct-client",
+                status: 402,
                 timestamp: Date.now(),
               },
             ],
