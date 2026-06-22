@@ -3,7 +3,7 @@ import { CARDANO_SEND_CONFLICT_PENDING_MESSAGE } from "@keplr-wallet/cardano";
 import { of } from "rxjs";
 import { CardanoService } from "./service";
 
-const LOCAL_OUTGOING_GUARD_GRACE_MS = 15_000;
+const LOCAL_PENDING_TX_TTL_MS = 10 * 60 * 1000;
 
 describe("CardanoService outgoing spend guard", () => {
   const baseBuildParams = {
@@ -53,9 +53,25 @@ describe("CardanoService outgoing spend guard", () => {
     expect(walletManager.buildSendAdaTxDraftOutcome).not.toHaveBeenCalled();
   });
 
-  it("does not block when local pending is older than grace and SDK is empty; map unchanged", async () => {
+  it("blocks when local pending is 30s old and SDK outgoing is empty", async () => {
     const service = new CardanoService();
-    const staleCreatedAt = Date.now() - LOCAL_OUTGOING_GUARD_GRACE_MS - 2000;
+    const pendingMap = new Map([
+      ["txhash", { createdAt: Date.now() - 30_000, amount: "1" }],
+    ]);
+    (service as any).locallyPendingSentTxs.set("cardano-preview", pendingMap);
+    (service as any).keyRing = emptySdkKeyRing();
+
+    expect(
+      await (service as any).hasConflictingOutgoingSpend("cardano-preview")
+    ).toBe(true);
+    expect(await service.getHasOutgoingPendingSpend("cardano-preview")).toBe(
+      true
+    );
+  });
+
+  it("does not block when local pending is older than TTL and SDK is empty; map unchanged", async () => {
+    const service = new CardanoService();
+    const staleCreatedAt = Date.now() - LOCAL_PENDING_TX_TTL_MS - 2000;
     const pendingMap = new Map([
       ["txhash", { createdAt: staleCreatedAt, amount: "1" }],
     ]);

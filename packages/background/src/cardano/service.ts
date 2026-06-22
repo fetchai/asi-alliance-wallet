@@ -389,8 +389,8 @@ export class CardanoService {
     }
   }
 
-  /** Short window where locallyPendingSentTxs still blocks sends until SDK outgoing updates. */
-  private static readonly LOCAL_OUTGOING_GUARD_GRACE_MS = 15_000;
+  /** TTL for rows in locallyPendingSentTxs (send guard, activity merge, tracked-tx fallback). */
+  private static readonly LOCAL_PENDING_TX_TTL_MS = 10 * 60 * 1000;
 
   /**
    * Read-only: SDK outgoing queues. No wallet mutations.
@@ -417,8 +417,8 @@ export class CardanoService {
   }
 
   /**
-   * Read-only: true if locallyPendingSentTxs has any entry fresh enough to block sends.
-   * Does not mutate the map (shared with activity in withPendingTxs).
+   * Read-only: true if locallyPendingSentTxs has any non-expired entry (blocks sends and
+   * may extend aggressive polling). Does not mutate the map (shared with withPendingTxs).
    */
   private hasFreshLocalOutgoingGuard(chainId?: string): boolean {
     if (!chainId) {
@@ -430,7 +430,7 @@ export class CardanoService {
     }
     const now = Date.now();
     for (const [, v] of perChain) {
-      if (now - v.createdAt <= CardanoService.LOCAL_OUTGOING_GUARD_GRACE_MS) {
+      if (now - v.createdAt <= CardanoService.LOCAL_PENDING_TX_TTL_MS) {
         return true;
       }
     }
@@ -1328,13 +1328,12 @@ export class CardanoService {
     if (!perChain) {
       return false;
     }
-    const ttlMs = 10 * 60 * 1000;
     const now = Date.now();
     for (const [id, v] of perChain.entries()) {
       if (this.normalizeCardanoTxId(id) !== txIdNorm) {
         continue;
       }
-      if (now - v.createdAt > ttlMs) {
+      if (now - v.createdAt > CardanoService.LOCAL_PENDING_TX_TTL_MS) {
         continue;
       }
       return true;
@@ -1517,12 +1516,11 @@ export class CardanoService {
       const perChain = this.locallyPendingSentTxs.get(chainId);
       if (!perChain) return [] as CardanoTxHistoryItem[];
 
-      const ttlMs = 10 * 60 * 1000;
       const now = Date.now();
 
       const items: CardanoTxHistoryItem[] = [];
       for (const [id, v] of perChain.entries()) {
-        if (now - v.createdAt > ttlMs) {
+        if (now - v.createdAt > CardanoService.LOCAL_PENDING_TX_TTL_MS) {
           perChain.delete(id);
           continue;
         }
