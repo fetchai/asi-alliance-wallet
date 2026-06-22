@@ -1,5 +1,6 @@
 import { getHandler } from "./handler";
 import {
+  BuildSendAdaTxDraftMsg,
   GetCardanoTxHistoryMsg,
   GetCardanoSyncStatusMsg,
   LoadMoreCardanoTxHistoryMsg,
@@ -8,14 +9,33 @@ import type {
   CardanoSyncStatusResponse,
   CardanoTxHistoryStateResponse,
 } from "./messages";
+import { encodeCardanoUiError } from "@keplr-wallet/cardano";
+import { Buffer } from "buffer/";
+
+jest.mock("rxjs", () => ({
+  firstValueFrom: jest.fn(),
+}));
 
 jest.mock("./blockfrost-limit-presentation", () => ({
   ...jest.requireActual("./blockfrost-limit-presentation"),
   withBlockfrostLimitPresentation: jest.fn(
     async (response: unknown) => response
   ),
-  encodeCardanoSendError: jest.fn(),
 }));
+
+jest.mock("@keplr-wallet/cardano", () => {
+  const actual = jest.requireActual("@keplr-wallet/cardano");
+  return {
+    ...actual,
+    wasRateLimitedRecently: jest.fn(),
+    getBlockfrostConfigSource: jest.fn(),
+  };
+});
+
+const { wasRateLimitedRecently, getBlockfrostConfigSource } = jest.requireMock(
+  "@keplr-wallet/cardano"
+);
+const { firstValueFrom } = jest.requireMock("rxjs");
 
 const internalEnv = { isInternalMsg: true } as any;
 
@@ -27,10 +47,14 @@ function makeKeyRingService(ensureError?: unknown): any {
     getKeyRing: () => ({
       getCurrentKeyStore: () => ({ meta: { __id__: "wallet-1" } }),
     }),
+    getCurrentUnlockSessionId: jest.fn().mockReturnValue("session-1"),
+    chainsService: {
+      getSelectedChain: jest.fn().mockResolvedValue("cardano-preprod"),
+    },
   };
 }
 
-function makeService(): any {
+function makeService(overrides: Record<string, unknown> = {}): any {
   return {
     isInitialized: jest.fn().mockReturnValue(true),
     isReady: jest.fn().mockReturnValue(true),
@@ -43,11 +67,23 @@ function makeService(): any {
     loadMoreTxHistory: jest
       .fn()
       .mockResolvedValue({ items: [], mightHaveMore: false }),
+    runOwnedPolling: jest.fn(async ({ compute }: { compute: () => unknown }) =>
+      compute()
+    ),
+    getHasOutgoingPendingSpend: jest.fn().mockResolvedValue(false),
+    getKey: jest.fn().mockResolvedValue({ address: Buffer.from("addr1") }),
+    buildSendAdaTxDraft: jest.fn(),
+    ...overrides,
   };
 }
 
 describe("Cardano tx history handler — Blockfrost rate limit", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (wasRateLimitedRecently as jest.Mock).mockReturnValue(false);
+    (getBlockfrostConfigSource as jest.Mock).mockReturnValue("builtin");
+    (firstValueFrom as jest.Mock).mockReset();
+  });
 
   describe("GetCardanoTxHistoryMsg", () => {
     it("returns state blockfrost_rate_limited and does not throw when ensureCardanoServiceReady throws HTTP 429", async () => {
@@ -165,6 +201,61 @@ describe("Cardano tx history handler — Blockfrost rate limit", () => {
       )) as CardanoSyncStatusResponse;
 
       expect(result.state).toBe("blockfrost_rate_limited");
+    });
+
+    it("promotes syncing to blockfrost_rate_limited when wasRateLimitedRecently is true", async () => {
+      (wasRateLimitedRecently as jest.Mock).mockReturnValue(true);
+      const service = makeService({
+        runOwnedPolling: jest.fn().mockResolvedValue({
+          state: "syncing",
+          isSettled: false,
+          hasOutgoingPendingSpend: false,
+        }),
+      });
+      const keyRingService = makeKeyRingService();
+      const handler = getHandler(service, keyRingService);
+      const msg = new GetCardanoSyncStatusMsg("cardano-preprod");
+
+      const result = (await handler(
+        internalEnv,
+        msg
+      )) as CardanoSyncStatusResponse;
+
+      expect(result.state).toBe("blockfrost_rate_limited");
+      expect(result.isSettled).toBe(false);
+    });
+  });
+
+  describe("BuildSendAdaTxDraftMsg", () => {
+    it("returns encoded Blockfrost limit error when wallet is unsettled and recently rate-limited", async () => {
+      (wasRateLimitedRecently as jest.Mock).mockReturnValue(true);
+      (firstValueFrom as jest.Mock)
+        .mockRejectedValueOnce(new Error("Timeout has occurred"))
+        .mockResolvedValueOnce(false);
+
+      const service = makeService({
+        getKey: jest.fn().mockResolvedValue({ address: Buffer.from("addr1") }),
+        getWalletManager: jest.fn().mockReturnValue({
+          hasWallet: () => true,
+          syncStatus$: { pipe: jest.fn() },
+        }),
+      });
+      const keyRingService = makeKeyRingService();
+      const handler = getHandler(service, keyRingService);
+      const msg = new BuildSendAdaTxDraftMsg(
+        "addr1test",
+        "1000000",
+        undefined,
+        "cardano-preprod"
+      );
+
+      await expect(handler(internalEnv, msg)).rejects.toThrow(
+        encodeCardanoUiError(
+          "blockfrost_builtin_limit",
+          "Project rate limit exceeded"
+        )
+      );
+      expect(service.buildSendAdaTxDraft).not.toHaveBeenCalled();
     });
   });
 });

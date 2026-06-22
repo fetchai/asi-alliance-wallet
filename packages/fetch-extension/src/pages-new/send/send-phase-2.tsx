@@ -66,7 +66,10 @@ import {
 } from "./send-phase-2-helpers";
 import { removeComma } from "@utils/format";
 import { CardanoBlockfrostRateLimitBanner } from "@components-v2/cardano/blockfrost-rate-limit-banner";
-import { blockfrostLimitPresentationFromUiError } from "../../utils/cardano-blockfrost";
+import {
+  blockfrostLimitPresentationFromUiError,
+  getBlockfrostLimitBannerMessage,
+} from "../../utils/cardano-blockfrost";
 
 const CARDANO_SYNC_POLL_FAST_MS = 2000;
 const CARDANO_SYNC_POLL_NORMAL_MS = 6000;
@@ -495,6 +498,14 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     });
     const cardanoStatusMessage = !isOnline
       ? cardanoOfflineMessage
+      : cardanoSyncState === "blockfrost_rate_limited"
+      ? getBlockfrostLimitBannerMessage(
+          cardanoBlockfrostLimit ?? {
+            activeKeySource: "builtin",
+            showBuiltinLimitCta: true,
+            showUserKeyLimitWarning: false,
+          }
+        )
       : cardanoSyncState === "temporarily_unavailable"
       ? "Wallet is initializing. Please wait"
       : cardanoSyncState === "provider_error"
@@ -577,7 +588,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             return;
           }
           setIsCardanoSyncing(
-            state === "syncing" || state === "temporarily_unavailable"
+            state !== "blockfrost_rate_limited" &&
+              (state === "syncing" || state === "temporarily_unavailable")
           );
           if (isSubscribed && myEpoch === pollEpoch) {
             clearPollTimeout();

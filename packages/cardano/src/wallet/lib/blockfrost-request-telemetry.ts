@@ -38,6 +38,22 @@ interface FailureRecord {
   timestamp: number;
 }
 
+const resolveFailureStatus = (error: unknown): FailureRecord["status"] => {
+  const direct = (error as { status?: unknown })?.status;
+  if (typeof direct === "number") {
+    return direct;
+  }
+  const nested = (error as { response?: { status?: unknown } })?.response
+    ?.status;
+  if (typeof nested === "number") {
+    return nested;
+  }
+  if (isBlockfrostRateLimitError(error)) {
+    return 402;
+  }
+  return "unknown";
+};
+
 interface RequestRecord {
   callerTag: string;
   endpoint: string;
@@ -304,13 +320,14 @@ export const installBlockfrostRequestTelemetry = ({
       byCallerTag.set(callerTag, callerBucket);
       bySourceTag.set(sourceTag, sourceBucket);
 
+      const failureStatus = resolveFailureStatus(error);
       failures.push({
         callerTag,
         endpoint: normalizedEndpoint,
         kind,
         ms,
         sourceTag,
-        status: error?.status ?? "unknown",
+        status: failureStatus,
         timestamp: Date.now(),
       });
       if (failures.length > MAX_FAILURES_TO_KEEP) failures.shift();
@@ -320,7 +337,7 @@ export const installBlockfrostRequestTelemetry = ({
         kind,
         ms,
         sourceTag,
-        status: error?.status ?? "unknown",
+        status: failureStatus,
       });
 
       logger.warn("[Blockfrost telemetry] request failed", {
@@ -330,7 +347,7 @@ export const installBlockfrostRequestTelemetry = ({
         kind,
         ms,
         sourceTag,
-        status: error?.status,
+        status: failureStatus,
       });
       throw error;
     }

@@ -30,8 +30,11 @@ import { Buffer } from "buffer/";
 import { formatErrorForLog } from "../logging/safe-error";
 import {
   encodeCardanoUiError,
+  getBlockfrostChainNameFromNetwork,
+  getCardanoNetworkFromChainId,
   isBlockfrostRateLimitError,
   isBlockfrostRateLimitMessage,
+  wasRateLimitedRecently,
   CARDANO_UI_ERROR_PREFIX,
 } from "@keplr-wallet/cardano";
 import {
@@ -62,6 +65,51 @@ const stateFromError = (error: unknown): CardanoServiceState => {
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error ?? "unknown_error");
+
+const applyRecentBlockfrostRateLimitState = (
+  response: CardanoSyncStatusResponse,
+  chainId: string | undefined
+): CardanoSyncStatusResponse => {
+  if (
+    !chainId ||
+    (response.state !== "syncing" &&
+      response.state !== "temporarily_unavailable")
+  ) {
+    return response;
+  }
+  try {
+    const chainName = getBlockfrostChainNameFromNetwork(
+      getCardanoNetworkFromChainId(chainId)
+    );
+    if (wasRateLimitedRecently(chainName)) {
+      return { ...response, state: "blockfrost_rate_limited" };
+    }
+  } catch {
+    // invalid chainId — leave response unchanged
+  }
+  return response;
+};
+
+const throwIfRecentlyRateLimited = (chainId: string | undefined): void => {
+  if (!chainId) {
+    return;
+  }
+  try {
+    const chainName = getBlockfrostChainNameFromNetwork(
+      getCardanoNetworkFromChainId(chainId)
+    );
+    if (wasRateLimitedRecently(chainName)) {
+      throw Object.assign(new Error("Project rate limit exceeded"), {
+        status: 402,
+      });
+    }
+  } catch (error) {
+    if (isBlockfrostRateLimitError(error)) {
+      throw error;
+    }
+    // invalid chainId — continue with sync error path
+  }
+};
 
 const getSubmitErrorMessage = (error: unknown): string => {
   if (error instanceof Error && error.message) {
@@ -317,7 +365,7 @@ const handleEstimateSendAdaMsg: (
     if (!service.isReady()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
-    await waitForCardanoWalletSettled(service);
+    await waitForCardanoWalletSettled(service, msg.chainId);
 
     try {
       return await service.estimateSendAda({
@@ -332,7 +380,10 @@ const handleEstimateSendAdaMsg: (
   };
 };
 
-const waitForCardanoWalletSettled = async (service: CardanoService) => {
+const waitForCardanoWalletSettled = async (
+  service: CardanoService,
+  chainId?: string
+) => {
   const walletManager = service.getWalletManager();
   if (!walletManager || !walletManager.hasWallet()) {
     throw new Error("temporarily_unavailable: wallet_not_ready");
@@ -355,8 +406,29 @@ const waitForCardanoWalletSettled = async (service: CardanoService) => {
       () => false
     );
     if (!isSettled) {
+      throwIfRecentlyRateLimited(chainId);
       throw new Error("syncing: wallet_sync_in_progress");
     }
+  }
+};
+
+const awaitWalletSettledForSendFlow = async (
+  service: CardanoService,
+  keyRingService: KeyRingService,
+  chainId?: string
+): Promise<void> => {
+  try {
+    await waitForCardanoWalletSettled(service, chainId);
+  } catch (error) {
+    const rawMessage = errorMessage(error);
+    const encoded = await encodeCardanoSendError(
+      error,
+      rawMessage,
+      service,
+      keyRingService,
+      chainId
+    );
+    throw new Error(toCardanoUiSubmitError(encoded));
   }
 };
 
@@ -424,7 +496,7 @@ const handleBuildSendAdaTxDraftMsg: (
     if (!service.isReady()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
-    await waitForCardanoWalletSettled(service);
+    await awaitWalletSettledForSendFlow(service, keyRingService, msg.chainId);
     const context = await getCardanoDraftContext(
       service,
       keyRingService,
@@ -479,7 +551,7 @@ const handleSubmitSendAdaTxDraftMsg: (
     if (!service.isReady()) {
       throw new Error("Cardano service not ready. Please unlock wallet first.");
     }
-    await waitForCardanoWalletSettled(service);
+    await awaitWalletSettledForSendFlow(service, keyRingService, msg.chainId);
     const context = await getCardanoDraftContext(
       service,
       keyRingService,
@@ -550,7 +622,7 @@ const handleSubmitSendAdaTxDraftWithPasswordMsg: (
         )
       );
     }
-    await waitForCardanoWalletSettled(service);
+    await awaitWalletSettledForSendFlow(service, keyRingService, msg.chainId);
     const context = await getCardanoDraftContext(
       service,
       keyRingService,
@@ -710,7 +782,12 @@ const handleGetCardanoSyncStatusMsg: (
       },
     });
 
-    return attachLimit(polled as CardanoSyncStatusResponse);
+    return attachLimit(
+      applyRecentBlockfrostRateLimitState(
+        polled as CardanoSyncStatusResponse,
+        msg.chainId
+      )
+    );
   };
 };
 

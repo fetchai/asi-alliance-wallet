@@ -1,4 +1,7 @@
-import { wasRateLimitedRecently } from "./blockfrost-request-telemetry";
+import {
+  installBlockfrostRequestTelemetry,
+  wasRateLimitedRecently,
+} from "./blockfrost-request-telemetry";
 
 const registryKey = "__cardanoBlockfrostTelemetryRegistry";
 
@@ -59,5 +62,23 @@ describe("wasRateLimitedRecently", () => {
     ]);
 
     expect(wasRateLimitedRecently("Preprod")).toBe(false);
+  });
+
+  it("returns true when telemetry records nested response.status 402", async () => {
+    const blockfrostClient = {
+      request: jest.fn().mockRejectedValue({ response: { status: 402 } }),
+    };
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: blockfrostClient as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+    });
+
+    await expect(blockfrostClient.request("network")).rejects.toEqual({
+      response: { status: 402 },
+    });
+
+    expect(wasRateLimitedRecently("Preprod")).toBe(true);
   });
 });
