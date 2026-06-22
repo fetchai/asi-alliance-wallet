@@ -1,8 +1,7 @@
-import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../common";
 import { computed } from "mobx";
-import { ObservableChainQueryMap } from "../chain-query";
+import { ChainGetter, ObservableQueryMap } from "../../common";
+import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
 import { DomainsOwnedBy } from "./types";
 
 export class ObservableQueryAllDomainsOwnedByInner extends ObservableCosmwasmContractChainQuery<DomainsOwnedBy> {
@@ -10,12 +9,19 @@ export class ObservableQueryAllDomainsOwnedByInner extends ObservableCosmwasmCon
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected override readonly contractAddress: string,
+    protected readonly contractAddress: string,
     protected readonly owner: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, {
-      get_all_domains_owned_by: { owner: owner },
-    });
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      contractAddress,
+      {
+        get_all_domains_owned_by: { owner: owner },
+      },
+      `all-domains-${contractAddress}-${chainId}-${owner}`
+    );
   }
 
   @computed
@@ -28,13 +34,13 @@ export class ObservableQueryAllDomainsOwnedByInner extends ObservableCosmwasmCon
   }
 }
 
-export class ObservableQueryAllDomainsOwnedBy extends ObservableChainQueryMap<DomainsOwnedBy> {
+export class ObservableQueryAllDomainsOwnedBy extends ObservableQueryMap<DomainsOwnedBy> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (key: string) => {
+    super((key: string) => {
       const split = key.split("/");
       return new ObservableQueryAllDomainsOwnedByInner(
         this.kvStore,

@@ -1,8 +1,7 @@
 import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../common";
+import { ChainGetter, ObservableQueryMap } from "../../common";
 import { computed } from "mobx";
-import { ObservableChainQueryMap } from "../chain-query";
 import { ICNSNames } from "./types";
 
 export class ObservableQueryICNSNamesInner extends ObservableCosmwasmContractChainQuery<ICNSNames> {
@@ -10,12 +9,19 @@ export class ObservableQueryICNSNamesInner extends ObservableCosmwasmContractCha
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected override readonly contractAddress: string,
+    protected readonly contractAddress: string,
     protected readonly address: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, {
-      icns_names: { address: address },
-    });
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      contractAddress,
+      {
+        icns_names: { address: address },
+      },
+      `icns-names-${contractAddress}-${address}-${chainId}`
+    );
   }
 
   @computed
@@ -37,20 +43,17 @@ export class ObservableQueryICNSNamesInner extends ObservableCosmwasmContractCha
   }
 }
 
-export class ObservableQueryICNSNames extends ObservableChainQueryMap<ICNSNames> {
-  constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
-  ) {
-    super(kvStore, chainId, chainGetter, (key: string) => {
-      const split = key.split("/");
+export class ObservableQueryICNSNames extends ObservableQueryMap<ICNSNames> {
+  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+    super((key: string) => {
+      const [contractAddress, address] = key.split("/");
+
       return new ObservableQueryICNSNamesInner(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
-        split[0],
-        split[1]
+        kvStore,
+        chainId,
+        chainGetter,
+        contractAddress,
+        address
       );
     });
   }

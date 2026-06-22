@@ -1,7 +1,6 @@
 import { Cw20ContractTokenInfo } from "./types";
 import { KVStore } from "@keplr-wallet/common";
-import { ObservableChainQueryMap } from "../chain-query";
-import { ChainGetter } from "../../common";
+import { ChainGetter, ObservableQueryMap } from "../../common";
 import { computed } from "mobx";
 import { ObservableCosmwasmContractChainQuery } from "./contract-query";
 
@@ -10,9 +9,16 @@ export class ObservableQueryCw20ContactInfoInner extends ObservableCosmwasmContr
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected override readonly contractAddress: string
+    protected readonly contractAddress: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, { token_info: {} });
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      contractAddress,
+      { token_info: {} },
+      `cw20-contract-info-${contractAddress}-${chainId}`
+    );
   }
 
   @computed
@@ -25,13 +31,13 @@ export class ObservableQueryCw20ContactInfoInner extends ObservableCosmwasmContr
   }
 }
 
-export class ObservableQueryCw20ContractInfo extends ObservableChainQueryMap<Cw20ContractTokenInfo> {
+export class ObservableQueryCw20ContractInfo extends ObservableQueryMap<Cw20ContractTokenInfo> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: KVStore,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (contractAddress: string) => {
+    super((contractAddress: string) => {
       return new ObservableQueryCw20ContactInfoInner(
         this.kvStore,
         this.chainId,
