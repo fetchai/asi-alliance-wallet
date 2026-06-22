@@ -3133,7 +3133,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
         coinDecimals: 18,
         coinGeckoId: "fetch-ai",
         gasPriceStep: {
-          low: 0,
+          low: 5000000000,
           average: 5000000000,
           high: 6250000000,
         },
