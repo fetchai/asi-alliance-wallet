@@ -1583,6 +1583,24 @@ Salt: ${salt}`;
     return keys;
   }
 
+  private static resolveGenericWalletNameForChain(
+    meta: KeyStoreMetaKnown | undefined,
+    chainId: string
+  ): string {
+    if (!meta) {
+      return "Unnamed Account";
+    }
+
+    let nameByChain: Record<string, string> = {};
+    try {
+      nameByChain = meta["nameByChain"] ? JSON.parse(meta["nameByChain"]) : {};
+    } catch {
+      nameByChain = {};
+    }
+
+    return nameByChain?.[chainId] || meta["name"] || "Unnamed Account";
+  }
+
   private async ensureAndRepairAddressCaches(
     chainId: string,
     keys: (Key & { name: string })[],
@@ -1605,6 +1623,14 @@ Salt: ${salt}`;
     const walletNames = walletInfos.map(
       (w) => (w.meta as KeyStoreMetaKnown)?.["name"] || "Unnamed Account"
     );
+    const genericWalletNames = flags.isCardano
+      ? []
+      : walletInfos.map((walletInfo) =>
+          KeyRingService.resolveGenericWalletNameForChain(
+            walletInfo.meta as KeyStoreMetaKnown,
+            chainId
+          )
+        );
     const selectedIndex = walletInfos.findIndex((w) => w.selected);
     const activeWalletId =
       selectedIndex >= 0 ? walletIds[selectedIndex] : walletIds[0] || "";
@@ -1664,7 +1690,7 @@ Salt: ${salt}`;
           const mnemonicLength = walletInfo?.meta?.["mnemonicLength"];
           next[id] = {
             address: addressHex,
-            name: walletNames[idx],
+            name: genericWalletNames[idx],
             pubKey: pubKeyHex,
             mnemonicLength: mnemonicLength,
           };
@@ -1674,16 +1700,23 @@ Salt: ${salt}`;
       }
     }
 
-    // For consistency check, use display address (matches cache format)
+    const consistencyWalletNames = flags.isCardano
+      ? walletNames
+      : genericWalletNames;
+
     const activeKey = selectedIndex >= 0 ? keys[selectedIndex] : null;
     const activeAddressForCheck =
-      activeKey && selectedIndex >= 0 ? displayAddresses[selectedIndex] : "";
+      activeKey && selectedIndex >= 0
+        ? flags.isCardano
+          ? displayAddresses[selectedIndex]
+          : Buffer.from(activeKey.address).toString("hex")
+        : "";
 
     const consistencyResult =
       await this.keyRing.addressCacheManager.checkConsistency(
         chainId,
         walletIds,
-        walletNames,
+        consistencyWalletNames,
         activeWalletId,
         activeAddressForCheck,
         flags.isCardano
@@ -1729,7 +1762,7 @@ Salt: ${salt}`;
           const mnemonicLength = walletInfo?.meta?.["mnemonicLength"];
           next[id] = {
             address: addressHex,
-            name: walletNames[idx],
+            name: genericWalletNames[idx],
             pubKey: pubKeyHex,
             mnemonicLength: mnemonicLength,
           };

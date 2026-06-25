@@ -163,7 +163,6 @@ export class RootStore {
   >;
 
   private readonly _addressCacheSyncManager: AddressCacheSyncManager;
-  private _lastChainType: boolean | undefined = undefined;
   private _lastWalletIds: Set<string> | undefined = undefined;
   private _lastWalletStatus: number | undefined = undefined;
   private _walletListSyncGeneration = 0;
@@ -380,29 +379,6 @@ export class RootStore {
         },
         { fireImmediately: true }
       )
-    );
-
-    // This prevents showing incorrect addresses due to format differences
-    this._disposers.push(
-      autorun(() => {
-        const currentChain = this.chainStore.current;
-        const isEvm = currentChain.features?.includes("evm") ?? false;
-
-        if (!this._lastChainType) {
-          this._lastChainType = isEvm;
-          return;
-        }
-
-        const lastChainType = this._lastChainType;
-        const hasChainTypeChanged = lastChainType !== isEvm;
-
-        if (hasChainTypeChanged) {
-          const { addressCacheStore } = require("../utils/address-cache-store");
-          addressCacheStore.clearAllCaches();
-        }
-
-        this._lastChainType = isEvm;
-      })
     );
 
     const addressCacheReactionDisposer = reaction(
