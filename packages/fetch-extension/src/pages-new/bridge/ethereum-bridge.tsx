@@ -3,7 +3,6 @@ import { observer } from "mobx-react-lite";
 import { useNavigate, useLocation } from "react-router";
 
 import style from "./style.module.scss";
-import { Button } from "reactstrap";
 import { AddressInput, CoinInput, FeeButtons } from "@components-v2/form";
 import {
   IAmountConfig,
@@ -25,6 +24,17 @@ import { Card } from "@components-v2/card";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { TXNTYPE } from "../../config";
+
+const buttonStyles: React.CSSProperties = {
+  width: "94%",
+  padding: "12px",
+  height: "56px",
+  margin: "0 auto",
+  position: "fixed",
+  bottom: "15px",
+  left: "0px",
+  right: "0px",
+};
 
 export const EthereumBridge: FunctionComponent<{
   limit: string;
@@ -200,6 +210,7 @@ export const Configure: FunctionComponent<{
           )}
           <ButtonV2
             variant="dark"
+            styleProps={buttonStyles}
             disabled={!isValid}
             onClick={(e: any) => {
               e.preventDefault();
@@ -280,9 +291,9 @@ export const Approve: FunctionComponent<{
 
     return (
       <form className={style["formContainer"]}>
-        <h2>Approve</h2>
+        <h2 style={{ color: "var(--font-dark)", fontWeight: 400 }}>Approve</h2>
         <div className={style["formInnerContainer"]}>
-          <div style={{ marginBottom: "20px" }}>
+          <div style={{ marginBottom: "20px", color: "var(--font-secondary)" }}>
             Allow the bridge contract to spend{" "}
             <span style={{ fontWeight: "bold" }}>
               {new IntPretty(amountConfig.amount).trim(true).toString()} FET
@@ -290,22 +301,34 @@ export const Approve: FunctionComponent<{
             on your behalf.
           </div>
 
-          <FeeButtons
-            label={intl.formatMessage({
-              id: "send.input.fee",
-            })}
-            feeConfig={feeConfig}
-            gasConfig={gasConfig}
-            priceStore={priceStore}
-            gasSimulator={approveGasSimulator}
-          />
+          <div
+            style={{
+              width: "94%",
+              margin: "0 auto",
+              position: "fixed",
+              bottom: "10px",
+              left: "0px",
+              right: "0px",
+            }}
+          >
+            <FeeButtons
+              label={intl.formatMessage({
+                id: "send.input.fee",
+              })}
+              feeConfig={feeConfig}
+              gasConfig={gasConfig}
+              priceStore={priceStore}
+              gasSimulator={approveGasSimulator}
+            />
+          </div>
 
-          <Button
+          <ButtonV2
+            text={<FormattedMessage id="ibc.transfer.next" />}
             type="submit"
-            color="primary"
-            block
+            styleProps={buttonStyles}
+            variant="dark"
             disabled={!isValid}
-            onClick={async (e) => {
+            onClick={async (e: any) => {
               e.preventDefault();
 
               try {
@@ -384,9 +407,7 @@ export const Approve: FunctionComponent<{
                 });
               }
             }}
-          >
-            <FormattedMessage id="ibc.transfer.next" />
-          </Button>
+          />
         </div>
       </form>
     );
@@ -424,9 +445,11 @@ export const Bridge: FunctionComponent<{
 
   return (
     <form className={style["formContainer"]}>
-      <h2>Bridge</h2>
+      <h2 style={{ color: "var(--font-dark)", fontWeight: 400 }}>Bridge</h2>
       <div className={style["formInnerContainer"]}>
-        <p style={{ overflowWrap: "break-word" }}>
+        <p
+          style={{ overflowWrap: "break-word", color: "var(--font-secondary)" }}
+        >
           Sending{" "}
           <span style={{ fontWeight: "bold" }}>
             {new IntPretty(bridgeAmount).trim(true).toString()}{" "}
@@ -445,12 +468,13 @@ export const Bridge: FunctionComponent<{
           gasSimulator={bridgeGasSimulator}
         />
 
-        <Button
+        <ButtonV2
+          text={<FormattedMessage id="ibc.transfer.next" />}
+          styleProps={buttonStyles}
           type="submit"
-          color="primary"
-          block
+          variant="dark"
           disabled={!isValid}
-          onClick={async (e) => {
+          onClick={async (e: any) => {
             e.preventDefault();
 
             try {
@@ -519,9 +543,7 @@ export const Bridge: FunctionComponent<{
               });
             }
           }}
-        >
-          <FormattedMessage id="ibc.transfer.next" />
-        </Button>
+        />
       </div>
     </form>
   );

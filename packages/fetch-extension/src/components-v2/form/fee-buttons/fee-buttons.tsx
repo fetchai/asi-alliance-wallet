@@ -300,7 +300,7 @@ export const FeeButtonsInner: FunctionComponent<
               style={{
                 marginTop: "0px",
                 marginBottom: "12px",
-                color: "white",
+                color: "var(--font-dark)",
                 fontSize: "14px",
               }}
             >

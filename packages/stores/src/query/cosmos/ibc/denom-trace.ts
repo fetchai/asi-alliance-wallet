@@ -25,7 +25,6 @@ export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<De
       async (queryClient) => {
         const client = queryClient as unknown as IbcExtension;
         const response = await client.ibc.transfer.denomTrace(this.hash);
-        console.log("ibc denom trace response", response);
         return camelToSnake(response) as DenomTraceResponse;
       },
       setupIbcExtension,
