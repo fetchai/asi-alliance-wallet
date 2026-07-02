@@ -134,7 +134,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -153,6 +153,8 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
           return (
             <InputCardView
               label="Password"
+              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               keyboardType={"default"}
               secureTextEntry={!showPassword}
               returnKeyType="next"
@@ -168,7 +170,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
               rightIcon={
                 !showPassword ? (
                   <IconButton
-                    icon={<EyeIcon />}
+                    icon={<EyeIcon color="black" />}
                     backgroundBlur={false}
                     onPress={() => {
                       setShowPassword(!showPassword);
@@ -176,7 +178,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
                   />
                 ) : (
                   <IconButton
-                    icon={<HideEyeIcon />}
+                    icon={<HideEyeIcon color="black" />}
                     backgroundBlur={false}
                     onPress={() => {
                       setShowPassword(!showPassword);
@@ -300,7 +302,13 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
           setShowPassword(false);
           submit();
         }}
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
       />
       {/* Mock element for bottom padding */}
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />

@@ -46,7 +46,7 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
   const [modelStatus, setModelStatus] = useState(ModelStatus.First);
 
   return (
-    <PageWithView backgroundMode="image">
+    <PageWithView backgroundMode="secondary">
       <View style={style.flatten(["padding-page", "flex-grow-1"]) as ViewStyle}>
         <View style={style.get("flex-2")} />
         <IconWithText
@@ -70,9 +70,12 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
               "margin-x-20",
               "text-center",
               "font-medium",
+              "color-black",
             ]) as ViewStyle
           }
-          subtitleStyle={style.flatten(["subtitle3"]) as ViewStyle}
+          subtitleStyle={
+            style.flatten(["subtitle3", "color-gray-300"]) as ViewStyle
+          }
         />
         <BlurBackground
           borderRadius={12}
@@ -89,7 +92,7 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
             style={
               style.flatten([
                 "subtitle3",
-                "color-white",
+                "color-black",
                 "text-center",
                 "margin-x-24",
                 "margin-y-14",
@@ -103,7 +106,13 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
         <Button
           text="Continue"
           size="large"
-          containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+          containerStyle={
+            style.flatten([
+              "border-radius-32",
+              "background-color-dark",
+            ]) as ViewStyle
+          }
+          textStyle={style.flatten(["color-white"]) as ViewStyle}
           onPress={async () => {
             const permission = await Camera.getCameraPermissionsAsync();
             if (permission?.status == PermissionStatus.UNDETERMINED) {

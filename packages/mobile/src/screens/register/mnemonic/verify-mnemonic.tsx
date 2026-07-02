@@ -107,7 +107,7 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -115,7 +115,7 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-black",
             "margin-y-18",
             "font-normal",
           ]) as ViewStyle
@@ -175,13 +175,17 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
         />
         <Button
           containerStyle={
-            style.flatten(["border-radius-32", "margin-top-24"]) as ViewStyle
+            style.flatten([
+              "border-radius-32",
+              "margin-top-24",
+              "background-color-dark",
+            ]) as ViewStyle
           }
           text="Continue"
           size="large"
           loading={isCreating}
           disabled={wordSet.join(" ") !== newMnemonicConfig.mnemonic}
-          textStyle={style.flatten(["body2"]) as ViewStyle}
+          textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
           onPress={async () => {
             setIsCreating(true);
             smartNavigation.navigateSmart("Register.CreateAccount", {
@@ -219,19 +223,20 @@ const WordButton: FunctionComponent<{
             "flex-1",
             "border-radius-32",
             "border-width-1",
-            "border-color-white@40%",
+            "border-color-gray-100",
+            "background-color-gray-5",
           ],
-          [used && "border-color-white@20%"]
+          [used && "background-color-gray-50"]
         ) as ViewStyle
       }
       onPress={onPress}
-      rippleColor={"black@50%"}
+      rippleColor={"black@10%"}
     >
       <Text
         style={
           style.flatten(
-            ["text-caption2", "color-white", "text-center"],
-            [used && "color-white@20%"]
+            ["text-caption2", "color-black", "text-center"],
+            [used && "color-gray-200"]
           ) as ViewStyle
         }
       >

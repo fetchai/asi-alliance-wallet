@@ -20,17 +20,17 @@ export const BipButtons: FunctionComponent<{
         containerStyle={
           [
             style.flatten(
-              ["justify-center", "margin-y-18"],
+              ["justify-center", "margin-y-18", "background-color-gray-5"],
               [
                 "border-width-1",
                 "border-radius-64",
-                selected ? "border-color-indigo" : "border-color-white@40%",
+                selected ? "border-color-indigo" : "border-color-gray-100",
               ]
             ),
             { width: 150 },
           ] as ViewStyle
         }
-        textStyle={style.flatten(["text-caption2"]) as ViewStyle}
+        textStyle={style.flatten(["text-caption2", "color-black"]) as ViewStyle}
         onPress={() => setIsSelected(!selected)}
       />
 
@@ -48,19 +48,24 @@ export const BipButtons: FunctionComponent<{
                 "margin-y-18",
                 "border-width-1",
                 "border-radius-64",
-
+                "background-color-gray-5",
                 "margin-left-10",
               ],
               [
                 clearButtonDisable
-                  ? "border-color-white@20%"
-                  : "border-color-white@40%",
+                  ? "border-color-gray-50"
+                  : "border-color-gray-100",
               ]
             ),
             { width: 70 },
           ] as ViewStyle
         }
-        textStyle={style.flatten(["text-caption2"]) as ViewStyle}
+        textStyle={
+          style.flatten(
+            ["text-caption2"],
+            [clearButtonDisable ? "color-gray-200" : "color-black"]
+          ) as ViewStyle
+        }
         onPress={onPressClearButton}
       />
     </View>

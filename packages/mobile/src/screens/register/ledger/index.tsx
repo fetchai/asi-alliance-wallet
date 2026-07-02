@@ -344,7 +344,7 @@ export const LedgerScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -352,7 +352,7 @@ export const LedgerScreen: FunctionComponent = () => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-black",
             "margin-y-10",
             "font-medium",
           ]) as ViewStyle
@@ -360,7 +360,7 @@ export const LedgerScreen: FunctionComponent = () => {
       >
         Connect hardware wallet
       </Text>
-      <Text style={style.flatten(["h6", "color-gray-200"]) as ViewStyle}>
+      <Text style={style.flatten(["h6", "color-gray-300"]) as ViewStyle}>
         To keep your account safe, avoid any personal information or words
       </Text>
       <Controller
@@ -377,6 +377,8 @@ export const LedgerScreen: FunctionComponent = () => {
           return (
             <InputCardView
               label="Account name"
+              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               containerStyle={style.flatten(["margin-top-18"]) as ViewStyle}
               returnKeyType={mode === "add" ? "done" : "next"}
               onSubmitEditing={() => {
@@ -436,6 +438,8 @@ export const LedgerScreen: FunctionComponent = () => {
               return (
                 <InputCardView
                   label="Password"
+                  labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+                  inputStyle={style.flatten(["color-black"]) as ViewStyle}
                   keyboardType={"default"}
                   containerStyle={style.flatten(["margin-top-8"]) as ViewStyle}
                   secureTextEntry={!showPassword}
@@ -452,7 +456,7 @@ export const LedgerScreen: FunctionComponent = () => {
                   rightIcon={
                     !showPassword ? (
                       <IconButton
-                        icon={<EyeIcon />}
+                        icon={<EyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -460,7 +464,7 @@ export const LedgerScreen: FunctionComponent = () => {
                       />
                     ) : (
                       <IconButton
-                        icon={<HideEyeIcon />}
+                        icon={<HideEyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -582,13 +586,11 @@ export const LedgerScreen: FunctionComponent = () => {
         containerStyle={
           style.flatten([
             "margin-y-18",
-            "background-color-white",
+            "background-color-dark",
             "border-radius-32",
           ]) as ViewStyle
         }
-        textStyle={{
-          color: "#0B1742",
-        }}
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         text="Continue"
         size="large"
         loading={isCreating}

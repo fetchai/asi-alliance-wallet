@@ -45,9 +45,7 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithView
-      backgroundMode="image"
-      isTransparentHeader={true}
-      backgroundBlur={true}
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-20"]) as ViewStyle}
     >
       <View style={style.get("flex-8")} />
@@ -63,7 +61,7 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
           style={
             style.flatten([
               "h4",
-              "color-text-low",
+              "color-gray-300",
               "text-center",
               "margin-top-10",
             ]) as ViewStyle
@@ -83,7 +81,7 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
           }
         >
           <Text
-            style={style.flatten(["subtitle1", "color-text-low"]) as ViewStyle}
+            style={style.flatten(["subtitle1", "color-black"]) as ViewStyle}
           >
             Enable Biometric
           </Text>
@@ -100,13 +98,11 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
           style.flatten([
             "margin-top-44",
             "margin-bottom-20",
-            "background-color-white",
+            "background-color-dark",
             "border-radius-32",
           ]) as ViewStyle
         }
-        textStyle={{
-          color: "#0B1742",
-        }}
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         size="large"
         text="Start using your wallet"
         loading={isLoading}
