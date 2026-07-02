@@ -2,6 +2,7 @@ import { KeyRingService } from "./service";
 import { KeyRingStatus } from "./keyring";
 import { MemoryKVStore } from "@keplr-wallet/common";
 import type { CardanoService } from "../cardano/service";
+import { StaleCardanoRuntimeError } from "../cardano/ensure-errors";
 import { ChainInfo } from "@keplr-wallet/types";
 import { PREFERRED_DEFAULT_CHAIN_ID } from "../chains/default-chain";
 import {
@@ -587,6 +588,152 @@ describe("KeyRingService", () => {
       expect(service.keyRingStatus).toBe(KeyRingStatus.UNLOCKED);
       expect(mockCardanoService.reset).toHaveBeenCalled();
       expect((service as any)["cardanoRestoreByChainId"].size).toBe(0);
+    });
+  });
+
+  describe("changeKeyStoreFromMultiKeyStore Cardano reset guard", () => {
+    it("does not reset Cardano runtime when current chain is non-Cardano", async () => {
+      const reset = jest.fn();
+      const changeKeyStoreFromMultiKeyStore = jest.fn().mockResolvedValue({
+        multiKeyStoreInfo: [],
+      });
+      const dispatchEvent = jest.fn();
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
+        findChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+      } as any;
+      service["keyRing"] = {
+        changeKeyStoreFromMultiKeyStore,
+      } as any;
+      service["cardanoService"] = { reset } as any;
+      service["interactionService"] = {
+        dispatchEvent,
+      } as any;
+
+      await service.changeKeyStoreFromMultiKeyStore(1);
+
+      expect(changeKeyStoreFromMultiKeyStore).toHaveBeenCalledWith(1);
+      expect(dispatchEvent).toHaveBeenCalled();
+      expect(reset).not.toHaveBeenCalled();
+    });
+
+    it("resets Cardano runtime when current chain is Cardano", async () => {
+      const reset = jest.fn();
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-preview"),
+        findChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["keyRing"] = {
+        changeKeyStoreFromMultiKeyStore: jest.fn().mockResolvedValue({
+          multiKeyStoreInfo: [],
+        }),
+      } as any;
+      service["cardanoService"] = { reset } as any;
+      service["interactionService"] = {
+        dispatchEvent: jest.fn(),
+      } as any;
+
+      await service.changeKeyStoreFromMultiKeyStore(1);
+
+      expect(reset).toHaveBeenCalled();
+    });
+  });
+
+  describe("Cardano runtime stale init recovery", () => {
+    it("retries ensure after in-flight init is invalidated by resetCardanoRuntime", async () => {
+      let resolveRestore: (() => void) | undefined;
+      let restoreCallCount = 0;
+      let initialized = false;
+      const restoreFromKeyStore = jest.fn().mockImplementation(() => {
+        restoreCallCount += 1;
+        if (restoreCallCount === 1) {
+          return new Promise<void>((resolve) => {
+            resolveRestore = resolve;
+          });
+        }
+        initialized = true;
+        return Promise.resolve();
+      });
+      const reset = jest.fn();
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-preview"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        reset,
+        restoreFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => initialized),
+        isReady: jest.fn().mockImplementation(() => initialized),
+        isKeyAgentReady: jest.fn().mockImplementation(() => initialized),
+      } as any;
+
+      const ensurePromise = service.ensureCardanoServiceReady(
+        "cardano-preview",
+        {
+          mode: "key",
+        }
+      );
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
+
+      service["resetCardanoRuntime"]();
+      resolveRestore?.();
+
+      await expect(ensurePromise).resolves.toBeUndefined();
+      expect(restoreFromKeyStore).toHaveBeenCalledTimes(2);
+      expect(reset).toHaveBeenCalled();
+    });
+
+    it("does not log stale generation as Cardano initialization failure", async () => {
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      let initialized = false;
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-preview"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        restoreFromKeyStore: jest
+          .fn()
+          .mockImplementationOnce(async () => {
+            service["cardanoRuntimeGeneration"] += 1;
+          })
+          .mockImplementationOnce(async () => {
+            initialized = true;
+          }),
+        isInitialized: jest.fn().mockImplementation(() => initialized),
+        isReady: jest.fn().mockImplementation(() => initialized),
+        isKeyAgentReady: jest.fn().mockImplementation(() => initialized),
+      } as any;
+
+      await expect(
+        service.ensureCardanoServiceReady("cardano-preview", { mode: "key" })
+      ).resolves.toBeUndefined();
+
+      expect(consoleError).not.toHaveBeenCalledWith(
+        "[KeyRingService] Failed to initialize CardanoService:",
+        expect.any(StaleCardanoRuntimeError)
+      );
+      consoleError.mockRestore();
     });
   });
 });

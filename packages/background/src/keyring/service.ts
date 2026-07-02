@@ -7,6 +7,7 @@ import { Key, KeyStoreMetaKnown } from "./types";
 import { CardanoService } from "../cardano/service";
 import {
   CARDANO_ENSURE_MESSAGE,
+  StaleCardanoRuntimeError,
   formatNetworkContextInvalidForCardano,
   formatProviderUnavailableError,
   formatWalletNotReadyError,
@@ -149,6 +150,15 @@ export class KeyRingService {
     return this.isCardanoChain(chainId);
   }
 
+  private cardanoRuntimeGeneration = 0;
+
+  private resetCardanoRuntime(): void {
+    this.cardanoRuntimeGeneration += 1;
+    this.cardanoServiceInitPromise = null;
+    this.cardanoRestoreByChainId.clear();
+    this.cardanoService.reset();
+  }
+
   public async reinitializeCardanoService(chainId: string): Promise<void> {
     if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
       throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
@@ -157,8 +167,7 @@ export class KeyRingService {
       throw new Error(formatNetworkContextInvalidForCardano(chainId));
     }
 
-    this.cardanoService.reset();
-    this.cardanoRestoreByChainId.clear();
+    this.resetCardanoRuntime();
     await this.ensureCardanoServiceReady(chainId);
   }
 
@@ -193,22 +202,20 @@ export class KeyRingService {
           return;
         }
         cardanoRuntimeTouched = true;
-        await this.ensureCardanoServiceReady(newChainId);
+        await this.ensureCardanoServiceReady(newChainId, { mode: "key" });
         runPostSwitchCacheRepair = true;
       } else {
         const stillCurrent = await this.chainsService.getSelectedChain();
         if (stillCurrent !== targetChainId) {
           return;
         }
-        this.cardanoService.reset();
-        this.cardanoRestoreByChainId.clear();
+        this.resetCardanoRuntime();
       }
     } catch (error) {
       if (cardanoRuntimeTouched) {
         // Cleanup touched Cardano runtime state to avoid cross-chain stale side effects
         // when selected chain rollback is triggered by ChainsService.
-        this.cardanoService.reset();
-        this.cardanoRestoreByChainId.clear();
+        this.resetCardanoRuntime();
 
         // Best-effort restore old Cardano context after rollback.
         try {
@@ -339,8 +346,7 @@ export class KeyRingService {
       keyStoreChanged = result.keyStoreChanged;
 
       if (keyStoreChanged) {
-        this.cardanoService.reset();
-        this.cardanoRestoreByChainId.clear();
+        this.resetCardanoRuntime();
         await this.alignSelectedChainWithCurrentWalletIfNeeded();
       }
 
@@ -537,8 +543,7 @@ export class KeyRingService {
 
   lock(): KeyRingStatus {
     this.keyRing.lock();
-    this.cardanoService.reset();
-    this.cardanoRestoreByChainId.clear();
+    this.resetCardanoRuntime();
     return this.keyRing.status;
   }
 
@@ -560,16 +565,14 @@ export class KeyRingService {
           );
         } else {
           // Keep Cardano detached when active chain is non-Cardano.
-          this.cardanoService.reset();
-          this.cardanoRestoreByChainId.clear();
+          this.resetCardanoRuntime();
         }
       } catch (error) {
         console.error(
           "[KeyRingService] Post-unlock Cardano initialization failed:",
           error
         );
-        this.cardanoService.reset();
-        this.cardanoRestoreByChainId.clear();
+        this.resetCardanoRuntime();
       }
     }
 
@@ -610,6 +613,29 @@ export class KeyRingService {
     chainId?: string,
     options?: { mode?: "transaction" | "key" }
   ): Promise<void> {
+    try {
+      await this.ensureCardanoServiceReadyOnce(chainId, options);
+    } catch (error) {
+      if (!(error instanceof StaleCardanoRuntimeError)) {
+        throw error;
+      }
+      const targetChainId =
+        chainId || (await this.chainsService.getSelectedChain());
+      if (!targetChainId) {
+        throw error;
+      }
+      const currentChainId = await this.chainsService.getSelectedChain();
+      if (currentChainId !== targetChainId) {
+        throw error;
+      }
+      await this.ensureCardanoServiceReadyOnce(chainId, options);
+    }
+  }
+
+  private async ensureCardanoServiceReadyOnce(
+    chainId?: string,
+    options?: { mode?: "transaction" | "key" }
+  ): Promise<void> {
     const mode = options?.mode ?? "transaction";
     const assertReady = () => this.assertCardanoReadyForMode(chainId, mode);
 
@@ -635,12 +661,7 @@ export class KeyRingService {
           try {
             const ks = this.keyRing.getCurrentKeyStore();
             if (ks && this.keyRing.status === KeyRingStatus.UNLOCKED) {
-              await this.cardanoService.restoreFromKeyStore(
-                ks,
-                this.keyRing.currentPassword,
-                this.crypto,
-                chainId
-              );
+              await this.restoreCardanoFromKeyStoreWithGeneration(ks, chainId);
             }
             resolve();
           } catch (e) {
@@ -650,7 +671,11 @@ export class KeyRingService {
       });
       // Set must run in the same sync turn after creating the promise.
       this.cardanoRestoreByChainId.set(chainId, promise);
-      promise.finally(() => this.cardanoRestoreByChainId.delete(chainId));
+      promise.finally(() => {
+        if (this.cardanoRestoreByChainId.get(chainId) === promise) {
+          this.cardanoRestoreByChainId.delete(chainId);
+        }
+      });
       await promise;
       assertReady();
       return;
@@ -672,13 +697,18 @@ export class KeyRingService {
           await promise;
           assertReady();
         } catch (error) {
+          if (error instanceof StaleCardanoRuntimeError) {
+            throw error;
+          }
           console.error(
             "[KeyRingService] Failed to initialize CardanoService:",
             error
           );
           throw error;
         } finally {
-          this.cardanoServiceInitPromise = null;
+          if (this.cardanoServiceInitPromise === promise) {
+            this.cardanoServiceInitPromise = null;
+          }
         }
       } else {
         throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
@@ -686,6 +716,29 @@ export class KeyRingService {
     }
 
     assertReady();
+  }
+
+  private async restoreCardanoFromKeyStoreWithGeneration(
+    ks: Parameters<CardanoService["restoreFromKeyStore"]>[0],
+    chainId: string
+  ): Promise<void> {
+    const generation = this.cardanoRuntimeGeneration;
+    try {
+      await this.cardanoService.restoreFromKeyStore(
+        ks,
+        this.keyRing.currentPassword,
+        this.crypto,
+        chainId
+      );
+      if (generation !== this.cardanoRuntimeGeneration) {
+        throw new StaleCardanoRuntimeError();
+      }
+    } catch (error) {
+      if (generation !== this.cardanoRuntimeGeneration) {
+        throw new StaleCardanoRuntimeError();
+      }
+      throw error;
+    }
   }
 
   private assertCardanoReadyForMode(
@@ -725,22 +778,20 @@ export class KeyRingService {
     if (walletShouldLeaveCardanoChain(ks)) {
       throw new Error(CARDANO_ENSURE_MESSAGE.MNEMONIC_24);
     }
+    const currentChainId =
+      chainId || (await this.chainsService.getSelectedChain());
+    if (!currentChainId) {
+      throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
+    }
+    if (!(await this.isCardanoChain(currentChainId))) {
+      throw new Error(formatNetworkContextInvalidForCardano(currentChainId));
+    }
     try {
-      const currentChainId =
-        chainId || (await this.chainsService.getSelectedChain());
-      if (!currentChainId) {
-        throw new Error(CARDANO_ENSURE_MESSAGE.NETWORK_CONTEXT_MISSING);
-      }
-      if (!(await this.isCardanoChain(currentChainId))) {
-        throw new Error(formatNetworkContextInvalidForCardano(currentChainId));
-      }
-      await this.cardanoService.restoreFromKeyStore(
-        ks,
-        this.keyRing.currentPassword,
-        this.crypto,
-        currentChainId
-      );
+      await this.restoreCardanoFromKeyStoreWithGeneration(ks, currentChainId);
     } catch (error) {
+      if (error instanceof StaleCardanoRuntimeError) {
+        throw error;
+      }
       console.error(
         "[KeyRingService] Failed to initialize CardanoService:",
         error
@@ -1441,8 +1492,10 @@ Salt: ${salt}`;
   }> {
     try {
       const result = await this.keyRing.changeKeyStoreFromMultiKeyStore(index);
-      this.cardanoService.reset();
-      this.cardanoRestoreByChainId.clear();
+      const currentChainId = await this.chainsService.getSelectedChain();
+      if (await this.isCardanoChainSafe(currentChainId)) {
+        this.resetCardanoRuntime();
+      }
       await this.alignSelectedChainWithCurrentWalletIfNeeded();
       return result;
     } finally {

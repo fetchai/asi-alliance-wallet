@@ -10,6 +10,14 @@ export const CARDANO_ENSURE_MESSAGE = {
   MNEMONIC_24: "Cardano requires 24-word mnemonic",
 } as const;
 
+/** Expected cancellation when Cardano runtime was reset during an in-flight restore. */
+export class StaleCardanoRuntimeError extends Error {
+  constructor() {
+    super("stale_cardano_runtime");
+    this.name = "StaleCardanoRuntimeError";
+  }
+}
+
 export function formatProviderUnavailableError(chainId?: string): string {
   return `provider_error: provider_unavailable${chainId ? `: ${chainId}` : ""}`;
 }
