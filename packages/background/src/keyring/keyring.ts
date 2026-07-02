@@ -2155,8 +2155,8 @@ export class KeyRing {
       let fallbackAlgo: "cardano_unsupported" | "cardano_derivation_failed" =
         "cardano_unsupported";
       if (shouldTryCardano) {
+        const svc = new CardanoService();
         try {
-          const svc = new CardanoService();
           await svc.restoreFromKeyStore(
             keyStore as any,
             this.password,
@@ -2181,6 +2181,8 @@ export class KeyRing {
             error
           );
           // Fall through to typed unsupported state.
+        } finally {
+          svc.reset();
         }
       }
 

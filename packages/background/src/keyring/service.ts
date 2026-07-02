@@ -193,6 +193,13 @@ export class KeyRingService {
         }
         cardanoRuntimeTouched = true;
         await this.ensureCardanoServiceReady(newChainId);
+      } else {
+        const stillCurrent = await this.chainsService.getSelectedChain();
+        if (stillCurrent !== targetChainId) {
+          return;
+        }
+        this.cardanoService.reset();
+        this.cardanoRestoreByChainId.clear();
       }
     } catch (error) {
       if (cardanoRuntimeTouched) {

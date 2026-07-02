@@ -467,6 +467,61 @@ describe("KeyRingService", () => {
     });
   });
 
+  describe("onNetworkSwitch non-Cardano detach", () => {
+    it("detaches Cardano runtime when switching to a non-Cardano chain", async () => {
+      const reset = jest.fn();
+      const ensure = jest.fn();
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      service["cardanoService"] = { reset } as any;
+      service["cardanoRestoreByChainId"] = new Map([
+        ["cardano-preview", Promise.resolve()],
+      ]);
+      service["ensureCardanoServiceReady"] = ensure;
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-preview", "fetchhub-4")
+      ).resolves.toBeUndefined();
+
+      expect(reset).toHaveBeenCalled();
+      expect((service as any)["cardanoRestoreByChainId"].size).toBe(0);
+      expect(ensure).not.toHaveBeenCalled();
+    });
+
+    it("does not detach Cardano runtime on stale non-Cardano switch event", async () => {
+      const reset = jest.fn();
+      const getSelectedChain = jest
+        .fn()
+        .mockResolvedValueOnce("fetchhub-4")
+        .mockResolvedValueOnce("cardano-preview");
+      service["chainsService"] = {
+        getSelectedChain,
+        getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      service["cardanoService"] = { reset } as any;
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-preview", "fetchhub-4")
+      ).resolves.toBeUndefined();
+
+      expect(reset).not.toHaveBeenCalled();
+    });
+  });
+
   describe("unlock with stale selected chain", () => {
     let chainsService: ReturnType<typeof createTestChainsService>;
     let mockCardanoService: CardanoService;
