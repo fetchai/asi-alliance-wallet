@@ -1,6 +1,12 @@
 import { MemoryKVStore } from "@keplr-wallet/common";
 import { KeyCurves } from "@keplr-wallet/crypto";
+import { ChainInfo } from "@keplr-wallet/types";
 import { KeyRing } from "./keyring";
+import { Crypto } from "./crypto";
+
+function evmEmbedChain(chainId: string): ChainInfo[] {
+  return [{ chainId, features: ["evm"] } as ChainInfo];
+}
 
 describe("KeyRing security hardening", () => {
   const createKeyStore = (meta: Record<string, string>) => ({
@@ -145,7 +151,7 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
     const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
 
     const keyRing = new KeyRing(
-      [{ chainId, features: ["evm"] }],
+      evmEmbedChain(chainId),
       kvStore,
       {} as any,
       {} as any,
@@ -158,15 +164,17 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
 
     (keyRing as any).loaded = true;
     (keyRing as any).multiKeyStore = [w1, w2];
-    (keyRing as any).keyStore = w2;
+    (keyRing as any).keyStore = w1;
     (keyRing as any).password = "pw";
     (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
 
     const getKeysSpy = jest.spyOn(keyRing, "getKeys").mockResolvedValue([]);
     const checkConsistencySpy = jest
-      .spyOn(keyRing.cacheManager, "checkConsistency")
+      .spyOn(keyRing.addressCacheManager, "checkConsistency")
       .mockResolvedValue({ isConsistent: true, issues: [] });
-    jest.spyOn(keyRing, "unlock").mockResolvedValue(undefined as any);
+    jest
+      .spyOn(keyRing as any, "reloadActiveKeyStoreForSwitch")
+      .mockResolvedValue(undefined);
     jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
     jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
       w2: { address: "aa".repeat(20), pubKey: "11" },
@@ -186,7 +194,7 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
     const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
 
     const keyRing = new KeyRing(
-      [{ chainId, features: ["evm"] }],
+      evmEmbedChain(chainId),
       kvStore,
       {} as any,
       {} as any,
@@ -199,7 +207,7 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
 
     (keyRing as any).loaded = true;
     (keyRing as any).multiKeyStore = [w1, w2];
-    (keyRing as any).keyStore = w2;
+    (keyRing as any).keyStore = w1;
     (keyRing as any).password = "pw";
     (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
 
@@ -213,11 +221,13 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
         isKeystone: false,
       },
     ] as any);
-    jest.spyOn(keyRing.cacheManager, "checkConsistency");
-    jest.spyOn(keyRing, "unlock").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing.addressCacheManager, "checkConsistency");
+    jest
+      .spyOn(keyRing as any, "reloadActiveKeyStoreForSwitch")
+      .mockResolvedValue(undefined);
     jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
     jest
-      .spyOn(keyRing, "updateCacheForActiveWallet")
+      .spyOn(keyRing as any, "updateCacheForActiveWallet")
       .mockResolvedValue(undefined);
     jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
       w1: { address: "cc".repeat(20), pubKey: "11" },
@@ -229,3 +239,300 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
     expect(getKeysSpy).toHaveBeenCalledWith(chainId, true);
   });
 });
+
+describe("reloadActiveKeyStoreForSwitch session material cache", () => {
+  const createKeyStore = (meta: Record<string, string>) => ({
+    version: "1.2" as const,
+    type: "mnemonic" as const,
+    curve: KeyCurves.secp256k1,
+    meta,
+    bip44HDPath: {
+      account: 0,
+      change: 0,
+      addressIndex: 0,
+    },
+    crypto: {
+      kdf: "scrypt",
+    },
+  });
+
+  it("reuses session material without decrypt on repeat switch to same wallet", async () => {
+    const kvStore = new MemoryKVStore("keyring-session-cache-hit");
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+
+    const keyRing = new KeyRing(
+      [],
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      {} as any
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    (keyRing as any).keyStore = w1;
+    (keyRing as any).password = "pw";
+
+    const decryptSpy = jest
+      .spyOn(keyRing as any, "decryptKeyStoreToMaterial")
+      .mockResolvedValue({
+        type: "mnemonic",
+        mnemonicMasterSeed: new Uint8Array([9, 9, 9]),
+      });
+
+    await (keyRing as any).reloadActiveKeyStoreForSwitch("pw");
+    await (keyRing as any).reloadActiveKeyStoreForSwitch("pw");
+
+    expect(decryptSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("changeKeyStoreFromMultiKeyStore uses reloadActiveKeyStoreForSwitch not unlock", async () => {
+    const kvStore = new MemoryKVStore("keyring-switch-reload-path");
+    const chainId = "evmos_9001-2";
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+
+    const keyRing = new KeyRing(
+      evmEmbedChain(chainId),
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      {
+        getSelectedChain: jest.fn().mockResolvedValue(chainId),
+      }
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    (keyRing as any).keyStore = w1;
+    (keyRing as any).password = "pw";
+    (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
+
+    const reloadSpy = jest
+      .spyOn(keyRing as any, "reloadActiveKeyStoreForSwitch")
+      .mockResolvedValue(undefined);
+    const unlockSpy = jest
+      .spyOn(keyRing, "unlock")
+      .mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w2: { address: "aa".repeat(20), pubKey: "11" },
+    });
+
+    await keyRing.changeKeyStoreFromMultiKeyStore(1);
+
+    expect(reloadSpy).toHaveBeenCalledWith("pw");
+    expect(unlockSpy).not.toHaveBeenCalled();
+  });
+
+  it("clears session material on lock", async () => {
+    const kvStore = new MemoryKVStore("keyring-session-cache-lock");
+    const keyRing = makeKeyRing(kvStore);
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).keyStore = createKeyStore({
+      __id__: "w1",
+      name: "Wallet 1",
+    });
+    (keyRing as any).password = "pw";
+    (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
+    (keyRing as any).sessionKeyStoreMaterial.set("w1", {
+      type: "mnemonic",
+      mnemonicMasterSeed: new Uint8Array([1, 2, 3]),
+    });
+
+    keyRing.lock();
+
+    expect((keyRing as any).sessionKeyStoreMaterial.size).toBe(0);
+  });
+
+  it("caches active wallet material on unlock so switching back does not decrypt again", async () => {
+    const kvStore = new MemoryKVStore("keyring-unlock-session-cache");
+    const chainId = "evmos_9001-2";
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+
+    const keyRing = new KeyRing(
+      evmEmbedChain(chainId),
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      {
+        getSelectedChain: jest.fn().mockResolvedValue(chainId),
+      }
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    (keyRing as any).keyStore = w1;
+
+    const decryptSpy = jest
+      .spyOn(keyRing as any, "decryptKeyStoreToMaterial")
+      .mockResolvedValue({
+        type: "mnemonic",
+        mnemonicMasterSeed: new Uint8Array([1]),
+      });
+
+    jest
+      .spyOn(keyRing as any, "calculateMnemonicLengthInBackground")
+      .mockResolvedValue(undefined);
+    jest
+      .spyOn(keyRing as any, "migrateCacheToEncrypted")
+      .mockResolvedValue(undefined);
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w1: { address: "aa".repeat(20), pubKey: "11" },
+      w2: { address: "bb".repeat(20), pubKey: "22" },
+    });
+
+    await keyRing.unlock("pw");
+    await keyRing.changeKeyStoreFromMultiKeyStore(1);
+    await keyRing.changeKeyStoreFromMultiKeyStore(0);
+
+    expect(decryptSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears session material on password change", async () => {
+    const kvStore = new MemoryKVStore("keyring-session-cache-password");
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const keyRing = makeKeyRing(kvStore);
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1];
+    (keyRing as any).keyStore = w1;
+    (keyRing as any).password = "old";
+    (keyRing as any).sessionKeyStoreMaterial.set("w1", {
+      type: "mnemonic",
+      mnemonicMasterSeed: new Uint8Array([1]),
+    });
+    (keyRing as any).sessionKeyStoreMaterial.set("w2", {
+      type: "mnemonic",
+      mnemonicMasterSeed: new Uint8Array([2]),
+    });
+
+    jest.spyOn(Crypto, "decrypt").mockResolvedValue(Buffer.from("payload"));
+    jest
+      .spyOn(Crypto, "encrypt")
+      .mockImplementation(
+        async (
+          _crypto,
+          _kdf,
+          type,
+          curve,
+          _payload,
+          _password,
+          meta,
+          bip44HDPath
+        ) => ({
+          version: "1.2" as const,
+          type,
+          curve,
+          meta: meta as Record<string, string>,
+          bip44HDPath,
+          crypto: { kdf: "scrypt" },
+        })
+      );
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+
+    await keyRing.updatePassword("old", "new");
+
+    expect((keyRing as any).sessionKeyStoreMaterial.size).toBe(0);
+  });
+
+  it("does not reuse pre-password session material after password change and switch", async () => {
+    const kvStore = new MemoryKVStore("keyring-session-cache-after-password");
+    const chainId = "evmos_9001-2";
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+
+    const keyRing = new KeyRing(
+      evmEmbedChain(chainId),
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      {
+        getSelectedChain: jest.fn().mockResolvedValue(chainId),
+      }
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    (keyRing as any).keyStore = w1;
+
+    const decryptSpy = jest
+      .spyOn(keyRing as any, "decryptKeyStoreToMaterial")
+      .mockResolvedValue({
+        type: "mnemonic",
+        mnemonicMasterSeed: new Uint8Array([1]),
+      });
+
+    jest
+      .spyOn(keyRing as any, "calculateMnemonicLengthInBackground")
+      .mockResolvedValue(undefined);
+    jest
+      .spyOn(keyRing as any, "migrateCacheToEncrypted")
+      .mockResolvedValue(undefined);
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w1: { address: "aa".repeat(20), pubKey: "11" },
+      w2: { address: "bb".repeat(20), pubKey: "22" },
+    });
+
+    await keyRing.unlock("pw");
+    await keyRing.changeKeyStoreFromMultiKeyStore(1);
+    expect((keyRing as any).sessionKeyStoreMaterial.size).toBe(2);
+
+    jest.spyOn(Crypto, "decrypt").mockResolvedValue(Buffer.from("payload"));
+    jest
+      .spyOn(Crypto, "encrypt")
+      .mockImplementation(
+        async (
+          _crypto,
+          _kdf,
+          type,
+          curve,
+          _payload,
+          _password,
+          meta,
+          bip44HDPath
+        ) => ({
+          version: "1.2" as const,
+          type,
+          curve,
+          meta: meta as Record<string, string>,
+          bip44HDPath,
+          crypto: { kdf: "scrypt" },
+        })
+      );
+
+    await keyRing.updatePassword("pw", "new");
+    expect((keyRing as any).sessionKeyStoreMaterial.size).toBe(0);
+
+    decryptSpy.mockClear();
+
+    await keyRing.changeKeyStoreFromMultiKeyStore(0);
+
+    expect(decryptSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+function makeKeyRing(kvStore: MemoryKVStore) {
+  return new KeyRing(
+    [],
+    kvStore,
+    {} as any,
+    {} as any,
+    { dispatchEvent: jest.fn() } as any,
+    {} as any,
+    {} as any
+  );
+}

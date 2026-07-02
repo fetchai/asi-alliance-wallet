@@ -44,6 +44,15 @@ export enum KeyRingStatus {
   UNLOCKED,
 }
 
+type SessionKeyStoreMaterial =
+  | { type: "mnemonic"; mnemonicMasterSeed: Uint8Array }
+  | { type: "privateKey"; privateKey: Uint8Array }
+  | {
+      type: "ledger";
+      ledgerPublicKeyCache: Record<string, Uint8Array | undefined>;
+    }
+  | { type: "keystone"; keystonePublicKey: KeystoneKeyringData };
+
 export type MultiKeyStoreInfoElem = Pick<
   KeyStore,
   "version" | "type" | "meta" | "bip44HDPath" | "coinTypeForChain" | "curve"
@@ -123,6 +132,12 @@ export class KeyRing {
    * Session = from unlock() until lock(); migration runs at most once per session.
    */
   private cacheMigrationDoneThisSession = false;
+
+  /**
+   * Decrypted signing material per wallet for the current unlock session.
+   * Cleared on lock/password change; avoids re-scrypt on account switch.
+   */
+  private sessionKeyStoreMaterial = new Map<string, SessionKeyStoreMaterial>();
 
   constructor(
     private readonly embedChainInfos: ChainInfo[],
@@ -664,6 +679,7 @@ export class KeyRing {
     }
     this.cacheMigrationDoneThisSession = false;
     this.unlockSessionId = "";
+    this.clearSessionKeyStoreMaterial();
     this.clearCaches();
     this.password = "";
 
@@ -672,64 +688,189 @@ export class KeyRing {
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
   }
 
-  public async unlock(password: string) {
-    if (!this.keyStore || this.type === "none") {
-      throw new Error("Key ring not initialized");
+  private clearSessionKeyStoreMaterial(): void {
+    this.sessionKeyStoreMaterial.clear();
+  }
+
+  private removeSessionKeyStoreMaterial(walletId: string): void {
+    if (walletId) {
+      this.sessionKeyStoreMaterial.delete(walletId);
+    }
+  }
+
+  private cloneSessionKeyStoreMaterial(
+    material: SessionKeyStoreMaterial
+  ): SessionKeyStoreMaterial {
+    switch (material.type) {
+      case "mnemonic":
+        return {
+          type: "mnemonic",
+          mnemonicMasterSeed: new Uint8Array(material.mnemonicMasterSeed),
+        };
+      case "privateKey":
+        return {
+          type: "privateKey",
+          privateKey: new Uint8Array(material.privateKey),
+        };
+      case "ledger": {
+        const ledgerPublicKeyCache: Record<string, Uint8Array | undefined> = {};
+        for (const [k, v] of Object.entries(material.ledgerPublicKeyCache)) {
+          ledgerPublicKeyCache[k] = v ? new Uint8Array(v) : undefined;
+        }
+        return { type: "ledger", ledgerPublicKeyCache };
+      }
+      case "keystone":
+        return {
+          type: "keystone",
+          keystonePublicKey: JSON.parse(
+            JSON.stringify(material.keystonePublicKey)
+          ) as KeystoneKeyringData,
+        };
+      default: {
+        const _exhaustive: never = material;
+        throw new Error(
+          `Unexpected session material type: ${String(_exhaustive)}`
+        );
+      }
+    }
+  }
+
+  private applySessionKeyStoreMaterial(
+    material: SessionKeyStoreMaterial
+  ): void {
+    this.clearCaches();
+    switch (material.type) {
+      case "mnemonic":
+        this._mnemonicMasterSeed = new Uint8Array(material.mnemonicMasterSeed);
+        break;
+      case "privateKey":
+        this._privateKey = new Uint8Array(material.privateKey);
+        break;
+      case "ledger":
+        this._ledgerPublicKeyCache = Object.fromEntries(
+          Object.entries(material.ledgerPublicKeyCache).map(([k, v]) => [
+            k,
+            v ? new Uint8Array(v) : undefined,
+          ])
+        );
+        break;
+      case "keystone":
+        this._keystonePublicKeyCache = JSON.parse(
+          JSON.stringify(material.keystonePublicKey)
+        ) as KeystoneKeyringData;
+        break;
+      default: {
+        const _exhaustive: never = material;
+        throw new Error(
+          `Unexpected session material type: ${String(_exhaustive)}`
+        );
+      }
+    }
+  }
+
+  private async decryptKeyStoreToMaterial(
+    keyStore: KeyStore,
+    password: string
+  ): Promise<SessionKeyStoreMaterial> {
+    const type = KeyRing.getTypeOfKeyStore(keyStore);
+
+    if (type === "mnemonic") {
+      const mnemonic = Buffer.from(
+        await Crypto.decrypt(this.crypto, keyStore, password)
+      ).toString();
+      return {
+        type: "mnemonic",
+        mnemonicMasterSeed: Mnemonic.generateMasterSeedFromMnemonic(mnemonic),
+      };
     }
 
-    if (this.type === "mnemonic") {
-      // If password is invalid, error will be thrown.
-      const mnemonic = Buffer.from(
-        await Crypto.decrypt(this.crypto, this.keyStore, password)
-      ).toString();
-      this.mnemonicMasterSeed =
-        Mnemonic.generateMasterSeedFromMnemonic(mnemonic);
-    } else if (this.type === "privateKey") {
-      // If password is invalid, error will be thrown.
-      this.privateKey = Buffer.from(
-        Buffer.from(
-          await Crypto.decrypt(this.crypto, this.keyStore, password)
-        ).toString(),
-        "hex"
-      );
-    } else if (this.type === "ledger") {
-      // Attempt to decode the ciphertext as a JSON public key map. If that fails,
-      // try decoding as a single public key hex.
+    if (type === "privateKey") {
+      return {
+        type: "privateKey",
+        privateKey: Buffer.from(
+          Buffer.from(
+            await Crypto.decrypt(this.crypto, keyStore, password)
+          ).toString(),
+          "hex"
+        ),
+      };
+    }
+
+    if (type === "ledger") {
       const pubKeys: Record<string, Uint8Array> = {};
-      const cipherText = await Crypto.decrypt(
-        this.crypto,
-        this.keyStore,
-        password
-      );
+      const cipherText = await Crypto.decrypt(this.crypto, keyStore, password);
 
       try {
         const encodedPubkeys = JSON.parse(Buffer.from(cipherText).toString());
         Object.keys(encodedPubkeys).forEach(
           (k) => (pubKeys[k] = Buffer.from(encodedPubkeys[k], "hex"))
         );
-      } catch (e) {
-        // Decode as bytes (Legacy representation)
+      } catch {
         pubKeys[LedgerApp.Cosmos] = Buffer.from(
           Buffer.from(cipherText).toString(),
           "hex"
         );
       }
 
-      this.ledgerPublicKeyCache = pubKeys;
-    } else if (this.type === "keystone") {
-      const cipherText = await Crypto.decrypt(
-        this.crypto,
-        this.keyStore,
-        password
-      );
+      return { type: "ledger", ledgerPublicKeyCache: pubKeys };
+    }
+
+    if (type === "keystone") {
+      const cipherText = await Crypto.decrypt(this.crypto, keyStore, password);
       try {
-        this.keystonePublicKey = JSON.parse(Buffer.from(cipherText).toString());
+        return {
+          type: "keystone",
+          keystonePublicKey: JSON.parse(
+            Buffer.from(cipherText).toString()
+          ) as KeystoneKeyringData,
+        };
       } catch (e: any) {
         throw new Error("Unexpected content of Keystone public keys");
       }
-    } else {
-      throw new Error("Unexpected type of keyring");
     }
+
+    throw new Error("Unexpected type of keyring");
+  }
+
+  /**
+   * Reload active keystore secrets during account switch without unlock side effects
+   * (status-changed, mnemonic-length background work, cache migration).
+   */
+  private async reloadActiveKeyStoreForSwitch(password: string): Promise<void> {
+    if (!this.keyStore || this.type === "none") {
+      throw new Error("Key ring not initialized");
+    }
+    if (this.password !== password) {
+      throw new Error("Invalid password");
+    }
+
+    const walletId = KeyRing.getKeyStoreId(this.keyStore);
+    const cached = this.sessionKeyStoreMaterial.get(walletId);
+    const material = cached
+      ? this.cloneSessionKeyStoreMaterial(cached)
+      : this.cloneSessionKeyStoreMaterial(
+          await this.decryptKeyStoreToMaterial(this.keyStore, password)
+        );
+
+    if (!cached) {
+      this.sessionKeyStoreMaterial.set(walletId, material);
+    }
+
+    this.applySessionKeyStoreMaterial(material);
+    this.clearCardanoMemoryCache();
+  }
+
+  public async unlock(password: string) {
+    if (!this.keyStore || this.type === "none") {
+      throw new Error("Key ring not initialized");
+    }
+
+    const walletId = KeyRing.getKeyStoreId(this.keyStore);
+    const material = this.cloneSessionKeyStoreMaterial(
+      await this.decryptKeyStoreToMaterial(this.keyStore, password)
+    );
+    this.sessionKeyStoreMaterial.set(walletId, material);
+    this.applySessionKeyStoreMaterial(material);
 
     this.password = password;
     this.unlockSessionId = `kr_sess_${Date.now().toString(36)}_${Math.random()
@@ -1125,6 +1266,8 @@ export class KeyRing {
 
     try {
       const deletedId = KeyRing.getKeyStoreId(keyStore);
+
+      this.removeSessionKeyStoreMaterial(deletedId);
 
       await this.clearCachesOnWalletDelete(deletedId);
 
@@ -1760,7 +1903,7 @@ export class KeyRing {
 
     this.keyStore = keyStore;
 
-    await this.unlock(this.password);
+    await this.reloadActiveKeyStoreForSwitch(this.password);
 
     try {
       const currentChainId = await this.chainsService.getSelectedChain();
@@ -2226,6 +2369,8 @@ export class KeyRing {
     if (oldPassword === newPassword) {
       throw new Error("New password must be different");
     }
+
+    this.clearSessionKeyStoreMaterial();
 
     const newMultiKeyStore: KeyStore[] = [];
 
