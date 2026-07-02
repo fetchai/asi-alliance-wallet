@@ -60,6 +60,14 @@ jest.mock("../../../stores", () => ({
         currencies: [],
       },
     },
+    keyRingStore: {
+      multiKeyStoreInfo: [
+        {
+          selected: true,
+          meta: { __id__: "test-wallet-id" },
+        },
+      ],
+    },
   }),
 }));
 

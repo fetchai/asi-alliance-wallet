@@ -7,6 +7,18 @@ jest.mock("../../../config", () => ({
   TXNTYPE: { send: "send" },
 }));
 
+jest.mock("@keplr-wallet/background", () => ({
+  GetCardanoSyncStatusMsg: class GetCardanoSyncStatusMsg {
+    static type() {
+      return "cardano-get-sync-status";
+    }
+    constructor(
+      public readonly chainId?: string,
+      public readonly pollingVisibility?: string
+    ) {}
+  },
+}));
+
 import { WalletActions } from "./index";
 
 jest.mock("mobx-react-lite", () => ({
