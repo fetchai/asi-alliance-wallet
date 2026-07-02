@@ -116,3 +116,116 @@ describe("KeyRing security hardening", () => {
     });
   });
 });
+
+describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
+  const createKeyStore = (meta: Record<string, string>) => ({
+    version: "1.2" as const,
+    type: "mnemonic" as const,
+    curve: KeyCurves.secp256k1,
+    meta,
+    bip44HDPath: {
+      account: 0,
+      change: 0,
+      addressIndex: 0,
+    },
+    crypto: {
+      kdf: "scrypt",
+    },
+  });
+
+  const flushAsyncRepair = () =>
+    new Promise<void>((resolve) => {
+      setImmediate(() => setImmediate(resolve));
+    });
+
+  it("does not call getKeys or checkConsistency when partial cache has active wallet address", async () => {
+    const kvStore = new MemoryKVStore("keyring-partial-cache-switch");
+    const chainId = "evmos_9001-2";
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+
+    const keyRing = new KeyRing(
+      [{ chainId, features: ["evm"] }],
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      {
+        getSelectedChain: jest.fn().mockResolvedValue(chainId),
+      }
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    (keyRing as any).keyStore = w2;
+    (keyRing as any).password = "pw";
+    (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
+
+    const getKeysSpy = jest.spyOn(keyRing, "getKeys").mockResolvedValue([]);
+    const checkConsistencySpy = jest
+      .spyOn(keyRing.cacheManager, "checkConsistency")
+      .mockResolvedValue({ isConsistent: true, issues: [] });
+    jest.spyOn(keyRing, "unlock").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w2: { address: "aa".repeat(20), pubKey: "11" },
+    });
+
+    await keyRing.changeKeyStoreFromMultiKeyStore(1);
+    await flushAsyncRepair();
+
+    expect(getKeysSpy).not.toHaveBeenCalled();
+    expect(checkConsistencySpy).not.toHaveBeenCalled();
+  });
+
+  it("calls getKeys when active wallet address is missing from partial cache", async () => {
+    const kvStore = new MemoryKVStore("keyring-missing-active-cache-switch");
+    const chainId = "evmos_9001-2";
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+
+    const keyRing = new KeyRing(
+      [{ chainId, features: ["evm"] }],
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      {
+        getSelectedChain: jest.fn().mockResolvedValue(chainId),
+      }
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    (keyRing as any).keyStore = w2;
+    (keyRing as any).password = "pw";
+    (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
+
+    const getKeysSpy = jest.spyOn(keyRing, "getKeys").mockResolvedValue([
+      {
+        name: "Wallet 2",
+        algo: "ethsecp256k1",
+        pubKey: Buffer.from("aa", "hex"),
+        address: Buffer.from("bb".repeat(20), "hex"),
+        isNanoLedger: false,
+        isKeystone: false,
+      },
+    ] as any);
+    jest.spyOn(keyRing.cacheManager, "checkConsistency");
+    jest.spyOn(keyRing, "unlock").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+    jest
+      .spyOn(keyRing, "updateCacheForActiveWallet")
+      .mockResolvedValue(undefined);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w1: { address: "cc".repeat(20), pubKey: "11" },
+    });
+
+    await keyRing.changeKeyStoreFromMultiKeyStore(1);
+    await flushAsyncRepair();
+
+    expect(getKeysSpy).toHaveBeenCalledWith(chainId, true);
+  });
+});

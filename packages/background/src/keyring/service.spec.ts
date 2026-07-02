@@ -483,9 +483,8 @@ describe("KeyRingService", () => {
         ["cardano-preview", Promise.resolve()],
       ]);
       service["ensureCardanoServiceReady"] = ensure;
-      service["runAddressCacheRepairBestEffort"] = jest
-        .fn()
-        .mockResolvedValue(undefined);
+      const repair = jest.fn().mockResolvedValue(undefined);
+      service["runAddressCacheRepairBestEffort"] = repair;
 
       await expect(
         service["onNetworkSwitch"]("cardano-preview", "fetchhub-4")
@@ -494,6 +493,7 @@ describe("KeyRingService", () => {
       expect(reset).toHaveBeenCalled();
       expect((service as any)["cardanoRestoreByChainId"].size).toBe(0);
       expect(ensure).not.toHaveBeenCalled();
+      expect(repair).not.toHaveBeenCalled();
     });
 
     it("does not detach Cardano runtime on stale non-Cardano switch event", async () => {

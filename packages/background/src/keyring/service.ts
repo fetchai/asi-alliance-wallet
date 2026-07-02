@@ -172,6 +172,7 @@ export class KeyRingService {
     newChainId: string
   ): Promise<void> => {
     let cardanoRuntimeTouched = false;
+    let runPostSwitchCacheRepair = false;
     try {
       if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
         return;
@@ -193,6 +194,7 @@ export class KeyRingService {
         }
         cardanoRuntimeTouched = true;
         await this.ensureCardanoServiceReady(newChainId);
+        runPostSwitchCacheRepair = true;
       } else {
         const stillCurrent = await this.chainsService.getSelectedChain();
         if (stillCurrent !== targetChainId) {
@@ -240,12 +242,16 @@ export class KeyRingService {
     }
 
     // Non-critical post-commit step: cache repair should not fail network switch commit.
-    this.runAddressCacheRepairBestEffort(newChainId).catch((error) => {
-      console.error(
-        `[KeyRingService] Post-switch cache repair failed for ${newChainId}:`,
-        error
-      );
-    });
+    // Do not trigger generic full address repair on network switch.
+    // Generic ListAccounts is cache-first and falls back to derivation on demand.
+    if (runPostSwitchCacheRepair) {
+      this.runAddressCacheRepairBestEffort(newChainId).catch((error) => {
+        console.error(
+          `[KeyRingService] Post-switch cache repair failed for ${newChainId}:`,
+          error
+        );
+      });
+    }
   };
 
   private async runAddressCacheRepairBestEffort(

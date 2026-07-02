@@ -1815,7 +1815,7 @@ export class KeyRing {
             let activeWalletAddress = cachedActiveAddress;
             let keys: Key[] | undefined;
 
-            if (!activeWalletAddress || !hasFullCache) {
+            if (!activeWalletAddress) {
               keys = await this.getKeys(currentChainId, isEvm);
               const activeWalletIndex = walletIds.indexOf(activeWalletId);
               activeWalletAddress =
@@ -1833,7 +1833,7 @@ export class KeyRing {
               );
             }
 
-            if (activeWalletAddress) {
+            if (activeWalletAddress && hasFullCache) {
               const consistencyResult =
                 await this.cacheManager.checkConsistency(
                   currentChainId,
@@ -1845,6 +1845,10 @@ export class KeyRing {
                 );
 
               if (!consistencyResult.isConsistent) {
+                console.warn(
+                  `[KeyRing] Cache inconsistency after wallet switch for ${currentChainId}:`,
+                  consistencyResult.issues
+                );
                 await this.clearAllAddressCaches();
 
                 try {
