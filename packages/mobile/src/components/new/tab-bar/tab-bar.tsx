@@ -11,12 +11,16 @@ export const TabBarView: FunctionComponent<{
   setSelected: any;
   contentContainerStyle?: ViewStyle;
   containerStyle?: ViewStyle;
+  unselectedTextColorToken?: string;
+  backgroundColorToken?: string;
 }> = ({
   listItem,
   selected,
   setSelected,
   contentContainerStyle,
   containerStyle,
+  unselectedTextColorToken,
+  backgroundColorToken,
 }) => {
   const [prevSelected, setPrevSelected] = useState(0);
 
@@ -32,7 +36,11 @@ export const TabBarView: FunctionComponent<{
         textStyle={
           style.flatten(
             ["text-caption1", "padding-x-4"],
-            [select && "color-indigo-900"]
+            [
+              select
+                ? "color-indigo-900"
+                : (unselectedTextColorToken as any) || undefined,
+            ]
           ) as ViewStyle
         }
         containerStyle={
@@ -79,7 +87,10 @@ export const TabBarView: FunctionComponent<{
       borderRadius={12}
       containerStyle={
         [
-          style.flatten(["margin-y-10", "padding-2"]),
+          style.flatten(
+            ["margin-y-10", "padding-2"],
+            [(backgroundColorToken as any) || undefined]
+          ),
           containerStyle,
         ] as ViewStyle
       }

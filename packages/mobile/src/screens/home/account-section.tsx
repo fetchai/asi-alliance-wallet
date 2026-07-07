@@ -271,11 +271,12 @@ export const AccountSection: FunctionComponent<{
           containerStyle={
             style.flatten([
               "border-width-1",
-              "border-color-white@20%",
+              "border-color-gray-100",
             ]) as ViewStyle
           }
+          textStyle={style.flatten(["color-black"]) as ViewStyle}
           text={titleCase(chainStore.current.chainName)}
-          icon={<ChevronDownIcon size={12} />}
+          icon={<ChevronDownIcon size={12} color="black" />}
           onPress={() => {
             navigation.dispatch(DrawerActions.toggleDrawer());
             analyticsStore.logEvent("chain_change_click", {
@@ -289,7 +290,7 @@ export const AccountSection: FunctionComponent<{
         <View style={style.flatten(["flex-row"])}>
           <IconButton
             borderRadius={32}
-            icon={<QRCodeIcon size={15} />}
+            icon={<QRCodeIcon size={15} color="black" />}
             backgroundBlur={false}
             onPress={async () => {
               const permission = await Camera.getCameraPermissionsAsync();
@@ -312,7 +313,7 @@ export const AccountSection: FunctionComponent<{
             iconStyle={
               style.flatten([
                 "border-width-1",
-                "border-color-white@20%",
+                "border-color-gray-100",
                 "padding-x-12",
                 "padding-y-6",
                 "justify-center",
@@ -322,13 +323,13 @@ export const AccountSection: FunctionComponent<{
           />
           <IconButton
             borderRadius={32}
-            icon={<NotificationIcon size={15} />}
+            icon={<NotificationIcon size={15} color="black" />}
             backgroundBlur={false}
             onPress={() => smartNavigation.navigateSmart("Inbox", {})}
             iconStyle={
               style.flatten([
                 "border-width-1",
-                "border-color-white@20%",
+                "border-color-gray-100",
                 "padding-x-12",
                 "padding-y-6",
                 "justify-center",
@@ -340,7 +341,7 @@ export const AccountSection: FunctionComponent<{
       </View>
       <BlurBackground
         borderRadius={14}
-        blurIntensity={16}
+        backgroundBlur={false}
         containerStyle={
           [
             style.flatten([
@@ -352,21 +353,26 @@ export const AccountSection: FunctionComponent<{
               "padding-x-16",
               "padding-y-12",
               "border-width-1",
-              "border-color-indigo-20",
+              "border-color-gray-100",
+              "background-color-gray-5",
             ]),
             containerStyle,
           ] as ViewStyle
         }
       >
         <View style={style.flatten(["flex-3"]) as ViewStyle}>
-          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+          <Text style={style.flatten(["body3", "color-black"]) as ViewStyle}>
             {account.name}
           </Text>
-          <AddressCopyable address={account.bech32Address} maxCharacters={16} />
+          <AddressCopyable
+            address={account.bech32Address}
+            maxCharacters={16}
+            textStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+          />
         </View>
         <IconButton
           backgroundBlur={false}
-          icon={<ThreeDotIcon size={15} />}
+          icon={<ThreeDotIcon size={15} color="black" />}
           iconStyle={
             style.flatten([
               "width-32",
@@ -437,7 +443,7 @@ export const AccountSection: FunctionComponent<{
             <Text
               style={
                 style.flatten([
-                  "color-white@60%",
+                  "color-gray-300",
                   "body3",
                   "margin-left-4",
                 ]) as ViewStyle
@@ -453,12 +459,12 @@ export const AccountSection: FunctionComponent<{
             style.flatten([
               "padding-x-12",
               "border-width-1",
-              "border-color-white@20%",
+              "border-color-gray-100",
               "margin-top-24",
               "border-radius-32",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3"]) as ViewStyle}
+          textStyle={style.flatten(["body3", "color-black"]) as ViewStyle}
           text={"View portfolio"}
           onPress={() => {
             navigation.navigate("Portfolio");

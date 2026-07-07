@@ -201,14 +201,14 @@ export const LineGraph: FunctionComponent<{
           style.flatten([
             "text-caption2",
             "text-center",
-            "color-white",
+            "color-dark",
           ]) as ViewStyle
         }
       >
         {`${
           chainStore.current.currencies[0].coinDenom
         }/${priceStore.defaultVsCurrency.toUpperCase()} `}
-        <Text style={style.flatten(["color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["color-gray-300"]) as ViewStyle}>
           {`${
             priceStore.supportedVsCurrencies[priceStore.defaultVsCurrency]
               ?.symbol
@@ -247,13 +247,12 @@ export const LineGraph: FunctionComponent<{
           <BlurButton
             text={"Updating the chart"}
             backgroundBlur={false}
-            textStyle={style.flatten(["body3"]) as ViewStyle}
+            textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
             containerStyle={
-              style.flatten([
-                "padding-x-12",
-                "background-color-indigo-800",
-                "absolute",
-              ]) as ViewStyle
+              {
+                ...style.flatten(["padding-x-12", "absolute"]),
+                backgroundColor: "#b1fcab",
+              } as ViewStyle
             }
           />
         )}

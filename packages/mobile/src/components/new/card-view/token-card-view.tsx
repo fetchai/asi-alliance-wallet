@@ -36,7 +36,11 @@ export const TokenCardView: FunctionComponent<{
         blurIntensity={16}
         containerStyle={
           [
-            style.flatten(["padding-18", "justify-center"]),
+            style.flatten([
+              "padding-18",
+              "justify-center",
+              "background-color-gray-5",
+            ]),
             containerStyle,
           ] as ViewStyle
         }
@@ -65,7 +69,7 @@ export const TokenCardView: FunctionComponent<{
                 <Text
                   style={
                     [
-                      style.flatten(["body3", "padding-2", "color-white"]),
+                      style.flatten(["body3", "padding-2", "color-black"]),
                       titleStyle,
                     ] as ViewStyle
                   }
@@ -79,7 +83,7 @@ export const TokenCardView: FunctionComponent<{
                     style.flatten([
                       "body3",
                       "padding-2",
-                      "color-white@60%",
+                      "color-gray-200",
                     ]) as ViewStyle
                   }
                 >

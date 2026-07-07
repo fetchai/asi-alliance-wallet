@@ -15,6 +15,7 @@ interface RenderNumberProps {
   fontSizeValue?: number;
   hookName: string;
   containerStyle?: ViewStyle;
+  textColor?: string;
   listProperties: {
     durationValue?: number;
     easingValue?: string;
@@ -44,6 +45,7 @@ export function RenderNumber({
   listProperties,
   fontSizeValue = 50,
   containerStyle,
+  textColor = "white",
 }: RenderNumberProps) {
   const heightChange = fontSizeValue;
   const initialY = useSharedValue(0);
@@ -103,12 +105,9 @@ export function RenderNumber({
               key={i}
               style={
                 [
-                  style.flatten([
-                    "color-white",
-                    "font-normal",
-                    "overflow-hidden",
-                  ]),
+                  style.flatten(["font-normal", "overflow-hidden"]),
                   {
+                    color: textColor,
                     lineHeight: fontSizeValue * 1.0,
                     fontSize: fontSizeValue,
                     height: fontSizeValue,

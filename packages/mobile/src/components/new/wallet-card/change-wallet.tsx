@@ -43,7 +43,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
               style.flatten([
                 "margin-left-6",
                 "border-width-1",
-                "border-color-new-gray-500",
+                "border-color-gray-100",
                 "border-radius-4",
                 "items-center",
                 "justify-center",
@@ -55,7 +55,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
                 [
                   style.flatten([
                     "font-medium",
-                    "color-white",
+                    "color-dark",
                     "margin-x-4",
                     "margin-y-1",
                     "text-center",
@@ -87,7 +87,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
                 style.flatten([
                   "border-width-1",
                   "border-radius-4",
-                  "border-color-new-gray-500",
+                  "border-color-gray-100",
                   "width-24",
                   "height-20",
                   "items-center",
@@ -110,7 +110,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
                 style.flatten([
                   "border-width-1",
                   "border-radius-4",
-                  "border-color-new-gray-500",
+                  "border-color-gray-100",
                   "width-24",
                   "height-20",
                   "items-center",
@@ -132,8 +132,13 @@ export const ChangeWalletCardModel: FunctionComponent<{
           <BlurBackground
             key={i.toString()}
             borderRadius={12}
-            blurIntensity={15}
-            containerStyle={style.flatten(["margin-bottom-6"]) as ViewStyle}
+            backgroundBlur={false}
+            containerStyle={
+              [
+                style.flatten(["margin-bottom-6", "background-color-gray-5"]),
+                keyStore.selected ? { backgroundColor: "#e0fedd" } : null,
+              ] as ViewStyle
+            }
           >
             <RectButton
               onPress={async () => {
@@ -148,17 +153,13 @@ export const ChangeWalletCardModel: FunctionComponent<{
               }}
               activeOpacity={0.5}
               style={
-                style.flatten(
-                  [
-                    "flex-row",
-                    "items-center",
-                    "padding-x-16",
-                    "padding-y-18",
-
-                    "border-radius-12",
-                  ],
-                  [keyStore.selected && "background-color-indigo"]
-                ) as ViewStyle
+                style.flatten([
+                  "flex-row",
+                  "items-center",
+                  "padding-x-16",
+                  "padding-y-18",
+                  "border-radius-12",
+                ]) as ViewStyle
               }
               underlayColor={style.flatten(["color-gray-50"]).color}
             >
@@ -172,7 +173,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
                     style={
                       style.flatten([
                         keyStore?.selected ? "h7" : "body3",
-                        "color-white",
+                        "color-dark",
                       ]) as ViewStyle
                     }
                   >
@@ -185,7 +186,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
                     style={
                       style.flatten([
                         "text-caption2",
-                        "color-white",
+                        "color-gray-300",
                         "margin-top-2",
                       ]) as ViewStyle
                     }
@@ -198,7 +199,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
                 ) : null}
               </View>
               <View style={style.flatten(["flex-1", "items-end"]) as ViewStyle}>
-                {keyStore.selected ? <CheckIcon /> : null}
+                {keyStore.selected ? <CheckIcon color="black" /> : null}
               </View>
             </RectButton>
           </BlurBackground>

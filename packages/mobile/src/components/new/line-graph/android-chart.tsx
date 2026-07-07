@@ -2,9 +2,6 @@ import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import { LineChart } from "react-native-svg-charts";
 import * as shape from "d3-shape";
 import {
-  Defs,
-  LinearGradient,
-  Stop,
   Circle,
   G,
   Text as SvgText,
@@ -33,15 +30,6 @@ export const AndroidLineChart: FunctionComponent<{
     size.current = dateList.length;
   }, [dateList]);
 
-  const Gradient = () => (
-    <Defs key={"gradient"}>
-      <LinearGradient id={"gradient"} x1={"0"} y1={"0%"} x2={"0%"} y2={"100%"}>
-        <Stop offset={"0%"} stopColor={loading ? "#37373E" : "#F9774B"} />
-        <Stop offset={"50%"} stopColor={loading ? "#37373E" : "#CF447B"} />
-        <Stop offset={"100%"} stopColor={loading ? "#37373E" : "#5F38FB"} />
-      </LinearGradient>
-    </Defs>
-  );
 
   const [positionX, setPositionX] = useState(-1); // The currently selected X coordinate position
 
@@ -116,14 +104,14 @@ export const AndroidLineChart: FunctionComponent<{
             x={apx(45)}
             fontSize={apx(24)}
             fontWeight="bold"
-            fill="#FFFFFF"
+            fill="#151a1a"
           >
             {`${currencySymbol}${valueList[positionX]}`}
           </SvgText>
           <SvgText
             x={apx(20)}
             y={apx(24 + 20)}
-            fill="#C6C6CD"
+            fill="#9A9AA2"
             fontSize={apx(24)}
           >
             {date}
@@ -136,12 +124,12 @@ export const AndroidLineChart: FunctionComponent<{
             r={apx(20 / 2)}
             stroke="#fff"
             strokeWidth={apx(2)}
-            fill="#FEBE18"
+            fill="#73A271"
           />
           <Line
             y1={y(valueList[positionX])}
             y2={200}
-            stroke="#C6C6CD"
+            stroke="#9A9AA2"
             strokeWidth={apx(3)}
             strokeDasharray={[6, 6]}
           />
@@ -165,11 +153,10 @@ export const AndroidLineChart: FunctionComponent<{
         curve={shape.curveNatural}
         svg={{
           strokeWidth: 2,
-          stroke: "url(#gradient)",
+          stroke: loading ? "#DCDCE3" : "#151a1a",
         }}
       >
         <CustomLine />
-        <Gradient />
         <Tooltip />
       </LineChart>
     </View>
