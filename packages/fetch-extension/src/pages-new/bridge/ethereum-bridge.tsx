@@ -322,6 +322,20 @@ export const Approve: FunctionComponent<{
             />
           </div>
 
+          <div
+            style={{
+              marginTop: "16px",
+              marginBottom: "20px",
+              color: "var(--font-secondary)",
+              fontSize: "13px",
+              lineHeight: "18px",
+              textAlign: "center",
+            }}
+          >
+            This is the approval step. You&apos;ll confirm the bridge
+            transaction next.
+          </div>
+
           <ButtonV2
             text={<FormattedMessage id="ibc.transfer.next" />}
             type="submit"

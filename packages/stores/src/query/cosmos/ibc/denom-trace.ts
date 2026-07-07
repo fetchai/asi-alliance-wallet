@@ -66,7 +66,7 @@ export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<De
       return undefined;
     }
 
-    return this.response.data.denom_trace.base_denom;
+    return this.response.data.denom_trace.base;
   }
 
   @computed

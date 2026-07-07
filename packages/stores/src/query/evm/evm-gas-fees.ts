@@ -25,7 +25,6 @@ export class ObservableQueryEvmGasPrice extends ObservableJsonRPCQuery<Etherscan
 
   @computed
   get gasPrice(): string | undefined {
-    console.log(this.response);
     if (!this.response || !this.response.data || !this.response.data) {
       return undefined;
     }
