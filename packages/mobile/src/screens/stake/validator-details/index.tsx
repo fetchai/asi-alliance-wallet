@@ -79,7 +79,7 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={
         style.flatten([
@@ -109,10 +109,10 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
                 style.flatten([
                   "flex-1",
                   "border-radius-32",
-                  "border-color-white@40%",
+                  "border-color-gray-100",
                 ]) as ViewStyle
               }
-              textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+              textStyle={style.flatten(["body2", "color-dark"]) as ViewStyle}
               onPress={() => {
                 analyticsStore.logEvent("redelegate_click", {
                   pageName: "Validator Details",
@@ -132,9 +132,12 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
             <View style={style.flatten(["width-card-gap"]) as ViewStyle} />
             <Button
               containerStyle={
-                style.flatten(["flex-1", "border-radius-32"]) as ViewStyle
+                {
+                  ...style.flatten(["flex-1", "border-radius-32"]),
+                  backgroundColor: "#151a1a",
+                } as ViewStyle
               }
-              textStyle={style.flatten(["body2"]) as ViewStyle}
+              textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
               text="Stake more"
               onPress={() => {
                 analyticsStore.logEvent("stake_more_click", {
@@ -165,9 +168,14 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           <View style={style.flatten(["flex-1"])} />
           {validatorSelector ? (
             <Button
-              containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+              containerStyle={
+                {
+                  ...style.flatten(["border-radius-32"]),
+                  backgroundColor: "#151a1a",
+                } as ViewStyle
+              }
               text="Choose this validator"
-              textStyle={style.flatten(["body2"]) as ViewStyle}
+              textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
               onPress={() => {
                 analyticsStore.logEvent("choose_validator_click", {
                   pageName: "Validator Details",
@@ -180,9 +188,14 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
             />
           ) : (
             <Button
-              containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+              containerStyle={
+                {
+                  ...style.flatten(["border-radius-32"]),
+                  backgroundColor: "#151a1a",
+                } as ViewStyle
+              }
               text="Stake with this validator"
-              textStyle={style.flatten(["body2"]) as ViewStyle}
+              textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
               onPress={() => {
                 analyticsStore.logEvent("stake_with_validator_click", {
                   pageName: "Validator Details",

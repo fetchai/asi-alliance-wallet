@@ -140,7 +140,7 @@ export const StakeCard: FunctionComponent = () => {
   }
   const pieData = [
     {
-      color: "#F9774B",
+      color: "#FAB29B",
       value: rewardsPercentage,
       focused:
         Math.round(stakablePercentage) == 0 &&
@@ -148,12 +148,12 @@ export const StakeCard: FunctionComponent = () => {
     },
 
     {
-      color: "#5F38FB",
+      color: "#2DA6CF",
       value: stakedPercentage,
       focused: Math.round(stakedPercentage) > 0,
     },
     {
-      color: "#CFC3FE",
+      color: "#B1FCAB",
       value: stakablePercentage,
       focused:
         Math.round(rewardsPercentage) == 0 &&
@@ -162,7 +162,7 @@ export const StakeCard: FunctionComponent = () => {
         Math.round(stakablePercentage) > 0,
     },
     {
-      color: "#9F88FD",
+      color: "#3A5638",
       value: vestingPercentage,
       focused:
         Math.round(stakedPercentage) == 0 &&
@@ -188,7 +188,7 @@ export const StakeCard: FunctionComponent = () => {
   const legendComponentItem = [
     {
       title: "Available",
-      lineColor: "#CFC3FE",
+      lineColor: "#B1FCAB",
       balance: spendableNumber,
       denom: stakableDenom,
       percentageValue: stakablePercentage,
@@ -196,7 +196,7 @@ export const StakeCard: FunctionComponent = () => {
     },
     {
       title: "Staked",
-      lineColor: "#5F38FB",
+      lineColor: "#2DA6CF",
       balance: stakedBalNumber,
       denom: stakedDenom,
       percentageValue: stakedPercentage,
@@ -204,7 +204,7 @@ export const StakeCard: FunctionComponent = () => {
     },
     {
       title: "Staking rewards",
-      lineColor: "#F9774B",
+      lineColor: "#FAB29B",
       balance: rewardsBalNumber,
       denom: rewardDenom,
       percentageValue: rewardsPercentage,
@@ -213,7 +213,7 @@ export const StakeCard: FunctionComponent = () => {
     isVesting && !isVestingExpired(vestingEndTimeStamp)
       ? {
           title: "Vesting",
-          lineColor: "#9F88FD",
+          lineColor: "#3A5638",
           balance: vestingBalance(),
           denom: rewardDenom,
           percentageValue: vestingPercentage,
@@ -237,7 +237,7 @@ export const StakeCard: FunctionComponent = () => {
                   <Text
                     style={
                       style.flatten([
-                        "color-white@60%",
+                        "color-gray-300",
                         "body3",
                         "margin-bottom-4",
                         "width-122",
@@ -266,8 +266,8 @@ export const StakeCard: FunctionComponent = () => {
                     containerStyle={
                       style.flatten(["margin-left-2"]) as ViewStyle
                     }
-                    boneColor={style.get("color-white@20%").color}
-                    highlightColor={style.get("color-white@60%").color}
+                    boneColor={"#DCDCE3"}
+                    highlightColor={"#F6F6F6"}
                   >
                     <View
                       style={
@@ -286,12 +286,13 @@ export const StakeCard: FunctionComponent = () => {
                           durationValue: 1000,
                           easingValue: "linear",
                         }}
+                        textColor={"#151a1a"}
                       />
                       <Text
                         style={
                           [
                             style.flatten([
-                              "color-white",
+                              "color-dark",
                               "subtitle2",
                               "padding-left-4",
                             ]),
@@ -304,7 +305,7 @@ export const StakeCard: FunctionComponent = () => {
                       <Text
                         style={
                           [
-                            style.flatten(["color-white@60%", "subtitle2"]),
+                            style.flatten(["color-gray-300", "subtitle2"]),
                             { lineHeight: 18 },
                           ] as ViewStyle
                         }
@@ -316,7 +317,7 @@ export const StakeCard: FunctionComponent = () => {
                       <Text
                         style={
                           style.flatten([
-                            "color-white@60%",
+                            "color-gray-300",
                             "body3",
                           ]) as ViewStyle
                         }
@@ -349,7 +350,7 @@ export const StakeCard: FunctionComponent = () => {
             sectionAutoFocus
             radius={62}
             innerRadius={38}
-            innerCircleColor={"#232B5D"}
+            innerCircleColor={"#f6f6f6"}
             focusOnPress={true}
           />
         </View>

@@ -254,15 +254,15 @@ export const DelegateScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
     >
       <BlurBackground
         borderRadius={12}
-        blurIntensity={16}
+        backgroundBlur={false}
         containerStyle={
-          style.flatten(["padding-18", "margin-y-16"]) as ViewStyle
+          style.flatten(["padding-18", "margin-y-16", "background-color-gray-5"]) as ViewStyle
         }
       >
         <View
@@ -282,28 +282,30 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             />
           ) : (
             <BlurBackground
-              backgroundBlur={true}
-              blurIntensity={16}
+              backgroundBlur={false}
               containerStyle={
-                style.flatten([
-                  "width-32",
-                  "height-32",
-                  "border-radius-64",
-                  "items-center",
-                  "justify-center",
-                  "margin-right-8",
-                ]) as ViewStyle
+                {
+                  ...style.flatten([
+                    "width-32",
+                    "height-32",
+                    "border-radius-64",
+                    "items-center",
+                    "justify-center",
+                    "margin-right-8",
+                  ]),
+                  backgroundColor: "#dddfdf",
+                } as ViewStyle
               }
             >
               <VectorCharacter
                 char={validator.description.moniker.trim()[0]}
-                color="white"
+                color="#151a1a"
                 height={12}
               />
             </BlurBackground>
           )}
 
-          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
             {validator?.description.moniker?.trim()}
           </Text>
         </View>
@@ -322,7 +324,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
                   style={
                     style.flatten([
                       "text-caption2",
-                      "color-white@60%",
+                      "color-gray-300",
                     ]) as ViewStyle
                   }
                 >
@@ -330,7 +332,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
                 </Text>
                 <Text
                   style={
-                    style.flatten(["color-white", "text-caption2"]) as ViewStyle
+                    style.flatten(["color-dark", "text-caption2"]) as ViewStyle
                   }
                 >
                   {item.value}
@@ -346,7 +348,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -359,7 +361,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
       <Text
         style={
           style.flatten([
-            "color-white@60%",
+            "color-gray-300",
             "text-caption2",
             "margin-top-8",
           ]) as ViewStyle
@@ -378,7 +380,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -393,7 +395,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
           style.flatten([
             "margin-y-16",
             "padding-12",
-            "background-color-cardColor@25%",
+            "background-color-gray-50",
             "flex-row",
             "border-radius-12",
           ]) as ViewStyle
@@ -407,7 +409,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
           <CircleExclamationIcon />
         </View>
         <Text
-          style={style.flatten(["body3", "color-white", "flex-1"]) as ViewStyle}
+          style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}
         >
           When you decide to unstake, your assets will be locked 21 days to be
           liquid again
@@ -423,7 +425,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -431,7 +433,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             style={
               style.flatten([
                 "body3",
-                "color-white",
+                "color-dark",
                 "margin-right-6",
               ]) as ViewStyle
             }
@@ -444,8 +446,8 @@ export const DelegateScreen: FunctionComponent = observer(() => {
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.delegate]
-                    ? style.get("color-white@20%").color
-                    : "white"
+                    ? "#DCDCE3"
+                    : "#151a1a"
                 }
               />
             }
@@ -457,8 +459,8 @@ export const DelegateScreen: FunctionComponent = observer(() => {
                 "justify-center",
                 "border-width-1",
                 activityStore.getPendingTxnTypes[txnTypeKey.delegate]
-                  ? "border-color-white@20%"
-                  : "border-color-white@40%",
+                  ? "border-color-gray-100"
+                  : "border-color-gray-100",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.delegate]}
@@ -484,9 +486,12 @@ export const DelegateScreen: FunctionComponent = observer(() => {
       <View style={style.flatten(["flex-1"])} />
       <Button
         text="Confirm"
-        textStyle={style.flatten(["body2"]) as ViewStyle}
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         containerStyle={
-          style.flatten(["margin-top-16", "border-radius-32"]) as ViewStyle
+          {
+            ...style.flatten(["margin-top-16", "border-radius-32"]),
+            backgroundColor: "#151a1a",
+          } as ViewStyle
         }
         disabled={!account.isReadyToSendTx || !txStateIsValid}
         loading={activityStore.getPendingTxnTypes[txnTypeKey.delegate]}

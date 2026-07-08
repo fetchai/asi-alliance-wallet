@@ -129,7 +129,7 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
         setSelectedKey={(key) => setSort(key as Sort)}
       />
       <PageWithSectionList
-        backgroundMode="image"
+        backgroundMode="secondary"
         sections={[
           {
             data,
@@ -161,12 +161,11 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
               <View style={style.flatten(["margin-top-16"]) as ViewStyle}>
                 <InputCardView
                   placeholder="Search"
-                  placeholderTextColor={"white"}
                   value={search}
                   onChangeText={(text: string) => {
                     setSearch(text);
                   }}
-                  rightIcon={<SearchIcon size={12} />}
+                  rightIcon={<SearchIcon size={12} color="black" />}
                 />
               </View>
               {data.length === 0 ? (
@@ -180,7 +179,7 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
                     style.flatten([
                       "flex-row",
                       "border-width-1",
-                      "border-color-white@40%",
+                      "border-color-gray-100",
                       "border-radius-64",
                       "padding-x-12",
                       "padding-y-6",
@@ -198,7 +197,7 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
                     <Text
                       style={
                         [
-                          style.flatten(["body3", "color-white@60%"]),
+                          style.flatten(["body3", "color-gray-300"]),
                           { lineHeight: 17 },
                         ] as ViewStyle
                       }
@@ -210,7 +209,7 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
                         [
                           style.flatten([
                             "body3",
-                            "color-white",
+                            "color-dark",
                             "margin-left-8",
                           ]),
                           { lineHeight: 17 },
@@ -221,7 +220,7 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
                     </Text>
                   </View>
                   <View style={style.flatten(["justify-end"]) as ViewStyle}>
-                    <SortIcon />
+                    <SortIcon color="#151a1a" />
                   </View>
                 </TouchableOpacity>
               )}
@@ -276,11 +275,10 @@ const ValidatorItem: FunctionComponent<{
     prevSelectValidatorAdress !== validatorAddress ? (
       <StakeValidatorCardView
         containerStyle={
-          style.flatten(
-            ["margin-bottom-6"],
-
-            [selectedValidator == validatorAddress && "background-color-indigo"]
-          ) as ViewStyle
+          [
+            style.flatten(["margin-bottom-6"]),
+            selectedValidator == validatorAddress ? { backgroundColor: "#e0fedd" } : null,
+          ] as ViewStyle
         }
         heading={validator.description.moniker?.trim()}
         validatorAddress={validatorAddress}
@@ -289,9 +287,9 @@ const ValidatorItem: FunctionComponent<{
         )}
         trailingIcon={
           selectedValidator == validatorAddress ? (
-            <CheckIcon color="white" />
+            <CheckIcon color="black" />
           ) : (
-            <ChevronRightIcon />
+            <ChevronRightIcon color="#151a1a" />
           )
         }
         delegated={shortenNumber(validator.delegator_shares)}

@@ -104,7 +104,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={[
         style.get("flex-grow-1"),
@@ -114,7 +114,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
       ]}
       refreshControl={
         <RefreshControl
-          tintColor={"white"}
+          tintColor={"black"}
           refreshing={refreshing}
           onRefresh={onRefresh}
           progressViewOffset={isTab ? (Platform.OS === "ios" ? 0 : 48) : 0}
@@ -126,7 +126,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-dark",
             "margin-top-16",
             "margin-bottom-14",
             "font-normal",
@@ -141,10 +141,14 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
           <Button
             text="Stake more"
             containerStyle={
-              style.flatten(["border-radius-64", "margin-y-32"]) as ViewStyle
+              style.flatten([
+                "border-radius-64",
+                "margin-y-32",
+                "background-color-dark",
+              ]) as ViewStyle
             }
             rippleColor="black@50%"
-            textStyle={style.flatten(["body2"]) as ViewStyle}
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
             onPress={() => {
               analyticsStore.logEvent("stake_click", {
                 chainId: chainStore.current.chainId,

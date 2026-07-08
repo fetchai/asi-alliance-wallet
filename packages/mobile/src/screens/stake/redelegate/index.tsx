@@ -224,7 +224,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
     >
@@ -234,7 +234,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             "flex-row",
             "items-center",
             "border-width-1",
-            "border-color-white@20%",
+            "border-color-gray-100",
             "border-radius-12",
             "padding-12",
             "justify-between",
@@ -244,7 +244,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
       >
         <Text
           style={
-            style.flatten(["body3", "color-white@60%", "flex-1"]) as ViewStyle
+            style.flatten(["body3", "color-gray-300", "flex-1"]) as ViewStyle
           }
         >
           Current staked amount
@@ -253,7 +253,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           style={
             style.flatten([
               "subtitle3",
-              "color-white",
+              "color-dark",
               "flex-1",
               "text-right",
             ]) as ViewStyle
@@ -280,7 +280,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "margin-bottom-8",
           ]) as ViewStyle
         }
@@ -291,7 +291,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "border-width-1",
-            "border-color-white@20%",
+            "border-color-gray-100",
             "border-radius-12",
             "padding-x-18",
             "padding-y-12",
@@ -299,7 +299,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           {srcValidator ? srcValidator.description.moniker : "..."}
         </Text>
       </View>
@@ -307,7 +307,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
       <DropDownCardView
         containerStyle={style.flatten(["margin-bottom-16"]) as ViewStyle}
         mainHeadingrStyle={style.flatten(["body3"]) as ViewStyle}
-        headingrStyle={style.flatten(["body3", "color-white@60%"]) as ViewStyle}
+        headingrStyle={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
         mainHeading="To"
         heading={
           dstValidator ? dstValidator.description.moniker : "Choose validator"
@@ -316,8 +316,8 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           <ChevronRightIcon
             color={
               activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
-                ? style.get("color-white@20%").color
-                : "white"
+                ? "#DCDCE3"
+                : "#151a1a"
             }
           />
         }
@@ -334,7 +334,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "margin-y-0",
             "margin-bottom-8",
           ]) as ViewStyle
@@ -346,7 +346,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
       <Text
         style={
           style.flatten([
-            "color-white@60%",
+            "color-gray-300",
             "text-caption2",
             "margin-top-8",
           ]) as ViewStyle
@@ -365,7 +365,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -386,7 +386,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -394,7 +394,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             style={
               style.flatten([
                 "body3",
-                "color-white",
+                "color-dark",
                 "margin-right-6",
               ]) as ViewStyle
             }
@@ -407,8 +407,8 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
-                    ? style.get("color-white@20%").color
-                    : "white"
+                    ? "#DCDCE3"
+                    : "#151a1a"
                 }
               />
             }
@@ -421,7 +421,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
                 "border-width-1",
                 activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
                   ? "border-color-white@20%"
-                  : "border-color-white@40%",
+                  : "border-color-gray-100",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
@@ -450,9 +450,12 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         disabled={!account.isReadyToSendTx || !txStateIsValid}
         loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
         containerStyle={
-          style.flatten(["margin-top-16", "border-radius-32"]) as ViewStyle
+          {
+            ...style.flatten(["margin-top-16", "border-radius-32"]),
+            backgroundColor: "#151a1a",
+          } as ViewStyle
         }
-        textStyle={style.flatten(["body2"]) as ViewStyle}
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         onPress={redelegateAmount}
       />
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />

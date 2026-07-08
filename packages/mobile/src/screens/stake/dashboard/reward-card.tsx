@@ -197,9 +197,9 @@ export const MyRewardCard: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      blurIntensity={20}
+      backgroundBlur={false}
       containerStyle={
-        [style.flatten(["padding-18"]), containerStyle] as ViewStyle
+        [style.flatten(["padding-18", "background-color-gray-5"]), containerStyle] as ViewStyle
       }
     >
       <View
@@ -217,7 +217,7 @@ export const MyRewardCard: FunctionComponent<{
               style.flatten([
                 "body3",
                 "padding-bottom-6",
-                "color-white@60%",
+                "color-gray-300",
               ]) as ViewStyle
             }
           >
@@ -235,8 +235,8 @@ export const MyRewardCard: FunctionComponent<{
                 height: 15,
               },
             ]}
-            boneColor={style.get("color-white@20%").color}
-            highlightColor={style.get("color-white@60%").color}
+            boneColor={"#DCDCE3"}
+            highlightColor={"#F6F6F6"}
           >
             <View style={style.flatten(["flex-row", "flex-wrap"]) as ViewStyle}>
               <AnimatedNumber
@@ -257,6 +257,7 @@ export const MyRewardCard: FunctionComponent<{
                   durationValue: 1000,
                   easingValue: "linear",
                 }}
+                textColor={"#151a1a"}
               />
               <Text
                 style={
@@ -346,7 +347,7 @@ export const MyRewardCard: FunctionComponent<{
           <Text
             style={
               [
-                style.flatten(["color-indigo-250", "text-caption2"]),
+                style.flatten(["color-dark", "text-caption2"]),
                 { lineHeight: 15 },
               ] as ViewStyle
             }
@@ -355,9 +356,9 @@ export const MyRewardCard: FunctionComponent<{
           </Text>
           <View style={style.flatten(["margin-left-6"]) as ViewStyle}>
             {!showRewars ? (
-              <ChevronDownIcon color="#BFAFFD" size={12} />
+              <ChevronDownIcon color="#151a1a" size={12} />
             ) : (
-              <ChevronUpIcon color="#BFAFFD" size={12} />
+              <ChevronUpIcon color="#151a1a" size={12} />
             )}
           </View>
         </TouchableOpacity>
@@ -573,22 +574,24 @@ const DelegateReward: FunctionComponent<{
                 />
               ) : (
                 <BlurBackground
-                  backgroundBlur={true}
-                  blurIntensity={16}
+                  backgroundBlur={false}
                   containerStyle={
-                    style.flatten([
-                      "width-32",
-                      "height-32",
-                      "border-radius-64",
-                      "items-center",
-                      "justify-center",
-                      "margin-right-12",
-                    ]) as ViewStyle
+                    {
+                      ...style.flatten([
+                        "width-32",
+                        "height-32",
+                        "border-radius-64",
+                        "items-center",
+                        "justify-center",
+                        "margin-right-12",
+                      ]),
+                      backgroundColor: "#dddfdf",
+                    } as ViewStyle
                   }
                 >
                   <VectorCharacter
                     char={val.description.moniker.trim()[0]}
-                    color="white"
+                    color="#151a1a"
                     height={12}
                   />
                 </BlurBackground>
@@ -600,7 +603,7 @@ const DelegateReward: FunctionComponent<{
                       "body3",
 
                       "padding-bottom-2",
-                      "color-white",
+                      "color-dark",
                     ]) as ViewStyle
                   }
                 >
@@ -608,7 +611,7 @@ const DelegateReward: FunctionComponent<{
                 </Text>
                 <Text
                   style={
-                    style.flatten(["body3", "color-white@60%"]) as ViewStyle
+                    style.flatten(["body3", "color-gray-300"]) as ViewStyle
                   }
                 >
                   {`${numberLocalFormat(
@@ -639,13 +642,13 @@ const DelegateReward: FunctionComponent<{
                   containerStyle={
                     style.flatten([
                       "border-radius-64",
-                      "border-color-white@40%",
+                      "border-color-gray-100",
                       "padding-x-6",
                       "height-30",
                     ]) as ViewStyle
                   }
                   textStyle={
-                    style.flatten(["body3", "color-white"]) as ViewStyle
+                    style.flatten(["body3", "color-dark"]) as ViewStyle
                   }
                   onPress={() => {
                     if (!networkIsConnected) {

@@ -28,12 +28,12 @@ export const UnbondingCard: FunctionComponent<{
   return unbonding ? (
     <BlurBackground
       borderRadius={12}
-      blurIntensity={16}
+      backgroundBlur={false}
       containerStyle={
-        [style.flatten(["padding-18"]), containerStyle] as ViewStyle
+        [style.flatten(["padding-18", "background-color-gray-5"]), containerStyle] as ViewStyle
       }
     >
-      <Text style={style.flatten(["subtitle2", "color-white"]) as ViewStyle}>
+      <Text style={style.flatten(["subtitle2", "color-dark"]) as ViewStyle}>
         My Unstaking
       </Text>
       <View style={style.flatten(["padding-bottom-8"]) as ViewStyle}>
@@ -98,7 +98,7 @@ export const UnbondingCard: FunctionComponent<{
               >
                 <Text
                   style={
-                    style.flatten(["body3", "color-white@60%"]) as ViewStyle
+                    style.flatten(["body3", "color-gray-300"]) as ViewStyle
                   }
                 >
                   {entry.balance
@@ -109,7 +109,7 @@ export const UnbondingCard: FunctionComponent<{
                 </Text>
                 <View style={style.get("flex-1")} />
                 <Text
-                  style={style.flatten(["body3", "color-white"]) as ViewStyle}
+                  style={style.flatten(["body3", "color-dark"]) as ViewStyle}
                 >
                   {remainingText}
                 </Text>

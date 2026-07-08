@@ -204,7 +204,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
     >
@@ -215,7 +215,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
               "flex-row",
               "items-center",
               "border-width-1",
-              "border-color-white@20%",
+              "border-color-gray-100",
               "border-radius-12",
               "padding-12",
               "justify-between",
@@ -226,7 +226,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
       >
         <Text
           style={
-            style.flatten(["body3", "color-white@60%", "flex-1"]) as ViewStyle
+            style.flatten(["body3", "color-gray-300", "flex-1"]) as ViewStyle
           }
         >
           Current staked amount
@@ -235,7 +235,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           style={
             style.flatten([
               "subtitle3",
-              "color-white",
+              "color-dark",
               "flex-1",
               "text-right",
             ]) as ViewStyle
@@ -263,7 +263,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -276,7 +276,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
       <Text
         style={
           style.flatten([
-            "color-white@60%",
+            "color-gray-300",
             "text-caption2",
             "margin-top-8",
           ]) as ViewStyle
@@ -295,7 +295,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -310,7 +310,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           style.flatten([
             "margin-y-16",
             "padding-12",
-            "background-color-cardColor@25%",
+            "background-color-gray-50",
             "flex-row",
             "border-radius-12",
           ]) as ViewStyle
@@ -324,7 +324,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           <CircleExclamationIcon />
         </View>
         <Text
-          style={style.flatten(["body3", "color-white", "flex-1"]) as ViewStyle}
+          style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}
         >
           Your tokens will go through a 21-day unstaking process
         </Text>
@@ -339,7 +339,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -347,7 +347,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
             style={
               style.flatten([
                 "body3",
-                "color-white",
+                "color-dark",
                 "margin-right-6",
               ]) as ViewStyle
             }
@@ -360,8 +360,8 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.undelegate]
-                    ? style.get("color-white@20%").color
-                    : "white"
+                    ? "#DCDCE3"
+                    : "#151a1a"
                 }
               />
             }
@@ -373,8 +373,8 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
                 "justify-center",
                 "border-width-1",
                 activityStore.getPendingTxnTypes[txnTypeKey.undelegate]
-                  ? "border-color-white@20%"
-                  : "border-color-white@40%",
+                  ? "border-color-gray-100"
+                  : "border-color-gray-100",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.undelegate]}
@@ -402,9 +402,12 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         text="Confirm"
         disabled={!account.isReadyToSendTx || !txStateIsValid}
         loading={activityStore.getPendingTxnTypes[txnTypeKey.undelegate]}
-        textStyle={style.flatten(["body2"]) as ViewStyle}
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         containerStyle={
-          style.flatten(["margin-top-16", "border-radius-32"]) as ViewStyle
+          {
+            ...style.flatten(["margin-top-16", "border-radius-32"]),
+            backgroundColor: "#151a1a",
+          } as ViewStyle
         }
         onPress={unstakeBalance}
       />

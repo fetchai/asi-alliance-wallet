@@ -139,10 +139,14 @@ export const PortfolioStakingCard: FunctionComponent<{
 
   return (
     <BlurBackground
-      blurIntensity={10}
+      backgroundBlur={false}
       containerStyle={
         [
-          style.flatten(["padding-18", "border-radius-16"]),
+          style.flatten([
+            "padding-18",
+            "border-radius-16",
+            "background-color-gray-5",
+          ]),
           cardStyle,
         ] as ViewStyle
       }
@@ -150,7 +154,7 @@ export const PortfolioStakingCard: FunctionComponent<{
       <Text
         style={
           style.flatten([
-            "color-white",
+            "color-dark",
             "subtitle3",
             "margin-bottom-20",
           ]) as ViewStyle
