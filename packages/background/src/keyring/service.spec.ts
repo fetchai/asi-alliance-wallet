@@ -227,6 +227,7 @@ describe("KeyRingService", () => {
         currentPassword: "pw",
       } as any;
       service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
         getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
       } as any;
       service["cardanoService"] = {
@@ -243,6 +244,7 @@ describe("KeyRingService", () => {
 
     it("throws on existing dedup promise path when service remains not ready", async () => {
       service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
         getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
       } as any;
       service["cardanoService"] = {
@@ -260,6 +262,10 @@ describe("KeyRingService", () => {
     });
 
     it("throws on init dedup promise path when service remains not ready", async () => {
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
       service["cardanoService"] = {
         isInitialized: jest.fn().mockReturnValue(false),
         isReady: jest.fn().mockReturnValue(false),
@@ -285,6 +291,7 @@ describe("KeyRingService", () => {
         getCurrentKeyStore: jest.fn().mockReturnValue({}),
       } as any;
       service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-preprod"),
         getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
       } as any;
       service["cardanoService"] = {
@@ -303,6 +310,56 @@ describe("KeyRingService", () => {
         isKeystone: false,
       });
       expect(mockGetKey).toHaveBeenCalledWith("cardano-preprod");
+    });
+
+    it("rejects stale Cardano ensure when selected chain is non-Cardano", async () => {
+      const restoreFromKeyStore = jest.fn();
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cosmoshub-4"),
+      } as any;
+      service["cardanoService"] = {
+        isInitialized: jest.fn().mockReturnValue(false),
+        restoreFromKeyStore,
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({}),
+      } as any;
+
+      await expect(
+        service.ensureCardanoServiceReady("cardano-preview")
+      ).rejects.toThrow("network_context_invalid_for_cardano: cardano-preview");
+      expect(restoreFromKeyStore).not.toHaveBeenCalled();
+    });
+
+    it("does not restore Cardano when selected chain changes before restore", async () => {
+      const restoreFromKeyStore = jest.fn();
+      const getSelectedChain = jest
+        .fn()
+        .mockResolvedValueOnce("cardano-preview")
+        .mockResolvedValue("cosmoshub-4");
+      service["chainsService"] = {
+        getSelectedChain,
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        isInitialized: jest.fn().mockReturnValue(false),
+        isReady: jest.fn().mockReturnValue(false),
+        restoreFromKeyStore,
+      } as any;
+
+      await expect(
+        service.ensureCardanoServiceReady("cardano-preview")
+      ).rejects.toThrow("network_context_invalid_for_cardano: cardano-preview");
+      expect(restoreFromKeyStore).not.toHaveBeenCalled();
     });
   });
 
