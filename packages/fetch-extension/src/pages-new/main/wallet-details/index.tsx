@@ -450,7 +450,7 @@ export const WalletDetailsView = observer(
                               </React.Fragment>
                             )
                           ) : (
-                            "..."
+                            <Skeleton height="21px" />
                           )}
                         </div>
                       </Address>
