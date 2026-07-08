@@ -7,6 +7,7 @@ import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { formatAddress } from "@utils/format";
 import { walletSupportsCardano } from "@utils/index";
 import classnames from "classnames";
+import { flowResult } from "mobx";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useState, useMemo } from "react";
 import { useIntl } from "react-intl";
@@ -163,8 +164,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                         toChainName: chainInfo.raw.chainName,
                       };
                     }
-                    chainStore.selectChain(chainInfo.raw.chainId);
-                    chainStore.saveLastViewChainId();
+                    void flowResult(
+                      chainStore.selectChainAndPersist(chainInfo.raw.chainId)
+                    ).catch((e) => {
+                      console.warn("Failed to switch chain:", e);
+                    });
                     chatStore.userDetailsStore.resetUser();
                     proposalStore.resetProposals();
                     chatStore.messagesStore.resetChatList();
@@ -249,8 +253,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                           toChainName: chainInfo.raw.chainName,
                         };
                       }
-                      chainStore.selectChain(chainInfo.raw.chainId);
-                      chainStore.saveLastViewChainId();
+                      void flowResult(
+                        chainStore.selectChainAndPersist(chainInfo.raw.chainId)
+                      ).catch((e) => {
+                        console.warn("Failed to switch chain:", e);
+                      });
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();
                       chatStore.messagesStore.resetChatList();
@@ -374,8 +381,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                         toChainName: chainInfo.raw.chainName,
                       };
                     }
-                    chainStore.selectChain(chainInfo.raw.chainId);
-                    chainStore.saveLastViewChainId();
+                    void flowResult(
+                      chainStore.selectChainAndPersist(chainInfo.raw.chainId)
+                    ).catch((e) => {
+                      console.warn("Failed to switch chain:", e);
+                    });
                     chatStore.userDetailsStore.resetUser();
                     proposalStore.resetProposals();
                     chatStore.messagesStore.resetChatList();
@@ -480,8 +490,13 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                             toChainName: chainInfo.raw.chainName,
                           };
                         }
-                        chainStore.selectChain(chainInfo.raw.chainId);
-                        chainStore.saveLastViewChainId();
+                        void flowResult(
+                          chainStore.selectChainAndPersist(
+                            chainInfo.raw.chainId
+                          )
+                        ).catch((e) => {
+                          console.warn("Failed to switch chain:", e);
+                        });
                         chatStore.userDetailsStore.resetUser();
                         proposalStore.resetProposals();
                         chatStore.messagesStore.resetChatList();
