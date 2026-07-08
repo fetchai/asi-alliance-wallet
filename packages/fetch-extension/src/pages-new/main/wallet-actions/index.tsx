@@ -14,7 +14,6 @@ import {
   checkAddressIsBuySellWhitelisted,
 } from "@utils/moonpay-currency";
 import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
-import { getNativeBridgeModeByChainId } from "@utils/native-bridge-mode";
 
 interface WalletActionsProps {
   isOpen: boolean;
@@ -103,8 +102,6 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     //     bal.balance.toDec().gt(new Dec(0))
     //   ) !== undefined;
 
-    const nativeBridgeMode = getNativeBridgeModeByChainId(chainId);
-
     // check if address is whitelisted for Buy/Sell feature
     const isAddressWhitelisted = accountInfo?.bech32Address
       ? checkAddressIsBuySellWhitelisted(
@@ -180,28 +177,6 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
               heading="Buy / Sell"
               onClick={() => {
                 navigate("/more/token/moonpay");
-              }}
-            />
-          ) : (
-            ""
-          )}
-
-          {nativeBridgeMode !== "none" ? (
-            <Card
-              leftImageStyle={{ background: "transparent", height: "18px" }}
-              style={{
-                background: "var(--card-bg)",
-                height: "60px",
-                marginBottom: "6px",
-              }}
-              leftImage={require("@assets/svg/wireframe/bridge.svg")}
-              heading={"Bridge"}
-              onClick={() => {
-                navigate("/bridge");
-                analyticsStore.logEvent("native_bridge_click", {
-                  tabName: "fund_transfer_tab",
-                  pageName: "Home",
-                });
               }}
             />
           ) : (

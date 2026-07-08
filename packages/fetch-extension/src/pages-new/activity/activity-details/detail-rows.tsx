@@ -123,6 +123,7 @@ export const DetailRows = ({ details }: { details: any }) => {
       <DetailRow
         label="Memo"
         value={details.memo.length > 0 ? details.memo : "-"}
+        showTooltip={details.memo.length > 0}
       />
       <DetailRow
         label={`Total ${

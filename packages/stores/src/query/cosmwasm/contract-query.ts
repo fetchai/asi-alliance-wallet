@@ -1,96 +1,32 @@
-import { ObservableChainQuery } from "../chain-query";
 import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../common";
-import { QueryResponse } from "../../common";
-
-import { Buffer } from "buffer/";
-import { autorun } from "mobx";
+import { QueryClient } from "@cosmjs/stargate";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { setupWasmExtension } from "@cosmjs/cosmwasm-stargate";
+import { ChainGetter, ObservableQueryTendermint } from "../../common";
 
 export class ObservableCosmwasmContractChainQuery<
   T
-> extends ObservableChainQuery<T> {
-  protected disposer?: () => void;
-
+> extends ObservableQueryTendermint<T> {
   constructor(
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly contractAddress: string,
+    contractAddress: string,
     // eslint-disable-next-line @typescript-eslint/ban-types
-    protected obj: object
+    msg: object,
+    cacheKey: string = ""
   ) {
-    super(
-      kvStore,
-      chainId,
-      chainGetter,
-      ObservableCosmwasmContractChainQuery.getUrlFromObj(contractAddress, obj)
-    );
-  }
+    const rpc = chainGetter.getChain(chainId).rpc;
+    const wasmQueryFn = async (client: QueryClient) => {
+      const wasm = (client as any).wasm;
 
-  protected override onStart() {
-    super.onStart();
-
-    return new Promise<void>((resolve) => {
-      this.disposer = autorun(() => {
-        const chainInfo = this.chainGetter.getChain(this.chainId);
-        if (chainInfo.features && chainInfo.features.includes("wasmd_0.24+")) {
-          if (this.url.startsWith("/wasm/v1/")) {
-            this.setUrl(`/cosmwasm${this.url}`);
-          }
-        } else {
-          if (this.url.startsWith("/cosmwasm/")) {
-            this.setUrl(`${this.url.replace("/cosmwasm", "")}`);
-          }
-        }
-
-        resolve();
-      });
-    });
-  }
-
-  protected override onStop() {
-    if (this.disposer) {
-      this.disposer();
-      this.disposer = undefined;
-    }
-    super.onStop();
-  }
-
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  protected static getUrlFromObj(contractAddress: string, obj: object): string {
-    const msg = JSON.stringify(obj);
-    const query = Buffer.from(msg).toString("base64");
-
-    return `/wasm/v1/contract/${contractAddress}/smart/${query}`;
-  }
-
-  protected override canFetch(): boolean {
-    return this.contractAddress.length !== 0;
-  }
-
-  protected override async fetchResponse(
-    abortController: AbortController
-  ): Promise<{ response: QueryResponse<T>; headers: any }> {
-    const { response, headers } = await super.fetchResponse(abortController);
-
-    const wasmResult = response.data as unknown as
-      | {
-          data: any;
-        }
-      | undefined;
-
-    if (!wasmResult) {
-      throw new Error("Failed to get the response from the contract");
-    }
-
-    return {
-      headers,
-      response: {
-        data: wasmResult.data as T,
-        status: response.status,
-        staled: false,
-        timestamp: Date.now(),
-      },
+      if (!wasm?.queryContractSmart) {
+        throw new Error("Wasm extension not available in QueryClient");
+      }
+      const result = await wasm.queryContractSmart(contractAddress, msg);
+      return result as T;
     };
+
+    super(kvStore, rpc, wasmQueryFn, setupWasmExtension, cacheKey);
   }
 }

@@ -22,7 +22,7 @@ export const BridgePage: FunctionComponent = observer(() => {
       alternativeTitle={"Bridge"}
       canChangeChainInfo={false}
       onBackButton={() => {
-        navigate(-1);
+        navigate("/");
       }}
     >
       {mode === "none" ? (

@@ -491,7 +491,7 @@ export class CosmosAccountImpl {
           signerAddress,
           type,
           fee,
-          memo,
+          memo: memo || signDoc?.memo,
           nodes,
         });
         this.activityStore.addProposalNode(proposalNode);
@@ -503,7 +503,7 @@ export class CosmosAccountImpl {
           signDoc,
           type,
           fee,
-          memo,
+          memo: memo || signDoc?.memo,
           nodes,
         });
         this.activityStore.addNode(newNode);

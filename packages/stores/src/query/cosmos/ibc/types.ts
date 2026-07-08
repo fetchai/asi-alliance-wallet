@@ -37,8 +37,11 @@ export type ClientStateResponse = {
 };
 
 export type DenomTraceResponse = {
-  denom_trace: {
-    path: string;
-    base_denom: string;
+  denom: {
+    base: string;
+    trace: {
+      port_id: string;
+      channel_id: string;
+    }[];
   };
 };
