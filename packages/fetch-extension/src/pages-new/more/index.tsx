@@ -20,6 +20,7 @@ import {
 import * as manifest from "../../manifest.v3.json";
 import { useConfirm } from "@components/confirm";
 import { isRunningInSidePanel, toggleSidePanel } from "@utils/side-panel";
+import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 // import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
 
 export const MorePage: FunctionComponent = () => {
@@ -80,6 +81,8 @@ export const MorePage: FunctionComponent = () => {
           : accountInfo.bech32Address
       )
     : false;
+
+  const isBridgeSupported = chainId === CHAIN_ID_FETCHHUB || chainId === "1";
 
   return (
     <HeaderLayout
@@ -146,6 +149,27 @@ export const MorePage: FunctionComponent = () => {
             navigate("/ibc-transfer");
           }}
         />
+      )}
+      {isBridgeSupported ? (
+        <Card
+          leftImageStyle={{ background: "transparent", height: "18px" }}
+          style={{
+            background: "var(--card-bg)",
+            height: "60px",
+            marginBottom: "6px",
+          }}
+          leftImage={require("@assets/svg/wireframe/bridge.svg")}
+          heading={"Bridge"}
+          onClick={() => {
+            navigate("/bridge");
+            analyticsStore.logEvent("native_bridge_click", {
+              tabName: "fund_transfer_tab",
+              pageName: "More",
+            });
+          }}
+        />
+      ) : (
+        ""
       )}
       {currentChain?.raw?.type !== "testnet" &&
       moonpaySupportedTokens?.length > 0 &&

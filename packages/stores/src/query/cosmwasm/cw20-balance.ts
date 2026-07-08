@@ -5,18 +5,24 @@ import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { BalanceRegistry, ObservableQueryBalanceInner } from "../balances";
 import { Cw20ContractBalance } from "./types";
 import { ObservableCosmwasmContractChainQuery } from "./contract-query";
-
 export class ObservableQueryCw20Balance extends ObservableCosmwasmContractChainQuery<Cw20ContractBalance> {
   constructor(
     kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected override readonly contractAddress: string,
+    contractAddress: string,
     protected readonly bech32Address: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, {
-      balance: { address: bech32Address },
-    });
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      contractAddress,
+      {
+        balance: { address: bech32Address },
+      },
+      `cw20-balance-${contractAddress}-${bech32Address}`
+    );
   }
 
   protected override canFetch(): boolean {

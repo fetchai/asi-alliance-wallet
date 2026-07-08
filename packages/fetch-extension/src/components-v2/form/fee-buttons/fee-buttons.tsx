@@ -300,7 +300,7 @@ export const FeeButtonsInner: FunctionComponent<
               style={{
                 marginTop: "0px",
                 marginBottom: "12px",
-                color: "white",
+                color: "var(--font-dark)",
                 fontSize: "14px",
               }}
             >
@@ -327,7 +327,7 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{
                     opacity: "0.6",
                     fontWeight: 400,
-                    color: "var(--grey-white, #FFF)",
+                    color: "var(--font-dark)",
                     fontSize: "12px",
                     marginLeft: "5px",
                   }}
@@ -355,7 +355,7 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{
                     opacity: "0.6",
                     fontWeight: 400,
-                    color: "var(--grey-white, #FFF)",
+                    color: "var(--font-dark)",
                     fontSize: "12px",
                     marginLeft: "5px",
                   }}
@@ -397,7 +397,7 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{
                     opacity: "0.6",
                     fontWeight: 400,
-                    color: "var(--grey-white, #FFF)",
+                    color: "var(--font-dark)",
                     fontSize: "12px",
                     marginLeft: "5px",
                   }}
