@@ -54,7 +54,7 @@ export const InputCardView = React.forwardRef<TextInput, InputCardViewProps>(
           <Text
             style={
               [
-                style.flatten(["color-white@60%", "margin-y-12", "body3"]),
+                style.flatten(["color-gray-400", "margin-y-12", "body3"]),
                 labelStyle,
               ] as ViewStyle
             }
@@ -105,7 +105,7 @@ export const InputCardView = React.forwardRef<TextInput, InputCardViewProps>(
                 [
                   style.flatten([
                     "body3",
-                    "color-white",
+                    "color-dark",
                     "padding-0",
                     "justify-center",
                   ]),

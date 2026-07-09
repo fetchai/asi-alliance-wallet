@@ -6,6 +6,8 @@ import {
   BlurHeaderOptionsPreset,
   TransparentHeaderOptionsPreset,
 } from "components/header";
+import { HeaderLeftBackLightButton } from "components/header/button";
+import { getPlatformFontFamily } from "styles/builder/utils";
 import { SendScreen } from "screens/send";
 import { ReceiveScreen } from "screens/receive";
 import { CameraScreen } from "screens/camera";
@@ -31,16 +33,28 @@ export const OtherNavigation: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Send",
+          headerTitleStyle: {
+            color: "#151a1a",
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Send"
         component={SendScreen}
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Receive",
+          headerTitleStyle: {
+            color: "#151a1a",
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Receive"
         component={ReceiveScreen}
@@ -63,8 +77,14 @@ export const OtherNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Rename wallet",
+          headerTitleStyle: {
+            color: "#151a1a",
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="RenameWallet"
         component={RenameWalletScreen}
@@ -72,8 +92,13 @@ export const OtherNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerTitleStyle: {
+            color: "#151a1a",
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="DeleteWallet"
         component={DeleteWalletScreen}
@@ -81,8 +106,13 @@ export const OtherNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerTitleStyle: {
+            color: "#151a1a",
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="ActivityDetails"
         component={ActivityDetails}

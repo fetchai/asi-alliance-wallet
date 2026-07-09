@@ -125,7 +125,7 @@ export const AddressInputCard: FunctionComponent<{
               style.flatten([
                 "padding-y-4",
                 "margin-y-8",
-                "color-white@60%",
+                "color-gray-400",
                 "body3",
               ]) as ViewStyle
             }
@@ -160,10 +160,10 @@ export const AddressInputCard: FunctionComponent<{
               style={style.flatten(["flex-3", "justify-center"]) as ViewStyle}
             >
               <TextInput
-                placeholderTextColor={style.flatten(["color-white@60%"]).color}
+                placeholderTextColor={style.flatten(["color-gray-300"]).color}
                 style={
                   [
-                    style.flatten(["body3", "color-white", "padding-0"]),
+                    style.flatten(["body3", "color-dark", "padding-0"]),
                     Platform.select({
                       ios: {},
                       android: {

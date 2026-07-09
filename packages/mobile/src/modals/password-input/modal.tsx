@@ -56,7 +56,12 @@ export const PasswordInputModal: FunctionComponent<{
   }
 
   return (
-    <CardModal isOpen={isOpen} close={close} title={title}>
+    <CardModal
+      isOpen={isOpen}
+      close={close}
+      title={title}
+      childrenContainerStyle={{ marginTop: 12 }}
+    >
       <InputCardView
         label="Password"
         labelStyle={

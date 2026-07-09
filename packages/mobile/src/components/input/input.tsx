@@ -116,7 +116,7 @@ export const TextInput = React.forwardRef<
             placeholderTextColor={
               props.placeholderTextColor ??
               style.flatten(
-                ["color-white@60%"],
+                ["color-gray-300"],
                 [!(props.editable ?? true) && "dark:color-platinum-200"]
               ).color
             }
@@ -125,8 +125,7 @@ export const TextInput = React.forwardRef<
                 [
                   "padding-0",
                   "body2-in-text-input",
-                  "color-gray-200",
-                  "dark:color-platinum-50",
+                  "color-dark",
                   "flex-1",
                 ],
                 [!(props.editable ?? true) && "color-gray-300"]

@@ -53,7 +53,7 @@ export const MemoInputView: FunctionComponent<{
           <Text
             style={
               [
-                style.flatten(["padding-y-4", "color-white@60%", "margin-y-8"]),
+                style.flatten(["padding-y-4", "color-gray-400", "margin-y-8"]),
                 labelStyle,
               ] as ViewStyle
             }
@@ -89,7 +89,7 @@ export const MemoInputView: FunctionComponent<{
               placeholderTextColor={style.flatten(["color-gray-200"]).color}
               style={
                 [
-                  style.flatten(["body3", "color-white", "padding-0"]),
+                  style.flatten(["body3", "color-dark", "padding-0"]),
                   Platform.select({
                     ios: {},
                     android: {

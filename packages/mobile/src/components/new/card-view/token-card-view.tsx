@@ -33,7 +33,7 @@ export const TokenCardView: FunctionComponent<{
     <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
       <BlurBackground
         borderRadius={12}
-        blurIntensity={16}
+        backgroundBlur={false}
         containerStyle={
           [
             style.flatten([
@@ -108,7 +108,7 @@ export const TokenCardView: FunctionComponent<{
                   style={
                     style.flatten([
                       "body3",
-                      "color-white",
+                      "color-dark",
                       "font-medium",
                     ]) as ViewStyle
                   }

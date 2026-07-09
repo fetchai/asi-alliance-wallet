@@ -90,6 +90,7 @@ export const ColorPalette = {
   "white-700": "#09090A",
   "white-transparent-100": "#f9f9f900",
 
+  "gray-5": "#F6F6F6",
   "gray-10": "#F8F9FC",
   "gray-50": "#F2F2F7",
   "gray-100": "#DCDCE3",
@@ -102,6 +103,7 @@ export const ColorPalette = {
   "new-gray-500": "#8A9FB8",
   "new-gray-700": "#556578",
 
+  dark: "#151a1a",
   black: "#000000",
 
   linear: "#CF447B",
@@ -129,6 +131,8 @@ export const ColorPalette = {
   "orange-500": "#F9774B",
 
   "yellow-500": "#EDC32C",
+
+  "sky-focus": "#2DA6CF",
 };
 
 export const TextColors = {
@@ -149,6 +153,7 @@ export const DarkThemeTextColors = {
 
 export const BackgroundColors = {
   card: "rgba(255, 255, 255, 0.95)",
+  "background-card": ColorPalette["gray-300"],
   "background-secondary": ColorPalette["gray-10"],
   // The background tertiary has a color that is distinct with the inputs.
   // Used in card modal or screen where input exists.
