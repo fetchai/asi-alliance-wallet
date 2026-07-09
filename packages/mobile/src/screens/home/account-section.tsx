@@ -380,6 +380,7 @@ export const AccountSection: FunctionComponent<{
               "border-radius-64",
               "items-center",
               "justify-center",
+              "background-color-gray-100@65%",
             ]) as ViewStyle
           }
           containerStyle={style.flatten(["flex-1", "items-end"]) as ViewStyle}
@@ -462,9 +463,10 @@ export const AccountSection: FunctionComponent<{
               "border-color-gray-100",
               "margin-top-24",
               "border-radius-32",
+              "background-color-dark",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3", "color-black"]) as ViewStyle}
+          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
           text={"View portfolio"}
           onPress={() => {
             navigation.navigate("Portfolio");

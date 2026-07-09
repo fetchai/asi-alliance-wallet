@@ -28,6 +28,7 @@ import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { txnTypeKey } from "components/new/txn-status.tsx";
 import { numberLocalFormat } from "utils/format/format";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const RedelegateScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -65,6 +66,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
   } = useStore();
 
   const style = useStyle();
+  const safeAreaInsets = useSafeAreaInsets();
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -226,55 +228,73 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
     <PageWithScrollView
       backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
-      contentContainerStyle={style.get("flex-grow-1")}
+      contentContainerStyle={{
+        paddingBottom: Math.max(safeAreaInsets.bottom, 16) + 80,
+      }}
+      fixed={
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            paddingHorizontal: 16,
+            paddingBottom: Math.max(safeAreaInsets.bottom, 16),
+            paddingTop: 16,
+          }}
+        >
+          <Button
+            text="Confirm"
+            disabled={!account.isReadyToSendTx || !txStateIsValid}
+            loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
+            containerStyle={
+              {
+                ...style.flatten(["border-radius-32"]),
+                backgroundColor: "#151a1a",
+              } as ViewStyle
+            }
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+            onPress={redelegateAmount}
+          />
+        </View>
+      }
     >
-      <View
-        style={
-          style.flatten([
-            "flex-row",
-            "items-center",
-            "border-width-1",
-            "border-color-gray-100",
-            "border-radius-12",
-            "padding-12",
-            "justify-between",
-            "margin-y-16",
-          ]) as ViewStyle
-        }
-      >
+      <View style={style.flatten(["margin-y-16"]) as ViewStyle}>
         <Text
           style={
-            style.flatten(["body3", "color-gray-300", "flex-1"]) as ViewStyle
+            style.flatten([
+              "body3",
+              "color-gray-300",
+              "margin-bottom-8",
+            ]) as ViewStyle
           }
         >
           Current staked amount
         </Text>
-        <Text
-          style={
-            style.flatten([
-              "subtitle3",
-              "color-dark",
-              "flex-1",
-              "text-right",
-            ]) as ViewStyle
-          }
+        <View
+          style={{
+            backgroundColor: "#f6f6f6",
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+          }}
         >
-          {`${numberLocalFormat(
-            staked
-              .trim(true)
-              .shrink(true)
-              .maxDecimals(6)
-              .toString()
-              .split(" ")[0]
-          )} ${
-            staked
-              .trim(true)
-              .shrink(true)
-              .maxDecimals(6)
-              .toString()
-              .split(" ")[1]
-          }`}
-        </Text>
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
+            {`${numberLocalFormat(
+              staked
+                .trim(true)
+                .shrink(true)
+                .maxDecimals(6)
+                .toString()
+                .split(" ")[0]
+            )} ${
+              staked
+                .trim(true)
+                .shrink(true)
+                .maxDecimals(6)
+                .toString()
+                .split(" ")[1]
+            }`}
+          </Text>
+        </View>
       </View>
       <Text
         style={
@@ -303,9 +323,13 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           {srcValidator ? srcValidator.description.moniker : "..."}
         </Text>
       </View>
-
       <DropDownCardView
-        containerStyle={style.flatten(["margin-bottom-16"]) as ViewStyle}
+        containerStyle={
+          {
+            ...style.flatten(["margin-bottom-16"]),
+            backgroundColor: "#f6f6f6",
+          } as ViewStyle
+        }
         mainHeadingrStyle={style.flatten(["body3"]) as ViewStyle}
         headingrStyle={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
         mainHeading="To"
@@ -444,21 +468,6 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             : sendConfigs.feeConfig.error.message}
         </Text>
       ) : null}
-      <View style={style.flatten(["flex-1"])} />
-      <Button
-        text="Confirm"
-        disabled={!account.isReadyToSendTx || !txStateIsValid}
-        loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
-        containerStyle={
-          {
-            ...style.flatten(["margin-top-16", "border-radius-32"]),
-            backgroundColor: "#151a1a",
-          } as ViewStyle
-        }
-        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
-        onPress={redelegateAmount}
-      />
-      <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
       <TransactionModal
         isOpen={showTransectionModal}
         close={() => {

@@ -32,7 +32,10 @@ export const AddressCopyable: FunctionComponent<{
       activeOpacity={0.2}
     >
       <Text
-        style={[style.flatten(["body3", "color-white@60%"]) as ViewStyle, textStyle]}
+        style={[
+          style.flatten(["body3", "color-white@60%"]) as ViewStyle,
+          textStyle,
+        ]}
       >
         {Bech32Address.shortenAddress(address, maxCharacters)}
       </Text>
@@ -77,7 +80,7 @@ export const AddressCopyable: FunctionComponent<{
             </View>
           </View>
         ) : (
-          <CopyIcon size={15} />
+          <CopyIcon size={15} color="#151a1a" />
         )}
       </View>
     </RectButton>

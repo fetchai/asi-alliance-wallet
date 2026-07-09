@@ -2,7 +2,6 @@ import React, { FunctionComponent, useMemo, useState } from "react";
 import { Text, View, ViewStyle } from "react-native";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { useStyle } from "styles/index";
-import { GradientButton } from "components/new/button/gradient-button";
 import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
 import {
@@ -199,7 +198,10 @@ export const MyRewardCard: FunctionComponent<{
       borderRadius={12}
       backgroundBlur={false}
       containerStyle={
-        [style.flatten(["padding-18", "background-color-gray-5"]), containerStyle] as ViewStyle
+        [
+          style.flatten(["padding-18", "background-color-gray-5"]),
+          containerStyle,
+        ] as ViewStyle
       }
     >
       <View
@@ -285,17 +287,19 @@ export const MyRewardCard: FunctionComponent<{
           queryReward.pendingRewardValidatorAddresses.length === 0 ||
           !stakedSum.isReady
         ) ? (
-          <GradientButton
+          <Button
             text={"Claim all"}
-            color1={"#F9774B"}
-            color2={"#CF447B"}
             rippleColor="black@50%"
             size="small"
             containerStyle={
-              style.flatten(["border-radius-64", "height-32"]) as ViewStyle
+              style.flatten([
+                "border-radius-64",
+                "height-32",
+                "padding-x-4",
+                "background-color-green-250",
+              ]) as ViewStyle
             }
-            buttonStyle={style.flatten(["padding-x-4"]) as ViewStyle}
-            textStyle={style.flatten(["body3"]) as ViewStyle}
+            textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
             onPress={() => {
               if (!networkIsConnected) {
                 Toast.show({

@@ -5,7 +5,6 @@ import { useStyle } from "styles/index";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { Button } from "components/button";
-import { GradientButton } from "components/new/button/gradient-button";
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { Dec } from "@keplr-wallet/unit";
@@ -142,13 +141,10 @@ export const DelegatedCard: FunctionComponent<{
         backgroundBlur={false}
         containerStyle={
           [
-            style.flatten([
-              "padding-14",
-              "flex-1",
-              "background-color-gray-5",
-              "border-width-1",
-              "border-color-gray-100",
-            ]),
+            {
+              ...style.flatten(["padding-14"]),
+              backgroundColor: "#e3fee1",
+            },
             containerStyle,
           ] as ViewStyle
         }
@@ -282,13 +278,17 @@ export const DelegatedCard: FunctionComponent<{
           !account.isReadyToSendTx ||
           stakableReward.toDec().equals(new Dec(0))
         ) ? (
-          <GradientButton
+          <Button
             text="Claim rewards"
             size="small"
+            rippleColor="black@50%"
             containerStyle={
-              style.flatten(["border-radius-32", "margin-top-12"]) as ViewStyle
+              {
+                ...style.flatten(["border-radius-32", "margin-top-12"]),
+                backgroundColor: "#B1FCAB",
+              } as ViewStyle
             }
-            textStyle={style.flatten(["body3"]) as ViewStyle}
+            textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
             onPress={() => {
               if (
                 activityStore.getPendingTxnTypes[txnTypeKey.withdrawRewards]

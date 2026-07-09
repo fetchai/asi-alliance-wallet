@@ -134,7 +134,7 @@ export const StakeAmountInput: FunctionComponent<{
               style={
                 style.flatten([
                   "body3",
-                  "color-white@60%",
+                  "color-dark@60%",
                   "margin-left-8",
                 ]) as ViewStyle
               }

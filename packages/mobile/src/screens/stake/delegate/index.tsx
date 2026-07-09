@@ -406,7 +406,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             [style.flatten(["margin-top-4", "margin-right-10"])] as ViewStyle
           }
         >
-          <CircleExclamationIcon />
+          <CircleExclamationIcon color="#151a1a" />
         </View>
         <Text
           style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}

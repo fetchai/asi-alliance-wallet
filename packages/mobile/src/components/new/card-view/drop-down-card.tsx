@@ -35,7 +35,7 @@ export const DropDownCardView: FunctionComponent<{
         <Text
           style={
             [
-              style.flatten(["text-button3", "margin-y-8", "color-white@60%"]),
+              style.flatten(["text-button3", "margin-y-8", "color-dark@60%"]),
               mainHeadingrStyle,
             ] as ViewStyle
           }

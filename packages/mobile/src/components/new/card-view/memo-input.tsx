@@ -67,26 +67,26 @@ export const MemoInputView: FunctionComponent<{
           containerStyle={
             [
               style.flatten(
-                ["padding-x-18", "padding-y-12", "flex-row"],
-                isFocused || error
-                  ? [
-                      // The order is important.
-                      // The border color has different priority according to state.
-                      // The more in front, the lower the priority.
-                      "border-width-1",
-                      isFocused ? "border-color-indigo" : undefined,
-                      error ? "border-color-red-250" : undefined,
-                    ]
-                  : []
+                [
+                  "padding-x-18",
+                  "padding-y-12",
+                  "flex-row",
+                  "border-width-1",
+                  "border-color-gray-100",
+                ],
+                [
+                  isFocused && "border-color-sky-focus",
+                  error ? "border-color-red-250" : undefined,
+                ]
               ),
+              { backgroundColor: "#f6f6f6" },
               inputContainerStyle,
-              // { paddingVertical: 9 },
             ] as ViewStyle
           }
         >
           <View style={style.flatten(["flex-3"]) as ViewStyle}>
             <TextInput
-              placeholderTextColor={style.flatten(["color-gray-200"]).color}
+              placeholderTextColor={style.flatten(["color-gray-300"]).color}
               style={
                 [
                   style.flatten(["body3", "color-dark", "padding-0"]),

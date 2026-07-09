@@ -208,55 +208,44 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
     >
-      <View
-        style={
-          [
-            style.flatten([
-              "flex-row",
-              "items-center",
-              "border-width-1",
-              "border-color-gray-100",
-              "border-radius-12",
-              "padding-12",
-              "justify-between",
-              "margin-y-16",
-            ]),
-          ] as ViewStyle
-        }
-      >
+      <View style={style.flatten(["margin-y-16"]) as ViewStyle}>
         <Text
           style={
-            style.flatten(["body3", "color-gray-300", "flex-1"]) as ViewStyle
+            style.flatten([
+              "body3",
+              "color-gray-300",
+              "margin-bottom-8",
+            ]) as ViewStyle
           }
         >
           Current staked amount
         </Text>
-        <Text
-          style={
-            style.flatten([
-              "subtitle3",
-              "color-dark",
-              "flex-1",
-              "text-right",
-            ]) as ViewStyle
-          }
+        <View
+          style={{
+            backgroundColor: "#f6f6f6",
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+          }}
         >
-          {`${numberLocalFormat(
-            staked
-              .trim(true)
-              .shrink(true)
-              .maxDecimals(6)
-              .toString()
-              .split(" ")[0]
-          )} ${
-            staked
-              .trim(true)
-              .shrink(true)
-              .maxDecimals(6)
-              .toString()
-              .split(" ")[1]
-          }`}
-        </Text>
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
+            {`${numberLocalFormat(
+              staked
+                .trim(true)
+                .shrink(true)
+                .maxDecimals(6)
+                .toString()
+                .split(" ")[0]
+            )} ${
+              staked
+                .trim(true)
+                .shrink(true)
+                .maxDecimals(6)
+                .toString()
+                .split(" ")[1]
+            }`}
+          </Text>
+        </View>
       </View>
       <StakeAmountInput
         label="Amount"
