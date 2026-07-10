@@ -109,14 +109,39 @@ export const SendPhase1: FunctionComponent<{
     .maxDecimals(6)
     .toString()}${Usd}`;
 
+  const maxAmount = React.useMemo(() => {
+    try {
+      const feeCurrency = sendConfigs.feeConfig.feeCurrencies?.[0];
+      if (!feeCurrency) {
+        return removeComma(
+          balance.shrink(true).hideDenom(true).toString().trim()
+        );
+      }
+      const fees = sendConfigs.feeConfig.getFeeTypePrettyForFeeCurrency(
+        feeCurrency,
+        sendConfigs.feeConfig.feeType ?? "average"
+      );
+      const maxWithFee = balance.sub(fees);
+      if (maxWithFee.toDec().isNegative()) return "0";
+      return removeComma(maxWithFee.shrink(true).hideDenom(true).toString());
+    } catch {
+      return removeComma(
+        balance.shrink(true).hideDenom(true).toString().trim()
+      );
+    }
+  }, [
+    balance,
+    sendConfigs.feeConfig.fee,
+    sendConfigs.feeConfig.feeType,
+    sendConfigs.feeConfig.feeCurrencies,
+  ]);
+
   return (
     <React.Fragment>
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
       <AmountInputSection
         amountConfig={sendConfigs.amountConfig}
-        spendableBalance={removeComma(
-          balance.shrink(true).hideDenom(true).toString().trim()
-        )}
+        spendableBalance={maxAmount}
       />
       {/* This is a send component */}
       <View style={style.flatten(["margin-y-20"]) as ViewStyle}>
@@ -143,7 +168,7 @@ export const SendPhase1: FunctionComponent<{
           }
           headingrStyle={
             style.flatten([
-              noChangeAccount ? "color-white@20%" : "color-white",
+              noChangeAccount ? "color-gray-300" : "color-dark",
             ]) as ViewStyle
           }
           mainHeading="Send from"
@@ -151,9 +176,7 @@ export const SendPhase1: FunctionComponent<{
           trailingIcon={
             <ChevronDownIcon
               size={12}
-              color={
-                noChangeAccount ? style.get("color-white@20%").color : "white"
-              }
+              color={noChangeAccount ? "#DCDCE3" : "#151a1a"}
             />
           }
           onPress={() => {
@@ -168,9 +191,15 @@ export const SendPhase1: FunctionComponent<{
       <Button
         text="Next"
         size="large"
-        containerStyle={style.flatten(["border-radius-64"]) as ViewStyle}
-        textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
-        rippleColor="black@50%"
+        containerStyle={
+          {
+            ...style.flatten(["border-radius-64"]),
+            backgroundColor: "#151a1a",
+          } as ViewStyle
+        }
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
+        }
         disabled={
           sendConfigs.amountConfig.amount === "" ||
           sendConfigs.amountConfig.amount == "0" ||

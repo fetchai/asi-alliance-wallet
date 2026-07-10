@@ -56,7 +56,7 @@ export const IconWithText: FunctionComponent<{
             style={
               [
                 style.flatten([
-                  "h5",
+                  "h6",
                   "items-center",
                   "margin-y-8",
                   "color-dark",

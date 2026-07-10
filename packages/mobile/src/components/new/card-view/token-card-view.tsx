@@ -69,7 +69,7 @@ export const TokenCardView: FunctionComponent<{
                 <Text
                   style={
                     [
-                      style.flatten(["body3", "padding-2", "color-black"]),
+                      style.flatten(["body3", "padding-2", "color-dark"]),
                       titleStyle,
                     ] as ViewStyle
                   }

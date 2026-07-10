@@ -55,9 +55,14 @@ export const TransactionFeeModel: FunctionComponent<{
         <Button
           text="Save changes"
           containerStyle={
-            style.flatten(["margin-top-24", "border-radius-32"]) as ViewStyle
+            style.flatten([
+              "margin-top-24",
+              "border-radius-32",
+              "background-color-dark",
+            ]) as ViewStyle
           }
-          textStyle={style.flatten(["body2"]) as ViewStyle}
+          textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+          rippleColor="#333333"
           onPress={() => {
             feeConfig.setFeeType(selectFeeButton);
             close();

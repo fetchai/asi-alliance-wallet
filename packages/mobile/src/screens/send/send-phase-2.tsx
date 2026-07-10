@@ -236,23 +236,24 @@ export const SendPhase2: FunctionComponent<{
           style.flatten([
             "flex-row",
             "border-width-1",
-            "border-color-white@20%",
+            "border-color-gray-100",
             "border-radius-12",
             "padding-x-14",
             "padding-y-10",
             "items-center",
+            "background-color-gray-5",
           ]) as ViewStyle
         }
       >
         <View style={style.flatten(["flex-3", "justify-center"]) as ViewStyle}>
           {usdValue() ? (
-            <Text style={style.flatten(["color-white", "body3"]) as ViewStyle}>
+            <Text style={style.flatten(["color-dark", "body3"]) as ViewStyle}>
               {usdValue()} {`${priceStore.defaultVsCurrency.toUpperCase()}`}
             </Text>
           ) : null}
           <Text
             style={
-              style.flatten(["color-white@60%", "text-caption2"]) as ViewStyle
+              style.flatten(["color-gray-300", "text-caption2"]) as ViewStyle
             }
           >
             {`${numberLocalFormat(getAmountLabel().split(" ")[0])} ${
@@ -267,12 +268,12 @@ export const SendPhase2: FunctionComponent<{
           containerStyle={
             style.flatten([
               "border-width-1",
-              activityStore.getPendingTxnTypes[txnTypeKey.send]
-                ? "border-color-white@20%"
-                : "border-color-white@40%",
+              "border-color-gray-100",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["padding-x-14", "body3"]) as ViewStyle}
+          textStyle={
+            style.flatten(["padding-x-14", "body3", "color-dark"]) as ViewStyle
+          }
           disable={activityStore.getPendingTxnTypes[txnTypeKey.send]}
           onPress={() => setIsNext(false)}
         />
@@ -309,7 +310,7 @@ export const SendPhase2: FunctionComponent<{
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -317,7 +318,7 @@ export const SendPhase2: FunctionComponent<{
             style={
               style.flatten([
                 "body3",
-                "color-white",
+                "color-dark",
                 "margin-right-6",
               ]) as ViewStyle
             }
@@ -330,8 +331,8 @@ export const SendPhase2: FunctionComponent<{
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.send]
-                    ? style.get("color-white@20%").color
-                    : "white"
+                    ? "#DCDCE3"
+                    : "#151a1a"
                 }
               />
             }
@@ -342,9 +343,7 @@ export const SendPhase2: FunctionComponent<{
                 "items-center",
                 "justify-center",
                 "border-width-1",
-                activityStore.getPendingTxnTypes[txnTypeKey.send]
-                  ? "border-color-white@20%"
-                  : "border-color-white@40%",
+                "border-color-gray-100",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.send]}
@@ -372,16 +371,15 @@ export const SendPhase2: FunctionComponent<{
         text="Review transaction"
         size="large"
         containerStyle={
-          style.flatten(
-            ["border-radius-64", "margin-top-20"],
-            [
-              sendConfigs.amountConfig.amount === "" ||
-                sendConfigs.amountConfig.amount == "0",
-            ]
-          ) as ViewStyle
+          {
+            ...style.flatten(["border-radius-64", "margin-top-20"]),
+            backgroundColor: "#151a1a",
+          } as ViewStyle
         }
-        textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
-        rippleColor="black@50%"
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
+        }
+        rippleColor={style.get("color-green-250").color}
         disabled={
           !account.isReadyToSendTx ||
           !txStateIsValid ||

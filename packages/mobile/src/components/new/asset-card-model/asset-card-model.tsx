@@ -93,7 +93,6 @@ export const AssetCardModel: FunctionComponent<{
     >
       <InputCardView
         placeholder="Search"
-        placeholderTextColor={"white"}
         value={search}
         onChangeText={(text: string) => {
           setSearch(text);
@@ -128,7 +127,7 @@ export const AssetCardModel: FunctionComponent<{
                   [
                     currency.coinMinimalDenom ===
                       amountConfig.sendCurrency.coinMinimalDenom &&
-                      "background-color-indigo",
+                      "background-color-green-250",
                   ]
                 ) as ViewStyle
               }

@@ -123,7 +123,7 @@ export const ActivityNativeTab: FunctionComponent<{
           }}
           keyExtractor={(_item, index) => index.toString()}
           ItemSeparatorComponent={() => (
-            <CardDivider style={style.flatten(["margin-y-16"]) as ViewStyle} />
+            <CardDivider style={style.flatten(["margin-y-8"]) as ViewStyle} />
           )}
         />
       );

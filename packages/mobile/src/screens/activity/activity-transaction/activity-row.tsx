@@ -36,7 +36,17 @@ export const ActivityRow: FunctionComponent<{
 
   return (
     <TouchableOpacity
-      style={style.flatten(["flex-row", "items-center"]) as ViewStyle}
+      style={
+        style.flatten([
+          "flex-row",
+          "items-center",
+          "background-color-gray-5",
+          "border-radius-12",
+          "padding-x-8",
+          "padding-y-12",
+          "margin-y-4",
+        ]) as ViewStyle
+      }
       onPress={() => {
         navigation.navigate("Others", {
           screen: "ActivityDetails",
@@ -82,14 +92,16 @@ export const ActivityRow: FunctionComponent<{
           }
         >
           <IconButton
-            icon={getActivityIcon(details.verb)}
-            backgroundBlur={true}
+            icon={getActivityIcon(details.verb, "#151a1a")}
+            backgroundBlur={false}
             iconStyle={
               style.flatten([
                 "width-32",
                 "height-32",
                 "items-center",
                 "justify-center",
+                "background-color-gray-100",
+                "border-radius-64",
               ]) as ViewStyle
             }
           />

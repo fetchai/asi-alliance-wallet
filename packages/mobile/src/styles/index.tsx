@@ -44,6 +44,7 @@ export const ColorPalette = {
   "green-50": "#ECFDF6",
   "green-100": "#DBF9EC",
   "green-200": "#AAECD0",
+  "green-250": "#B1FCAB",
   "green-300": "#68EAB2",
   "green-400": "#2DD98F",
   "green-500": "#22AC71",

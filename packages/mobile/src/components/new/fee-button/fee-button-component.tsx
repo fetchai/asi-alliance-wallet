@@ -80,21 +80,21 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
             ]) as ViewStyle
           }
         >
-          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
             Advanced Settings
           </Text>
           <Switch
             trackColor={{
-              false: "#767577",
-              true: "#5F38FB",
+              false: "#d0d1d1",
+              true: "#2DCE89",
             }}
-            thumbColor={feeButtonState.isGasInputOpen ? "#FFFFFF" : "#D0BCFF66"}
+            thumbColor={feeButtonState.isGasInputOpen ? "#FFFFFF" : "#f6f6f6"}
             style={[
               {
                 borderRadius: 16,
               },
               style.flatten(
-                ["border-color-pink-light@40%"],
+                ["border-color-gray-200"],
                 [!feeButtonState.isGasInputOpen && "border-width-1"]
               ),
             ]}
@@ -194,35 +194,42 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
       const isEvm = chainStore.current.features?.includes("evm") ?? false;
 
       return (
-        <BlurBackground borderRadius={12} blurIntensity={15}>
+        <BlurBackground
+          borderRadius={12}
+          blurIntensity={0}
+          containerStyle={
+            [{ backgroundColor: selected ? "#e0fedd" : "#f6f6f6" }] as ViewStyle
+          }
+        >
           <RectButton
             style={
-              style.flatten(
-                [
-                  "flex-row",
-                  "items-center",
-                  "justify-between",
-                  "padding-x-16",
-                  "padding-y-18",
-                ],
-                [selected && "background-color-indigo", "border-radius-12"]
-              ) as ViewStyle
+              style.flatten([
+                "flex-row",
+                "items-center",
+                "justify-between",
+                "padding-x-16",
+                "padding-y-18",
+                "border-radius-12",
+              ]) as ViewStyle
             }
+            underlayColor={selected ? "#c8f5c5" : "#e0e0e0"}
             onPress={onPress}
           >
             <View style={style.flatten(["flex-row"])}>
-              <Text
-                style={style.flatten(["body3", "color-white"]) as ViewStyle}
-              >
+              <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
                 {label}
               </Text>
               {price ? (
                 <Text
                   style={
-                    style.flatten(
-                      ["padding-top-2", "text-caption2", "margin-left-6"],
-                      [selected ? "color-white" : "color-white@60%"]
-                    ) as ViewStyle
+                    [
+                      style.flatten([
+                        "padding-top-2",
+                        "text-caption2",
+                        "margin-left-6",
+                      ]),
+                      { color: "#737676" },
+                    ] as ViewStyle
                   }
                 >
                   {price.toString()}
@@ -231,11 +238,10 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
             </View>
             <Text
               style={
-                style.flatten([
-                  "text-center",
-                  "text-caption2",
-                  "color-white@60%",
-                ]) as ViewStyle
+                [
+                  style.flatten(["text-center", "text-caption2"]),
+                  { color: "#737676" },
+                ] as ViewStyle
               }
             >
               {amount.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}

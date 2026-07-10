@@ -105,7 +105,7 @@ export const CardModal: FunctionComponent<{
                         "items-center",
                         "justify-center",
                         "border-width-1",
-                        "border-color-white@20%",
+                        "border-color-gray-200",
                       ]) as ViewStyle
                     }
                     onPress={() => close()}

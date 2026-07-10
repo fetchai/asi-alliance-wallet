@@ -156,7 +156,11 @@ export const ActivityDetails = observer(() => {
             borderRadius={12}
             backgroundBlur={false}
             containerStyle={
-              style.flatten(["margin-12", "padding-16", "background-color-gray-5"]) as ViewStyle
+              style.flatten([
+                "margin-12",
+                "padding-16",
+                "background-color-gray-5",
+              ]) as ViewStyle
             }
           >
             <TimelineView
@@ -164,14 +168,16 @@ export const ActivityDetails = observer(() => {
                 {
                   icon: (
                     <IconButton
-                      icon={<LeftRightCrossIcon size={20} />}
-                      backgroundBlur={true}
+                      icon={<LeftRightCrossIcon size={20} color="#151a1a" />}
+                      backgroundBlur={false}
                       iconStyle={
                         style.flatten([
                           "width-32",
                           "height-32",
                           "items-center",
                           "justify-center",
+                          "background-color-gray-100",
+                          "border-radius-64",
                         ]) as ViewStyle
                       }
                     />
@@ -188,14 +194,18 @@ export const ActivityDetails = observer(() => {
             borderRadius={12}
             backgroundBlur={false}
             containerStyle={
-              style.flatten(["margin-12", "padding-16", "background-color-gray-5"]) as ViewStyle
+              style.flatten([
+                "margin-12",
+                "padding-16",
+                "background-color-gray-5",
+              ]) as ViewStyle
             }
           >
             <TimelineView
               trailingTitleStyle={
                 style.flatten([
                   details.verb == "Received"
-                    ? "color-green-400"
+                    ? "color-vibrant-green-500"
                     : "color-dark",
                 ]) as ViewStyle
               }
@@ -203,14 +213,16 @@ export const ActivityDetails = observer(() => {
                 {
                   icon: (
                     <IconButton
-                      icon={getActivityIcon("")}
-                      backgroundBlur={true}
+                      icon={getActivityIcon("", "#151a1a")}
+                      backgroundBlur={false}
                       iconStyle={
                         style.flatten([
                           "width-32",
                           "height-32",
                           "items-center",
                           "justify-center",
+                          "background-color-gray-100",
+                          "border-radius-64",
                         ]) as ViewStyle
                       }
                     />
@@ -227,14 +239,16 @@ export const ActivityDetails = observer(() => {
                 {
                   icon: (
                     <IconButton
-                      icon={getActivityIcon(details.verb)}
-                      backgroundBlur={true}
+                      icon={getActivityIcon(details.verb, "#151a1a")}
+                      backgroundBlur={false}
                       iconStyle={
                         style.flatten([
                           "width-32",
                           "height-32",
                           "items-center",
                           "justify-center",
+                          "background-color-gray-100",
+                          "border-radius-64",
                         ]) as ViewStyle
                       }
                     />

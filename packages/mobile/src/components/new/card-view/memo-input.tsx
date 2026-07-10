@@ -79,7 +79,6 @@ export const MemoInputView: FunctionComponent<{
                   error ? "border-color-red-250" : undefined,
                 ]
               ),
-              { backgroundColor: "#f6f6f6" },
               inputContainerStyle,
             ] as ViewStyle
           }

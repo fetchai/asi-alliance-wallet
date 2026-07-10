@@ -83,7 +83,7 @@ export const AmountInputSection: FunctionComponent<{
         style={
           style.flatten(
             ["h2", "font-medium", "height-66", "flex-0", "text-center"],
-            [errorText ? "color-red-250" : "color-white"]
+            [errorText ? "color-red-250" : "color-dark"]
           ) as ViewStyle
         }
         inputContainerStyle={
@@ -118,7 +118,9 @@ export const AmountInputSection: FunctionComponent<{
               : amountConfig.sendCurrency.coinDenom}
           </Text>
         }
-        placeholderTextColor={errorText ? "red" : "white"}
+        placeholderTextColor={
+          errorText ? "red" : style.flatten(["color-gray-300"]).color
+        }
         value={
           isToggleClicked && amountConfig.sendCurrency["coinGeckoId"]
             ? parseDollarAmount(inputInUsd).toString()
@@ -145,7 +147,7 @@ export const AmountInputSection: FunctionComponent<{
           <Text
             style={
               [
-                style.flatten(["body3", "color-gray-100", "text-center"]),
+                style.flatten(["body3", "color-gray-300", "text-center"]),
               ] as ViewStyle
             }
           >
@@ -157,7 +159,7 @@ export const AmountInputSection: FunctionComponent<{
             style={
               style.flatten([
                 "body3",
-                "color-white@60%",
+                "color-gray-300",
                 "text-center",
               ]) as ViewStyle
             }

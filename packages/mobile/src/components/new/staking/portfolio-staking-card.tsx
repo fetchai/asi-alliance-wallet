@@ -9,7 +9,7 @@ import { Dec } from "@keplr-wallet/unit";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { TransactionModal } from "modals/transaction";
-import { GradientButton } from "components/new/button/gradient-button";
+import { Button } from "components/button";
 import { ClaimRewardsModal } from "../claim-reward-model";
 import {
   NavigationProp,
@@ -170,14 +170,17 @@ export const PortfolioStakingCard: FunctionComponent<{
         stakable.toDec().lte(new Dec(0)) ||
         rewards.pendingRewardValidatorAddresses.length === 0
       ) ? (
-        <GradientButton
+        <Button
           text="Claim rewards"
-          size="default"
           containerStyle={
-            style.flatten(["border-radius-64", "margin-top-20"]) as ViewStyle
+            style.flatten([
+              "border-radius-64",
+              "margin-top-20",
+              "background-color-dark",
+            ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3"]) as ViewStyle}
-          rippleColor="black@50%"
+          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
+          rippleColor={style.get("color-green-250").color}
           onPress={() => {
             if (accountInfo.txTypeInProgress === "withdrawRewards") {
               Toast.show({
