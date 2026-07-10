@@ -76,7 +76,7 @@ export const ActivityRow: FunctionComponent<{
           style={
             style.flatten([
               "border-radius-64",
-              "background-color-indigo-900",
+              "background-color-gray-100",
               "margin-left-16",
             ]) as ViewStyle
           }
@@ -101,7 +101,7 @@ export const ActivityRow: FunctionComponent<{
             style.flatten([
               "body3",
               "padding-4",
-              "color-white",
+              "color-dark",
               "font-medium",
             ]) as ViewStyle
           }
@@ -113,7 +113,7 @@ export const ActivityRow: FunctionComponent<{
             style.flatten([
               "body3",
               "padding-2",
-              "color-white@60%",
+              "color-gray-300",
               "font-medium",
             ]) as ViewStyle
           }
@@ -123,11 +123,11 @@ export const ActivityRow: FunctionComponent<{
               Confirmed • {moment(details.timestamp).format("hh:mm A")}
             </React.Fragment>
           ) : node.transaction.status === "Pending" ? (
-            <Text style={style.flatten(["color-white@60%", "h7"]) as ViewStyle}>
+            <Text style={style.flatten(["color-gray-300", "h7"]) as ViewStyle}>
               Pending
             </Text>
           ) : (
-            <Text style={style.flatten(["color-white@60%", "h7"]) as ViewStyle}>
+            <Text style={style.flatten(["color-gray-300", "h7"]) as ViewStyle}>
               Error
             </Text>
           )}
@@ -152,7 +152,7 @@ export const ActivityRow: FunctionComponent<{
               "font-medium",
               details.verb == "Received"
                 ? "color-vibrant-green-500"
-                : "color-white@60%",
+                : "color-dark",
             ]) as ViewStyle
           }
         >
@@ -163,7 +163,7 @@ export const ActivityRow: FunctionComponent<{
             style.flatten([
               "body3",
               "font-medium",
-              "color-white@60%",
+              "color-gray-300",
               "margin-left-4",
             ]) as ViewStyle
           }

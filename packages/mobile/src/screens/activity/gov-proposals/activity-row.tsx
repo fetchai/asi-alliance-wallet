@@ -76,7 +76,7 @@ export const GovActivityRow: FunctionComponent<{
             style.flatten([
               "body3",
               "padding-y-6",
-              "color-white",
+              "color-dark",
               "font-medium",
             ]) as ViewStyle
           }
@@ -87,7 +87,7 @@ export const GovActivityRow: FunctionComponent<{
           style={
             style.flatten([
               "body3",
-              "color-white@60%",
+              "color-gray-300",
               "font-medium",
             ]) as ViewStyle
           }

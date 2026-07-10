@@ -86,14 +86,14 @@ export const ActivityDetails = observer(() => {
   };
 
   return (
-    <PageWithScrollView backgroundMode={"image"}>
+    <PageWithScrollView backgroundMode={"secondary"}>
       <View style={style.flatten(["items-center"]) as ViewStyle}>
         <View
           style={
             style.flatten([
               "padding-16",
               "border-radius-64",
-              "background-color-white",
+              "background-color-gray-100",
             ]) as ViewStyle
           }
         >
@@ -102,7 +102,7 @@ export const ActivityDetails = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-white",
+              "color-dark",
               "h3",
               "font-normal",
               "margin-top-10",
@@ -146,7 +146,7 @@ export const ActivityDetails = observer(() => {
             ) as ViewStyle
           }
         />
-        <Text style={style.flatten(["color-gray-200", "body2"]) as ViewStyle}>
+        <Text style={style.flatten(["color-gray-300", "body2"]) as ViewStyle}>
           {moment(details.timestamp).format("MMMM DD, hh:mm A")}
         </Text>
       </View>
@@ -154,9 +154,9 @@ export const ActivityDetails = observer(() => {
         {details.verb === "Smart Contract Interaction" ? (
           <BlurBackground
             borderRadius={12}
-            blurIntensity={15}
+            backgroundBlur={false}
             containerStyle={
-              style.flatten(["margin-12", "padding-16"]) as ViewStyle
+              style.flatten(["margin-12", "padding-16", "background-color-gray-5"]) as ViewStyle
             }
           >
             <TimelineView
@@ -186,9 +186,9 @@ export const ActivityDetails = observer(() => {
         ) : (
           <BlurBackground
             borderRadius={12}
-            blurIntensity={15}
+            backgroundBlur={false}
             containerStyle={
-              style.flatten(["margin-12", "padding-16"]) as ViewStyle
+              style.flatten(["margin-12", "padding-16", "background-color-gray-5"]) as ViewStyle
             }
           >
             <TimelineView
@@ -196,7 +196,7 @@ export const ActivityDetails = observer(() => {
                 style.flatten([
                   details.verb == "Received"
                     ? "color-green-400"
-                    : "color-white",
+                    : "color-dark",
                 ]) as ViewStyle
               }
               data={[

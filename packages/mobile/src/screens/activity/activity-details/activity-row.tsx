@@ -26,7 +26,7 @@ export const DetailRow = ({
       }
     >
       <View style={style.flatten(["flex-2"]) as ViewStyle}>
-        <Text style={style.flatten(["color-white"]) as ViewStyle}>{label}</Text>
+        <Text style={style.flatten(["color-dark"]) as ViewStyle}>{label}</Text>
       </View>
       <RectButton
         style={StyleSheet.flatten([

@@ -15,7 +15,7 @@ export const NoActivityView: FunctionComponent = () => {
     <IconWithText
       title={
         isAvailable
-          ? "No activity yet"
+          ? "No Activity Yet"
           : "Feature not available \non this network"
       }
       subtitle={

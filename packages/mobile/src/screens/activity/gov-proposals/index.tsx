@@ -91,7 +91,7 @@ export const GovProposalsTab: FunctionComponent<{
         ) : proposalLoading ? (
           <ActivityIndicator
             size="large"
-            color={style.get("color-white").color}
+            color={style.get("color-dark").color}
           />
         ) : (
           <NoActivityView />

@@ -144,7 +144,7 @@ export const ActivityNativeTab: FunctionComponent<{
         ) : activities.length == 0 && isLoading ? (
           <ActivityIndicator
             size="large"
-            color={style.get("color-white").color}
+            color={style.get("color-dark").color}
           />
         ) : (
           <NoActivityView />

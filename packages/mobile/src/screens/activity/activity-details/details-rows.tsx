@@ -256,7 +256,7 @@ export const DetailRows = ({ details }: { details: any }) => {
             containerStyle={
               style.flatten([
                 "border-width-1",
-                "border-color-white@40%",
+                "border-color-gray-100",
                 "margin-4",
                 "padding-6",
                 "justify-center",

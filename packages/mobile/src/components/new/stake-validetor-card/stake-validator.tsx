@@ -74,7 +74,10 @@ export const StakeValidatorCardView: FunctionComponent<{
         borderRadius={12}
         backgroundBlur={false}
         containerStyle={
-          [style.flatten(["padding-18", "background-color-gray-5"]), containerStyle] as ViewStyle
+          [
+            style.flatten(["padding-18", "background-color-gray-5"]),
+            containerStyle,
+          ] as ViewStyle
         }
       >
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -106,7 +109,11 @@ export const StakeValidatorCardView: FunctionComponent<{
                   } as ViewStyle
                 }
               >
-                <VectorCharacter char={heading[0]} color="#151a1a" height={12} />
+                <VectorCharacter
+                  char={heading[0]}
+                  color="#151a1a"
+                  height={12}
+                />
               </BlurBackground>
             )}
             <View>
