@@ -251,7 +251,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   return (
     <React.Fragment>
       <ScreenBackground
-        backgroundMode="image"
+        backgroundMode="secondary"
         backgroundBlur={true}
         isTransparentHeader={true}
       />
@@ -270,9 +270,11 @@ export const UnlockScreen: FunctionComponent = observer(() => {
         >
           <View style={style.flatten(["items-center"]) as ViewStyle}>
             <Image
-              source={require("assets/logo/logo.png")}
+              source={require("assets/logo/logo-black.png")}
               style={{
                 aspectRatio: 2.977,
+                width: 100,
+                height: 80,
               }}
               resizeMode="contain"
               fadeDuration={0}
@@ -283,7 +285,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
               style.flatten(["margin-x-page", "margin-top-34"]) as ViewStyle
             }
           >
-            <Text style={style.flatten(["h2", "font-medium", "color-white"])}>
+            <Text style={style.flatten(["h2", "font-medium", "color-dark"])}>
               Welcome back
             </Text>
             <Text
@@ -291,7 +293,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 style.flatten([
                   "h6",
                   "font-medium",
-                  "color-gray-100",
+                  "color-gray-300",
                   "margin-top-12",
                 ]) as ViewStyle
               }
@@ -321,6 +323,8 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 )
               }
               containerStyle={style.flatten(["margin-y-20"]) as ViewStyle}
+              labelStyle={{ color: "#737676" } as ViewStyle}
+              inputStyle={{ color: "#151a1a" } as ViewStyle}
               secureTextEntry={!showPassword}
               value={password}
               returnKeyType="done"
@@ -333,8 +337,12 @@ export const UnlockScreen: FunctionComponent = observer(() => {
             />
             <Button
               containerStyle={
-                style.flatten(["border-radius-32", "margin-y-10"]) as ViewStyle
+                {
+                  ...style.flatten(["border-radius-32", "margin-y-10"]),
+                  backgroundColor: "#151a1a",
+                } as ViewStyle
               }
+              textStyle={style.flatten(["color-white"]) as ViewStyle}
               text="Sign in"
               size="large"
               loading={isLoading}
@@ -357,18 +365,18 @@ export const UnlockScreen: FunctionComponent = observer(() => {
               >
                 <View style={style.flatten(["items-center"]) as ViewStyle}>
                   {Platform.OS === "android" ? (
-                    <FingerprintIcon color={style.get("color-white").color} />
+                    <FingerprintIcon color={"#151a1a"} />
                   ) : (
-                    <FaceDetectIcon color={style.get("color-blue-400").color} />
+                    <FaceDetectIcon color={"#151a1a"} />
                   )}
                 </View>
                 <Button
-                  textStyle={style.flatten(["color-white", "h5"]) as ViewStyle}
+                  textStyle={style.flatten(["color-dark", "h5"]) as ViewStyle}
                   text="Use biometric authentication"
                   mode="text"
                   loading={isBiometricLoading}
                   showLoadingSpinner={true}
-                  loaderColor="white"
+                  loaderColor="#151a1a"
                 />
               </View>
             </TouchableOpacity>

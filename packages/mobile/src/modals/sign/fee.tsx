@@ -54,7 +54,7 @@ export const FeeInSign: FunctionComponent<{
             }
           >
             <Text
-              style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}
+              style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
             >
               Transaction fee:
             </Text>
@@ -65,7 +65,7 @@ export const FeeInSign: FunctionComponent<{
                 style={
                   style.flatten([
                     "body3",
-                    "color-white",
+                    "color-dark",
                     "margin-right-6",
                   ]) as ViewStyle
                 }
@@ -80,7 +80,7 @@ export const FeeInSign: FunctionComponent<{
               </Text>
               <IconButton
                 backgroundBlur={false}
-                icon={<GearIcon />}
+                icon={<GearIcon color={style.flatten(["color-dark"]).color} />}
                 iconStyle={
                   style.flatten([
                     "width-32",
@@ -88,7 +88,7 @@ export const FeeInSign: FunctionComponent<{
                     "items-center",
                     "justify-center",
                     "border-width-1",
-                    "border-color-white@40%",
+                    "border-color-gray-100",
                   ]) as ViewStyle
                 }
                 onPress={() => setFeeModal(true)}

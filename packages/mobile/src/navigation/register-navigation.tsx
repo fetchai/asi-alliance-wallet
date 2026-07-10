@@ -2,7 +2,7 @@ import React, { FunctionComponent } from "react";
 import { useStyle } from "styles/index";
 import { TransitionPresets } from "@react-navigation/stack";
 import {
-  BlurHeaderOptionsPreset,
+  HeaderOnSecondaryScreenOptionsPreset,
   TransparentHeaderOptionsPreset,
 } from "components/header";
 import { RegisterIntroScreen } from "screens/register";
@@ -62,9 +62,12 @@ export const RegisterNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "Import wallet",
+          headerTitleStyle: {
+            color: style.flatten(["color-dark"]).color,
+            fontSize: 16,
+          },
         }}
         name="Register.RecoverMnemonic"
         component={RecoverMnemonicScreen}

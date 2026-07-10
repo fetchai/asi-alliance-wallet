@@ -125,7 +125,6 @@ export const TransactionModal: FunctionComponent<{
               ]) as ViewStyle
             }
             textStyle={style.flatten(["color-white", "body2"]) as ViewStyle}
-            rippleColor="black@50%"
             onPress={() => {
               close();
               onTryAgainClick();
@@ -147,7 +146,6 @@ export const TransactionModal: FunctionComponent<{
             ) as ViewStyle
           }
           textStyle={style.flatten(["color-white", "body2"]) as ViewStyle}
-          rippleColor="black@50%"
           onPress={() => {
             close();
             onHomeClick();

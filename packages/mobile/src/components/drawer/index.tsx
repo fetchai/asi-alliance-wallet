@@ -183,7 +183,6 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                       ]) as ViewStyle
                     }
                     activeOpacity={0.5}
-                    rippleColor={"#e0fedd"}
                     underlayColor={"#e0fedd"}
                   >
                     <View

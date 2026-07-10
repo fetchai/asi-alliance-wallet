@@ -177,8 +177,7 @@ export const FilterView: FunctionComponent<{
         containerStyle={
           {
             ...style.flatten(["border-radius-64"]),
-            backgroundColor:
-              filters == selectedFilter ? "#e8e8e8" : "#151a1a",
+            backgroundColor: filters == selectedFilter ? "#e8e8e8" : "#151a1a",
           } as ViewStyle
         }
         textStyle={
@@ -187,7 +186,6 @@ export const FilterView: FunctionComponent<{
             filters == selectedFilter ? "color-gray-300" : "color-white",
           ]) as ViewStyle
         }
-        rippleColor="#333333"
         disabled={filters == selectedFilter}
         onPress={() => handleFilterChange(selectedFilter)}
       />

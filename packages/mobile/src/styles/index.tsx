@@ -94,6 +94,7 @@ export const ColorPalette = {
   "gray-5": "#F6F6F6",
   "gray-10": "#F8F9FC",
   "gray-50": "#F2F2F7",
+  "gray-60": "#E0E0E0",
   "gray-100": "#DCDCE3",
   "gray-200": "#C6C6CD",
   "gray-300": "#9A9AA2",
@@ -498,7 +499,7 @@ export const { StyleProvider, useStyle, useStyleThemeController } =
           "blurred-tabbar-background": BackgroundColors["card"],
 
           // Belows are for the button props and may not be used as styles.
-          "rect-button-default-ripple": ColorPalette["indigo"],
+          "rect-button-default-ripple": ColorPalette["gray-60"],
           // Active opacity is 0.2 by default.
           "rect-button-default-underlay": ColorPalette["gray-300"],
 

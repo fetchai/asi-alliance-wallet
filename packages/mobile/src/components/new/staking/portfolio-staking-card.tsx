@@ -180,7 +180,6 @@ export const PortfolioStakingCard: FunctionComponent<{
             ]) as ViewStyle
           }
           textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
-          rippleColor={style.get("color-green-250").color}
           onPress={() => {
             if (accountInfo.txTypeInProgress === "withdrawRewards") {
               Toast.show({

@@ -11,6 +11,12 @@ import english from "hyphenation.en-us";
 import { useStore } from "stores/index";
 import { Buffer } from "buffer/";
 import { observer } from "mobx-react-lite";
+import { Grant } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/authz";
+import {
+  AuthorizationType,
+  StakeAuthorization,
+} from "@keplr-wallet/proto-types/cosmos/staking/v1beta1/authz";
+import { SendAuthorization } from "@keplr-wallet/proto-types/cosmos/bank/v1beta1/authz";
 
 const h = new Hypher(english);
 
@@ -104,6 +110,14 @@ export interface MsgVote {
   };
 }
 
+export interface MsgSubmitProposal {
+  value: {
+    content: any;
+    initial_deposit: CoinPrimitive[];
+    proposer: string;
+  };
+}
+
 export interface MsgInstantiateContract {
   value: {
     // Admin field can be omitted.
@@ -155,7 +169,7 @@ export interface MsgLink {
         to: string;
       }
     ];
-    address: string;
+    neuron: string;
   };
 }
 
@@ -398,6 +412,237 @@ export function renderMsgVote(proposalId: string, option: string | number) {
   };
 }
 
+export function renderMsgSubmitProposal(
+  proposer: string,
+  content: any,
+  initialDeposit: CoinPrimitive[] | undefined
+) {
+  const proposalTitle = content?.value?.title || content?.title;
+  const proposalType = (
+    content?.type?.split("/").pop() || content?.["@type"]?.split(".").pop()
+  )
+    ?.replace(/([A-Z])/g, " $1")
+    .trim();
+
+  return {
+    title: proposalTitle || "Submit Proposal",
+    content: (
+      <Text>
+        <Text>{"Proposer: "}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {hyphen(Bech32Address.shortenAddress(proposer, 24))}
+        </Text>
+        <Text>{`\nType: `}</Text>
+        <Text style={{ fontWeight: "bold" }}>{proposalType || "Proposal"}</Text>
+        {initialDeposit && initialDeposit.length > 0 ? (
+          <Text>{`\nDeposit: ${initialDeposit
+            .map((d) => `${d.amount} ${d.denom}`)
+            .join(", ")}`}</Text>
+        ) : null}
+        <Text>{`\n${JSON.stringify(content, null, 2)}`}</Text>
+      </Text>
+    ),
+    scrollViewHorizontal: true,
+  };
+}
+
+export function renderMsgInstantiateContract(
+  currencies: AppCurrency[],
+  initFunds: CoinPrimitive[],
+  admin: string | undefined,
+  codeId: string,
+  label: string,
+  initMsg: object
+) {
+  const funds: { amount: string; denom: string }[] = [];
+  for (const coinPrimitive of initFunds) {
+    const coin = new Coin(coinPrimitive.denom, coinPrimitive.amount);
+    const parsed = CoinUtils.parseDecAndDenomFromCoin(currencies, coin);
+    funds.push({
+      amount: clearDecimals(parsed.amount),
+      denom: parsed.denom,
+    });
+  }
+
+  return {
+    title: "Instantiate Contract",
+    content: (
+      <Text>
+        <Text>{"Code ID: "}</Text>
+        <Text style={{ fontWeight: "bold" }}>{codeId}</Text>
+        <Text>{`\nLabel: `}</Text>
+        <Text style={{ fontWeight: "bold" }}>{label}</Text>
+        {admin ? (
+          <Text>
+            <Text>{`\nAdmin: `}</Text>
+            <Text style={{ fontWeight: "bold" }}>
+              {Bech32Address.shortenAddress(admin, 30)}
+            </Text>
+          </Text>
+        ) : null}
+        {funds.length > 0 ? (
+          <Text>
+            <Text>{`\nFunds: `}</Text>
+            <Text style={{ fontWeight: "bold" }}>
+              {funds.map((c) => `${c.amount} ${c.denom}`).join(", ")}
+            </Text>
+          </Text>
+        ) : null}
+        <WasmExecutionMsgView msg={initMsg} />
+      </Text>
+    ),
+    scrollViewHorizontal: true,
+  };
+}
+
+export function renderGenericMsgGrant(
+  granteeAddress: string,
+  expiration: Grant["expiration"],
+  grantTypeUrl: string
+) {
+  return {
+    title: "Grant Authorization",
+    content: (
+      <Text>
+        <Text>{"Grantee: "}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {hyphen(Bech32Address.shortenAddress(granteeAddress, 24))}
+        </Text>
+        <Text>{`\nGrant type: `}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {grantTypeUrl ? grantTypeUrl.split(".").slice(-1)[0] : "Unspecified"}
+        </Text>
+        {expiration ? (
+          <Text>{`\nExpires: ${expiration.toLocaleDateString()}`}</Text>
+        ) : null}
+      </Text>
+    ),
+  };
+}
+
+const stakingAuthorizationTypeLabels: Record<AuthorizationType, string> = {
+  [AuthorizationType.AUTHORIZATION_TYPE_DELEGATE]: "Delegate",
+  [AuthorizationType.AUTHORIZATION_TYPE_REDELEGATE]: "Redelegate",
+  [AuthorizationType.AUTHORIZATION_TYPE_UNDELEGATE]: "Undelegate",
+  [AuthorizationType.AUTHORIZATION_TYPE_UNSPECIFIED]: "Unspecified",
+  [AuthorizationType.UNRECOGNIZED]: "Unrecognized",
+};
+
+export function renderStakeMsgGrant(
+  currencies: AppCurrency[],
+  grantee: string,
+  expiration: Grant["expiration"],
+  stakingSettings: StakeAuthorization
+) {
+  const parsedMaxAmount =
+    stakingSettings.maxTokens &&
+    CoinUtils.parseDecAndDenomFromCoin(
+      currencies,
+      new Coin(
+        stakingSettings.maxTokens.denom,
+        stakingSettings.maxTokens.amount
+      )
+    );
+  const grantTypeStr =
+    stakingAuthorizationTypeLabels[stakingSettings.authorizationType] ||
+    "Unknown";
+  const validators =
+    stakingSettings.allowList?.address ||
+    stakingSettings.denyList?.address ||
+    [];
+  const validatorListType = stakingSettings.allowList?.address?.length
+    ? "Allowed validators"
+    : "Denied validators";
+
+  return {
+    title: "Grant Authorization",
+    content: (
+      <Text>
+        <Text>{"Grantee: "}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {hyphen(Bech32Address.shortenAddress(grantee, 24))}
+        </Text>
+        <Text>{`\nGrant type: `}</Text>
+        <Text style={{ fontWeight: "bold" }}>{grantTypeStr}</Text>
+        {validators.length > 0 ? (
+          <Text>
+            <Text>{`\n${validatorListType}: `}</Text>
+            <Text style={{ fontWeight: "bold" }}>
+              {validators
+                .map((a) => Bech32Address.shortenAddress(a, 24))
+                .join(", ")}
+            </Text>
+          </Text>
+        ) : null}
+        <Text>{`\nMax amount: `}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {parsedMaxAmount
+            ? `${clearDecimals(parsedMaxAmount.amount)} ${
+                parsedMaxAmount.denom
+              }`
+            : "Unlimited"}
+        </Text>
+        {expiration ? (
+          <Text>{`\nExpires: ${expiration.toLocaleDateString()}`}</Text>
+        ) : null}
+      </Text>
+    ),
+  };
+}
+
+export function renderSendMsgGrant(
+  currencies: AppCurrency[],
+  granteeAddress: string,
+  expiration: Grant["expiration"],
+  sendSettings: SendAuthorization
+) {
+  const spendLimit =
+    sendSettings.spendLimit
+      ?.map((amount) =>
+        CoinUtils.parseDecAndDenomFromCoin(
+          currencies,
+          new Coin(amount.denom, amount.amount)
+        )
+      )
+      ?.map((coin) => `${clearDecimals(coin.amount)} ${coin.denom}`)
+      .join(", ") || "Unlimited";
+
+  return {
+    title: "Grant Authorization",
+    content: (
+      <Text>
+        <Text>{"Grantee: "}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {hyphen(Bech32Address.shortenAddress(granteeAddress, 24))}
+        </Text>
+        <Text>{`\nMax send amount: `}</Text>
+        <Text style={{ fontWeight: "bold" }}>{spendLimit}</Text>
+        {expiration ? (
+          <Text>{`\nExpires: ${expiration.toLocaleDateString()}`}</Text>
+        ) : null}
+      </Text>
+    ),
+  };
+}
+
+export function renderMsgRevoke(revokeType: string, granteeAddress: string) {
+  return {
+    title: "Revoke Authorization",
+    content: (
+      <Text>
+        <Text>{"Revoke: "}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {revokeType.split(".").slice(-1)[0]}
+        </Text>
+        <Text>{" from "}</Text>
+        <Text style={{ fontWeight: "bold" }}>
+          {hyphen(Bech32Address.shortenAddress(granteeAddress, 24))}
+        </Text>
+      </Text>
+    ),
+  };
+}
+
 export function renderMsgExecuteContract(
   currencies: Currency[],
   sentFunds: CoinPrimitive[],
@@ -469,9 +714,7 @@ export const WasmExecutionMsgView: FunctionComponent<{
 
   const style = useStyle();
 
-  // TODO: Toggle open button?
-  // const [isOpen, setIsOpen] = useState(true);
-  // const toggleOpen = () => setIsOpen((isOpen) => !isOpen);
+  const [isOpen, setIsOpen] = useState(true);
 
   const [detailsMsg, setDetailsMsg] = useState(() =>
     JSON.stringify(msg, null, 2)
@@ -520,12 +763,22 @@ export const WasmExecutionMsgView: FunctionComponent<{
 
   return (
     <Text style={style.flatten(["margin-top-8"]) as ViewStyle}>
-      <Text>{`\n${detailsMsg}`}</Text>
-      {warningMsg ? (
-        <Text style={style.flatten(["color-red-200"]) as ViewStyle}>
-          {warningMsg}
-        </Text>
+      {isOpen ? (
+        <React.Fragment>
+          <Text>{`\n${detailsMsg}`}</Text>
+          {warningMsg ? (
+            <Text style={style.flatten(["color-red-200"]) as ViewStyle}>
+              {warningMsg}
+            </Text>
+          ) : null}
+        </React.Fragment>
       ) : null}
+      <Text
+        onPress={() => setIsOpen(!isOpen)}
+        style={style.flatten(["text-caption2", "color-gray-300"]) as ViewStyle}
+      >
+        {isOpen ? "\nClose" : "\nDetails"}
+      </Text>
     </Text>
   );
 });

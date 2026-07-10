@@ -71,7 +71,6 @@ export const QuickTabOptionModel: FunctionComponent<{
           }
           activeOpacity={0.5}
           underlayColor={"#e0e0e0"}
-          rippleColor={"#e0e0e0"}
         >
           <IconButton
             backgroundBlur={false}
@@ -118,7 +117,6 @@ export const QuickTabOptionModel: FunctionComponent<{
           }
           activeOpacity={0.5}
           underlayColor={"#e0e0e0"}
-          rippleColor={"#e0e0e0"}
         >
           <IconButton
             backgroundBlur={false}
@@ -163,8 +161,7 @@ export const QuickTabOptionModel: FunctionComponent<{
             ]) as ViewStyle
           }
           activeOpacity={1}
-          underlayColor={"rgba(255,255,255,0)"}
-          rippleColor={"rgba(255,255,255,0)"}
+          underlayColor={"#e0e0e0"}
         >
           <View
             style={style.flatten(["flex-row", "items-center"]) as ViewStyle}

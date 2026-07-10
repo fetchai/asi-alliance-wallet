@@ -158,58 +158,58 @@ export const AddressInputCard: FunctionComponent<{
           <View
             style={style.flatten(["flex-3", "justify-center"]) as ViewStyle}
           >
-              <TextInput
-                placeholderTextColor={style.flatten(["color-gray-300"]).color}
-                style={
-                  [
-                    style.flatten(["body3", "color-dark", "padding-0"]),
-                    Platform.select({
-                      ios: {},
-                      android: {
-                        // On android, the text input's height does not equals to the line height by strange.
-                        // To fix this problem, set the height explicitly.
-                        height: 19,
-                      },
-                    }),
-                  ] as ViewStyle
+            <TextInput
+              placeholderTextColor={style.flatten(["color-gray-300"]).color}
+              style={
+                [
+                  style.flatten(["body3", "color-dark", "padding-0"]),
+                  Platform.select({
+                    ios: {},
+                    android: {
+                      // On android, the text input's height does not equals to the line height by strange.
+                      // To fix this problem, set the height explicitly.
+                      height: 19,
+                    },
+                  }),
+                ] as ViewStyle
+              }
+              keyboardType={
+                Platform.OS === "ios" ? "ascii-capable" : "visible-password"
+              }
+              returnKeyType="done"
+              placeholder={placeholderText}
+              value={recipientConfig.rawRecipient}
+              multiline={true}
+              editable={editable}
+              onChangeText={(text) => {
+                if (
+                  // If icns is possible and users enters ".", complete bech32 prefix automatically.
+                  "isICNSEnabled" in recipientConfig &&
+                  recipientConfig.isICNSEnabled &&
+                  text.length > 0 &&
+                  text[text.length - 1] === "." &&
+                  numOfCharacter(text, ".") === 1 &&
+                  numOfCharacter(recipientConfig.rawRecipient, ".") === 0
+                ) {
+                  text = text + recipientConfig.icnsExpectedBech32Prefix;
                 }
-                keyboardType={
-                  Platform.OS === "ios" ? "ascii-capable" : "visible-password"
+                recipientConfig.setRawRecipient(text);
+              }}
+              onFocus={(e) => {
+                setIsFocused(true);
+
+                if (onFocus) {
+                  onFocus(e);
                 }
-                returnKeyType="done"
-                placeholder={placeholderText}
-                value={recipientConfig.rawRecipient}
-                multiline={true}
-                editable={editable}
-                onChangeText={(text) => {
-                  if (
-                    // If icns is possible and users enters ".", complete bech32 prefix automatically.
-                    "isICNSEnabled" in recipientConfig &&
-                    recipientConfig.isICNSEnabled &&
-                    text.length > 0 &&
-                    text[text.length - 1] === "." &&
-                    numOfCharacter(text, ".") === 1 &&
-                    numOfCharacter(recipientConfig.rawRecipient, ".") === 0
-                  ) {
-                    text = text + recipientConfig.icnsExpectedBech32Prefix;
-                  }
-                  recipientConfig.setRawRecipient(text);
-                }}
-                onFocus={(e) => {
-                  setIsFocused(true);
+              }}
+              onBlur={(e) => {
+                setIsFocused(false);
 
-                  if (onFocus) {
-                    onFocus(e);
-                  }
-                }}
-                onBlur={(e) => {
-                  setIsFocused(false);
-
-                  if (onBlur) {
-                    onBlur(e);
-                  }
-                }}
-              />
+                if (onBlur) {
+                  onBlur(e);
+                }
+              }}
+            />
           </View>
           <View
             style={
@@ -228,9 +228,7 @@ export const AddressInputCard: FunctionComponent<{
                 icon={
                   <QRCodeIcon
                     size={16}
-                    color={
-                      buttonDisable ? "#DCDCE3" : "#151a1a"
-                    }
+                    color={buttonDisable ? "#DCDCE3" : "#151a1a"}
                   />
                 }
                 borderRadius={0}

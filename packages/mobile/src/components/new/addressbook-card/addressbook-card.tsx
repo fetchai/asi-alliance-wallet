@@ -92,7 +92,6 @@ export const AddressBookCardModel: FunctionComponent<{
     >
       <InputCardView
         placeholder="Search"
-        placeholderTextColor={"white"}
         value={search}
         onChangeText={(text: string) => {
           setSearch(text);
@@ -113,15 +112,22 @@ export const AddressBookCardModel: FunctionComponent<{
                 }}
                 activeOpacity={0.5}
                 style={
-                  style.flatten(["padding-12", "border-radius-12"]) as ViewStyle
+                  [
+                    style.flatten([
+                      "padding-12",
+                      "border-radius-12",
+                      "margin-bottom-4",
+                      "background-color-gray-5",
+                    ]),
+                  ] as ViewStyle
                 }
-                underlayColor={style.flatten(["color-gray-50"]).color}
+                underlayColor={"#e0e0e0"}
               >
                 <Text
                   style={
                     style.flatten([
                       "body3",
-                      "color-white",
+                      "color-dark",
                       "padding-bottom-10",
                     ]) as ViewStyle
                   }
@@ -130,7 +136,10 @@ export const AddressBookCardModel: FunctionComponent<{
                 </Text>
                 <Text
                   style={
-                    style.flatten(["color-white", "text-caption2"]) as ViewStyle
+                    style.flatten([
+                      "text-caption2",
+                      "color-gray-300",
+                    ]) as ViewStyle
                   }
                 >
                   {data.item.address}
@@ -146,7 +155,7 @@ export const AddressBookCardModel: FunctionComponent<{
               style.flatten([
                 "body3",
                 "text-center",
-                "color-white",
+                "color-gray-400",
                 "margin-y-24",
               ]) as ViewStyle
             }
@@ -157,10 +166,9 @@ export const AddressBookCardModel: FunctionComponent<{
             containerStyle={
               style.flatten([
                 "border-radius-32",
-                "border-color-white@40%",
+                "background-color-dark",
               ]) as ViewStyle
             }
-            mode="outline"
             textStyle={style.flatten(["color-white", "body2", "font-normal"])}
             text="Add an address"
             onPress={() => {
