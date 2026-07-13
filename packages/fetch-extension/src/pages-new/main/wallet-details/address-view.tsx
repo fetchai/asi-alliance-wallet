@@ -51,13 +51,19 @@ export const ResponsiveAddressView: React.FC<ResponsiveAddressProps> = ({
       return;
     }
 
+    // Layout not measured yet: never collapse to "..."; show full address until width is known.
+    if (availableWidth <= 0) {
+      setDisplayText(address);
+      return;
+    }
+
     const fullWidth = measureWidth(address);
     if (availableWidth >= fullWidth) {
       setDisplayText(address);
       return;
     }
 
-    let best = "...";
+    let best = address;
     let lo = 0;
     let hi = len;
     while (lo <= hi) {
