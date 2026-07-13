@@ -116,6 +116,9 @@ export class CardanoService {
 
   /**
    * Restore internal CardanoKeyRing from saved keystore of Background wallet.
+   * Owns cleanup of a detached restore: if reset() (or another restore) replaced
+   * this.keyRing mid-flight, dispose only this restore's wallet manager so
+   * Blockfrost polling cannot leak. Never clears a newer current runtime.
    */
   async restoreFromKeyStore(
     store: KeyStore,
@@ -126,6 +129,7 @@ export class CardanoService {
     if (!this.keyRing) {
       this.keyRing = new CardanoKeyRing();
     }
+    const restoringKeyRing = this.keyRing;
 
     const decryptFn = crypto
       ? (keyStore: KeyStore, pwd: string) =>
@@ -137,18 +141,29 @@ export class CardanoService {
       password
     );
 
-    await this.keyRing.restore(
-      store as KeyStore,
-      password,
-      decryptFn,
-      chainId,
-      resolveBlockfrostConfig ? { resolveBlockfrostConfig } : undefined
-    );
+    try {
+      await restoringKeyRing.restore(
+        store as KeyStore,
+        password,
+        decryptFn,
+        chainId,
+        resolveBlockfrostConfig ? { resolveBlockfrostConfig } : undefined
+      );
 
-    await this.waitForKeyAgentReady();
-    this.runtimeSessionId = `cad_sess_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2)}`;
+      await this.waitForKeyAgentReady(restoringKeyRing);
+      // Only publish session id if this restore is still the current runtime.
+      if (this.keyRing === restoringKeyRing) {
+        this.runtimeSessionId = `cad_sess_${Date.now().toString(
+          36
+        )}_${Math.random().toString(36).slice(2)}`;
+      }
+    } finally {
+      if (this.keyRing !== restoringKeyRing) {
+        try {
+          restoringKeyRing.getWalletManager()?.dispose?.();
+        } catch {}
+      }
+    }
   }
 
   /**
@@ -2129,13 +2144,11 @@ export class CardanoService {
   }
 
   /**
-   * Wait for keyAgent to be ready with exponential backoff
+   * Wait for keyAgent readiness on the restore-local keyRing.
+   * If reset() detaches it mid-flight, restoreFromKeyStore() disposes
+   * the orphaned wallet manager in finally.
    */
-  private async waitForKeyAgentReady(): Promise<void> {
-    if (!this.keyRing) {
-      throw new Error("CardanoKeyRing not initialized");
-    }
-
+  private async waitForKeyAgentReady(keyRing: CardanoKeyRing): Promise<void> {
     const config = {
       maxAttempts: 100, // 1 second maximum
       initialDelay: 5, // Start with 5ms
@@ -2146,13 +2159,13 @@ export class CardanoService {
     let attempts = 0;
     let delay = config.initialDelay;
 
-    while (!this.keyRing.isKeyAgentReady() && attempts < config.maxAttempts) {
+    while (!keyRing.isKeyAgentReady() && attempts < config.maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, delay));
       attempts++;
       delay = Math.min(delay * config.backoffMultiplier, config.maxDelay);
     }
 
-    if (!this.keyRing.isKeyAgentReady()) {
+    if (!keyRing.isKeyAgentReady()) {
       throw new Error(
         `CardanoKeyRing keyAgent failed to initialize after ${attempts} attempts`
       );
