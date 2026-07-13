@@ -9,7 +9,7 @@ import { walletSupportsCardano } from "@utils/index";
 import classnames from "classnames";
 import { flowResult } from "mobx";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useState, useMemo } from "react";
+import React, { FunctionComponent, useState, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
@@ -18,6 +18,7 @@ import { getFilteredChainValues } from "@utils/filters";
 import { NotificationOption } from "@components-v2/notification-option";
 import { NoResults } from "@components-v2/no-results";
 import { useLoadingIndicator } from "@components/loading-indicator";
+import { useNotification } from "@components/notification";
 interface ChainListProps {
   showAddress?: boolean;
   setIsSelectNetOpen?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -38,11 +39,65 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const [clickedChain, setClickedChain] = useState(
       chainStore.current.chainId
     );
+    const switchInFlightRef = useRef(false);
 
     const intl = useIntl();
     const navigate = useNavigate();
     const confirm = useConfirm();
     const loadingIndicator = useLoadingIndicator();
+    const notification = useNotification();
+
+    // Keep the picker open until the background switch and last-view
+    // persistence complete. On rollback, keep the current network selected.
+    async function selectChainAndClose(
+      chainId: string,
+      properties: Record<string, string> = {},
+      markClicked = true
+    ) {
+      if (switchInFlightRef.current) {
+        return;
+      }
+      switchInFlightRef.current = true;
+
+      if (markClicked) {
+        setClickedChain(chainId);
+      }
+
+      loadingIndicator.setIsLoading("chain-switch", true);
+      try {
+        await flowResult(chainStore.selectChainAndPersist(chainId));
+        chatStore.userDetailsStore.resetUser();
+        proposalStore.resetProposals();
+        chatStore.messagesStore.resetChatList();
+        chatStore.messagesStore.setIsChatSubscriptionActive(false);
+        messageAndGroupListenerUnsubscribe();
+        if (Object.keys(properties).length > 0) {
+          analyticsStore.logEvent("chain_change_click", properties);
+        }
+        setIsSelectNetOpen?.(false);
+      } catch (error) {
+        if (markClicked) {
+          setClickedChain(chainStore.current.chainId);
+        }
+        console.warn("Failed to switch chain:", error);
+        notification.push({
+          type: "warning",
+          placement: "top-center",
+          duration: 5,
+          content: intl.formatMessage({
+            id: "chain.switch.failed",
+            defaultMessage: "Failed to switch network",
+          }),
+          canDelete: true,
+          transition: {
+            duration: 0.25,
+          },
+        });
+      } finally {
+        loadingIndicator.setIsLoading("chain-switch", false);
+        switchInFlightRef.current = false;
+      }
+    }
 
     const mainChainList = chainStore.chainInfosInUI.filter(
       (chainInfo: any) =>
@@ -154,8 +209,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       : ""
                   }
                   onClick={() => {
-                    setClickedChain(chainInfo.raw.chainId);
-                    let properties = {};
+                    let properties: Record<string, string> = {};
                     if (chainInfo.raw.chainId !== chainStore.current.chainId) {
                       properties = {
                         chainId: chainStore.current.chainId,
@@ -164,23 +218,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                         toChainName: chainInfo.raw.chainName,
                       };
                     }
-                    void flowResult(
-                      chainStore.selectChainAndPersist(chainInfo.raw.chainId)
-                    ).catch((e) => {
-                      console.warn("Failed to switch chain:", e);
-                    });
-                    chatStore.userDetailsStore.resetUser();
-                    proposalStore.resetProposals();
-                    chatStore.messagesStore.resetChatList();
-                    chatStore.messagesStore.setIsChatSubscriptionActive(false);
-                    messageAndGroupListenerUnsubscribe();
-
-                    if (Object.values(properties).length > 0) {
-                      analyticsStore.logEvent("chain_change_click", properties);
-                    }
-                    if (setIsSelectNetOpen) {
-                      setIsSelectNetOpen(false);
-                    }
+                    void selectChainAndClose(chainInfo.raw.chainId, properties);
                   }}
                   subheading={
                     showAddress
@@ -242,7 +280,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       }
                     }}
                     onClick={() => {
-                      let properties = {};
+                      let properties: Record<string, string> = {};
                       if (
                         chainInfo.raw.chainId !== chainStore.current.chainId
                       ) {
@@ -253,28 +291,11 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                           toChainName: chainInfo.raw.chainName,
                         };
                       }
-                      void flowResult(
-                        chainStore.selectChainAndPersist(chainInfo.raw.chainId)
-                      ).catch((e) => {
-                        console.warn("Failed to switch chain:", e);
-                      });
-                      chatStore.userDetailsStore.resetUser();
-                      proposalStore.resetProposals();
-                      chatStore.messagesStore.resetChatList();
-                      chatStore.messagesStore.setIsChatSubscriptionActive(
+                      void selectChainAndClose(
+                        chainInfo.raw.chainId,
+                        properties,
                         false
                       );
-                      messageAndGroupListenerUnsubscribe();
-                      // navigate("/");
-                      if (Object.values(properties).length > 0) {
-                        analyticsStore.logEvent(
-                          "chain_change_click",
-                          properties
-                        );
-                      }
-                      if (setIsSelectNetOpen) {
-                        setIsSelectNetOpen(false);
-                      }
                     }}
                     subheading={
                       showAddress
@@ -371,8 +392,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                       : ""
                   }
                   onClick={() => {
-                    setClickedChain(chainInfo.raw.chainId);
-                    let properties = {};
+                    let properties: Record<string, string> = {};
                     if (chainInfo.raw.chainId !== chainStore.current.chainId) {
                       properties = {
                         chainId: chainStore.current.chainId,
@@ -381,23 +401,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                         toChainName: chainInfo.raw.chainName,
                       };
                     }
-                    void flowResult(
-                      chainStore.selectChainAndPersist(chainInfo.raw.chainId)
-                    ).catch((e) => {
-                      console.warn("Failed to switch chain:", e);
-                    });
-                    chatStore.userDetailsStore.resetUser();
-                    proposalStore.resetProposals();
-                    chatStore.messagesStore.resetChatList();
-                    chatStore.messagesStore.setIsChatSubscriptionActive(false);
-                    messageAndGroupListenerUnsubscribe();
-
-                    if (Object.values(properties).length > 0) {
-                      analyticsStore.logEvent("chain_change_click", properties);
-                    }
-                    if (setIsSelectNetOpen) {
-                      setIsSelectNetOpen(false);
-                    }
+                    void selectChainAndClose(chainInfo.raw.chainId, properties);
                   }}
                   subheading={
                     showAddress
@@ -478,8 +482,7 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                           : ""
                       }
                       onClick={() => {
-                        setClickedChain(chainInfo.raw.chainId);
-                        let properties = {};
+                        let properties: Record<string, string> = {};
                         if (
                           chainInfo.raw.chainId !== chainStore.current.chainId
                         ) {
@@ -490,30 +493,10 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                             toChainName: chainInfo.raw.chainName,
                           };
                         }
-                        void flowResult(
-                          chainStore.selectChainAndPersist(
-                            chainInfo.raw.chainId
-                          )
-                        ).catch((e) => {
-                          console.warn("Failed to switch chain:", e);
-                        });
-                        chatStore.userDetailsStore.resetUser();
-                        proposalStore.resetProposals();
-                        chatStore.messagesStore.resetChatList();
-                        chatStore.messagesStore.setIsChatSubscriptionActive(
-                          false
+                        void selectChainAndClose(
+                          chainInfo.raw.chainId,
+                          properties
                         );
-                        messageAndGroupListenerUnsubscribe();
-
-                        if (Object.values(properties).length > 0) {
-                          analyticsStore.logEvent(
-                            "chain_change_click",
-                            properties
-                          );
-                        }
-                        if (setIsSelectNetOpen) {
-                          setIsSelectNetOpen(false);
-                        }
                       }}
                       subheading={
                         showAddress
