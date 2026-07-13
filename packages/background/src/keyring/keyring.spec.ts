@@ -1,6 +1,7 @@
 import { MemoryKVStore } from "@keplr-wallet/common";
-import { KeyCurves } from "@keplr-wallet/crypto";
+import { KeyCurves, PrivKeySecp256k1 } from "@keplr-wallet/crypto";
 import { ChainInfo } from "@keplr-wallet/types";
+import { Wallet } from "@ethersproject/wallet";
 import { KeyRing } from "./keyring";
 import { Crypto } from "./crypto";
 
@@ -144,11 +145,23 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
       setImmediate(() => setImmediate(resolve));
     });
 
+  const mockChainsService = (
+    chainId: string,
+    features: { address: boolean; signing: boolean } = {
+      address: true,
+      signing: true,
+    }
+  ) => ({
+    getSelectedChain: jest.fn().mockResolvedValue(chainId),
+    getChainEthereumKeyFeatures: jest.fn().mockResolvedValue(features),
+  });
+
   it("does not call getKeys or checkConsistency when partial cache has active wallet address", async () => {
     const kvStore = new MemoryKVStore("keyring-partial-cache-switch");
     const chainId = "evmos_9001-2";
     const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
     const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+    const chainsService = mockChainsService(chainId);
 
     const keyRing = new KeyRing(
       evmEmbedChain(chainId),
@@ -157,9 +170,7 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
       {} as any,
       { dispatchEvent: jest.fn() } as any,
       {} as any,
-      {
-        getSelectedChain: jest.fn().mockResolvedValue(chainId),
-      }
+      chainsService
     );
 
     (keyRing as any).loaded = true;
@@ -185,6 +196,7 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
 
     expect(getKeysSpy).not.toHaveBeenCalled();
     expect(checkConsistencySpy).not.toHaveBeenCalled();
+    expect(chainsService.getChainEthereumKeyFeatures).not.toHaveBeenCalled();
   });
 
   it("calls getKeys when active wallet address is missing from partial cache", async () => {
@@ -200,9 +212,7 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
       {} as any,
       { dispatchEvent: jest.fn() } as any,
       {} as any,
-      {
-        getSelectedChain: jest.fn().mockResolvedValue(chainId),
-      }
+      mockChainsService(chainId)
     );
 
     (keyRing as any).loaded = true;
@@ -238,6 +248,124 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
 
     expect(getKeysSpy).toHaveBeenCalledWith(chainId, true);
   });
+
+  it("uses ethereum address derivation for eth-address-gen chains without evm feature", async () => {
+    const kvStore = new MemoryKVStore("keyring-eth-address-gen-switch");
+    const chainId = "injective-1";
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+    const chainsService = mockChainsService(chainId, {
+      address: true,
+      signing: true,
+    });
+
+    const keyRing = new KeyRing(
+      [
+        {
+          chainId,
+          features: ["eth-address-gen", "eth-key-sign"],
+        } as ChainInfo,
+      ],
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      chainsService
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    (keyRing as any).keyStore = w1;
+    (keyRing as any).password = "pw";
+    (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
+
+    const getKeysSpy = jest.spyOn(keyRing, "getKeys").mockResolvedValue([
+      {
+        name: "Wallet 2",
+        algo: "ethsecp256k1",
+        pubKey: Buffer.from("aa", "hex"),
+        address: Buffer.from("bb".repeat(20), "hex"),
+        isNanoLedger: false,
+        isKeystone: false,
+      },
+    ] as any);
+    jest
+      .spyOn(keyRing as any, "reloadActiveKeyStoreForSwitch")
+      .mockResolvedValue(undefined);
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+    jest
+      .spyOn(keyRing as any, "updateCacheForActiveWallet")
+      .mockResolvedValue(undefined);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w1: { address: "cc".repeat(20), pubKey: "11" },
+    });
+
+    await keyRing.changeKeyStoreFromMultiKeyStore(1);
+    await flushAsyncRepair();
+
+    expect(chainsService.getChainEthereumKeyFeatures).toHaveBeenCalledWith(
+      chainId
+    );
+    expect(getKeysSpy).toHaveBeenCalledWith(chainId, true);
+  });
+
+  it("rejects stale cosmos-derived cache entries when ethereum address derivation is required", async () => {
+    const kvStore = new MemoryKVStore("keyring-stale-eth-cache");
+    const chainId = "injective-1";
+    const wallet = Wallet.createRandom();
+    const mnemonic = wallet.mnemonic.phrase;
+    const privKey = new PrivKeySecp256k1(
+      Buffer.from(wallet.privateKey.slice(2), "hex")
+    );
+    const pubKeyBytes = Buffer.from(privKey.getPubKey().toBytes());
+    const cosmosAddressHex = Buffer.from(
+      privKey.getPubKey().getAddress()
+    ).toString("hex");
+    const ethAddressHex = wallet.address.slice(2).toLowerCase();
+
+    const keyStore = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const keyRing = new KeyRing(
+      [
+        {
+          chainId,
+          features: ["eth-address-gen", "eth-key-sign"],
+        } as ChainInfo,
+      ],
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      mockChainsService(chainId)
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [keyStore];
+    (keyRing as any).keyStore = keyStore;
+    (keyRing as any).password = "pw";
+
+    jest.spyOn(Crypto, "decrypt").mockResolvedValue(Buffer.from(mnemonic));
+    const saveCacheSpy = jest
+      .spyOn(keyRing, "saveGenericChainCache")
+      .mockResolvedValue(undefined);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w1: {
+        address: cosmosAddressHex,
+        pubKey: Buffer.from(pubKeyBytes).toString("hex"),
+      },
+    });
+
+    const keys = await keyRing.getKeys(chainId, true);
+
+    expect(Buffer.from(keys[0].address).toString("hex")).toBe(ethAddressHex);
+    expect(saveCacheSpy).toHaveBeenCalled();
+    const saved = saveCacheSpy.mock.calls[0][1] as Record<
+      string,
+      { address: string }
+    >;
+    expect(saved["w1"].address.toLowerCase()).toBe(ethAddressHex);
+  });
 });
 
 describe("reloadActiveKeyStoreForSwitch session material cache", () => {
@@ -254,6 +382,13 @@ describe("reloadActiveKeyStoreForSwitch session material cache", () => {
     crypto: {
       kdf: "scrypt",
     },
+  });
+
+  const mockChainsService = (chainId: string) => ({
+    getSelectedChain: jest.fn().mockResolvedValue(chainId),
+    getChainEthereumKeyFeatures: jest
+      .fn()
+      .mockResolvedValue({ address: true, signing: true }),
   });
 
   it("reuses session material without decrypt on repeat switch to same wallet", async () => {
@@ -302,9 +437,7 @@ describe("reloadActiveKeyStoreForSwitch session material cache", () => {
       {} as any,
       { dispatchEvent: jest.fn() } as any,
       {} as any,
-      {
-        getSelectedChain: jest.fn().mockResolvedValue(chainId),
-      }
+      mockChainsService(chainId)
     );
 
     (keyRing as any).loaded = true;
@@ -364,9 +497,7 @@ describe("reloadActiveKeyStoreForSwitch session material cache", () => {
       {} as any,
       { dispatchEvent: jest.fn() } as any,
       {} as any,
-      {
-        getSelectedChain: jest.fn().mockResolvedValue(chainId),
-      }
+      mockChainsService(chainId)
     );
 
     (keyRing as any).loaded = true;
@@ -459,9 +590,7 @@ describe("reloadActiveKeyStoreForSwitch session material cache", () => {
       {} as any,
       { dispatchEvent: jest.fn() } as any,
       {} as any,
-      {
-        getSelectedChain: jest.fn().mockResolvedValue(chainId),
-      }
+      mockChainsService(chainId)
     );
 
     (keyRing as any).loaded = true;

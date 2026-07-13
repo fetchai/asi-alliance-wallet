@@ -1911,10 +1911,6 @@ export class KeyRing {
         this.embedChainInfos
           .find((c) => c.chainId === currentChainId)
           ?.features?.includes("cardano") ?? false;
-      const isEvm =
-        this.embedChainInfos
-          .find((c) => c.chainId === currentChainId)
-          ?.features?.includes("evm") ?? false;
       const walletIds = this.multiKeyStore.map((ks) =>
         KeyRing.getKeyStoreId(ks)
       );
@@ -1959,7 +1955,12 @@ export class KeyRing {
             let keys: Key[] | undefined;
 
             if (!activeWalletAddress) {
-              keys = await this.getKeys(currentChainId, isEvm);
+              const useEthereumAddress = (
+                await this.chainsService.getChainEthereumKeyFeatures(
+                  currentChainId
+                )
+              ).address;
+              keys = await this.getKeys(currentChainId, useEthereumAddress);
               const activeWalletIndex = walletIds.indexOf(activeWalletId);
               activeWalletAddress =
                 activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
@@ -2797,15 +2798,41 @@ export class KeyRing {
         const addressBytes = Buffer.from(hex, "hex");
         const pubKeyBytes = Buffer.from(persisted.pubKey, "hex");
 
-        keys.push({
-          name: walletName,
-          algo: useEthereumAddress ? "ethsecp256k1" : KeyCurves.secp256k1,
-          pubKey: pubKeyBytes,
-          address: addressBytes,
-          isNanoLedger: keyStore.type === "ledger",
-          isKeystone: keyStore.type === "keystone",
-        });
-        continue;
+        // Reject stale cosmos-derived cache entries for eth-address-gen chains.
+        if (useEthereumAddress) {
+          try {
+            const expectedEth = computeAddress(pubKeyBytes)
+              .replace("0x", "")
+              .toLowerCase();
+            if (hex.toLowerCase() !== expectedEth) {
+              delete persistent[storeId];
+              needsCacheClear = true;
+            } else {
+              keys.push({
+                name: walletName,
+                algo: "ethsecp256k1",
+                pubKey: pubKeyBytes,
+                address: addressBytes,
+                isNanoLedger: keyStore.type === "ledger",
+                isKeystone: keyStore.type === "keystone",
+              });
+              continue;
+            }
+          } catch {
+            delete persistent[storeId];
+            needsCacheClear = true;
+          }
+        } else {
+          keys.push({
+            name: walletName,
+            algo: KeyCurves.secp256k1,
+            pubKey: pubKeyBytes,
+            address: addressBytes,
+            isNanoLedger: keyStore.type === "ledger",
+            isKeystone: keyStore.type === "keystone",
+          });
+          continue;
+        }
       }
 
       switch (keyStore.type) {

@@ -1639,14 +1639,7 @@ Salt: ${salt}`;
 
   async getKeys(chainId: string): Promise<(Key & { name: string })[]> {
     const chainInfo = await this.chainsService.getChainInfo(chainId);
-    const isEvm = chainInfo.features?.includes("evm") ?? false;
     const isCardano = chainInfo.features?.includes("cardano") ?? false;
-
-    if (!isCardano) {
-      const keys = await this.keyRing.getKeys(chainId, isEvm);
-      // Skip ensureAndRepairAddressCaches for performance - getKeys() already handles caching
-      return keys;
-    }
 
     if (isCardano) {
       const keys = await this.keyRing.getKeysForCardano(chainId);
@@ -1654,7 +1647,10 @@ Salt: ${salt}`;
       return keys;
     }
 
-    const keys = await this.keyRing.getKeys(chainId, isEvm);
+    const useEthereumAddress = (
+      await this.chainsService.getChainEthereumKeyFeatures(chainId)
+    ).address;
+    const keys = await this.keyRing.getKeys(chainId, useEthereumAddress);
     // Skip ensureAndRepairAddressCaches for performance - getKeys() already handles caching
     return keys;
   }
