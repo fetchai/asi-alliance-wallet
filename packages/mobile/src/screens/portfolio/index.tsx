@@ -29,7 +29,7 @@ export const PortfolioScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollViewInBottomTabView
-      backgroundMode={"image"}
+      backgroundMode={"secondary"}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       ref={scrollViewRef}
     >
@@ -37,7 +37,7 @@ export const PortfolioScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-dark",
             "margin-y-10",
             "font-normal",
           ]) as ViewStyle
@@ -49,6 +49,8 @@ export const PortfolioScreen: FunctionComponent = observer(() => {
         listItem={AssetsSectionEnum}
         selected={selectedId}
         setSelected={setSelectedId}
+        backgroundColorToken="background-color-gray-100"
+        unselectedTextColorToken="color-gray-300"
       />
       {selectedId === AssetsSectionEnum.Tokens && (
         <View style={style.flatten(["margin-y-10"]) as ViewStyle}>

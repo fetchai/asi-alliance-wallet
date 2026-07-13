@@ -263,7 +263,7 @@ export const AddressQRCodeModal: FunctionComponent<{
               style={
                 style.flatten([
                   "padding-8",
-                  "dark:background-color-white",
+                  "background-color-white",
                 ]) as ViewStyle
               }
             >
@@ -283,11 +283,19 @@ export const AddressQRCodeModal: FunctionComponent<{
         </View>
         <View style={style.flatten(["flex-row"])}>
           <Button
-            containerStyle={style.flatten(["flex-1"])}
             text="Share Address"
-            mode="light"
             size="large"
             loading={account.bech32Address === ""}
+            containerStyle={
+              [
+                style.flatten([
+                  "flex-1",
+                  "border-radius-32",
+                  "background-color-dark",
+                ]),
+              ] as ViewStyle
+            }
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
             onPress={() => {
               Share.share({
                 message: account.bech32Address,

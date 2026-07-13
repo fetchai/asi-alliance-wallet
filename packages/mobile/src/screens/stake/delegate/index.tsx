@@ -262,7 +262,11 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         borderRadius={12}
         backgroundBlur={false}
         containerStyle={
-          style.flatten(["padding-18", "margin-y-16", "background-color-gray-5"]) as ViewStyle
+          style.flatten([
+            "padding-18",
+            "margin-y-16",
+            "background-color-gray-5",
+          ]) as ViewStyle
         }
       >
         <View

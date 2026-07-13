@@ -109,11 +109,7 @@ export const DelegationsCard: FunctionComponent<{
               <Text
                 style={
                   [
-                    style.flatten([
-                      "text-caption2",
-                      "color-dark",
-                      "font-bold",
-                    ]),
+                    style.flatten(["text-caption2", "color-dark", "font-bold"]),
                     { lineHeight: 14 },
                   ] as ViewStyle
                 }
@@ -160,7 +156,11 @@ export const DelegationsCard: FunctionComponent<{
                 backgroundBlur={false}
                 containerStyle={
                   [
-                    style.flatten(["padding-18", "flex-row", "background-color-gray-5"]),
+                    style.flatten([
+                      "padding-18",
+                      "flex-row",
+                      "background-color-gray-5",
+                    ]),
                     containerStyle,
                   ] as ViewStyle
                 }
@@ -354,10 +354,7 @@ export const DelegationsCard: FunctionComponent<{
             );
           })
         ) : (
-          <ActivityIndicator
-            size="large"
-            color={"#151a1a"}
-          />
+          <ActivityIndicator size="large" color={"#151a1a"} />
         )}
       </React.Fragment>
     );

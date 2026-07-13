@@ -289,7 +289,6 @@ export const MyRewardCard: FunctionComponent<{
         ) ? (
           <Button
             text={"Claim all"}
-            rippleColor="black@50%"
             size="small"
             containerStyle={
               style.flatten([
@@ -640,7 +639,6 @@ const DelegateReward: FunctionComponent<{
               <View style={style.flatten(["flex-2", "items-end"])}>
                 <Button
                   text={"Claim"}
-                  rippleColor="black@50%"
                   size="small"
                   mode="outline"
                   containerStyle={

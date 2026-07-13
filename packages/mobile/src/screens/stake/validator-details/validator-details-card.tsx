@@ -113,7 +113,10 @@ export const ValidatorDetailsCard: FunctionComponent<{
           borderRadius={12}
           backgroundBlur={false}
           containerStyle={
-            [style.flatten(["padding-18", "background-color-gray-5"]), containerStyle] as ViewStyle
+            [
+              style.flatten(["padding-18", "background-color-gray-5"]),
+              containerStyle,
+            ] as ViewStyle
           }
         >
           <View

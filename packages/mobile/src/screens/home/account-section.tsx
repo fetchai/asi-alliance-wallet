@@ -550,7 +550,7 @@ export const AccountSection: FunctionComponent<{
         }
         buttonText={
           modelStatus == ModelStatus.First
-            ? "Allow Fetch to use camera"
+            ? "Allow ASI Wallet to use camera"
             : "Enable camera permission in settings"
         }
         isOpen={openCameraModel}

@@ -379,7 +379,6 @@ export const SendPhase2: FunctionComponent<{
         textStyle={
           style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
         }
-        rippleColor={style.get("color-green-250").color}
         disabled={
           !account.isReadyToSendTx ||
           !txStateIsValid ||

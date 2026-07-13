@@ -1,14 +1,7 @@
 import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import { LineChart } from "react-native-svg-charts";
 import * as shape from "d3-shape";
-import {
-  Circle,
-  G,
-  Text as SvgText,
-  Path,
-  Rect,
-  Line,
-} from "react-native-svg";
+import { Circle, G, Text as SvgText, Path, Rect, Line } from "react-native-svg";
 import { PanResponder, Dimensions, View } from "react-native";
 
 export const AndroidLineChart: FunctionComponent<{
@@ -29,7 +22,6 @@ export const AndroidLineChart: FunctionComponent<{
   useEffect(() => {
     size.current = dateList.length;
   }, [dateList]);
-
 
   const [positionX, setPositionX] = useState(-1); // The currently selected X coordinate position
 

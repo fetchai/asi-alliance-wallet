@@ -122,12 +122,7 @@ export const TextInput = React.forwardRef<
             }
             style={StyleSheet.flatten([
               style.flatten(
-                [
-                  "padding-0",
-                  "body2-in-text-input",
-                  "color-dark",
-                  "flex-1",
-                ],
+                ["padding-0", "body2-in-text-input", "color-dark", "flex-1"],
                 [!(props.editable ?? true) && "color-gray-300"]
               ),
               Platform.select({

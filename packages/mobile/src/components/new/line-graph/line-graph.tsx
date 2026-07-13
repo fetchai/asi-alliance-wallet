@@ -251,7 +251,8 @@ export const LineGraph: FunctionComponent<{
             containerStyle={
               {
                 ...style.flatten(["padding-x-12", "absolute"]),
-                backgroundColor: style.get("background-color-green-250").backgroundColor,
+                backgroundColor: style.get("background-color-green-250")
+                  .backgroundColor,
               } as ViewStyle
             }
           />

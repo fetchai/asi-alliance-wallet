@@ -97,21 +97,33 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
     // If inflation is 0 or not fetched properly, there is no need to sort by APY.
     if (apr.toDec().gt(new Dec(0))) {
       return [
-        { label: "Voting Power", key: "Voting Power", icon: <VotingIcon /> },
-        { label: "APR: High to low", key: "APR", icon: <PercentIcon /> },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: <VotingIcon color="#151a1a" />,
+        },
+        {
+          label: "APR: High to low",
+          key: "APR",
+          icon: <PercentIcon color="#151a1a" />,
+        },
         {
           label: "Commission: Low to high",
           key: "Commission",
-          icon: <CommissionIcon />,
+          icon: <CommissionIcon color="#151a1a" />,
         },
       ];
     } else {
       return [
-        { label: "Voting Power", key: "Voting Power", icon: <VotingIcon /> },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: <VotingIcon color="#151a1a" />,
+        },
         {
           label: "Commission: Low to high",
           key: "Commission",
-          icon: <CommissionIcon />,
+          icon: <CommissionIcon color="#151a1a" />,
         },
       ];
     }
@@ -165,7 +177,7 @@ export const ValidatorListScreen: FunctionComponent = observer(() => {
                   onChangeText={(text: string) => {
                     setSearch(text);
                   }}
-                  rightIcon={<SearchIcon size={12} color="black" />}
+                  rightIcon={<SearchIcon size={12} color="#151a1a" />}
                 />
               </View>
               {data.length === 0 ? (
@@ -277,7 +289,9 @@ const ValidatorItem: FunctionComponent<{
         containerStyle={
           [
             style.flatten(["margin-bottom-6"]),
-            selectedValidator == validatorAddress ? { backgroundColor: "#e0fedd" } : null,
+            selectedValidator == validatorAddress
+              ? { backgroundColor: "#e0fedd" }
+              : null,
           ] as ViewStyle
         }
         heading={validator.description.moniker?.trim()}
@@ -287,7 +301,7 @@ const ValidatorItem: FunctionComponent<{
         )}
         trailingIcon={
           selectedValidator == validatorAddress ? (
-            <CheckIcon color="black" />
+            <CheckIcon color="#151a1a" />
           ) : (
             <ChevronRightIcon color="#151a1a" />
           )

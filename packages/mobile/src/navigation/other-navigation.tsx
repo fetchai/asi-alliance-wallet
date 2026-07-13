@@ -2,10 +2,7 @@ import React, { FunctionComponent } from "react";
 import { useStyle } from "styles/index";
 
 import { TransitionPresets } from "@react-navigation/stack";
-import {
-  BlurHeaderOptionsPreset,
-  TransparentHeaderOptionsPreset,
-} from "components/header";
+import { TransparentHeaderOptionsPreset } from "components/header";
 import { HeaderLeftBackLightButton } from "components/header/button";
 import { getPlatformFontFamily } from "styles/builder/utils";
 import { SendScreen } from "screens/send";

@@ -157,10 +157,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                   backgroundBlur={false}
                   containerStyle={
                     [
-                      style.flatten([
-                        "margin-y-2",
-                        "background-color-gray-5",
-                      ]),
+                      style.flatten(["margin-y-2", "background-color-gray-5"]),
                       selected ? { backgroundColor: "#e0fedd" } : null,
                     ] as ViewStyle
                   }
@@ -236,9 +233,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                         {titleCase(chainInfo.chainName)}
                       </Text>
                     </View>
-                    <View>
-                      {selected ? <CheckIcon color="black" /> : null}
-                    </View>
+                    <View>{selected ? <CheckIcon color="black" /> : null}</View>
                   </RectButton>
                 </BlurBackground>
               );

@@ -147,7 +147,6 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
                 "background-color-dark",
               ]) as ViewStyle
             }
-            rippleColor="black@50%"
             textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
             onPress={() => {
               analyticsStore.logEvent("stake_click", {

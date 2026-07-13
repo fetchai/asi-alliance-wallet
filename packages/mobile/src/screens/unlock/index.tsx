@@ -273,8 +273,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
               source={require("assets/logo/logo-black.png")}
               style={{
                 aspectRatio: 2.977,
-                width: 100,
-                height: 80,
+                height: 60,
               }}
               resizeMode="contain"
               fadeDuration={0}

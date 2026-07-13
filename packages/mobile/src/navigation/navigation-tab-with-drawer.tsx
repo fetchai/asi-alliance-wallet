@@ -242,7 +242,8 @@ export const MainTabNavigation: FunctionComponent = () => {
                     iconStyle={
                       {
                         ...style.flatten(["padding-16"]),
-                        backgroundColor: style.get("background-color-green-250").backgroundColor,
+                        backgroundColor: style.get("background-color-green-250")
+                          .backgroundColor,
                       } as ViewStyle
                     }
                     bottomTextStyle={

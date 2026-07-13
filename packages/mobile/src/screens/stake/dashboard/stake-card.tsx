@@ -153,7 +153,7 @@ export const StakeCard: FunctionComponent = () => {
       focused: Math.round(stakedPercentage) > 0,
     },
     {
-      color: "#B1FCAB",
+      color: style.get("color-green-250").color,
       value: stakablePercentage,
       focused:
         Math.round(rewardsPercentage) == 0 &&
@@ -188,7 +188,7 @@ export const StakeCard: FunctionComponent = () => {
   const legendComponentItem = [
     {
       title: "Available",
-      lineColor: "#B1FCAB",
+      lineColor: style.get("color-green-250").color,
       balance: spendableNumber,
       denom: stakableDenom,
       percentageValue: stakablePercentage,
@@ -286,7 +286,7 @@ export const StakeCard: FunctionComponent = () => {
                           durationValue: 1000,
                           easingValue: "linear",
                         }}
-                        textColor={"#151a1a"}
+                        textColor={style.flatten(["color-dark"]).color}
                       />
                       <Text
                         style={

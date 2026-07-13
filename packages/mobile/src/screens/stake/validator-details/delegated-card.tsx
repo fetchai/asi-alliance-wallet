@@ -281,11 +281,11 @@ export const DelegatedCard: FunctionComponent<{
           <Button
             text="Claim rewards"
             size="small"
-            rippleColor="black@50%"
             containerStyle={
               {
                 ...style.flatten(["border-radius-32", "margin-top-12"]),
-                backgroundColor: "#B1FCAB",
+                backgroundColor: style.get("background-color-green-250")
+                  .backgroundColor,
               } as ViewStyle
             }
             textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
