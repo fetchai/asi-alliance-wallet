@@ -646,6 +646,31 @@ export class RootStore {
       })
     );
 
+    // Retry Cardano account load after network return when a prior off-chain
+    // getKey left the account Rejected (side panel misses WEBPAGE_PORT keystore-changed).
+    this._disposers.push(
+      reaction(
+        () => this.chainStore.selectedChainId,
+        (selectedChainId) => {
+          if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+            return;
+          }
+          if (!selectedChainId) {
+            return;
+          }
+          const account = this.accountStore.getAccount(selectedChainId);
+          if (
+            account.walletStatus === WalletStatus.Rejected &&
+            account.rejectionReason?.message.includes(
+              "network_context_invalid_for_cardano:"
+            )
+          ) {
+            account.init();
+          }
+        }
+      )
+    );
+
     this.priceStore = new CoinGeckoPriceStore(
       new ExtensionKVStore("store_prices"),
       FiatCurrencies.reduce<{
