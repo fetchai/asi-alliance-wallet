@@ -321,7 +321,7 @@ export const LedgerGranterModal: FunctionComponent<{
               style={
                 style.flatten([
                   "body3",
-                  "color-white",
+                  "color-dark",
                   "text-center",
                 ]) as ViewStyle
               }
@@ -334,7 +334,7 @@ export const LedgerGranterModal: FunctionComponent<{
               style={
                 style.flatten([
                   "body3",
-                  "color-white",
+                  "color-dark",
                   "text-center",
                   "margin-bottom-24",
                 ]) as ViewStyle
@@ -349,13 +349,12 @@ export const LedgerGranterModal: FunctionComponent<{
               <BlurButton
                 text={pairingText}
                 backgroundBlur={false}
-                leftIcon={paired ? <CheckIcon color="black" size={14} /> : null}
+                leftIcon={
+                  paired ? <CheckIcon color="#151a1a" size={14} /> : null
+                }
                 leftIconStyle={style.flatten(["margin-right-8"]) as ViewStyle}
                 textStyle={
-                  style.flatten(
-                    ["text-caption2"],
-                    [paired && "color-black"]
-                  ) as ViewStyle
+                  style.flatten(["text-caption2", "color-dark"]) as ViewStyle
                 }
                 containerStyle={
                   style.flatten(
@@ -363,7 +362,7 @@ export const LedgerGranterModal: FunctionComponent<{
                     [
                       paired
                         ? "background-color-vibrant-green-500"
-                        : "background-color-indigo-800",
+                        : "background-color-gray-100",
                     ]
                   ) as ViewStyle
                 }
@@ -381,11 +380,11 @@ export const LedgerGranterModal: FunctionComponent<{
               containerStyle={
                 style.flatten([
                   "margin-top-24",
-                  "border-color-white@40%",
+                  "border-color-gray-200",
                   "border-radius-32",
                 ]) as ViewStyle
               }
-              textStyle={style.flatten(["color-white", "body3"]) as ViewStyle}
+              textStyle={style.flatten(["color-dark", "body3"]) as ViewStyle}
               onPress={() =>
                 Linking.canOpenURL(
                   `${DOCS_URL}/get-started#connect-ledger`
@@ -426,7 +425,7 @@ export const LedgerGranterModal: FunctionComponent<{
           style={
             style.flatten([
               "subtitle3",
-              "color-white",
+              "color-dark",
               "text-center",
               "margin-y-20",
             ]) as ViewStyle

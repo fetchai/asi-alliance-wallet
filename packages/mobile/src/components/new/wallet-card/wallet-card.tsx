@@ -3,16 +3,12 @@ import { CardModal } from "modals/card";
 import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { IconButton } from "components/new/button/icon";
-import { LayerGroupIcon } from "../icon/layer-group";
 import { EditIcon } from "../icon/edit";
 import { DeleteIcon } from "../icon/color-delete";
 import { RectButton } from "components/rect-button";
-import { PlusIcon } from "../../icon";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 
 export enum ManageWalletOption {
-  addNewWallet,
-  changeWallet,
   renameWallet,
   deleteWallet,
 }
@@ -45,105 +41,10 @@ export const WalletCardModel: FunctionComponent<{
         <RectButton
           onPress={() => {
             close();
-            onSelectWallet(ManageWalletOption.addNewWallet);
-          }}
-          style={style.flatten(["border-radius-12"]) as ViewStyle}
-          activeOpacity={0.5}
-          rippleColor={"#e0fedd"}
-          underlayColor={"#e0fedd"}
-        >
-          <View
-            style={
-              style.flatten([
-                "flex-row",
-                "items-center",
-                "padding-18",
-              ]) as ViewStyle
-            }
-          >
-            <IconButton
-              backgroundBlur={false}
-              icon={<PlusIcon color={"black"} size={13} />}
-              iconStyle={style.flatten(["padding-0"]) as ViewStyle}
-            />
-            <Text
-              style={
-                style.flatten([
-                  "body3",
-                  "color-dark",
-                  "margin-left-18",
-                ]) as ViewStyle
-              }
-            >
-              Add new wallet
-            </Text>
-          </View>
-        </RectButton>
-      </BlurBackground>
-      <BlurBackground
-        borderRadius={12}
-        backgroundBlur={false}
-        containerStyle={
-          style.flatten([
-            "margin-bottom-6",
-            "background-color-gray-5",
-          ]) as ViewStyle
-        }
-      >
-        <RectButton
-          onPress={() => {
-            onSelectWallet(ManageWalletOption.changeWallet);
-          }}
-          style={style.flatten(["border-radius-12"]) as ViewStyle}
-          activeOpacity={0.5}
-          rippleColor={"#e0fedd"}
-          underlayColor={"#e0fedd"}
-        >
-          <View
-            style={
-              style.flatten([
-                "flex-row",
-                "items-center",
-                "padding-18",
-              ]) as ViewStyle
-            }
-          >
-            <IconButton
-              backgroundBlur={false}
-              icon={<LayerGroupIcon size={16} color="black" />}
-              iconStyle={style.flatten(["padding-0"]) as ViewStyle}
-            />
-            <Text
-              style={
-                style.flatten([
-                  "body3",
-                  "color-dark",
-                  "margin-left-18",
-                ]) as ViewStyle
-              }
-            >
-              Change wallet
-            </Text>
-          </View>
-        </RectButton>
-      </BlurBackground>
-      <BlurBackground
-        borderRadius={12}
-        backgroundBlur={false}
-        containerStyle={
-          style.flatten([
-            "margin-bottom-6",
-            "background-color-gray-5",
-          ]) as ViewStyle
-        }
-      >
-        <RectButton
-          onPress={() => {
             onSelectWallet(ManageWalletOption.renameWallet);
           }}
           style={style.flatten(["border-radius-12"]) as ViewStyle}
           activeOpacity={0.5}
-          rippleColor={"#e0fedd"}
           underlayColor={"#e0fedd"}
         >
           <View
@@ -186,11 +87,11 @@ export const WalletCardModel: FunctionComponent<{
       >
         <RectButton
           onPress={() => {
+            close();
             onSelectWallet(ManageWalletOption.deleteWallet);
           }}
           style={style.flatten(["border-radius-12"]) as ViewStyle}
           activeOpacity={0.5}
-          rippleColor={"#e0fedd"}
           underlayColor={"#e0fedd"}
         >
           <View

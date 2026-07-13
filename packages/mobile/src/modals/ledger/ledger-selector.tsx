@@ -88,10 +88,14 @@ export const LedgerNanoBLESelector: FunctionComponent<{
   return !isConnecting ? (
     <BlurButton
       text={name}
-      blurIntensity={25}
+      backgroundBlur={false}
       borderRadius={12}
+      textStyle={style.flatten(["color-dark"]) as ViewStyle}
       containerStyle={
-        style.flatten(["padding-12", "margin-bottom-6"]) as ViewStyle
+        [
+          style.flatten(["padding-12", "margin-bottom-6"]),
+          { backgroundColor: "#f6f6f6" },
+        ] as ViewStyle
       }
       onPress={async () => {
         await testLedgerConnection();

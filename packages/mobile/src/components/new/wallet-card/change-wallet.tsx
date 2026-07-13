@@ -1,9 +1,11 @@
 import React, { FunctionComponent } from "react";
 import { CardModal } from "modals/card";
-import { Text, View, ViewStyle } from "react-native";
+import { Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { RectButton } from "components/rect-button";
 import { CheckIcon } from "components/new/icon/check";
+import { EditIcon } from "components/new/icon/edit";
+import { Button } from "components/button";
 import { useStore } from "stores/index";
 import {
   MultiKeyStoreInfoElem,
@@ -24,7 +26,17 @@ export const ChangeWalletCardModel: FunctionComponent<{
   onChangeAccount: (
     keyStore: MultiKeyStoreInfoWithSelectedElem
   ) => Promise<void>;
-}> = ({ close, title, isOpen, keyRingStore, onChangeAccount }) => {
+  onEditAccount?: () => void;
+  onAddNewWallet?: () => void;
+}> = ({
+  close,
+  title,
+  isOpen,
+  keyRingStore,
+  onChangeAccount,
+  onEditAccount,
+  onAddNewWallet,
+}) => {
   const style = useStyle();
   const { analyticsStore, accountStore, chainStore } = useStore();
 
@@ -198,13 +210,57 @@ export const ChangeWalletCardModel: FunctionComponent<{
                   </Text>
                 ) : null}
               </View>
-              <View style={style.flatten(["flex-1", "items-end"]) as ViewStyle}>
-                {keyStore.selected ? <CheckIcon color="black" /> : null}
+              <View
+                style={
+                  style.flatten([
+                    "flex-1",
+                    "items-end",
+                    "flex-row",
+                    "justify-end",
+                  ]) as ViewStyle
+                }
+              >
+                {keyStore.selected ? (
+                  <React.Fragment>
+                    <CheckIcon size={16} />
+                    {onEditAccount ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          close();
+                          onEditAccount();
+                        }}
+                        style={style.flatten(["margin-left-12"]) as ViewStyle}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <EditIcon size={16} />
+                      </TouchableOpacity>
+                    ) : null}
+                  </React.Fragment>
+                ) : null}
               </View>
             </RectButton>
           </BlurBackground>
         );
       })}
+      {onAddNewWallet ? (
+        <Button
+          text="Add New Wallet"
+          size="large"
+          containerStyle={
+            {
+              ...style.flatten(["border-radius-32", "margin-top-12"]),
+              backgroundColor: "#ffffff",
+              borderWidth: 1,
+              borderColor: "#DCDCE3",
+            } as ViewStyle
+          }
+          textStyle={style.flatten(["color-dark", "body3"]) as ViewStyle}
+          onPress={() => {
+            close();
+            onAddNewWallet();
+          }}
+        />
+      ) : null}
     </CardModal>
   );
 };

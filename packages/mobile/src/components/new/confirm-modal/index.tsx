@@ -2,7 +2,7 @@ import React, { FunctionComponent } from "react";
 import { CardModal } from "modals/card";
 import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
-import { BlurButton } from "components/new/button/blur-button";
+import { Button } from "components/button";
 
 export const ConfirmCardModel: FunctionComponent<{
   isOpen: boolean;
@@ -33,7 +33,11 @@ export const ConfirmCardModel: FunctionComponent<{
       disableGesture={true}
       titleStyle={style.flatten(["text-center"]) as ViewStyle}
     >
-      <Text style={style.flatten(["text-center", "color-white"]) as ViewStyle}>
+      <Text
+        style={
+          style.flatten(["body3", "text-center", "color-gray-300"]) as ViewStyle
+        }
+      >
         {subtitle}
       </Text>
       <View
@@ -45,44 +49,36 @@ export const ConfirmCardModel: FunctionComponent<{
           ]) as ViewStyle
         }
       >
-        <BlurButton
+        <Button
           text="Cancel"
-          backgroundBlur={false}
-          borderRadius={32}
+          size="large"
+          mode="outline"
           onPress={() => {
             select(false);
             close();
           }}
           containerStyle={
-            style.flatten([
-              "border-width-1",
-              "padding-y-6",
-              "margin-y-2",
-              "border-color-gray-300",
-              "width-160",
-              "justify-center",
-            ]) as ViewStyle
+            {
+              ...style.flatten(["border-radius-32", "flex-1"]),
+              borderColor: "#DCDCE3",
+              marginRight: 6,
+            } as ViewStyle
           }
-          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
+          textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
         />
-        <BlurButton
+        <Button
           text={confirmButtonText}
-          backgroundBlur={false}
-          borderRadius={32}
+          size="large"
           onPress={() => {
             select(true);
             close();
           }}
           containerStyle={
-            style.flatten([
-              "border-width-1",
-              "border-color-gray-300",
-              "padding-x-20",
-              "padding-y-6",
-              "margin-y-2",
-              "width-160",
-              "justify-center",
-            ]) as ViewStyle
+            {
+              ...style.flatten(["border-radius-32", "flex-1"]),
+              backgroundColor: "#151a1a",
+              marginLeft: 6,
+            } as ViewStyle
           }
           textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
         />

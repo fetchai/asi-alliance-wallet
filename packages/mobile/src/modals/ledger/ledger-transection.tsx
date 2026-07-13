@@ -102,7 +102,7 @@ export const LedgerTransectionGuideModel: FunctionComponent<{
         style={
           style.flatten([
             "subtitle3",
-            "color-white",
+            "color-dark",
             "text-center",
             "margin-top-24",
           ]) as ViewStyle

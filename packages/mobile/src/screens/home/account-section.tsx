@@ -384,7 +384,7 @@ export const AccountSection: FunctionComponent<{
             ]) as ViewStyle
           }
           containerStyle={style.flatten(["flex-1", "items-end"]) as ViewStyle}
-          onPress={() => setIsOpenModal(true)}
+          onPress={() => setChangeWalletModal(true)}
         />
       </BlurBackground>
       <ClaimCard
@@ -483,29 +483,11 @@ export const AccountSection: FunctionComponent<{
         close={() => setIsOpenModal(false)}
         onSelectWallet={(option: ManageWalletOption) => {
           switch (option) {
-            case ManageWalletOption.addNewWallet:
-              analyticsStore.logEvent("add_new_wallet_click", {
-                pageName: "Home",
-              });
-              navigation.navigate("Register", {
-                screen: "Register.Intro",
-              });
-              break;
-
-            case ManageWalletOption.changeWallet:
-              analyticsStore.logEvent("change_wallet_click", {
-                pageName: "Home",
-              });
-              setChangeWalletModal(true);
-              setIsOpenModal(false);
-              break;
-
             case ManageWalletOption.renameWallet:
               analyticsStore.logEvent("rename_wallet_click", {
                 pageName: "Home",
               });
               smartNavigation.navigateSmart("RenameWallet", {});
-              setIsOpenModal(false);
               break;
 
             case ManageWalletOption.deleteWallet:
@@ -513,7 +495,6 @@ export const AccountSection: FunctionComponent<{
                 pageName: "Home",
               });
               smartNavigation.navigateSmart("DeleteWallet", {});
-              setIsOpenModal(false);
               break;
           }
         }}
@@ -533,6 +514,17 @@ export const AccountSection: FunctionComponent<{
               pageName: "Home",
             });
           }
+        }}
+        onEditAccount={() => {
+          setIsOpenModal(true);
+        }}
+        onAddNewWallet={() => {
+          analyticsStore.logEvent("add_new_wallet_click", {
+            pageName: "Home",
+          });
+          navigation.navigate("Register", {
+            screen: "Register.Intro",
+          });
         }}
       />
       <CameraPermissionModal
