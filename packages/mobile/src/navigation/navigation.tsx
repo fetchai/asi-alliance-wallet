@@ -50,7 +50,7 @@ export const AddressBookStackScreen: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Address book",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -64,7 +64,7 @@ export const AddressBookStackScreen: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Add an address",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -78,7 +78,7 @@ export const AddressBookStackScreen: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Edit address book",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -107,7 +107,7 @@ export const ChainListStackScreen: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Manage networks",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },

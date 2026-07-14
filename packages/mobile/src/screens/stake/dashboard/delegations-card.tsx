@@ -354,7 +354,10 @@ export const DelegationsCard: FunctionComponent<{
             );
           })
         ) : (
-          <ActivityIndicator size="large" color={"#151a1a"} />
+          <ActivityIndicator
+            size="large"
+            color={style.get("color-dark").color}
+          />
         )}
       </React.Fragment>
     );

@@ -14,57 +14,62 @@ export const BipButtons: FunctionComponent<{
     <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
       <BlurButton
         text="Advanced Settings"
-        blurIntensity={16}
+        blurIntensity={0}
         borderRadius={32}
-        backgroundBlur={selected}
+        backgroundBlur={false}
         containerStyle={
           [
-            style.flatten(
-              ["justify-center", "margin-y-18", "background-color-gray-5"],
-              [
-                "border-width-1",
-                "border-radius-64",
-                selected ? "border-color-indigo" : "border-color-gray-100",
-              ]
-            ),
-            { width: 150 },
+            style.flatten([
+              "justify-center",
+              "margin-y-18",
+              selected ? "background-color-dark" : "background-color-white",
+            ]),
+            {
+              width: 150,
+              borderRadius: 100,
+              borderWidth: 1,
+              borderColor: "#d0d1d1",
+              paddingVertical: 6,
+            },
           ] as ViewStyle
         }
-        textStyle={style.flatten(["text-caption2", "color-black"]) as ViewStyle}
+        textStyle={
+          style.flatten([
+            "text-caption2",
+            selected ? "color-white" : "color-dark",
+          ]) as ViewStyle
+        }
         onPress={() => setIsSelected(!selected)}
       />
 
       <BlurButton
         text="Clear all"
-        blurIntensity={16}
+        blurIntensity={0}
         borderRadius={32}
         backgroundBlur={false}
         disable={clearButtonDisable}
         containerStyle={
           [
-            style.flatten(
-              [
-                "justify-center",
-                "margin-y-18",
-                "border-width-1",
-                "border-radius-64",
-                "background-color-gray-5",
-                "margin-left-10",
-              ],
-              [
-                clearButtonDisable
-                  ? "border-color-gray-50"
-                  : "border-color-gray-100",
-              ]
-            ),
-            { width: 70 },
+            style.flatten([
+              "justify-center",
+              "margin-y-18",
+              "margin-left-10",
+              clearButtonDisable
+                ? "background-color-gray-50"
+                : "background-color-dark",
+            ]),
+            {
+              width: 80,
+              borderRadius: 100,
+              paddingVertical: 6,
+            },
           ] as ViewStyle
         }
         textStyle={
-          style.flatten(
-            ["text-caption2"],
-            [clearButtonDisable ? "color-gray-200" : "color-black"]
-          ) as ViewStyle
+          style.flatten([
+            "text-caption2",
+            clearButtonDisable ? "color-gray-300" : "color-white",
+          ]) as ViewStyle
         }
         onPress={onPressClearButton}
       />

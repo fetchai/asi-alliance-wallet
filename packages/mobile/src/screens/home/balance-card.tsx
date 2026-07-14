@@ -59,7 +59,7 @@ export const BalanceCard: FunctionComponent<{
           includeComma={true}
           decimalAmount={2}
           fontSizeValue={32}
-          textColor={"#151a1a"}
+          textColor={style.get("color-dark").color}
           hookName={"withTiming"}
           withTimingProps={{
             durationValue: 1000,

@@ -75,8 +75,11 @@ export const ConfirmCardModel: FunctionComponent<{
           }}
           containerStyle={
             {
-              ...style.flatten(["border-radius-32", "flex-1"]),
-              backgroundColor: "#151a1a",
+              ...style.flatten([
+                "border-radius-32",
+                "flex-1",
+                "background-color-dark",
+              ]),
               marginLeft: 6,
             } as ViewStyle
           }

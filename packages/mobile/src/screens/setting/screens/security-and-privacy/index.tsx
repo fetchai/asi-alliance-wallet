@@ -23,7 +23,7 @@ export const SecurityAndPrivacyScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.flatten(["flex-grow-1"])}
       style={style.flatten(["padding-x-page", "margin-top-16"]) as ViewStyle}
       scrollEnabled={false}

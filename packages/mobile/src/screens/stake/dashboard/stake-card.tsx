@@ -55,10 +55,11 @@ export const StakeCard: FunctionComponent = () => {
   );
 
   const stakableReward = rewards.stakableReward;
-  const stakedSum = delegated.add(unbonding);
+  const stakedSum = delegated;
   const stakableBal = stakable.shrink(true).trim(true).toString();
   const stakedBal = stakedSum.shrink(true).trim(true).toString();
   const rewardsBal = stakableReward.shrink(true).trim(true).toString();
+  const unbondingBal = unbonding.shrink(true).trim(true).toString();
 
   const { numericPart: stakableBalNumber, denomPart: stakableDenom } =
     separateNumericAndDenom(stakableBal);
@@ -66,6 +67,8 @@ export const StakeCard: FunctionComponent = () => {
     separateNumericAndDenom(stakedBal);
   const { numericPart: rewardsBalNumber, denomPart: rewardDenom } =
     separateNumericAndDenom(rewardsBal);
+  const { numericPart: unbondingBalNumber, denomPart: unbondingDenom } =
+    separateNumericAndDenom(unbondingBal);
 
   const vestingInfo = queries.cosmos.queryAccount.getQueryBech32Address(
     accountInfo.bech32Address
@@ -120,12 +123,14 @@ export const StakeCard: FunctionComponent = () => {
   const total =
     parseFloat(stakableBalNumber) +
     parseFloat(stakedBalNumber) +
-    parseFloat(rewardsBalNumber);
+    parseFloat(rewardsBalNumber) +
+    parseFloat(unbondingBalNumber);
 
   let stakablePercentage = 0;
   let stakedPercentage = 0;
   let rewardsPercentage = 0;
   let vestingPercentage = 0;
+  let unbondingPercentage = 0;
   if (total > 0) {
     stakablePercentage =
       total >= spendableNumber
@@ -137,6 +142,7 @@ export const StakeCard: FunctionComponent = () => {
       isVesting && !isVestingExpired(vestingEndTimeStamp)
         ? (parseFloat(vestingBalance()) / total) * 100
         : 0;
+    unbondingPercentage = (parseFloat(unbondingBalNumber) / total) * 100;
   }
   const pieData = [
     {
@@ -146,7 +152,6 @@ export const StakeCard: FunctionComponent = () => {
         Math.round(stakablePercentage) == 0 &&
         Math.round(rewardsPercentage) > 0,
     },
-
     {
       color: "#2DA6CF",
       value: stakedPercentage,
@@ -169,6 +174,9 @@ export const StakeCard: FunctionComponent = () => {
         Math.round(stakablePercentage) == 0 &&
         Math.round(vestingPercentage) > 0,
     },
+    ...(parseFloat(unbondingBalNumber) > 0
+      ? [{ color: "#F4B400", value: unbondingPercentage, focused: false }]
+      : []),
   ];
 
   const renderLine = (color: string) => {
@@ -218,6 +226,16 @@ export const StakeCard: FunctionComponent = () => {
           denom: rewardDenom,
           percentageValue: vestingPercentage,
           dollarValue: spendableBalances.balances[0],
+        }
+      : null,
+    parseFloat(unbondingBalNumber) > 0
+      ? {
+          title: "Unbonding",
+          lineColor: "#F4B400",
+          balance: unbondingBalNumber,
+          denom: unbondingDenom || stakedDenom,
+          percentageValue: unbondingPercentage,
+          dollarValue: unbonding,
         }
       : null,
   ];

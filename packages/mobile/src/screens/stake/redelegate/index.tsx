@@ -246,10 +246,10 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             disabled={!account.isReadyToSendTx || !txStateIsValid}
             loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
             containerStyle={
-              {
-                ...style.flatten(["border-radius-32"]),
-                backgroundColor: "#151a1a",
-              } as ViewStyle
+              style.flatten([
+                "border-radius-32",
+                "background-color-dark",
+              ]) as ViewStyle
             }
             textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
             onPress={redelegateAmount}

@@ -29,7 +29,7 @@ export const SettingAddTokenScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -62,9 +62,15 @@ export const SettingAddTokenScreen: FunctionComponent = observer(() => {
         text="Save"
         size="large"
         containerStyle={
-          style.flatten(["border-radius-32", "margin-top-20"]) as ViewStyle
+          style.flatten([
+            "border-radius-32",
+            "margin-top-20",
+            "background-color-dark",
+          ]) as ViewStyle
         }
-        textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
+        }
         disabled={!queryTokenInfo.tokenInfo || queryTokenInfo.error != null}
         loading={!queryTokenInfo.tokenInfo && loading}
         onPress={async () => {

@@ -82,7 +82,7 @@ export const EditAddressBookScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -122,7 +122,15 @@ export const EditAddressBookScreen: FunctionComponent = observer(() => {
       <Button
         text="Save"
         size="large"
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
+        }
         disabled={checkButtonDisable()}
         onPress={async () => {
           if (

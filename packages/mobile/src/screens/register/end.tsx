@@ -9,7 +9,6 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "stores/index";
 import { Toggle } from "components/toggle";
 import delay from "delay";
-import { LinearGradientText } from "components/svg/linear-gradient-text";
 import { RocketIcon } from "components/new/icon/rocket";
 
 export const RegisterEndScreen: FunctionComponent = observer(() => {
@@ -52,11 +51,18 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
       <View style={style.flatten(["items-center"])}>
         <RocketIcon />
 
-        <LinearGradientText
-          text="You’re all set!"
-          color1="#CF447B"
-          color2="#F9774B"
-        />
+        <Text
+          style={
+            style.flatten([
+              "h2",
+              "color-dark",
+              "font-medium",
+              "margin-top-10",
+            ]) as ViewStyle
+          }
+        >
+          You’re all set!
+        </Text>
         <Text
           style={
             style.flatten([
@@ -80,9 +86,7 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
             ]) as ViewStyle
           }
         >
-          <Text
-            style={style.flatten(["subtitle1", "color-black"]) as ViewStyle}
-          >
+          <Text style={style.flatten(["subtitle1", "color-dark"]) as ViewStyle}>
             Enable Biometric
           </Text>
           <View style={style.get("flex-1")} />

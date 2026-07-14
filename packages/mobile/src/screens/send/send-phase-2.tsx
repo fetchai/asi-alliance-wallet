@@ -372,8 +372,11 @@ export const SendPhase2: FunctionComponent<{
         size="large"
         containerStyle={
           {
-            ...style.flatten(["border-radius-64", "margin-top-20"]),
-            backgroundColor: "#151a1a",
+            ...style.flatten([
+              "border-radius-64",
+              "margin-top-20",
+              "background-color-dark",
+            ]),
           } as ViewStyle
         }
         textStyle={

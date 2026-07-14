@@ -60,9 +60,12 @@ export const GovActivityRow: FunctionComponent<{
   } {
     switch (vote.toUpperCase()) {
       case "YES":
-        return { backgroundColor: ColorPalette["green-250"], color: "#151a1a" };
+        return {
+          backgroundColor: ColorPalette["green-250"],
+          color: ColorPalette["dark"],
+        };
       case "ABSTAIN":
-        return { backgroundColor: "#E8E8E8", color: "#151a1a" };
+        return { backgroundColor: "#E8E8E8", color: ColorPalette["dark"] };
       case "NO":
       case "NO_WITH_VETO":
       default:

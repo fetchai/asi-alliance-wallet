@@ -1,5 +1,5 @@
 import React, { FunctionComponent } from "react";
-import { useStyle } from "styles/index";
+import { ColorPalette, useStyle } from "styles/index";
 import { Stack } from "./navigation";
 import { TransitionPresets } from "@react-navigation/stack";
 import { TransparentHeaderOptionsPreset } from "components/header";
@@ -18,7 +18,7 @@ import { ViewStyle } from "react-native";
 
 const lightHeaderOverrides = {
   headerTitleStyle: {
-    color: "#151a1a",
+    color: ColorPalette["dark"],
     fontSize: 16,
     fontFamily: getPlatformFontFamily("400"),
   },

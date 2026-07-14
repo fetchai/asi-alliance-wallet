@@ -43,7 +43,7 @@ export const TabBarView: FunctionComponent<{
         containerStyle={
           [
             style.flatten(["justify-center"]),
-            select ? { backgroundColor: "#151a1a" } : {},
+            select ? style.flatten(["background-color-dark"]) : {},
             {
               width:
                 (Dimensions.get("window").width -

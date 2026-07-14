@@ -110,10 +110,11 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
       <View style={style.flatten(["width-card-gap"]) as ViewStyle} />
       <Button
         containerStyle={
-          {
-            ...style.flatten(["flex-1", "border-radius-32"]),
-            backgroundColor: "#151a1a",
-          } as ViewStyle
+          style.flatten([
+            "flex-1",
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
         }
         textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         text="Stake more"
@@ -137,10 +138,10 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
   ) : validatorSelector ? (
     <Button
       containerStyle={
-        {
-          ...style.flatten(["border-radius-32"]),
-          backgroundColor: "#151a1a",
-        } as ViewStyle
+        style.flatten([
+          "border-radius-32",
+          "background-color-dark",
+        ]) as ViewStyle
       }
       text="Choose this validator"
       textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
@@ -157,10 +158,10 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
   ) : (
     <Button
       containerStyle={
-        {
-          ...style.flatten(["border-radius-32"]),
-          backgroundColor: "#151a1a",
-        } as ViewStyle
+        style.flatten([
+          "border-radius-32",
+          "background-color-dark",
+        ]) as ViewStyle
       }
       text="Stake with this validator"
       textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}

@@ -259,7 +259,7 @@ export const MyRewardCard: FunctionComponent<{
                   durationValue: 1000,
                   easingValue: "linear",
                 }}
-                textColor={"#151a1a"}
+                textColor={style.get("color-dark").color}
               />
               <Text
                 style={

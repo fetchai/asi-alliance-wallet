@@ -393,10 +393,11 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         loading={activityStore.getPendingTxnTypes[txnTypeKey.undelegate]}
         textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         containerStyle={
-          {
-            ...style.flatten(["margin-top-16", "border-radius-32"]),
-            backgroundColor: "#151a1a",
-          } as ViewStyle
+          style.flatten([
+            "margin-top-16",
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
         }
         onPress={unstakeBalance}
       />

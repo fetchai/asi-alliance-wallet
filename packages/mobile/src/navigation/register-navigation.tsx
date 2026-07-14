@@ -44,8 +44,7 @@ export const RegisterNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "",
         }}
         name="Register.NewMnemonic"
@@ -53,8 +52,7 @@ export const RegisterNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "",
         }}
         name="Register.VerifyMnemonic"
@@ -83,8 +81,7 @@ export const RegisterNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "",
         }}
         name="Register.CreateAccount"

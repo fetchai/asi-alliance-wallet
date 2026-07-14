@@ -14,6 +14,7 @@ import { MyRewardCard } from "./reward-card";
 import { useStore } from "stores/index";
 import { Button } from "components/button";
 import { DelegationsCard } from "./delegations-card";
+import { UnbondingCard } from "./unbonding-card";
 import { IconWithText } from "components/new/icon-with-text/icon-with-text";
 import {
   NavigationProp,
@@ -63,6 +64,12 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
       account.bech32Address
     );
   const delegations = queryDelegations.delegations;
+
+  const queryUnbondingDelegations =
+    queries.cosmos.queryUnbondingDelegations.getQueryBech32Address(
+      account.bech32Address
+    );
+  const hasUnbonding = !queryUnbondingDelegations.total.toDec().isZero();
 
   useEffect(() => {
     if (scrollViewRef.current) {
@@ -136,7 +143,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
         Stake
       </Text>
       <StakeCard />
-      {delegations && delegations.length > 0 ? (
+      {(delegations && delegations.length > 0) || hasUnbonding ? (
         <React.Fragment>
           <Button
             text="Stake more"
@@ -160,18 +167,29 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
               });
             }}
           />
-          <MyRewardCard
-            queries={queries}
-            queryDelegations={queryDelegations}
-            containerStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
-          />
-
-          <DelegationsCard
-            containerStyle={style.flatten(["margin-y-6"]) as ViewStyle}
-            queries={queries}
-            queryDelegations={queryDelegations}
-            accountBech32Address={account.bech32Address}
-          />
+          {delegations && delegations.length > 0 && (
+            <React.Fragment>
+              <MyRewardCard
+                queries={queries}
+                queryDelegations={queryDelegations}
+                containerStyle={
+                  style.flatten(["margin-bottom-24"]) as ViewStyle
+                }
+              />
+              <DelegationsCard
+                containerStyle={style.flatten(["margin-y-6"]) as ViewStyle}
+                queries={queries}
+                queryDelegations={queryDelegations}
+                accountBech32Address={account.bech32Address}
+              />
+            </React.Fragment>
+          )}
+          {hasUnbonding && (
+            <UnbondingCard
+              containerStyle={style.flatten(["margin-y-6"]) as ViewStyle}
+              accountBech32Address={account.bech32Address}
+            />
+          )}
         </React.Fragment>
       ) : (
         <View

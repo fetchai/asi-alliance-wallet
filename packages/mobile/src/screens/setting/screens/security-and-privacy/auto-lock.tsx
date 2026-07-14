@@ -32,16 +32,16 @@ export const AutoLockScreen: FunctionComponent = observer(() => {
         right={
           <Switch
             trackColor={{
-              false: "#767577",
-              true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
+              false: "#DCDCE3",
+              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
             }}
-            thumbColor={isAutoLockOn ? "#5F38FB" : "#D0BCFF66"}
+            thumbColor={isAutoLockOn ? "#73A271" : "#9A9AA2"}
             style={[
               {
                 borderRadius: 16,
                 borderWidth: 1,
               },
-              style.flatten(["border-color-pink-light@40%"]),
+              style.flatten(["border-color-gray-100"]),
             ]}
             onValueChange={handleAutoLockToggle}
             value={isAutoLockOn}

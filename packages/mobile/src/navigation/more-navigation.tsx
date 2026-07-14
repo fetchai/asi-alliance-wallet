@@ -46,7 +46,7 @@ export const MoreNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Add a token",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -60,7 +60,7 @@ export const MoreNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Manage tokens",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -100,7 +100,7 @@ export const MoreNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Security & Privacy",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -114,7 +114,7 @@ export const MoreNavigation: FunctionComponent = () => {
         options={{
           ...TransparentHeaderOptionsPreset,
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -127,7 +127,7 @@ export const MoreNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "App version",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -141,7 +141,7 @@ export const MoreNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Currency",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -155,7 +155,7 @@ export const MoreNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Proposals",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -169,7 +169,7 @@ export const MoreNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },

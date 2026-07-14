@@ -33,7 +33,7 @@ export const OtherNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Send",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -47,7 +47,7 @@ export const OtherNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Receive",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -77,7 +77,7 @@ export const OtherNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "Rename wallet",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -91,7 +91,7 @@ export const OtherNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
@@ -105,7 +105,7 @@ export const OtherNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           title: "",
           headerTitleStyle: {
-            color: "#151a1a",
+            color: style.get("color-dark").color,
             fontSize: 16,
             fontFamily: getPlatformFontFamily("400"),
           },
