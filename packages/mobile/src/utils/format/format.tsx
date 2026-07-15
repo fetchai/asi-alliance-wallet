@@ -1,6 +1,8 @@
 import { Buffer } from "buffer/";
 import { AGENT_ADDRESS } from "../../config";
 import { Platform } from "react-native";
+import { MultiKeyStoreInfoWithSelected } from "@keplr-wallet/background";
+import { RegisterMode } from "@keplr-wallet/hooks";
 
 export const separateNumericAndDenom = (value: any) => {
   const data = value ? value.split(" ") : ["", ""];
@@ -159,4 +161,78 @@ export const numberLocalFormat = (number: string) => {
     return Number(number).toLocaleString("en-US");
   }
   return number;
+};
+
+export const getNextDefaultAccountName = (
+  items: MultiKeyStoreInfoWithSelected,
+  prefix = "account"
+): string => {
+  if (items.length === 0) {
+    return `${prefix}-1`;
+  }
+  const lastName = items[items.length - 1]?.meta?.["name"] || "";
+  const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
+  const lastNum = match ? Number(match[1]) : 0;
+  return `${prefix}-${lastNum + 1}`;
+};
+
+export const validateWalletName = (
+  value: string,
+  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  registerConfigMode?: RegisterMode
+) => {
+  const alreadyImportedWalletNames = [
+    ...new Set(
+      multiKeyStoreInfo?.flatMap((item) => {
+        const defaultName = item?.meta?.["name"];
+        const chainNames = item?.meta?.["nameByChain"]
+          ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+          : [];
+        return [defaultName, ...chainNames].filter(Boolean);
+      }) ?? []
+    ),
+  ];
+
+  let nameAlreadyExists = false;
+  if (!registerConfigMode || registerConfigMode !== "create") {
+    nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+  }
+
+  const allowedPattern = /^[a-zA-Z0-9 @_\-\.\(\)]*$/;
+  const isValidFormat = allowedPattern.test(value);
+  const containsLetterOrNumber = /[a-zA-Z0-9]/.test(value);
+
+  return {
+    isValidFormat,
+    nameAlreadyExists,
+    containsLetterOrNumber,
+    isValid: isValidFormat && !nameAlreadyExists && containsLetterOrNumber,
+  };
+};
+
+export const validateAccountName = (
+  value: string,
+  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  mode: RegisterMode
+): string | undefined => {
+  const trimmedValue = value.trimStart();
+  const isEmpty = trimmedValue === "";
+  const { isValid, isValidFormat, containsLetterOrNumber } = validateWalletName(
+    trimmedValue,
+    multiKeyStoreInfo,
+    mode
+  );
+
+  if (!isValid || isEmpty) {
+    if (!isValidFormat) {
+      return "Only letters, numbers and basic symbols (_-.@#()) are allowed.";
+    }
+    if (isEmpty) {
+      return "Account name cannot be empty";
+    }
+    if (!containsLetterOrNumber) {
+      return "Account name must contain at least one letter or number.";
+    }
+    return "Account name already exists, please try a different name";
+  }
 };

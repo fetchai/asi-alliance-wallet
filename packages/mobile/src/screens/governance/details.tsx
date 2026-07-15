@@ -543,7 +543,7 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
               [voteText === "Change your vote" && "border-color-gray-100"]
             ),
             ...(voteText !== "Change your vote" && {
-              backgroundColor: "#151a1a",
+              backgroundColor: style.get("color-dark").color,
             }),
           } as ViewStyle
         }

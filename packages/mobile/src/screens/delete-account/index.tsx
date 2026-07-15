@@ -56,7 +56,7 @@ export const DeleteWalletScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -67,8 +67,12 @@ export const DeleteWalletScreen: FunctionComponent = () => {
           subtitle={
             "You will no longer have access to\nyour wallet on ASI Alliance Wallet"
           }
-          titleStyle={style.flatten(["h3", "font-normal"]) as ViewStyle}
-          subtitleStyle={style.flatten(["body3"]) as ViewStyle}
+          titleStyle={
+            style.flatten(["h3", "font-normal", "color-dark"]) as ViewStyle
+          }
+          subtitleStyle={
+            style.flatten(["body3", "color-gray-300"]) as ViewStyle
+          }
         />
       </View>
       <InputCardView
@@ -97,7 +101,7 @@ export const DeleteWalletScreen: FunctionComponent = () => {
           <SimpleCardView
             backgroundBlur={false}
             heading="Make sure you’ve backed up your mnemonic seed before proceeding."
-            headingStyle={style.flatten(["body3"]) as ViewStyle}
+            headingStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
             cardStyle={
               style.flatten([
                 "background-color-coral-red@25%",
@@ -117,17 +121,13 @@ export const DeleteWalletScreen: FunctionComponent = () => {
               });
             }}
             textStyle={
-              style.flatten([
-                "color-white",
-                "body2",
-                "font-normal",
-              ]) as ViewStyle
+              style.flatten(["color-dark", "body2", "font-normal"]) as ViewStyle
             }
             containerStyle={
               style.flatten([
                 "border-radius-32",
                 "margin-y-12",
-                "border-color-white@20%",
+                "border-color-gray-100",
               ]) as ViewStyle
             }
           />
@@ -144,8 +144,15 @@ export const DeleteWalletScreen: FunctionComponent = () => {
           });
         }}
         disabled={!password}
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
-        textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
+        }
       />
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
       <KeyboardSpacerView />

@@ -79,11 +79,18 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
       {password && keychainStore.isBiometrySupported ? (
         <View
           style={
-            style.flatten([
-              "flex-row",
-              "margin-top-58",
-              "items-center",
-            ]) as ViewStyle
+            [
+              style.flatten([
+                "flex-row",
+                "margin-top-58",
+                "items-center",
+                "padding-18",
+                "border-radius-12",
+                "border-width-1",
+                "border-color-gray-100",
+                "background-color-white",
+              ]),
+            ] as ViewStyle
           }
         >
           <Text style={style.flatten(["subtitle1", "color-dark"]) as ViewStyle}>
@@ -127,7 +134,7 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
                 keyRingStore.multiKeyStoreInfo.length - 1
               );
             }
-            analyticsStore.logEvent("start_using_your_wallet_click", {
+            analyticsStore.logEvent("staart_using_your_wallet_click", {
               pageName: "Register",
             });
             smartNavigation.reset({

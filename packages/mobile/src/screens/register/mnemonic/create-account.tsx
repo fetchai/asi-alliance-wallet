@@ -12,7 +12,13 @@ import { Button } from "components/button";
 import { Controller, useForm } from "react-hook-form";
 import { useStore } from "stores/index";
 import { useSmartNavigation } from "navigation/smart-navigation";
-import { isPrivateKey, trimWordsStr } from "utils/format/format";
+import { SelectNetwork } from "components/new/select-network";
+import {
+  isPrivateKey,
+  trimWordsStr,
+  getNextDefaultAccountName,
+  validateAccountName,
+} from "utils/format/format";
 import { PasswordValidateView } from "components/new/password-validate/password-validate";
 import { CheckIcon } from "components/new/icon/check";
 import { XmarkIcon } from "components/new/icon/xmark";
@@ -49,11 +55,15 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const [password, setPassword] = useState("");
   const [mode] = useState(registerConfig.mode);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
 
   const smartNavigation = useSmartNavigation();
 
   const style = useStyle();
-  const { analyticsStore } = useStore();
+  const { analyticsStore, keyRingStore } = useStore();
+  const defaultAccountName = getNextDefaultAccountName(
+    keyRingStore.multiKeyStoreInfo
+  );
 
   useEffect(() => {
     setValue("mnemonic", mnemonic, {
@@ -67,8 +77,11 @@ export const CreateAccountScreen: FunctionComponent = () => {
     setFocus,
     setValue,
     getValues,
+    watch,
     formState: { errors },
   } = useForm<FormData>();
+
+  const currentName = watch("name", defaultAccountName);
 
   const submit = handleSubmit(async () => {
     setIsCreating(true);
@@ -81,7 +94,9 @@ export const CreateAccountScreen: FunctionComponent = () => {
         getValues("name").trim(),
         mnemonic,
         getValues("password"),
-        bip44HDPath
+        bip44HDPath,
+        {},
+        selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "seed",
@@ -92,7 +107,9 @@ export const CreateAccountScreen: FunctionComponent = () => {
       await registerConfig.createPrivateKey(
         getValues("name"),
         privateKey,
-        getValues("password")
+        getValues("password"),
+        {},
+        selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "seed",
@@ -167,11 +184,8 @@ export const CreateAccountScreen: FunctionComponent = () => {
         control={control}
         rules={{
           required: "Name is required",
-          validate: (value: string) => {
-            if (value.trim().length < 3) {
-              return "Name at least 3 characters";
-            }
-          },
+          validate: (value: string) =>
+            validateAccountName(value, keyRingStore.multiKeyStoreInfo, mode),
         }}
         render={({ field: { onChange, onBlur, value, ref } }) => {
           return (
@@ -195,21 +209,11 @@ export const CreateAccountScreen: FunctionComponent = () => {
                 onChange(value.trim());
               }}
               onChangeText={(text: string) => {
-                text = text.replace(
-                  /[~`!#$%^&*()+={}\[\]|\\:;"'<>,.?/₹•€£]/,
-                  ""
-                );
-                if (text[0] === " " || text[0] === "-") {
-                  return;
-                }
-                if (
-                  (text[text.length - 1] === "-" && text[text.length - 2]) ===
-                  "-"
-                ) {
-                  return;
-                }
-                text = text.replace(/ {1,}/g, " ");
-                onChange(text);
+                const filtered = text
+                  .trimStart()
+                  .replace(/[^a-zA-Z0-9 @_\-\.\(\)]/g, "")
+                  .replace(/ {2,}/g, " ");
+                onChange(filtered);
               }}
               value={value}
               maxLength={30}
@@ -218,8 +222,39 @@ export const CreateAccountScreen: FunctionComponent = () => {
           );
         }}
         name="name"
-        defaultValue=""
+        defaultValue={defaultAccountName}
       />
+      <SelectNetwork
+        selectedNetworks={selectedNetworks}
+        disabled={currentName === defaultAccountName}
+        onMultiSelectChange={setSelectedNetworks}
+      />
+      {currentName !== defaultAccountName && selectedNetworks.length === 0 && (
+        <Text
+          style={
+            style.flatten([
+              "text-caption2",
+              "color-red-400",
+              "margin-top-4",
+            ]) as ViewStyle
+          }
+        >
+          Please select at least one network
+        </Text>
+      )}
+      {currentName !== defaultAccountName && selectedNetworks.length > 0 && (
+        <Text
+          style={
+            style.flatten([
+              "text-caption2",
+              "color-gray-300",
+              "margin-top-4",
+            ]) as ViewStyle
+          }
+        >
+          * Account name for unselected networks will be {defaultAccountName}
+        </Text>
+      )}
       {mode === "create" && (
         <React.Fragment>
           <Controller
@@ -395,6 +430,9 @@ export const CreateAccountScreen: FunctionComponent = () => {
         textStyle={style.flatten(["color-white"]) as ViewStyle}
         text="Confirm"
         size="large"
+        disabled={
+          currentName !== defaultAccountName && selectedNetworks.length === 0
+        }
         loading={isCreating}
         onPress={() => {
           submit();

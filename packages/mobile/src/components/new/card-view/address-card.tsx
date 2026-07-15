@@ -179,7 +179,6 @@ export const AddressInputCard: FunctionComponent<{
               returnKeyType="done"
               placeholder={placeholderText}
               value={recipientConfig.rawRecipient}
-              multiline={true}
               editable={editable}
               onChangeText={(text) => {
                 if (
@@ -291,6 +290,10 @@ export const AddressInputCard: FunctionComponent<{
           title="Choose recipient"
           close={() => setIsOpenModal(false)}
           addressBookConfig={addressBookConfig}
+          onSelectRecipient={(address) => {
+            recipientConfig.setRawRecipient(address);
+            setIsOpenModal(false);
+          }}
           addAddressBook={(add) => {
             if (add) {
               analyticsStore.logEvent("add_new_address_click", {

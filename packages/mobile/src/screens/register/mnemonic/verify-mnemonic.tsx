@@ -1,6 +1,12 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { PageWithScrollView } from "components/page";
-import { FlatList, Text, View, ViewStyle } from "react-native";
+import {
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 import { useStyle } from "styles/index";
 import { WordChip } from "components/mnemonic";
 import { Button } from "components/button";
@@ -8,7 +14,7 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { NewMnemonicConfig } from "./hook";
 import { RegisterConfig } from "@keplr-wallet/hooks";
-import { RectButton } from "components/rect-button";
+import { BlurBackground } from "components/new/blur-background/blur-background";
 import { BIP44AdvancedButton, useBIP44Option } from "screens/register/bip44";
 import { BipButtons } from "screens/register/bip-button";
 
@@ -170,7 +176,7 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
           data={candidateWords}
           keyExtractor={(_, index) => index.toString()}
           renderItem={renderButtonItem}
-          numColumns={4}
+          numColumns={3}
           scrollEnabled={false}
         />
         <Button
@@ -214,35 +220,38 @@ const WordButton: FunctionComponent<{
   const style = useStyle();
 
   return (
-    <RectButton
-      style={
-        style.flatten(
-          [
-            "padding-y-6",
-            "margin-4",
-            "flex-1",
-            "border-radius-32",
-            "border-width-1",
-            "border-color-gray-100",
-            "background-color-gray-5",
-          ],
-          [used && "background-color-gray-50"]
-        ) as ViewStyle
-      }
+    <TouchableOpacity
+      activeOpacity={0.6}
       onPress={onPress}
-      rippleColor={"black@10%"}
+      style={style.flatten(["flex-1", "margin-4"]) as ViewStyle}
     >
-      <Text
-        style={
-          style.flatten(
-            ["text-caption2", "color-black", "text-center"],
-            [used && "color-gray-200"]
-          ) as ViewStyle
+      <BlurBackground
+        backgroundBlur={false}
+        containerStyle={
+          [
+            style.flatten([
+              "padding-y-8",
+              "items-center",
+              "border-radius-64",
+              "border-width-1",
+              "border-color-gray-100",
+            ]),
+            used && { backgroundColor: "#e8e8e8" },
+          ] as ViewStyle
         }
       >
-        {word}
-      </Text>
-    </RectButton>
+        <Text
+          style={
+            style.flatten(
+              ["text-caption2"],
+              [used ? "color-gray-300" : "color-dark"]
+            ) as ViewStyle
+          }
+        >
+          {word}
+        </Text>
+      </BlurBackground>
+    </TouchableOpacity>
   );
 };
 

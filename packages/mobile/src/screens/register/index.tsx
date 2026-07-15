@@ -140,8 +140,7 @@ export const RegisterIntroScreen: FunctionComponent = () => {
               source={require("assets/logo/logo-black.png")}
               style={{
                 aspectRatio: 2.977,
-                width: 100,
-                height: 80,
+                height: 60,
               }}
               resizeMode="contain"
               fadeDuration={0}
@@ -149,7 +148,7 @@ export const RegisterIntroScreen: FunctionComponent = () => {
           </View>
           {isBackBtnVisible ? (
             <IconButton
-              icon={<HeaderBackButtonIcon color="white" size={21} />}
+              icon={<HeaderBackButtonIcon color="#151a1a" size={21} />}
               backgroundBlur={false}
               onPress={() => navigation.goBack()}
               containerStyle={style.flatten(["absolute"])}

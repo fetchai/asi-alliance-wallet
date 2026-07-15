@@ -323,7 +323,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
               }
               containerStyle={style.flatten(["margin-y-20"]) as ViewStyle}
               labelStyle={{ color: "#737676" } as ViewStyle}
-              inputStyle={{ color: "#151a1a" } as ViewStyle}
+              inputStyle={{ color: style.get("color-dark").color } as ViewStyle}
               secureTextEntry={!showPassword}
               value={password}
               returnKeyType="done"
@@ -336,10 +336,11 @@ export const UnlockScreen: FunctionComponent = observer(() => {
             />
             <Button
               containerStyle={
-                {
-                  ...style.flatten(["border-radius-32", "margin-y-10"]),
-                  backgroundColor: "#151a1a",
-                } as ViewStyle
+                style.flatten([
+                  "border-radius-32",
+                  "margin-y-10",
+                  "background-color-dark",
+                ]) as ViewStyle
               }
               textStyle={style.flatten(["color-white"]) as ViewStyle}
               text="Sign in"
@@ -375,7 +376,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                   mode="text"
                   loading={isBiometricLoading}
                   showLoadingSpinner={true}
-                  loaderColor="#151a1a"
+                  loaderColor={style.get("color-dark").color}
                 />
               </View>
             </TouchableOpacity>

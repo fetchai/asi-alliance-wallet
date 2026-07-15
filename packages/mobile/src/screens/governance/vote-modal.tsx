@@ -67,8 +67,11 @@ export const GovernanceVoteModal: FunctionComponent<{
           size="large"
           containerStyle={
             {
-              ...style.flatten(["border-radius-64", "margin-top-18"]),
-              backgroundColor: "#151a1a",
+              ...style.flatten([
+                "border-radius-64",
+                "margin-top-18",
+                "background-color-dark",
+              ]),
             } as ViewStyle
           }
           textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}

@@ -53,17 +53,16 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
         right={
           <Switch
             trackColor={{
-              false: "#767577",
-              true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
+              false: "#DCDCE3",
+              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
             }}
-            thumbColor={keychainStore.isBiometryOn ? "#5F38FB" : "#D0BCFF66"}
+            thumbColor={keychainStore.isBiometryOn ? "#73A271" : "#9A9AA2"}
             style={[
               {
                 borderRadius: 16,
                 borderWidth: 1,
-                // transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
               },
-              style.flatten(["border-color-pink-light@40%"]),
+              style.flatten(["border-color-gray-100"]),
             ]}
             onValueChange={async (value) => {
               if (value) {

@@ -28,15 +28,6 @@ interface RenderNumberProps {
   };
 }
 
-const easingLists = {
-  linear: Easing.linear,
-  ease: Easing.ease,
-  bounce: Easing.bounce,
-  poly: Easing.poly(4),
-  circle: Easing.circle,
-  bezier: Easing.bezier(0.25, 0.1, 0.25, 1),
-};
-
 const NUMBERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export function RenderNumber({
@@ -54,12 +45,27 @@ export function RenderNumber({
   const style = useStyle();
 
   const animatedStylesTiming = useAnimatedStyle(() => {
+    "worklet";
+    let easing;
+    if (easingValue === "bounce") {
+      easing = Easing.bounce;
+    } else if (easingValue === "poly") {
+      easing = Easing.poly(4);
+    } else if (easingValue === "circle") {
+      easing = Easing.circle;
+    } else if (easingValue === "bezier") {
+      easing = Easing.bezier(0.25, 0.1, 0.25, 1);
+    } else if (easingValue === "ease") {
+      easing = Easing.ease;
+    } else {
+      easing = Easing.linear;
+    }
     return {
       transform: [
         {
           translateY: withTiming(negativeTranslateY, {
             duration: listProperties.durationValue,
-            easing: easingLists[easingValue as keyof typeof easingLists],
+            easing,
           }),
         },
       ],

@@ -245,7 +245,7 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
         inputContainerStyle={
           style.flatten(["background-color-gray-5"]) as ViewStyle
         }
-        inputStyle={style.flatten(["text-center", "color-black"]) as ViewStyle}
+        inputStyle={style.flatten(["text-center", "color-dark"]) as ViewStyle}
         value={items.item}
         multiline={selectedSeed === SeedType.PRIVATE_KEY}
         numberOfLines={selectedSeed === SeedType.PRIVATE_KEY ? 2 : 1}
@@ -324,11 +324,7 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
             size="large"
             mode="outline"
             textStyle={
-              style.flatten([
-                "color-black",
-                "body3",
-                "font-normal",
-              ]) as ViewStyle
+              style.flatten(["color-dark", "body3", "font-normal"]) as ViewStyle
             }
             containerStyle={
               style.flatten([

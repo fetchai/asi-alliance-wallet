@@ -40,7 +40,8 @@ export const ChangeWalletCardModel: FunctionComponent<{
   const style = useStyle();
   const { analyticsStore, accountStore, chainStore } = useStore();
 
-  const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+  const chainId = chainStore.current.chainId;
+  const accountInfo = accountStore.getAccount(chainId);
 
   if (!isOpen) {
     return null;
@@ -189,7 +190,16 @@ export const ChangeWalletCardModel: FunctionComponent<{
                       ]) as ViewStyle
                     }
                   >
-                    {keyStore.meta?.["name"] || "Fetch Account"}
+                    {(() => {
+                      const nameByChain = keyStore.meta?.["nameByChain"]
+                        ? JSON.parse(keyStore.meta["nameByChain"])
+                        : {};
+                      return (
+                        nameByChain[chainId] ||
+                        keyStore.meta?.["name"] ||
+                        "Fetch Account"
+                      );
+                    })()}
                   </Text>
                   {getKeyStoreTypeLabel(keyStore)}
                 </View>

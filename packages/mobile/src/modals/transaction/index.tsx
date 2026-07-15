@@ -4,7 +4,7 @@ import { ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { IconWithText } from "components/new/icon-with-text/icon-with-text";
 import { Button } from "components/button";
-import { TendermintTxTracer } from "@keplr-wallet/cosmos";
+import { CosmosTxTracer } from "@keplr-wallet/stores";
 import { Buffer } from "buffer";
 import { useStore } from "stores/index";
 import LottieView from "lottie-react-native";
@@ -45,7 +45,7 @@ export const TransactionModal: FunctionComponent<{
     title: "Transaction pending",
     subTitle:
       "Transaction has been broadcasted to blockchain and pending confirmation",
-    img: require("assets/lottie/txn-pending-icon.json"),
+    img: require("assets/lottie/pending.json"),
   });
 
   const style = useStyle();
@@ -56,15 +56,15 @@ export const TransactionModal: FunctionComponent<{
       title: "Transaction pending",
       subTitle:
         "Transaction has been broadcasted to blockchain and pending confirmation",
-      img: require("assets/lottie/txn-pending-icon.json"),
+      img: require("assets/lottie/pending.json"),
     });
     const chainInfo = chainStore.getChain(chainId);
-    const txTracer: TendermintTxTracer = new TendermintTxTracer(
+    const txTracer: CosmosTxTracer = new CosmosTxTracer(
       chainInfo.rpc,
       "/websocket"
     );
     txTracer
-      .traceTx(Buffer.from(txnHash, "hex"))
+      .traceTx(Buffer.from(txnHash, "hex") as Uint8Array)
       .then((tx) => {
         if (tx.code == null || tx.code === 0) {
           setTransactionState({
@@ -72,14 +72,14 @@ export const TransactionModal: FunctionComponent<{
             title: "Transaction successful",
             subTitle:
               "Congratulations!\nYour transaction has been completed and confirmed by the blockchain",
-            img: require("assets/lottie/txn-success-icon.json"),
+            img: require("assets/lottie/success.json"),
           });
         } else {
           setTransactionState({
             status: TransactionStatus.Failed,
             title: "Transaction failed",
             subTitle: "Unfortunately your transaction has failed.",
-            img: require("assets/lottie/txn-error-icon.json"),
+            img: require("assets/lottie/failed.json"),
           });
         }
       })
@@ -120,11 +120,11 @@ export const TransactionModal: FunctionComponent<{
             containerStyle={
               style.flatten([
                 "border-radius-64",
-                "border-color-white@40%",
+                "border-color-gray-100",
                 "margin-top-18",
               ]) as ViewStyle
             }
-            textStyle={style.flatten(["color-white", "body2"]) as ViewStyle}
+            textStyle={style.flatten(["color-dark", "body2"]) as ViewStyle}
             onPress={() => {
               close();
               onTryAgainClick();
@@ -133,11 +133,10 @@ export const TransactionModal: FunctionComponent<{
         ) : null}
         <Button
           text={buttonText}
-          mode="outline"
           size="large"
           containerStyle={
             style.flatten(
-              ["border-radius-64", "border-color-white@40%"],
+              ["border-radius-64", "background-color-dark"],
               [
                 transactionState.status === TransactionStatus.Failed
                   ? "margin-top-12"

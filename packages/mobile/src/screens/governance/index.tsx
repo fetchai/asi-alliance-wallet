@@ -114,7 +114,7 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
             setSearch(text);
           }}
           rightIcon={<SearchIcon size={12} color="#151a1a" />}
-          inputStyle={{ color: "#151a1a" } as any}
+          inputStyle={{ color: style.get("color-dark").color } as any}
         />
       </View>
       {sections.data.length !== 0 ? (

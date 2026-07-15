@@ -64,9 +64,7 @@ export const PasswordInputModal: FunctionComponent<{
     >
       <InputCardView
         label="Password"
-        labelStyle={
-          style.flatten(["margin-y-0", "margin-bottom-12"]) as ViewStyle
-        }
+        labelStyle={style.flatten(["margin-y-12"]) as ViewStyle}
         keyboardType={"default"}
         rightIcon={
           !showPassword ? (
@@ -109,7 +107,14 @@ export const PasswordInputModal: FunctionComponent<{
         }}
         disabled={!password}
         containerStyle={
-          style.flatten(["border-radius-32", "margin-top-24"]) as ViewStyle
+          style.flatten([
+            "border-radius-32",
+            "margin-top-24",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
         }
       />
       <KeyboardSpacerView />

@@ -92,13 +92,13 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
         <SimpleCardView
           heading={words.join(" ")}
           headingMode={"normal"}
+          backgroundBlur={false}
           headingStyle={style.flatten(["body3", "color-black"]) as ViewStyle}
           cardStyle={
-            style.flatten([
-              "margin-y-10",
-              "margin-bottom-24",
-              "background-color-gray-5",
-            ]) as ViewStyle
+            [
+              style.flatten(["margin-y-10", "margin-bottom-24"]),
+              { backgroundColor: "#f6f6f6" },
+            ] as ViewStyle
           }
           trailingIconComponent={
             isTimedOut ? (
