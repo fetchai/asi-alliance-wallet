@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import { BIP44HDPath } from "@keplr-wallet/background";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -55,6 +55,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const [password, setPassword] = useState("");
   const [mode] = useState(registerConfig.mode);
   const [isCreating, setIsCreating] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
 
   const smartNavigation = useSmartNavigation();
@@ -84,6 +85,8 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const currentName = watch("name", defaultAccountName);
 
   const submit = handleSubmit(async () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsCreating(true);
     setShowPassword(false);
 
@@ -131,6 +134,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
         },
       ],
     });
+    isSubmittingRef.current = false;
     setIsCreating(false);
   });
 

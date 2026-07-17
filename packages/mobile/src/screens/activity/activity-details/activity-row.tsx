@@ -101,7 +101,7 @@ export const DetailRow = ({
           </View>
         )}
         <Text
-          style={style.flatten(["color-gray-200", "text-right"]) as ViewStyle}
+          style={style.flatten(["color-gray-400", "text-right"]) as ViewStyle}
         >
           {value}
         </Text>

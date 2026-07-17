@@ -65,7 +65,10 @@ export const GovActivityRow: FunctionComponent<{
           color: ColorPalette["dark"],
         };
       case "ABSTAIN":
-        return { backgroundColor: "#E8E8E8", color: ColorPalette["dark"] };
+        return {
+          backgroundColor: ColorPalette["gray-55"],
+          color: ColorPalette["dark"],
+        };
       case "NO":
       case "NO_WITH_VETO":
       default:

@@ -6,7 +6,7 @@ import React, {
 } from "react";
 import { CardModal } from "modals/card";
 import { Text, View, ViewStyle } from "react-native";
-import { useStyle } from "styles/index";
+import { ColorPalette, useStyle } from "styles/index";
 import { IconButton } from "components/new/button/icon";
 import { RectButton } from "components/rect-button";
 import { BlurBackground } from "components/new/blur-background/blur-background";
@@ -179,7 +179,7 @@ export const FilterView: FunctionComponent<{
             ...style.flatten(["border-radius-64"]),
             backgroundColor:
               filters == selectedFilter
-                ? "#e8e8e8"
+                ? ColorPalette["gray-55"]
                 : style.get("color-dark").color,
           } as ViewStyle
         }

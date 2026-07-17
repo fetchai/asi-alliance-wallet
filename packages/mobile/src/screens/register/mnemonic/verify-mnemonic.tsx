@@ -7,7 +7,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { useStyle } from "styles/index";
+import { ColorPalette, useStyle } from "styles/index";
 import { WordChip } from "components/mnemonic";
 import { Button } from "components/button";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -236,7 +236,7 @@ const WordButton: FunctionComponent<{
               "border-width-1",
               "border-color-gray-100",
             ]),
-            used && { backgroundColor: "#e8e8e8" },
+            used && { backgroundColor: ColorPalette["gray-55"] },
           ] as ViewStyle
         }
       >
