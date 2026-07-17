@@ -2,8 +2,8 @@ import React, { FunctionComponent, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
-import { ArrowDownGradientIcon } from "components/new/icon/arrow-down-gradient";
-import { ArrowUpGradientIcon } from "components/new/icon/arrow-up-gradient";
+import { ArrowDownIcon } from "components/new/icon/arrow-down";
+import { ArrowUpIcon } from "components/new/icon/arrow-up";
 import { useStyle } from "styles/index";
 import { useStore } from "stores/index";
 import {
@@ -11,7 +11,7 @@ import {
   ParamListBase,
   useNavigation,
 } from "@react-navigation/native";
-import { EarnIcon } from "components/new/icon/earn-icon";
+import { StakeIcon } from "components/new/icon/stake-icon";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { LockIcon } from "components/new/icon/lock";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
@@ -567,7 +567,7 @@ export const TokenBalanceSection: FunctionComponent<{
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
           <Button
             text={"Receive"}
-            rightIcon={<ArrowDownGradientIcon size={15} />}
+            rightIcon={<ArrowDownIcon size={15} color="white" />}
             textStyle={
               style.flatten([
                 "color-white",
@@ -596,7 +596,7 @@ export const TokenBalanceSection: FunctionComponent<{
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
           <Button
             text={"Send"}
-            rightIcon={<ArrowUpGradientIcon size={15} />}
+            rightIcon={<ArrowUpIcon size={15} color="white" />}
             textStyle={
               style.flatten([
                 "color-white",
@@ -630,7 +630,7 @@ export const TokenBalanceSection: FunctionComponent<{
         textStyle={
           style.flatten(["color-white", "margin-x-8", "body2"]) as ViewStyle
         }
-        rightIcon={<EarnIcon size={15} />}
+        rightIcon={<StakeIcon size={15} color="white" />}
         containerStyle={
           style.flatten([
             "border-radius-32",

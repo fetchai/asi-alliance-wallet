@@ -14,7 +14,6 @@ import {
 import { KeyRingStore } from "@keplr-wallet/stores";
 import { BlurBackground } from "../blur-background/blur-background";
 import { Bech32Address } from "@keplr-wallet/cosmos";
-import { IconButton } from "../button/icon";
 import { SimpleGoogleIcon } from "../icon/simple-google";
 import { SimpleAppleIcon } from "../icon/simple-apple";
 
@@ -47,20 +46,35 @@ export const ChangeWalletCardModel: FunctionComponent<{
     return null;
   }
 
+  const socialIconStyle = {
+    ...style.flatten([
+      "border-width-1",
+      "border-radius-4",
+      "width-24",
+      "height-20",
+      "items-center",
+      "justify-center",
+      "margin-left-6",
+    ]),
+    borderColor: "#a1a3a3",
+  } as ViewStyle;
+
   const getKeyStoreTypeLabel = (keyStore: MultiKeyStoreInfoElem) => {
     switch (keyStore.type) {
       case "ledger":
         return (
           <View
             style={
-              style.flatten([
-                "margin-left-6",
-                "border-width-1",
-                "border-color-gray-100",
-                "border-radius-4",
-                "items-center",
-                "justify-center",
-              ]) as ViewStyle
+              {
+                ...style.flatten([
+                  "margin-left-6",
+                  "border-width-1",
+                  "border-radius-4",
+                  "items-center",
+                  "justify-center",
+                ]),
+                borderColor: "#a1a3a3",
+              } as ViewStyle
             }
           >
             <Text
@@ -73,10 +87,7 @@ export const ChangeWalletCardModel: FunctionComponent<{
                     "margin-y-1",
                     "text-center",
                   ]),
-                  {
-                    fontSize: 10,
-                    textTransform: "uppercase",
-                  },
+                  { fontSize: 10, textTransform: "uppercase" },
                 ] as ViewStyle
               }
             >
@@ -86,52 +97,23 @@ export const ChangeWalletCardModel: FunctionComponent<{
         );
 
       case "privateKey":
-        // Torus key
         if (
-          keyStore.meta &&
           keyStore.meta?.["email"] &&
           keyStore.meta?.["socialType"] === "apple"
         ) {
           return (
-            <IconButton
-              icon={<SimpleAppleIcon />}
-              backgroundBlur={false}
-              iconStyle={
-                style.flatten([
-                  "border-width-1",
-                  "border-radius-4",
-                  "border-color-gray-100",
-                  "width-24",
-                  "height-20",
-                  "items-center",
-                  "justify-center",
-                  "margin-left-6",
-                ]) as ViewStyle
-              }
-            />
+            <View style={socialIconStyle}>
+              <SimpleAppleIcon />
+            </View>
           );
         } else if (
-          keyStore.meta &&
           keyStore.meta?.["email"] &&
           keyStore.meta?.["socialType"] === "google"
         ) {
           return (
-            <IconButton
-              icon={<SimpleGoogleIcon />}
-              backgroundBlur={false}
-              iconStyle={
-                style.flatten([
-                  "border-width-1",
-                  "border-radius-4",
-                  "border-color-gray-100",
-                  "width-24",
-                  "height-20",
-                  "items-center",
-                  "justify-center",
-                  "margin-left-6",
-                ]) as ViewStyle
-              }
-            />
+            <View style={socialIconStyle}>
+              <SimpleGoogleIcon />
+            </View>
           );
         }
         return;
@@ -179,15 +161,23 @@ export const ChangeWalletCardModel: FunctionComponent<{
               <View style={style.flatten(["flex-5"]) as ViewStyle}>
                 <View
                   style={
-                    style.flatten(["flex-row", "items-center"]) as ViewStyle
+                    style.flatten([
+                      "flex-row",
+                      "items-center",
+                      "flex-1",
+                    ]) as ViewStyle
                   }
                 >
                   <Text
+                    numberOfLines={1}
                     style={
-                      style.flatten([
-                        keyStore?.selected ? "h7" : "body3",
-                        "color-dark",
-                      ]) as ViewStyle
+                      [
+                        style.flatten([
+                          keyStore?.selected ? "h7" : "body3",
+                          "color-dark",
+                        ]),
+                        { flexShrink: 1 },
+                      ] as ViewStyle
                     }
                   >
                     {(() => {

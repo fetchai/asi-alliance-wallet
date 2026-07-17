@@ -128,12 +128,10 @@ export const SettingItem: FunctionComponent<{
       ) : (
         <View
           style={StyleSheet.flatten([
-            style.flatten([
-              "height-56",
-              "padding-x-20",
-              "flex-row",
-              "items-center",
-            ]) as ViewStyle,
+            style.flatten(
+              ["padding-x-20", "flex-row", "items-center"],
+              [paragraph ? "padding-y-14" : "height-56"]
+            ) as ViewStyle,
             propStyle,
           ])}
         >

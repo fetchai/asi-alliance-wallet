@@ -196,6 +196,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
                     "width-90",
                   ]) as ViewStyle
                 }
+                textStyle={style.flatten(["color-dark"]) as ViewStyle}
                 backgroundBlur={false}
                 onPress={() => {
                   setIsOpenModal(true);

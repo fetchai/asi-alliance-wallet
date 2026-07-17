@@ -193,9 +193,7 @@ export const LineGraph: FunctionComponent<{
   }, [cacheKey]);
 
   return (
-    <View
-      style={[style.flatten(["margin-top-24", "overflow-hidden"])] as ViewStyle}
-    >
+    <View style={[style.flatten(["margin-top-24"])] as ViewStyle}>
       <Text
         style={
           style.flatten([

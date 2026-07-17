@@ -104,10 +104,9 @@ export const SendPhase1: FunctionComponent<{
     ? `(${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
 
-  const availableBalance = `${balance
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${Usd}`;
+  const availableBalance = `${balance.shrink(true).maxDecimals(6).toString()}${
+    Usd ? ` ${Usd}` : ""
+  }`;
 
   const maxAmount = React.useMemo(() => {
     try {
@@ -153,7 +152,7 @@ export const SendPhase1: FunctionComponent<{
           heading={sendConfigs.amountConfig.sendCurrency.coinDenom}
           subHeading={`Available: ${numberLocalFormat(
             availableBalance.split(" ")[0]
-          )} ${availableBalance.split(" ")[1]}`}
+          )} ${availableBalance.split(" ").slice(1).join(" ")}`}
           trailingIcon={<ChevronDownIcon size={12} />}
           onPress={() => {
             setOpenAssetModel(true);

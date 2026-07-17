@@ -71,7 +71,7 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-gray-300",
+              "color-gray-400",
               "body2",
               "margin-bottom-8",
             ]) as ViewStyle

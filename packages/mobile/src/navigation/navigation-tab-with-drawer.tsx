@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useRef } from "react";
-import { useStyle } from "styles/index";
+import { ColorPalette, useStyle } from "styles/index";
 import { useStore } from "stores/index";
 import {
   DrawerActions,
@@ -186,7 +186,9 @@ export const MainTabNavigation: FunctionComponent = () => {
                           "padding-x-24",
                           "margin-bottom-6",
                         ]),
-                        ...(focused ? { backgroundColor: "#e8e8e8" } : {}),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
                       } as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
@@ -212,7 +214,9 @@ export const MainTabNavigation: FunctionComponent = () => {
                           "padding-x-24",
                           "margin-bottom-6",
                         ]),
-                        ...(focused ? { backgroundColor: "#e8e8e8" } : {}),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
                       } as ViewStyle
                     }
                     bottomTextStyle={
@@ -271,7 +275,9 @@ export const MainTabNavigation: FunctionComponent = () => {
                           "padding-x-24",
                           "margin-bottom-6",
                         ]),
-                        ...(focused ? { backgroundColor: "#e8e8e8" } : {}),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
                       } as ViewStyle
                     }
                     bottomTextStyle={
@@ -296,7 +302,9 @@ export const MainTabNavigation: FunctionComponent = () => {
                           "padding-x-24",
                           "margin-bottom-6",
                         ]),
-                        ...(focused ? { backgroundColor: "#e8e8e8" } : {}),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
                       } as ViewStyle
                     }
                     bottomTextStyle={

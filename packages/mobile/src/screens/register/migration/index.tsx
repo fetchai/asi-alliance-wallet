@@ -93,7 +93,9 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
-      <Text style={style.flatten(["color-black", "h2"]) as ViewStyle}>
+      <Text
+        style={style.flatten(["h2", "color-black", "margin-y-10"]) as ViewStyle}
+      >
         Migrate from ETH
       </Text>
       <Controller

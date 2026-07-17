@@ -373,7 +373,7 @@ export const LedgerScreen: FunctionComponent = () => {
       >
         Connect hardware wallet
       </Text>
-      <Text style={style.flatten(["h6", "color-gray-300"]) as ViewStyle}>
+      <Text style={style.flatten(["body2", "color-gray-400"]) as ViewStyle}>
         To keep your account safe, avoid any personal information or words
       </Text>
       <Controller

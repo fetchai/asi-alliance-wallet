@@ -148,17 +148,17 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
         </View>
         <View style={style.flatten(["width-full"]) as ViewStyle}>
           <Button
-            mode="outline"
+            mode="fill"
             containerStyle={
               style.flatten(
-                ["border-radius-32", "margin-top-38", "border-color-gray-100"],
-                [isTimedOut && "border-color-green-400"]
+                ["border-radius-32", "margin-top-38", "background-color-dark"],
+                [isTimedOut && "background-color-vibrant-green-500"]
               ) as ViewStyle
             }
             textStyle={
               style.flatten(
-                ["text-button1", "color-dark"],
-                [isTimedOut && "color-green-400"]
+                ["text-button1", "color-white"],
+                [isTimedOut && "color-white"]
               ) as ViewStyle
             }
             {...(isTimedOut && {

@@ -66,8 +66,8 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "h4",
-              "color-gray-300",
+              "body1",
+              "color-gray-400",
               "text-center",
               "margin-top-10",
             ]) as ViewStyle

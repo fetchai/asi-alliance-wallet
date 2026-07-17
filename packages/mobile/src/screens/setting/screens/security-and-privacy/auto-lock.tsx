@@ -27,7 +27,7 @@ export const AutoLockScreen: FunctionComponent = observer(() => {
       <SettingItem
         label="Auto Lock"
         paragraph="Automatically lock wallet when it is in background"
-        style={style.flatten(["height-72", "padding-18"]) as ViewStyle}
+        style={style.flatten(["padding-18"]) as ViewStyle}
         left={<AutoLockTimer size={24} />}
         right={
           <Switch

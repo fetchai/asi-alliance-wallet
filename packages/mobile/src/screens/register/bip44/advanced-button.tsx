@@ -6,7 +6,7 @@ import React, {
 } from "react";
 import { BIP44Option } from "./bip44-option";
 import { useStyle } from "styles/index";
-import { Text, View, ViewStyle } from "react-native";
+import { ScrollView, Text, ViewStyle } from "react-native";
 import { InputCardView } from "components/new/card-view/input-card";
 
 const useZeroOrPositiveIntegerString = (initialValue: string) => {
@@ -64,13 +64,12 @@ export const BIP44AdvancedButton: FunctionComponent<{
           >
             HD Derivation Path
           </Text>
-          <View
-            style={
-              style.flatten([
-                "flex-row",
-                "items-center",
-                "margin-bottom-16",
-              ]) as ViewStyle
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={style.flatten(["margin-bottom-16"]) as ViewStyle}
+            contentContainerStyle={
+              style.flatten(["flex-row", "items-center"]) as ViewStyle
             }
           >
             <Text
@@ -176,7 +175,7 @@ export const BIP44AdvancedButton: FunctionComponent<{
                 }
               }}
             />
-          </View>
+          </ScrollView>
           {change.isValid && !isChangeZeroOrOne ? (
             <Text
               style={

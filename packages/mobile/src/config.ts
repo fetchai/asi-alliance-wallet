@@ -983,6 +983,8 @@ export const EmbedChainInfos: ChainInfo[] = [
           "https://raw.githubusercontent.com/cosmos/chain-registry/master/shentu/images/ctk.png",
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/shentu/images/ctk.png",
     features: ["ibc-transfer", "ibc-go"],
   },
   {
@@ -1158,7 +1160,7 @@ export const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/persistence.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/persistence/images/xprt.png",
     features: ["ibc-transfer", "ibc-go"],
   },
   {
@@ -1253,7 +1255,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinDecimals: 6,
       },
     ],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/ixo.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/impacthub/images/ixo.png",
     features: ["ibc-transfer"],
   },
   {
@@ -1318,7 +1321,7 @@ export const EmbedChainInfos: ChainInfo[] = [
     ],
     features: ["ibc-go"],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/agoric.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/agoric/images/Agoric-logo-color.png",
   },
   {
     rpc: "https://rpc-cyber.keplr.app",
@@ -1348,6 +1351,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "BOOT",
         coinMinimalDenom: "boot",
         coinDecimals: 0,
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/bostrom/images/boot.png",
       },
       {
         coinDenom: "H",
@@ -1375,6 +1380,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "BOOT",
         coinMinimalDenom: "boot",
         coinDecimals: 0,
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/bostrom/images/boot.png",
         gasPriceStep: {
           low: 0,
           average: 0,
@@ -1382,6 +1389,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/bostrom/images/boot.png",
     features: ["ibc-transfer", "cosmwasm", "ibc-go"],
   },
   {
@@ -1956,6 +1965,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/stride/images/strd.png",
     features: ["ibc-transfer", "ibc-go"],
   },
   {
@@ -2008,6 +2019,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
     features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
   },
   {
@@ -2143,6 +2156,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/kava/images/kava.png",
   },
   {
     rpc: "https://rpc-quicksilver.keplr.app",
@@ -2198,6 +2213,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/quicksilver/images/qck.png",
     features: [],
   },
   {
@@ -2254,6 +2271,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra2/images/luna.png",
     features: [],
   },
   {
@@ -2323,6 +2342,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra/images/luna.png",
     features: ["terra-classic-fee"],
   },
   {
@@ -2395,6 +2416,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/quasar/images/quasar.png",
     features: [],
   },
   {
@@ -2453,6 +2476,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/noble/images/stake.png",
     features: [],
   },
   {
@@ -2505,6 +2530,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/omniflixhub/images/flix.png",
     features: [],
   },
   {
@@ -2557,6 +2584,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/kyve/images/kyve.png",
     features: [],
   },
   {
@@ -2626,6 +2655,53 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "TESTFET",
         coinMinimalDenom: "atestfet",
         coinDecimals: 18,
+        gasPriceStep: {
+          low: 0,
+          average: 5000000000,
+          high: 6250000000,
+        },
+      },
+    ],
+    features: ["cosmwasm"],
+    walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
+    govUrl: "https://explore-dorado.fetch.ai/proposals/",
+  },
+  {
+    rpc: "https://rpc-gemini.fetch.ai",
+    rest: "https://rest-gemini.fetch.ai",
+    chainId: "gemini-1",
+    chainName: "Gemini Testnet",
+    hideInUI: false,
+    stakeCurrency: {
+      coinDenom: "TESTFET",
+      coinMinimalDenom: "atestfet",
+      coinDecimals: 18,
+      coinGeckoId: "fetch-ai",
+    },
+    bip44: {
+      coinType: 118,
+    },
+    bech32Config: Bech32Address.defaultBech32Config("fetch"),
+    type: "testnet",
+    currencies: [
+      {
+        coinDenom: "TESTFET",
+        coinMinimalDenom: "atestfet",
+        coinDecimals: 18,
+        coinGeckoId: "fetch-ai",
+      },
+      {
+        coinDenom: "MOBX",
+        coinMinimalDenom: "nanomobx",
+        coinDecimals: 9,
+      },
+    ],
+    feeCurrencies: [
+      {
+        coinDenom: "TESTFET",
+        coinMinimalDenom: "atestfet",
+        coinDecimals: 18,
+        coinGeckoId: "fetch-ai",
         gasPriceStep: {
           low: 0,
           average: 5000000000,

@@ -21,6 +21,35 @@ export const IOSLineChart: FunctionComponent<{
 
   const chartMaxValue = Number(maxValue - minValue);
 
+  const getSignificantDecimals = (v: number): number => {
+    if (v === 0) return 2;
+    const abs = Math.abs(v);
+    if (abs >= 1) return 2;
+    const decPart = abs.toFixed(10).split(".")[1] ?? "";
+    let firstNonZero = 0;
+    for (let i = 0; i < decPart.length; i++) {
+      if (decPart[i] !== "0") {
+        firstNonZero = i;
+        break;
+      }
+    }
+    return firstNonZero + 2;
+  };
+
+  const maxDecimals = Math.max(
+    getSignificantDecimals(minValue),
+    getSignificantDecimals(maxValue)
+  );
+
+  const formatYLabel = (label: string) => {
+    const val = parseFloat(label);
+    if (isNaN(val)) return "";
+    const formatted = Number.isInteger(val)
+      ? val.toString()
+      : val.toFixed(maxDecimals);
+    return `${currencySymbol}${formatted}`;
+  };
+
   return (
     <LineChart
       // chart variable
@@ -39,19 +68,24 @@ export const IOSLineChart: FunctionComponent<{
       hideDataPoints={true}
       adjustToWidth={true}
       thickness={2}
-      initialSpacing={0}
-      endSpacing={0}
+      initialSpacing={8}
+      endSpacing={8}
       // y label variable
       showFractionalValues={true}
       maxValue={chartMaxValue}
       yAxisOffset={minValue}
+      noOfSections={1}
       // y axis variable
       disableScroll={true}
       yAxisThickness={0}
-      yAxisColor={"lightgray"}
-      hideYAxisText={true}
+      yAxisColor={"transparent"}
+      hideYAxisText={false}
+      yAxisTextStyle={{ color: "#9A9AA2", fontSize: 10 }}
+      yAxisLabelWidth={58}
+      formatYLabel={formatYLabel}
+      // x axis variable
       xAxisThickness={0}
-      // horizontal line vriable
+      // horizontal line variable
       hideRules={true}
       // line variable
       lineGradient={false}

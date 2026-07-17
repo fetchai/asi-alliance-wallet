@@ -89,8 +89,8 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
 
     proposals = proposals.filter(
       (proposal) =>
-        proposal.title.toLowerCase().includes(search.trim().toLowerCase()) ||
-        proposal.id.includes(search)
+        proposal?.title?.toLowerCase().includes(search.trim().toLowerCase()) ||
+        proposal?.id?.includes(search)
     );
 
     return { data: proposals };

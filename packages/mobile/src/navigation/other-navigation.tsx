@@ -59,8 +59,13 @@ export const OtherNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="NativeTokens"
         component={TokenDetail}
@@ -118,7 +123,12 @@ export const OtherNavigation: FunctionComponent = () => {
         options={{
           ...TransparentHeaderOptionsPreset,
           title: "",
-          // Only show the back button.
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="WebView"
         component={WebViewScreen}

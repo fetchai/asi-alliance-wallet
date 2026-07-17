@@ -74,7 +74,7 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
             ]) as ViewStyle
           }
           subtitleStyle={
-            style.flatten(["subtitle3", "color-gray-300"]) as ViewStyle
+            style.flatten(["body3", "color-gray-400"]) as ViewStyle
           }
         />
         <BlurBackground

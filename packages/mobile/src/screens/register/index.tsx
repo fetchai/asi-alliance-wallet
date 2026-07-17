@@ -68,12 +68,14 @@ const SelectWalletOptionCard: FunctionComponent<{
             backgroundBlur={true}
             blurIntensity={25}
           />
-          <View style={style.flatten(["padding-x-24"]) as ViewStyle}>
+          <View
+            style={style.flatten(["padding-left-12", "flex-1"]) as ViewStyle}
+          >
             <Text
               style={
                 style.flatten([
                   "subtitle2",
-                  "margin-bottom-10",
+                  "margin-bottom-6",
                   "color-black",
                 ]) as ViewStyle
               }
@@ -81,7 +83,7 @@ const SelectWalletOptionCard: FunctionComponent<{
               {title}
             </Text>
             <Text
-              style={style.flatten(["color-gray-200", "body3"]) as ViewStyle}
+              style={style.flatten(["color-gray-400", "body3"]) as ViewStyle}
             >
               {desc}
             </Text>
@@ -178,30 +180,18 @@ export const RegisterIntroScreen: FunctionComponent = () => {
                     "h1",
                     "font-normal",
                     "color-black",
-                    "padding-top-10",
                   ]) as ViewStyle
                 }
               >
-                Welcome to your
+                {"Welcome to your\nASI Alliance Wallet"}
               </Text>
               <Text
                 style={
                   style.flatten([
-                    "h1",
-                    "font-normal",
-                    "color-black",
-                    "padding-top-10",
-                  ]) as ViewStyle
-                }
-              >
-                ASI Alliance Wallet
-              </Text>
-              <Text
-                style={
-                  style.flatten([
-                    "body1",
-                    "color-gray-200",
-                    "padding-y-24",
+                    "body2",
+                    "color-gray-400",
+                    "margin-top-16",
+                    "margin-bottom-8",
                   ]) as ViewStyle
                 }
               >
