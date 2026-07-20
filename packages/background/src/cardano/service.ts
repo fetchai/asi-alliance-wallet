@@ -1,5 +1,6 @@
 import {
   CardanoKeyRing,
+  CardanoKeyContext,
   KeyStore,
   Key,
   CardanoWalletManager,
@@ -64,6 +65,8 @@ import {
 export class CardanoService {
   private keyRing?: CardanoKeyRing;
   private notification?: Notification;
+  /** ASI chain id this NetworkRuntime was restored for (null when detached). */
+  private boundChainId: string | undefined;
   private txHistoryStore?: CardanoTxHistoryStore;
   private blockfrostCredentialsStore?: BlockfrostCredentialsStore;
   private txHistoryControllers = new Map<
@@ -173,11 +176,14 @@ export class CardanoService {
       );
 
       await this.waitForKeyAgentReady(restoringKeyRing);
-      // Only publish session id if this restore is still the current runtime.
+      // Only publish session id / bound chain if this restore is still the current runtime.
       if (this.keyRing === restoringKeyRing) {
         this.runtimeSessionId = `cad_sess_${Date.now().toString(
           36
         )}_${Math.random().toString(36).slice(2)}`;
+        if (chainId) {
+          this.boundChainId = chainId;
+        }
       }
     } finally {
       if (this.keyRing !== restoringKeyRing) {
@@ -206,6 +212,19 @@ export class CardanoService {
     return this.keyRing !== undefined;
   }
 
+  /** ASI chain id the attached NetworkRuntime was restored for. */
+  getBoundChainId(): string | undefined {
+    return this.boundChainId;
+  }
+
+  /**
+   * Transaction-ready NetworkRuntime for the given ASI chain id.
+   * Wrong-network attached runtimes are not considered ready.
+   */
+  isReadyForChain(chainId: string): boolean {
+    return this.isReady() && this.boundChainId === chainId;
+  }
+
   /** Attached network-runtime instance id, if a wallet manager is present. */
   getAttachedRuntimeInstanceId(): string | undefined {
     return this.keyRing?.getWalletManager()?.getRuntimeInstanceId?.();
@@ -215,7 +234,10 @@ export class CardanoService {
    * Dispose only when the captured instance is still the attached manager.
    * Strict exact-match: never treat a missing attached manager as a match
    * (mid-init of a newer runtime must survive stale leave).
-   * @returns true when reset ran for the matched instance.
+   *
+   * While a newer rebuild is mid-create on the same CardanoKeyRing, only soft-
+   * detach the matched manager — never global reset / invalidatePendingRebuilds.
+   * @returns true when the matched instance was detached or reset.
    */
   disposeRuntimeIfInstance(instanceId: string | undefined): boolean {
     if (instanceId == null) {
@@ -225,6 +247,16 @@ export class CardanoService {
     if (currentId !== instanceId) {
       return false;
     }
+
+    // Mid-create candidate on the shared key ring: detach old manager only.
+    if (this.keyRing?.isRebuildInFlight?.()) {
+      const detached = this.keyRing.detachWalletManagerIfInstance?.(instanceId);
+      if (detached) {
+        this.boundChainId = undefined;
+      }
+      return Boolean(detached);
+    }
+
     this.reset();
     return true;
   }
@@ -252,6 +284,7 @@ export class CardanoService {
       this.keyRing?.getWalletManager()?.dispose?.();
     } catch {}
     this.keyRing = undefined;
+    this.boundChainId = undefined;
     this.runtimeSessionId = "";
   }
 
@@ -264,7 +297,53 @@ export class CardanoService {
     return this.runtimeSessionId;
   }
 
-  /** Get Cardano public key/address for UI and signing */
+  /**
+   * Offline address derivation (KeyContext). Never publishes NetworkRuntime
+   * (`this.keyRing`), never creates Blockfrost / PersonalWallet.
+   */
+  async deriveKeyFromKeyStore(
+    store: KeyStore,
+    password: string,
+    crypto: any | undefined,
+    chainId: string
+  ): Promise<Key> {
+    if (!chainId) {
+      throw new Error("network_context_missing");
+    }
+
+    let decryptedMnemonic: string;
+    if (crypto) {
+      const decrypted = await Crypto.decrypt(
+        crypto,
+        store as KeyringKeyStore,
+        password
+      );
+      decryptedMnemonic = Buffer.from(decrypted).toString();
+    } else if (store.key) {
+      decryptedMnemonic = store.key;
+    } else {
+      throw new Error(
+        "keyStore.key is undefined for Cardano key context and no crypto provided"
+      );
+    }
+
+    const mnemonicWords = decryptedMnemonic.trim().split(/\s+/);
+    const accountIndex = store.bip44HDPath?.account ?? 0;
+    const context = await CardanoKeyContext.create({
+      mnemonicWords,
+      chainId,
+      accountIndex,
+      passphrase: new Uint8Array(),
+    });
+    return context.getKey();
+  }
+
+  /**
+   * Runtime-only address access for transaction flows after NetworkRuntime ensure.
+   * Account / ListAccounts UI must use deriveKeyFromKeyStore (offline KeyContext).
+   * When requested chain differs from the attached runtime network, falls back to
+   * KeyContext only — never creates a wallet manager.
+   */
   async getKey(chainId?: string): Promise<Key> {
     if (!this.keyRing) {
       throw new Error(
@@ -1260,7 +1339,11 @@ export class CardanoService {
     return !!(this.keyRing && this.keyRing.isTransactionReady());
   }
 
-  /** True when the Cardano key agent can derive addresses (no Blockfrost wallet required). */
+  /**
+   * True when the key agent owned by the attached NetworkRuntime is initialized.
+   * Not an offline KeyContext readiness signal — address UI / mode:key must not
+   * gate on this flag.
+   */
   isKeyAgentReady(): boolean {
     return this.keyRing?.isKeyAgentReady() ?? false;
   }

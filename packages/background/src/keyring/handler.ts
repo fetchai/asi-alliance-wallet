@@ -814,14 +814,13 @@ const handleListAccountsMsg: (
     const isEVM = chainInfo.features?.includes("evm");
     const isCardano = chainInfo.features?.includes("cardano");
 
-    // First ListAccounts for a new Cardano chain may block here until restore/init completes,
-    // because network-changed is dispatched before onNetworkSwitch handlers finish.
+    // Offline KeyContext readiness only — does not start NetworkRuntime / Blockfrost.
     if (isCardano) {
       try {
         await service.ensureCardanoServiceReady(chainId, { mode: "key" });
       } catch (error) {
         console.error(
-          "[KeyRingService] ensureCardanoServiceReady failed in ListAccountsMsg:",
+          "[KeyRingService] ensureCardanoServiceReady(mode:key) failed in ListAccountsMsg:",
           formatErrorForLog(error, { chainId, source: "ListAccountsMsg" })
         );
         return {

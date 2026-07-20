@@ -148,7 +148,15 @@ describe("CardanoKeyRing blockfrost resolver", () => {
     mockCreate.mockClear();
     mockDispose.mockClear();
 
-    await keyRing.getKey("cardano-mainnet");
+    await keyRing.restore(
+      makeKeyStore(),
+      "password",
+      undefined,
+      "cardano-mainnet",
+      {
+        resolveBlockfrostConfig: resolver,
+      }
+    );
 
     expect(resolver).toHaveBeenLastCalledWith("mainnet");
     expect(mockCreate).toHaveBeenCalledWith(
@@ -160,6 +168,22 @@ describe("CardanoKeyRing blockfrost resolver", () => {
         },
       })
     );
+  });
+
+  it("getKey for another Cardano network uses KeyContext and does not create WalletManager", async () => {
+    const keyRing = new CardanoKeyRing();
+    await keyRing.restore(
+      makeKeyStore(),
+      "password",
+      undefined,
+      "cardano-preprod"
+    );
+    mockCreate.mockClear();
+
+    const key = await keyRing.getKey("cardano-mainnet");
+
+    expect(Buffer.from(key.address).toString("utf8")).toBe("addr1test");
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("Cardano→Cardano rebuild keeps runtimeGeneration and refreshes ownerSwitchGeneration", async () => {
@@ -201,7 +225,20 @@ describe("CardanoKeyRing blockfrost resolver", () => {
     switchGeneration = 11;
     getSelectedChainId.mockReturnValue("cardano-mainnet");
 
-    await keyRing.getKey("cardano-mainnet");
+    await keyRing.restore(
+      makeKeyStore(),
+      "password",
+      undefined,
+      "cardano-mainnet",
+      {
+        resolveBlockfrostConfig: resolver,
+        runtimeGeneration: 3,
+        getOwnerSwitchGeneration,
+        getSelectedChainId,
+        selectedChainIdAtCreate: "cardano-mainnet",
+        createdBy: "restore",
+      }
+    );
 
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -285,7 +322,15 @@ describe("CardanoKeyRing blockfrost resolver", () => {
 
     let thrownError: Error | undefined;
     try {
-      await keyRing.getKey("cardano-mainnet");
+      await keyRing.restore(
+        makeKeyStore(),
+        "password",
+        undefined,
+        "cardano-mainnet",
+        {
+          resolveBlockfrostConfig: resolver,
+        }
+      );
     } catch (error) {
       thrownError = error as Error;
     }
@@ -331,9 +376,17 @@ describe("CardanoKeyRing blockfrost resolver", () => {
       new Error("request failed with projectId=leaked-key")
     );
 
-    await expect(keyRing.getKey("cardano-mainnet")).rejects.toThrow(
-      "cardano_wallet_manager_create_failed"
-    );
+    await expect(
+      keyRing.restore(
+        makeKeyStore(),
+        "password",
+        undefined,
+        "cardano-mainnet",
+        {
+          resolveBlockfrostConfig: resolver,
+        }
+      )
+    ).rejects.toThrow("cardano_wallet_manager_create_failed");
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "[CardanoKeyRing] Failed to create CardanoWalletManager"
@@ -354,6 +407,10 @@ describe("CardanoKeyRing blockfrost resolver", () => {
     const consoleWarnSpy = jest
       .spyOn(console, "warn")
       .mockImplementation(() => {});
+    // Distinct manager instances — production create never reuses the prior object.
+    mockCreate
+      .mockResolvedValueOnce(makeManager("ready", "rt_prior"))
+      .mockResolvedValueOnce(makeManager("ready", "rt_next"));
     const keyRing = new CardanoKeyRing();
 
     await keyRing.restore(
@@ -362,7 +419,12 @@ describe("CardanoKeyRing blockfrost resolver", () => {
       undefined,
       "cardano-preprod"
     );
-    await keyRing.getKey("cardano-mainnet");
+    await keyRing.restore(
+      makeKeyStore(),
+      "password",
+      undefined,
+      "cardano-mainnet"
+    );
 
     expect(keyRing.getWalletManager()?.getRuntimeStatus()).toBe("ready");
     expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -487,6 +549,49 @@ describe("CardanoKeyRing blockfrost resolver", () => {
       expect(manager?.isAttached()).toBe(false);
       expect(mockDispose).toHaveBeenCalled();
       expect(keyRing.getWalletManager()).toBeUndefined();
+    });
+
+    it("soft-detach of A during create B disposes A once and attaches B", async () => {
+      let releaseCreate: (() => void) | undefined;
+      const prior = makeManager("ready", "rt_A");
+      const next = makeManager("ready", "rt_B");
+      mockCreate
+        .mockResolvedValueOnce(prior)
+        .mockImplementationOnce(async () => {
+          await new Promise<void>((resolve) => {
+            releaseCreate = resolve;
+          });
+          return next;
+        });
+
+      const keyRing = new CardanoKeyRing();
+      await keyRing.restore(
+        makeKeyStore(),
+        "password",
+        undefined,
+        "cardano-preprod"
+      );
+      expect(keyRing.getWalletManager()?.getRuntimeInstanceId()).toBe("rt_A");
+
+      const rebuildPromise = (keyRing as any).rebuildAgentsForNetwork(
+        "mainnet",
+        { chainId: "cardano-mainnet" }
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(keyRing.isRebuildInFlight()).toBe(true);
+
+      // Soft-detach A while B is mid-create (stale exact-dispose path).
+      expect(keyRing.detachWalletManagerIfInstance("rt_A")).toBe(true);
+      expect(prior.dispose).toHaveBeenCalledTimes(1);
+      expect(keyRing.getWalletManager()).toBeUndefined();
+
+      releaseCreate?.();
+      await rebuildPromise;
+
+      expect(keyRing.getWalletManager()?.getRuntimeInstanceId()).toBe("rt_B");
+      // Soft-detach already disposed A — rebuild must not dispose A a second time.
+      expect(prior.dispose).toHaveBeenCalledTimes(1);
+      expect(next.isAttached()).toBe(true);
     });
   });
 });

@@ -654,6 +654,128 @@ describe("reloadActiveKeyStoreForSwitch session material cache", () => {
   });
 });
 
+describe("getKeysForCardano cold-cache offline path", () => {
+  const mnemonic = Array(23).fill("abandon").concat("about").join(" ");
+  const createKeyStore = (meta: Record<string, string>) => ({
+    version: "1.2" as const,
+    type: "mnemonic" as const,
+    // Plaintext key path: deriveKeyFromKeyStore uses store.key when present.
+    key: mnemonic,
+    curve: KeyCurves.secp256k1,
+    meta,
+    bip44HDPath: {
+      account: 0,
+      change: 0,
+      addressIndex: 0,
+    },
+    crypto: {
+      kdf: "scrypt",
+    },
+  });
+
+  it("cache miss derives via KeyContext without NetworkRuntime restore or WM create", async () => {
+    const kvStore = new MemoryKVStore("keyring-getkeys-cardano-cold");
+    const chainId = "cardano-preprod";
+    const keyStore = createKeyStore({
+      __id__: "w-cardano-1",
+      name: "Cardano Wallet",
+      cardano: "true",
+      mnemonicLength: "24",
+    });
+
+    const keyRing = new KeyRing(
+      [{ chainId, features: ["cardano"] } as ChainInfo],
+      kvStore,
+      {} as any,
+      {} as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any,
+      {} as any
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [keyStore];
+    (keyRing as any).keyStore = keyStore;
+    (keyRing as any).password = "pw";
+    (keyRing as any).cardanoKeyCache = new Map();
+    jest.spyOn(keyRing as any, "loadCardanoChainCache").mockResolvedValue({});
+    const saveCache = jest
+      .spyOn(keyRing as any, "saveCardanoChainCache")
+      .mockResolvedValue(undefined);
+
+    const { CardanoService } = await import("../cardano/service");
+    const { CardanoWalletManager } = await import("@keplr-wallet/cardano");
+
+    const addressBytes = Buffer.from("addr_test1qz_getkeys_cold_cache", "utf8");
+    const pubKeyBytes = Uint8Array.from([0xab, 0xcd]);
+
+    const deriveSpy = jest
+      .spyOn(CardanoService.prototype, "deriveKeyFromKeyStore")
+      .mockResolvedValue({
+        algo: "cardano_address_only",
+        pubKey: pubKeyBytes,
+        address: addressBytes,
+        isKeystone: false,
+        isNanoLedger: false,
+      } as any);
+    const restoreSpy = jest
+      .spyOn(CardanoService.prototype, "restoreFromKeyStore")
+      .mockImplementation(async () => {
+        throw new Error(
+          "restoreFromKeyStore must not run for getKeysForCardano"
+        );
+      });
+    const createSpy = jest
+      .spyOn(CardanoWalletManager, "create")
+      .mockImplementation(async () => {
+        throw new Error(
+          "CardanoWalletManager.create must not run for getKeysForCardano"
+        );
+      });
+
+    try {
+      const keys = await keyRing.getKeysForCardano(chainId);
+
+      expect(deriveSpy).toHaveBeenCalledTimes(1);
+      expect(deriveSpy).toHaveBeenCalledWith(
+        keyStore,
+        "pw",
+        expect.anything(),
+        chainId
+      );
+      expect(restoreSpy).not.toHaveBeenCalled();
+      expect(createSpy).not.toHaveBeenCalled();
+
+      expect(keys).toHaveLength(1);
+      expect(keys[0].name).toBe("Cardano Wallet");
+      expect(Buffer.from(keys[0].address).toString("utf8")).toBe(
+        "addr_test1qz_getkeys_cold_cache"
+      );
+
+      // Memory + persistent chain-specific cache filled for subsequent hits.
+      expect(
+        (keyRing as any).cardanoKeyCache.get(`cardano:${chainId}:w-cardano-1`)
+      ).toEqual({
+        address: addressBytes,
+        pubKey: pubKeyBytes,
+      });
+      expect(saveCache).toHaveBeenCalledWith(
+        chainId,
+        expect.objectContaining({
+          "w-cardano-1": {
+            address: "addr_test1qz_getkeys_cold_cache",
+            pubKey: "abcd",
+          },
+        })
+      );
+    } finally {
+      deriveSpy.mockRestore();
+      restoreSpy.mockRestore();
+      createSpy.mockRestore();
+    }
+  });
+});
+
 function makeKeyRing(kvStore: MemoryKVStore) {
   return new KeyRing(
     [],

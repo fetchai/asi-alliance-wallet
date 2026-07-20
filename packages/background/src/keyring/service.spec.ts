@@ -273,28 +273,35 @@ describe("KeyRingService", () => {
       ).rejects.toThrow("temporarily_unavailable: wallet_not_ready");
     });
 
-    it("getKey succeeds when keyAgent is ready but transaction is not", async () => {
-      const mockGetKey = jest.fn().mockResolvedValue({
+    it("getKey uses offline KeyContext without NetworkRuntime ensure", async () => {
+      const mockDerive = jest.fn().mockResolvedValue({
         algo: "cardano_address_only",
         pubKey: new Uint8Array(),
         address: Buffer.from("addr_test1qq"),
         isNanoLedger: false,
         isKeystone: false,
       });
+      const restoreFromKeyStore = jest.fn();
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
-        getCurrentKeyStore: jest.fn().mockReturnValue({}),
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
       } as any;
       service["chainsService"] = {
-        getSelectedChain: jest.fn().mockResolvedValue("cardano-preprod"),
+        // Selected can be non-Cardano — offline getKey must still succeed.
+        getSelectedChain: jest.fn().mockResolvedValue("cosmoshub-4"),
         getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
       } as any;
       service["cardanoService"] = {
-        isInitialized: jest.fn().mockReturnValue(true),
+        isInitialized: jest.fn().mockReturnValue(false),
         isReady: jest.fn().mockReturnValue(false),
-        isKeyAgentReady: jest.fn().mockReturnValue(true),
-        restoreFromKeyStore: jest.fn().mockResolvedValue(undefined),
-        getKey: mockGetKey,
+        isKeyAgentReady: jest.fn().mockReturnValue(false),
+        restoreFromKeyStore,
+        deriveKeyFromKeyStore: mockDerive,
+        getKey: jest.fn(),
       } as any;
 
       await expect(service.getKey("cardano-preprod")).resolves.toEqual({
@@ -304,7 +311,40 @@ describe("KeyRingService", () => {
         isNanoLedger: false,
         isKeystone: false,
       });
-      expect(mockGetKey).toHaveBeenCalledWith("cardano-preprod");
+      expect(mockDerive).toHaveBeenCalledWith(
+        expect.anything(),
+        "pw",
+        expect.anything(),
+        "cardano-preprod"
+      );
+      expect(restoreFromKeyStore).not.toHaveBeenCalled();
+      expect(service["cardanoService"].getKey).not.toHaveBeenCalled();
+    });
+
+    it("ensure(mode:key) does not create NetworkRuntime", async () => {
+      const restoreFromKeyStore = jest.fn();
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+      } as any;
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cosmoshub-4"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["cardanoService"] = {
+        isInitialized: jest.fn().mockReturnValue(false),
+        isReady: jest.fn().mockReturnValue(false),
+        restoreFromKeyStore,
+      } as any;
+
+      await expect(
+        service.ensureCardanoServiceReady("cardano-preprod", { mode: "key" })
+      ).resolves.toBeUndefined();
+      expect(restoreFromKeyStore).not.toHaveBeenCalled();
+      expect(service["cardanoNetworkRuntimeInFlight"]).toBeNull();
     });
 
     it("rejects stale Cardano ensure when selected chain is non-Cardano", async () => {
@@ -359,7 +399,7 @@ describe("KeyRingService", () => {
   });
 
   describe("network switch rollback degradation paths", () => {
-    it("resets touched cardano runtime when critical switch step fails", async () => {
+    it("enters Cardano without NetworkRuntime ensure (lazy key context / tx ensure)", async () => {
       const mockGetChainInfo = jest.fn().mockImplementation((chainId: string) =>
         Promise.resolve({
           features: chainId.startsWith("cardano") ? ["cardano"] : [],
@@ -371,67 +411,757 @@ describe("KeyRingService", () => {
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
-        getCurrentKeyStore: jest.fn().mockReturnValue({
-          type: "mnemonic",
-          meta: { key: "v", mnemonicLength: "24" },
-          bip44HDPath: { account: 0, change: 0, addressIndex: 0 },
-        }),
-        currentPassword: "pw",
       } as any;
       service["cardanoService"] = {
         reset: jest.fn(),
+        isInitialized: jest.fn().mockReturnValue(false),
+        getBoundChainId: jest.fn().mockReturnValue(undefined),
+        getAttachedRuntimeInstanceId: jest.fn(),
+        disposeRuntimeIfInstance: jest.fn(),
       } as any;
-      const ensure = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("critical_rebind_failed"))
-        .mockResolvedValueOnce(undefined);
+      const ensure = jest.fn().mockResolvedValue(undefined);
       service["ensureCardanoServiceReady"] = ensure;
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
 
       await expect(
-        service["onNetworkSwitch"]("cardano-old", "cardano-new")
-      ).rejects.toThrow("critical_rebind_failed");
+        service["onNetworkSwitch"]("fetchhub-4", "cardano-new")
+      ).resolves.toBeUndefined();
 
-      expect((service["cardanoService"] as any).reset).toHaveBeenCalled();
-      expect((service as any)["cardanoNetworkRuntimeInFlight"]).toBeNull();
-      // Rollback uses the same ensure ownership path.
-      expect(ensure).toHaveBeenCalledTimes(2);
-      expect(ensure).toHaveBeenNthCalledWith(2, "cardano-old");
+      expect(ensure).not.toHaveBeenCalled();
+      expect((service["cardanoService"] as any).reset).not.toHaveBeenCalled();
+      expect(service["runAddressCacheRepairBestEffort"]).toHaveBeenCalledWith(
+        "cardano-new"
+      );
     });
 
-    it("keeps deterministic degraded state when old-context restore fails", async () => {
+    it("Cardano→Cardano detaches prior runtime without creating a new one", async () => {
+      const leaveSpy = jest.spyOn(service as any, "leaveCardanoRuntime");
+      service["cardanoRuntimeGeneration"] = 5;
       service["chainsService"] = {
-        getSelectedChain: jest.fn().mockResolvedValue("cardano-new"),
-        getChainInfo: jest.fn().mockImplementation((chainId: string) =>
-          Promise.resolve({
-            features: chainId.startsWith("cardano") ? ["cardano"] : [],
-          })
-        ),
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      const disposeRuntimeIfInstance = jest.fn().mockReturnValue(true);
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        isInitialized: jest.fn().mockReturnValue(true),
+        isReady: jest.fn().mockReturnValue(true),
+        getBoundChainId: jest.fn().mockReturnValue("cardano-preprod"),
+        getAttachedRuntimeInstanceId: jest.fn().mockReturnValue("rt_preprod"),
+        disposeRuntimeIfInstance,
+      } as any;
+      const ensure = jest.fn();
+      service["ensureCardanoServiceReady"] = ensure;
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-preprod", "cardano-mainnet")
+      ).resolves.toBeUndefined();
+
+      expect(ensure).not.toHaveBeenCalled();
+      expect(leaveSpy).toHaveBeenCalledWith({
+        instanceId: "rt_preprod",
+        runtimeGeneration: 5,
+      });
+      leaveSpy.mockRestore();
+    });
+
+    it("after Cardano→Cardano, transaction ensure restores for the new chain", async () => {
+      let bound: string | undefined = "cardano-preprod";
+      let ready = true;
+      const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
+        bound = "cardano-mainnet";
+        ready = true;
+      });
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+        getSwitchGeneration: jest.fn().mockReturnValue(1),
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-mainnet"),
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
         getCurrentKeyStore: jest.fn().mockReturnValue({
           type: "mnemonic",
-          meta: { key: "v", mnemonicLength: "24" },
-          bip44HDPath: { account: 0, change: 0, addressIndex: 0 },
+          meta: { mnemonicLength: "24" },
         }),
         currentPassword: "pw",
       } as any;
       service["cardanoService"] = {
         reset: jest.fn(),
+        restoreFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => ready),
+        isReady: jest.fn().mockImplementation(() => ready),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation((id: string) => ready && bound === id),
+        getBoundChainId: jest.fn().mockImplementation(() => bound),
+        getRuntimeState: jest.fn().mockReturnValue("ready"),
+        getAttachedRuntimeInstanceId: jest.fn().mockReturnValue("rt_old"),
+        disposeRuntimeIfInstance: jest.fn().mockImplementation(() => {
+          ready = false;
+          bound = undefined;
+          return true;
+        }),
       } as any;
-      const ensure = jest
+      service["runAddressCacheRepairBestEffort"] = jest
         .fn()
-        .mockRejectedValueOnce(new Error("critical_rebind_failed"))
-        .mockRejectedValueOnce(new Error("old_restore_failed"));
-      service["ensureCardanoServiceReady"] = ensure;
+        .mockResolvedValue(undefined);
 
-      await expect(
-        service["onNetworkSwitch"]("cardano-old", "cardano-new")
-      ).rejects.toThrow("critical_rebind_failed");
+      await service["onNetworkSwitch"]("cardano-preprod", "cardano-mainnet");
+      expect(restoreFromKeyStore).not.toHaveBeenCalled();
 
-      expect((service["cardanoService"] as any).reset).toHaveBeenCalledTimes(1);
-      expect(ensure).toHaveBeenCalledTimes(2);
-      expect((service as any)["cardanoNetworkRuntimeInFlight"]).toBeNull();
+      await service.ensureCardanoServiceReady("cardano-mainnet");
+      expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
+      expect(restoreFromKeyStore).toHaveBeenCalledWith(
+        expect.anything(),
+        "pw",
+        expect.anything(),
+        "cardano-mainnet",
+        expect.anything()
+      );
+    });
+
+    it("stale handler that paused before stillCurrent does not dispose winner runtime B", async () => {
+      service["cardanoRuntimeGeneration"] = 5;
+      let attachedId: string | undefined = "rt_A";
+      const disposeRuntimeIfInstance = jest.fn((id: string | undefined) => {
+        if (id != null && id === attachedId) {
+          attachedId = undefined;
+          return true;
+        }
+        return false;
+      });
+
+      let releaseGetChainInfo: (() => void) | undefined;
+      const getChainInfoGate = new Promise<void>((resolve) => {
+        releaseGetChainInfo = resolve;
+      });
+
+      service["chainsService"] = {
+        getSelectedChain: jest
+          .fn()
+          // Handler A first check while still winning
+          .mockResolvedValueOnce("cardano-mainnet")
+          // Handler A stillCurrent — B already won
+          .mockResolvedValueOnce("cardano-preprod"),
+        getChainInfo: jest.fn().mockImplementation(async () => {
+          await getChainInfoGate;
+          return { features: ["cardano"] };
+        }),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        isInitialized: jest.fn().mockReturnValue(true),
+        getBoundChainId: jest.fn().mockReturnValue("cardano-preprod"),
+        getAttachedRuntimeInstanceId: jest
+          .fn()
+          .mockImplementation(() => attachedId),
+        disposeRuntimeIfInstance,
+      } as any;
+      service["runAddressCacheRepairBestEffort"] = jest.fn();
+
+      const handlerA = service["onNetworkSwitch"](
+        "cardano-preprod",
+        "cardano-mainnet"
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      // B wins and attaches a newer runtime while A is suspended in getChainInfo.
+      attachedId = "rt_B";
+      service["cardanoRuntimeGeneration"] = 6;
+
+      releaseGetChainInfo?.();
+      await expect(handlerA).resolves.toBeUndefined();
+
+      // Stale A may only dispose the instance captured at start (rt_A), never rt_B.
+      expect(disposeRuntimeIfInstance).toHaveBeenCalledWith("rt_A");
+      expect(disposeRuntimeIfInstance).not.toHaveBeenCalledWith("rt_B");
+      expect(attachedId).toBe("rt_B");
+    });
+
+    it("same-target mid-init in-flight is not treated as wrong-network by switch", async () => {
+      let createCalls = 0;
+      let releaseCreate: (() => void) | undefined;
+      let ready = false;
+      let bound: string | undefined;
+      let initialized = false;
+
+      const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
+        createCalls += 1;
+        initialized = true;
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        bound = "cardano-mainnet";
+        ready = true;
+      });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+        getSwitchGeneration: jest.fn().mockReturnValue(1),
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-mainnet"),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        restoreFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => initialized),
+        isReady: jest.fn().mockImplementation(() => ready),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation((id: string) => ready && bound === id),
+        getBoundChainId: jest.fn().mockImplementation(() => bound),
+        getRuntimeState: jest
+          .fn()
+          .mockImplementation(() => (ready ? "ready" : "not_initialized")),
+        getAttachedRuntimeInstanceId: jest.fn().mockReturnValue(undefined),
+        disposeRuntimeIfInstance: jest.fn().mockReturnValue(false),
+      } as any;
+      const leaveSpy = jest.spyOn(service as any, "leaveCardanoRuntime");
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      const ensurePromise =
+        service.ensureCardanoServiceReady("cardano-mainnet");
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+      expect(initialized).toBe(true);
+      expect(bound).toBeUndefined();
+      expect(service["cardanoNetworkRuntimeInFlight"]?.chainId).toBe(
+        "cardano-mainnet"
+      );
+
+      // Switch to same target while mid-init: must not leave / bump generation.
+      await service["onNetworkSwitch"]("fetchhub-4", "cardano-mainnet");
+      expect(leaveSpy).not.toHaveBeenCalled();
+      expect(createCalls).toBe(1);
+
+      releaseCreate?.();
+      await ensurePromise;
+      expect(createCalls).toBe(1);
+      expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
+      leaveSpy.mockRestore();
+    });
+
+    it("target ensure started after switch snapshot is not wiped by cleanup", async () => {
+      service["cardanoRuntimeGeneration"] = 5;
+      let createCalls = 0;
+      let releaseCreate: (() => void) | undefined;
+      let releaseGetChainInfo: (() => void) | undefined;
+      let ready = true;
+      let bound: string | undefined = "cardano-preprod";
+      let attachedId: string | undefined = "rt_preprod";
+      let initialized = true;
+      // Only the switch handler's getChainInfo waits — ensure must proceed.
+      let pauseNextGetChainInfo = true;
+
+      const getChainInfoGate = new Promise<void>((resolve) => {
+        releaseGetChainInfo = resolve;
+      });
+
+      const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
+        createCalls += 1;
+        initialized = true;
+        // Real CardanoKeyRing keeps previous manager attached until new attach.
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        bound = "cardano-mainnet";
+        attachedId = "rt_mainnet";
+        ready = true;
+      });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+        getChainInfo: jest.fn().mockImplementation(async () => {
+          if (pauseNextGetChainInfo) {
+            pauseNextGetChainInfo = false;
+            await getChainInfoGate;
+          }
+          return { features: ["cardano"] };
+        }),
+        getSwitchGeneration: jest.fn().mockReturnValue(2),
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-mainnet"),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        restoreFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => initialized),
+        isReady: jest.fn().mockImplementation(() => ready && bound != null),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation((id: string) => ready && bound === id),
+        getBoundChainId: jest.fn().mockImplementation(() => bound),
+        getRuntimeState: jest
+          .fn()
+          .mockImplementation(() =>
+            ready && bound != null ? "ready" : "not_initialized"
+          ),
+        getAttachedRuntimeInstanceId: jest
+          .fn()
+          .mockImplementation(() => attachedId),
+        disposeRuntimeIfInstance: jest.fn((id: string | undefined) => {
+          if (id != null && id === attachedId) {
+            attachedId = undefined;
+            bound = undefined;
+            return true;
+          }
+          return false;
+        }),
+      } as any;
+      const leaveSpy = jest.spyOn(service as any, "leaveCardanoRuntime");
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      // Handler snapshots preprod, then suspends in getChainInfo.
+      const switchPromise = service["onNetworkSwitch"](
+        "cardano-preprod",
+        "cardano-mainnet"
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      // Target ensure starts AFTER snapshot while handler is paused.
+      const ensurePromise =
+        service.ensureCardanoServiceReady("cardano-mainnet");
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+      expect(service["cardanoNetworkRuntimeInFlight"]?.chainId).toBe(
+        "cardano-mainnet"
+      );
+      expect(attachedId).toBe("rt_preprod");
+
+      releaseGetChainInfo?.();
+      await switchPromise;
+
+      // Must not leave immediately — that would stale the in-flight ensure.
+      expect(leaveSpy).not.toHaveBeenCalled();
+      expect(service["cardanoRuntimeGeneration"]).toBe(5);
+      expect(createCalls).toBe(1);
+
+      releaseCreate?.();
+      await ensurePromise;
+      // Success settle: newer instance attached — no forced leave.
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+      expect(bound).toBe("cardano-mainnet");
+      expect(attachedId).toBe("rt_mainnet");
+      expect(service["cardanoRuntimeGeneration"]).toBe(5);
+      leaveSpy.mockRestore();
+    });
+
+    it("settle disposes ensure winner bound to a deselected Cardano chain", async () => {
+      service["cardanoRuntimeGeneration"] = 5;
+      let createCalls = 0;
+      let releaseCreate: (() => void) | undefined;
+      let releaseGetChainInfo: (() => void) | undefined;
+      let ready = true;
+      let bound: string | undefined = "cardano-preprod";
+      let attachedId: string | undefined = "rt_A";
+      let initialized = true;
+      let selected = "cardano-preview";
+      let pauseNextGetChainInfo = true;
+
+      const getChainInfoGate = new Promise<void>((resolve) => {
+        releaseGetChainInfo = resolve;
+      });
+
+      const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
+        createCalls += 1;
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        // Ensure(C=preview) attaches successfully after selected already moved to B.
+        bound = "cardano-preview";
+        attachedId = "rt_C";
+        ready = true;
+      });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockImplementation(async () => selected),
+        getChainInfo: jest.fn().mockImplementation(async () => {
+          if (pauseNextGetChainInfo) {
+            pauseNextGetChainInfo = false;
+            await getChainInfoGate;
+          }
+          return { features: ["cardano"] };
+        }),
+        getSwitchGeneration: jest.fn().mockReturnValue(2),
+        peekSelectedChainId: jest.fn().mockImplementation(() => selected),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        reset: jest.fn(() => {
+          attachedId = undefined;
+          bound = undefined;
+          initialized = false;
+          ready = false;
+        }),
+        restoreFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => initialized),
+        isReady: jest.fn().mockImplementation(() => ready && bound != null),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation((id: string) => ready && bound === id),
+        getBoundChainId: jest.fn().mockImplementation(() => bound),
+        getRuntimeState: jest
+          .fn()
+          .mockImplementation(() =>
+            ready && bound != null ? "ready" : "not_initialized"
+          ),
+        getAttachedRuntimeInstanceId: jest
+          .fn()
+          .mockImplementation(() => attachedId),
+        disposeRuntimeIfInstance: jest.fn((id: string | undefined) => {
+          if (id != null && id === attachedId) {
+            attachedId = undefined;
+            bound = undefined;
+            initialized = false;
+            ready = false;
+            return true;
+          }
+          return false;
+        }),
+      } as any;
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      const switchPromise = service["onNetworkSwitch"](
+        "cardano-preprod",
+        "cardano-preview"
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const ensurePromise =
+        service.ensureCardanoServiceReady("cardano-preview");
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+
+      // Complete switch while selected is still the ensure target (settles later).
+      releaseGetChainInfo?.();
+      await switchPromise;
+
+      // Selected moves to B before ensure(C) attaches.
+      selected = "cardano-mainnet";
+      releaseCreate?.();
+      await ensurePromise;
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
+
+      // C must not remain attached under selected B.
+      expect(createCalls).toBe(1);
+      expect(attachedId).toBeUndefined();
+      expect(bound).toBeUndefined();
+      expect(selected).toBe("cardano-mainnet");
+    });
+
+    it("failed target ensure after switch snapshot detaches leftover wrong-network runtime", async () => {
+      service["cardanoRuntimeGeneration"] = 5;
+      let createCalls = 0;
+      let releaseCreate: (() => void) | undefined;
+      let releaseGetChainInfo: (() => void) | undefined;
+      let ready = true;
+      let bound: string | undefined = "cardano-preprod";
+      let attachedId: string | undefined = "rt_preprod";
+      let initialized = true;
+      let pauseNextGetChainInfo = true;
+
+      const getChainInfoGate = new Promise<void>((resolve) => {
+        releaseGetChainInfo = resolve;
+      });
+
+      const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
+        createCalls += 1;
+        // Keep A attached through the failed create (real KeyRing behavior).
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        throw new Error("cardano_wallet_manager_create_failed");
+      });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+        getChainInfo: jest.fn().mockImplementation(async () => {
+          if (pauseNextGetChainInfo) {
+            pauseNextGetChainInfo = false;
+            await getChainInfoGate;
+          }
+          return { features: ["cardano"] };
+        }),
+        getSwitchGeneration: jest.fn().mockReturnValue(2),
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-mainnet"),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      const reset = jest.fn(() => {
+        attachedId = undefined;
+        bound = undefined;
+        initialized = false;
+        ready = false;
+      });
+      service["cardanoService"] = {
+        reset,
+        restoreFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => initialized),
+        isReady: jest.fn().mockImplementation(() => ready && bound != null),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation((id: string) => ready && bound === id),
+        getBoundChainId: jest.fn().mockImplementation(() => bound),
+        getRuntimeState: jest
+          .fn()
+          .mockImplementation(() =>
+            ready && bound != null ? "ready" : "not_initialized"
+          ),
+        getAttachedRuntimeInstanceId: jest
+          .fn()
+          .mockImplementation(() => attachedId),
+        disposeRuntimeIfInstance: jest.fn((id: string | undefined) => {
+          if (id != null && id === attachedId) {
+            reset();
+            return true;
+          }
+          return false;
+        }),
+      } as any;
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      const switchPromise = service["onNetworkSwitch"](
+        "cardano-preprod",
+        "cardano-mainnet"
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const ensurePromise =
+        service.ensureCardanoServiceReady("cardano-mainnet");
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+
+      releaseGetChainInfo?.();
+      await switchPromise;
+      expect(attachedId).toBe("rt_preprod");
+      expect(service["cardanoRuntimeGeneration"]).toBe(5);
+
+      releaseCreate?.();
+      await expect(ensurePromise).rejects.toThrow(
+        "cardano_wallet_manager_create_failed"
+      );
+      // Settlement after failed ensure must detach leftover A.
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(createCalls).toBe(1);
+      expect(attachedId).toBeUndefined();
+      expect(bound).toBeUndefined();
+      expect(service["cardanoRuntimeGeneration"]).toBe(6);
+    });
+
+    it("leaveCardanoRuntime does not bump generation when a different instance is attached", () => {
+      const reset = jest.fn();
+      const disposeRuntimeIfInstance = jest.fn().mockReturnValue(false);
+      service["cardanoRuntimeGeneration"] = 5;
+      service["cardanoNetworkRuntimeInFlight"] = {
+        chainId: "cardano-mainnet",
+        promise: Promise.resolve(),
+      };
+      service["cardanoService"] = {
+        reset,
+        getAttachedRuntimeInstanceId: jest.fn().mockReturnValue("rt_new"),
+        disposeRuntimeIfInstance,
+        isInitialized: jest.fn().mockReturnValue(true),
+      } as any;
+
+      service["leaveCardanoRuntime"]({
+        instanceId: "rt_old",
+        runtimeGeneration: 5,
+      });
+
+      expect(disposeRuntimeIfInstance).toHaveBeenCalledWith("rt_old");
+      expect(service["cardanoRuntimeGeneration"]).toBe(5);
+      expect(service["cardanoNetworkRuntimeInFlight"]).not.toBeNull();
+      expect(reset).not.toHaveBeenCalled();
+    });
+
+    it("leaveCardanoRuntime defers when captured instance was cleared mid-ensure", async () => {
+      const reset = jest.fn();
+      const disposeRuntimeIfInstance = jest.fn().mockReturnValue(false);
+      service["cardanoRuntimeGeneration"] = 5;
+      service["cardanoNetworkRuntimeInFlight"] = {
+        chainId: "cardano-mainnet",
+        promise: Promise.resolve(),
+      };
+      service["chainsService"] = {
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-mainnet"),
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+      } as any;
+      service["cardanoService"] = {
+        reset,
+        getAttachedRuntimeInstanceId: jest.fn().mockReturnValue(undefined),
+        getBoundChainId: jest.fn().mockReturnValue(undefined),
+        disposeRuntimeIfInstance,
+        isInitialized: jest.fn().mockReturnValue(true),
+      } as any;
+
+      service["leaveCardanoRuntime"]({
+        instanceId: "rt_preprod",
+        runtimeGeneration: 5,
+      });
+
+      // Immediate wipe skipped — settle runs after in-flight.
+      expect(disposeRuntimeIfInstance).not.toHaveBeenCalled();
+      expect(service["cardanoRuntimeGeneration"]).toBe(5);
+      expect(service["cardanoNetworkRuntimeInFlight"]).not.toBeNull();
+      expect(reset).not.toHaveBeenCalled();
+
+      await new Promise((resolve) => setImmediate(resolve));
+      // Captured id already gone → settle is a no-op.
+      expect(disposeRuntimeIfInstance).not.toHaveBeenCalled();
+      expect(service["cardanoRuntimeGeneration"]).toBe(5);
+      expect(reset).not.toHaveBeenCalled();
+    });
+
+    it("stale dispose during mid-create does not invalidate newer candidate", async () => {
+      service["cardanoRuntimeGeneration"] = 5;
+      let createCalls = 0;
+      let releaseCreate: (() => void) | undefined;
+      let ready = true;
+      let bound: string | undefined = "cardano-preprod";
+      let attachedId: string | undefined = "rt_A";
+      let initialized = true;
+      let rebuildInFlight = false;
+      const invalidatePendingRebuilds = jest.fn();
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-mainnet"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+        getSwitchGeneration: jest.fn().mockReturnValue(2),
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-mainnet"),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+
+      const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
+        createCalls += 1;
+        rebuildInFlight = true;
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        rebuildInFlight = false;
+        attachedId = "rt_B";
+        bound = "cardano-mainnet";
+        ready = true;
+      });
+
+      const reset = jest.fn(() => {
+        invalidatePendingRebuilds();
+        attachedId = undefined;
+        bound = undefined;
+        initialized = false;
+      });
+
+      service["cardanoService"] = {
+        reset,
+        restoreFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => initialized),
+        isReady: jest.fn().mockImplementation(() => ready && bound != null),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation((id: string) => ready && bound === id),
+        getBoundChainId: jest.fn().mockImplementation(() => bound),
+        getRuntimeState: jest
+          .fn()
+          .mockImplementation(() =>
+            ready && bound != null ? "ready" : "not_initialized"
+          ),
+        getAttachedRuntimeInstanceId: jest
+          .fn()
+          .mockImplementation(() => attachedId),
+        disposeRuntimeIfInstance: jest.fn((id: string | undefined) => {
+          if (id == null || id !== attachedId) {
+            return false;
+          }
+          if (rebuildInFlight) {
+            attachedId = undefined;
+            bound = undefined;
+            return true;
+          }
+          reset();
+          return true;
+        }),
+      } as any;
+      service["runAddressCacheRepairBestEffort"] = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      const ensurePromise =
+        service.ensureCardanoServiceReady("cardano-mainnet");
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+      expect(rebuildInFlight).toBe(true);
+      expect(attachedId).toBe("rt_A");
+
+      // Stale abandoned switch target: selected already mainnet ≠ preprod.
+      await service["onNetworkSwitch"]("cardano-preprod", "cardano-preprod");
+      expect(invalidatePendingRebuilds).not.toHaveBeenCalled();
+
+      releaseCreate?.();
+      await ensurePromise;
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(createCalls).toBe(1);
+      expect(attachedId).toBe("rt_B");
+      expect(bound).toBe("cardano-mainnet");
+      expect(invalidatePendingRebuilds).not.toHaveBeenCalled();
     });
 
     it("does not fail switch when only post-commit cache repair fails", async () => {
@@ -450,6 +1180,10 @@ describe("KeyRingService", () => {
         .mockRejectedValue(new Error("cache_repair_failed"));
       service["cardanoService"] = {
         reset: jest.fn(),
+        isInitialized: jest.fn().mockReturnValue(false),
+        getBoundChainId: jest.fn().mockReturnValue(undefined),
+        getAttachedRuntimeInstanceId: jest.fn(),
+        disposeRuntimeIfInstance: jest.fn(),
       } as any;
 
       await expect(
@@ -472,6 +1206,13 @@ describe("KeyRingService", () => {
       service["runAddressCacheRepairBestEffort"] = (
         service as any
       ).runAddressCacheRepairBestEffort.bind(service);
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        isInitialized: jest.fn().mockReturnValue(false),
+        getBoundChainId: jest.fn().mockReturnValue(undefined),
+        getAttachedRuntimeInstanceId: jest.fn(),
+        disposeRuntimeIfInstance: jest.fn(),
+      } as any;
 
       await expect(
         service["onNetworkSwitch"]("cardano-old", "cardano-new")
@@ -481,28 +1222,24 @@ describe("KeyRingService", () => {
       expect(repair).not.toHaveBeenCalled();
     });
 
-    it("supports retry after failed switch without stale dedup state", async () => {
-      const getSelectedChain = jest
-        .fn()
-        .mockResolvedValueOnce("cardano-new")
-        .mockResolvedValueOnce("cardano-new");
+    it("retries enter Cardano after prior leave without requiring NetworkRuntime ensure", async () => {
+      const getSelectedChain = jest.fn().mockResolvedValue("cardano-new");
       service["chainsService"] = {
         getSelectedChain,
         getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
-        getCurrentKeyStore: jest.fn().mockReturnValue({ meta: { key: "v" } }),
-        currentPassword: "pw",
       } as any;
       service["cardanoService"] = {
         reset: jest.fn(),
+        isInitialized: jest.fn().mockReturnValue(false),
+        getBoundChainId: jest.fn().mockReturnValue(undefined),
+        getAttachedRuntimeInstanceId: jest.fn(),
+        disposeRuntimeIfInstance: jest.fn(),
       } as any;
 
-      const ensure = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("first_failed"))
-        .mockResolvedValueOnce(undefined);
+      const ensure = jest.fn();
       service["ensureCardanoServiceReady"] = ensure;
       service["runAddressCacheRepairBestEffort"] = jest
         .fn()
@@ -510,12 +1247,11 @@ describe("KeyRingService", () => {
 
       await expect(
         service["onNetworkSwitch"]("cardano-old", "cardano-new")
-      ).rejects.toThrow("first_failed");
-      expect((service as any)["cardanoNetworkRuntimeInFlight"]).toBeNull();
-
+      ).resolves.toBeUndefined();
       await expect(
         service["onNetworkSwitch"]("cardano-old", "cardano-new")
       ).resolves.toBeUndefined();
+      expect(ensure).not.toHaveBeenCalled();
     });
   });
 
@@ -528,6 +1264,7 @@ describe("KeyRingService", () => {
       service["chainsService"] = {
         getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
         getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+        peekSelectedChainId: jest.fn().mockReturnValue("fetchhub-4"),
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
@@ -550,7 +1287,9 @@ describe("KeyRingService", () => {
         service["onNetworkSwitch"]("cardano-preview", "fetchhub-4")
       ).resolves.toBeUndefined();
 
-      expect(disposeRuntimeIfInstance).toHaveBeenCalledWith("rt_leave");
+      // Confirmed non-Cardano leave hard-resets (invalidates mid-create candidates).
+      expect(reset).toHaveBeenCalled();
+      expect(disposeRuntimeIfInstance).not.toHaveBeenCalled();
       expect((service as any)["cardanoNetworkRuntimeInFlight"]).toBeNull();
       expect((service as any)["cardanoRuntimeGeneration"]).toBe(4);
       expect(ensure).not.toHaveBeenCalled();
@@ -564,6 +1303,7 @@ describe("KeyRingService", () => {
       service["chainsService"] = {
         getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
         getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+        peekSelectedChainId: jest.fn().mockReturnValue("fetchhub-4"),
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
@@ -584,17 +1324,87 @@ describe("KeyRingService", () => {
       expect((service as any)["cardanoRuntimeGeneration"]).toBe(2);
     });
 
+    it("confirmed non-Cardano leave hard-resets when B already attached", async () => {
+      const reset = jest.fn();
+      const disposeRuntimeIfInstance = jest.fn();
+      service["cardanoRuntimeGeneration"] = 3;
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+        peekSelectedChainId: jest.fn().mockReturnValue("fetchhub-4"),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      // Capture A, but B attaches before leave runs (same generation).
+      service["cardanoService"] = {
+        reset,
+        getAttachedRuntimeInstanceId: jest
+          .fn()
+          .mockReturnValueOnce("rt_A") // capture
+          .mockReturnValue("rt_B"),
+        disposeRuntimeIfInstance,
+        isInitialized: jest.fn().mockReturnValue(true),
+        getBoundChainId: jest.fn().mockReturnValue("cardano-mainnet"),
+      } as any;
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-preprod", "fetchhub-4")
+      ).resolves.toBeUndefined();
+
+      expect(reset).toHaveBeenCalled();
+      expect((service as any)["cardanoRuntimeGeneration"]).toBe(4);
+      expect(disposeRuntimeIfInstance).not.toHaveBeenCalled();
+    });
+
+    it("confirmed non-Cardano leave hard-resets mid-create candidate via invalidate", async () => {
+      const reset = jest.fn();
+      service["cardanoRuntimeGeneration"] = 3;
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+        peekSelectedChainId: jest.fn().mockReturnValue("fetchhub-4"),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+      } as any;
+      service["cardanoService"] = {
+        reset,
+        getAttachedRuntimeInstanceId: jest.fn().mockReturnValue("rt_A"),
+        disposeRuntimeIfInstance: jest.fn(),
+        isInitialized: jest.fn().mockReturnValue(true),
+        getBoundChainId: jest.fn().mockReturnValue("cardano-preprod"),
+      } as any;
+      // Mid-create ensure is in-flight; hard leave must clear it (soft-detach alone is insufficient).
+      service["cardanoNetworkRuntimeInFlight"] = {
+        chainId: "cardano-mainnet",
+        promise: new Promise(() => {
+          /* never settles in this test */
+        }),
+      };
+
+      await expect(
+        service["onNetworkSwitch"]("cardano-preprod", "fetchhub-4")
+      ).resolves.toBeUndefined();
+
+      expect(reset).toHaveBeenCalled();
+      expect((service as any)["cardanoNetworkRuntimeInFlight"]).toBeNull();
+      expect((service as any)["cardanoRuntimeGeneration"]).toBe(4);
+    });
+
     it("stale leave does not reset mid-init newer runtime when captured id is gone", async () => {
       const disposeRuntimeIfInstance = jest.fn().mockReturnValue(false);
       const reset = jest.fn();
       const getSelectedChain = jest
         .fn()
         .mockResolvedValueOnce("fetchhub-4")
-        .mockResolvedValueOnce("cardano-preview");
+        .mockResolvedValueOnce("cardano-preview")
+        .mockResolvedValue("cardano-preview");
       service["cardanoRuntimeGeneration"] = 5;
       service["chainsService"] = {
         getSelectedChain,
         getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-preview"),
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
@@ -616,6 +1426,10 @@ describe("KeyRingService", () => {
       await expect(
         service["onNetworkSwitch"]("cardano-preview", "fetchhub-4")
       ).resolves.toBeUndefined();
+
+      // stillCurrent abort defers exact dispose until in-flight settles.
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(disposeRuntimeIfInstance).toHaveBeenCalledWith("rt_old");
       expect(reset).not.toHaveBeenCalled();
@@ -643,6 +1457,7 @@ describe("KeyRingService", () => {
           return "fetchhub-4";
         }),
         getChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+        peekSelectedChainId: jest.fn().mockReturnValue("fetchhub-4"),
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
@@ -707,21 +1522,7 @@ describe("KeyRingService", () => {
       } as any;
     });
 
-    it("returns UNLOCKED and reconciles selected chain when stale id was persisted", async () => {
-      const status = await service.unlock("password");
-
-      expect(status).toBe(KeyRingStatus.UNLOCKED);
-      expect(service.keyRingStatus).toBe(KeyRingStatus.UNLOCKED);
-      expect(await chainsService.getSelectedChain()).toBe(
-        PREFERRED_DEFAULT_CHAIN_ID
-      );
-      expect(mockCardanoService.reset).toHaveBeenCalled();
-    });
-
-    it("returns UNLOCKED and resets Cardano when post-unlock init fails", async () => {
-      (mockCardanoService.restoreFromKeyStore as jest.Mock).mockRejectedValue(
-        new Error("cardano_init_failed")
-      );
+    it("returns UNLOCKED and keeps Cardano detached without NetworkRuntime on Cardano unlock", async () => {
       chainsService = createTestChainsService([
         ...TEST_EMBED_CHAINS,
         {
@@ -736,9 +1537,21 @@ describe("KeyRingService", () => {
       const status = await service.unlock("password");
 
       expect(status).toBe(KeyRingStatus.UNLOCKED);
-      expect(service.keyRingStatus).toBe(KeyRingStatus.UNLOCKED);
-      expect(mockCardanoService.reset).toHaveBeenCalled();
+      expect(mockCardanoService.restoreFromKeyStore).not.toHaveBeenCalled();
+      expect(mockCardanoService.reset).not.toHaveBeenCalled();
       expect((service as any)["cardanoNetworkRuntimeInFlight"]).toBeNull();
+    });
+
+    it("returns UNLOCKED, reconciles stale selected chain, and detaches Cardano on non-Cardano", async () => {
+      const status = await service.unlock("password");
+
+      expect(status).toBe(KeyRingStatus.UNLOCKED);
+      expect(service.keyRingStatus).toBe(KeyRingStatus.UNLOCKED);
+      expect(await chainsService.getSelectedChain()).toBe(
+        PREFERRED_DEFAULT_CHAIN_ID
+      );
+      expect(mockCardanoService.restoreFromKeyStore).not.toHaveBeenCalled();
+      expect(mockCardanoService.reset).toHaveBeenCalled();
     });
   });
 
@@ -823,6 +1636,16 @@ describe("KeyRingService", () => {
         restoreFromKeyStore,
         isInitialized: jest.fn().mockImplementation(() => initialized),
         isReady: jest.fn().mockImplementation(() => initialized),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation(
+            (id: string) => initialized && id === "cardano-preview"
+          ),
+        getBoundChainId: jest
+          .fn()
+          .mockImplementation(() =>
+            initialized ? "cardano-preview" : undefined
+          ),
         isKeyAgentReady: jest.fn().mockImplementation(() => initialized),
         getRuntimeState: jest
           .fn()
@@ -831,12 +1654,8 @@ describe("KeyRingService", () => {
           ),
       } as any;
 
-      const ensurePromise = service.ensureCardanoServiceReady(
-        "cardano-preview",
-        {
-          mode: "key",
-        }
-      );
+      const ensurePromise =
+        service.ensureCardanoServiceReady("cardano-preview");
 
       await new Promise((resolve) => setImmediate(resolve));
       expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
@@ -878,6 +1697,16 @@ describe("KeyRingService", () => {
           }),
         isInitialized: jest.fn().mockImplementation(() => initialized),
         isReady: jest.fn().mockImplementation(() => initialized),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation(
+            (id: string) => initialized && id === "cardano-preview"
+          ),
+        getBoundChainId: jest
+          .fn()
+          .mockImplementation(() =>
+            initialized ? "cardano-preview" : undefined
+          ),
         isKeyAgentReady: jest.fn().mockImplementation(() => initialized),
         getRuntimeState: jest
           .fn()
@@ -887,7 +1716,7 @@ describe("KeyRingService", () => {
       } as any;
 
       await expect(
-        service.ensureCardanoServiceReady("cardano-preview", { mode: "key" })
+        service.ensureCardanoServiceReady("cardano-preview")
       ).resolves.toBeUndefined();
 
       expect(consoleError).not.toHaveBeenCalledWith(
@@ -932,6 +1761,14 @@ describe("KeyRingService", () => {
         // Mimic early keyRing publish: initialized mid-flight, ready only after restore.
         isInitialized: jest.fn().mockImplementation(() => midInit || ready),
         isReady: jest.fn().mockImplementation(() => ready),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation(
+            (id: string) => ready && id === "cardano-preview"
+          ),
+        getBoundChainId: jest
+          .fn()
+          .mockImplementation(() => (ready ? "cardano-preview" : undefined)),
         isKeyAgentReady: jest.fn().mockImplementation(() => ready),
         getRuntimeState: jest
           .fn()
@@ -943,10 +1780,8 @@ describe("KeyRingService", () => {
       expect(midInit).toBe(true);
       expect(createCalls).toBe(1);
 
-      // Second ensure enters while initialized but not ready — must join, not create.
-      const ensure2 = service.ensureCardanoServiceReady("cardano-preview", {
-        mode: "key",
-      });
+      // Second ensure (transaction) while initialized but not ready — must join, not create.
+      const ensure2 = service.ensureCardanoServiceReady("cardano-preview");
       await new Promise((resolve) => setImmediate(resolve));
 
       expect(createCalls).toBe(1);
@@ -957,6 +1792,79 @@ describe("KeyRingService", () => {
 
       expect(createCalls).toBe(1);
       expect(attachedCount).toBe(1);
+      expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
+    });
+
+    it("concurrent key + transaction: key path 0 creates, transaction path exactly 1", async () => {
+      let releaseCreate: (() => void) | undefined;
+      let createCalls = 0;
+      let ready = false;
+
+      const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
+        createCalls += 1;
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        ready = true;
+      });
+      const deriveKeyFromKeyStore = jest.fn().mockImplementation(async () => {
+        // Simulate offline key work overlapping with NetworkRuntime create.
+        await new Promise((resolve) => setImmediate(resolve));
+        return {
+          algo: "cardano_address_only",
+          pubKey: new Uint8Array(),
+          address: Buffer.from("addr_test1_offline"),
+          isNanoLedger: false,
+          isKeystone: false,
+        };
+      });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("cardano-preview"),
+        getChainInfo: jest.fn().mockResolvedValue({ features: ["cardano"] }),
+        getSwitchGeneration: jest.fn().mockReturnValue(0),
+        peekSelectedChainId: jest.fn().mockReturnValue("cardano-preview"),
+      } as any;
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        getCurrentKeyStore: jest.fn().mockReturnValue({
+          type: "mnemonic",
+          meta: { mnemonicLength: "24" },
+        }),
+        currentPassword: "pw",
+      } as any;
+      service["cardanoService"] = {
+        reset: jest.fn(),
+        restoreFromKeyStore,
+        deriveKeyFromKeyStore,
+        isInitialized: jest.fn().mockImplementation(() => ready),
+        isReady: jest.fn().mockImplementation(() => ready),
+        isReadyForChain: jest
+          .fn()
+          .mockImplementation(
+            (id: string) => ready && id === "cardano-preview"
+          ),
+        getBoundChainId: jest
+          .fn()
+          .mockImplementation(() => (ready ? "cardano-preview" : undefined)),
+        isKeyAgentReady: jest.fn().mockImplementation(() => ready),
+        getRuntimeState: jest
+          .fn()
+          .mockImplementation(() => (ready ? "ready" : "not_initialized")),
+      } as any;
+
+      const keyPath = service.getKey("cardano-preview");
+      const txPath = service.ensureCardanoServiceReady("cardano-preview");
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(deriveKeyFromKeyStore).toHaveBeenCalled();
+      expect(createCalls).toBe(1);
+
+      releaseCreate?.();
+      await Promise.all([keyPath, txPath]);
+
+      expect(deriveKeyFromKeyStore).toHaveBeenCalledTimes(1);
+      expect(createCalls).toBe(1);
       expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
     });
   });

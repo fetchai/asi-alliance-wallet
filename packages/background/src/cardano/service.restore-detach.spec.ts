@@ -88,6 +88,43 @@ describe("CardanoService restoreFromKeyStore detached cleanup", () => {
     expect(service["runtimeSessionId"]).toBe("cad_sess_newer");
   });
 
+  it("disposeRuntimeIfInstance soft-detaches during rebuild without wiping key ring", () => {
+    const service = new CardanoService();
+    const disposeOld = jest.fn();
+    const markDetached = jest.fn();
+    const invalidatePendingRebuilds = jest.fn();
+    const detachWalletManagerIfInstance = jest.fn((id: string) => {
+      if (id !== "rt_A") {
+        return false;
+      }
+      markDetached();
+      disposeOld();
+      (service["keyRing"] as any).getWalletManager = jest
+        .fn()
+        .mockReturnValue(undefined);
+      return true;
+    });
+
+    service["boundChainId"] = "cardano-preprod";
+    service["keyRing"] = {
+      invalidatePendingRebuilds,
+      isRebuildInFlight: jest.fn().mockReturnValue(true),
+      detachWalletManagerIfInstance,
+      getWalletManager: jest.fn().mockReturnValue({
+        getRuntimeInstanceId: () => "rt_A",
+        dispose: disposeOld,
+        markDetached,
+      }),
+    } as any;
+
+    expect(service.disposeRuntimeIfInstance("rt_A")).toBe(true);
+
+    expect(detachWalletManagerIfInstance).toHaveBeenCalledWith("rt_A");
+    expect(invalidatePendingRebuilds).not.toHaveBeenCalled();
+    expect(service["keyRing"]).toBeTruthy();
+    expect(service["boundChainId"]).toBeUndefined();
+  });
+
   it("disposeRuntimeIfInstance leaves a newer attached runtime untouched", () => {
     const service = new CardanoService();
     const disposeNew = jest.fn();

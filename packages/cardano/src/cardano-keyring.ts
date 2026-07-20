@@ -1,4 +1,5 @@
 import { CardanoWalletManager } from "./wallet-manager";
+import { CardanoKeyContext } from "./cardano-key-context";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { makeObservable, observable } from "mobx";
 import { KeyCurve } from "@keplr-wallet/crypto";
@@ -81,6 +82,8 @@ export class CardanoKeyRing {
    * always dispose the stale candidate (P1 ownership).
    */
   private rebuildGeneration = 0;
+  /** Depth of rebuildAgentsForNetworkLocked currently running (mid-create of a candidate). */
+  private rebuildInFlightDepth = 0;
 
   private resolveNetworkOrThrow(chainId?: string): CardanoNetwork {
     if (!chainId) {
@@ -101,6 +104,33 @@ export class CardanoKeyRing {
    */
   invalidatePendingRebuilds(): void {
     this.rebuildGeneration += 1;
+  }
+
+  /** True while a manager candidate is being created (before attach). */
+  isRebuildInFlight(): boolean {
+    return this.rebuildInFlightDepth > 0;
+  }
+
+  /**
+   * Dispose only the currently attached manager when it matches instanceId.
+   * Keeps the CardanoKeyRing (mnemonic / in-flight rebuild) intact — never
+   * bumps rebuildGeneration. Used so stale leave cannot kill a mid-create candidate.
+   */
+  detachWalletManagerIfInstance(instanceId: string): boolean {
+    const wm = this.walletManager;
+    if (!wm || wm.getRuntimeInstanceId?.() !== instanceId) {
+      return false;
+    }
+    try {
+      wm.markDetached?.();
+      wm.dispose?.();
+    } catch {
+      console.warn(
+        "[CardanoKeyRing] Failed to detach matched CardanoWalletManager"
+      );
+    }
+    this.walletManager = undefined;
+    return true;
   }
 
   public async getMetaFromMnemonic(
@@ -207,15 +237,32 @@ export class CardanoKeyRing {
     });
   }
 
+  /**
+   * Address derivation for an already-restored NetworkRuntime key ring.
+   * Same-network uses the attached keyAgent; other network → offline KeyContext
+   * only (never CardanoWalletManager / Blockfrost). Account and ListAccounts UI
+   * must use CardanoService.deriveKeyFromKeyStore instead.
+   */
   public async getKey(chainId?: string): Promise<Key> {
+    // Address derivation must not rebuild NetworkRuntime / Blockfrost wallet.
+    // If requested network differs from attached runtime, derive offline via KeyContext.
+    if (chainId && this.mnemonicWords) {
+      const network = getCardanoNetworkFromChainId(chainId);
+      if (!this.keyAgent || this.currentNetwork !== network) {
+        const context = await CardanoKeyContext.create({
+          mnemonicWords: this.mnemonicWords,
+          chainId,
+          accountIndex: this.accountIndex,
+          passphrase: this.passphrase,
+        });
+        return context.getKey();
+      }
+    }
+
     if (!this.keyAgent) {
       throw new Error(
         "Cardano key agent not initialized. Please unlock wallet first."
       );
-    }
-
-    if (chainId) {
-      await this.updateNetworkIfNeeded(chainId);
     }
 
     try {
@@ -237,14 +284,6 @@ export class CardanoKeyRing {
       console.error("Failed to derive Cardano address:", error);
       throw new Error("Failed to generate Cardano address");
     }
-  }
-
-  private async updateNetworkIfNeeded(chainId: string): Promise<void> {
-    const network = getCardanoNetworkFromChainId(chainId);
-    if (this.currentNetwork === network) {
-      return;
-    }
-    await this.rebuildAgentsForNetwork(network, { chainId });
   }
 
   private async rebuildAgentsForNetwork(
@@ -284,116 +323,128 @@ export class CardanoKeyRing {
       throw new Error("Cardano mnemonic is not available for agent rebuild");
     }
 
-    const ownershipToken = this.rebuildGeneration;
-
-    let blockfrostConfig: BlockfrostConfig | null | undefined = undefined;
+    this.rebuildInFlightDepth += 1;
     try {
-      if (this.resolveBlockfrostConfig) {
-        blockfrostConfig = await this.resolveBlockfrostConfig(network);
-      }
-    } catch {
-      console.error("[CardanoKeyRing] Failed to resolve Blockfrost config");
-      throw new Error("cardano_blockfrost_config_resolve_failed");
-    }
+      const ownershipToken = this.rebuildGeneration;
 
-    const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
-    const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
-    const cardanoChainId = await getCardanoChainIdFromNetwork(network);
-    const bip32Ed25519 = await SodiumBip32Ed25519.create();
-
-    const previousWalletManager = this.walletManager;
-
-    const newKeyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
-      {
-        mnemonicWords: this.mnemonicWords,
-        accountIndex: this.accountIndex,
-        purpose: CARDANO_PURPOSE,
-        chainId: cardanoChainId,
-        getPassphrase: async () => this.passphrase,
-      },
-      { bip32Ed25519, logger: console }
-    );
-
-    let newWalletManager: CardanoWalletManager | undefined;
-    try {
-      const previousInstanceId =
-        previousWalletManager?.getRuntimeInstanceId?.();
-      const resolvedChainId =
-        runtimeMeta?.chainId ?? getAsiCardanoChainIdFromNetwork(network);
-      const getSelectedChainId =
-        runtimeMeta?.getSelectedChainId ??
-        this.runtimeOwnership?.getSelectedChainId;
-      const runtimeGeneration =
-        runtimeMeta?.runtimeGeneration ??
-        this.runtimeOwnership?.runtimeGeneration;
-      const ownerSwitchGeneration =
-        runtimeMeta?.ownerSwitchGeneration ??
-        this.runtimeOwnership?.getOwnerSwitchGeneration?.();
-      const selectedChainIdAtCreate =
-        getSelectedChainId?.() ??
-        runtimeMeta?.selectedChainIdAtCreate ??
-        resolvedChainId;
-      const createdBy =
-        runtimeMeta?.createdBy ?? this.runtimeOwnership?.createdBy ?? "restore";
-
-      newWalletManager = await CardanoWalletManager.create({
-        mnemonicWords: this.mnemonicWords,
-        network,
-        accountIndex: this.accountIndex,
-        passphrase: this.passphrase,
-        blockfrostConfig,
-        createdBy,
-        chainId: resolvedChainId,
-        runtimeGeneration,
-        ownerSwitchGeneration,
-        selectedChainIdAtCreate,
-        getSelectedChainId,
-      });
-
-      // Ownership moved during create: never attach; always dispose candidate.
-      if (ownershipToken !== this.rebuildGeneration) {
-        try {
-          newWalletManager.dispose?.();
-        } catch {
-          console.warn(
-            "[CardanoKeyRing] Failed to dispose stale CardanoWalletManager candidate"
-          );
-        }
-        throw new Error("cardano_wallet_manager_stale_create");
-      }
-
-      this.keyAgent = newKeyAgent;
-      this.walletManager = newWalletManager;
-      this.currentNetwork = network;
-      newWalletManager.markAttached({
-        replacedInstanceId: previousInstanceId,
-      });
-
+      let blockfrostConfig: BlockfrostConfig | null | undefined = undefined;
       try {
-        if (previousWalletManager) {
-          previousWalletManager.markDetached?.();
-          previousWalletManager.dispose?.();
+        if (this.resolveBlockfrostConfig) {
+          blockfrostConfig = await this.resolveBlockfrostConfig(network);
         }
       } catch {
-        console.warn(
-          "[CardanoKeyRing] Failed to dispose previous CardanoWalletManager"
-        );
+        console.error("[CardanoKeyRing] Failed to resolve Blockfrost config");
+        throw new Error("cardano_blockfrost_config_resolve_failed");
       }
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === "cardano_wallet_manager_stale_create"
-      ) {
-        throw error;
-      }
-      // Create failed after allocation: ensure the candidate cannot leak.
-      if (newWalletManager && !newWalletManager.isAttached?.()) {
+
+      const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
+      const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
+      const cardanoChainId = await getCardanoChainIdFromNetwork(network);
+      const bip32Ed25519 = await SodiumBip32Ed25519.create();
+
+      const previousWalletManager = this.walletManager;
+
+      const newKeyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
+        {
+          mnemonicWords: this.mnemonicWords,
+          accountIndex: this.accountIndex,
+          purpose: CARDANO_PURPOSE,
+          chainId: cardanoChainId,
+          getPassphrase: async () => this.passphrase,
+        },
+        { bip32Ed25519, logger: console }
+      );
+
+      let newWalletManager: CardanoWalletManager | undefined;
+      try {
+        const previousInstanceId =
+          previousWalletManager?.getRuntimeInstanceId?.();
+        const resolvedChainId =
+          runtimeMeta?.chainId ?? getAsiCardanoChainIdFromNetwork(network);
+        const getSelectedChainId =
+          runtimeMeta?.getSelectedChainId ??
+          this.runtimeOwnership?.getSelectedChainId;
+        const runtimeGeneration =
+          runtimeMeta?.runtimeGeneration ??
+          this.runtimeOwnership?.runtimeGeneration;
+        const ownerSwitchGeneration =
+          runtimeMeta?.ownerSwitchGeneration ??
+          this.runtimeOwnership?.getOwnerSwitchGeneration?.();
+        const selectedChainIdAtCreate =
+          getSelectedChainId?.() ??
+          runtimeMeta?.selectedChainIdAtCreate ??
+          resolvedChainId;
+        const createdBy =
+          runtimeMeta?.createdBy ??
+          this.runtimeOwnership?.createdBy ??
+          "restore";
+
+        newWalletManager = await CardanoWalletManager.create({
+          mnemonicWords: this.mnemonicWords,
+          network,
+          accountIndex: this.accountIndex,
+          passphrase: this.passphrase,
+          blockfrostConfig,
+          createdBy,
+          chainId: resolvedChainId,
+          runtimeGeneration,
+          ownerSwitchGeneration,
+          selectedChainIdAtCreate,
+          getSelectedChainId,
+        });
+
+        // Ownership moved during create: never attach; always dispose candidate.
+        if (ownershipToken !== this.rebuildGeneration) {
+          try {
+            newWalletManager.dispose?.();
+          } catch {
+            console.warn(
+              "[CardanoKeyRing] Failed to dispose stale CardanoWalletManager candidate"
+            );
+          }
+          throw new Error("cardano_wallet_manager_stale_create");
+        }
+
+        // Capture before replace: soft-detach may already have disposed previous.
+        const previousStillOwned =
+          previousWalletManager != null &&
+          this.walletManager === previousWalletManager;
+
+        this.keyAgent = newKeyAgent;
+        this.walletManager = newWalletManager;
+        this.currentNetwork = network;
+        newWalletManager.markAttached({
+          replacedInstanceId: previousInstanceId,
+        });
+
         try {
-          newWalletManager.dispose?.();
-        } catch {}
+          if (previousStillOwned) {
+            previousWalletManager.markDetached?.();
+            previousWalletManager.dispose?.();
+          }
+        } catch {
+          console.warn(
+            "[CardanoKeyRing] Failed to dispose previous CardanoWalletManager"
+          );
+        }
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "cardano_wallet_manager_stale_create"
+        ) {
+          throw error;
+        }
+        // Create failed after allocation: ensure the candidate cannot leak.
+        if (newWalletManager && !newWalletManager.isAttached?.()) {
+          try {
+            newWalletManager.dispose?.();
+          } catch {}
+        }
+        console.error("[CardanoKeyRing] Failed to create CardanoWalletManager");
+        throw new Error("cardano_wallet_manager_create_failed");
       }
-      console.error("[CardanoKeyRing] Failed to create CardanoWalletManager");
-      throw new Error("cardano_wallet_manager_create_failed");
+    } finally {
+      this.rebuildInFlightDepth = Math.max(0, this.rebuildInFlightDepth - 1);
     }
   }
 
@@ -433,7 +484,8 @@ export class CardanoKeyRing {
   }
 
   /**
-   * Checks if keyAgent is initialized
+   * True when the NetworkRuntime-owned InMemoryKeyAgent is present.
+   * Not offline KeyContext readiness — do not use for address UI gating.
    */
   isKeyAgentReady(): boolean {
     return !!this.keyAgent;

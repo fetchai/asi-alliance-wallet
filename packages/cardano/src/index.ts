@@ -7,6 +7,7 @@ export * from "./wallet/util";
 
 export { CardanoWalletManager } from "./wallet-manager";
 export { CardanoKeyRing } from "./cardano-keyring";
+export { CardanoKeyContext } from "./cardano-key-context";
 export { CardanoAccount } from "./cardano-account";
 
 // Re-export types for compatibility with background package

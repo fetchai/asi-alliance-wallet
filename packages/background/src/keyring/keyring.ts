@@ -2183,18 +2183,13 @@ export class KeyRing {
 
   /**
    * Derive Cardano keys for all wallets (including non-selected) using the in-memory password.
-   * For wallets that don't support Cardano or fail derivation, returns a typed capability marker
-   * with empty address/pubKey (`cardano_unsupported` / `cardano_derivation_failed`).
+   * Cache miss uses offline KeyContext (deriveKeyFromKeyStore) — never NetworkRuntime /
+   * CardanoWalletManager / Blockfrost. For wallets that don't support Cardano or fail
+   * derivation, returns a typed capability marker with empty address/pubKey
+   * (`cardano_unsupported` / `cardano_derivation_failed`).
    */
   public async getKeysForCardano(
-    chainId: string,
-    telemetry?: {
-      selectedChainId?: string;
-      runtimeGeneration?: number;
-      ownerSwitchGeneration?: number;
-      getOwnerSwitchGeneration?: () => number | undefined;
-      getSelectedChainId?: () => string | undefined;
-    }
+    chainId: string
   ): Promise<(Key & { name: string })[]> {
     if (!this.password) {
       throw new Error("Keyring is locked");
@@ -2310,27 +2305,14 @@ export class KeyRing {
       let fallbackAlgo: "cardano_unsupported" | "cardano_derivation_failed" =
         "cardano_unsupported";
       if (shouldTryCardano) {
-        const svc = new CardanoService();
         try {
-          const selectedChainId =
-            telemetry?.getSelectedChainId?.() ?? telemetry?.selectedChainId;
-          await svc.restoreFromKeyStore(
+          // Offline KeyContext only — never spin up NetworkRuntime / Blockfrost.
+          const key = await new CardanoService().deriveKeyFromKeyStore(
             keyStore as any,
             this.password,
             this.crypto,
-            chainId,
-            {
-              runtimeGeneration: telemetry?.runtimeGeneration,
-              ownerSwitchGeneration: telemetry?.ownerSwitchGeneration,
-              getOwnerSwitchGeneration: telemetry?.getOwnerSwitchGeneration,
-              selectedChainIdAtCreate: selectedChainId,
-              getSelectedChainId:
-                telemetry?.getSelectedChainId ??
-                (() => telemetry?.selectedChainId),
-              createdBy: "listAccounts",
-            }
+            chainId
           );
-          const key = await svc.getKey(chainId);
           this.cardanoKeyCache.set(keyId, {
             address: key.address,
             pubKey: key.pubKey,
@@ -2348,8 +2330,6 @@ export class KeyRing {
             error
           );
           // Fall through to typed unsupported state.
-        } finally {
-          svc.reset();
         }
       }
 
