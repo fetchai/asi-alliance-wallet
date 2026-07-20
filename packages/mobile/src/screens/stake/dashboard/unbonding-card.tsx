@@ -8,7 +8,7 @@ import { ValidatorThumbnail } from "components/thumbnail";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { VectorCharacter } from "components/vector-character";
 import { IconButton } from "components/new/button/icon";
-import { numberLocalFormat } from "utils/format/format";
+import { formatBalance, formatFiatBalance } from "utils/format/format";
 import moment from "moment";
 
 export const UnbondingCard: FunctionComponent<{
@@ -114,11 +114,6 @@ export const UnbondingCard: FunctionComponent<{
           <React.Fragment key={ubd.validatorAddress}>
             {ubd.entries.map((entry) => {
               const completionTime = moment(entry.completionTime).fromNow();
-              const amount = entry.balance
-                .maxDecimals(6)
-                .trim(true)
-                .shrink(true)
-                .toString();
               const amountUSD = priceStore.calculatePrice(
                 entry.balance.maxDecimals(5).trim(true).shrink(true)
               );
@@ -198,8 +193,7 @@ export const UnbondingCard: FunctionComponent<{
                             ]) as ViewStyle
                           }
                         >
-                          {numberLocalFormat(amount.split(" ")[0])}{" "}
-                          {amount.split(" ")[1]}
+                          {formatBalance(entry.balance, 6)}
                         </Text>
                       </View>
                       {amountUSD ? (
@@ -216,11 +210,7 @@ export const UnbondingCard: FunctionComponent<{
                                 ]) as ViewStyle
                               }
                             >
-                              {amountUSD
-                                .shrink(true)
-                                .maxDecimals(6)
-                                .trim(true)
-                                .toString()}
+                              {formatFiatBalance(amountUSD)}
                             </Text>
                             <Text
                               style={

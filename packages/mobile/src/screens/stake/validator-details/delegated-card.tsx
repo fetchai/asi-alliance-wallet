@@ -16,7 +16,7 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import { txnTypeKey, txType } from "components/new/txn-status.tsx";
-import { numberLocalFormat } from "utils/format/format";
+import { formatBalance } from "utils/format/format";
 
 export const DelegatedCard: FunctionComponent<{
   containerStyle?: ViewStyle;
@@ -60,7 +60,7 @@ export const DelegatedCard: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -75,7 +75,7 @@ export const DelegatedCard: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await account.cosmos.sendWithdrawDelegationRewardMsgs(
         [validatorAddress],
@@ -106,7 +106,7 @@ export const DelegatedCard: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {
@@ -154,7 +154,7 @@ export const DelegatedCard: FunctionComponent<{
             style.flatten([
               "flex-row",
               "justify-between",
-              "margin-bottom-4",
+              "margin-bottom-12",
             ]) as ViewStyle
           }
         >
@@ -170,19 +170,11 @@ export const DelegatedCard: FunctionComponent<{
               style.flatten([
                 "color-dark",
                 "subtitle3",
-                "flex-1",
                 "text-right",
               ]) as ViewStyle
             }
           >
-            {`${numberLocalFormat(
-              staked
-                .trim(true)
-                .shrink(true)
-                .maxDecimals(10)
-                .toString()
-                .split(" ")[0]
-            )} ${staked.trim(true).shrink(true).toString().split(" ")[1]}`}
+            {formatBalance(staked, 10, false)}
           </Text>
         </View>
         <View
@@ -206,21 +198,11 @@ export const DelegatedCard: FunctionComponent<{
               style.flatten([
                 "color-dark",
                 "subtitle3",
-                "flex-1",
                 "text-right",
               ]) as ViewStyle
             }
           >
-            {`${numberLocalFormat(
-              stakableReward
-                .trim(true)
-                .shrink(true)
-                .maxDecimals(10)
-                .toString()
-                .split(" ")[0]
-            )} ${
-              stakableReward.trim(true).shrink(true).toString().split(" ")[1]
-            }`}
+            {formatBalance(stakableReward, 10, false)}
           </Text>
         </View>
         {/* <View
@@ -241,16 +223,15 @@ export const DelegatedCard: FunctionComponent<{
       </View> */}
         <Button
           text="Unstake"
-          mode="outline"
           size="small"
           containerStyle={
             style.flatten([
               "border-radius-32",
               "margin-top-12",
-              "border-color-gray-100",
+              "background-color-dark",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
+          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
           onPress={() => {
             analyticsStore.logEvent("unstake_click", {
               chainId: chainStore.current.chainId,
@@ -264,7 +245,7 @@ export const DelegatedCard: FunctionComponent<{
             ) {
               Toast.show({
                 type: "error",
-                text1: `${txnInProgressMessage()} in progress`,
+                text1: `${txnInProgressMessage()} In Progress`,
               });
               return;
             }
@@ -279,7 +260,7 @@ export const DelegatedCard: FunctionComponent<{
           stakableReward.toDec().equals(new Dec(0))
         ) ? (
           <Button
-            text="Claim rewards"
+            text="Claim Rewards"
             size="small"
             containerStyle={
               {
@@ -295,7 +276,7 @@ export const DelegatedCard: FunctionComponent<{
               ) {
                 Toast.show({
                   type: "error",
-                  text1: `${txType[txnTypeKey.withdrawRewards]} in progress`,
+                  text1: `${txType[txnTypeKey.withdrawRewards]} In Progress`,
                 });
                 return;
               }
@@ -322,9 +303,7 @@ export const DelegatedCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${numberLocalFormat(
-          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
+        earnedAmount={formatBalance(stakableReward)}
         onPress={handleClaim}
         buttonLoading={
           isSendingTx ||

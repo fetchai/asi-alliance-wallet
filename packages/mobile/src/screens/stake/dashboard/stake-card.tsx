@@ -6,7 +6,11 @@ import { CardDivider } from "components/card";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
 import { useStore } from "stores/index";
-import { isVestingExpired, separateNumericAndDenom } from "utils/format/format";
+import {
+  formatBalance,
+  isVestingExpired,
+  separateNumericAndDenom,
+} from "utils/format/format";
 import { AnimatedNumber } from "components/new/animations/animated-number";
 import Skeleton from "react-native-reanimated-skeleton";
 import { VestingType } from "@keplr-wallet/stores";
@@ -144,6 +148,12 @@ export const StakeCard: FunctionComponent = () => {
         : 0;
     unbondingPercentage = (parseFloat(unbondingBalNumber) / total) * 100;
   }
+
+  const stakableBalance = formatBalance(stakable, 2, false);
+  const stakedBalance = formatBalance(stakedSum, 2, false);
+  const rewardsBalance = formatBalance(stakableReward, 2, false);
+  const unbondingBalance = formatBalance(unbonding, 2, false);
+
   const pieData = [
     {
       color: "#FAB29B",
@@ -197,6 +207,7 @@ export const StakeCard: FunctionComponent = () => {
     {
       title: "Available",
       lineColor: style.get("color-green-250").color,
+      formattedBalance: stakableBalance,
       balance: spendableNumber,
       denom: stakableDenom,
       percentageValue: stakablePercentage,
@@ -205,6 +216,7 @@ export const StakeCard: FunctionComponent = () => {
     {
       title: "Staked",
       lineColor: "#2DA6CF",
+      formattedBalance: stakedBalance,
       balance: stakedBalNumber,
       denom: stakedDenom,
       percentageValue: stakedPercentage,
@@ -213,6 +225,7 @@ export const StakeCard: FunctionComponent = () => {
     {
       title: "Staking rewards",
       lineColor: "#FAB29B",
+      formattedBalance: rewardsBalance,
       balance: rewardsBalNumber,
       denom: rewardDenom,
       percentageValue: rewardsPercentage,
@@ -222,6 +235,9 @@ export const StakeCard: FunctionComponent = () => {
       ? {
           title: "Vesting",
           lineColor: "#3A5638",
+          formattedBalance: `${Number(vestingBalance()).toFixed(
+            2
+          )} ${rewardDenom}`,
           balance: vestingBalance(),
           denom: rewardDenom,
           percentageValue: vestingPercentage,
@@ -232,6 +248,7 @@ export const StakeCard: FunctionComponent = () => {
       ? {
           title: "Unbonding",
           lineColor: "#F4B400",
+          formattedBalance: unbondingBalance,
           balance: unbondingBalNumber,
           denom: unbondingDenom || stakedDenom,
           percentageValue: unbondingPercentage,
@@ -292,34 +309,49 @@ export const StakeCard: FunctionComponent = () => {
                         style.flatten(["flex-row", "flex-wrap"]) as ViewStyle
                       }
                     >
-                      <AnimatedNumber
-                        numberForAnimated={parseFloat(
-                          parseFloat(item.balance).toFixed(2)
-                        )}
-                        includeComma={true}
-                        decimalAmount={2}
-                        fontSizeValue={16}
-                        hookName={"withTiming"}
-                        withTimingProps={{
-                          durationValue: 1000,
-                          easingValue: "linear",
-                        }}
-                        textColor={style.flatten(["color-dark"]).color}
-                      />
-                      <Text
-                        style={
-                          [
-                            style.flatten([
-                              "color-dark",
-                              "subtitle2",
-                              "padding-left-4",
-                            ]),
-                            { lineHeight: 16 },
-                          ] as ViewStyle
-                        }
-                      >
-                        {`${item.denom}`}
-                      </Text>
+                      {parseFloat(item.balance) >= 0.01 ? (
+                        <React.Fragment>
+                          <AnimatedNumber
+                            numberForAnimated={parseFloat(
+                              parseFloat(item.balance).toFixed(2)
+                            )}
+                            includeComma={true}
+                            decimalAmount={2}
+                            fontSizeValue={16}
+                            hookName={"withTiming"}
+                            withTimingProps={{
+                              durationValue: 1000,
+                              easingValue: "linear",
+                            }}
+                            textColor={style.flatten(["color-dark"]).color}
+                          />
+                          <Text
+                            style={
+                              [
+                                style.flatten([
+                                  "color-dark",
+                                  "subtitle2",
+                                  "padding-left-4",
+                                ]),
+                                { lineHeight: 16 },
+                              ] as ViewStyle
+                            }
+                          >
+                            {`${item.denom}`}
+                          </Text>
+                        </React.Fragment>
+                      ) : (
+                        <Text
+                          style={
+                            [
+                              style.flatten(["color-dark", "subtitle2"]),
+                              { lineHeight: 16 },
+                            ] as ViewStyle
+                          }
+                        >
+                          {item.formattedBalance}
+                        </Text>
+                      )}
                       <Text
                         style={
                           [
@@ -328,7 +360,7 @@ export const StakeCard: FunctionComponent = () => {
                           ] as ViewStyle
                         }
                       >
-                        {`(${item.percentageValue.toFixed(2)}%)`}
+                        {` (${item.percentageValue.toFixed(2)}%)`}
                       </Text>
                     </View>
                     {priceStore.calculatePrice(item.dollarValue)?.toString() ? (

@@ -5,6 +5,7 @@ import { useStyle } from "styles/index";
 import { useIntl } from "react-intl";
 import { ProgressBar } from "components/progress-bar";
 import { BlurBackground } from "components/new/blur-background/blur-background";
+import { formatBalance } from "utils/format/format";
 
 export const UnbondingCard: FunctionComponent<{
   containerStyle?: ViewStyle;
@@ -104,11 +105,7 @@ export const UnbondingCard: FunctionComponent<{
                     style.flatten(["body3", "color-gray-300"]) as ViewStyle
                   }
                 >
-                  {entry.balance
-                    .shrink(true)
-                    .trim(true)
-                    .maxDecimals(6)
-                    .toString()}
+                  {formatBalance(entry.balance)}
                 </Text>
                 <View style={style.get("flex-1")} />
                 <Text

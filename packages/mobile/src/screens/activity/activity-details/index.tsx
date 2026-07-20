@@ -7,7 +7,11 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { PageWithScrollView } from "components/page";
 import { useStore } from "stores/index";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { formatAddress, formatToTruncated } from "utils/format/format";
+import {
+  formatAddress,
+  formatFiatBalance,
+  formatToTruncated,
+} from "utils/format/format";
 import { LeftRightCrossIcon } from "components/new/icon/left-right-cross";
 import { IconButton } from "components/new/button/icon";
 import { getActivityIcon, getDetails } from "utils/stable-sort";
@@ -61,7 +65,7 @@ export const ActivityDetails = observer(() => {
 
   const convertTofiatCurrency = (currency: CoinPretty) => {
     const value = priceStore.calculatePrice(currency, fiatCurrency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
 
   const toAddress = (details: {

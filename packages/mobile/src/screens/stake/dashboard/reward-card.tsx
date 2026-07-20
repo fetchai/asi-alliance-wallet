@@ -4,10 +4,7 @@ import { BlurBackground } from "components/new/blur-background/blur-background";
 import { useStyle } from "styles/index";
 import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
-import {
-  numberLocalFormat,
-  separateNumericAndDenom,
-} from "utils/format/format";
+import { formatBalance, separateNumericAndDenom } from "utils/format/format";
 import { Dec } from "@keplr-wallet/unit";
 import Toast from "react-native-toast-message";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
@@ -115,7 +112,7 @@ export const MyRewardCard: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -146,7 +143,7 @@ export const MyRewardCard: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await tx.send(
         { amount: [], gas: gas.toString() },
@@ -171,7 +168,7 @@ export const MyRewardCard: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {
@@ -303,7 +300,7 @@ export const MyRewardCard: FunctionComponent<{
               if (!networkIsConnected) {
                 Toast.show({
                   type: "error",
-                  text1: "No internet connection",
+                  text1: "No Internet Connection",
                 });
                 return;
               }
@@ -312,7 +309,7 @@ export const MyRewardCard: FunctionComponent<{
               ) {
                 Toast.show({
                   type: "error",
-                  text1: `${txType[txnTypeKey.withdrawRewards]} in progress`,
+                  text1: `${txType[txnTypeKey.withdrawRewards]} In Progress`,
                 });
                 return;
               }
@@ -377,11 +374,7 @@ export const MyRewardCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${numberLocalFormat(
-          pendingStakableReward.shrink(true).trim(true).toString().split(" ")[0]
-        )} ${
-          pendingStakableReward.shrink(true).trim(true).toString().split(" ")[1]
-        }`}
+        earnedAmount={formatBalance(pendingStakableReward)}
         onPress={handleAllClaim}
         buttonLoading={
           isSendingTx ||
@@ -465,7 +458,7 @@ const DelegateReward: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -479,7 +472,7 @@ const DelegateReward: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await account.cosmos.sendWithdrawDelegationRewardMsgs(
         [validatorAddress],
@@ -505,7 +498,7 @@ const DelegateReward: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {
@@ -617,21 +610,7 @@ const DelegateReward: FunctionComponent<{
                     style.flatten(["body3", "color-gray-300"]) as ViewStyle
                   }
                 >
-                  {`${numberLocalFormat(
-                    rewards
-                      .maxDecimals(8)
-                      .trim(true)
-                      .shrink(true)
-                      .toString()
-                      .split(" ")[0]
-                  )} ${
-                    rewards
-                      .maxDecimals(8)
-                      .trim(true)
-                      .shrink(true)
-                      .toString()
-                      .split(" ")[1]
-                  }`}
+                  {formatBalance(rewards, 8)}
                 </Text>
               </View>
             </View>
@@ -656,7 +635,7 @@ const DelegateReward: FunctionComponent<{
                     if (!networkIsConnected) {
                       Toast.show({
                         type: "error",
-                        text1: "No internet connection",
+                        text1: "No Internet Connection",
                       });
                       return;
                     }
@@ -669,7 +648,7 @@ const DelegateReward: FunctionComponent<{
                         type: "error",
                         text1: `${
                           txType[txnTypeKey.withdrawRewards]
-                        } in progress`,
+                        } In Progress`,
                       });
                       return;
                     }
@@ -697,9 +676,7 @@ const DelegateReward: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${numberLocalFormat(claimData.reward.split(" ")[0])} ${
-          claimData.reward.split(" ")[1]
-        }`}
+        earnedAmount={claimData.reward}
         onPress={() => handleClaim(claimData.validatorAddress)}
         buttonLoading={isSendingTx == claimData.validatorAddress}
       />

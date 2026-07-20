@@ -3,6 +3,7 @@ import { AGENT_ADDRESS } from "../../config";
 import { Platform } from "react-native";
 import { MultiKeyStoreInfoWithSelected } from "@keplr-wallet/background";
 import { RegisterMode } from "@keplr-wallet/hooks";
+import { CoinPretty, PricePretty } from "@keplr-wallet/unit";
 
 export const separateNumericAndDenom = (value: any) => {
   const data = value ? value.split(" ") : ["", ""];
@@ -155,6 +156,61 @@ export const removeTrailingZeros = (number: string) => {
 };
 
 export const removeComma = (value: string) => value.replace(/,/g, "");
+
+export const formatBalance = (
+  balance: CoinPretty,
+  maxDecimals = 6,
+  useCoinPrettyFormatting = true
+) => {
+  const minimumValue = 1 / Math.pow(10, maxDecimals);
+  const shrunkBase = balance.shrink(true).trim(true);
+  const shrunk = useCoinPrettyFormatting
+    ? shrunkBase.maxDecimals(maxDecimals)
+    : balance.shrink(true);
+  // Use pre-maxDecimals dec so truncation doesn't cause a truly non-zero value to appear zero
+  const dec = shrunkBase.toDec();
+  const numericValue = Number(dec.toString());
+  if (!dec.isZero() && numericValue < minimumValue) {
+    return `< ${minimumValue.toFixed(maxDecimals)} ${
+      balance.currency.coinDenom
+    }`;
+  }
+  if (dec.isZero()) {
+    return useCoinPrettyFormatting
+      ? shrunk.maxDecimals(0).toString()
+      : `0 ${balance.currency.coinDenom}`;
+  }
+  if (useCoinPrettyFormatting) {
+    const formatted = shrunk.toString();
+    if (Platform.OS === "android") {
+      const spaceIdx = formatted.indexOf(" ");
+      const numStr = formatted.slice(0, spaceIdx);
+      const denom = formatted.slice(spaceIdx);
+      return `${Number(numStr).toLocaleString("en-US")}${denom}`;
+    }
+    return formatted;
+  }
+  return `${numericValue.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDecimals,
+  })} ${balance.currency.coinDenom}`;
+};
+
+export const formatFiatBalance = (balance: PricePretty, maxDecimals = 2) => {
+  const dec = balance.toDec();
+  if (dec.isZero()) {
+    return "0";
+  }
+  const numericValue = Number(dec.toString());
+  const minimumValue = 1 / Math.pow(10, maxDecimals);
+  if (numericValue < minimumValue) {
+    return `< ${minimumValue.toFixed(maxDecimals)}`;
+  }
+  return numericValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: maxDecimals,
+  });
+};
 
 export const numberLocalFormat = (number: string) => {
   if (Platform.OS == "android") {

@@ -32,7 +32,7 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import { GearIcon } from "components/new/icon/gear-icon";
 import { IconButton } from "components/new/button/icon";
 import { clearDecimals } from "modals/sign/messages";
-import { numberLocalFormat } from "utils/format/format";
+import { formatFiatBalance, numberLocalFormat } from "utils/format/format";
 
 interface SendConfigs {
   amountConfig: AmountConfig;
@@ -89,7 +89,7 @@ export const SendPhase2: FunctionComponent<{
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
 
   const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
@@ -159,14 +159,14 @@ export const SendPhase2: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
     if (activityStore.getPendingTxnTypes[txnTypeKey.send]) {
       Toast.show({
         type: "error",
-        text1: `${txType[txnTypeKey.send]} in progress`,
+        text1: `${txType[txnTypeKey.send]} In Progress`,
       });
       return;
     }
@@ -207,7 +207,7 @@ export const SendPhase2: FunctionComponent<{
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction rejected",
+            text1: "Transaction Rejected",
           });
           return;
         } else {

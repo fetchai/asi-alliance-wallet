@@ -22,7 +22,7 @@ import {
 import { VectorCharacter } from "components/vector-character";
 import { KeplrETCQueriesImpl } from "@keplr-wallet/stores-etc";
 import { IconButton } from "components/new/button/icon";
-import { numberLocalFormat } from "utils/format/format";
+import { formatBalance } from "utils/format/format";
 
 interface DeepReadonlyObject {
   queryBalances: ObservableQueryBalances;
@@ -70,11 +70,11 @@ export const DelegationsCard: FunctionComponent<{
     const validatorsData = useMemo(() => {
       const data: Staking.Validator[] = [];
       for (const val of validators) {
-        const isAvailable = delegations.find(
+        const delegation = delegations.find(
           (element) =>
             element.delegation.validator_address == val.operator_address
         );
-        if (isAvailable) {
+        if (delegation && new Dec(delegation.balance.amount).gt(new Dec(0))) {
           data.push(val);
         }
       }
@@ -235,22 +235,7 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {numberLocalFormat(
-                          amount
-                            .maxDecimals(4)
-                            .trim(true)
-                            .shrink(true)
-                            .toString()
-                            .split(" ")[0]
-                        )}{" "}
-                        {
-                          amount
-                            .maxDecimals(4)
-                            .trim(true)
-                            .shrink(true)
-                            .toString()
-                            .split(" ")[1]
-                        }
+                        {formatBalance(amount, 4)}
                       </Text>
                     </View>
                     <View style={style.flatten(["items-end"])}>
@@ -265,11 +250,7 @@ export const DelegationsCard: FunctionComponent<{
                               ]) as ViewStyle
                             }
                           >
-                            {amountUSD
-                              .shrink(true)
-                              .maxDecimals(6)
-                              .trim(true)
-                              .toString()}
+                            {formatBalance(amountUSD as any)}
                           </Text>
                           <Text
                             style={
@@ -319,22 +300,7 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {numberLocalFormat(
-                          reward
-                            .maxDecimals(6)
-                            .trim(true)
-                            .shrink(true)
-                            .toString()
-                            .split(" ")[0]
-                        )}{" "}
-                        {
-                          reward
-                            .maxDecimals(6)
-                            .trim(true)
-                            .shrink(true)
-                            .toString()
-                            .split(" ")[1]
-                        }
+                        {formatBalance(reward)}
                       </Text>
                       <Text
                         style={

@@ -14,6 +14,7 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import {
+  formatFiatBalance,
   numberLocalFormat,
   separateNumericAndDenom,
 } from "utils/format/format";
@@ -61,7 +62,7 @@ export const TokensSection: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
 
   function balanceCoinDenom(balance: CoinPretty): string {

@@ -95,7 +95,7 @@ export const PortfolioStakingCard: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await tx.send({ amount: [], gas: gas.toString() }, "", undefined, {
         onBroadcasted: (txHash) => {
@@ -115,7 +115,7 @@ export const PortfolioStakingCard: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {

@@ -26,7 +26,7 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { txnTypeKey } from "components/new/txn-status.tsx";
-import { numberLocalFormat } from "utils/format/format";
+import { formatBalance, formatFiatBalance } from "utils/format/format";
 
 export const UndelegateScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -117,7 +117,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
   useEffect(() => {
     const inputValueInUsd = convertToUsd(staked);
@@ -128,12 +128,6 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
     ? ` (${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
 
-  const availableBalance = `${staked
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${Usd}`;
-
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
     sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
@@ -143,7 +137,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -181,7 +175,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction rejected",
+            text1: "Transaction Rejected",
           });
           return;
         } else {
@@ -229,21 +223,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           }}
         >
           <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
-            {`${numberLocalFormat(
-              staked
-                .trim(true)
-                .shrink(true)
-                .maxDecimals(6)
-                .toString()
-                .split(" ")[0]
-            )} ${
-              staked
-                .trim(true)
-                .shrink(true)
-                .maxDecimals(6)
-                .toString()
-                .split(" ")[1]
-            }`}
+            {formatBalance(staked, 6)}
           </Text>
         </View>
       </View>
@@ -270,9 +250,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${numberLocalFormat(availableBalance.split(" ")[0])} ${
-        availableBalance.split(" ")[1]
-      }`}</Text>
+      >{`Available: ${formatBalance(staked, 6)}${Usd}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}

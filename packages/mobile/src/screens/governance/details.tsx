@@ -501,7 +501,7 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction rejected",
+            text1: "Transaction Rejected",
           });
           return;
         } else {
@@ -555,7 +555,7 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
           if (activityStore.getPendingTxnTypes[txnTypeKey.govVote]) {
             Toast.show({
               type: "error",
-              text1: `${txType[txnTypeKey.govVote]} in progress`,
+              text1: `${txType[txnTypeKey.govVote]} In Progress`,
             });
             return;
           }

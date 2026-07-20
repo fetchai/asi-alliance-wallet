@@ -29,7 +29,11 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { txnTypeKey } from "components/new/txn-status.tsx";
-import { numberLocalFormat } from "utils/format/format";
+import {
+  formatBalance,
+  formatFiatBalance,
+  numberLocalFormat,
+} from "utils/format/format";
 
 interface ItemData {
   title: string;
@@ -122,7 +126,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
   useEffect(() => {
     const inputValueInUsd = convertToUsd(balance);
@@ -132,12 +136,6 @@ export const DelegateScreen: FunctionComponent = observer(() => {
   const Usd = inputInUsd
     ? ` (${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
-
-  const availableBalance = `${balance
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${Usd}`;
 
   const bondedValidators = queries.cosmos.queryValidators.getQueryStatus(
     Staking.BondStatus.Bonded
@@ -195,7 +193,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -231,7 +229,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction rejected",
+            text1: "Transaction Rejected",
           });
           return;
         } else {
@@ -370,9 +368,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${numberLocalFormat(
-        availableBalance.toString().split(" ")[0]
-      )} ${availableBalance.toString().split(" ")[1]}`}</Text>
+      >{`Available: ${formatBalance(balance)}${Usd}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}

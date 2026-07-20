@@ -6,6 +6,7 @@ import { SearchIcon } from "components/new/icon/search-icon";
 import { IAmountConfig } from "@keplr-wallet/hooks";
 import { useStore } from "stores/index";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { formatFiatBalance } from "utils/format/format";
 import { TokenCardView } from "../card-view/token-card-view";
 import { EmptyView } from "../empty";
 import { InputCardView } from "../card-view/input-card";
@@ -53,7 +54,7 @@ export const AssetCardModel: FunctionComponent<{
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
   const balancesMap = new Map(
     queries.cosmos.querySpendableBalances

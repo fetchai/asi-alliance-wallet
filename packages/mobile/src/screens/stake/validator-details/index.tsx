@@ -98,7 +98,7 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           if (isTxnInProgress()) {
             Toast.show({
               type: "error",
-              text1: `${txnInProgressMessage()} in progress`,
+              text1: `${txnInProgressMessage()} In Progress`,
             });
             return;
           }
@@ -125,7 +125,7 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           if (isTxnInProgress()) {
             Toast.show({
               type: "error",
-              text1: `${txnInProgressMessage()} in progress`,
+              text1: `${txnInProgressMessage()} In Progress`,
             });
             return;
           }
@@ -172,7 +172,7 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
         if (isTxnInProgress()) {
           Toast.show({
             type: "error",
-            text1: `${txnInProgressMessage()} in progress`,
+            text1: `${txnInProgressMessage()} In Progress`,
           });
           return;
         }

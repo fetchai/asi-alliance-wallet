@@ -14,7 +14,7 @@ import { useStyle } from "styles/index";
 import * as RNLocalize from "react-native-localize";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import { useStore } from "stores/index";
-import { parseDollarAmount } from "utils/format/format";
+import { formatFiatBalance, parseDollarAmount } from "utils/format/format";
 import { UseMaxButton } from "../button/use-max-button";
 import { observer } from "mobx-react-lite";
 
@@ -29,7 +29,7 @@ export const AmountInputSection: FunctionComponent<{
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
 
   useEffect(() => {
