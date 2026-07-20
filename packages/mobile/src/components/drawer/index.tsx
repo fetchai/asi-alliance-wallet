@@ -25,6 +25,7 @@ import { EmptyView } from "components/new/empty";
 import { titleCase } from "utils/format/format";
 import { Button } from "components/button";
 import { InputCardView } from "components/new/card-view/input-card";
+import { flowResult } from "mobx";
 
 export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
   observer((props) => {
@@ -162,9 +163,18 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                   <RectButton
                     onPress={() => {
                       setSearch("");
-                      chainStore.selectChain(chainInfo.chainId);
-                      chainStore.saveLastViewChainId();
-                      navigation.dispatch(DrawerActions.closeDrawer());
+                      void flowResult(
+                        chainStore.selectChainAndPersist(chainInfo.chainId)
+                      )
+                        .then(() => {
+                          navigation.dispatch(DrawerActions.closeDrawer());
+                        })
+                        .catch((error) => {
+                          console.warn(
+                            "[Drawer] Failed to switch network:",
+                            error
+                          );
+                        });
                     }}
                     style={
                       style.flatten(

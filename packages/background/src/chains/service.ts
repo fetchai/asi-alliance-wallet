@@ -36,14 +36,23 @@ import {
   NetworkAuthorityCommitObserver,
   NetworkAuthoritySnapshot,
 } from "./authority/types";
+import {
+  NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
+  notifyNetworkSurfacesSyncListeners,
+} from "./network-surfaces-sync-fanout";
+
+export { NETWORK_SURFACES_SYNC_MESSAGE_TYPE } from "./network-surfaces-sync-fanout";
+export {
+  addNetworkSurfacesSyncListener,
+  notifyNetworkSurfacesSyncListeners,
+} from "./network-surfaces-sync-fanout";
+export type { NetworkSurfacesSyncPayload } from "./network-surfaces-sync-fanout";
 
 type ChainRemovedHandler = (chainId: string, identifier: string) => void;
 type NetworkSwitchHandler = (
   oldChainId: string | undefined,
   newChainId: string
 ) => Promise<void>;
-
-export const NETWORK_SURFACES_SYNC_MESSAGE_TYPE = "network-surfaces-sync";
 
 export class ChainsService {
   protected onChainRemovedHandlers: ChainRemovedHandler[] = [];
@@ -917,6 +926,8 @@ export class ChainsService {
   private broadcastNetworkSurfacesSync(
     snapshot: NetworkAuthoritySnapshot
   ): void {
+    notifyNetworkSurfacesSyncListeners(snapshot);
+
     try {
       const g = globalThis as {
         browser?: { runtime?: { sendMessage?: (message: unknown) => unknown } };
