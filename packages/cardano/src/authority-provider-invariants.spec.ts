@@ -1,6 +1,6 @@
 /**
  * Authority ↔ Blockfrost provider invariants.
- * Production gates: installBlockfrostRequestTelemetry + lease + keyring getKey.
+ * Production gates: installBlockfrostRequestGuard + lease + keyring getKey.
  */
 const mockCreate = jest.fn();
 
@@ -47,10 +47,10 @@ import {
 } from "./runtime-lease";
 import { createFakeBlockfrostTransport } from "./test-utils/fake-blockfrost-transport";
 import {
-  clearCardanoRuntimeTelemetryForTests,
-  installBlockfrostRequestTelemetry,
+  clearBlockfrostRequestGuardForTests,
+  installBlockfrostRequestGuard,
   markCardanoRuntimeDisposed,
-} from "./wallet/lib/blockfrost-request-telemetry";
+} from "./wallet/lib/blockfrost-request-guard";
 
 const mnemonic = Array(23).fill("abandon").concat("about").join(" ");
 
@@ -73,17 +73,14 @@ const makeAuthority = (state: {
   getRuntimeGeneration: () => state.generation,
 });
 
-const silentLogger = { debug: jest.fn(), warn: jest.fn() } as any;
-
 function wireLease(
   transport: ReturnType<typeof createFakeBlockfrostTransport>,
   lease: ReturnType<typeof createCardanoRuntimeLease>,
   runtimeInstanceId: string
 ) {
-  installBlockfrostRequestTelemetry({
+  installBlockfrostRequestGuard({
     blockfrostClient: transport.client as any,
     chainName: "Preprod",
-    logger: silentLogger,
     runtimeInstanceId,
     runtimeLease: lease,
     chainId: lease.chainId,
@@ -106,7 +103,7 @@ describe("authority-provider invariants", () => {
   });
 
   afterEach(() => {
-    clearCardanoRuntimeTelemetryForTests();
+    clearBlockfrostRequestGuardForTests();
   });
 
   describe("network / runtime transitions", () => {
@@ -209,10 +206,9 @@ describe("authority-provider invariants", () => {
     it("blocks when manager runtime is disposed", async () => {
       const transport = createFakeBlockfrostTransport();
 
-      installBlockfrostRequestTelemetry({
+      installBlockfrostRequestGuard({
         blockfrostClient: transport.client as any,
         chainName: "Preprod",
-        logger: silentLogger,
         runtimeInstanceId: "rt_disposed_c8",
         chainId: "cardano-preprod",
         runtimeGeneration: 1,

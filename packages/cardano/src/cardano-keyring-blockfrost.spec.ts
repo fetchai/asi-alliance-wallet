@@ -42,9 +42,9 @@ import {
   createCardanoRuntimeLease,
 } from "./runtime-lease";
 import {
-  clearCardanoRuntimeTelemetryForTests,
-  installBlockfrostRequestTelemetry,
-} from "./wallet/lib/blockfrost-request-telemetry";
+  clearBlockfrostRequestGuardForTests,
+  installBlockfrostRequestGuard,
+} from "./wallet/lib/blockfrost-request-guard";
 
 const mnemonic = Array(23).fill("abandon").concat("about").join(" ");
 
@@ -100,7 +100,7 @@ describe("CardanoKeyRing blockfrost resolver", () => {
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
-    clearCardanoRuntimeTelemetryForTests();
+    clearBlockfrostRequestGuardForTests();
   });
 
   it("restore passes resolver result into CardanoWalletManager.create", async () => {
@@ -629,10 +629,9 @@ describe("CardanoKeyRing blockfrost resolver", () => {
       mockCreate.mockImplementation(
         async (opts: { runtimeLease?: typeof lease }) => {
           const client = { request: rawRequest };
-          installBlockfrostRequestTelemetry({
+          installBlockfrostRequestGuard({
             blockfrostClient: client as any,
             chainName: "Preprod",
-            logger: { debug: jest.fn(), warn: jest.fn() } as any,
             runtimeInstanceId: "rt_mid_create",
             runtimeLease: opts.runtimeLease ?? lease,
             chainId: "cardano-preprod",

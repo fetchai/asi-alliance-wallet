@@ -1,197 +1,112 @@
 import {
-  clearCardanoRuntimeTelemetryForTests,
-  installBlockfrostRequestTelemetry,
+  clearBlockfrostRequestGuardForTests,
+  installBlockfrostRequestGuard,
+  resetBlockfrostRateLimitTelemetry,
   wasRateLimitedRecently,
-} from "./blockfrost-request-telemetry";
-
-const storeKey = "__cardanoBlockfrostTelemetryStore";
-const apiKey = "__cardanoBlockfrostTelemetry";
+} from "./blockfrost-request-guard";
 
 describe("wasRateLimitedRecently", () => {
   afterEach(() => {
-    clearCardanoRuntimeTelemetryForTests();
-    delete (globalThis as Record<string, unknown>)[storeKey];
-    delete (globalThis as Record<string, unknown>)[apiKey];
+    clearBlockfrostRequestGuardForTests();
   });
 
-  it("returns false when a recent failure has burst-throttle HTTP 429", () => {
-    const globalScope = globalThis as Record<string, unknown>;
-    globalScope[storeKey] = {
-      active: new Map([
-        [
-          "Preprod::rt1",
-          {
-            attached: true,
-            chainName: "Preprod",
-            collector: {
-              getSnapshot: () => ({
-                failures: [
-                  {
-                    callerTag: "test",
-                    endpoint: "network",
-                    kind: "network",
-                    ms: 10,
-                    sourceTag: "direct-client",
-                    status: 429,
-                    timestamp: Date.now(),
-                  },
-                ],
-              }),
-              reset: jest.fn(),
-            },
-            disposed: false,
-            registryKey: "Preprod::rt1",
-            runtimeInstanceId: "rt1",
-          },
-        ],
-      ]),
-      disposed: [],
-    };
-
+  it("is false before any quota failure", () => {
     expect(wasRateLimitedRecently("Preprod")).toBe(false);
   });
 
-  it("returns true when a recent failure has quota-exceeded HTTP 402", () => {
-    const globalScope = globalThis as Record<string, unknown>;
-    globalScope[storeKey] = {
-      active: new Map([
-        [
-          "Preprod::rt1",
-          {
-            attached: true,
-            chainName: "Preprod",
-            collector: {
-              getSnapshot: () => ({
-                failures: [
-                  {
-                    callerTag: "test",
-                    endpoint: "network",
-                    kind: "network",
-                    ms: 10,
-                    sourceTag: "direct-client",
-                    status: 402,
-                    timestamp: Date.now(),
-                  },
-                ],
-              }),
-              reset: jest.fn(),
-            },
-            disposed: false,
-            registryKey: "Preprod::rt1",
-            runtimeInstanceId: "rt1",
-          },
-        ],
-      ]),
-      disposed: [],
-    };
+  it("returns false when a recent failure has burst-throttle HTTP 429", async () => {
+    const rawRequest = jest.fn().mockRejectedValue({ status: 429 });
+    const client = { request: rawRequest };
 
+    installBlockfrostRequestGuard({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      runtimeInstanceId: "rt_burst",
+    });
+
+    await expect(client.request("network")).rejects.toEqual({ status: 429 });
+    expect(wasRateLimitedRecently("Preprod")).toBe(false);
+  });
+
+  it("returns true when a recent failure has quota-exceeded HTTP 402", async () => {
+    const rawRequest = jest.fn().mockRejectedValue({ status: 402 });
+    const client = { request: rawRequest };
+
+    installBlockfrostRequestGuard({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      runtimeInstanceId: "rt_quota",
+    });
+
+    await expect(client.request("network")).rejects.toEqual({ status: 402 });
     expect(wasRateLimitedRecently("Preprod")).toBe(true);
   });
 
-  it("returns false when failures are outside the recent window", () => {
-    const globalScope = globalThis as Record<string, unknown>;
-    globalScope[storeKey] = {
-      active: new Map([
-        [
-          "Preprod::rt1",
-          {
-            attached: true,
-            chainName: "Preprod",
-            collector: {
-              getSnapshot: () => ({
-                failures: [
-                  {
-                    callerTag: "test",
-                    endpoint: "network",
-                    kind: "network",
-                    ms: 10,
-                    sourceTag: "direct-client",
-                    status: 429,
-                    timestamp: Date.now() - 60 * 60 * 1000,
-                  },
-                ],
-              }),
-              reset: jest.fn(),
-            },
-            disposed: false,
-            registryKey: "Preprod::rt1",
-            runtimeInstanceId: "rt1",
-          },
-        ],
-      ]),
-      disposed: [],
-    };
+  it("returns true when nested response.status is 402", async () => {
+    const rawRequest = jest
+      .fn()
+      .mockRejectedValue({ response: { status: 402 } });
+    const client = { request: rawRequest };
 
-    expect(wasRateLimitedRecently("Preprod")).toBe(false);
-  });
-
-  it("returns true when telemetry records nested response.status 402", async () => {
-    const blockfrostClient = {
-      request: jest.fn().mockRejectedValue({ response: { status: 402 } }),
-    };
-
-    installBlockfrostRequestTelemetry({
-      blockfrostClient: blockfrostClient as any,
+    installBlockfrostRequestGuard({
+      blockfrostClient: client as any,
       chainName: "Preprod",
-      logger: { debug: jest.fn(), warn: jest.fn() } as any,
       runtimeInstanceId: "rt_nested",
     });
 
-    await expect(blockfrostClient.request("network")).rejects.toEqual({
+    await expect(client.request("network")).rejects.toEqual({
       response: { status: 402 },
     });
-
     expect(wasRateLimitedRecently("Preprod")).toBe(true);
   });
 
-  it("aggregates rate-limit failures across multiple instances of a chain", () => {
-    const globalScope = globalThis as Record<string, unknown>;
-    globalScope[storeKey] = {
-      active: new Map([
-        [
-          "Preprod::old",
-          {
-            attached: false,
-            chainName: "Preprod",
-            collector: {
-              getSnapshot: () => ({ failures: [] }),
-              reset: jest.fn(),
-            },
-            disposed: false,
-            registryKey: "Preprod::old",
-            runtimeInstanceId: "old",
-          },
-        ],
-        [
-          "Preprod::new",
-          {
-            attached: true,
-            chainName: "Preprod",
-            collector: {
-              getSnapshot: () => ({
-                failures: [
-                  {
-                    callerTag: "test",
-                    endpoint: "network",
-                    kind: "network",
-                    ms: 10,
-                    sourceTag: "direct-client",
-                    status: 402,
-                    timestamp: Date.now(),
-                  },
-                ],
-              }),
-              reset: jest.fn(),
-            },
-            disposed: false,
-            registryKey: "Preprod::new",
-            runtimeInstanceId: "new",
-          },
-        ],
-      ]),
-      disposed: [],
-    };
+  it("returns false when nested response.status is burst-throttle 429", async () => {
+    const rawRequest = jest
+      .fn()
+      .mockRejectedValue({ response: { status: 429 } });
+    const client = { request: rawRequest };
 
+    installBlockfrostRequestGuard({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      runtimeInstanceId: "rt_nested_burst",
+    });
+
+    await expect(client.request("network")).rejects.toEqual({
+      response: { status: 429 },
+    });
+    expect(wasRateLimitedRecently("Preprod")).toBe(false);
+  });
+
+  it("reset clears recent quota for the chain", async () => {
+    const rawRequest = jest.fn().mockRejectedValue({ status: 402 });
+    const client = { request: rawRequest };
+
+    installBlockfrostRequestGuard({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      runtimeInstanceId: "rt_rl_reset",
+    });
+
+    await expect(client.request("network")).rejects.toEqual({ status: 402 });
     expect(wasRateLimitedRecently("Preprod")).toBe(true);
+
+    resetBlockfrostRateLimitTelemetry("Preprod");
+    expect(wasRateLimitedRecently("Preprod")).toBe(false);
+  });
+
+  it("does not cross-contaminate chains", async () => {
+    const rawRequest = jest.fn().mockRejectedValue({ status: 402 });
+    const client = { request: rawRequest };
+
+    installBlockfrostRequestGuard({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      runtimeInstanceId: "rt_rl_preprod",
+    });
+
+    await expect(client.request("network")).rejects.toEqual({ status: 402 });
+    expect(wasRateLimitedRecently("Preprod")).toBe(true);
+    expect(wasRateLimitedRecently("Mainnet")).toBe(false);
   });
 });

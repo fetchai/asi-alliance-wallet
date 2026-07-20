@@ -10,10 +10,6 @@ import {
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
   GetCardanoTrackedTxStatusMsg,
-  GetCardanoTelemetryRequestCountsByTypeMsg,
-  GetCardanoTelemetrySnapshotMsg,
-  CaptureCardanoTelemetryBaselineMsg,
-  GetCardanoTelemetryBaselinesMsg,
   LoadMoreCardanoTxHistoryMsg,
   GetMaxSpendableAdaMsg,
   GetBlockfrostCredentialsMsg,
@@ -40,10 +36,6 @@ export function init(
   router.registerMessage(GetCardanoSyncStatusMsg);
   router.registerMessage(GetCardanoTxHistoryMsg);
   router.registerMessage(GetCardanoTrackedTxStatusMsg);
-  router.registerMessage(GetCardanoTelemetryRequestCountsByTypeMsg);
-  router.registerMessage(GetCardanoTelemetrySnapshotMsg);
-  router.registerMessage(CaptureCardanoTelemetryBaselineMsg);
-  router.registerMessage(GetCardanoTelemetryBaselinesMsg);
   router.registerMessage(LoadMoreCardanoTxHistoryMsg);
   router.registerMessage(GetMaxSpendableAdaMsg);
   router.registerMessage(GetBlockfrostCredentialsMsg);

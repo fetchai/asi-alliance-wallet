@@ -39,10 +39,9 @@ import { BlockfrostInputResolver } from "../../adapters/blockfrost-input-resolve
 import { initStakePoolService, type ChainName } from "./stake-pool-service";
 import type { BlockfrostConfig } from "../../adapters/env-adapter";
 import {
-  createTelemetryTaggedClient,
-  installBlockfrostRequestTelemetry,
+  installBlockfrostRequestGuard,
   type CardanoRuntimeCreatedBy,
-} from "./blockfrost-request-telemetry";
+} from "./blockfrost-request-guard";
 import type { CardanoRuntimeLease } from "../../runtime-lease";
 
 export interface WalletProvidersDependencies {
@@ -158,10 +157,9 @@ export const createBlockfrostProviders = ({
   const blockfrostClient = new BlockfrostClient(blockfrostClientConfig, {
     rateLimiter,
   });
-  installBlockfrostRequestTelemetry({
+  installBlockfrostRequestGuard({
     blockfrostClient,
     chainName: chainName || "unknown",
-    logger,
     runtimeInstanceId,
     runtimeGeneration,
     ownerSwitchGeneration,
@@ -171,50 +169,17 @@ export const createBlockfrostProviders = ({
     getSelectedChainId,
     runtimeLease,
   });
-  const assetClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "assetProvider"
-  );
-  const networkClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "networkInfoProvider"
-  );
-  const rewardsClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "rewardsProvider"
-  );
-  const stakePoolClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "stakePoolProvider"
-  );
-  const txSubmitClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "txSubmitProvider"
-  );
-  const chainHistoryClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "chainHistoryProvider"
-  );
-  const dRepClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "drepProvider"
-  );
-  const rewardAccountInfoClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "rewardAccountInfoProvider"
-  );
-  const addressDiscoveryClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "addressDiscovery"
-  );
-  const inputResolverClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "inputResolver"
-  );
-  const utxoClient = createTelemetryTaggedClient(
-    blockfrostClient,
-    "utxoProvider"
-  );
+  const assetClient = blockfrostClient;
+  const networkClient = blockfrostClient;
+  const rewardsClient = blockfrostClient;
+  const stakePoolClient = blockfrostClient;
+  const txSubmitClient = blockfrostClient;
+  const chainHistoryClient = blockfrostClient;
+  const dRepClient = blockfrostClient;
+  const rewardAccountInfoClient = blockfrostClient;
+  const addressDiscoveryClient = blockfrostClient;
+  const inputResolverClient = blockfrostClient;
+  const utxoClient = blockfrostClient;
   const createNoOpAsyncProvider = <T extends object>(
     base: Partial<{ [K in keyof T]: T[K] }>,
     label: string

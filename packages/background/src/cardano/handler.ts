@@ -10,10 +10,6 @@ import {
   GetCardanoSyncStatusMsg,
   GetCardanoTxHistoryMsg,
   GetCardanoTrackedTxStatusMsg,
-  GetCardanoTelemetryRequestCountsByTypeMsg,
-  GetCardanoTelemetrySnapshotMsg,
-  CaptureCardanoTelemetryBaselineMsg,
-  GetCardanoTelemetryBaselinesMsg,
   LoadMoreCardanoTxHistoryMsg,
   GetMaxSpendableAdaMsg,
   GetBlockfrostCredentialsMsg,
@@ -227,26 +223,6 @@ export const getHandler: (
         return handleGetCardanoTrackedTxStatusMsg(service, keyRingService)(
           env,
           msg as GetCardanoTrackedTxStatusMsg
-        );
-      case GetCardanoTelemetryRequestCountsByTypeMsg.type():
-        return handleGetCardanoTelemetryRequestCountsByTypeMsg(service)(
-          env,
-          msg as GetCardanoTelemetryRequestCountsByTypeMsg
-        );
-      case GetCardanoTelemetrySnapshotMsg.type():
-        return handleGetCardanoTelemetrySnapshotMsg(service)(
-          env,
-          msg as GetCardanoTelemetrySnapshotMsg
-        );
-      case CaptureCardanoTelemetryBaselineMsg.type():
-        return handleCaptureCardanoTelemetryBaselineMsg(service)(
-          env,
-          msg as CaptureCardanoTelemetryBaselineMsg
-        );
-      case GetCardanoTelemetryBaselinesMsg.type():
-        return handleGetCardanoTelemetryBaselinesMsg(service)(
-          env,
-          msg as GetCardanoTelemetryBaselinesMsg
         );
       case LoadMoreCardanoTxHistoryMsg.type():
         return handleLoadMoreCardanoTxHistoryMsg(service, keyRingService)(
@@ -997,50 +973,6 @@ const handleGetCardanoTrackedTxStatusMsg: (
         }
       },
     });
-  };
-};
-
-const handleGetCardanoTelemetryRequestCountsByTypeMsg: (
-  service: CardanoService
-) => InternalHandler<GetCardanoTelemetryRequestCountsByTypeMsg> = (service) => {
-  return async (env, _msg) => {
-    if (!env.isInternalMsg) {
-      throw new Error("This message is only supported for internal requests");
-    }
-    return service.getTelemetryRequestCountsByType();
-  };
-};
-
-const handleGetCardanoTelemetrySnapshotMsg: (
-  service: CardanoService
-) => InternalHandler<GetCardanoTelemetrySnapshotMsg> = (service) => {
-  return async (env, _msg) => {
-    if (!env.isInternalMsg) {
-      throw new Error("This message is only supported for internal requests");
-    }
-    return service.getTelemetrySnapshot();
-  };
-};
-
-const handleCaptureCardanoTelemetryBaselineMsg: (
-  service: CardanoService
-) => InternalHandler<CaptureCardanoTelemetryBaselineMsg> = (service) => {
-  return async (env, msg) => {
-    if (!env.isInternalMsg) {
-      throw new Error("This message is only supported for internal requests");
-    }
-    return service.captureTelemetryBaseline(msg.label);
-  };
-};
-
-const handleGetCardanoTelemetryBaselinesMsg: (
-  service: CardanoService
-) => InternalHandler<GetCardanoTelemetryBaselinesMsg> = (service) => {
-  return async (env, _msg) => {
-    if (!env.isInternalMsg) {
-      throw new Error("This message is only supported for internal requests");
-    }
-    return service.getTelemetryBaselines();
   };
 };
 

@@ -62,17 +62,9 @@ export {
   wasRateLimitedRecently,
   BLOCKFROST_RATE_LIMIT_RECENT_WINDOW_MS,
   createRuntimeInstanceId,
+  clearBlockfrostRequestGuardForTests,
   clearCardanoRuntimeTelemetryForTests,
-  getCardanoRuntimeTelemetryActiveCount,
-  getCardanoRuntimeTelemetryDisposedCount,
-  isCardanoRuntimeTelemetryDebugEnabled,
-  markCardanoRuntimeAttached,
-  markCardanoRuntimeDetached,
+  installBlockfrostRequestGuard,
   markCardanoRuntimeDisposed,
-  recordCardanoRuntimeLifecycle,
-} from "./wallet/lib/blockfrost-request-telemetry";
-export type {
-  CardanoRuntimeCreatedBy,
-  CardanoRuntimeLifecycleEvent,
-  CardanoRuntimeTelemetryMeta,
-} from "./wallet/lib/blockfrost-request-telemetry";
+} from "./wallet/lib/blockfrost-request-guard";
+export type { CardanoRuntimeCreatedBy } from "./wallet/lib/blockfrost-request-guard";

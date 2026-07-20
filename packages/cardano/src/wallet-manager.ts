@@ -10,12 +10,9 @@ import { getBlockfrostChainNameFromNetwork } from "./utils/blockfrost-network-ma
 import { Cardano } from "@cardano-sdk/core";
 import {
   createRuntimeInstanceId,
-  markCardanoRuntimeAttached,
-  markCardanoRuntimeDetached,
   markCardanoRuntimeDisposed,
-  recordCardanoRuntimeLifecycle,
   type CardanoRuntimeCreatedBy,
-} from "./wallet/lib/blockfrost-request-telemetry";
+} from "./wallet/lib/blockfrost-request-guard";
 import {
   isCardanoRuntimeInactiveError,
   type CardanoRuntimeLease,
@@ -33,7 +30,7 @@ export type CardanoWalletManagerCreateOptions = {
   passphrase?: Uint8Array;
   /** undefined = built-in env config; null = provider unavailable without throw */
   blockfrostConfig?: BlockfrostConfig | null;
-  /** P0 telemetry / ownership metadata */
+  /** Runtime ownership metadata for lease correlation */
   runtimeGeneration?: number;
   ownerSwitchGeneration?: number;
   chainId?: string;
@@ -111,16 +108,12 @@ export class CardanoWalletManager {
     return this.attached;
   }
 
-  markAttached(options?: { replacedInstanceId?: string }): void {
+  markAttached(_options?: { replacedInstanceId?: string }): void {
     this.attached = true;
-    markCardanoRuntimeAttached(this.runtimeInstanceId, {
-      replacedInstanceId: options?.replacedInstanceId,
-    });
   }
 
   markDetached(): void {
     this.attached = false;
-    markCardanoRuntimeDetached(this.runtimeInstanceId);
   }
 
   private setupWSErrorHandling() {
@@ -172,20 +165,9 @@ export class CardanoWalletManager {
     runtimeLease,
   }: CardanoWalletManagerCreateOptions): Promise<CardanoWalletManager> {
     const runtimeInstanceId = createRuntimeInstanceId();
-    const chainName = getBlockfrostChainNameFromNetwork(network);
     const assertLeaseActive = (operation: string) => {
       runtimeLease?.assertActive(operation);
     };
-
-    recordCardanoRuntimeLifecycle("manager.create.started", {
-      runtimeInstanceId,
-      chainName,
-      chainId,
-      createdBy,
-      runtimeGeneration,
-      ownerSwitchGeneration,
-      selectedChainId: selectedChainIdAtCreate,
-    });
 
     assertLeaseActive("manager.create.before_imports");
 
@@ -240,15 +222,6 @@ export class CardanoWalletManager {
       manager.ownerSwitchGeneration = ownerSwitchGeneration;
       manager.chainId = chainId;
       manager.createdBy = createdBy;
-      recordCardanoRuntimeLifecycle("manager.create.completed", {
-        runtimeInstanceId,
-        chainName,
-        chainId,
-        createdBy,
-        runtimeGeneration,
-        ownerSwitchGeneration,
-        selectedChainId: selectedChainIdAtCreate,
-      });
       return manager;
     }
 
@@ -282,7 +255,7 @@ export class CardanoWalletManager {
       chainHistoryProvider = created.providers?.chainHistoryProvider;
       assertLeaseActive("manager.create.before_return");
     } catch (error) {
-      // createFullWallet may have registered Blockfrost telemetry before failing.
+      // createFullWallet may have patched Blockfrost request before failing.
       markCardanoRuntimeDisposed(runtimeInstanceId);
       if (wallet) {
         CardanoWalletManager.shutdownOrphanWallet(wallet);
@@ -311,15 +284,6 @@ export class CardanoWalletManager {
     manager.ownerSwitchGeneration = ownerSwitchGeneration;
     manager.chainId = chainId;
     manager.createdBy = createdBy;
-    recordCardanoRuntimeLifecycle("manager.create.completed", {
-      runtimeInstanceId,
-      chainName,
-      chainId,
-      createdBy,
-      runtimeGeneration,
-      ownerSwitchGeneration,
-      selectedChainId: selectedChainIdAtCreate,
-    });
     return manager;
   }
 
@@ -613,8 +577,7 @@ export class CardanoWalletManager {
 
   /**
    * lace-style: cleanup method for proper resource management.
-   * Always attempts shutdown/close so repeated dispose stays observable for QA;
-   * telemetry dispose transition is recorded only once.
+   * Always attempts shutdown/close; dispose latch flips only once.
    */
   dispose() {
     if (!this.disposed) {
