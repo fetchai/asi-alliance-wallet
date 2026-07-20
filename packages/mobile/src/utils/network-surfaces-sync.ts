@@ -1,13 +1,20 @@
-import { flowResult } from "mobx";
-import { ChainStore } from "../stores/chain";
+import { AppState, type AppStateStatus } from "react-native";
 import {
   addNetworkSurfacesSyncListener,
   NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
   type NetworkSurfacesSyncPayload,
 } from "@keplr-wallet/background";
+import type { ProjectionSyncOutcome } from "@keplr-wallet/common";
 
 export { NETWORK_SURFACES_SYNC_MESSAGE_TYPE };
 export type { NetworkSurfacesSyncPayload };
+
+/** Minimal surface API — avoid importing ChainStore (heavy transitive deps). */
+export type NetworkProjectionSurface = {
+  invalidateNetworkProjection(): void;
+  syncNetworkProjection(): Promise<ProjectionSyncOutcome>;
+  cancelPendingNetworkProjectionRetry?: () => void;
+};
 
 export function isNetworkSurfacesSyncMessage(
   message: unknown
@@ -17,68 +24,72 @@ export function isNetworkSurfacesSyncMessage(
 }
 
 /**
- * Apply a background network-surfaces broadcast to local projection only.
- * Never writes selection back to background.
+ * Broadcast is invalidation only — never apply payload chainId/revision.
  */
-export async function applyNetworkSurfacesSyncFromBroadcast(
-  chainStore: ChainStore,
-  message: NetworkSurfacesSyncPayload
-): Promise<void> {
-  if (
-    typeof message.chainId !== "string" ||
-    message.chainId.length === 0 ||
-    typeof message.revision !== "number"
-  ) {
+export function invalidateNetworkProjectionFromBroadcast(
+  chainStore: NetworkProjectionSurface,
+  message: unknown
+): void {
+  if (!isNetworkSurfacesSyncMessage(message)) {
     return;
   }
-
-  await flowResult(
-    chainStore.applyBackgroundSelectedChain(message.chainId, message.revision)
-  );
+  chainStore.invalidateNetworkProjection();
 }
 
-type SubscribeAndCatchUpDeps = {
-  addListener: (
+type AttachMobileNetworkProjectionListenersDeps = {
+  chainStore: NetworkProjectionSurface;
+  addListener?: (
     listener: (message: NetworkSurfacesSyncPayload) => void
   ) => () => void;
-  applyFromBroadcast: (
-    message: NetworkSurfacesSyncPayload
-  ) => PromiseLike<void>;
-  catchUpFromBackground: () => PromiseLike<unknown>;
-  onCatchUpError?: (error: unknown) => void;
+  /** Defaults to AppState "active" (foreground resume). */
+  addAppStateListener?: (
+    listener: (state: AppStateStatus) => void
+  ) => () => void;
 };
 
 /**
- * Subscribe first, then catch-up in the background. Returns unsubscribe
- * synchronously so Provider remount can detach immediately even if catch-up
- * is still pending.
+ * Attach in-process listener + AppState resume to the ChainStore projection
+ * controller. Controller lifetime is owned by ChainStore.
  */
-export function subscribeNetworkSurfacesAndCatchUp(
-  deps: SubscribeAndCatchUpDeps
+export function attachMobileNetworkProjectionListeners(
+  deps: AttachMobileNetworkProjectionListenersDeps
 ): () => void {
-  const unsubscribe = deps.addListener((message) => {
-    void Promise.resolve(deps.applyFromBroadcast(message)).catch((error) => {
-      console.warn("[surfaces] network sync failed:", error);
+  const addListener = deps.addListener ?? addNetworkSurfacesSyncListener;
+
+  const addAppStateListener =
+    deps.addAppStateListener ??
+    ((listener) => {
+      const subscription = AppState.addEventListener("change", listener);
+      return () => {
+        subscription.remove();
+      };
     });
+
+  const unsubscribe = addListener((message) => {
+    invalidateNetworkProjectionFromBroadcast(deps.chainStore, message);
   });
 
-  void Promise.resolve(deps.catchUpFromBackground()).catch((error) => {
-    deps.onCatchUpError?.(error);
-    console.warn("[surfaces] network catch-up failed:", error);
+  const detachAppState = addAppStateListener((state) => {
+    if (state === "active") {
+      deps.chainStore.invalidateNetworkProjection();
+    }
   });
 
-  return unsubscribe;
+  // Catch-up after subscribe. Swallow dispose mid-pull (and any other reject):
+  // fire-and-forget must not surface unhandled rejections.
+  void deps.chainStore.syncNetworkProjection().catch(() => undefined);
+
+  return () => {
+    unsubscribe();
+    detachAppState();
+    // Remount catch-up re-arms sync; cancel so backoff cannot fire while detached.
+    deps.chainStore.cancelPendingNetworkProjectionRetry?.();
+  };
 }
 
-/** Wire mobile ChainStore to in-process authority broadcasts + catch-up read. */
+/** Wire mobile ChainStore to in-process authority broadcasts + catch-up sync. */
 export function startMobileNetworkSurfacesSync(
-  chainStore: ChainStore
+  chainStore: NetworkProjectionSurface
 ): () => void {
-  return subscribeNetworkSurfacesAndCatchUp({
-    addListener: addNetworkSurfacesSyncListener,
-    applyFromBroadcast: (message) =>
-      applyNetworkSurfacesSyncFromBroadcast(chainStore, message),
-    catchUpFromBackground: () =>
-      flowResult(chainStore.catchUpSelectedChainFromBackground()),
-  });
+  return attachMobileNetworkProjectionListeners({ chainStore });
 }

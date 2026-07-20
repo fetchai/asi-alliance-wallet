@@ -1,13 +1,13 @@
 import { flowResult } from "mobx";
 import {
   BroadcastKeyringSurfacesSyncMsg,
-  GetSelectedChainSnapshotMsg,
   KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
 } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { ChainStore } from "../stores/chain";
 import { KeyRingStore } from "@keplr-wallet/stores";
+import type { ProjectionSyncOutcome } from "@keplr-wallet/common";
+import type { NetworkProjectionSurface } from "./network-surfaces-sync";
 
 export { KEYRING_SURFACES_SYNC_MESSAGE_TYPE };
 
@@ -25,22 +25,13 @@ export async function requestKeyringSurfacesSyncBroadcast(): Promise<void> {
 }
 
 /**
- * Refresh multi-key store from background, then project the committed snapshot.
- * Wallet/chain compatibility repair runs in background before this broadcast;
- * surfaces must not write Select back (that can overwrite a newer explicit choice).
+ * Refresh multi-key store from background, then sync network projection via
+ * the shared controller (no direct selection apply).
  */
 export async function syncKeyringSurfacesFromBackground(
-  chainStore: ChainStore,
+  chainStore: NetworkProjectionSurface,
   keyRingStore: KeyRingStore
-): Promise<void> {
+): Promise<ProjectionSyncOutcome> {
   await flowResult(keyRingStore.refreshMultiKeyStoreInfo());
-
-  const snapshot = await requester.sendMessage(
-    BACKGROUND_PORT,
-    new GetSelectedChainSnapshotMsg()
-  );
-
-  await flowResult(
-    chainStore.applyBackgroundSelectedChain(snapshot.chainId, snapshot.revision)
-  );
+  return chainStore.syncNetworkProjection();
 }

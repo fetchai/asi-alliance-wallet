@@ -12,6 +12,7 @@ import {
   GetSelectedChainIdMsg,
   GetSelectedChainSnapshotMsg,
   SelectSelectedChainMsg,
+  GetNetworkProjectionMsg,
 } from "./messages";
 import { ChainInfo } from "@keplr-wallet/types";
 
@@ -41,6 +42,11 @@ export const getHandler: (service: ChainsService) => Handler = (service) => {
         return handleGetSelectedChainSnapshotMsg(service)(
           env,
           msg as GetSelectedChainSnapshotMsg
+        );
+      case GetNetworkProjectionMsg:
+        return handleGetNetworkProjectionMsg(service)(
+          env,
+          msg as GetNetworkProjectionMsg
         );
       case SelectSelectedChainMsg:
         return handleSelectSelectedChainMsg(service)(
@@ -115,6 +121,14 @@ const handleGetSelectedChainSnapshotMsg: (
 ) => InternalHandler<GetSelectedChainSnapshotMsg> = (service) => {
   return async () => {
     return await service.getSelectedChainSnapshot();
+  };
+};
+
+const handleGetNetworkProjectionMsg: (
+  service: ChainsService
+) => InternalHandler<GetNetworkProjectionMsg> = (service) => {
+  return async () => {
+    return await service.getNetworkProjection();
   };
 };
 

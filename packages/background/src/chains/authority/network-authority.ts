@@ -66,6 +66,34 @@ export class NetworkAuthority {
     return (await this.getSnapshot()).chainId;
   }
 
+  /**
+   * Run a read under the same FIFO as select/add/remove so registry and
+   * selection cannot tear relative to concurrent commits.
+   */
+  runSerialized<T>(operation: () => Promise<T>): Promise<T> {
+    return this.queue.enqueue(async () => {
+      await this.ensureHydrated();
+      return operation();
+    });
+  }
+
+  /** Current in-memory snapshot; caller must be inside runSerialized/hydrate. */
+  getCommittedSnapshotUnchecked(): NetworkAuthoritySnapshot {
+    if (!this.snapshot) {
+      throw new Error("NetworkAuthority has no snapshot");
+    }
+    return { ...this.snapshot };
+  }
+
+  /**
+   * Publish surfaces invalidation for the current snapshot without bumping
+   * revision (registry-only mutations / endpoint updates).
+   */
+  async publishProjectionInvalidation(): Promise<void> {
+    await this.ensureHydrated();
+    await this.publishProjectionInvalidationUnlocked();
+  }
+
   select(chainId: string): Promise<NetworkAuthoritySnapshot> {
     return this.queue.enqueue(async () => {
       await this.ensureHydrated();
@@ -73,10 +101,26 @@ export class NetworkAuthority {
     });
   }
 
+  /**
+   * Rewrite selection.chainId to the registry's exact canonical string when the
+   * committed selection still names the same chain identity. No-op if the user
+   * has already switched to a different identity (avoids racing tryUpdate vs
+   * user select).
+   */
+  alignSelectedCanonicalIfCurrent(
+    canonicalChainId: string
+  ): Promise<NetworkAuthoritySnapshot | null> {
+    return this.queue.enqueue(async () => {
+      await this.ensureHydrated();
+      return this.commitAlignSelectedCanonicalIfCurrent(canonicalChainId);
+    });
+  }
+
   commitAddChain(chainInfo: ChainInfoWithRepoUpdateOptions): Promise<void> {
     return this.queue.enqueue(async () => {
       await this.ensureHydrated();
       await this.deps.registry.commitAddChain(chainInfo);
+      await this.publishProjectionInvalidationUnlocked();
     });
   }
 
@@ -87,8 +131,23 @@ export class NetworkAuthority {
   commitRemoveChain(chainId: string): Promise<void> {
     return this.queue.enqueue(async () => {
       await this.ensureHydrated();
-      return this.commitRemove(chainId);
+      await this.commitRemove(chainId);
+      await this.publishProjectionInvalidationUnlocked();
     });
+  }
+
+  private async publishProjectionInvalidationUnlocked(): Promise<void> {
+    if (!this.snapshot) {
+      return;
+    }
+    try {
+      this.deps.publisher?.publishInternalSurfacesSync?.({ ...this.snapshot });
+    } catch (error) {
+      console.warn(
+        "[NetworkAuthority] projection invalidation publish failed:",
+        error
+      );
+    }
   }
 
   private async ensureHydrated(): Promise<void> {
@@ -195,6 +254,42 @@ export class NetworkAuthority {
     const next: NetworkAuthoritySnapshot = {
       chainId: canonical,
       revision: this.nextRevision(current?.revision ?? 0),
+    };
+
+    await this.persistAndCommitMemory(next, previous, {
+      publish: true,
+      notifyObservers: true,
+    });
+    return { ...next };
+  }
+
+  private async commitAlignSelectedCanonicalIfCurrent(
+    canonicalChainId: string
+  ): Promise<NetworkAuthoritySnapshot | null> {
+    const current = this.snapshot;
+    if (!current) {
+      throw new Error("NetworkAuthority has no snapshot");
+    }
+
+    const canonical = await this.deps.registry.findCanonicalChainId(
+      canonicalChainId
+    );
+    if (!canonical) {
+      return null;
+    }
+
+    if (!this.sameChainIdentity(current.chainId, canonical)) {
+      return null;
+    }
+
+    if (current.chainId === canonical) {
+      return { ...current };
+    }
+
+    const previous = { ...current };
+    const next: NetworkAuthoritySnapshot = {
+      chainId: canonical,
+      revision: this.nextRevision(current.revision),
     };
 
     await this.persistAndCommitMemory(next, previous, {

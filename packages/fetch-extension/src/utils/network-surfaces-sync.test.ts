@@ -1,19 +1,11 @@
-import type { AppStateStatus } from "react-native";
 import {
-  attachMobileNetworkProjectionListeners,
+  attachExtensionNetworkProjectionListeners,
   invalidateNetworkProjectionFromBroadcast,
   NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
 } from "./network-surfaces-sync";
 
 jest.mock("@keplr-wallet/background", () => ({
   NETWORK_SURFACES_SYNC_MESSAGE_TYPE: "network-surfaces-sync",
-  addNetworkSurfacesSyncListener: jest.fn(),
-}));
-
-jest.mock("react-native", () => ({
-  AppState: {
-    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
-  },
 }));
 
 describe("invalidateNetworkProjectionFromBroadcast", () => {
@@ -44,8 +36,8 @@ describe("invalidateNetworkProjectionFromBroadcast", () => {
   });
 });
 
-describe("attachMobileNetworkProjectionListeners", () => {
-  it("invalidates on broadcast, AppState active, and syncs catch-up after subscribe", async () => {
+describe("attachExtensionNetworkProjectionListeners", () => {
+  it("invalidates on broadcast, focus, and catch-up syncs after subscribe", async () => {
     const invalidateNetworkProjection = jest.fn();
     const syncNetworkProjection = jest.fn(async () => "applied" as const);
     const cancelPendingNetworkProjectionRetry = jest.fn();
@@ -55,79 +47,41 @@ describe("attachMobileNetworkProjectionListeners", () => {
       cancelPendingNetworkProjectionRetry,
     } as any;
 
-    let listener:
-      | ((message: { type: string; chainId: string; revision: number }) => void)
-      | undefined;
-    let appStateListener: ((state: AppStateStatus) => void) | undefined;
+    let runtimeListener: ((message: unknown) => void) | undefined;
+    let focusListener: (() => void) | undefined;
 
-    const unsubscribe = attachMobileNetworkProjectionListeners({
+    const detach = attachExtensionNetworkProjectionListeners({
       chainStore,
-      addListener: (l) => {
-        listener = l;
+      addRuntimeMessageListener: (listener) => {
+        runtimeListener = listener;
         return () => {
-          listener = undefined;
+          runtimeListener = undefined;
         };
       },
-      addAppStateListener: (l) => {
-        appStateListener = l;
+      addFocusListener: (listener) => {
+        focusListener = listener;
         return () => {
-          appStateListener = undefined;
+          focusListener = undefined;
         };
       },
     });
 
-    expect(listener).toBeDefined();
-    expect(appStateListener).toBeDefined();
     await Promise.resolve();
     expect(syncNetworkProjection).toHaveBeenCalledTimes(1);
 
-    listener!({
+    runtimeListener!({
       type: NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
       chainId: "fetchhub-4",
       revision: 6,
     });
     expect(invalidateNetworkProjection).toHaveBeenCalledTimes(1);
 
-    appStateListener!("active");
+    focusListener!();
     expect(invalidateNetworkProjection).toHaveBeenCalledTimes(2);
 
-    appStateListener!("background");
-    expect(invalidateNetworkProjection).toHaveBeenCalledTimes(2);
-
-    unsubscribe();
-    expect(listener).toBeUndefined();
-    expect(appStateListener).toBeUndefined();
-    expect(cancelPendingNetworkProjectionRetry).toHaveBeenCalledTimes(1);
-  });
-
-  it("unsubscribe stops receiving broadcasts", () => {
-    const invalidateNetworkProjection = jest.fn();
-    const syncNetworkProjection = jest.fn(async () => "applied" as const);
-    const cancelPendingNetworkProjectionRetry = jest.fn();
-    const chainStore = {
-      invalidateNetworkProjection,
-      syncNetworkProjection,
-      cancelPendingNetworkProjectionRetry,
-    } as any;
-
-    let listener:
-      | ((message: { type: string; chainId: string; revision: number }) => void)
-      | undefined;
-
-    const unsubscribe = attachMobileNetworkProjectionListeners({
-      chainStore,
-      addListener: (l) => {
-        listener = l;
-        return () => {
-          listener = undefined;
-        };
-      },
-      addAppStateListener: () => () => undefined,
-    });
-
-    unsubscribe();
-    expect(listener).toBeUndefined();
-    expect(invalidateNetworkProjection).not.toHaveBeenCalled();
+    detach();
+    expect(runtimeListener).toBeUndefined();
+    expect(focusListener).toBeUndefined();
     expect(cancelPendingNetworkProjectionRetry).toHaveBeenCalledTimes(1);
   });
 
@@ -144,13 +98,12 @@ describe("attachMobileNetworkProjectionListeners", () => {
     const chainStore = {
       invalidateNetworkProjection: jest.fn(),
       syncNetworkProjection,
-      cancelPendingNetworkProjectionRetry: jest.fn(),
     } as any;
 
-    attachMobileNetworkProjectionListeners({
+    attachExtensionNetworkProjectionListeners({
       chainStore,
-      addListener: () => () => undefined,
-      addAppStateListener: () => () => undefined,
+      addRuntimeMessageListener: () => () => undefined,
+      addFocusListener: () => () => undefined,
     });
 
     await Promise.resolve();

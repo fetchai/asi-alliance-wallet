@@ -31,8 +31,9 @@ export {
 } from "./keyring-surfaces-sync";
 
 export {
-  applyNetworkSurfacesSyncFromBroadcast,
+  invalidateNetworkProjectionFromBroadcast,
   isNetworkSurfacesSyncMessage,
+  attachExtensionNetworkProjectionListeners,
   NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
 } from "./network-surfaces-sync";
 import { RegisterMode } from "@keplr-wallet/hooks";

@@ -1,9 +1,4 @@
-import { applyBackgroundSelectedChainCore } from "./apply-background-selected-chain-core";
 import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
-import {
-  SelectedChainApplyResult,
-  SelectedChainAuthoritySnapshot,
-} from "./apply-selected-chain-authority";
 
 async function runGenerator(
   iterator: Generator<PromiseLike<unknown>, unknown, unknown>
@@ -25,66 +20,9 @@ async function runGenerator(
   return next.value;
 }
 
-describe("applyBackgroundSelectedChainCore races", () => {
-  it("does not let unknown B/rev2 overwrite C/rev3 after delayed registry refresh", async () => {
-    let local: SelectedChainAuthoritySnapshot = {
-      chainId: "fetchhub-4",
-      revision: 1,
-    };
-    const known = new Set<string>(["fetchhub-4", "dorado-1"]);
-
-    let releaseRefresh!: () => void;
-    const refreshGate = new Promise<void>((resolve) => {
-      releaseRefresh = resolve;
-    });
-
-    const applyB = applyBackgroundSelectedChainCore(
-      {
-        getLocalSnapshot: () => ({ ...local }),
-        setLocalSnapshot: (next) => {
-          local = { ...next };
-        },
-        hasChain: (id) => known.has(id),
-        refreshRegistry: async () => {
-          await refreshGate;
-          known.add("custom-b");
-        },
-      },
-      { chainId: "custom-b", revision: 2 }
-    );
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    await expect(
-      applyBackgroundSelectedChainCore(
-        {
-          getLocalSnapshot: () => ({ ...local }),
-          setLocalSnapshot: (next) => {
-            local = { ...next };
-          },
-          hasChain: (id) => known.has(id),
-          refreshRegistry: async () => undefined,
-        },
-        { chainId: "dorado-1", revision: 3 }
-      )
-    ).resolves.toBe("applied");
-
-    expect(local).toEqual({ chainId: "dorado-1", revision: 3 });
-
-    releaseRefresh();
-    await expect(applyB).resolves.toBe("stale");
-    expect(local).toEqual({ chainId: "dorado-1", revision: 3 });
-  });
-});
-
 describe("selectChainAndPersistWiring during overlapping selects", () => {
-  it("awaits ack for B even while a later C is also requested; C remains applied", async () => {
+  it("awaits ack for B even while a later C is also requested; both sync projection", async () => {
     const calls: string[] = [];
-    let local: SelectedChainAuthoritySnapshot = {
-      chainId: "fetchhub-4",
-      revision: 1,
-    };
 
     let releaseB!: (value: { chainId: string; revision: number }) => void;
     const bAck = new Promise<{ chainId: string; revision: number }>(
@@ -101,24 +39,14 @@ describe("selectChainAndPersistWiring during overlapping selects", () => {
       return { chainId: "cardano-preview", revision: 3 };
     };
 
-    const tryApply = async (
-      chainId: string,
-      revision: number
-    ): Promise<SelectedChainApplyResult> => {
-      if (revision < local.revision) {
-        calls.push(`stale:${chainId}:${revision}`);
-        return "stale";
-      }
-      local = { chainId, revision };
-      calls.push(`apply:${chainId}:${revision}`);
-      return "applied";
-    };
-
     const persistB = runGenerator(
       selectChainAndPersistWiring(
         {
           sendSelectSelectedChain: sendSelect,
-          tryApplyBackgroundSelectedChain: tryApply,
+          syncProjection: async () => {
+            calls.push("sync:b");
+            return "applied";
+          },
           saveLastViewChainId: async () => {
             calls.push("persist");
           },
@@ -134,7 +62,10 @@ describe("selectChainAndPersistWiring during overlapping selects", () => {
       selectChainAndPersistWiring(
         {
           sendSelectSelectedChain: sendSelect,
-          tryApplyBackgroundSelectedChain: tryApply,
+          syncProjection: async () => {
+            calls.push("sync:c");
+            return "applied";
+          },
           saveLastViewChainId: async () => {
             calls.push("persist");
           },
@@ -143,11 +74,11 @@ describe("selectChainAndPersistWiring during overlapping selects", () => {
       )
     );
 
-    expect(local).toEqual({ chainId: "cardano-preview", revision: 3 });
+    expect(calls).toContain("sync:c");
 
     releaseB({ chainId: "dorado-1", revision: 2 });
-    await expect(persistB).rejects.toThrow("network_switch_superseded");
-    expect(local).toEqual({ chainId: "cardano-preview", revision: 3 });
+    await persistB;
+    expect(calls).toContain("sync:b");
   });
 
   it("does not resolve without sending Select (no startup deferral)", async () => {
@@ -160,11 +91,8 @@ describe("selectChainAndPersistWiring during overlapping selects", () => {
             calls.push(`send:${chainId}`);
             return { chainId, revision: 2 };
           },
-          tryApplyBackgroundSelectedChain: async (
-            chainId,
-            revision
-          ): Promise<SelectedChainApplyResult> => {
-            calls.push(`apply:${chainId}:${revision}`);
+          syncProjection: async () => {
+            calls.push("sync");
             return "applied";
           },
           saveLastViewChainId: async () => {
@@ -175,7 +103,7 @@ describe("selectChainAndPersistWiring during overlapping selects", () => {
       )
     );
 
-    expect(calls).toEqual(["send:dorado-1", "apply:dorado-1:2", "persist"]);
+    expect(calls).toEqual(["send:dorado-1", "sync", "persist"]);
   });
 });
 
@@ -188,8 +116,7 @@ describe("sign/token selection gating helpers", () => {
             sendSelectSelectedChain: async () => {
               throw new Error("network_switch_superseded");
             },
-            tryApplyBackgroundSelectedChain:
-              async (): Promise<SelectedChainApplyResult> => "applied",
+            syncProjection: async () => "applied",
             saveLastViewChainId: async () => undefined,
           },
           "dorado-1"
@@ -198,7 +125,7 @@ describe("sign/token selection gating helpers", () => {
     ).rejects.toThrow("network_switch_superseded");
   });
 
-  it("treats stale apply after ack as superseded", async () => {
+  it("projection retry-scheduled after ack does not fail the switch", async () => {
     await expect(
       runGenerator(
         selectChainAndPersistWiring(
@@ -207,14 +134,13 @@ describe("sign/token selection gating helpers", () => {
               chainId,
               revision: 1,
             }),
-            tryApplyBackgroundSelectedChain:
-              async (): Promise<SelectedChainApplyResult> => "stale",
+            syncProjection: async () => "retry-scheduled",
             saveLastViewChainId: async () => undefined,
           },
           "dorado-1"
         )
       )
-    ).rejects.toThrow("network_switch_superseded");
+    ).resolves.toBeUndefined();
   });
 });
 

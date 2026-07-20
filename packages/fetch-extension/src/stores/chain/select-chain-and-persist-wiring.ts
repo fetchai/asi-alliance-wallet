@@ -1,50 +1,38 @@
 import { toGenerator } from "@keplr-wallet/common";
 import { ensureSelectedChainAck } from "./ensure-selected-chain-ack";
-import {
-  SelectedChainApplyResult,
-  shouldPersistLastViewAfterApply,
-} from "./apply-selected-chain-authority";
+import type { ProjectionSyncOutcome } from "@keplr-wallet/common";
 
 type SelectChainAndPersistWiringDeps = {
   sendSelectSelectedChain: (
     chainId: string
   ) => PromiseLike<{ chainId: string; revision: number }>;
-  tryApplyBackgroundSelectedChain: (
-    chainId: string,
-    revision: number
-  ) => SelectedChainApplyResult | PromiseLike<SelectedChainApplyResult>;
+  /** Pull authoritative projection after ACK. Failure ≠ switch failure. */
+  syncProjection: () => PromiseLike<ProjectionSyncOutcome>;
   saveLastViewChainId: () => PromiseLike<unknown>;
 };
 
 /**
- * Explicit user selection: await background ack, apply revision locally, then
- * best-effort last-view persist.
+ * Explicit user selection: await background ack (switch success), then
+ * sync projection. Projection retry/errors do not fail the switch.
  */
 export function* selectChainAndPersistWiring(
   deps: SelectChainAndPersistWiringDeps,
   chainId: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Generator<any, void, any> {
-  const authority = yield* toGenerator(
+  yield* toGenerator(
     Promise.resolve(
       ensureSelectedChainAck(deps.sendSelectSelectedChain, chainId)
     )
   );
 
-  const result = yield* toGenerator(
-    Promise.resolve(
-      deps.tryApplyBackgroundSelectedChain(
-        authority.chainId,
-        authority.revision
-      )
-    )
-  );
+  const outcome = yield* toGenerator(Promise.resolve(deps.syncProjection()));
 
-  if (result === "stale" || result === "protocol-violation") {
-    throw new Error("network_switch_superseded");
-  }
-
-  if (!shouldPersistLastViewAfterApply(result)) {
+  if (outcome !== "applied") {
+    console.warn(
+      "[selectChainAndPersist] projection sync scheduled retry after chain switch;",
+      "switch succeeded; last-view persist skipped until projection applies"
+    );
     return;
   }
 

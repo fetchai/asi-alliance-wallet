@@ -5,6 +5,7 @@ import {
   makeObservable,
   flow,
   flowResult,
+  runInAction,
 } from "mobx";
 
 import {
@@ -17,8 +18,7 @@ import {
 import { ChainInfo } from "@keplr-wallet/types";
 import {
   ChainInfoWithCoreTypes,
-  GetChainInfosMsg,
-  GetSelectedChainSnapshotMsg,
+  GetNetworkProjectionMsg,
   RemoveSuggestedChainInfoMsg,
   TryUpdateChainMsg,
   SetChainEndpointsMsg,
@@ -29,18 +29,32 @@ import {
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 
 import { MessageRequester } from "@keplr-wallet/router";
-import { KVStore, toGenerator } from "@keplr-wallet/common";
+import {
+  KVStore,
+  toGenerator,
+  createNetworkProjectionController,
+  createProjectionHydrationGate,
+  applyNetworkProjectionBundle,
+  armEndpointsQueryRefresh,
+  createEndpointsQueryRefreshLatch,
+  disarmEndpointsQueryRefresh,
+  noteEndpointsMutationSyncOutcome,
+  shouldRefreshQueriesOnAcceptedApply,
+  type EndpointsQueryRefreshLatch,
+  type NetworkProjectionController,
+  type ProjectionHydrationGate,
+  type ProjectionApplyResult,
+  type ProjectionSyncOutcome,
+} from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
-import { startupSyncSelectedChainWiring } from "./startup-sync-selected-chain-wiring";
-import { SelectedChainApplyResult } from "./apply-selected-chain-authority";
-import { applyBackgroundSelectedChainCore } from "./apply-background-selected-chain-core";
 import { getDefaultFallbackChainId } from "@keplr-wallet/background/cardano-chain-policy";
 
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @observable
   protected _selectedChainId: string;
 
+  /** 0 = placeholder / not yet projected from background. */
   @observable
   protected _acceptedRevision: number = 0;
 
@@ -54,6 +68,11 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   @observable
   protected _showTestnet: boolean = false;
+
+  protected readonly projectionController: NetworkProjectionController;
+  protected readonly projectionHydrationGate: ProjectionHydrationGate;
+  protected readonly endpointsQueryRefreshLatch: EndpointsQueryRefreshLatch =
+    createEndpointsQueryRefreshLatch();
 
   constructor(
     protected readonly kvStore: KVStore,
@@ -78,6 +97,28 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
       disabledChains: [],
     };
 
+    this.projectionController = createNetworkProjectionController({
+      pullBundle: () => this.pullProjectionBundle(),
+      applyBundle: (bundle) => this.applyProjectionBundle(bundle),
+      onPullError: (error) => {
+        console.warn("[ChainStore] network projection pull failed:", error);
+      },
+    });
+
+    this.projectionHydrationGate = createProjectionHydrationGate({
+      releaseInitialQueries: () => {
+        this.deferInitialQueryController.ready();
+      },
+      setInitializing: (value) => {
+        runInAction(() => {
+          this._isInitializing = value;
+        });
+      },
+      onFirstSuccess: () => {
+        void flowResult(this.finishProjectionBootstrap());
+      },
+    });
+
     makeObservable(this);
 
     this.init();
@@ -89,6 +130,27 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   get acceptedRevision(): number {
     return this._acceptedRevision;
+  }
+
+  get projectionReady(): boolean {
+    return this.projectionController.projectionReady;
+  }
+
+  /** One controller per ChainStore; UI surfaces call invalidate/syncNow. */
+  getNetworkProjectionController(): NetworkProjectionController {
+    return this.projectionController;
+  }
+
+  invalidateNetworkProjection(): void {
+    this.projectionController.invalidate();
+  }
+
+  syncNetworkProjection(): Promise<ProjectionSyncOutcome> {
+    return this.projectionController.syncNow();
+  }
+
+  cancelPendingNetworkProjectionRetry(): void {
+    this.projectionController.cancelPendingRetry();
   }
 
   @computed
@@ -195,9 +257,6 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   @flow
   *selectChainAndPersist(chainId: string) {
-    // Always send the acknowledged command. Background is hydrated before UI
-    // init finishes reading the snapshot; deferring would resolve without ack
-    // and let a stale B overwrite a later C after startup.
     yield* selectChainAndPersistWiring(
       {
         sendSelectSelectedChain: (id) => {
@@ -207,27 +266,35 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
             revision: number;
           }>;
         },
-        tryApplyBackgroundSelectedChain: (id, revision) =>
-          flowResult(this.applyBackgroundSelectedChain(id, revision)),
+        syncProjection: () => this.projectionController.syncNow(),
         saveLastViewChainId: () => flowResult(this.saveLastViewChainId()),
       },
       chainId
     );
   }
 
-  /**
-   * Apply a background snapshot to local projection. Refreshes chain infos when
-   * the selected chain is not yet known locally (e.g. newly added custom chain).
-   * Revision is re-checked after every await before mutating local state.
-   */
-  @flow
-  *applyBackgroundSelectedChain(
-    chainId: string,
-    revision: number
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Generator<any, SelectedChainApplyResult, any> {
-    return (yield* toGenerator(
-      applyBackgroundSelectedChainCore(
+  dispose(): void {
+    this.projectionController.dispose();
+  }
+
+  protected async pullProjectionBundle(): Promise<{
+    selection: { chainId: string; revision: number };
+    chainInfos: ChainInfoWithCoreTypes[];
+  }> {
+    const msg = new GetNetworkProjectionMsg();
+    return this.requester.sendMessage(BACKGROUND_PORT, msg);
+  }
+
+  protected applyProjectionBundle(bundle: {
+    selection: { chainId: string; revision: number };
+    chainInfos: ChainInfoWithCoreTypes[];
+  }): ProjectionApplyResult {
+    if (this.projectionController.disposed) {
+      return "rejected";
+    }
+
+    const result = runInAction(() =>
+      applyNetworkProjectionBundle(
         {
           getLocalSnapshot: () => ({
             chainId: this._selectedChainId,
@@ -237,8 +304,9 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
             this._selectedChainId = snapshot.chainId;
             this._acceptedRevision = snapshot.revision;
           },
-          hasChain: (id) => this.hasChainSafe(id),
-          refreshRegistry: () => flowResult(this.getChainInfosFromBackground()),
+          setChainInfos: (chainInfos) => {
+            this.setChainInfos(chainInfos as ChainInfoWithCoreTypes[]);
+          },
           onProtocolViolation: (local, incoming) => {
             console.error(
               "[ChainStore] equal revision with different chainId from background",
@@ -249,16 +317,23 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
               }
             );
           },
-          onMissingChain: (missingId) => {
-            console.warn(
-              "[ChainStore] background selected chain is not in local registry:",
-              missingId
-            );
-          },
         },
-        { chainId, revision }
+        {
+          selection: bundle.selection,
+          chainInfos: bundle.chainInfos,
+        }
       )
-    )) as SelectedChainApplyResult;
+    );
+
+    if (result === "protocol-violation" || result === "stale") {
+      return "rejected";
+    }
+
+    this.projectionHydrationGate.onPullSucceeded();
+    if (shouldRefreshQueriesOnAcceptedApply(this.endpointsQueryRefreshLatch)) {
+      ObservableQuery.refreshAllObserved();
+    }
+    return "accepted";
   }
 
   @action
@@ -301,37 +376,17 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   }
 
   @flow
-  protected *init() {
-    this._isInitializing = true;
-    yield this.getChainInfosFromBackground();
-
-    this.deferInitialQueryController.ready();
-
-    yield* startupSyncSelectedChainWiring({
-      getBackgroundSnapshot: () => {
-        const msg = new GetSelectedChainSnapshotMsg();
-        return this.requester.sendMessage(BACKGROUND_PORT, msg) as Promise<{
-          chainId: string;
-          revision: number;
-        }>;
-      },
-      tryApplyBackgroundSelectedChain: (chainId, revision) =>
-        flowResult(this.applyBackgroundSelectedChain(chainId, revision)),
-    });
-
-    // Cosmetic last-view mirror after successful projection; never drives authority.
+  protected *finishProjectionBootstrap() {
     try {
       yield* toGenerator(
         Promise.resolve(flowResult(this.saveLastViewChainId()))
       );
     } catch (error) {
       console.warn(
-        "[ChainStore] Failed to persist last-view chain id after startup sync:",
+        "[ChainStore] Failed to persist last-view chain id after projection hydrate:",
         error
       );
     }
-
-    this._isInitializing = false;
 
     const lastViewShowTestnet = yield* toGenerator(
       this.kvStore.get<boolean>("extension_last_view_show_testnet")
@@ -364,12 +419,12 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   }
 
   @flow
-  protected *getChainInfosFromBackground() {
-    const msg = new GetChainInfosMsg();
-    const result = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-    this.setChainInfos(result.chainInfos);
+  protected *init() {
+    this._isInitializing = true;
+
+    // Do not release queries or clear isInitializing until the first successful
+    // authoritative pull (see projectionHydrationGate.onPullSucceeded).
+    yield* toGenerator(this.projectionController.syncNow());
   }
 
   @flow
@@ -401,30 +456,22 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     }
 
     const msg = new RemoveSuggestedChainInfoMsg(chainId);
-    const chainInfos = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-
-    this.setChainInfos(chainInfos);
+    yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    return yield* toGenerator(this.projectionController.syncNow());
   }
 
   @flow
   *addCustomChainInfo(chainInfo: ChainInfo) {
     const msg = new SuggestChainInfoMsg(chainInfo);
     yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
-
-    yield this.getChainInfosFromBackground();
+    return yield* toGenerator(this.projectionController.syncNow());
   }
 
   @flow
   *tryUpdateChain(chainId: string) {
     const msg = new TryUpdateChainMsg(chainId);
-    const result = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-    if (result.updated) {
-      yield this.getChainInfosFromBackground();
-    }
+    yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    return yield* toGenerator(this.projectionController.syncNow());
   }
 
   @flow
@@ -434,24 +481,29 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     rest: string | undefined
   ) {
     const msg = new SetChainEndpointsMsg(chainId, rpc, rest);
-    const newChainInfos = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-
-    this.setChainInfos(newChainInfos);
-
-    ObservableQuery.refreshAllObserved();
+    // Arm before BG: invalidation fan-out may apply before this flow reaches syncNow.
+    armEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+    try {
+      yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    } catch (error) {
+      disarmEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+      throw error;
+    }
+    const outcome = yield* toGenerator(this.projectionController.syncNow());
+    noteEndpointsMutationSyncOutcome(this.endpointsQueryRefreshLatch, outcome);
   }
 
   @flow
   *resetChainEndpoints(chainId: string) {
     const msg = new ResetChainEndpointsMsg(chainId);
-    const newChainInfos = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-
-    this.setChainInfos(newChainInfos);
-
-    ObservableQuery.refreshAllObserved();
+    armEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+    try {
+      yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    } catch (error) {
+      disarmEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+      throw error;
+    }
+    const outcome = yield* toGenerator(this.projectionController.syncNow());
+    noteEndpointsMutationSyncOutcome(this.endpointsQueryRefreshLatch, outcome);
   }
 }

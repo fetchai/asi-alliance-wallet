@@ -370,13 +370,15 @@ describe("NetworkAuthority", () => {
         chainName: "Custom",
         features: ["cosmos"],
       } as any);
-      const { authority } = createTestNetworkAuthority({ registry });
+      const { authority, publisher } = createTestNetworkAuthority({ registry });
       await authority.hydrate();
+      publisher.publishInternalSurfacesSync.mockClear();
 
       await authority.commitRemoveChain("custom-1");
       await expect(registry.findCanonicalChainId("custom-1")).resolves.toBe(
         undefined
       );
+      expect(publisher.publishInternalSurfacesSync).toHaveBeenCalledTimes(1);
     });
 
     it("remove then select of same chain cannot both succeed from stale race", async () => {
@@ -416,6 +418,87 @@ describe("NetworkAuthority", () => {
 
       await expect(authority.select("custom-1")).resolves.toEqual({
         chainId: "custom-1",
+        revision: 2,
+      });
+    });
+
+    it("publishes projection invalidation after registry add", async () => {
+      const { authority, publisher } = createTestNetworkAuthority();
+      await authority.hydrate();
+      publisher.publishInternalSurfacesSync.mockClear();
+
+      await authority.commitAddChain({
+        chainId: "custom-1",
+        chainName: "Custom",
+        features: ["cosmos"],
+      } as any);
+
+      expect(publisher.publishInternalSurfacesSync).toHaveBeenCalledTimes(1);
+      expect(publisher.publishInternalSurfacesSync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chainId: PREFERRED_DEFAULT_CHAIN_ID,
+          revision: 1,
+        })
+      );
+    });
+  });
+
+  describe("alignSelectedCanonicalIfCurrent", () => {
+    it("rewrites selection chainId when identity matches and string drifted", async () => {
+      const registry = new MemoryAuthorityRegistry();
+      const { authority } = createTestNetworkAuthority({ registry });
+      await authority.hydrate();
+      await authority.select("dorado-1");
+
+      registry.rewriteCanonicalId("dorado-1", "dorado-2");
+
+      await expect(
+        authority.alignSelectedCanonicalIfCurrent("dorado-2")
+      ).resolves.toEqual({
+        chainId: "dorado-2",
+        revision: 3,
+      });
+      await expect(authority.getSnapshot()).resolves.toEqual({
+        chainId: "dorado-2",
+        revision: 3,
+      });
+    });
+
+    it("no-ops when user has already selected a different identity", async () => {
+      const registry = new MemoryAuthorityRegistry();
+      await registry.commitAddChain({
+        chainId: "custom-1",
+        chainName: "Custom",
+        features: ["cosmos"],
+      } as any);
+      const { authority } = createTestNetworkAuthority({ registry });
+      await authority.hydrate();
+      await authority.select("custom-1");
+
+      registry.rewriteCanonicalId("dorado-1", "dorado-2");
+
+      await expect(
+        authority.alignSelectedCanonicalIfCurrent("dorado-2")
+      ).resolves.toBeNull();
+      await expect(authority.getSelectedChainId()).resolves.toBe("custom-1");
+    });
+  });
+
+  describe("projection invalidation", () => {
+    it("publishProjectionInvalidation republishes current snapshot without select", async () => {
+      const { authority, publisher } = createTestNetworkAuthority();
+      await authority.hydrate();
+      await authority.select("dorado-1");
+      publisher.publishInternalSurfacesSync.mockClear();
+
+      await authority.publishProjectionInvalidation();
+
+      expect(publisher.publishInternalSurfacesSync).toHaveBeenCalledWith({
+        chainId: "dorado-1",
+        revision: 2,
+      });
+      await expect(authority.getSnapshot()).resolves.toEqual({
+        chainId: "dorado-1",
         revision: 2,
       });
     });

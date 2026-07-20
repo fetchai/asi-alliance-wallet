@@ -1,5 +1,4 @@
 import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
-import { SelectedChainApplyResult } from "./apply-selected-chain-authority";
 
 async function runGenerator(
   iterator: IterableIterator<unknown>
@@ -22,7 +21,7 @@ async function runGenerator(
 }
 
 describe("selectChainAndPersistWiring", () => {
-  it("ack success -> local apply -> persist", async () => {
+  it("ack success -> syncProjection applied -> persist", async () => {
     const calls: string[] = [];
 
     await runGenerator(
@@ -32,8 +31,8 @@ describe("selectChainAndPersistWiring", () => {
             calls.push(`ack:${chainId}`);
             return { chainId, revision: 1 };
           },
-          tryApplyBackgroundSelectedChain: (chainId, revision) => {
-            calls.push(`local:${chainId}:${revision}`);
+          syncProjection: async () => {
+            calls.push("sync");
             return "applied";
           },
           saveLastViewChainId: async () => {
@@ -44,10 +43,10 @@ describe("selectChainAndPersistWiring", () => {
       )
     );
 
-    expect(calls).toEqual(["ack:fetchhub-4", "local:fetchhub-4:1", "persist"]);
+    expect(calls).toEqual(["ack:fetchhub-4", "sync", "persist"]);
   });
 
-  it("ack failure -> local unchanged -> persist not called", async () => {
+  it("ack failure -> sync and persist not called", async () => {
     const calls: string[] = [];
 
     await expect(
@@ -58,8 +57,8 @@ describe("selectChainAndPersistWiring", () => {
               calls.push("ack:fail");
               throw new Error("ack failed");
             },
-            tryApplyBackgroundSelectedChain: (chainId) => {
-              calls.push(`local:${chainId}`);
+            syncProjection: async () => {
+              calls.push("sync");
               return "applied";
             },
             saveLastViewChainId: async () => {
@@ -74,31 +73,35 @@ describe("selectChainAndPersistWiring", () => {
     expect(calls).toEqual(["ack:fail"]);
   });
 
-  it("ack success but stale revision rejects as superseded", async () => {
+  it("ack success with retry-scheduled does not fail switch and skips persist", async () => {
     const calls: string[] = [];
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
 
-    await expect(
-      runGenerator(
-        selectChainAndPersistWiring(
-          {
-            sendSelectSelectedChain: async (chainId: string) => {
-              calls.push(`ack:${chainId}`);
-              return { chainId, revision: 1 };
-            },
-            tryApplyBackgroundSelectedChain: (): SelectedChainApplyResult => {
-              calls.push("local:stale");
-              return "stale";
-            },
-            saveLastViewChainId: async () => {
-              calls.push("persist");
-            },
+    await runGenerator(
+      selectChainAndPersistWiring(
+        {
+          sendSelectSelectedChain: async (chainId: string) => {
+            calls.push(`ack:${chainId}`);
+            return { chainId, revision: 1 };
           },
-          "fetchhub-4"
-        )
+          syncProjection: async () => {
+            calls.push("sync");
+            return "retry-scheduled";
+          },
+          saveLastViewChainId: async () => {
+            calls.push("persist");
+          },
+        },
+        "fetchhub-4"
       )
-    ).rejects.toThrow("network_switch_superseded");
+    );
 
-    expect(calls).toEqual(["ack:fetchhub-4", "local:stale"]);
+    expect(calls).toEqual(["ack:fetchhub-4", "sync"]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("projection sync scheduled retry"),
+      expect.any(String)
+    );
+    warn.mockRestore();
   });
 
   it("ack success + persist failure still resolves", async () => {
@@ -113,12 +116,12 @@ describe("selectChainAndPersistWiring", () => {
               calls.push(`ack:${chainId}`);
               return { chainId, revision: 1 };
             },
-            tryApplyBackgroundSelectedChain: (chainId, revision) => {
-              calls.push(`local:${chainId}:${revision}`);
+            syncProjection: async () => {
+              calls.push("sync");
               return "applied";
             },
             saveLastViewChainId: async () => {
-              calls.push("persist:fail");
+              calls.push("persist");
               throw new Error("persist failed");
             },
           },
@@ -127,12 +130,7 @@ describe("selectChainAndPersistWiring", () => {
       )
     ).resolves.toBeUndefined();
 
-    expect(calls).toEqual([
-      "ack:fetchhub-4",
-      "local:fetchhub-4:1",
-      "persist:fail",
-    ]);
-    expect(warn).toHaveBeenCalled();
+    expect(calls).toEqual(["ack:fetchhub-4", "sync", "persist"]);
     warn.mockRestore();
   });
 });

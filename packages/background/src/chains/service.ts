@@ -848,6 +848,34 @@ export class ChainsService {
     return this.getNetworkAuthority().getSnapshot();
   }
 
+  /**
+   * Authoritative UI projection: selection + chainInfos under the authority FIFO.
+   */
+  async getNetworkProjection(): Promise<{
+    selection: NetworkAuthoritySnapshot;
+    chainInfos: ChainInfoWithCoreTypes[];
+  }> {
+    const authority = this.getNetworkAuthority();
+    return authority.runSerialized(async () => {
+      const selection = authority.getCommittedSnapshotUnchecked();
+      const chainInfos = await this.getChainInfos();
+      const found = chainInfos.some(
+        (info) => info.chainId === selection.chainId
+      );
+      if (!found) {
+        throw new Error(
+          "Network projection selection is not present in chain registry"
+        );
+      }
+      return { selection, chainInfos };
+    });
+  }
+
+  /** Registry/endpoint mutations: notify all surfaces without bumping revision. */
+  async notifyProjectionInvalidation(): Promise<void> {
+    await this.getNetworkAuthority().publishProjectionInvalidation();
+  }
+
   async setSelectedChain(chainId: string): Promise<void> {
     await this.getNetworkAuthority().select(chainId);
   }
@@ -855,6 +883,18 @@ export class ChainsService {
   /** Internal UI path: returns committed `{ chainId, revision }` ack. */
   async selectChainWithAck(chainId: string): Promise<NetworkAuthoritySnapshot> {
     return this.getNetworkAuthority().select(chainId);
+  }
+
+  /**
+   * Registry chainId string drift repair: only rewrites selection when it still
+   * names the same identity as `canonicalChainId`.
+   */
+  async alignSelectedCanonicalIfCurrent(
+    canonicalChainId: string
+  ): Promise<NetworkAuthoritySnapshot | null> {
+    return this.getNetworkAuthority().alignSelectedCanonicalIfCurrent(
+      canonicalChainId
+    );
   }
 
   private broadcastNetworkSurfacesSync(

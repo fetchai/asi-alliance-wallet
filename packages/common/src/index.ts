@@ -7,3 +7,4 @@ export * from "./json";
 export * from "./icns";
 export * from "./service-worker";
 export * from "./cache-manager";
+export * from "./network-projection";

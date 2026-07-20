@@ -86,4 +86,96 @@ describe("ChainsService", () => {
       );
     });
   });
+
+  describe("getNetworkProjection", () => {
+    it("returns selection that is present in the same chainInfos snapshot", async () => {
+      const service = await createWiredTestChainsService();
+      const bundle = await service.getNetworkProjection();
+      const selectedId = bundle.selection.chainId;
+      expect(
+        bundle.chainInfos.some((info) => info.chainId === selectedId)
+      ).toBe(true);
+    });
+
+    it("stays consistent with concurrent select (FIFO, no torn pair)", async () => {
+      const service = await createWiredTestChainsService();
+
+      const [first, ack, second] = await Promise.all([
+        service.getNetworkProjection(),
+        service.selectChainWithAck("dorado-1"),
+        service.getNetworkProjection(),
+      ]);
+
+      expect(ack).toEqual({ chainId: "dorado-1", revision: 2 });
+
+      for (const bundle of [first, second]) {
+        expect(
+          bundle.chainInfos.some(
+            (info) => info.chainId === bundle.selection.chainId
+          )
+        ).toBe(true);
+      }
+    });
+
+    it("stays consistent with concurrent add/remove (FIFO, no torn pair)", async () => {
+      const service = await createWiredTestChainsService();
+
+      const add = service.addChainInfo({
+        chainId: "custom-torn-1",
+        chainName: "Custom Torn",
+        features: ["cosmos"],
+      } as any);
+
+      const [duringAdd, afterAdd] = await Promise.all([
+        service.getNetworkProjection(),
+        add.then(() => service.getNetworkProjection()),
+      ]);
+
+      for (const bundle of [duringAdd, afterAdd]) {
+        expect(
+          bundle.chainInfos.some(
+            (info) => info.chainId === bundle.selection.chainId
+          )
+        ).toBe(true);
+      }
+
+      expect(
+        afterAdd.chainInfos.some((info) => info.chainId === "custom-torn-1")
+      ).toBe(true);
+
+      const remove = service.removeChainInfo("custom-torn-1");
+      const [duringRemove, afterRemove] = await Promise.all([
+        service.getNetworkProjection(),
+        remove.then(() => service.getNetworkProjection()),
+      ]);
+
+      for (const bundle of [duringRemove, afterRemove]) {
+        expect(
+          bundle.chainInfos.some(
+            (info) => info.chainId === bundle.selection.chainId
+          )
+        ).toBe(true);
+      }
+
+      expect(
+        afterRemove.chainInfos.some((info) => info.chainId === "custom-torn-1")
+      ).toBe(false);
+    });
+
+    it("fails closed when selection chainId is not exactly in chainInfos", async () => {
+      const service = await createWiredTestChainsService();
+      await service.selectChainWithAck("dorado-1");
+      jest.spyOn(service, "getChainInfos").mockResolvedValue([
+        {
+          chainId: "fetchhub-4",
+          chainName: "Fetchhub",
+          features: ["cosmos"],
+        } as any,
+      ]);
+
+      await expect(service.getNetworkProjection()).rejects.toThrow(
+        /not present in chain registry/
+      );
+    });
+  });
 });

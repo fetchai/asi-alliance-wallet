@@ -760,6 +760,7 @@ export class RootStore {
   }
 
   dispose(): void {
+    this.chainStore.dispose();
     this._addressCacheSyncManager.dispose();
     this._disposers.forEach((d) => d());
     this._disposers.length = 0;

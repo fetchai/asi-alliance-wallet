@@ -278,3 +278,32 @@ export class SelectSelectedChainMsg extends Message<{
     return SelectSelectedChainMsg.type();
   }
 }
+
+/**
+ * Internal UI pull of selection + registry under the authority FIFO barrier.
+ * Not external-approved. Payload is authoritative for projection apply.
+ */
+export class GetNetworkProjectionMsg extends Message<{
+  selection: { chainId: string; revision: number };
+  chainInfos: ChainInfoWithCoreTypes[];
+}> {
+  public static type() {
+    return "get-network-projection";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetNetworkProjectionMsg.type();
+  }
+}
