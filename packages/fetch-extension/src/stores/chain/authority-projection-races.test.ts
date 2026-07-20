@@ -144,6 +144,34 @@ describe("sign/token selection gating helpers", () => {
   });
 });
 
+describe("ACK vs projection sync", () => {
+  it("Select ACK succeeds while subsequent syncNow is retry-scheduled", async () => {
+    const events: string[] = [];
+    await expect(
+      runGenerator(
+        selectChainAndPersistWiring(
+          {
+            sendSelectSelectedChain: async (chainId) => {
+              events.push(`ack:${chainId}`);
+              return { chainId, revision: 4 };
+            },
+            syncProjection: async () => {
+              events.push("sync:retry-scheduled");
+              return "retry-scheduled";
+            },
+            saveLastViewChainId: async () => {
+              events.push("persist-last-view");
+            },
+          },
+          "cardano-preprod"
+        )
+      )
+    ).resolves.toBeUndefined();
+
+    expect(events).toEqual(["ack:cardano-preprod", "sync:retry-scheduled"]);
+  });
+});
+
 describe("approval completion boundary (background owns add→select)", () => {
   it("models CommitAdd then Select before external resolve", async () => {
     const events: string[] = [];

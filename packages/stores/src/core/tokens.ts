@@ -14,15 +14,19 @@ import { InteractionStore } from "./interaction";
 import { toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import {
-  assertSuggestedTokenApproveIdentity,
-  assertSuggestedTokenRejectIdentity,
-} from "./suggested-token-identity";
+  resolveSuggestedTokenApprove,
+  resolveSuggestedTokenReject,
+} from "./suggested-token-actions";
 
 export {
   assertSuggestedTokenApproveIdentity,
   assertSuggestedTokenRejectIdentity,
 } from "./suggested-token-identity";
 export type { SuggestedTokenWaitingData } from "./suggested-token-identity";
+export {
+  resolveSuggestedTokenApprove,
+  resolveSuggestedTokenReject,
+} from "./suggested-token-actions";
 
 export class TokensStoreInner {
   @observable.ref
@@ -160,8 +164,10 @@ export class TokensStore<
     appCurrency: AppCurrency,
     identity: { interactionId: string; chainId: string }
   ) {
-    const data = this.waitingSuggestedToken;
-    assertSuggestedTokenApproveIdentity(data, identity);
+    const data = resolveSuggestedTokenApprove(
+      this.waitingSuggestedToken,
+      identity
+    );
 
     yield this.interactionStore.approve(
       SuggestTokenMsg.type(),
@@ -174,8 +180,10 @@ export class TokensStore<
 
   @flow
   *rejectSuggestedToken(identity: { interactionId: string }) {
-    const data = this.waitingSuggestedToken;
-    assertSuggestedTokenRejectIdentity(data, identity);
+    const data = resolveSuggestedTokenReject(
+      this.waitingSuggestedToken,
+      identity
+    );
 
     yield this.interactionStore.reject(SuggestTokenMsg.type(), data.id);
   }
