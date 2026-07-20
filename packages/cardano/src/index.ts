@@ -47,4 +47,18 @@ export {
   resetBlockfrostRateLimitTelemetry,
   wasRateLimitedRecently,
   BLOCKFROST_RATE_LIMIT_RECENT_WINDOW_MS,
+  createRuntimeInstanceId,
+  clearCardanoRuntimeTelemetryForTests,
+  getCardanoRuntimeTelemetryActiveCount,
+  getCardanoRuntimeTelemetryDisposedCount,
+  isCardanoRuntimeTelemetryDebugEnabled,
+  markCardanoRuntimeAttached,
+  markCardanoRuntimeDetached,
+  markCardanoRuntimeDisposed,
+  recordCardanoRuntimeLifecycle,
+} from "./wallet/lib/blockfrost-request-telemetry";
+export type {
+  CardanoRuntimeCreatedBy,
+  CardanoRuntimeLifecycleEvent,
+  CardanoRuntimeTelemetryMeta,
 } from "./wallet/lib/blockfrost-request-telemetry";

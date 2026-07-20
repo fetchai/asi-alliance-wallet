@@ -2187,7 +2187,14 @@ export class KeyRing {
    * with empty address/pubKey (`cardano_unsupported` / `cardano_derivation_failed`).
    */
   public async getKeysForCardano(
-    chainId: string
+    chainId: string,
+    telemetry?: {
+      selectedChainId?: string;
+      runtimeGeneration?: number;
+      ownerSwitchGeneration?: number;
+      getOwnerSwitchGeneration?: () => number | undefined;
+      getSelectedChainId?: () => string | undefined;
+    }
   ): Promise<(Key & { name: string })[]> {
     if (!this.password) {
       throw new Error("Keyring is locked");
@@ -2305,11 +2312,23 @@ export class KeyRing {
       if (shouldTryCardano) {
         const svc = new CardanoService();
         try {
+          const selectedChainId =
+            telemetry?.getSelectedChainId?.() ?? telemetry?.selectedChainId;
           await svc.restoreFromKeyStore(
             keyStore as any,
             this.password,
             this.crypto,
-            chainId
+            chainId,
+            {
+              runtimeGeneration: telemetry?.runtimeGeneration,
+              ownerSwitchGeneration: telemetry?.ownerSwitchGeneration,
+              getOwnerSwitchGeneration: telemetry?.getOwnerSwitchGeneration,
+              selectedChainIdAtCreate: selectedChainId,
+              getSelectedChainId:
+                telemetry?.getSelectedChainId ??
+                (() => telemetry?.selectedChainId),
+              createdBy: "listAccounts",
+            }
           );
           const key = await svc.getKey(chainId);
           this.cardanoKeyCache.set(keyId, {

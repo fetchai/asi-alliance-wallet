@@ -124,7 +124,21 @@ export class CardanoService {
     store: KeyStore,
     password: string,
     crypto?: any,
-    chainId?: string
+    chainId?: string,
+    runtimeMeta?: {
+      runtimeGeneration?: number;
+      ownerSwitchGeneration?: number;
+      getOwnerSwitchGeneration?: () => number | undefined;
+      selectedChainIdAtCreate?: string;
+      getSelectedChainId?: () => string | undefined;
+      createdBy?:
+        | "getKey"
+        | "networkSwitch"
+        | "syncStatus"
+        | "listAccounts"
+        | "restore"
+        | "unknown";
+    }
   ): Promise<void> {
     if (!this.keyRing) {
       this.keyRing = new CardanoKeyRing();
@@ -147,7 +161,15 @@ export class CardanoService {
         password,
         decryptFn,
         chainId,
-        resolveBlockfrostConfig ? { resolveBlockfrostConfig } : undefined
+        {
+          ...(resolveBlockfrostConfig ? { resolveBlockfrostConfig } : {}),
+          runtimeGeneration: runtimeMeta?.runtimeGeneration,
+          ownerSwitchGeneration: runtimeMeta?.ownerSwitchGeneration,
+          getOwnerSwitchGeneration: runtimeMeta?.getOwnerSwitchGeneration,
+          selectedChainIdAtCreate: runtimeMeta?.selectedChainIdAtCreate,
+          getSelectedChainId: runtimeMeta?.getSelectedChainId,
+          createdBy: runtimeMeta?.createdBy,
+        }
       );
 
       await this.waitForKeyAgentReady(restoringKeyRing);

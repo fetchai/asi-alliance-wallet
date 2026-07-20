@@ -44,6 +44,8 @@ export class ChainsService {
 
   protected cachedChainInfos: ChainInfoWithCoreTypes[] | undefined;
   protected selectedChainId: string | undefined;
+  /** Bumped on every committed selected-chain change; for Cardano runtime ownership/telemetry. */
+  private switchGeneration = 0;
 
   protected chainUpdaterService!: ChainUpdaterService;
   protected interactionService!: InteractionService;
@@ -650,9 +652,19 @@ export class ChainsService {
     this.onNetworkSwitchHandlers.push(handler);
   }
 
+  getSwitchGeneration(): number {
+    return this.switchGeneration;
+  }
+
+  /** Sync peek of in-memory selected chain (may be undefined before first resolve). */
+  peekSelectedChainId(): string | undefined {
+    return this.selectedChainId;
+  }
+
   async setSelectedChain(chainId: string) {
     if (this.selectedChainId !== chainId) {
       const oldChainId = this.selectedChainId;
+      this.switchGeneration += 1;
       this.selectedChainId = chainId;
       try {
         // Complete critical network switch handlers before notifying UI.

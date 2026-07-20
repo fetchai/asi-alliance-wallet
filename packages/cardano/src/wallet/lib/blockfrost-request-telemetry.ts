@@ -7,6 +7,30 @@ import {
 
 const SLOW_REQUEST_MS = 1000;
 const MAX_FAILURES_TO_KEEP = 50;
+const MAX_RECENT_REQUESTS_TO_KEEP = 300;
+/** Bounded ring of disposed runtimes (dev/test diagnosis; prod uses same bound). */
+const MAX_DISPOSED_RUNTIMES_TO_KEEP = 20;
+/** Terminal disposed records older than this are pruned on access. */
+const DISPOSED_RUNTIME_TTL_MS = 5 * 60 * 1000;
+
+export type CardanoRuntimeCreatedBy =
+  | "getKey"
+  | "networkSwitch"
+  | "syncStatus"
+  | "listAccounts"
+  | "restore"
+  | "unknown";
+
+export type CardanoRuntimeLifecycleEvent =
+  | "manager.create.started"
+  | "manager.create.completed"
+  | "manager.attached"
+  | "manager.replaced"
+  | "manager.detached"
+  | "manager.dispose.started"
+  | "manager.dispose.completed"
+  | "blockfrost.request"
+  | "blockfrost.request_after_dispose";
 
 type RequestKind =
   | "address_discovery"
@@ -64,20 +88,42 @@ interface RequestRecord {
   timestamp: number;
 }
 
-interface AggregatedStats {
+export interface AggregatedStats {
+  attached?: boolean;
   byCallerTag: Record<string, StatsBucket>;
   byEndpoint: Record<string, StatsBucket>;
   byKind: Record<RequestKind, StatsBucket>;
   bySourceTag: Record<string, StatsBucket>;
+  chainId?: string;
   chainName: string;
+  createdBy?: CardanoRuntimeCreatedBy;
+  disposed?: boolean;
   failures: FailureRecord[];
+  ownerSwitchGeneration?: number;
   recentRequests: RequestRecord[];
+  registryKey?: string;
+  runtimeGeneration?: number;
+  runtimeInstanceId?: string;
+  selectedChainIdAtCreate?: string;
   startedAt: number;
   totals: StatsBucket;
 }
 
+export interface CardanoRuntimeTelemetryMeta {
+  chainId?: string;
+  chainName: string;
+  createdBy?: CardanoRuntimeCreatedBy;
+  getSelectedChainId?: () => string | undefined;
+  ownerSwitchGeneration?: number;
+  runtimeGeneration?: number;
+  runtimeInstanceId: string;
+  selectedChainIdAtCreate?: string;
+}
+
 interface TelemetryGlobalApi {
+  getActiveRuntimes: () => AggregatedStats[];
   getAllSnapshots: () => Record<string, AggregatedStats>;
+  getDisposedRuntimes: () => AggregatedStats[];
   getRequestCountsByType: () => Record<string, Record<RequestKind, number>>;
   captureBaseline: (label: string) => Record<string, AggregatedStats>;
   getBaselines: () => Record<string, Record<string, AggregatedStats>>;
@@ -85,6 +131,36 @@ interface TelemetryGlobalApi {
   printRequestCountsByType: () => Record<string, Record<RequestKind, number>>;
   reset: () => void;
 }
+
+interface TelemetryCollector {
+  getSnapshot: () => AggregatedStats;
+  markAttached: () => void;
+  markDetached: () => void;
+  markDisposed: () => void;
+  reset: () => void;
+  setLifecycleFlags: (flags: { attached: boolean; disposed: boolean }) => void;
+}
+
+type RuntimeTelemetryEntry = {
+  attached: boolean;
+  chainId?: string;
+  chainName: string;
+  collector: TelemetryCollector;
+  createdBy?: CardanoRuntimeCreatedBy;
+  disposed: boolean;
+  disposedAt?: number;
+  getSelectedChainId?: () => string | undefined;
+  ownerSwitchGeneration?: number;
+  registryKey: string;
+  runtimeGeneration?: number;
+  runtimeInstanceId: string;
+  selectedChainIdAtCreate?: string;
+};
+
+type TelemetryStore = {
+  active: Map<string, RuntimeTelemetryEntry>;
+  disposed: RuntimeTelemetryEntry[];
+};
 
 const createBucket = (): StatsBucket => ({
   avgMs: 0,
@@ -104,10 +180,10 @@ const updateBucket = (bucket: StatsBucket, ok: boolean, ms: number) => {
   else bucket.errorCount += 1;
 };
 
-const MAX_RECENT_REQUESTS_TO_KEEP = 300;
 const toStatsRecord = (
   map: Map<string, StatsBucket>
 ): Record<string, StatsBucket> => Object.fromEntries(map.entries());
+
 const toKindCounts = (
   byKind: Record<RequestKind, StatsBucket>
 ): Record<RequestKind, number> => ({
@@ -179,20 +255,40 @@ const getCallerTag = (): string => {
   return "unknown";
 };
 
-const globalKey = "__cardanoBlockfrostTelemetryRegistry";
+const storeGlobalKey = "__cardanoBlockfrostTelemetryStore";
 const baselineGlobalKey = "__cardanoBlockfrostTelemetryBaselines";
+const apiGlobalKey = "__cardanoBlockfrostTelemetry";
 
-interface TelemetryCollector {
-  getSnapshot: () => AggregatedStats;
-  reset: () => void;
-}
-
-const getRegistry = (): Map<string, TelemetryCollector> => {
-  const globalScope = globalThis as Record<string, unknown>;
-  if (!globalScope[globalKey]) {
-    globalScope[globalKey] = new Map<string, TelemetryCollector>();
+/** Dev/test default on; production requires CARDANO_RUNTIME_TELEMETRY=1. */
+export const isCardanoRuntimeTelemetryDebugEnabled = (): boolean => {
+  if (process.env["CARDANO_RUNTIME_TELEMETRY"] === "1") {
+    return true;
   }
-  return globalScope[globalKey] as Map<string, TelemetryCollector>;
+  if (process.env["CARDANO_RUNTIME_TELEMETRY"] === "0") {
+    return false;
+  }
+  return process.env["NODE_ENV"] !== "production";
+};
+
+export const createRuntimeInstanceId = (): string =>
+  `cad_rt_${Date.now().toString(36)}_${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+
+export const toRuntimeRegistryKey = (
+  chainName: string,
+  runtimeInstanceId: string
+): string => `${chainName}::${runtimeInstanceId}`;
+
+const getStore = (): TelemetryStore => {
+  const globalScope = globalThis as Record<string, unknown>;
+  if (!globalScope[storeGlobalKey]) {
+    globalScope[storeGlobalKey] = {
+      active: new Map<string, RuntimeTelemetryEntry>(),
+      disposed: [],
+    } satisfies TelemetryStore;
+  }
+  return globalScope[storeGlobalKey] as TelemetryStore;
 };
 
 const getBaselinesStore = (): Map<string, Record<string, AggregatedStats>> => {
@@ -209,19 +305,187 @@ const getBaselinesStore = (): Map<string, Record<string, AggregatedStats>> => {
   >;
 };
 
+const pruneDisposed = (store: TelemetryStore, now = Date.now()): void => {
+  store.disposed = store.disposed.filter(
+    (entry) =>
+      entry.disposedAt == null ||
+      now - entry.disposedAt <= DISPOSED_RUNTIME_TTL_MS
+  );
+  while (store.disposed.length > MAX_DISPOSED_RUNTIMES_TO_KEEP) {
+    store.disposed.shift();
+  }
+};
+
+const emitLifecycle = (
+  event: CardanoRuntimeLifecycleEvent,
+  payload: Record<string, unknown>,
+  logger?: Logger
+) => {
+  if (!isCardanoRuntimeTelemetryDebugEnabled()) {
+    return;
+  }
+  const log = logger?.debug?.bind(logger) ?? console.debug;
+  log(`[Cardano runtime telemetry] ${event}`, payload);
+};
+
 // Telemetry snapshots are JSON-only by design (no BigInt/Map/Date/functions).
 const cloneSnapshot = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value)) as T;
+
+const listEntriesForChain = (chainName: string): RuntimeTelemetryEntry[] => {
+  const store = getStore();
+  pruneDisposed(store);
+  const matches = (entry: RuntimeTelemetryEntry) =>
+    entry.chainName === chainName;
+  return [
+    ...[...store.active.values()].filter(matches),
+    ...store.disposed.filter(matches),
+  ];
+};
+
+const moveToDisposed = (entry: RuntimeTelemetryEntry): void => {
+  const store = getStore();
+  store.active.delete(entry.registryKey);
+  entry.disposed = true;
+  entry.attached = false;
+  entry.disposedAt = Date.now();
+  entry.collector.setLifecycleFlags({ attached: false, disposed: true });
+  store.disposed.push(entry);
+  pruneDisposed(store);
+};
+
+export const recordCardanoRuntimeLifecycle = (
+  event: CardanoRuntimeLifecycleEvent,
+  payload: {
+    chainId?: string;
+    chainName?: string;
+    createdBy?: CardanoRuntimeCreatedBy;
+    logger?: Logger;
+    ownerSwitchGeneration?: number;
+    runtimeGeneration?: number;
+    runtimeInstanceId: string;
+    selectedChainId?: string;
+  }
+): void => {
+  emitLifecycle(
+    event,
+    {
+      chainId: payload.chainId,
+      chainName: payload.chainName,
+      createdBy: payload.createdBy,
+      ownerSwitchGeneration: payload.ownerSwitchGeneration,
+      runtimeGeneration: payload.runtimeGeneration,
+      runtimeInstanceId: payload.runtimeInstanceId,
+      selectedChainId: payload.selectedChainId,
+    },
+    payload.logger
+  );
+};
+
+export const markCardanoRuntimeAttached = (
+  runtimeInstanceId: string,
+  options?: { logger?: Logger; replacedInstanceId?: string }
+): void => {
+  const store = getStore();
+  for (const entry of store.active.values()) {
+    if (entry.runtimeInstanceId !== runtimeInstanceId) {
+      continue;
+    }
+    entry.attached = true;
+    entry.collector.setLifecycleFlags({
+      attached: true,
+      disposed: entry.disposed,
+    });
+    if (options?.replacedInstanceId) {
+      recordCardanoRuntimeLifecycle("manager.replaced", {
+        logger: options?.logger,
+        runtimeInstanceId,
+        chainName: entry.chainName,
+        chainId: entry.chainId,
+      });
+    }
+    recordCardanoRuntimeLifecycle("manager.attached", {
+      logger: options?.logger,
+      runtimeInstanceId,
+      chainName: entry.chainName,
+      chainId: entry.chainId,
+      createdBy: entry.createdBy,
+      runtimeGeneration: entry.runtimeGeneration,
+      ownerSwitchGeneration: entry.ownerSwitchGeneration,
+    });
+    return;
+  }
+};
+
+export const markCardanoRuntimeDetached = (
+  runtimeInstanceId: string,
+  options?: { logger?: Logger }
+): void => {
+  const store = getStore();
+  for (const entry of store.active.values()) {
+    if (entry.runtimeInstanceId !== runtimeInstanceId) {
+      continue;
+    }
+    entry.attached = false;
+    entry.collector.setLifecycleFlags({
+      attached: false,
+      disposed: entry.disposed,
+    });
+    recordCardanoRuntimeLifecycle("manager.detached", {
+      logger: options?.logger,
+      runtimeInstanceId,
+      chainName: entry.chainName,
+      chainId: entry.chainId,
+    });
+    return;
+  }
+};
+
+export const markCardanoRuntimeDisposed = (
+  runtimeInstanceId: string,
+  options?: { logger?: Logger }
+): void => {
+  const store = getStore();
+  const entry = [...store.active.values()].find(
+    (item) => item.runtimeInstanceId === runtimeInstanceId
+  );
+  if (!entry) {
+    return;
+  }
+  recordCardanoRuntimeLifecycle("manager.dispose.started", {
+    logger: options?.logger,
+    runtimeInstanceId,
+    chainName: entry.chainName,
+    chainId: entry.chainId,
+  });
+  moveToDisposed(entry);
+  recordCardanoRuntimeLifecycle("manager.dispose.completed", {
+    logger: options?.logger,
+    runtimeInstanceId,
+    chainName: entry.chainName,
+    chainId: entry.chainId,
+  });
+};
 
 export const installBlockfrostRequestTelemetry = ({
   blockfrostClient,
   chainName,
   logger,
+  runtimeInstanceId: runtimeInstanceIdInput,
+  runtimeGeneration,
+  ownerSwitchGeneration,
+  chainId,
+  createdBy,
+  selectedChainIdAtCreate,
+  getSelectedChainId,
 }: {
   blockfrostClient: BlockfrostClient;
   chainName: string;
   logger: Logger;
-}) => {
+} & Partial<Omit<CardanoRuntimeTelemetryMeta, "chainName">>) => {
+  const runtimeInstanceId = runtimeInstanceIdInput ?? createRuntimeInstanceId();
+  const registryKey = toRuntimeRegistryKey(chainName, runtimeInstanceId);
+
   const clientWithPatchedRequest = blockfrostClient as BlockfrostClient & {
     __telemetryPatched?: boolean;
     __telemetryRequest?: <T>(
@@ -230,10 +494,15 @@ export const installBlockfrostRequestTelemetry = ({
       ...args: unknown[]
     ) => Promise<T>;
     __telemetrySnapshot?: () => AggregatedStats;
+    __telemetryRuntimeInstanceId?: string;
     request: <T>(endpoint: string, ...args: unknown[]) => Promise<T>;
   };
-  if (clientWithPatchedRequest.__telemetryPatched) return;
+  if (clientWithPatchedRequest.__telemetryPatched) {
+    return runtimeInstanceId;
+  }
 
+  let attached = false;
+  let disposed = false;
   let startedAt = Date.now();
   let totals = createBucket();
   let byEndpoint = new Map<string, StatsBucket>();
@@ -257,6 +526,37 @@ export const installBlockfrostRequestTelemetry = ({
     }
   };
 
+  const buildSnapshot = (): AggregatedStats => ({
+    attached,
+    byCallerTag: toStatsRecord(byCallerTag),
+    byEndpoint: toStatsRecord(byEndpoint),
+    byKind: {
+      address_discovery: byKind.get("address_discovery") || createBucket(),
+      chain_history: byKind.get("chain_history") || createBucket(),
+      network: byKind.get("network") || createBucket(),
+      pool: byKind.get("pool") || createBucket(),
+      rewards: byKind.get("rewards") || createBucket(),
+      submit_tx: byKind.get("submit_tx") || createBucket(),
+      tx: byKind.get("tx") || createBucket(),
+      utxo: byKind.get("utxo") || createBucket(),
+      other: byKind.get("other") || createBucket(),
+    },
+    bySourceTag: toStatsRecord(bySourceTag),
+    chainId,
+    chainName,
+    createdBy,
+    disposed,
+    failures: [...failures],
+    ownerSwitchGeneration,
+    recentRequests: [...recentRequests],
+    registryKey,
+    runtimeGeneration,
+    runtimeInstanceId,
+    selectedChainIdAtCreate,
+    startedAt,
+    totals: { ...totals },
+  });
+
   clientWithPatchedRequest.__telemetryRequest = async <T>(
     endpoint: string,
     sourceTag: string,
@@ -266,6 +566,32 @@ export const installBlockfrostRequestTelemetry = ({
     const kind = getRequestKind(endpoint);
     const normalizedEndpoint = normalizeEndpoint(endpoint);
     const callerTag = getCallerTag();
+    const selectedChainIdAtRequest = getSelectedChainId?.();
+    const requestPayloadBase = {
+      callerTag,
+      chainId,
+      chainName,
+      createdBy,
+      endpoint: normalizedEndpoint,
+      kind,
+      ownerSwitchGeneration,
+      runtimeGeneration,
+      runtimeInstanceId,
+      selectedChainIdAtCreate,
+      selectedChainIdAtRequest,
+      sourceTag,
+    };
+
+    if (disposed) {
+      emitLifecycle(
+        "blockfrost.request_after_dispose",
+        requestPayloadBase,
+        logger
+      );
+    } else {
+      emitLifecycle("blockfrost.request", requestPayloadBase, logger);
+    }
+
     try {
       const result = await rawRequest<T>(endpoint, ...args);
       const ms = Date.now() - started;
@@ -292,14 +618,10 @@ export const installBlockfrostRequestTelemetry = ({
         status: "ok",
       });
 
-      if (ms >= SLOW_REQUEST_MS) {
+      if (ms >= SLOW_REQUEST_MS && isCardanoRuntimeTelemetryDebugEnabled()) {
         logger.debug("[Blockfrost telemetry] slow request", {
-          callerTag,
-          chainName,
-          endpoint: normalizedEndpoint,
-          kind,
+          ...requestPayloadBase,
           ms,
-          sourceTag,
         });
       }
       return result;
@@ -341,12 +663,8 @@ export const installBlockfrostRequestTelemetry = ({
       });
 
       logger.warn("[Blockfrost telemetry] request failed", {
-        callerTag,
-        chainName,
-        endpoint: normalizedEndpoint,
-        kind,
+        ...requestPayloadBase,
         ms,
-        sourceTag,
         status: failureStatus,
       });
       throw error;
@@ -362,32 +680,26 @@ export const installBlockfrostRequestTelemetry = ({
       ...args
     );
 
-  clientWithPatchedRequest.__telemetrySnapshot = () => ({
-    byCallerTag: toStatsRecord(byCallerTag),
-    byEndpoint: toStatsRecord(byEndpoint),
-    byKind: {
-      address_discovery: byKind.get("address_discovery") || createBucket(),
-      chain_history: byKind.get("chain_history") || createBucket(),
-      network: byKind.get("network") || createBucket(),
-      pool: byKind.get("pool") || createBucket(),
-      rewards: byKind.get("rewards") || createBucket(),
-      submit_tx: byKind.get("submit_tx") || createBucket(),
-      tx: byKind.get("tx") || createBucket(),
-      utxo: byKind.get("utxo") || createBucket(),
-      other: byKind.get("other") || createBucket(),
-    },
-    bySourceTag: toStatsRecord(bySourceTag),
-    chainName,
-    failures: [...failures],
-    recentRequests: [...recentRequests],
-    startedAt,
-    totals: { ...totals },
-  });
+  clientWithPatchedRequest.__telemetrySnapshot = () => buildSnapshot();
   clientWithPatchedRequest.__telemetryPatched = true;
+  clientWithPatchedRequest.__telemetryRuntimeInstanceId = runtimeInstanceId;
 
-  const registry = getRegistry();
   const collector: TelemetryCollector = {
-    getSnapshot: () => clientWithPatchedRequest.__telemetrySnapshot!(),
+    getSnapshot: () => buildSnapshot(),
+    markAttached: () => {
+      attached = true;
+    },
+    markDetached: () => {
+      attached = false;
+    },
+    markDisposed: () => {
+      disposed = true;
+      attached = false;
+    },
+    setLifecycleFlags: (flags) => {
+      attached = flags.attached;
+      disposed = flags.disposed;
+    },
     reset: () => {
       startedAt = Date.now();
       totals = createBucket();
@@ -399,25 +711,59 @@ export const installBlockfrostRequestTelemetry = ({
       recentRequests = [];
     },
   };
-  registry.set(chainName, collector);
+
+  const store = getStore();
+  pruneDisposed(store);
+  const entry: RuntimeTelemetryEntry = {
+    attached: false,
+    chainId,
+    chainName,
+    collector,
+    createdBy,
+    disposed: false,
+    getSelectedChainId,
+    ownerSwitchGeneration,
+    registryKey,
+    runtimeGeneration,
+    runtimeInstanceId,
+    selectedChainIdAtCreate,
+  };
+  store.active.set(registryKey, entry);
+
   const globalScope = globalThis as Record<string, unknown>;
   const baselinesStore = getBaselinesStore();
-  const getAllSnapshots = () =>
-    Object.fromEntries(
-      [...registry.entries()].map(([name, telemetryCollector]) => [
-        name,
-        telemetryCollector.getSnapshot(),
-      ])
-    );
+  const getAllSnapshots = () => {
+    pruneDisposed(store);
+    const snapshots: Record<string, AggregatedStats> = {};
+    for (const runtimeEntry of store.active.values()) {
+      snapshots[runtimeEntry.registryKey] =
+        runtimeEntry.collector.getSnapshot();
+    }
+    for (const runtimeEntry of store.disposed) {
+      snapshots[runtimeEntry.registryKey] =
+        runtimeEntry.collector.getSnapshot();
+    }
+    return snapshots;
+  };
   const getRequestCountsByType = () =>
     Object.fromEntries(
-      [...registry.entries()].map(([name, telemetryCollector]) => {
-        const snapshot = telemetryCollector.getSnapshot();
-        return [name, toKindCounts(snapshot.byKind)];
-      })
+      Object.entries(getAllSnapshots()).map(([key, snapshot]) => [
+        key,
+        toKindCounts(snapshot.byKind),
+      ])
     );
-  if (!globalScope["__cardanoBlockfrostTelemetry"]) {
+  if (!globalScope[apiGlobalKey]) {
     const telemetryGlobalApi: TelemetryGlobalApi = {
+      getActiveRuntimes: () => {
+        pruneDisposed(getStore());
+        return [...getStore().active.values()].map((item) =>
+          item.collector.getSnapshot()
+        );
+      },
+      getDisposedRuntimes: () => {
+        pruneDisposed(getStore());
+        return getStore().disposed.map((item) => item.collector.getSnapshot());
+      },
       getAllSnapshots: () => getAllSnapshots(),
       getRequestCountsByType: () => getRequestCountsByType(),
       captureBaseline: (label: string) => {
@@ -427,10 +773,12 @@ export const installBlockfrostRequestTelemetry = ({
         }
         const snapshot = cloneSnapshot(getAllSnapshots());
         baselinesStore.set(key, snapshot);
-        logger.debug("[Blockfrost telemetry] baseline captured", {
-          label: key,
-          chains: Object.keys(snapshot),
-        });
+        if (isCardanoRuntimeTelemetryDebugEnabled()) {
+          logger.debug("[Blockfrost telemetry] baseline captured", {
+            label: key,
+            runtimes: Object.keys(snapshot),
+          });
+        }
         return snapshot;
       },
       getBaselines: () =>
@@ -446,13 +794,19 @@ export const installBlockfrostRequestTelemetry = ({
         return data;
       },
       reset: () => {
-        for (const telemetryCollector of registry.values()) {
-          telemetryCollector.reset();
+        const current = getStore();
+        for (const runtimeEntry of current.active.values()) {
+          runtimeEntry.collector.reset();
+        }
+        for (const runtimeEntry of current.disposed) {
+          runtimeEntry.collector.reset();
         }
       },
     };
-    globalScope["__cardanoBlockfrostTelemetry"] = telemetryGlobalApi;
+    globalScope[apiGlobalKey] = telemetryGlobalApi;
   }
+
+  return runtimeInstanceId;
 };
 
 export const BLOCKFROST_RATE_LIMIT_RECENT_WINDOW_MS = 15 * 60 * 1000;
@@ -469,22 +823,38 @@ export const wasRateLimitedRecently = (
   chainName: string,
   windowMs: number = BLOCKFROST_RATE_LIMIT_RECENT_WINDOW_MS
 ): boolean => {
-  const collector = getRegistry().get(chainName);
-  if (!collector) {
-    return false;
-  }
-
   const cutoff = Date.now() - windowMs;
-  return collector
-    .getSnapshot()
-    .failures.some(
-      (failure) =>
-        failure.timestamp >= cutoff && isRateLimitFailureRecord(failure)
-    );
+  return listEntriesForChain(chainName).some((entry) =>
+    entry.collector
+      .getSnapshot()
+      .failures.some(
+        (failure) =>
+          failure.timestamp >= cutoff && isRateLimitFailureRecord(failure)
+      )
+  );
 };
 
 export const resetBlockfrostRateLimitTelemetry = (chainName: string): void => {
-  getRegistry().get(chainName)?.reset();
+  for (const entry of listEntriesForChain(chainName)) {
+    entry.collector.reset();
+  }
+};
+
+/** Test helper: wipe active + disposed runtime telemetry store. */
+export const clearCardanoRuntimeTelemetryForTests = (): void => {
+  const globalScope = globalThis as Record<string, unknown>;
+  delete globalScope[storeGlobalKey];
+  delete globalScope[apiGlobalKey];
+};
+
+export const getCardanoRuntimeTelemetryActiveCount = (): number => {
+  pruneDisposed(getStore());
+  return getStore().active.size;
+};
+
+export const getCardanoRuntimeTelemetryDisposedCount = (): number => {
+  pruneDisposed(getStore());
+  return getStore().disposed.length;
 };
 
 export const createTelemetryTaggedClient = (

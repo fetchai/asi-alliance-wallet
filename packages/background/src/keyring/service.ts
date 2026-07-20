@@ -230,7 +230,18 @@ export class KeyRingService {
                 ks,
                 this.keyRing.currentPassword,
                 this.crypto,
-                oldChainId
+                oldChainId,
+                {
+                  runtimeGeneration: this.cardanoRuntimeGeneration,
+                  ownerSwitchGeneration:
+                    this.chainsService.getSwitchGeneration?.() ?? 0,
+                  selectedChainIdAtCreate: oldChainId,
+                  getSelectedChainId: () =>
+                    this.chainsService.peekSelectedChainId?.(),
+                  getOwnerSwitchGeneration: () =>
+                    this.chainsService.getSwitchGeneration?.() ?? 0,
+                  createdBy: "restore",
+                }
               );
             }
           }
@@ -276,7 +287,15 @@ export class KeyRingService {
     const isCardano = chainInfo.features?.includes("cardano") ?? false;
     const isEvm = chainInfo.features?.includes("evm") ?? false;
     const keys = isCardano
-      ? await this.keyRing.getKeysForCardano(chainId)
+      ? await this.keyRing.getKeysForCardano(chainId, {
+          selectedChainId: currentChainId,
+          runtimeGeneration: this.cardanoRuntimeGeneration,
+          ownerSwitchGeneration:
+            this.chainsService.getSwitchGeneration?.() ?? 0,
+          getOwnerSwitchGeneration: () =>
+            this.chainsService.getSwitchGeneration?.() ?? 0,
+          getSelectedChainId: () => this.chainsService.peekSelectedChainId?.(),
+        })
       : await this.keyRing.getKeys(chainId, isEvm);
     await this.ensureAndRepairAddressCaches(chainId, keys, {
       isCardano,
@@ -561,7 +580,18 @@ export class KeyRingService {
             ks,
             this.keyRing.currentPassword,
             this.crypto,
-            currentChainId
+            currentChainId,
+            {
+              runtimeGeneration: this.cardanoRuntimeGeneration,
+              ownerSwitchGeneration:
+                this.chainsService.getSwitchGeneration?.() ?? 0,
+              selectedChainIdAtCreate: currentChainId,
+              getSelectedChainId: () =>
+                this.chainsService.peekSelectedChainId?.(),
+              getOwnerSwitchGeneration: () =>
+                this.chainsService.getSwitchGeneration?.() ?? 0,
+              createdBy: "restore",
+            }
           );
         } else {
           // Keep Cardano detached when active chain is non-Cardano.
@@ -739,12 +769,23 @@ export class KeyRingService {
     chainId: string
   ): Promise<void> {
     const generation = this.cardanoRuntimeGeneration;
+    const ownerSwitchGeneration =
+      this.chainsService.getSwitchGeneration?.() ?? 0;
     try {
       await this.cardanoService.restoreFromKeyStore(
         ks,
         this.keyRing.currentPassword,
         this.crypto,
-        chainId
+        chainId,
+        {
+          runtimeGeneration: generation,
+          ownerSwitchGeneration,
+          selectedChainIdAtCreate: chainId,
+          getSelectedChainId: () => this.chainsService.peekSelectedChainId?.(),
+          getOwnerSwitchGeneration: () =>
+            this.chainsService.getSwitchGeneration?.() ?? 0,
+          createdBy: "restore",
+        }
       );
       if (generation !== this.cardanoRuntimeGeneration) {
         throw new StaleCardanoRuntimeError();
@@ -1642,7 +1683,17 @@ Salt: ${salt}`;
     const isCardano = chainInfo.features?.includes("cardano") ?? false;
 
     if (isCardano) {
-      const keys = await this.keyRing.getKeysForCardano(chainId);
+      const selectedChainId =
+        this.chainsService.peekSelectedChainId?.() ??
+        (await this.chainsService.getSelectedChain());
+      const keys = await this.keyRing.getKeysForCardano(chainId, {
+        selectedChainId,
+        runtimeGeneration: this.cardanoRuntimeGeneration,
+        ownerSwitchGeneration: this.chainsService.getSwitchGeneration?.() ?? 0,
+        getOwnerSwitchGeneration: () =>
+          this.chainsService.getSwitchGeneration?.() ?? 0,
+        getSelectedChainId: () => this.chainsService.peekSelectedChainId?.(),
+      });
       // Skip ensureAndRepairAddressCaches for performance - getKeysForCardano() already handles caching
       return keys;
     }

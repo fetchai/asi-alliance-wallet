@@ -3,6 +3,7 @@ import { CardanoWalletManager } from "./wallet-manager";
 import { makeObservable, observable } from "mobx";
 import { KeyCurve } from "@keplr-wallet/crypto";
 import {
+  getAsiCardanoChainIdFromNetwork,
   getCardanoNetworkFromChainId,
   getCardanoChainIdFromNetwork,
 } from "./utils/network";
@@ -11,10 +12,19 @@ import {
   type BlockfrostConfig,
 } from "./adapters/env-adapter";
 import type { CardanoNetwork } from "./utils/network";
+import type { CardanoRuntimeCreatedBy } from "./wallet/lib/blockfrost-request-telemetry";
 
 export type ResolveBlockfrostConfig = (
   network: CardanoNetwork
 ) => Promise<BlockfrostConfig | null>;
+
+/** Persisted across restore → getKey network rebuild so identity is not dropped. */
+export type CardanoKeyRingRuntimeOwnership = {
+  createdBy?: CardanoRuntimeCreatedBy;
+  getOwnerSwitchGeneration?: () => number | undefined;
+  getSelectedChainId?: () => string | undefined;
+  runtimeGeneration?: number;
+};
 
 // Definitions of constants and interfaces specific to Cardano
 export const CARDANO_PURPOSE = 1852;
@@ -63,6 +73,7 @@ export class CardanoKeyRing {
   private passphrase: Uint8Array = new Uint8Array();
   private currentNetwork: CardanoNetwork | undefined;
   private resolveBlockfrostConfig?: ResolveBlockfrostConfig;
+  private runtimeOwnership?: CardanoKeyRingRuntimeOwnership;
 
   private resolveNetworkOrThrow(chainId?: string): CardanoNetwork {
     if (!chainId) {
@@ -117,7 +128,15 @@ export class CardanoKeyRing {
     password: string,
     decryptFn?: (keyStore: KeyStore, password: string) => Promise<Uint8Array>,
     chainId?: string,
-    options?: { resolveBlockfrostConfig?: ResolveBlockfrostConfig }
+    options?: {
+      resolveBlockfrostConfig?: ResolveBlockfrostConfig;
+      runtimeGeneration?: number;
+      ownerSwitchGeneration?: number;
+      getOwnerSwitchGeneration?: () => number | undefined;
+      selectedChainIdAtCreate?: string;
+      getSelectedChainId?: () => string | undefined;
+      createdBy?: CardanoRuntimeCreatedBy;
+    }
   ): Promise<void> {
     const accountIndex = keyStore.bip44HDPath?.account ?? 0;
 
@@ -147,8 +166,25 @@ export class CardanoKeyRing {
     // Keep Cardano derivation independent from extension unlock password.
     this.passphrase = new Uint8Array();
     this.resolveBlockfrostConfig = options?.resolveBlockfrostConfig;
+    this.runtimeOwnership = {
+      createdBy: options?.createdBy ?? "restore",
+      runtimeGeneration: options?.runtimeGeneration,
+      getOwnerSwitchGeneration:
+        options?.getOwnerSwitchGeneration ??
+        (options?.ownerSwitchGeneration != null
+          ? () => options.ownerSwitchGeneration
+          : undefined),
+      getSelectedChainId: options?.getSelectedChainId,
+    };
 
-    await this.rebuildAgentsForNetwork(network);
+    await this.rebuildAgentsForNetwork(network, {
+      chainId: chainId ?? getAsiCardanoChainIdFromNetwork(network),
+      runtimeGeneration: options?.runtimeGeneration,
+      ownerSwitchGeneration: options?.ownerSwitchGeneration,
+      selectedChainIdAtCreate: options?.selectedChainIdAtCreate,
+      getSelectedChainId: options?.getSelectedChainId,
+      createdBy: options?.createdBy ?? "restore",
+    });
 
     logBlockfrostProviderStatus(network, {
       providerReady: this.walletManager?.getRuntimeStatus() === "ready",
@@ -193,11 +229,19 @@ export class CardanoKeyRing {
     if (this.currentNetwork === network) {
       return;
     }
-    await this.rebuildAgentsForNetwork(network);
+    await this.rebuildAgentsForNetwork(network, { chainId });
   }
 
   private async rebuildAgentsForNetwork(
-    network: CardanoNetwork
+    network: CardanoNetwork,
+    runtimeMeta?: {
+      chainId?: string;
+      runtimeGeneration?: number;
+      ownerSwitchGeneration?: number;
+      selectedChainIdAtCreate?: string;
+      getSelectedChainId?: () => string | undefined;
+      createdBy?: CardanoRuntimeCreatedBy;
+    }
   ): Promise<void> {
     if (!this.mnemonicWords) {
       throw new Error("Cardano mnemonic is not available for agent rebuild");
@@ -232,20 +276,52 @@ export class CardanoKeyRing {
     );
 
     try {
+      const previousInstanceId =
+        previousWalletManager?.getRuntimeInstanceId?.();
+      const resolvedChainId =
+        runtimeMeta?.chainId ?? getAsiCardanoChainIdFromNetwork(network);
+      const getSelectedChainId =
+        runtimeMeta?.getSelectedChainId ??
+        this.runtimeOwnership?.getSelectedChainId;
+      const runtimeGeneration =
+        runtimeMeta?.runtimeGeneration ??
+        this.runtimeOwnership?.runtimeGeneration;
+      const ownerSwitchGeneration =
+        runtimeMeta?.ownerSwitchGeneration ??
+        this.runtimeOwnership?.getOwnerSwitchGeneration?.();
+      const selectedChainIdAtCreate =
+        getSelectedChainId?.() ??
+        runtimeMeta?.selectedChainIdAtCreate ??
+        resolvedChainId;
+      const createdBy =
+        runtimeMeta?.createdBy ?? this.runtimeOwnership?.createdBy ?? "restore";
+
       const newWalletManager = await CardanoWalletManager.create({
         mnemonicWords: this.mnemonicWords,
         network,
         accountIndex: this.accountIndex,
         passphrase: this.passphrase,
         blockfrostConfig,
+        createdBy,
+        chainId: resolvedChainId,
+        runtimeGeneration,
+        ownerSwitchGeneration,
+        selectedChainIdAtCreate,
+        getSelectedChainId,
       });
 
       this.keyAgent = newKeyAgent;
       this.walletManager = newWalletManager;
       this.currentNetwork = network;
+      newWalletManager.markAttached({
+        replacedInstanceId: previousInstanceId,
+      });
 
       try {
-        previousWalletManager?.dispose?.();
+        if (previousWalletManager) {
+          previousWalletManager.markDetached?.();
+          previousWalletManager.dispose?.();
+        }
       } catch {
         console.warn(
           "[CardanoKeyRing] Failed to dispose previous CardanoWalletManager"

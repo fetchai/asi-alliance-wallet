@@ -100,7 +100,11 @@ describe("CardanoWalletManager blockfrostConfig injection", () => {
       },
       expect.anything(),
       expect.any(Boolean),
-      "preprod"
+      "preprod",
+      expect.objectContaining({
+        createdBy: "unknown",
+        runtimeInstanceId: expect.stringMatching(/^cad_rt_/),
+      })
     );
     expect(manager.getRuntimeStatus()).toBe("ready");
     expect(manager.hasWallet()).toBe(true);
@@ -151,7 +155,11 @@ describe("CardanoWalletManager blockfrostConfig injection", () => {
       },
       expect.anything(),
       expect.any(Boolean),
-      "preprod"
+      "preprod",
+      expect.objectContaining({
+        createdBy: "unknown",
+        runtimeInstanceId: expect.stringMatching(/^cad_rt_/),
+      })
     );
 
     createFullWalletSpy.mockRestore();

@@ -8,11 +8,35 @@ import {
 import type { CardanoNetwork } from "./utils/network";
 import { getBlockfrostChainNameFromNetwork } from "./utils/blockfrost-network-mapper";
 import { Cardano } from "@cardano-sdk/core";
+import {
+  createRuntimeInstanceId,
+  markCardanoRuntimeAttached,
+  markCardanoRuntimeDetached,
+  markCardanoRuntimeDisposed,
+  recordCardanoRuntimeLifecycle,
+  type CardanoRuntimeCreatedBy,
+} from "./wallet/lib/blockfrost-request-telemetry";
 
 export type CardanoRuntimeStatus =
   | "not_initialized"
   | "provider_unavailable"
   | "ready";
+
+export type CardanoWalletManagerCreateOptions = {
+  mnemonicWords: string[];
+  network: CardanoNetwork;
+  accountIndex?: number;
+  passphrase?: Uint8Array;
+  /** undefined = built-in env config; null = provider unavailable without throw */
+  blockfrostConfig?: BlockfrostConfig | null;
+  /** P0 telemetry / ownership metadata */
+  runtimeGeneration?: number;
+  ownerSwitchGeneration?: number;
+  chainId?: string;
+  createdBy?: CardanoRuntimeCreatedBy;
+  selectedChainIdAtCreate?: string;
+  getSelectedChainId?: () => string | undefined;
+};
 
 export class CardanoWalletManager {
   private wallet: any;
@@ -23,22 +47,75 @@ export class CardanoWalletManager {
   private chainHistoryProvider: any;
   private readonly cardanoStakingEnabled: boolean;
   private runtimeStatus: CardanoRuntimeStatus = "not_initialized";
+  private readonly runtimeInstanceId: string;
+  private runtimeGeneration?: number;
+  private ownerSwitchGeneration?: number;
+  private chainId?: string;
+  private createdBy?: CardanoRuntimeCreatedBy;
+  private disposed = false;
+  private attached = false;
 
   private constructor(
     wallet: any,
     keyAgent: any,
     wsProvider?: any,
     runtimeStatus: CardanoRuntimeStatus = "not_initialized",
-    cardanoStakingEnabled = false
+    cardanoStakingEnabled = false,
+    runtimeInstanceId: string = createRuntimeInstanceId()
   ) {
     this.wallet = wallet;
     this.keyAgent = keyAgent;
     this.wsProvider = wsProvider;
     this.runtimeStatus = runtimeStatus;
     this.cardanoStakingEnabled = cardanoStakingEnabled;
+    this.runtimeInstanceId = runtimeInstanceId;
     if (this.wallet) {
       this.setupWSErrorHandling();
     }
+  }
+
+  getRuntimeInstanceId(): string {
+    return this.runtimeInstanceId;
+  }
+
+  getRuntimeTelemetryMeta(): {
+    attached: boolean;
+    chainId?: string;
+    createdBy?: CardanoRuntimeCreatedBy;
+    disposed: boolean;
+    ownerSwitchGeneration?: number;
+    runtimeGeneration?: number;
+    runtimeInstanceId: string;
+  } {
+    return {
+      attached: this.attached,
+      chainId: this.chainId,
+      createdBy: this.createdBy,
+      disposed: this.disposed,
+      ownerSwitchGeneration: this.ownerSwitchGeneration,
+      runtimeGeneration: this.runtimeGeneration,
+      runtimeInstanceId: this.runtimeInstanceId,
+    };
+  }
+
+  isDisposed(): boolean {
+    return this.disposed;
+  }
+
+  isAttached(): boolean {
+    return this.attached;
+  }
+
+  markAttached(options?: { replacedInstanceId?: string }): void {
+    this.attached = true;
+    markCardanoRuntimeAttached(this.runtimeInstanceId, {
+      replacedInstanceId: options?.replacedInstanceId,
+    });
+  }
+
+  markDetached(): void {
+    this.attached = false;
+    markCardanoRuntimeDetached(this.runtimeInstanceId);
   }
 
   private setupWSErrorHandling() {
@@ -81,14 +158,26 @@ export class CardanoWalletManager {
     accountIndex = 0,
     passphrase = new Uint8Array(),
     blockfrostConfig,
-  }: {
-    mnemonicWords: string[];
-    network: CardanoNetwork;
-    accountIndex?: number;
-    passphrase?: Uint8Array;
-    /** undefined = built-in env config; null = provider unavailable without throw */
-    blockfrostConfig?: BlockfrostConfig | null;
-  }): Promise<CardanoWalletManager> {
+    runtimeGeneration,
+    ownerSwitchGeneration,
+    chainId,
+    createdBy = "unknown",
+    selectedChainIdAtCreate,
+    getSelectedChainId,
+  }: CardanoWalletManagerCreateOptions): Promise<CardanoWalletManager> {
+    const runtimeInstanceId = createRuntimeInstanceId();
+    const chainName = getBlockfrostChainNameFromNetwork(network);
+
+    recordCardanoRuntimeLifecycle("manager.create.started", {
+      runtimeInstanceId,
+      chainName,
+      chainId,
+      createdBy,
+      runtimeGeneration,
+      ownerSwitchGeneration,
+      selectedChainId: selectedChainIdAtCreate,
+    });
+
     // Create key agent
     const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
     const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
@@ -127,9 +216,23 @@ export class CardanoWalletManager {
         keyAgent,
         undefined,
         "provider_unavailable",
-        cardanoStakingEnabled
+        cardanoStakingEnabled,
+        runtimeInstanceId
       );
       manager.chainHistoryProvider = undefined;
+      manager.runtimeGeneration = runtimeGeneration;
+      manager.ownerSwitchGeneration = ownerSwitchGeneration;
+      manager.chainId = chainId;
+      manager.createdBy = createdBy;
+      recordCardanoRuntimeLifecycle("manager.create.completed", {
+        runtimeInstanceId,
+        chainName,
+        chainId,
+        createdBy,
+        runtimeGeneration,
+        ownerSwitchGeneration,
+        selectedChainId: selectedChainIdAtCreate,
+      });
       return manager;
     }
 
@@ -146,11 +249,22 @@ export class CardanoWalletManager {
         normalizedConfig,
         keyAgent,
         cardanoStakingEnabled,
-        network
+        network,
+        {
+          runtimeInstanceId,
+          runtimeGeneration,
+          ownerSwitchGeneration,
+          chainId,
+          createdBy,
+          selectedChainIdAtCreate,
+          getSelectedChainId,
+        }
       );
       wallet = created.wallet;
       chainHistoryProvider = created.providers?.chainHistoryProvider;
     } catch {
+      // createFullWallet may have registered Blockfrost telemetry before failing.
+      markCardanoRuntimeDisposed(runtimeInstanceId);
       throw new Error(
         "[CardanoWalletManager] provider_unavailable: wallet_init_failed"
       );
@@ -161,9 +275,23 @@ export class CardanoWalletManager {
       keyAgent,
       undefined,
       wallet ? "ready" : "provider_unavailable",
-      cardanoStakingEnabled
+      cardanoStakingEnabled,
+      runtimeInstanceId
     );
     manager.chainHistoryProvider = chainHistoryProvider;
+    manager.runtimeGeneration = runtimeGeneration;
+    manager.ownerSwitchGeneration = ownerSwitchGeneration;
+    manager.chainId = chainId;
+    manager.createdBy = createdBy;
+    recordCardanoRuntimeLifecycle("manager.create.completed", {
+      runtimeInstanceId,
+      chainName,
+      chainId,
+      createdBy,
+      runtimeGeneration,
+      ownerSwitchGeneration,
+      selectedChainId: selectedChainIdAtCreate,
+    });
     return manager;
   }
 
@@ -171,7 +299,16 @@ export class CardanoWalletManager {
     networkConfig: BlockfrostConfig,
     keyAgent: any,
     cardanoStakingEnabled: boolean,
-    network: CardanoNetwork
+    network: CardanoNetwork,
+    telemetry?: {
+      runtimeInstanceId: string;
+      runtimeGeneration?: number;
+      ownerSwitchGeneration?: number;
+      chainId?: string;
+      createdBy?: CardanoRuntimeCreatedBy;
+      selectedChainIdAtCreate?: string;
+      getSelectedChainId?: () => string | undefined;
+    }
   ): Promise<{ wallet: any; providers: any }> {
     // Import necessary SDK modules
     const walletModule = await import("@cardano-sdk/wallet");
@@ -202,6 +339,13 @@ export class CardanoWalletManager {
       logger: console,
       extensionLocalStorage,
       chainName,
+      runtimeInstanceId: telemetry?.runtimeInstanceId,
+      runtimeGeneration: telemetry?.runtimeGeneration,
+      ownerSwitchGeneration: telemetry?.ownerSwitchGeneration,
+      chainId: telemetry?.chainId,
+      createdBy: telemetry?.createdBy,
+      selectedChainIdAtCreate: telemetry?.selectedChainIdAtCreate,
+      getSelectedChainId: telemetry?.getSelectedChainId,
     });
 
     const { mode: walletStoresMode, stores } = this.createWalletStores(
@@ -216,6 +360,7 @@ export class CardanoWalletManager {
       cardanoStakingEnabled,
       pollInterval:
         (pollingConfig as any).interval ?? (pollingConfig as any).pollInterval,
+      runtimeInstanceId: telemetry?.runtimeInstanceId,
       walletStoresMode,
     });
     const asyncKeyAgent = KeyManagement.util.createAsyncKeyAgent(keyAgent);
@@ -408,9 +553,16 @@ export class CardanoWalletManager {
   }
 
   /**
-   * lace-style: cleanup method for proper resource management
+   * lace-style: cleanup method for proper resource management.
+   * Always attempts shutdown/close so repeated dispose stays observable for QA;
+   * telemetry dispose transition is recorded only once.
    */
   dispose() {
+    if (!this.disposed) {
+      this.disposed = true;
+      this.attached = false;
+      markCardanoRuntimeDisposed(this.runtimeInstanceId);
+    }
     try {
       if (this.wsProvider && this.wsProvider.close) {
         this.wsProvider

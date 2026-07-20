@@ -34,3 +34,10 @@ export async function getCardanoChainIdFromNetwork(network: CardanoNetwork) {
 export function isCardanoChainId(chainId: string): boolean {
   return chainId.startsWith("cardano-");
 }
+
+/** ASI extension chain id for a Cardano network (e.g. preprod → cardano-preprod). */
+export function getAsiCardanoChainIdFromNetwork(
+  network: CardanoNetwork
+): string {
+  return `cardano-${network}`;
+}

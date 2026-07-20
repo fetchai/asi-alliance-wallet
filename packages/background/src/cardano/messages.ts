@@ -196,12 +196,16 @@ export interface CardanoTelemetryStatsBucket {
 }
 
 export interface CardanoTelemetrySnapshotResponse {
-  [chainName: string]: {
+  [registryKey: string]: {
+    attached?: boolean;
     byCallerTag: Record<string, CardanoTelemetryStatsBucket>;
     byEndpoint: Record<string, CardanoTelemetryStatsBucket>;
     byKind: Record<CardanoTelemetryRequestKind, CardanoTelemetryStatsBucket>;
     bySourceTag: Record<string, CardanoTelemetryStatsBucket>;
+    chainId?: string;
     chainName: string;
+    createdBy?: string;
+    disposed?: boolean;
     failures: Array<{
       callerTag: string;
       endpoint: string;
@@ -211,6 +215,7 @@ export interface CardanoTelemetrySnapshotResponse {
       status: number | "unknown" | "ok";
       timestamp: number;
     }>;
+    ownerSwitchGeneration?: number;
     recentRequests: Array<{
       callerTag: string;
       endpoint: string;
@@ -220,6 +225,10 @@ export interface CardanoTelemetrySnapshotResponse {
       status: number | "unknown" | "ok";
       timestamp: number;
     }>;
+    registryKey?: string;
+    runtimeGeneration?: number;
+    runtimeInstanceId?: string;
+    selectedChainIdAtCreate?: string;
     startedAt: number;
     totals: CardanoTelemetryStatsBucket;
   };

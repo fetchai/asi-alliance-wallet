@@ -49,10 +49,16 @@ const makeKeyStore = (): KeyStore => ({
   crypto: {},
 });
 
-const makeManager = (runtimeStatus: "ready" | "provider_unavailable") => ({
+const makeManager = (
+  runtimeStatus: "ready" | "provider_unavailable",
+  runtimeInstanceId = "rt_test"
+) => ({
   dispose: mockDispose,
   getRuntimeStatus: () => runtimeStatus,
   hasWallet: () => runtimeStatus === "ready",
+  getRuntimeInstanceId: () => runtimeInstanceId,
+  markAttached: jest.fn(),
+  markDetached: jest.fn(),
 });
 
 describe("CardanoKeyRing blockfrost resolver", () => {
@@ -139,6 +145,61 @@ describe("CardanoKeyRing blockfrost resolver", () => {
         },
       })
     );
+  });
+
+  it("Cardano→Cardano rebuild keeps runtimeGeneration and refreshes ownerSwitchGeneration", async () => {
+    let switchGeneration = 10;
+    const getOwnerSwitchGeneration = jest.fn(() => switchGeneration);
+    const getSelectedChainId = jest.fn(() => "cardano-mainnet");
+    const resolver = jest.fn(async (network: string) => ({
+      baseUrl: `https://cardano-${network}.blockfrost.io/api/v0`,
+      projectId: `${network}-key`,
+    }));
+    const keyRing = new CardanoKeyRing();
+
+    await keyRing.restore(
+      makeKeyStore(),
+      "password",
+      undefined,
+      "cardano-preprod",
+      {
+        resolveBlockfrostConfig: resolver,
+        runtimeGeneration: 3,
+        ownerSwitchGeneration: switchGeneration,
+        getOwnerSwitchGeneration,
+        getSelectedChainId,
+        selectedChainIdAtCreate: "cardano-preprod",
+        createdBy: "restore",
+      }
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runtimeGeneration: 3,
+        ownerSwitchGeneration: 10,
+        chainId: "cardano-preprod",
+        createdBy: "restore",
+      })
+    );
+
+    mockCreate.mockClear();
+    switchGeneration = 11;
+    getSelectedChainId.mockReturnValue("cardano-mainnet");
+
+    await keyRing.getKey("cardano-mainnet");
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        network: "mainnet",
+        chainId: "cardano-mainnet",
+        runtimeGeneration: 3,
+        ownerSwitchGeneration: 11,
+        selectedChainIdAtCreate: "cardano-mainnet",
+        createdBy: "restore",
+        getSelectedChainId,
+      })
+    );
+    expect(getOwnerSwitchGeneration).toHaveBeenCalled();
   });
 
   it("without resolver passes blockfrostConfig undefined for legacy fallback", async () => {
