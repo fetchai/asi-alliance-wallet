@@ -307,3 +307,91 @@ export class GetNetworkProjectionMsg extends Message<{
     return GetNetworkProjectionMsg.type();
   }
 }
+
+/**
+ * After Select ACK on live Cardano sign CTA: bind ticket to interactionId at
+ * current authority revision. Internal only.
+ */
+export class IssueSignSwitchTicketMsg extends Message<{ ok: true }> {
+  public static type() {
+    return "issue-sign-switch-ticket";
+  }
+
+  constructor(
+    public readonly interactionId: string,
+    public readonly chainId: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.interactionId) {
+      throw new Error("interactionId not set");
+    }
+    if (!this.chainId) {
+      throw new Error("chainId not set");
+    }
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return IssueSignSwitchTicketMsg.type();
+  }
+}
+
+/** Query whether the sign switch ticket is still valid for this interaction. */
+export class GetSignSwitchTicketValidMsg extends Message<{ valid: boolean }> {
+  public static type() {
+    return "get-sign-switch-ticket-valid";
+  }
+
+  constructor(
+    public readonly interactionId: string,
+    public readonly expectedChainId: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.interactionId) {
+      throw new Error("interactionId not set");
+    }
+    if (!this.expectedChainId) {
+      throw new Error("expectedChainId not set");
+    }
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetSignSwitchTicketValidMsg.type();
+  }
+}
+
+/** Drop ticket (supersede / undo after CTA ACK). */
+export class ClearSignSwitchTicketMsg extends Message<{ ok: true }> {
+  public static type() {
+    return "clear-sign-switch-ticket";
+  }
+
+  constructor(public readonly interactionId?: string) {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop — clear all or matching id
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return ClearSignSwitchTicketMsg.type();
+  }
+}

@@ -13,6 +13,9 @@ import {
   GetSelectedChainSnapshotMsg,
   SelectSelectedChainMsg,
   GetNetworkProjectionMsg,
+  IssueSignSwitchTicketMsg,
+  GetSignSwitchTicketValidMsg,
+  ClearSignSwitchTicketMsg,
 } from "./messages";
 import { ChainInfo } from "@keplr-wallet/types";
 
@@ -52,6 +55,21 @@ export const getHandler: (service: ChainsService) => Handler = (service) => {
         return handleSelectSelectedChainMsg(service)(
           env,
           msg as SelectSelectedChainMsg
+        );
+      case IssueSignSwitchTicketMsg:
+        return handleIssueSignSwitchTicketMsg(service)(
+          env,
+          msg as IssueSignSwitchTicketMsg
+        );
+      case GetSignSwitchTicketValidMsg:
+        return handleGetSignSwitchTicketValidMsg(service)(
+          env,
+          msg as GetSignSwitchTicketValidMsg
+        );
+      case ClearSignSwitchTicketMsg:
+        return handleClearSignSwitchTicketMsg(service)(
+          env,
+          msg as ClearSignSwitchTicketMsg
         );
       case AddNetworkAndSwitchMsg:
         return handleAddNetworkAndSwitch(service)(
@@ -137,6 +155,34 @@ const handleSelectSelectedChainMsg: (
 ) => InternalHandler<SelectSelectedChainMsg> = (service) => {
   return async (_, msg) => {
     return await service.selectChainWithAck(msg.chainId);
+  };
+};
+
+const handleIssueSignSwitchTicketMsg: (
+  service: ChainsService
+) => InternalHandler<IssueSignSwitchTicketMsg> = (service) => {
+  return async (_, msg) => {
+    return await service.issueSignSwitchTicket(msg.interactionId, msg.chainId);
+  };
+};
+
+const handleGetSignSwitchTicketValidMsg: (
+  service: ChainsService
+) => InternalHandler<GetSignSwitchTicketValidMsg> = (service) => {
+  return async (_, msg) => {
+    const valid = await service.isSignSwitchTicketValid(
+      msg.interactionId,
+      msg.expectedChainId
+    );
+    return { valid };
+  };
+};
+
+const handleClearSignSwitchTicketMsg: (
+  service: ChainsService
+) => InternalHandler<ClearSignSwitchTicketMsg> = (service) => {
+  return async (_, msg) => {
+    return service.clearSignSwitchTicket(msg.interactionId);
   };
 };
 

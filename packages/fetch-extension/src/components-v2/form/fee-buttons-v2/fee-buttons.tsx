@@ -212,8 +212,11 @@ export const FeeButtonsInner: FunctionComponent<
     const { chainStore, analyticsStore } = useStore();
 
     const intl = useIntl();
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
-    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+    // Prefer feeConfig's bound chain (request-scoped on sign; send binds the
+    // active send chain). Do not use chainStore.current — Persist may be absent.
+    const feeChainInfo = chainStore.getChain(feeConfig.chainId);
+    const isEvm = feeChainInfo.features?.includes("evm") ?? false;
+    const isCardano = feeChainInfo.features?.includes("cardano") ?? false;
 
     const language = useLanguage();
 

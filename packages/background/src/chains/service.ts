@@ -37,6 +37,11 @@ import {
   NetworkAuthoritySnapshot,
 } from "./authority/types";
 import {
+  issueSignSwitchTicket,
+  isSignSwitchTicketValid,
+  type SignSwitchTicket,
+} from "./sign-switch-ticket";
+import {
   NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
   notifyNetworkSurfacesSyncListeners,
 } from "./network-surfaces-sync-fanout";
@@ -66,6 +71,7 @@ export class ChainsService {
   protected readonly kvStoreForSuggestChain: KVStore;
 
   private networkAuthority: NetworkAuthority | undefined;
+  private signSwitchTicket: SignSwitchTicket | null = null;
   private authorityUnsubscribers: Array<() => void> = [];
 
   constructor(
@@ -883,6 +889,68 @@ export class ChainsService {
   /** Internal UI path: returns committed `{ chainId, revision }` ack. */
   async selectChainWithAck(chainId: string): Promise<NetworkAuthoritySnapshot> {
     return this.getNetworkAuthority().select(chainId);
+  }
+
+  /**
+   * After Select ACK for a live Cardano sign CTA: bind ticket at current
+   * authority revision. Any later Select invalidates via revision mismatch.
+   */
+  async issueSignSwitchTicket(
+    interactionId: string,
+    chainId: string
+  ): Promise<{ ok: true }> {
+    const snapshot = await this.getSelectedChainSnapshot();
+    const chainIdsMatch = (a: string, b: string) => {
+      try {
+        return (
+          ChainIdHelper.parse(a).identifier ===
+          ChainIdHelper.parse(b).identifier
+        );
+      } catch {
+        return a === b;
+      }
+    };
+    this.signSwitchTicket = issueSignSwitchTicket(
+      snapshot,
+      interactionId,
+      chainId,
+      chainIdsMatch
+    );
+    return { ok: true };
+  }
+
+  async isSignSwitchTicketValid(
+    interactionId: string,
+    expectedChainId: string
+  ): Promise<boolean> {
+    const snapshot = await this.getSelectedChainSnapshot();
+    const chainIdsMatch = (a: string, b: string) => {
+      try {
+        return (
+          ChainIdHelper.parse(a).identifier ===
+          ChainIdHelper.parse(b).identifier
+        );
+      } catch {
+        return a === b;
+      }
+    };
+    return isSignSwitchTicketValid(
+      this.signSwitchTicket,
+      snapshot,
+      interactionId,
+      expectedChainId,
+      chainIdsMatch
+    );
+  }
+
+  clearSignSwitchTicket(interactionId?: string): { ok: true } {
+    if (
+      interactionId == null ||
+      this.signSwitchTicket?.interactionId === interactionId
+    ) {
+      this.signSwitchTicket = null;
+    }
+    return { ok: true };
   }
 
   /**

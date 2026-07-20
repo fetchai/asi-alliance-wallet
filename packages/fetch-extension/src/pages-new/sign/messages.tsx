@@ -21,6 +21,7 @@ import {
 } from "@keplr-wallet/proto-types/cosmos/staking/v1beta1/authz";
 import { SendAuthorization } from "@keplr-wallet/proto-types/cosmos/bank/v1beta1/authz";
 import { UnsignedTransaction } from "@ethersproject/transactions";
+import { useRequestedChain } from "../../utils/requested-chain-context";
 
 export interface MessageObj {
   readonly type: string;
@@ -829,7 +830,8 @@ export const WasmExecutionMsgView: FunctionComponent<{
   // eslint-disable-next-line @typescript-eslint/ban-types
   msg: object | string;
 }> = observer(({ msg }) => {
-  const { chainStore, accountStore } = useStore();
+  const { accountStore } = useStore();
+  const { chainInfo: requestChain } = useRequestedChain();
 
   const [isOpen, setIsOpen] = useState(true);
   const intl = useIntl();
@@ -855,13 +857,13 @@ export const WasmExecutionMsgView: FunctionComponent<{
           cipherText = cipherText.slice(64);
 
           const keplr = await accountStore
-            .getAccount(chainStore.current.chainId)
+            .getAccount(requestChain.chainId)
             .getKeplr();
           if (!keplr) {
             throw new Error("Can't get the keplr API");
           }
 
-          const enigmaUtils = keplr.getEnigmaUtils(chainStore.current.chainId);
+          const enigmaUtils = keplr.getEnigmaUtils(requestChain.chainId);
           let plainText = Buffer.from(
             await enigmaUtils.decrypt(cipherText, nonce)
           );
@@ -881,7 +883,7 @@ export const WasmExecutionMsgView: FunctionComponent<{
         }
       })();
     }
-  }, [chainStore, chainStore.current.chainId, intl, msg]);
+  }, [accountStore, requestChain.chainId, intl, msg]);
 
   return (
     <div>
