@@ -9,6 +9,19 @@ export { CardanoWalletManager } from "./wallet-manager";
 export { CardanoKeyRing } from "./cardano-keyring";
 export { CardanoKeyContext } from "./cardano-key-context";
 export { CardanoAccount } from "./cardano-account";
+export {
+  CARDANO_RUNTIME_INACTIVE_CODE,
+  CardanoRuntimeInactiveError,
+  createCardanoRuntimeLease,
+  isCardanoRuntimeInactiveError,
+} from "./runtime-lease";
+export type {
+  CardanoRuntimeInactiveReason,
+  CardanoRuntimeInactiveErrorLike,
+  CardanoRuntimeLease,
+  CardanoRuntimeLeaseAuthorityView,
+  MutableCardanoRuntimeLease,
+} from "./runtime-lease";
 
 // Re-export types for compatibility with background package
 export type {

@@ -43,6 +43,7 @@ import {
   installBlockfrostRequestTelemetry,
   type CardanoRuntimeCreatedBy,
 } from "./blockfrost-request-telemetry";
+import type { CardanoRuntimeLease } from "../../runtime-lease";
 
 export interface WalletProvidersDependencies {
   assetProvider: AssetProvider;
@@ -73,6 +74,7 @@ interface ProvidersConfig {
   createdBy?: CardanoRuntimeCreatedBy;
   selectedChainIdAtCreate?: string;
   getSelectedChainId?: () => string | undefined;
+  runtimeLease?: CardanoRuntimeLease;
 }
 
 const createTxSubmitProvider = (
@@ -137,6 +139,7 @@ export const createBlockfrostProviders = ({
   createdBy,
   selectedChainIdAtCreate,
   getSelectedChainId,
+  runtimeLease,
 }: ProvidersConfig): WalletProvidersDependencies => {
   const rateLimiter: RateLimiter =
     blockfrostConfig.rateLimiter ||
@@ -166,6 +169,7 @@ export const createBlockfrostProviders = ({
     createdBy,
     selectedChainIdAtCreate,
     getSelectedChainId,
+    runtimeLease,
   });
   const assetClient = createTelemetryTaggedClient(
     blockfrostClient,

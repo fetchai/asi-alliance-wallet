@@ -1,4 +1,5 @@
 import { NetworkAuthoritySnapshot } from "../../chains/authority";
+import type { CardanoRuntimeLease } from "@keplr-wallet/cardano";
 
 export type { NetworkAuthoritySnapshot };
 
@@ -9,6 +10,8 @@ export type RuntimeCreateContext = {
   runtimeGeneration: number;
   /** Throws if this create no longer owns the runtime slot. */
   assertStillOwner: () => void;
+  /** Revocable lease checked at provider/request boundaries. */
+  runtimeLease: CardanoRuntimeLease;
 };
 
 /**

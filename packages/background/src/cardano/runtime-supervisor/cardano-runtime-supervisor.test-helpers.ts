@@ -4,6 +4,7 @@ import {
   NetworkAuthoritySnapshot,
   RuntimeCreateContext,
 } from "./types";
+import type { MutableCardanoRuntimeLease } from "@keplr-wallet/cardano";
 
 export class MemoryCardanoRuntimeHost implements CardanoRuntimeHost {
   attachedInstanceId: string | undefined;
@@ -23,6 +24,8 @@ export class MemoryCardanoRuntimeHost implements CardanoRuntimeHost {
   createGate: Promise<void> | null = null;
   /** When set, createAndAttach throws after opening the gate. */
   createError: Error | null = null;
+  /** Most recent lease passed into createAndAttach. */
+  lastRuntimeLease: MutableCardanoRuntimeLease | null = null;
 
   getAttachedInstanceId(): string | undefined {
     return this.attachedInstanceId;
@@ -67,15 +70,20 @@ export class MemoryCardanoRuntimeHost implements CardanoRuntimeHost {
   async createAndAttach(ctx: RuntimeCreateContext): Promise<void> {
     this.createCalls += 1;
     this.createStarted.push(ctx.chainId);
+    this.lastRuntimeLease = ctx.runtimeLease as MutableCardanoRuntimeLease;
     // keyRing exists before manager attach (same as CardanoService restore).
     this.initialized = true;
     try {
+      // Prefer lease check first so inactive ownership surfaces as
+      // CardanoRuntimeInactiveError and supervisor can map it to stale.
+      ctx.runtimeLease.assertActive("host.before_gate");
       ctx.assertStillOwner();
 
       if (this.createGate) {
         await this.createGate;
       }
 
+      ctx.runtimeLease.assertActive("host.after_gate");
       ctx.assertStillOwner();
 
       if (this.createError) {

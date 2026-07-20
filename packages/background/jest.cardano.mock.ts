@@ -119,6 +119,19 @@ export {
   resetBlockfrostRateLimitTelemetry,
   wasRateLimitedRecently,
 } from "../cardano/src/wallet/lib/blockfrost-request-telemetry";
+export type {
+  CardanoRuntimeInactiveReason,
+  CardanoRuntimeInactiveErrorLike,
+  CardanoRuntimeLease,
+  CardanoRuntimeLeaseAuthorityView,
+  MutableCardanoRuntimeLease,
+} from "../cardano/src/runtime-lease";
+export {
+  CARDANO_RUNTIME_INACTIVE_CODE,
+  CardanoRuntimeInactiveError,
+  createCardanoRuntimeLease,
+  isCardanoRuntimeInactiveError,
+} from "../cardano/src/runtime-lease";
 export {
   isBlockfrostRateLimitError,
   isBlockfrostRateLimitHttpStatus,

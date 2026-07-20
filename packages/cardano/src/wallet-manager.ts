@@ -16,6 +16,10 @@ import {
   recordCardanoRuntimeLifecycle,
   type CardanoRuntimeCreatedBy,
 } from "./wallet/lib/blockfrost-request-telemetry";
+import {
+  isCardanoRuntimeInactiveError,
+  type CardanoRuntimeLease,
+} from "./runtime-lease";
 
 export type CardanoRuntimeStatus =
   | "not_initialized"
@@ -36,6 +40,7 @@ export type CardanoWalletManagerCreateOptions = {
   createdBy?: CardanoRuntimeCreatedBy;
   selectedChainIdAtCreate?: string;
   getSelectedChainId?: () => string | undefined;
+  runtimeLease?: CardanoRuntimeLease;
 };
 
 export class CardanoWalletManager {
@@ -164,9 +169,13 @@ export class CardanoWalletManager {
     createdBy = "unknown",
     selectedChainIdAtCreate,
     getSelectedChainId,
+    runtimeLease,
   }: CardanoWalletManagerCreateOptions): Promise<CardanoWalletManager> {
     const runtimeInstanceId = createRuntimeInstanceId();
     const chainName = getBlockfrostChainNameFromNetwork(network);
+    const assertLeaseActive = (operation: string) => {
+      runtimeLease?.assertActive(operation);
+    };
 
     recordCardanoRuntimeLifecycle("manager.create.started", {
       runtimeInstanceId,
@@ -178,12 +187,17 @@ export class CardanoWalletManager {
       selectedChainId: selectedChainIdAtCreate,
     });
 
+    assertLeaseActive("manager.create.before_imports");
+
     // Create key agent
     const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
+    assertLeaseActive("manager.create.after_crypto_import");
     const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
+    assertLeaseActive("manager.create.after_key_management_import");
     const { Cardano } = await import("@cardano-sdk/core");
 
     const bip32Ed25519 = await SodiumBip32Ed25519.create();
+    assertLeaseActive("manager.create.after_bip32");
     const keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
       {
         mnemonicWords,
@@ -201,6 +215,7 @@ export class CardanoWalletManager {
       },
       { bip32Ed25519, logger: console }
     );
+    assertLeaseActive("manager.create.after_key_agent");
 
     const cardanoStakingEnabled = isCardanoStakingEnabled();
     const resolvedConfig =
@@ -211,6 +226,7 @@ export class CardanoWalletManager {
     const normalizedProjectId = resolvedConfig?.projectId?.trim();
 
     if (!resolvedConfig || !isValidApiKey(normalizedProjectId)) {
+      assertLeaseActive("manager.create.before_unavailable_return");
       const manager = new CardanoWalletManager(
         undefined,
         keyAgent,
@@ -245,6 +261,7 @@ export class CardanoWalletManager {
     let chainHistoryProvider: any = undefined;
 
     try {
+      assertLeaseActive("manager.create.before_full_wallet");
       const created = await this.createFullWallet(
         normalizedConfig,
         keyAgent,
@@ -258,13 +275,24 @@ export class CardanoWalletManager {
           createdBy,
           selectedChainIdAtCreate,
           getSelectedChainId,
+          runtimeLease,
         }
       );
       wallet = created.wallet;
       chainHistoryProvider = created.providers?.chainHistoryProvider;
-    } catch {
+      assertLeaseActive("manager.create.before_return");
+    } catch (error) {
       // createFullWallet may have registered Blockfrost telemetry before failing.
       markCardanoRuntimeDisposed(runtimeInstanceId);
+      if (wallet) {
+        CardanoWalletManager.shutdownOrphanWallet(wallet);
+        wallet = undefined;
+      }
+
+      if (isCardanoRuntimeInactiveError(error)) {
+        throw error;
+      }
+
       throw new Error(
         "[CardanoWalletManager] provider_unavailable: wallet_init_failed"
       );
@@ -295,6 +323,19 @@ export class CardanoWalletManager {
     return manager;
   }
 
+  private static shutdownOrphanWallet(wallet: any): void {
+    if (!wallet || typeof wallet.shutdown !== "function") {
+      return;
+    }
+    try {
+      wallet.shutdown();
+    } catch {
+      console.warn(
+        "[CardanoWalletManager] Failed to shutdown orphan personal wallet"
+      );
+    }
+  }
+
   private static async createFullWallet(
     networkConfig: BlockfrostConfig,
     keyAgent: any,
@@ -308,13 +349,21 @@ export class CardanoWalletManager {
       createdBy?: CardanoRuntimeCreatedBy;
       selectedChainIdAtCreate?: string;
       getSelectedChainId?: () => string | undefined;
+      runtimeLease?: CardanoRuntimeLease;
     }
   ): Promise<{ wallet: any; providers: any }> {
+    const assertLeaseActive = (operation: string) => {
+      telemetry?.runtimeLease?.assertActive(operation);
+    };
+
     // Import necessary SDK modules
+    assertLeaseActive("createFullWallet.before_wallet_import");
     const walletModule = await import("@cardano-sdk/wallet");
     const { createPersonalWallet, storage, DEFAULT_POLLING_CONFIG } =
       walletModule;
+    assertLeaseActive("createFullWallet.after_wallet_import");
     const KeyManagement = await import("@cardano-sdk/key-management");
+    assertLeaseActive("createFullWallet.after_key_management_import");
     const { createBlockfrostProviders } = await import(
       "./wallet/lib/providers"
     );
@@ -333,6 +382,7 @@ export class CardanoWalletManager {
 
     const chainName = getBlockfrostChainNameFromNetwork(network);
 
+    assertLeaseActive("createFullWallet.before_providers");
     const providers = createBlockfrostProviders({
       blockfrostConfig: networkConfig,
       cardanoStakingEnabled,
@@ -346,6 +396,7 @@ export class CardanoWalletManager {
       createdBy: telemetry?.createdBy,
       selectedChainIdAtCreate: telemetry?.selectedChainIdAtCreate,
       getSelectedChainId: telemetry?.getSelectedChainId,
+      runtimeLease: telemetry?.runtimeLease,
     });
 
     const { mode: walletStoresMode, stores } = this.createWalletStores(
@@ -370,21 +421,29 @@ export class CardanoWalletManager {
       asyncKeyAgent
     )) as any;
 
-    const wallet = createPersonalWallet(
-      {
-        name: "Cardano Wallet",
-        polling: pollingConfig,
-      },
-      {
-        logger: console,
-        ...providers,
-        stores,
-        witnesser,
-        bip32Account,
-      }
-    );
-
-    return { wallet, providers };
+    assertLeaseActive("createFullWallet.before_personal_wallet");
+    let wallet: any;
+    try {
+      wallet = createPersonalWallet(
+        {
+          name: "Cardano Wallet",
+          polling: pollingConfig,
+        },
+        {
+          logger: console,
+          ...providers,
+          stores,
+          witnesser,
+          bip32Account,
+        }
+      );
+      assertLeaseActive("createFullWallet.after_personal_wallet");
+      return { wallet, providers };
+    } catch (error) {
+      // Lease may be revoked after createPersonalWallet starts pollers.
+      CardanoWalletManager.shutdownOrphanWallet(wallet);
+      throw error;
+    }
   }
 
   private static createWalletStores(storage: any, extensionLocalStorage: any) {

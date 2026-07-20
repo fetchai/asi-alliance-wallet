@@ -37,6 +37,14 @@ jest.mock("./adapters/env-adapter", () => ({
 }));
 
 import { CardanoKeyRing, type KeyStore } from "./cardano-keyring";
+import {
+  CardanoRuntimeInactiveError,
+  createCardanoRuntimeLease,
+} from "./runtime-lease";
+import {
+  clearCardanoRuntimeTelemetryForTests,
+  installBlockfrostRequestTelemetry,
+} from "./wallet/lib/blockfrost-request-telemetry";
 
 const mnemonic = Array(23).fill("abandon").concat("about").join(" ");
 
@@ -92,6 +100,7 @@ describe("CardanoKeyRing blockfrost resolver", () => {
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
+    clearCardanoRuntimeTelemetryForTests();
   });
 
   it("restore passes resolver result into CardanoWalletManager.create", async () => {
@@ -592,6 +601,83 @@ describe("CardanoKeyRing blockfrost resolver", () => {
       // Soft-detach already disposed A — rebuild must not dispose A a second time.
       expect(prior.dispose).toHaveBeenCalledTimes(1);
       expect(next.isAttached()).toBe(true);
+    });
+
+    it("blocks provider rawRequest when lease is revoked mid-create", async () => {
+      const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+      let releaseCreate: (() => void) | undefined;
+      let patchedClient:
+        | { request: (endpoint: string) => Promise<unknown> }
+        | undefined;
+
+      const state = {
+        chainId: "cardano-preprod" as string | null,
+        revision: 1 as number | null,
+        generation: 1,
+      };
+      const lease = createCardanoRuntimeLease({
+        chainId: "cardano-preprod",
+        authorityRevision: 1,
+        runtimeGeneration: 1,
+        authority: {
+          getChainId: () => state.chainId,
+          getRevision: () => state.revision,
+          getRuntimeGeneration: () => state.generation,
+        },
+      });
+
+      mockCreate.mockImplementation(
+        async (opts: { runtimeLease?: typeof lease }) => {
+          const client = { request: rawRequest };
+          installBlockfrostRequestTelemetry({
+            blockfrostClient: client as any,
+            chainName: "Preprod",
+            logger: { debug: jest.fn(), warn: jest.fn() } as any,
+            runtimeInstanceId: "rt_mid_create",
+            runtimeLease: opts.runtimeLease ?? lease,
+            chainId: "cardano-preprod",
+            runtimeGeneration: 1,
+            ownerSwitchGeneration: 1,
+          });
+          patchedClient = client;
+          await new Promise<void>((resolve) => {
+            releaseCreate = resolve;
+          });
+          (opts.runtimeLease ?? lease).assertActive(
+            "mock.create.before_return"
+          );
+          return makeManager("ready", "rt_mid_create");
+        }
+      );
+
+      const keyRing = new CardanoKeyRing();
+      const restorePromise = keyRing.restore(
+        makeKeyStore(),
+        "password",
+        undefined,
+        "cardano-preprod",
+        { runtimeLease: lease }
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(patchedClient).toBeDefined();
+
+      // Authority moved while create is gated: revoke lease before any poll.
+      state.chainId = "fetchhub-4";
+      state.revision = 2;
+      state.generation = 2;
+      lease.revoke("authority_commit");
+      keyRing.invalidatePendingRebuilds();
+
+      await expect(patchedClient!.request("network")).rejects.toBeInstanceOf(
+        CardanoRuntimeInactiveError
+      );
+      expect(rawRequest).not.toHaveBeenCalled();
+
+      releaseCreate?.();
+      await expect(restorePromise).rejects.toBeInstanceOf(
+        CardanoRuntimeInactiveError
+      );
+      expect(keyRing.getWalletManager()).toBeUndefined();
     });
   });
 });

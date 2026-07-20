@@ -1,9 +1,21 @@
+import {
+  createCardanoRuntimeLease,
+  isCardanoRuntimeInactiveError,
+  type MutableCardanoRuntimeLease,
+} from "@keplr-wallet/cardano";
 import { StaleCardanoRuntimeError } from "../ensure-errors";
 import {
   CapturedRuntimeOwnership,
   CardanoRuntimeSupervisorDeps,
   NetworkAuthoritySnapshot,
 } from "./types";
+
+type LeaseEntry = {
+  id: string;
+  lease: MutableCardanoRuntimeLease;
+  state: "pending" | "attached";
+  instanceId?: string;
+};
 
 /**
  * Observes committed authority snapshots and owns Cardano NetworkRuntime
@@ -24,6 +36,8 @@ export class CardanoRuntimeSupervisor {
     revision: number;
     promise: Promise<void>;
   } | null = null;
+  private leases = new Map<string, LeaseEntry>();
+  private nextLeaseId = 0;
 
   constructor(private readonly deps: CardanoRuntimeSupervisorDeps) {}
 
@@ -37,6 +51,11 @@ export class CardanoRuntimeSupervisor {
 
   getOwnerChainId(): string | null {
     return this.ownerChainId;
+  }
+
+  /** Test/inspection helper: active pending+attached leases. */
+  getActiveLeaseCount(): number {
+    return this.leases.size;
   }
 
   /**
@@ -53,6 +72,7 @@ export class CardanoRuntimeSupervisor {
    * ownership. Keeps createTail so in-flight physical creates stay serialized.
    */
   resetHostRuntime(): void {
+    this.revokeAllLeases("host_reset");
     this.runtimeGeneration += 1;
     this.inFlight = null;
     this.deps.host.reset();
@@ -71,11 +91,12 @@ export class CardanoRuntimeSupervisor {
     this.ownerRevision = snapshot.revision;
     this.ownerChainId = snapshot.chainId;
 
-    // Invalidate advertised readiness and in-flight create ownership before
+    // Invalidate advertised readiness and revoke non-matching leases before
     // any await. Keep createTail intact so physical creates stay serialized.
+    this.deps.host.invalidateAdvertisedReadiness();
+    this.revokeLeasesNotMatching(snapshot, "authority_commit");
     this.runtimeGeneration += 1;
     const leaveGeneration = this.runtimeGeneration;
-    this.deps.host.invalidateAdvertisedReadiness();
 
     if (!this.deps.isCardanoChain(snapshot.chainId)) {
       void this.settleLeave(captured, {
@@ -162,6 +183,18 @@ export class CardanoRuntimeSupervisor {
   private enqueueCreate(chainId: string, revision: number): Promise<void> {
     const run = async (): Promise<void> => {
       const generationAtClaim = this.runtimeGeneration;
+      const lease = createCardanoRuntimeLease({
+        chainId,
+        authorityRevision: revision,
+        runtimeGeneration: generationAtClaim,
+        authority: {
+          getChainId: () => this.ownerChainId,
+          getRevision: () => this.ownerRevision,
+          getRuntimeGeneration: () => this.runtimeGeneration,
+        },
+      });
+      const leaseId = this.registerLease(lease, "pending");
+
       const assertStillOwner = () => {
         if (this.runtimeGeneration !== generationAtClaim) {
           throw new StaleCardanoRuntimeError();
@@ -171,20 +204,35 @@ export class CardanoRuntimeSupervisor {
         }
       };
 
-      assertStillOwner();
+      try {
+        assertStillOwner();
+        lease.assertActive("supervisor.before_create");
 
-      if (this.deps.host.isReadyForChain(chainId)) {
-        return;
+        if (this.deps.host.isReadyForChain(chainId)) {
+          this.revokeAndUnregisterLease(leaseId, "already_ready");
+          return;
+        }
+
+        await this.deps.host.createAndAttach({
+          chainId,
+          authorityRevision: revision,
+          runtimeGeneration: generationAtClaim,
+          assertStillOwner,
+          runtimeLease: lease,
+        });
+
+        assertStillOwner();
+        lease.assertActive("supervisor.after_attach");
+        this.markLeaseAttached(leaseId, this.deps.host.getAttachedInstanceId());
+      } catch (error) {
+        // Always revoke on failure so a leaked host consumer cannot keep an
+        // active lease that future authority commits would no longer find.
+        this.revokeAndUnregisterLease(leaseId, "create_failed");
+        if (isCardanoRuntimeInactiveError(error)) {
+          throw new StaleCardanoRuntimeError();
+        }
+        throw error;
       }
-
-      await this.deps.host.createAndAttach({
-        chainId,
-        authorityRevision: revision,
-        runtimeGeneration: generationAtClaim,
-        assertStillOwner,
-      });
-
-      assertStillOwner();
     };
 
     const scheduled = this.createTail.then(run, run);
@@ -193,6 +241,74 @@ export class CardanoRuntimeSupervisor {
       () => undefined
     );
     return scheduled;
+  }
+
+  private registerLease(
+    lease: MutableCardanoRuntimeLease,
+    state: "pending" | "attached"
+  ): string {
+    this.nextLeaseId += 1;
+    const id = `lease_${this.nextLeaseId}`;
+    this.leases.set(id, { id, lease, state });
+    return id;
+  }
+
+  private markLeaseAttached(
+    leaseId: string,
+    instanceId: string | undefined
+  ): void {
+    const entry = this.leases.get(leaseId);
+    if (!entry) {
+      return;
+    }
+    entry.state = "attached";
+    entry.instanceId = instanceId;
+  }
+
+  private revokeAndUnregisterLease(leaseId: string, reason: string): void {
+    const entry = this.leases.get(leaseId);
+    if (!entry) {
+      return;
+    }
+    entry.lease.revoke(reason);
+    this.leases.delete(leaseId);
+  }
+
+  private revokeLeasesNotMatching(
+    snapshot: NetworkAuthoritySnapshot,
+    reason: string
+  ): void {
+    for (const [id, entry] of [...this.leases.entries()]) {
+      if (
+        entry.lease.chainId !== snapshot.chainId ||
+        entry.lease.authorityRevision !== snapshot.revision
+      ) {
+        entry.lease.revoke(reason);
+        this.leases.delete(id);
+      }
+    }
+  }
+
+  private revokeAllLeases(reason: string): void {
+    for (const [id, entry] of [...this.leases.entries()]) {
+      entry.lease.revoke(reason);
+      this.leases.delete(id);
+    }
+  }
+
+  private revokeLeaseForInstance(
+    instanceId: string | undefined,
+    reason: string
+  ): void {
+    if (instanceId == null) {
+      return;
+    }
+    for (const [id, entry] of [...this.leases.entries()]) {
+      if (entry.instanceId === instanceId) {
+        entry.lease.revoke(reason);
+        this.leases.delete(id);
+      }
+    }
   }
 
   private captureOwnership(): CapturedRuntimeOwnership {
@@ -243,22 +359,26 @@ export class CardanoRuntimeSupervisor {
 
     if (options.leaveGeneration !== this.runtimeGeneration) {
       // Stale leave: never reset — that could wipe a newer owner mid-create.
+      this.revokeLeaseForInstance(captured.instanceId, "stale_leave_dispose");
       this.deps.host.disposeRuntimeIfInstance(captured.instanceId);
       return;
     }
 
     if (options.force) {
+      this.revokeAllLeases("force_leave_reset");
       this.runtimeGeneration += 1;
       this.deps.host.reset();
       return;
     }
 
     if (captured.instanceId != null) {
+      this.revokeLeaseForInstance(captured.instanceId, "wrong_network_dispose");
       this.deps.host.disposeRuntimeIfInstance(captured.instanceId);
       return;
     }
 
     if (captured.wasInitialized) {
+      this.revokeAllLeases("mid_restore_reset");
       this.runtimeGeneration += 1;
       this.deps.host.reset();
     }

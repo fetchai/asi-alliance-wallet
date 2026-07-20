@@ -706,6 +706,7 @@ export class KeyRingService {
         getOwnerSwitchGeneration: () =>
           this.chainsService.getCommittedRevision(),
         createdBy: "restore",
+        runtimeLease: ctx.runtimeLease,
       }
     );
     ctx.assertStillOwner();

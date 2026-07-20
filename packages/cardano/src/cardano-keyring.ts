@@ -14,6 +14,10 @@ import {
 } from "./adapters/env-adapter";
 import type { CardanoNetwork } from "./utils/network";
 import type { CardanoRuntimeCreatedBy } from "./wallet/lib/blockfrost-request-telemetry";
+import {
+  isCardanoRuntimeInactiveError,
+  type CardanoRuntimeLease,
+} from "./runtime-lease";
 
 export type ResolveBlockfrostConfig = (
   network: CardanoNetwork
@@ -181,6 +185,7 @@ export class CardanoKeyRing {
       selectedChainIdAtCreate?: string;
       getSelectedChainId?: () => string | undefined;
       createdBy?: CardanoRuntimeCreatedBy;
+      runtimeLease?: CardanoRuntimeLease;
     }
   ): Promise<void> {
     const accountIndex = keyStore.bip44HDPath?.account ?? 0;
@@ -229,6 +234,7 @@ export class CardanoKeyRing {
       selectedChainIdAtCreate: options?.selectedChainIdAtCreate,
       getSelectedChainId: options?.getSelectedChainId,
       createdBy: options?.createdBy ?? "restore",
+      runtimeLease: options?.runtimeLease,
     });
 
     logBlockfrostProviderStatus(network, {
@@ -295,6 +301,7 @@ export class CardanoKeyRing {
       selectedChainIdAtCreate?: string;
       getSelectedChainId?: () => string | undefined;
       createdBy?: CardanoRuntimeCreatedBy;
+      runtimeLease?: CardanoRuntimeLease;
     }
   ): Promise<void> {
     const run = this.rebuildAgentsMutex.then(() =>
@@ -317,6 +324,7 @@ export class CardanoKeyRing {
       selectedChainIdAtCreate?: string;
       getSelectedChainId?: () => string | undefined;
       createdBy?: CardanoRuntimeCreatedBy;
+      runtimeLease?: CardanoRuntimeLease;
     }
   ): Promise<void> {
     if (!this.mnemonicWords) {
@@ -337,6 +345,8 @@ export class CardanoKeyRing {
         throw new Error("cardano_blockfrost_config_resolve_failed");
       }
 
+      runtimeMeta?.runtimeLease?.assertActive("keyring.before_imports");
+
       const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
       const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
       const cardanoChainId = await getCardanoChainIdFromNetwork(network);
@@ -344,6 +354,7 @@ export class CardanoKeyRing {
 
       const previousWalletManager = this.walletManager;
 
+      runtimeMeta?.runtimeLease?.assertActive("keyring.before_key_agent");
       const newKeyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
         {
           mnemonicWords: this.mnemonicWords,
@@ -379,6 +390,9 @@ export class CardanoKeyRing {
           this.runtimeOwnership?.createdBy ??
           "restore";
 
+        runtimeMeta?.runtimeLease?.assertActive(
+          "keyring.before_manager_create"
+        );
         newWalletManager = await CardanoWalletManager.create({
           mnemonicWords: this.mnemonicWords,
           network,
@@ -391,7 +405,11 @@ export class CardanoKeyRing {
           ownerSwitchGeneration,
           selectedChainIdAtCreate,
           getSelectedChainId,
+          runtimeLease: runtimeMeta?.runtimeLease,
         });
+
+        // Close the await window: lease may have been revoked after create returned.
+        runtimeMeta?.runtimeLease?.assertActive("keyring.after_manager_create");
 
         // Ownership moved during create: never attach; always dispose candidate.
         if (ownershipToken !== this.rebuildGeneration) {
@@ -428,17 +446,20 @@ export class CardanoKeyRing {
           );
         }
       } catch (error) {
+        // Always dispose an unattached candidate before rethrowing.
+        if (newWalletManager && !newWalletManager.isAttached?.()) {
+          try {
+            newWalletManager.dispose?.();
+          } catch {}
+        }
         if (
           error instanceof Error &&
           error.message === "cardano_wallet_manager_stale_create"
         ) {
           throw error;
         }
-        // Create failed after allocation: ensure the candidate cannot leak.
-        if (newWalletManager && !newWalletManager.isAttached?.()) {
-          try {
-            newWalletManager.dispose?.();
-          } catch {}
+        if (isCardanoRuntimeInactiveError(error)) {
+          throw error;
         }
         console.error("[CardanoKeyRing] Failed to create CardanoWalletManager");
         throw new Error("cardano_wallet_manager_create_failed");

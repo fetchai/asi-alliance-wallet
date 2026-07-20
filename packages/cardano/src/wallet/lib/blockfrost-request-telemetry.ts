@@ -4,6 +4,11 @@ import {
   isBlockfrostRateLimitError,
   isBlockfrostRateLimitHttpStatus,
 } from "../../adapters/blockfrost-error-classifier";
+import {
+  CardanoRuntimeInactiveError,
+  isCardanoRuntimeInactiveError,
+  type CardanoRuntimeLease,
+} from "../../runtime-lease";
 
 const SLOW_REQUEST_MS = 1000;
 const MAX_FAILURES_TO_KEEP = 50;
@@ -30,7 +35,8 @@ export type CardanoRuntimeLifecycleEvent =
   | "manager.dispose.started"
   | "manager.dispose.completed"
   | "blockfrost.request"
-  | "blockfrost.request_after_dispose";
+  | "blockfrost.request_after_dispose"
+  | "blockfrost.request_blocked_inactive_runtime";
 
 type RequestKind =
   | "address_discovery"
@@ -117,6 +123,7 @@ export interface CardanoRuntimeTelemetryMeta {
   ownerSwitchGeneration?: number;
   runtimeGeneration?: number;
   runtimeInstanceId: string;
+  runtimeLease?: CardanoRuntimeLease;
   selectedChainIdAtCreate?: string;
 }
 
@@ -478,6 +485,7 @@ export const installBlockfrostRequestTelemetry = ({
   createdBy,
   selectedChainIdAtCreate,
   getSelectedChainId,
+  runtimeLease,
 }: {
   blockfrostClient: BlockfrostClient;
   chainName: string;
@@ -582,17 +590,89 @@ export const installBlockfrostRequestTelemetry = ({
       sourceTag,
     };
 
-    if (disposed) {
+    const blockInactive = (error: CardanoRuntimeInactiveError): never => {
       emitLifecycle(
-        "blockfrost.request_after_dispose",
-        requestPayloadBase,
+        "blockfrost.request_blocked_inactive_runtime",
+        {
+          ...requestPayloadBase,
+          currentChainId: error.currentChainId,
+          currentGeneration: error.currentGeneration,
+          currentRevision: error.currentRevision,
+          expectedChainId: error.expectedChainId,
+          expectedGeneration: error.expectedGeneration,
+          expectedRevision: error.expectedRevision,
+          reason: error.reason,
+          revokeReason: error.revokeReason,
+        },
         logger
       );
-    } else {
-      emitLifecycle("blockfrost.request", requestPayloadBase, logger);
-    }
+      if (disposed) {
+        emitLifecycle(
+          "blockfrost.request_after_dispose",
+          requestPayloadBase,
+          logger
+        );
+      }
+      throw error;
+    };
 
     try {
+      runtimeLease?.assertActive(`blockfrost:${normalizedEndpoint}`);
+    } catch (error) {
+      if (isCardanoRuntimeInactiveError(error)) {
+        blockInactive(
+          error instanceof CardanoRuntimeInactiveError
+            ? error
+            : new CardanoRuntimeInactiveError({
+                reason: error.reason ?? "revoked",
+                expectedChainId:
+                  error.expectedChainId ??
+                  chainId ??
+                  runtimeLease?.chainId ??
+                  "unknown",
+                expectedRevision:
+                  error.expectedRevision ??
+                  ownerSwitchGeneration ??
+                  runtimeLease?.authorityRevision ??
+                  -1,
+                expectedGeneration:
+                  error.expectedGeneration ??
+                  runtimeGeneration ??
+                  runtimeLease?.runtimeGeneration ??
+                  -1,
+                currentChainId:
+                  error.currentChainId ?? selectedChainIdAtRequest,
+                currentRevision: error.currentRevision,
+                currentGeneration: error.currentGeneration,
+                operation: `blockfrost:${normalizedEndpoint}`,
+                revokeReason: error.revokeReason,
+                message: error.message,
+              })
+        );
+      }
+      throw error;
+    }
+
+    if (disposed) {
+      blockInactive(
+        new CardanoRuntimeInactiveError({
+          reason: "disposed",
+          expectedChainId: chainId ?? runtimeLease?.chainId ?? "unknown",
+          expectedRevision:
+            ownerSwitchGeneration ?? runtimeLease?.authorityRevision ?? -1,
+          expectedGeneration:
+            runtimeGeneration ?? runtimeLease?.runtimeGeneration ?? -1,
+          currentChainId: selectedChainIdAtRequest,
+          operation: `blockfrost:${normalizedEndpoint}`,
+          revokeReason: "manager_disposed",
+        })
+      );
+    }
+
+    emitLifecycle("blockfrost.request", requestPayloadBase, logger);
+
+    try {
+      // No await between assertActive / disposed check and rawRequest.
       const result = await rawRequest<T>(endpoint, ...args);
       const ms = Date.now() - started;
       const endpointBucket =

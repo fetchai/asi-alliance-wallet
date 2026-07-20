@@ -345,4 +345,166 @@ describe("CardanoRuntimeSupervisor", () => {
       expect(supervisor.isEligibleFor("cardano-mainnet", 1)).toBe(false);
     });
   });
+
+  describe("runtime leases", () => {
+    it("revokes pending lease on Cardano → non-Cardano during create", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      let release!: () => void;
+      host.createGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      commit(supervisor, "cardano-mainnet", 1);
+      const ensure = supervisor.ensureReady("cardano-mainnet", 1);
+      await Promise.resolve();
+      expect(host.createCalls).toBe(1);
+      expect(supervisor.getActiveLeaseCount()).toBe(1);
+
+      const pendingLease = host.lastRuntimeLease!;
+      commit(supervisor, "fetchhub-4", 2);
+      expect(pendingLease.signal.aborted).toBe(true);
+      expect(() => pendingLease.assertActive("test")).toThrow(
+        /Cardano runtime inactive/
+      );
+      expect(supervisor.getActiveLeaseCount()).toBe(0);
+
+      release();
+      await expect(ensure).rejects.toBeInstanceOf(StaleCardanoRuntimeError);
+    });
+
+    it("revokes pending lease on Cardano A → Cardano B during create", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      let release!: () => void;
+      host.createGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      commit(supervisor, "cardano-mainnet", 1);
+      const ensureA = supervisor.ensureReady("cardano-mainnet", 1);
+      await Promise.resolve();
+      const leaseA = host.lastRuntimeLease!;
+
+      commit(supervisor, "cardano-preprod", 2);
+      expect(leaseA.signal.aborted).toBe(true);
+
+      release();
+      await expect(ensureA).rejects.toBeInstanceOf(StaleCardanoRuntimeError);
+
+      host.createGate = null;
+      await supervisor.ensureReady("cardano-preprod", 2);
+      expect(host.lastRuntimeLease!.chainId).toBe("cardano-preprod");
+      expect(() => host.lastRuntimeLease!.assertActive("ok")).not.toThrow();
+    });
+
+    it("revokes old lease on Cardano A → non-Cardano → Cardano A", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      commit(supervisor, "cardano-mainnet", 1);
+      await supervisor.ensureReady("cardano-mainnet", 1);
+      const firstLease = host.lastRuntimeLease!;
+      const firstGeneration = firstLease.runtimeGeneration;
+
+      commit(supervisor, "fetchhub-4", 2);
+      expect(firstLease.signal.aborted).toBe(true);
+      await Promise.resolve();
+
+      commit(supervisor, "cardano-mainnet", 3);
+      await supervisor.ensureReady("cardano-mainnet", 3);
+      const secondLease = host.lastRuntimeLease!;
+      expect(secondLease.chainId).toBe("cardano-mainnet");
+      expect(secondLease.runtimeGeneration).not.toBe(firstGeneration);
+      expect(() => secondLease.assertActive("ok")).not.toThrow();
+      expect(() => firstLease.assertActive("old")).toThrow();
+    });
+
+    it("resetHostRuntime revokes pending leases", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      let release!: () => void;
+      host.createGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      commit(supervisor, "cardano-mainnet", 1);
+      const ensure = supervisor.ensureReady("cardano-mainnet", 1);
+      await Promise.resolve();
+      const pendingLease = host.lastRuntimeLease!;
+
+      supervisor.resetHostRuntime();
+      expect(pendingLease.signal.aborted).toBe(true);
+      expect(supervisor.getActiveLeaseCount()).toBe(0);
+
+      release();
+      await expect(ensure).rejects.toBeInstanceOf(StaleCardanoRuntimeError);
+    });
+
+    it("failed physical create revokes the pending lease", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      commit(supervisor, "cardano-mainnet", 1);
+      host.createError = new Error("create failed");
+
+      await expect(
+        supervisor.ensureReady("cardano-mainnet", 1)
+      ).rejects.toThrow("create failed");
+
+      expect(supervisor.getActiveLeaseCount()).toBe(0);
+      expect(host.lastRuntimeLease!.signal.aborted).toBe(true);
+    });
+
+    it("maps CardanoRuntimeInactiveError to StaleCardanoRuntimeError for retry", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      let release!: () => void;
+      host.createGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      commit(supervisor, "cardano-mainnet", 1);
+      const ensure = supervisor.ensureReady("cardano-mainnet", 1);
+      await Promise.resolve();
+
+      // Revoke only the lease (simulates inactive without assertStillOwner first).
+      host.lastRuntimeLease!.revoke("authority_commit");
+      release();
+
+      await expect(ensure).rejects.toBeInstanceOf(StaleCardanoRuntimeError);
+    });
+
+    it("stale dispose of old instance does not abort newer lease", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      commit(supervisor, "cardano-mainnet", 1);
+      await supervisor.ensureReady("cardano-mainnet", 1);
+      const oldLease = host.lastRuntimeLease!;
+
+      commit(supervisor, "cardano-preprod", 2);
+      expect(oldLease.signal.aborted).toBe(true);
+
+      // Newer owner attaches before stale leave runs.
+      host.attachedInstanceId = "inst-newer";
+      host.boundChainId = "cardano-preprod";
+      host.ready = true;
+      host.initialized = true;
+
+      // Simulate ensure for new ownership creating a fresh lease.
+      host.createGate = null;
+      // Force not-ready so ensure creates.
+      host.ready = false;
+      await supervisor.ensureReady("cardano-preprod", 2);
+      const newLease = host.lastRuntimeLease!;
+
+      await Promise.resolve();
+      expect(() => newLease.assertActive("new")).not.toThrow();
+      expect(newLease.signal.aborted).toBe(false);
+    });
+
+    it("two sequential ensureReady for same chain use different generations after reset", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      commit(supervisor, "cardano-mainnet", 1);
+      await supervisor.ensureReady("cardano-mainnet", 1);
+      const gen1 = host.lastRuntimeLease!.runtimeGeneration;
+
+      supervisor.resetHostRuntime();
+      host.ready = false;
+      await supervisor.ensureReady("cardano-mainnet", 1);
+      const gen2 = host.lastRuntimeLease!.runtimeGeneration;
+      expect(gen2).toBeGreaterThan(gen1);
+    });
+  });
 });

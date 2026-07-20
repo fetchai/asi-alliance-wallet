@@ -7,7 +7,12 @@ import {
   markCardanoRuntimeDisposed,
   resetBlockfrostRateLimitTelemetry,
   toRuntimeRegistryKey,
+  wasRateLimitedRecently,
 } from "./blockfrost-request-telemetry";
+import {
+  CardanoRuntimeInactiveError,
+  createCardanoRuntimeLease,
+} from "../../runtime-lease";
 
 const storeKey = "__cardanoBlockfrostTelemetryStore";
 const apiKey = "__cardanoBlockfrostTelemetry";
@@ -149,5 +154,298 @@ describe("runtime instance registry", () => {
     markCardanoRuntimeDisposed("rt_failed_create");
     expect(getCardanoRuntimeTelemetryActiveCount()).toBe(0);
     expect(getCardanoRuntimeTelemetryDisposedCount()).toBe(1);
+  });
+});
+
+describe("request-time runtime lease guard", () => {
+  afterEach(() => {
+    clearCardanoRuntimeTelemetryForTests();
+  });
+
+  const makeAuthority = (state: {
+    chainId: string | null;
+    revision: number | null;
+    generation: number;
+  }) => ({
+    getChainId: () => state.chainId,
+    getRevision: () => state.revision,
+    getRuntimeGeneration: () => state.generation,
+  });
+
+  it("calls rawRequest once when lease is active", async () => {
+    const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+    const client = { request: rawRequest };
+    const state = {
+      chainId: "cardano-preprod",
+      revision: 1,
+      generation: 1,
+    };
+    const lease = createCardanoRuntimeLease({
+      chainId: "cardano-preprod",
+      authorityRevision: 1,
+      runtimeGeneration: 1,
+      authority: makeAuthority(state),
+    });
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+      runtimeInstanceId: "rt_active",
+      runtimeLease: lease,
+      chainId: "cardano-preprod",
+      runtimeGeneration: 1,
+      ownerSwitchGeneration: 1,
+    });
+
+    await expect(client.request("network")).resolves.toEqual({ ok: true });
+    expect(rawRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks rawRequest when lease is revoked", async () => {
+    const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+    const client = { request: rawRequest };
+    const state = {
+      chainId: "cardano-preprod",
+      revision: 1,
+      generation: 1,
+    };
+    const lease = createCardanoRuntimeLease({
+      chainId: "cardano-preprod",
+      authorityRevision: 1,
+      runtimeGeneration: 1,
+      authority: makeAuthority(state),
+    });
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+      runtimeInstanceId: "rt_revoked",
+      runtimeLease: lease,
+      chainId: "cardano-preprod",
+    });
+
+    lease.revoke("authority_commit");
+
+    await expect(client.request("network")).rejects.toBeInstanceOf(
+      CardanoRuntimeInactiveError
+    );
+    expect(rawRequest).not.toHaveBeenCalled();
+  });
+
+  it("blocks rawRequest when manager is disposed", async () => {
+    const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+    const client = { request: rawRequest };
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+      runtimeInstanceId: "rt_disposed",
+      chainId: "cardano-preprod",
+      runtimeGeneration: 1,
+      ownerSwitchGeneration: 1,
+    });
+
+    markCardanoRuntimeDisposed("rt_disposed");
+
+    await expect(client.request("network")).rejects.toBeInstanceOf(
+      CardanoRuntimeInactiveError
+    );
+    expect(rawRequest).not.toHaveBeenCalled();
+  });
+
+  it("blocks rawRequest on stale revision with matching chain", async () => {
+    const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+    const client = { request: rawRequest };
+    const state = {
+      chainId: "cardano-preprod",
+      revision: 1,
+      generation: 1,
+    };
+    const lease = createCardanoRuntimeLease({
+      chainId: "cardano-preprod",
+      authorityRevision: 1,
+      runtimeGeneration: 1,
+      authority: makeAuthority(state),
+    });
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+      runtimeInstanceId: "rt_stale_rev",
+      runtimeLease: lease,
+    });
+
+    state.revision = 2;
+
+    await expect(client.request("network")).rejects.toMatchObject({
+      reason: "authority_mismatch",
+    });
+    expect(rawRequest).not.toHaveBeenCalled();
+  });
+
+  it("blocks rawRequest on stale generation with matching chain/revision", async () => {
+    const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+    const client = { request: rawRequest };
+    const state = {
+      chainId: "cardano-preprod",
+      revision: 1,
+      generation: 1,
+    };
+    const lease = createCardanoRuntimeLease({
+      chainId: "cardano-preprod",
+      authorityRevision: 1,
+      runtimeGeneration: 1,
+      authority: makeAuthority(state),
+    });
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+      runtimeInstanceId: "rt_stale_gen",
+      runtimeLease: lease,
+    });
+
+    state.generation = 2;
+
+    await expect(client.request("network")).rejects.toMatchObject({
+      reason: "generation_mismatch",
+    });
+    expect(rawRequest).not.toHaveBeenCalled();
+  });
+
+  it("allows in-flight request started before revoke to finish", async () => {
+    let resolveRaw!: (value: { ok: boolean }) => void;
+    const rawRequest = jest.fn(
+      (..._args: unknown[]) =>
+        new Promise<{ ok: boolean }>((resolve) => {
+          resolveRaw = resolve;
+        })
+    );
+    const client = {
+      request: rawRequest as (
+        endpoint: string,
+        ...args: unknown[]
+      ) => Promise<{ ok: boolean }>,
+    };
+    const state = {
+      chainId: "cardano-preprod",
+      revision: 1,
+      generation: 1,
+    };
+    const lease = createCardanoRuntimeLease({
+      chainId: "cardano-preprod",
+      authorityRevision: 1,
+      runtimeGeneration: 1,
+      authority: makeAuthority(state),
+    });
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+      runtimeInstanceId: "rt_inflight",
+      runtimeLease: lease,
+    });
+
+    const inFlight = client.request("network");
+    expect(rawRequest).toHaveBeenCalledTimes(1);
+
+    lease.revoke("authority_commit");
+
+    await expect(client.request("txs")).rejects.toBeInstanceOf(
+      CardanoRuntimeInactiveError
+    );
+    expect(rawRequest).toHaveBeenCalledTimes(1);
+
+    resolveRaw({ ok: true });
+    await expect(inFlight).resolves.toEqual({ ok: true });
+  });
+
+  it("does not record inactive-runtime blocks as rate-limit failures", async () => {
+    const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+    const client = { request: rawRequest };
+    const state = {
+      chainId: "cardano-preprod",
+      revision: 1,
+      generation: 1,
+    };
+    const lease = createCardanoRuntimeLease({
+      chainId: "cardano-preprod",
+      authorityRevision: 1,
+      runtimeGeneration: 1,
+      authority: makeAuthority(state),
+    });
+
+    installBlockfrostRequestTelemetry({
+      blockfrostClient: client as any,
+      chainName: "Preprod",
+      logger: { debug: jest.fn(), warn: jest.fn() } as any,
+      runtimeInstanceId: "rt_no_rl",
+      runtimeLease: lease,
+      chainId: "cardano-preprod",
+    });
+
+    lease.revoke("authority_commit");
+    await expect(client.request("network")).rejects.toBeInstanceOf(
+      CardanoRuntimeInactiveError
+    );
+
+    expect(wasRateLimitedRecently("Preprod")).toBe(false);
+  });
+
+  it("blocks duck-typed inactive errors when debug telemetry is off", async () => {
+    const previous = process.env["CARDANO_RUNTIME_TELEMETRY"];
+    process.env["CARDANO_RUNTIME_TELEMETRY"] = "0";
+
+    try {
+      const rawRequest = jest.fn().mockResolvedValue({ ok: true });
+      const client = { request: rawRequest };
+      const duckLease = {
+        chainId: "cardano-preprod",
+        authorityRevision: 1,
+        runtimeGeneration: 1,
+        signal: new AbortController().signal,
+        assertActive: () => {
+          const err = new Error("inactive from other module copy") as Error & {
+            code: string;
+            reason: string;
+            expectedChainId: string;
+            expectedRevision: number;
+            expectedGeneration: number;
+          };
+          err.code = "cardano_runtime_inactive";
+          err.reason = "revoked";
+          err.expectedChainId = "cardano-preprod";
+          err.expectedRevision = 1;
+          err.expectedGeneration = 1;
+          throw err;
+        },
+      };
+
+      installBlockfrostRequestTelemetry({
+        blockfrostClient: client as any,
+        chainName: "Preprod",
+        logger: { debug: jest.fn(), warn: jest.fn() } as any,
+        runtimeInstanceId: "rt_duck",
+        runtimeLease: duckLease as any,
+        chainId: "cardano-preprod",
+      });
+
+      await expect(client.request("network")).rejects.toMatchObject({
+        code: "cardano_runtime_inactive",
+      });
+      expect(rawRequest).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) {
+        delete process.env["CARDANO_RUNTIME_TELEMETRY"];
+      } else {
+        process.env["CARDANO_RUNTIME_TELEMETRY"] = previous;
+      }
+    }
   });
 });

@@ -9,6 +9,7 @@ import {
   cardanoMalformedMinimumPayloadError,
   CARDANO_SEND_CONFLICT_PENDING_MESSAGE,
 } from "@keplr-wallet/cardano";
+import type { CardanoRuntimeLease } from "@keplr-wallet/cardano";
 import { createBlockfrostConfigResolver } from "./blockfrost-credentials-runtime";
 import { Crypto } from "../keyring/crypto";
 import type { KeyStore as KeyringKeyStore } from "../keyring/types";
@@ -146,6 +147,7 @@ export class CardanoService {
         | "listAccounts"
         | "restore"
         | "unknown";
+      runtimeLease?: CardanoRuntimeLease;
     }
   ): Promise<void> {
     if (!this.keyRing) {
@@ -177,6 +179,7 @@ export class CardanoService {
           selectedChainIdAtCreate: runtimeMeta?.selectedChainIdAtCreate,
           getSelectedChainId: runtimeMeta?.getSelectedChainId,
           createdBy: runtimeMeta?.createdBy,
+          runtimeLease: runtimeMeta?.runtimeLease,
         }
       );
 
