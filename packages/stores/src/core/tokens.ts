@@ -13,6 +13,16 @@ import { ChainStore } from "../chain";
 import { InteractionStore } from "./interaction";
 import { toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import {
+  assertSuggestedTokenApproveIdentity,
+  assertSuggestedTokenRejectIdentity,
+} from "./suggested-token-identity";
+
+export {
+  assertSuggestedTokenApproveIdentity,
+  assertSuggestedTokenRejectIdentity,
+} from "./suggested-token-identity";
+export type { SuggestedTokenWaitingData } from "./suggested-token-identity";
 
 export class TokensStoreInner {
   @observable.ref
@@ -146,25 +156,28 @@ export class TokensStore<
   }
 
   @flow
-  *approveSuggestedToken(appCurrency: AppCurrency) {
+  *approveSuggestedToken(
+    appCurrency: AppCurrency,
+    identity: { interactionId: string; chainId: string }
+  ) {
     const data = this.waitingSuggestedToken;
-    if (data) {
-      yield this.interactionStore.approve(
-        SuggestTokenMsg.type(),
-        data.id,
-        appCurrency
-      );
+    assertSuggestedTokenApproveIdentity(data, identity);
 
-      yield this.getTokensOf(data.data.chainId).refreshTokens();
-    }
+    yield this.interactionStore.approve(
+      SuggestTokenMsg.type(),
+      data.id,
+      appCurrency
+    );
+
+    yield this.getTokensOf(data.data.chainId).refreshTokens();
   }
 
   @flow
-  *rejectSuggestedToken() {
+  *rejectSuggestedToken(identity: { interactionId: string }) {
     const data = this.waitingSuggestedToken;
-    if (data) {
-      yield this.interactionStore.reject(SuggestTokenMsg.type(), data.id);
-    }
+    assertSuggestedTokenRejectIdentity(data, identity);
+
+    yield this.interactionStore.reject(SuggestTokenMsg.type(), data.id);
   }
 
   @flow
