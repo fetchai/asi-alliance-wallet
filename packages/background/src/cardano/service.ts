@@ -206,6 +206,29 @@ export class CardanoService {
     return this.keyRing !== undefined;
   }
 
+  /** Attached network-runtime instance id, if a wallet manager is present. */
+  getAttachedRuntimeInstanceId(): string | undefined {
+    return this.keyRing?.getWalletManager()?.getRuntimeInstanceId?.();
+  }
+
+  /**
+   * Dispose only when the captured instance is still the attached manager.
+   * Strict exact-match: never treat a missing attached manager as a match
+   * (mid-init of a newer runtime must survive stale leave).
+   * @returns true when reset ran for the matched instance.
+   */
+  disposeRuntimeIfInstance(instanceId: string | undefined): boolean {
+    if (instanceId == null) {
+      return false;
+    }
+    const currentId = this.getAttachedRuntimeInstanceId();
+    if (currentId !== instanceId) {
+      return false;
+    }
+    this.reset();
+    return true;
+  }
+
   /** Reset CardanoService to avoid stale wallet state after switches */
   reset(): void {
     for (const controller of this.txHistoryControllers.values()) {
@@ -222,6 +245,9 @@ export class CardanoService {
     this.ownedPollingStates.clear();
     this.aggressivePollingUntilByChain.clear();
     this.submitAdaTxDraftSerial = Promise.resolve();
+    try {
+      this.keyRing?.invalidatePendingRebuilds?.();
+    } catch {}
     try {
       this.keyRing?.getWalletManager()?.dispose?.();
     } catch {}

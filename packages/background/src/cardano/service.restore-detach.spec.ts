@@ -87,4 +87,66 @@ describe("CardanoService restoreFromKeyStore detached cleanup", () => {
     expect(service["keyRing"]).toBe(newerKeyRing);
     expect(service["runtimeSessionId"]).toBe("cad_sess_newer");
   });
+
+  it("disposeRuntimeIfInstance leaves a newer attached runtime untouched", () => {
+    const service = new CardanoService();
+    const disposeNew = jest.fn();
+    service["keyRing"] = {
+      invalidatePendingRebuilds: jest.fn(),
+      getWalletManager: jest.fn().mockReturnValue({
+        getRuntimeInstanceId: () => "rt_new",
+        dispose: disposeNew,
+      }),
+    } as any;
+
+    expect(service.disposeRuntimeIfInstance("rt_old")).toBe(false);
+
+    expect(disposeNew).not.toHaveBeenCalled();
+    expect(service["keyRing"]).toBeTruthy();
+  });
+
+  it("disposeRuntimeIfInstance resets when captured instance is still current", () => {
+    const service = new CardanoService();
+    const dispose = jest.fn();
+    service["keyRing"] = {
+      invalidatePendingRebuilds: jest.fn(),
+      getWalletManager: jest.fn().mockReturnValue({
+        getRuntimeInstanceId: () => "rt_current",
+        dispose,
+      }),
+    } as any;
+
+    expect(service.disposeRuntimeIfInstance("rt_current")).toBe(true);
+
+    expect(dispose).toHaveBeenCalled();
+    expect(service["keyRing"]).toBeUndefined();
+  });
+
+  it("disposeRuntimeIfInstance does not reset mid-init runtime when captured id is gone", () => {
+    const service = new CardanoService();
+    const invalidatePendingRebuilds = jest.fn();
+    // Newer runtime published keyRing but manager not attached yet.
+    service["keyRing"] = {
+      invalidatePendingRebuilds,
+      getWalletManager: jest.fn().mockReturnValue(undefined),
+    } as any;
+    service["runtimeSessionId"] = "cad_sess_mid_init";
+
+    expect(service.disposeRuntimeIfInstance("rt_old")).toBe(false);
+
+    expect(invalidatePendingRebuilds).not.toHaveBeenCalled();
+    expect(service["keyRing"]).toBeTruthy();
+    expect(service["runtimeSessionId"]).toBe("cad_sess_mid_init");
+  });
+
+  it("disposeRuntimeIfInstance with undefined never resets", () => {
+    const service = new CardanoService();
+    service["keyRing"] = {
+      invalidatePendingRebuilds: jest.fn(),
+      getWalletManager: jest.fn().mockReturnValue(undefined),
+    } as any;
+
+    expect(service.disposeRuntimeIfInstance(undefined)).toBe(false);
+    expect(service["keyRing"]).toBeTruthy();
+  });
 });

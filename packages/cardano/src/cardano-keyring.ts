@@ -74,6 +74,13 @@ export class CardanoKeyRing {
   private currentNetwork: CardanoNetwork | undefined;
   private resolveBlockfrostConfig?: ResolveBlockfrostConfig;
   private runtimeOwnership?: CardanoKeyRingRuntimeOwnership;
+  /** Serializes rebuilds so concurrent callers cannot create two managers. */
+  private rebuildAgentsMutex: Promise<void> = Promise.resolve();
+  /**
+   * Bumped to invalidate in-flight manager creates so they never attach and
+   * always dispose the stale candidate (P1 ownership).
+   */
+  private rebuildGeneration = 0;
 
   private resolveNetworkOrThrow(chainId?: string): CardanoNetwork {
     if (!chainId) {
@@ -86,6 +93,14 @@ export class CardanoKeyRing {
     makeObservable(this);
     this.keyAgent = undefined;
     this.walletManager = undefined;
+  }
+
+  /**
+   * Marks any in-flight rebuild create as stale. Next completed create must
+   * dispose without attaching.
+   */
+  invalidatePendingRebuilds(): void {
+    this.rebuildGeneration += 1;
   }
 
   public async getMetaFromMnemonic(
@@ -243,9 +258,33 @@ export class CardanoKeyRing {
       createdBy?: CardanoRuntimeCreatedBy;
     }
   ): Promise<void> {
+    const run = this.rebuildAgentsMutex.then(() =>
+      this.rebuildAgentsForNetworkLocked(network, runtimeMeta)
+    );
+    // Keep the mutex chain alive regardless of success/failure.
+    this.rebuildAgentsMutex = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
+  private async rebuildAgentsForNetworkLocked(
+    network: CardanoNetwork,
+    runtimeMeta?: {
+      chainId?: string;
+      runtimeGeneration?: number;
+      ownerSwitchGeneration?: number;
+      selectedChainIdAtCreate?: string;
+      getSelectedChainId?: () => string | undefined;
+      createdBy?: CardanoRuntimeCreatedBy;
+    }
+  ): Promise<void> {
     if (!this.mnemonicWords) {
       throw new Error("Cardano mnemonic is not available for agent rebuild");
     }
+
+    const ownershipToken = this.rebuildGeneration;
 
     let blockfrostConfig: BlockfrostConfig | null | undefined = undefined;
     try {
@@ -275,6 +314,7 @@ export class CardanoKeyRing {
       { bip32Ed25519, logger: console }
     );
 
+    let newWalletManager: CardanoWalletManager | undefined;
     try {
       const previousInstanceId =
         previousWalletManager?.getRuntimeInstanceId?.();
@@ -296,7 +336,7 @@ export class CardanoKeyRing {
       const createdBy =
         runtimeMeta?.createdBy ?? this.runtimeOwnership?.createdBy ?? "restore";
 
-      const newWalletManager = await CardanoWalletManager.create({
+      newWalletManager = await CardanoWalletManager.create({
         mnemonicWords: this.mnemonicWords,
         network,
         accountIndex: this.accountIndex,
@@ -309,6 +349,18 @@ export class CardanoKeyRing {
         selectedChainIdAtCreate,
         getSelectedChainId,
       });
+
+      // Ownership moved during create: never attach; always dispose candidate.
+      if (ownershipToken !== this.rebuildGeneration) {
+        try {
+          newWalletManager.dispose?.();
+        } catch {
+          console.warn(
+            "[CardanoKeyRing] Failed to dispose stale CardanoWalletManager candidate"
+          );
+        }
+        throw new Error("cardano_wallet_manager_stale_create");
+      }
 
       this.keyAgent = newKeyAgent;
       this.walletManager = newWalletManager;
@@ -327,7 +379,19 @@ export class CardanoKeyRing {
           "[CardanoKeyRing] Failed to dispose previous CardanoWalletManager"
         );
       }
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "cardano_wallet_manager_stale_create"
+      ) {
+        throw error;
+      }
+      // Create failed after allocation: ensure the candidate cannot leak.
+      if (newWalletManager && !newWalletManager.isAttached?.()) {
+        try {
+          newWalletManager.dispose?.();
+        } catch {}
+      }
       console.error("[CardanoKeyRing] Failed to create CardanoWalletManager");
       throw new Error("cardano_wallet_manager_create_failed");
     }

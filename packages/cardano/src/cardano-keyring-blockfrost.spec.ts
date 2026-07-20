@@ -52,14 +52,29 @@ const makeKeyStore = (): KeyStore => ({
 const makeManager = (
   runtimeStatus: "ready" | "provider_unavailable",
   runtimeInstanceId = "rt_test"
-) => ({
-  dispose: mockDispose,
-  getRuntimeStatus: () => runtimeStatus,
-  hasWallet: () => runtimeStatus === "ready",
-  getRuntimeInstanceId: () => runtimeInstanceId,
-  markAttached: jest.fn(),
-  markDetached: jest.fn(),
-});
+) => {
+  let attached = false;
+  let disposed = false;
+  const manager = {
+    dispose: jest.fn(() => {
+      disposed = true;
+      attached = false;
+      mockDispose();
+    }),
+    getRuntimeStatus: () => runtimeStatus,
+    hasWallet: () => runtimeStatus === "ready",
+    getRuntimeInstanceId: () => runtimeInstanceId,
+    markAttached: jest.fn(() => {
+      attached = true;
+    }),
+    markDetached: jest.fn(() => {
+      attached = false;
+    }),
+    isAttached: () => attached,
+    isDisposed: () => disposed,
+  };
+  return manager;
+};
 
 describe("CardanoKeyRing blockfrost resolver", () => {
   let consoleErrorSpy: jest.SpyInstance;
@@ -355,5 +370,123 @@ describe("CardanoKeyRing blockfrost resolver", () => {
     );
 
     consoleWarnSpy.mockRestore();
+  });
+
+  describe("P1 network-runtime ownership", () => {
+    it("single-flight join contract: create===1 and attached===1 (mirrors KeyRingService)", async () => {
+      let releaseCreate: (() => void) | undefined;
+      let createCalls = 0;
+      const managers: ReturnType<typeof makeManager>[] = [];
+
+      mockCreate.mockImplementation(async () => {
+        createCalls += 1;
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        const manager = makeManager("ready", `rt_${createCalls}`);
+        managers.push(manager);
+        return manager;
+      });
+
+      const keyRing = new CardanoKeyRing();
+      // Same contract as KeyRingService NetworkRuntime in-flight join.
+      let inFlight: Promise<void> | null = null;
+      const ensure = (): Promise<void> => {
+        if (inFlight) {
+          return inFlight;
+        }
+        inFlight = keyRing
+          .restore(makeKeyStore(), "password", undefined, "cardano-preprod")
+          .finally(() => {
+            if (inFlight) {
+              inFlight = null;
+            }
+          });
+        return inFlight;
+      };
+
+      const first = ensure();
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+
+      const second = ensure();
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+
+      releaseCreate?.();
+      await Promise.all([first, second]);
+
+      expect(createCalls).toBe(1);
+      expect(managers.filter((m) => m.isAttached())).toHaveLength(1);
+      expect(managers.filter((m) => !m.isDisposed())).toHaveLength(1);
+    });
+
+    it("rebuild mutex prevents overlapping CardanoWalletManager.create", async () => {
+      let releaseCreate: (() => void) | undefined;
+      let createCalls = 0;
+
+      mockCreate.mockImplementation(async () => {
+        createCalls += 1;
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        return makeManager("ready", `rt_${createCalls}`);
+      });
+
+      const keyRing = new CardanoKeyRing();
+      const first = keyRing.restore(
+        makeKeyStore(),
+        "password",
+        undefined,
+        "cardano-preprod"
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(createCalls).toBe(1);
+
+      const second = (keyRing as any).rebuildAgentsForNetwork("preprod", {
+        chainId: "cardano-preprod",
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+      // Second must wait on mutex — no overlapping create.
+      expect(createCalls).toBe(1);
+
+      releaseCreate?.();
+      await first;
+      await new Promise((resolve) => setImmediate(resolve));
+      releaseCreate?.();
+      await second;
+    });
+
+    it("stale candidate after create is never attached and always disposed", async () => {
+      let releaseCreate: (() => void) | undefined;
+      mockCreate.mockImplementation(async () => {
+        await new Promise<void>((resolve) => {
+          releaseCreate = resolve;
+        });
+        return makeManager("ready", "rt_stale");
+      });
+
+      const keyRing = new CardanoKeyRing();
+      const restorePromise = keyRing.restore(
+        makeKeyStore(),
+        "password",
+        undefined,
+        "cardano-preprod"
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+
+      keyRing.invalidatePendingRebuilds();
+      releaseCreate?.();
+
+      await expect(restorePromise).rejects.toThrow(
+        "cardano_wallet_manager_stale_create"
+      );
+
+      const created = mockCreate.mock.results[0]?.value;
+      const manager = created ? await created : undefined;
+      expect(manager?.isAttached()).toBe(false);
+      expect(mockDispose).toHaveBeenCalled();
+      expect(keyRing.getWalletManager()).toBeUndefined();
+    });
   });
 });
