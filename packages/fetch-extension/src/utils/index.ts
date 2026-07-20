@@ -36,6 +36,19 @@ export {
   attachExtensionNetworkProjectionListeners,
   NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
 } from "./network-surfaces-sync";
+
+export {
+  resolveRequestedChain,
+  matchStrictChainIdentity,
+  assertStrictChainIdentity,
+  RequestedChainProvider,
+  useRequestedChain,
+  useOptionalRequestedChain,
+  type RequestedChainContextValue,
+  type ResolveRequestedChainResult,
+  type ResolveRequestedChainFailure,
+  type RequestedChainRegistry,
+} from "./requested-chain-context";
 import { RegisterMode } from "@keplr-wallet/hooks";
 
 /** Pre-keystore UI: word count that will yield Cardano-capable mnemonic after import (matches persisted `mnemonicLength` / `walletSupportsCardano`). */
