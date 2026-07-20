@@ -9,7 +9,6 @@ import {
   ListNetworksMsg,
   AddNetworkAndSwitchMsg,
   SwitchNetworkByChainIdMsg,
-  SetSelectedChainMsg,
   GetSelectedChainIdMsg,
   GetSelectedChainSnapshotMsg,
   SelectSelectedChainMsg,
@@ -32,11 +31,6 @@ export const getHandler: (service: ChainsService) => Handler = (service) => {
         return handleSuggestChainInfoMsg(service)(
           env,
           msg as SuggestChainInfoMsg
-        );
-      case SetSelectedChainMsg:
-        return handleSetSelectedChainMsg(service)(
-          env,
-          msg as SetSelectedChainMsg
         );
       case GetSelectedChainIdMsg:
         return handleGetSelectedChainIdMsg(service)(
@@ -104,14 +98,6 @@ const handleGetChainInfosWithoutEndpointsMsg: (
     return {
       chainInfos,
     };
-  };
-};
-
-const handleSetSelectedChainMsg: (
-  service: ChainsService
-) => InternalHandler<SetSelectedChainMsg> = (service) => {
-  return async (_, msg) => {
-    await service.setSelectedChain(msg.chainId);
   };
 };
 

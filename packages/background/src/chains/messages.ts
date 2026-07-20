@@ -225,34 +225,6 @@ export class GetSelectedChainIdMsg extends Message<{ chainId: string }> {
   }
 }
 
-export class SetSelectedChainMsg extends Message<void> {
-  public static type() {
-    return "set-selected-chain";
-  }
-
-  constructor(public readonly chainId: string) {
-    super();
-  }
-
-  validateBasic(): void {
-    if (!this.chainId) {
-      throw new Error("Chain info not set");
-    }
-  }
-
-  override approveExternal(): boolean {
-    return true;
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  type(): string {
-    return SetSelectedChainMsg.type();
-  }
-}
-
 /** Internal UI read of durable `{ chainId, revision }`. Not external-approved. */
 export class GetSelectedChainSnapshotMsg extends Message<{
   chainId: string;
