@@ -252,3 +252,57 @@ export class SetSelectedChainMsg extends Message<void> {
     return SetSelectedChainMsg.type();
   }
 }
+
+/** Internal UI read of durable `{ chainId, revision }`. Not external-approved. */
+export class GetSelectedChainSnapshotMsg extends Message<{
+  chainId: string;
+  revision: number;
+}> {
+  public static type() {
+    return "get-selected-chain-snapshot";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetSelectedChainSnapshotMsg.type();
+  }
+}
+
+/** Internal UI select with `{ chainId, revision }` ack. Not external-approved. */
+export class SelectSelectedChainMsg extends Message<{
+  chainId: string;
+  revision: number;
+}> {
+  public static type() {
+    return "select-selected-chain";
+  }
+
+  constructor(public readonly chainId: string) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.chainId) {
+      throw new Error("Chain info not set");
+    }
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return SelectSelectedChainMsg.type();
+  }
+}

@@ -197,6 +197,16 @@ export function init(
         interactionService,
         permissionService
       );
+      chainsService.wireNetworkAuthority({
+        readLegacyLastViewChainId: async () => {
+          const legacyStore = storeCreator("store_chain_config");
+          return (
+            (await legacyStore.get<string>("extension_last_view_chain_id")) ??
+            (await legacyStore.get<string>("last_view_chain_id"))
+          );
+        },
+      });
+      await chainsService.hydrateNetworkAuthority();
       ledgerService.init(interactionService);
       keystoneService.init(interactionService);
       keyRingService.init(

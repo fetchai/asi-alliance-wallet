@@ -40,6 +40,25 @@ export class CardanoRuntimeSupervisor {
   }
 
   /**
+   * Adopt an already-committed authority snapshot (e.g. after hydrate) without
+   * treating it as a network switch. Does not invalidate or dispose runtimes.
+   */
+  adoptCommittedSnapshot(snapshot: NetworkAuthoritySnapshot): void {
+    this.ownerRevision = snapshot.revision;
+    this.ownerChainId = snapshot.chainId;
+  }
+
+  /**
+   * Wipe host runtime (lock / keystore change) without changing authority
+   * ownership. Keeps createTail so in-flight physical creates stay serialized.
+   */
+  resetHostRuntime(): void {
+    this.runtimeGeneration += 1;
+    this.inFlight = null;
+    this.deps.host.reset();
+  }
+
+  /**
    * Authority commit observer. Sync invalidate only — physical dispose is
    * scheduled and must not delay the caller.
    */

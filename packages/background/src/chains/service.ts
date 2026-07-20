@@ -31,6 +31,11 @@ import {
   IBCCurrency,
   ERC20Currency,
 } from "@fetchai/wallet-types";
+import { NetworkAuthority } from "./authority/network-authority";
+import {
+  NetworkAuthorityCommitObserver,
+  NetworkAuthoritySnapshot,
+} from "./authority/types";
 
 type ChainRemovedHandler = (chainId: string, identifier: string) => void;
 type NetworkSwitchHandler = (
@@ -38,13 +43,19 @@ type NetworkSwitchHandler = (
   newChainId: string
 ) => Promise<void>;
 
+export const NETWORK_SURFACES_SYNC_MESSAGE_TYPE = "network-surfaces-sync";
+
 export class ChainsService {
   protected onChainRemovedHandlers: ChainRemovedHandler[] = [];
+  /** @deprecated Prefer NetworkAuthority commit observers. */
   protected onNetworkSwitchHandlers: NetworkSwitchHandler[] = [];
 
   protected cachedChainInfos: ChainInfoWithCoreTypes[] | undefined;
   protected selectedChainId: string | undefined;
-  /** Bumped on every committed selected-chain change; for Cardano runtime ownership/telemetry. */
+  /**
+   * Mirrors committed authority revision after wire-up (legacy name kept for
+   * Cardano restore meta / existing call sites).
+   */
   private switchGeneration = 0;
 
   protected chainUpdaterService!: ChainUpdaterService;
@@ -52,6 +63,9 @@ export class ChainsService {
   public permissionService!: PermissionService;
 
   protected readonly kvStoreForSuggestChain: KVStore;
+
+  private networkAuthority: NetworkAuthority | undefined;
+  private authorityUnsubscribers: Array<() => void> = [];
 
   constructor(
     protected readonly kvStore: KVStore,
@@ -481,6 +495,17 @@ export class ChainsService {
   }
 
   async addChainInfo(chainInfo: ChainInfoWithRepoUpdateOptions): Promise<void> {
+    if (this.networkAuthority) {
+      await this.networkAuthority.commitAddChain(chainInfo);
+      return;
+    }
+    await this.commitAddChainInfo(chainInfo);
+  }
+
+  /** Registry write only — must run inside the authority FIFO when wired. */
+  private async commitAddChainInfo(
+    chainInfo: ChainInfoWithRepoUpdateOptions
+  ): Promise<void> {
     if (await this.hasChainInfo(chainInfo.chainId)) {
       throw new Error("Same chain is already registered");
     }
@@ -509,6 +534,24 @@ export class ChainsService {
       throw new Error("Can't remove the embedded chain");
     }
 
+    if (this.networkAuthority) {
+      await this.networkAuthority.commitRemoveChain(chainId);
+      return;
+    }
+
+    await this.commitRemoveChainInfo(chainId);
+  }
+
+  /** Registry write only — must run inside the authority FIFO when wired. */
+  private async commitRemoveChainInfo(chainId: string): Promise<void> {
+    if (!(await this.hasChainInfo(chainId))) {
+      throw new Error("Chain is not registered");
+    }
+
+    if ((await this.getChainInfo(chainId)).embeded) {
+      throw new Error("Can't remove the embedded chain");
+    }
+
     const savedChainInfos =
       (await this.kvStoreForSuggestChain.get<ChainInfoWithRepoUpdateOptions[]>(
         "chain-infos"
@@ -526,14 +569,25 @@ export class ChainsService {
       resultChainInfo
     );
 
-    // Clear the updated chain info.
-    await this.chainUpdaterService.clearUpdatedProperty(chainId);
+    this.clearCachedChainInfos();
 
-    for (const chainRemovedHandler of this.onChainRemovedHandlers) {
-      chainRemovedHandler(chainId, ChainIdHelper.parse(chainId).identifier);
+    // Best-effort cleanup after the registry commit is durable.
+    try {
+      await this.chainUpdaterService.clearUpdatedProperty(chainId);
+    } catch (error) {
+      console.warn(
+        "[ChainsService] clearUpdatedProperty failed after remove:",
+        error
+      );
     }
 
-    this.clearCachedChainInfos();
+    for (const chainRemovedHandler of this.onChainRemovedHandlers) {
+      try {
+        chainRemovedHandler(chainId, ChainIdHelper.parse(chainId).identifier);
+      } catch (error) {
+        console.warn("[ChainsService] chain removed handler failed:", error);
+      }
+    }
   }
 
   async getChainEthereumKeyFeatures(
@@ -648,6 +702,10 @@ export class ChainsService {
     this.onChainRemovedHandlers.push(handler);
   }
 
+  /**
+   * @deprecated Legacy async switch handlers. Prefer authority commit observers.
+   * Not used when NetworkAuthority is wired.
+   */
   addNetworkSwitchHandler(handler: NetworkSwitchHandler) {
     this.onNetworkSwitchHandlers.push(handler);
   }
@@ -656,18 +714,158 @@ export class ChainsService {
     return this.switchGeneration;
   }
 
-  /** Sync peek of in-memory selected chain (may be undefined before first resolve). */
+  getCommittedRevision(): number {
+    return this.switchGeneration;
+  }
+
+  /** Sync peek of in-memory selected chain (may be undefined before hydrate). */
   peekSelectedChainId(): string | undefined {
     return this.selectedChainId;
   }
 
-  async setSelectedChain(chainId: string) {
+  /**
+   * Sync Cardano feature check from cache/embed (no await).
+   * Used by RuntimeSupervisor commit observers.
+   */
+  isCardanoFeatureSync(chainId: string): boolean {
+    const identifier = this.getChainIdentifierSafe(chainId);
+    if (identifier == null) {
+      return false;
+    }
+    const infos: Array<{ chainId: string; features?: string[] }> =
+      this.cachedChainInfos ??
+      this.embedChainInfos.map((chainInfo) => ({
+        chainId: chainInfo.chainId,
+        features: chainInfo.features,
+      }));
+    const found = infos.find(
+      (chainInfo) =>
+        this.getChainIdentifierSafe(chainInfo.chainId) === identifier
+    );
+    return found?.features?.includes("cardano") ?? false;
+  }
+
+  getNetworkAuthority(): NetworkAuthority {
+    if (!this.networkAuthority) {
+      throw new Error("NetworkAuthority is not wired");
+    }
+    return this.networkAuthority;
+  }
+
+  hasNetworkAuthority(): boolean {
+    return this.networkAuthority != null;
+  }
+
+  subscribeNetworkAuthority(
+    observer: NetworkAuthorityCommitObserver
+  ): () => void {
+    return this.getNetworkAuthority().subscribe(observer);
+  }
+
+  /**
+   * Attach durable selected-chain authority. Call once during background init
+   * before hydrate, together with CardanoRuntimeSupervisor subscription.
+   */
+  wireNetworkAuthority(options: {
+    readLegacyLastViewChainId: () => Promise<string | undefined>;
+  }): void {
+    if (this.networkAuthority) {
+      throw new Error("NetworkAuthority is already wired");
+    }
+
+    this.networkAuthority = new NetworkAuthority({
+      kvStore: this.kvStore,
+      registry: {
+        getChainInfos: async () => this.getChainInfos(),
+        findCanonicalChainId: async (chainId) => {
+          const info = await this.findChainInfo(chainId);
+          return info?.chainId;
+        },
+        commitAddChain: (chainInfo) => this.commitAddChainInfo(chainInfo),
+        commitRemoveChain: (chainId) => this.commitRemoveChainInfo(chainId),
+      },
+      readLegacyLastViewChainId: options.readLegacyLastViewChainId,
+      resolveFallbackChainId: (chainInfos) => {
+        const fallback = getDefaultFallbackChainId(chainInfos);
+        if (!fallback) {
+          throw new Error("No chain infos available");
+        }
+        return fallback;
+      },
+      publisher: {
+        publishInternalSurfacesSync: (snapshot) => {
+          this.broadcastNetworkSurfacesSync(snapshot);
+        },
+        publishWebpageNetworkChanged: (opaqueSeq) => {
+          this.interactionService.dispatchEvent(
+            WEBPAGE_PORT,
+            "network-changed",
+            {
+              seq: opaqueSeq,
+            }
+          );
+          this.interactionService.dispatchEvent(
+            WEBPAGE_PORT,
+            "keystore-changed",
+            {}
+          );
+        },
+      },
+    });
+
+    const unsubscribe = this.networkAuthority.subscribe((snapshot) => {
+      this.selectedChainId = snapshot.chainId;
+      this.switchGeneration = snapshot.revision;
+    });
+    this.authorityUnsubscribers.push(unsubscribe);
+  }
+
+  async hydrateNetworkAuthority(): Promise<void> {
+    const authority = this.getNetworkAuthority();
+    await authority.hydrate();
+    const snapshot = await authority.getSnapshot();
+    this.selectedChainId = snapshot.chainId;
+    this.switchGeneration = snapshot.revision;
+  }
+
+  async getSelectedChainSnapshot(): Promise<NetworkAuthoritySnapshot> {
+    if (this.networkAuthority) {
+      return this.networkAuthority.getSnapshot();
+    }
+    const chainId = await this.getSelectedChain();
+    return {
+      chainId,
+      revision: Math.max(this.switchGeneration, 1),
+    };
+  }
+
+  async setSelectedChain(chainId: string): Promise<void> {
+    if (this.networkAuthority) {
+      await this.networkAuthority.select(chainId);
+      return;
+    }
+
+    await this.setSelectedChainLegacy(chainId);
+  }
+
+  /** Internal UI path: returns committed `{ chainId, revision }` ack. */
+  async selectChainWithAck(chainId: string): Promise<NetworkAuthoritySnapshot> {
+    if (!this.networkAuthority) {
+      await this.setSelectedChainLegacy(chainId);
+      return {
+        chainId: this.selectedChainId as string,
+        revision: Math.max(this.switchGeneration, 1),
+      };
+    }
+    return this.networkAuthority.select(chainId);
+  }
+
+  private async setSelectedChainLegacy(chainId: string): Promise<void> {
     if (this.selectedChainId !== chainId) {
       const oldChainId = this.selectedChainId;
       this.switchGeneration += 1;
       this.selectedChainId = chainId;
       try {
-        // Complete critical network switch handlers before notifying UI.
         for (const handler of this.onNetworkSwitchHandlers) {
           await handler(oldChainId, chainId).catch((error) => {
             console.error("Network switch handler failed:", error);
@@ -675,7 +873,6 @@ export class ChainsService {
           });
         }
       } catch (error) {
-        // Fail-closed: roll back selected chain when critical switch handlers fail.
         this.selectedChainId = oldChainId;
         throw error;
       }
@@ -690,6 +887,34 @@ export class ChainsService {
     }
   }
 
+  private broadcastNetworkSurfacesSync(
+    snapshot: NetworkAuthoritySnapshot
+  ): void {
+    try {
+      const g = globalThis as {
+        browser?: { runtime?: { sendMessage?: (message: unknown) => unknown } };
+        chrome?: { runtime?: { sendMessage?: (message: unknown) => unknown } };
+      };
+      const rt = g.browser?.runtime ?? g.chrome?.runtime;
+      if (!rt?.sendMessage) {
+        return;
+      }
+      const sendMessage = rt.sendMessage as (
+        message: unknown
+      ) => void | Promise<unknown>;
+      const out = sendMessage({
+        type: NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
+        chainId: snapshot.chainId,
+        revision: snapshot.revision,
+      });
+      if (out && typeof (out as Promise<unknown>).catch === "function") {
+        (out as Promise<unknown>).catch(() => undefined);
+      }
+    } catch {
+      // Best-effort fan-out; commit already succeeded.
+    }
+  }
+
   private resolveFallbackChainId(chainInfos: ChainInfoWithCoreTypes[]): string {
     const fallback = getDefaultFallbackChainId(chainInfos);
     if (!fallback) {
@@ -699,6 +924,10 @@ export class ChainsService {
   }
 
   async getSelectedChain(): Promise<string> {
+    if (this.networkAuthority) {
+      return this.networkAuthority.getSelectedChainId();
+    }
+
     const chainInfos = await this.getChainInfos();
 
     if (!this.selectedChainId) {

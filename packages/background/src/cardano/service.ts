@@ -67,6 +67,11 @@ export class CardanoService {
   private notification?: Notification;
   /** ASI chain id this NetworkRuntime was restored for (null when detached). */
   private boundChainId: string | undefined;
+  /**
+   * When false, isReady()/isReadyForChain() stay false even if a manager still
+   * exists physically. Cleared on invalidate; restored only after successful attach.
+   */
+  private advertisedReady = false;
   private txHistoryStore?: CardanoTxHistoryStore;
   private blockfrostCredentialsStore?: BlockfrostCredentialsStore;
   private txHistoryControllers = new Map<
@@ -183,6 +188,7 @@ export class CardanoService {
         )}_${Math.random().toString(36).slice(2)}`;
         if (chainId) {
           this.boundChainId = chainId;
+          this.advertisedReady = true;
         }
       }
     } finally {
@@ -225,6 +231,15 @@ export class CardanoService {
     return this.isReady() && this.boundChainId === chainId;
   }
 
+  /**
+   * Synchronously stop advertising readiness for the attached runtime.
+   * Does not dispose the manager — physical cleanup is separate.
+   */
+  invalidateAdvertisedReadiness(): void {
+    this.boundChainId = undefined;
+    this.advertisedReady = false;
+  }
+
   /** Attached network-runtime instance id, if a wallet manager is present. */
   getAttachedRuntimeInstanceId(): string | undefined {
     return this.keyRing?.getWalletManager()?.getRuntimeInstanceId?.();
@@ -253,6 +268,7 @@ export class CardanoService {
       const detached = this.keyRing.detachWalletManagerIfInstance?.(instanceId);
       if (detached) {
         this.boundChainId = undefined;
+        this.advertisedReady = false;
       }
       return Boolean(detached);
     }
@@ -285,6 +301,7 @@ export class CardanoService {
     } catch {}
     this.keyRing = undefined;
     this.boundChainId = undefined;
+    this.advertisedReady = false;
     this.runtimeSessionId = "";
   }
 
@@ -1332,11 +1349,15 @@ export class CardanoService {
   }
 
   /**
-   * Checks service readiness for transaction operations
-   * Requires both keyRing and walletManager to be initialized
+   * Checks service readiness for transaction operations.
+   * Requires an attached transaction-ready manager and advertised readiness
+   * (cleared synchronously on authority switch, restored only after attach).
    */
   isReady(): boolean {
-    return !!(this.keyRing && this.keyRing.isTransactionReady());
+    return (
+      this.advertisedReady &&
+      !!(this.keyRing && this.keyRing.isTransactionReady())
+    );
   }
 
   /**

@@ -51,7 +51,6 @@ import { Bech32Address } from "@keplr-wallet/cosmos";
 import { isValidCardanoAddress } from "@keplr-wallet/cardano";
 import { SignDoc } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import { KeyRingStatus } from "./keyring";
-import { ExtensionKVStore } from "@keplr-wallet/common";
 import { Account, WalletStatus } from "@fetchai/wallet-types";
 import { formatErrorForLog } from "../logging/safe-error";
 
@@ -1086,11 +1085,7 @@ const handleGetAccountMsg: (
   service: KeyRingService
 ) => InternalHandler<GetAccountMsg> = (service) => {
   return async (env, msg) => {
-    const kvStore = new ExtensionKVStore("store_chain_config");
-    const chainId = await kvStore.get<string>("extension_last_view_chain_id");
-    if (!chainId) {
-      throw Error("could not detect current chainId");
-    }
+    const chainId = await service.chainsService.getSelectedChain();
 
     await service.permissionService.checkOrGrantBasicAccessPermission(
       env,

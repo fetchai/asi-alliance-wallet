@@ -6,6 +6,31 @@ import {
 } from "./cardano-runtime-supervisor.test-helpers";
 
 describe("CardanoRuntimeSupervisor", () => {
+  describe("adoptCommittedSnapshot", () => {
+    it("sets ownership without invalidating or disposing", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      host.ready = true;
+      host.boundChainId = "cardano-mainnet";
+      host.initialized = true;
+      host.attachedInstanceId = "inst-1";
+
+      supervisor.adoptCommittedSnapshot({
+        chainId: "cardano-mainnet",
+        revision: 4,
+      });
+
+      expect(supervisor.getOwnerChainId()).toBe("cardano-mainnet");
+      expect(supervisor.getOwnerRevision()).toBe(4);
+      expect(supervisor.getRuntimeGeneration()).toBe(0);
+      expect(host.ready).toBe(true);
+      expect(host.resetCalls).toBe(0);
+
+      await supervisor.ensureReady("cardano-mainnet", 4);
+      // Already ready for owner — no create.
+      expect(host.createCalls).toBe(0);
+    });
+  });
+
   describe("onAuthorityCommitted", () => {
     it("synchronously invalidates readiness without awaiting dispose", () => {
       const { supervisor, host } = createTestSupervisor();

@@ -6,6 +6,11 @@ import {
 import { Key, KeyStoreMetaKnown } from "./types";
 import { CardanoService } from "../cardano/service";
 import {
+  CardanoRuntimeSupervisor,
+  createCardanoServiceHost,
+  RuntimeCreateContext,
+} from "../cardano/runtime-supervisor";
+import {
   CARDANO_ENSURE_MESSAGE,
   StaleCardanoRuntimeError,
   formatNetworkContextInvalidForCardano,
@@ -128,7 +133,49 @@ export class KeyRingService {
     );
 
     this.chainsService.addChainRemovedHandler(this.onChainRemoved);
-    this.chainsService.addNetworkSwitchHandler(this.onNetworkSwitch);
+
+    if (this.chainsService.hasNetworkAuthority()) {
+      const supervisor = new CardanoRuntimeSupervisor({
+        host: createCardanoServiceHost(this.cardanoService, (ctx) =>
+          this.createAndAttachCardanoRuntime(ctx)
+        ),
+        isCardanoChain: (chainId) =>
+          this.chainsService.isCardanoFeatureSync(chainId),
+      });
+      this.cardanoRuntimeSupervisor = supervisor;
+
+      this.chainsService.subscribeNetworkAuthority((snapshot, previous) => {
+        supervisor.onAuthorityCommitted(snapshot, previous);
+        if (
+          this.keyRing.status === KeyRingStatus.UNLOCKED &&
+          this.chainsService.isCardanoFeatureSync(snapshot.chainId)
+        ) {
+          this.runAddressCacheRepairBestEffort(snapshot.chainId).catch(
+            (error) => {
+              console.error(
+                `[KeyRingService] Post-switch cache repair failed for ${snapshot.chainId}:`,
+                error
+              );
+            }
+          );
+        }
+      });
+
+      // Hydrate completes before KeyRing init and does not notify observers.
+      // Adopt the already-committed snapshot so the first ensure is not stale.
+      const hydratedChainId = this.chainsService.peekSelectedChainId();
+      const hydratedRevision = this.chainsService.getCommittedRevision();
+      if (hydratedChainId != null && hydratedRevision >= 1) {
+        supervisor.adoptCommittedSnapshot({
+          chainId: hydratedChainId,
+          revision: hydratedRevision,
+        });
+      }
+    } else {
+      // No authority: keep supervisor unset so legacy ensure/reset/onNetworkSwitch run.
+      this.cardanoRuntimeSupervisor = undefined;
+      this.chainsService.addNetworkSwitchHandler(this.onNetworkSwitch);
+    }
     this.analyticsSerice = analyticsSerice;
   }
 
@@ -150,11 +197,14 @@ export class KeyRingService {
     return this.isCardanoChain(chainId);
   }
 
+  private cardanoRuntimeSupervisor: CardanoRuntimeSupervisor | undefined;
+
   private cardanoRuntimeGeneration = 0;
 
   /**
    * Service-wide NetworkRuntime ensure join. Concurrent callers for the same
    * target chain share one promise regardless of intermediate isInitialized.
+   * Used only when CardanoRuntimeSupervisor is not attached (unit tests).
    */
   private cardanoNetworkRuntimeInFlight: {
     chainId: string;
@@ -162,6 +212,13 @@ export class KeyRingService {
   } | null = null;
 
   private resetCardanoRuntime(): void {
+    if (this.cardanoRuntimeSupervisor) {
+      this.cardanoRuntimeSupervisor.resetHostRuntime();
+      this.cardanoRuntimeGeneration =
+        this.cardanoRuntimeSupervisor.getRuntimeGeneration();
+      this.cardanoNetworkRuntimeInFlight = null;
+      return;
+    }
     this.cardanoRuntimeGeneration += 1;
     this.cardanoNetworkRuntimeInFlight = null;
     this.cardanoService.reset();
@@ -788,11 +845,7 @@ export class KeyRingService {
   }> {
     let currentChainId: string | undefined;
     try {
-      const { ExtensionKVStore } = await import("@keplr-wallet/common");
-      const kvStore = new ExtensionKVStore("store_chain_config");
-      currentChainId = await kvStore.get<string>(
-        "extension_last_view_chain_id"
-      );
+      currentChainId = await this.chainsService.getSelectedChain();
     } catch (error) {
       console.warn("Failed to get current chainId for Cardano meta:", error);
     }
@@ -1057,20 +1110,34 @@ export class KeyRingService {
 
   /**
    * Single-flight NetworkRuntime ensure (transaction mode only).
-   * Concurrent callers for the same target join one in-flight operation.
+   * With supervisor attached, joins create/ownership there. Otherwise uses the
+   * legacy in-flight map (unit tests without authority wire-up).
    */
   private async ensureCardanoServiceReadyOnce(
     chainId?: string,
     _options?: { mode?: "transaction" | "key" }
   ): Promise<void> {
-    let targetChainId = await this.resolveSelectedCardanoTargetChainId(chainId);
-    const assertReady = () => this.assertCardanoServiceReady(targetChainId);
+    const targetChainId = await this.resolveSelectedCardanoTargetChainId(
+      chainId
+    );
 
-    // Join / claim loop: after any await, re-check in-flight before starting another create.
+    if (this.cardanoRuntimeSupervisor) {
+      const snapshot = await this.chainsService.getSelectedChainSnapshot();
+      await this.cardanoRuntimeSupervisor.ensureReady(
+        targetChainId,
+        snapshot.revision
+      );
+      this.assertCardanoServiceReady(targetChainId);
+      return;
+    }
+
+    let resolvedTarget = targetChainId;
+    const assertReady = () => this.assertCardanoServiceReady(resolvedTarget);
+
     for (;;) {
       const inFlight = this.cardanoNetworkRuntimeInFlight;
       if (inFlight) {
-        if (inFlight.chainId === targetChainId) {
+        if (inFlight.chainId === resolvedTarget) {
           await inFlight.promise;
           assertReady();
           return;
@@ -1080,18 +1147,22 @@ export class KeyRingService {
         } catch {
           // Prior ensure failed; this caller may claim a fresh one.
         }
-        targetChainId = await this.resolveSelectedCardanoTargetChainId(chainId);
+        resolvedTarget = await this.resolveSelectedCardanoTargetChainId(
+          chainId
+        );
         continue;
       }
 
-      if (this.isCardanoNetworkRuntimeReadyForChain(targetChainId)) {
+      if (this.isCardanoNetworkRuntimeReadyForChain(resolvedTarget)) {
         assertReady();
         return;
       }
 
-      // Claim in the same sync turn as the null check (no await between).
-      const promise = this.runCardanoNetworkRuntimeEnsure(targetChainId);
-      this.cardanoNetworkRuntimeInFlight = { chainId: targetChainId, promise };
+      const promise = this.runCardanoNetworkRuntimeEnsure(resolvedTarget);
+      this.cardanoNetworkRuntimeInFlight = {
+        chainId: resolvedTarget,
+        promise,
+      };
       try {
         await promise;
         assertReady();
@@ -1113,6 +1184,38 @@ export class KeyRingService {
         }
       }
     }
+  }
+
+  private async createAndAttachCardanoRuntime(
+    ctx: RuntimeCreateContext
+  ): Promise<void> {
+    const ks = this.keyRing.getCurrentKeyStore();
+    if (!ks || this.keyRing.status !== KeyRingStatus.UNLOCKED) {
+      throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
+    }
+    if (walletShouldLeaveCardanoChain(ks)) {
+      throw new Error(CARDANO_ENSURE_MESSAGE.MNEMONIC_24);
+    }
+
+    ctx.assertStillOwner();
+    await this.cardanoService.restoreFromKeyStore(
+      ks,
+      this.keyRing.currentPassword,
+      this.crypto,
+      ctx.chainId,
+      {
+        runtimeGeneration: ctx.runtimeGeneration,
+        ownerSwitchGeneration: ctx.authorityRevision,
+        selectedChainIdAtCreate: ctx.chainId,
+        getSelectedChainId: () => this.chainsService.peekSelectedChainId?.(),
+        getOwnerSwitchGeneration: () =>
+          this.chainsService.getCommittedRevision?.() ??
+          this.chainsService.getSwitchGeneration?.() ??
+          0,
+        createdBy: "restore",
+      }
+    );
+    ctx.assertStillOwner();
   }
 
   private async runCardanoNetworkRuntimeEnsure(

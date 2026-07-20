@@ -11,6 +11,8 @@ import {
   SwitchNetworkByChainIdMsg,
   SetSelectedChainMsg,
   GetSelectedChainIdMsg,
+  GetSelectedChainSnapshotMsg,
+  SelectSelectedChainMsg,
 } from "./messages";
 import { ChainInfo } from "@keplr-wallet/types";
 
@@ -40,6 +42,16 @@ export const getHandler: (service: ChainsService) => Handler = (service) => {
         return handleGetSelectedChainIdMsg(service)(
           env,
           msg as GetSelectedChainIdMsg
+        );
+      case GetSelectedChainSnapshotMsg:
+        return handleGetSelectedChainSnapshotMsg(service)(
+          env,
+          msg as GetSelectedChainSnapshotMsg
+        );
+      case SelectSelectedChainMsg:
+        return handleSelectSelectedChainMsg(service)(
+          env,
+          msg as SelectSelectedChainMsg
         );
       case AddNetworkAndSwitchMsg:
         return handleAddNetworkAndSwitch(service)(
@@ -109,6 +121,22 @@ const handleGetSelectedChainIdMsg: (
   return async () => {
     const chainId = await service.getSelectedChain();
     return { chainId };
+  };
+};
+
+const handleGetSelectedChainSnapshotMsg: (
+  service: ChainsService
+) => InternalHandler<GetSelectedChainSnapshotMsg> = (service) => {
+  return async () => {
+    return await service.getSelectedChainSnapshot();
+  };
+};
+
+const handleSelectSelectedChainMsg: (
+  service: ChainsService
+) => InternalHandler<SelectSelectedChainMsg> = (service) => {
+  return async (_, msg) => {
+    return await service.selectChainWithAck(msg.chainId);
   };
 };
 
