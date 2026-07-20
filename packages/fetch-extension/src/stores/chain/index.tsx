@@ -193,17 +193,6 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     return this._showTestnet;
   }
 
-  /**
-   * Explicit selection must use selectChainAndPersist. Fire-and-forget wrapper
-   * still goes through ack; callers that care about errors should await Persist.
-   */
-  @action
-  selectChain(chainId: string) {
-    void flowResult(this.selectChainAndPersist(chainId)).catch((error) => {
-      console.warn("[ChainStore] selectChain failed:", error);
-    });
-  }
-
   @flow
   *selectChainAndPersist(chainId: string) {
     // Always send the acknowledged command. Background is hydrated before UI

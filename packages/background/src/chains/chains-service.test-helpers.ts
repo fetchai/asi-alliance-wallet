@@ -16,21 +16,46 @@ export const TEST_EMBED_CHAINS: ChainInfo[] = [
   } as ChainInfo,
 ];
 
-export function createTestChainsService(
-  embedChainInfos: ChainInfo[] = TEST_EMBED_CHAINS
-): ChainsService {
-  const service = new ChainsService(
-    new MemoryKVStore("test-chains"),
-    embedChainInfos
-  );
+const testChainUpdater = {
+  replaceChainInfo: async (chainInfo: ChainInfo) => chainInfo,
+  clearUpdatedProperty: async (_chainId: string) => undefined,
+};
+
+function initTestChainsService(service: ChainsService): ChainsService {
   service.init(
-    {
-      replaceChainInfo: async (chainInfo: ChainInfo) => chainInfo,
-    } as any,
+    testChainUpdater as any,
     {
       dispatchEvent: jest.fn(),
     } as any,
     {} as any
   );
+  return service;
+}
+
+export function createTestChainsService(
+  embedChainInfos: ChainInfo[] = TEST_EMBED_CHAINS
+): ChainsService {
+  return initTestChainsService(
+    new ChainsService(new MemoryKVStore("test-chains"), embedChainInfos)
+  );
+}
+
+/** Wire and hydrate NetworkAuthority for selection/registry commit tests. */
+export async function createWiredTestChainsService(
+  embedChainInfos: ChainInfo[] = TEST_EMBED_CHAINS,
+  options?: {
+    readLegacyLastViewChainId?: () => Promise<string | undefined>;
+    kvStore?: MemoryKVStore;
+  }
+): Promise<ChainsService> {
+  const service = options?.kvStore
+    ? initTestChainsService(new ChainsService(options.kvStore, embedChainInfos))
+    : createTestChainsService(embedChainInfos);
+
+  service.wireNetworkAuthority({
+    readLegacyLastViewChainId:
+      options?.readLegacyLastViewChainId ?? (async () => undefined),
+  });
+  await service.hydrateNetworkAuthority();
   return service;
 }

@@ -371,65 +371,35 @@ describe("ChainsService NetworkAuthority wire-up", () => {
     expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
   });
 
-  it("init without authority leaves supervisor unset so legacy ensure works", async () => {
+  it("init without NetworkAuthority throws before attaching supervisor", async () => {
     const chainsService = createTestChainsService(CARDANO_TEST_CHAINS);
     expect(chainsService.hasNetworkAuthority()).toBe(false);
-    chainsService["selectedChainId"] = "cardano-mainnet";
-    chainsService["switchGeneration"] = 1;
 
-    let ready = false;
-    let bound: string | undefined;
-    const restoreFromKeyStore = jest.fn().mockImplementation(async () => {
-      ready = true;
-      bound = "cardano-mainnet";
-    });
     const mockCardano = {
       reset: jest.fn(),
-      restoreFromKeyStore,
-      isInitialized: jest.fn().mockImplementation(() => ready),
-      isReady: jest.fn().mockImplementation(() => ready),
-      isReadyForChain: jest
-        .fn()
-        .mockImplementation((id: string) => ready && bound === id),
-      isKeyAgentReady: jest.fn().mockReturnValue(false),
-      getBoundChainId: jest.fn().mockImplementation(() => bound),
-      getAttachedRuntimeInstanceId: jest.fn().mockReturnValue(undefined),
-      disposeRuntimeIfInstance: jest.fn().mockReturnValue(false),
+      restoreFromKeyStore: jest.fn(),
+      isInitialized: jest.fn().mockReturnValue(false),
+      isReady: jest.fn().mockReturnValue(false),
       invalidateAdvertisedReadiness: jest.fn(),
-      getRuntimeState: jest
-        .fn()
-        .mockImplementation(() => (ready ? "ready" : "not_initialized")),
     } as any as CardanoService;
 
     const keyRingService = new KeyRingService(
-      new MemoryKVStore("test-kr-legacy"),
+      new MemoryKVStore("test-kr-no-authority"),
       CARDANO_TEST_CHAINS,
       {} as any,
       mockCardano
     );
 
-    keyRingService.init(
-      {} as any,
-      chainsService,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any
-    );
-
-    expect(keyRingService["cardanoRuntimeSupervisor"]).toBeUndefined();
-
-    keyRingService["keyRing"] = {
-      status: KeyRingStatus.UNLOCKED,
-      getCurrentKeyStore: jest.fn().mockReturnValue({
-        type: "mnemonic",
-        meta: { mnemonicLength: "24" },
-      }),
-      currentPassword: "pw",
-    } as any;
-
-    await keyRingService.ensureCardanoServiceReady("cardano-mainnet");
-    expect(restoreFromKeyStore).toHaveBeenCalledTimes(1);
+    expect(() =>
+      keyRingService.init(
+        {} as any,
+        chainsService,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+      )
+    ).toThrow(/requires NetworkAuthority/);
   });
 });
 

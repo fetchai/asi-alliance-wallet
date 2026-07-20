@@ -1,6 +1,5 @@
 import {
   observable,
-  action,
   computed,
   makeObservable,
   flow,
@@ -246,17 +245,6 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   get selectedChainId(): string {
     return this._selectedChainId;
-  }
-
-  /**
-   * Explicit selection must use selectChainAndPersist. Fire-and-forget wrapper
-   * still goes through ack; callers that care about errors should await Persist.
-   */
-  @action
-  selectChain(chainId: string) {
-    void flowResult(this.selectChainAndPersist(chainId)).catch((error) => {
-      console.warn("[ChainStore] selectChain failed:", error);
-    });
   }
 
   @flow

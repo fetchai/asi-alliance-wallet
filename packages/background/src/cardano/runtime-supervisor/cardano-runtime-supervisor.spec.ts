@@ -251,6 +251,42 @@ describe("CardanoRuntimeSupervisor", () => {
       await ensureB;
       expect(host.createCalls).toBe(2);
     });
+
+    it("resetHostRuntime during in-flight create keeps create-tail serialization", async () => {
+      const { supervisor, host } = createTestSupervisor();
+      let releaseA!: () => void;
+      host.createGate = new Promise<void>((resolve) => {
+        releaseA = resolve;
+      });
+
+      commit(supervisor, "cardano-mainnet", 1);
+      const ensureA = supervisor.ensureReady("cardano-mainnet", 1);
+      await Promise.resolve();
+      expect(host.createCalls).toBe(1);
+
+      // Lock / reinitialize clears advertised in-flight, but not createTail.
+      supervisor.resetHostRuntime();
+      expect(host.resetCalls).toBe(1);
+
+      host.createGate = null;
+      const ensureB = supervisor.ensureReady("cardano-mainnet", 1);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // A still occupies the physical create slot — B must not start yet.
+      expect(host.createCalls).toBe(1);
+
+      releaseA();
+      await expect(ensureA).rejects.toBeInstanceOf(StaleCardanoRuntimeError);
+      await ensureB;
+
+      expect(host.createCalls).toBe(2);
+      expect(host.createStarted).toEqual([
+        "cardano-mainnet",
+        "cardano-mainnet",
+      ]);
+      expect(supervisor.isEligibleFor("cardano-mainnet", 1)).toBe(true);
+    });
   });
 
   describe("stale dispose", () => {

@@ -134,47 +134,47 @@ export class KeyRingService {
 
     this.chainsService.addChainRemovedHandler(this.onChainRemoved);
 
-    if (this.chainsService.hasNetworkAuthority()) {
-      const supervisor = new CardanoRuntimeSupervisor({
-        host: createCardanoServiceHost(this.cardanoService, (ctx) =>
-          this.createAndAttachCardanoRuntime(ctx)
-        ),
-        isCardanoChain: (chainId) =>
-          this.chainsService.isCardanoFeatureSync(chainId),
-      });
-      this.cardanoRuntimeSupervisor = supervisor;
+    if (!this.chainsService.hasNetworkAuthority()) {
+      throw new Error(
+        "KeyRingService requires NetworkAuthority before init (wire and hydrate first)"
+      );
+    }
 
-      this.chainsService.subscribeNetworkAuthority((snapshot, previous) => {
-        supervisor.onAuthorityCommitted(snapshot, previous);
-        if (
-          this.keyRing.status === KeyRingStatus.UNLOCKED &&
-          this.chainsService.isCardanoFeatureSync(snapshot.chainId)
-        ) {
-          this.runAddressCacheRepairBestEffort(snapshot.chainId).catch(
-            (error) => {
-              console.error(
-                `[KeyRingService] Post-switch cache repair failed for ${snapshot.chainId}:`,
-                error
-              );
-            }
-          );
-        }
-      });
+    const supervisor = new CardanoRuntimeSupervisor({
+      host: createCardanoServiceHost(this.cardanoService, (ctx) =>
+        this.createAndAttachCardanoRuntime(ctx)
+      ),
+      isCardanoChain: (chainId) =>
+        this.chainsService.isCardanoFeatureSync(chainId),
+    });
+    this.cardanoRuntimeSupervisor = supervisor;
 
-      // Hydrate completes before KeyRing init and does not notify observers.
-      // Adopt the already-committed snapshot so the first ensure is not stale.
-      const hydratedChainId = this.chainsService.peekSelectedChainId();
-      const hydratedRevision = this.chainsService.getCommittedRevision();
-      if (hydratedChainId != null && hydratedRevision >= 1) {
-        supervisor.adoptCommittedSnapshot({
-          chainId: hydratedChainId,
-          revision: hydratedRevision,
-        });
+    this.chainsService.subscribeNetworkAuthority((snapshot, previous) => {
+      supervisor.onAuthorityCommitted(snapshot, previous);
+      if (
+        this.keyRing.status === KeyRingStatus.UNLOCKED &&
+        this.chainsService.isCardanoFeatureSync(snapshot.chainId)
+      ) {
+        this.runAddressCacheRepairBestEffort(snapshot.chainId).catch(
+          (error) => {
+            console.error(
+              `[KeyRingService] Post-switch cache repair failed for ${snapshot.chainId}:`,
+              error
+            );
+          }
+        );
       }
-    } else {
-      // No authority: keep supervisor unset so legacy ensure/reset/onNetworkSwitch run.
-      this.cardanoRuntimeSupervisor = undefined;
-      this.chainsService.addNetworkSwitchHandler(this.onNetworkSwitch);
+    });
+
+    // Hydrate completes before KeyRing init and does not notify observers.
+    // Adopt the already-committed snapshot so the first ensure is not stale.
+    const hydratedChainId = this.chainsService.peekSelectedChainId();
+    const hydratedRevision = this.chainsService.getCommittedRevision();
+    if (hydratedChainId != null && hydratedRevision >= 1) {
+      supervisor.adoptCommittedSnapshot({
+        chainId: hydratedChainId,
+        revision: hydratedRevision,
+      });
     }
     this.analyticsSerice = analyticsSerice;
   }
@@ -197,337 +197,10 @@ export class KeyRingService {
     return this.isCardanoChain(chainId);
   }
 
-  private cardanoRuntimeSupervisor: CardanoRuntimeSupervisor | undefined;
-
-  private cardanoRuntimeGeneration = 0;
-
-  /**
-   * Service-wide NetworkRuntime ensure join. Concurrent callers for the same
-   * target chain share one promise regardless of intermediate isInitialized.
-   * Used only when CardanoRuntimeSupervisor is not attached (unit tests).
-   */
-  private cardanoNetworkRuntimeInFlight: {
-    chainId: string;
-    promise: Promise<void>;
-  } | null = null;
+  private cardanoRuntimeSupervisor!: CardanoRuntimeSupervisor;
 
   private resetCardanoRuntime(): void {
-    if (this.cardanoRuntimeSupervisor) {
-      this.cardanoRuntimeSupervisor.resetHostRuntime();
-      this.cardanoRuntimeGeneration =
-        this.cardanoRuntimeSupervisor.getRuntimeGeneration();
-      this.cardanoNetworkRuntimeInFlight = null;
-      return;
-    }
-    this.cardanoRuntimeGeneration += 1;
-    this.cardanoNetworkRuntimeInFlight = null;
-    this.cardanoService.reset();
-  }
-
-  /**
-   * Confirmed leave-Cardano cleanup.
-   * force + confirmedNonCardanoChainId: authoritative leave for a non-Cardano
-   * selected chain — hard reset/invalidation of attached runtime and mid-create
-   * candidates (never soft-detach). Peek selected once more before wiping.
-   * Non-force: ownership-aware; may defer to settle when a target ensure owns the slot.
-   * Stale leave must call disposeRuntimeIfInstance only — never this method.
-   */
-  private leaveCardanoRuntime(
-    captured: {
-      instanceId: string | undefined;
-      runtimeGeneration: number;
-    },
-    options?: { force?: boolean; confirmedNonCardanoChainId?: string }
-  ): void {
-    if (options?.force) {
-      // Stale confirmed leave: never wipe a newer owner's generation/in-flight.
-      if (captured.runtimeGeneration !== this.cardanoRuntimeGeneration) {
-        this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-        return;
-      }
-      if (options.confirmedNonCardanoChainId != null) {
-        const selected = this.chainsService.peekSelectedChainId?.();
-        if (
-          selected != null &&
-          selected !== options.confirmedNonCardanoChainId
-        ) {
-          // Selected moved since stillCurrent — do not wipe a newer owner.
-          this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-          return;
-        }
-      }
-      // Hard leave: invalidate candidates and attached manager. Soft-detach must
-      // not apply here — otherwise a mid-create B can still attach afterward.
-      this.cardanoRuntimeGeneration += 1;
-      this.cardanoNetworkRuntimeInFlight = null;
-      this.cardanoService.reset();
-      return;
-    }
-
-    // Ownership moved via generation: do not invalidate the newer owner's state.
-    if (captured.runtimeGeneration !== this.cardanoRuntimeGeneration) {
-      this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-      return;
-    }
-
-    const currentAttached =
-      this.cardanoService.getAttachedRuntimeInstanceId?.();
-    // A different instance is attached under the same generation (replace/rebuild).
-    if (
-      captured.instanceId != null &&
-      currentAttached != null &&
-      currentAttached !== captured.instanceId
-    ) {
-      this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-      return;
-    }
-
-    const inFlight = this.cardanoNetworkRuntimeInFlight;
-    // Shared key ring is owned by an overlapping ensure — never wipe it here.
-    // Settlement after that ensure finishes will detach leftover captured if needed.
-    if (
-      inFlight != null &&
-      captured.instanceId != null &&
-      (currentAttached == null || currentAttached === captured.instanceId)
-    ) {
-      void this.settleCapturedAfterTargetEnsure(
-        captured,
-        inFlight.chainId,
-        inFlight.promise
-      );
-      return;
-    }
-
-    this.cardanoRuntimeGeneration += 1;
-    this.cardanoNetworkRuntimeInFlight = null;
-
-    if (captured.instanceId != null) {
-      this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-      // Same captured generation only: clear mid-init leftovers if nothing attached.
-      if (
-        this.cardanoService.getAttachedRuntimeInstanceId() == null &&
-        this.cardanoService.isInitialized()
-      ) {
-        this.cardanoService.reset();
-      }
-      return;
-    }
-    // Confirmed leave with no attached manager at capture.
-    this.cardanoService.reset();
-  }
-
-  /**
-   * After yielding Cardano→Cardano cleanup to a target ensure, re-check ownership
-   * once that ensure settles. A newer attached instance is a winner only when its
-   * boundChainId matches the currently selected chain; otherwise exact-dispose it.
-   * On failure with the captured wrong-network instance still attached under the
-   * target selected chain: force-detach so polling cannot continue on the wrong chain.
-   */
-  private async settleCapturedAfterTargetEnsure(
-    captured: {
-      instanceId: string | undefined;
-      runtimeGeneration: number;
-    },
-    targetChainId: string,
-    inFlightPromise: Promise<void>
-  ): Promise<void> {
-    let promise = inFlightPromise;
-    let settleTarget = targetChainId;
-    // Follow the in-flight chain (retries / superseding ensure) without unbounded recursion.
-    for (let hop = 0; hop < 8; hop++) {
-      try {
-        await promise;
-      } catch {
-        // Ensure failed — inspect residual ownership below.
-      }
-
-      const nextInFlight = this.cardanoNetworkRuntimeInFlight;
-      if (nextInFlight != null && nextInFlight.promise !== promise) {
-        promise = nextInFlight.promise;
-        settleTarget = nextInFlight.chainId;
-        continue;
-      }
-
-      if (captured.runtimeGeneration !== this.cardanoRuntimeGeneration) {
-        this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-        return;
-      }
-
-      const currentAttached =
-        this.cardanoService.getAttachedRuntimeInstanceId?.();
-      if (
-        captured.instanceId != null &&
-        currentAttached != null &&
-        currentAttached !== captured.instanceId
-      ) {
-        const selected =
-          this.chainsService.peekSelectedChainId?.() ??
-          (await this.chainsService.getSelectedChain());
-        const bound = this.cardanoService.getBoundChainId?.();
-        // Winner only if bound to the currently selected chain.
-        if (bound != null && bound === selected) {
-          return;
-        }
-        // Ensure finished for a deselected Cardano network — drop that runtime.
-        this.cardanoService.disposeRuntimeIfInstance(currentAttached);
-        return;
-      }
-
-      if (
-        captured.instanceId == null ||
-        currentAttached !== captured.instanceId
-      ) {
-        return;
-      }
-
-      const selected =
-        this.chainsService.peekSelectedChainId?.() ??
-        (await this.chainsService.getSelectedChain());
-      if (selected !== settleTarget) {
-        this.leaveCardanoRuntime(captured, { force: true });
-        return;
-      }
-
-      if (this.cardanoService.getBoundChainId?.() === settleTarget) {
-        return;
-      }
-
-      // Failure path: old wrong-network runtime still attached under target selected.
-      this.leaveCardanoRuntime(captured, { force: true });
-      return;
-    }
-  }
-
-  /**
-   * Exact-instance dispose that never resets a shared key ring while a NetworkRuntime
-   * ensure owns the slot. After that ensure settles, dispose only if the captured
-   * instance is still attached — never escalate to leave/generation bump (that is
-   * settleCapturedAfterTargetEnsure's job for yielded Cardano→Cardano cleanup).
-   */
-  private disposeCapturedRuntimeIfSafe(
-    instanceId: string | undefined,
-    runtimeGeneration: number
-  ): void {
-    if (instanceId == null) {
-      return;
-    }
-    const inFlight = this.cardanoNetworkRuntimeInFlight;
-    if (inFlight != null) {
-      void this.settleExactDisposeAfterInFlight(
-        { instanceId, runtimeGeneration },
-        inFlight.promise
-      );
-      return;
-    }
-    this.cardanoService.disposeRuntimeIfInstance(instanceId);
-  }
-
-  /**
-   * After an overlapping ensure finishes, exact-dispose the captured instance only
-   * if it is still the attached manager. Never bumps generation or clears in-flight.
-   */
-  private async settleExactDisposeAfterInFlight(
-    captured: {
-      instanceId: string | undefined;
-      runtimeGeneration: number;
-    },
-    inFlightPromise: Promise<void>
-  ): Promise<void> {
-    let promise = inFlightPromise;
-    for (let hop = 0; hop < 8; hop++) {
-      try {
-        await promise;
-      } catch {
-        // Ignore ensure failure — inspect attachment below.
-      }
-      const nextInFlight = this.cardanoNetworkRuntimeInFlight;
-      if (nextInFlight != null && nextInFlight.promise !== promise) {
-        promise = nextInFlight.promise;
-        continue;
-      }
-
-      if (captured.runtimeGeneration !== this.cardanoRuntimeGeneration) {
-        this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-        return;
-      }
-      if (
-        captured.instanceId != null &&
-        this.cardanoService.getAttachedRuntimeInstanceId?.() ===
-          captured.instanceId
-      ) {
-        this.cardanoService.disposeRuntimeIfInstance(captured.instanceId);
-      }
-      return;
-    }
-  }
-
-  /**
-   * Whether Cardano→Cardano cleanup should detach the entry-snapshot prior runtime.
-   * Uses both the entry snapshot and CURRENT ownership so an ensure started while
-   * the switch handler was suspended is never treated as leftover wrong-network.
-   */
-  private shouldDetachCapturedWrongNetworkRuntime(
-    captured: {
-      instanceId: string | undefined;
-      runtimeGeneration: number;
-      boundChainId: string | undefined;
-      inFlightChainId: string | undefined;
-      wasInitialized: boolean;
-    },
-    targetChainId: string
-  ): boolean {
-    const sameTargetInFlightAtCapture =
-      captured.inFlightChainId === targetChainId;
-    const snapshotWrongNetwork =
-      captured.wasInitialized &&
-      !sameTargetInFlightAtCapture &&
-      (captured.boundChainId == null ||
-        captured.boundChainId !== targetChainId);
-    if (!snapshotWrongNetwork) {
-      return false;
-    }
-
-    // Current-ownership guard after awaits.
-    if (this.cardanoNetworkRuntimeInFlight?.chainId === targetChainId) {
-      return false;
-    }
-    if (this.cardanoService.getBoundChainId?.() === targetChainId) {
-      return false;
-    }
-    const currentAttached =
-      this.cardanoService.getAttachedRuntimeInstanceId?.();
-    if (
-      captured.instanceId != null &&
-      currentAttached != null &&
-      currentAttached !== captured.instanceId
-    ) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * True when Cardano→Cardano cleanup yielded because a target ensure owns the
-   * slot — caller must schedule settleCapturedAfterTargetEnsure.
-   */
-  private shouldSettleCapturedAfterTargetEnsure(
-    captured: {
-      instanceId: string | undefined;
-      boundChainId: string | undefined;
-      wasInitialized: boolean;
-    },
-    targetChainId: string
-  ): boolean {
-    if (!captured.wasInitialized || captured.instanceId == null) {
-      return false;
-    }
-    if (
-      captured.boundChainId != null &&
-      captured.boundChainId === targetChainId
-    ) {
-      return false;
-    }
-    return this.cardanoNetworkRuntimeInFlight?.chainId === targetChainId;
+    this.cardanoRuntimeSupervisor.resetHostRuntime();
   }
 
   public async reinitializeCardanoService(chainId: string): Promise<void> {
@@ -541,115 +214,6 @@ export class KeyRingService {
     this.resetCardanoRuntime();
     await this.ensureCardanoServiceReady(chainId);
   }
-
-  /**
-   * Runs after setSelectedChain. Entering Cardano does not activate NetworkRuntime
-   * (lazy on first transaction-mode ensure). Leaving Cardano or Cardano→other Cardano
-   * disposes only the ownership snapshot captured before any await, and only after
-   * a current-ownership guard confirms no newer target operation owns the runtime.
-   */
-  protected readonly onNetworkSwitch = async (
-    _oldChainId: string | undefined,
-    newChainId: string
-  ): Promise<void> => {
-    let runPostSwitchCacheRepair = false;
-    try {
-      if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
-        return;
-      }
-
-      const targetChainId = newChainId;
-      // Single ownership snapshot BEFORE any await so a stale handler can only
-      // touch the instance that existed when this switch started — never a
-      // newer runtime attached while we were suspended.
-      const captured = {
-        instanceId: this.cardanoService.getAttachedRuntimeInstanceId(),
-        runtimeGeneration: this.cardanoRuntimeGeneration,
-        boundChainId: this.cardanoService.getBoundChainId?.(),
-        inFlightChainId: this.cardanoNetworkRuntimeInFlight?.chainId,
-        wasInitialized: this.cardanoService.isInitialized(),
-      };
-
-      const currentChainId = await this.chainsService.getSelectedChain();
-      if (currentChainId !== targetChainId) {
-        this.disposeCapturedRuntimeIfSafe(
-          captured.instanceId,
-          captured.runtimeGeneration
-        );
-        return;
-      }
-
-      const chainInfo = await this.chainsService.getChainInfo(newChainId);
-      const isCardano = chainInfo.features?.includes("cardano") ?? false;
-
-      const stillCurrent = await this.chainsService.getSelectedChain();
-      if (stillCurrent !== targetChainId) {
-        this.disposeCapturedRuntimeIfSafe(
-          captured.instanceId,
-          captured.runtimeGeneration
-        );
-        return;
-      }
-
-      if (isCardano) {
-        if (
-          this.shouldDetachCapturedWrongNetworkRuntime(captured, targetChainId)
-        ) {
-          this.leaveCardanoRuntime({
-            instanceId: captured.instanceId,
-            runtimeGeneration: captured.runtimeGeneration,
-          });
-        } else if (
-          this.shouldSettleCapturedAfterTargetEnsure(captured, targetChainId)
-        ) {
-          const inFlight = this.cardanoNetworkRuntimeInFlight;
-          if (inFlight != null) {
-            void this.settleCapturedAfterTargetEnsure(
-              {
-                instanceId: captured.instanceId,
-                runtimeGeneration: captured.runtimeGeneration,
-              },
-              targetChainId,
-              inFlight.promise
-            );
-          }
-        }
-
-        runPostSwitchCacheRepair = true;
-      } else {
-        // Confirmed leave to non-Cardano: hard reset so mid-create candidates
-        // cannot attach after cleanup (peek again inside leave).
-        this.leaveCardanoRuntime(
-          {
-            instanceId: captured.instanceId,
-            runtimeGeneration: captured.runtimeGeneration,
-          },
-          {
-            force: true,
-            confirmedNonCardanoChainId: targetChainId,
-          }
-        );
-      }
-    } catch (error) {
-      console.error(
-        `Network switch consistency check failed for ${newChainId}:`,
-        error
-      );
-      throw error;
-    }
-
-    // Non-critical post-commit step: cache repair should not fail network switch commit.
-    // Do not trigger generic full address repair on network switch.
-    // Generic ListAccounts is cache-first and falls back to derivation on demand.
-    if (runPostSwitchCacheRepair) {
-      this.runAddressCacheRepairBestEffort(newChainId).catch((error) => {
-        console.error(
-          `[KeyRingService] Post-switch cache repair failed for ${newChainId}:`,
-          error
-        );
-      });
-    }
-  };
 
   private async runAddressCacheRepairBestEffort(
     chainId: string
@@ -1098,20 +662,9 @@ export class KeyRingService {
     }
   }
 
-  private isCardanoNetworkRuntimeReadyForChain(chainId: string): boolean {
-    if (typeof this.cardanoService.isReadyForChain === "function") {
-      return this.cardanoService.isReadyForChain(chainId);
-    }
-    return (
-      this.cardanoService.isReady() &&
-      this.cardanoService.getBoundChainId?.() === chainId
-    );
-  }
-
   /**
    * Single-flight NetworkRuntime ensure (transaction mode only).
-   * With supervisor attached, joins create/ownership there. Otherwise uses the
-   * legacy in-flight map (unit tests without authority wire-up).
+   * Joins create/ownership through CardanoRuntimeSupervisor.
    */
   private async ensureCardanoServiceReadyOnce(
     chainId?: string,
@@ -1120,70 +673,12 @@ export class KeyRingService {
     const targetChainId = await this.resolveSelectedCardanoTargetChainId(
       chainId
     );
-
-    if (this.cardanoRuntimeSupervisor) {
-      const snapshot = await this.chainsService.getSelectedChainSnapshot();
-      await this.cardanoRuntimeSupervisor.ensureReady(
-        targetChainId,
-        snapshot.revision
-      );
-      this.assertCardanoServiceReady(targetChainId);
-      return;
-    }
-
-    let resolvedTarget = targetChainId;
-    const assertReady = () => this.assertCardanoServiceReady(resolvedTarget);
-
-    for (;;) {
-      const inFlight = this.cardanoNetworkRuntimeInFlight;
-      if (inFlight) {
-        if (inFlight.chainId === resolvedTarget) {
-          await inFlight.promise;
-          assertReady();
-          return;
-        }
-        try {
-          await inFlight.promise;
-        } catch {
-          // Prior ensure failed; this caller may claim a fresh one.
-        }
-        resolvedTarget = await this.resolveSelectedCardanoTargetChainId(
-          chainId
-        );
-        continue;
-      }
-
-      if (this.isCardanoNetworkRuntimeReadyForChain(resolvedTarget)) {
-        assertReady();
-        return;
-      }
-
-      const promise = this.runCardanoNetworkRuntimeEnsure(resolvedTarget);
-      this.cardanoNetworkRuntimeInFlight = {
-        chainId: resolvedTarget,
-        promise,
-      };
-      try {
-        await promise;
-        assertReady();
-        return;
-      } catch (error) {
-        if (error instanceof StaleCardanoRuntimeError) {
-          throw error;
-        }
-        if (!this.cardanoService.isInitialized()) {
-          console.error(
-            "[KeyRingService] Failed to initialize CardanoService:",
-            error
-          );
-        }
-        throw error;
-      } finally {
-        if (this.cardanoNetworkRuntimeInFlight?.promise === promise) {
-          this.cardanoNetworkRuntimeInFlight = null;
-        }
-      }
-    }
+    const snapshot = await this.chainsService.getSelectedChainSnapshot();
+    await this.cardanoRuntimeSupervisor.ensureReady(
+      targetChainId,
+      snapshot.revision
+    );
+    this.assertCardanoServiceReady(targetChainId);
   }
 
   private async createAndAttachCardanoRuntime(
@@ -1207,69 +702,13 @@ export class KeyRingService {
         runtimeGeneration: ctx.runtimeGeneration,
         ownerSwitchGeneration: ctx.authorityRevision,
         selectedChainIdAtCreate: ctx.chainId,
-        getSelectedChainId: () => this.chainsService.peekSelectedChainId?.(),
+        getSelectedChainId: () => this.chainsService.peekSelectedChainId(),
         getOwnerSwitchGeneration: () =>
-          this.chainsService.getCommittedRevision?.() ??
-          this.chainsService.getSwitchGeneration?.() ??
-          0,
+          this.chainsService.getCommittedRevision(),
         createdBy: "restore",
       }
     );
     ctx.assertStillOwner();
-  }
-
-  private async runCardanoNetworkRuntimeEnsure(
-    targetChainId: string
-  ): Promise<void> {
-    if (this.isCardanoNetworkRuntimeReadyForChain(targetChainId)) {
-      return;
-    }
-
-    const ks = this.keyRing.getCurrentKeyStore();
-    if (!ks || this.keyRing.status !== KeyRingStatus.UNLOCKED) {
-      throw new Error(CARDANO_ENSURE_MESSAGE.KEYRING_NOT_READY);
-    }
-
-    if (walletShouldLeaveCardanoChain(ks)) {
-      throw new Error(CARDANO_ENSURE_MESSAGE.MNEMONIC_24);
-    }
-
-    await this.resolveSelectedCardanoTargetChainId(targetChainId);
-    await this.restoreCardanoFromKeyStoreWithGeneration(ks, targetChainId);
-  }
-
-  private async restoreCardanoFromKeyStoreWithGeneration(
-    ks: Parameters<CardanoService["restoreFromKeyStore"]>[0],
-    chainId: string
-  ): Promise<void> {
-    const generation = this.cardanoRuntimeGeneration;
-    const ownerSwitchGeneration =
-      this.chainsService.getSwitchGeneration?.() ?? 0;
-    try {
-      await this.cardanoService.restoreFromKeyStore(
-        ks,
-        this.keyRing.currentPassword,
-        this.crypto,
-        chainId,
-        {
-          runtimeGeneration: generation,
-          ownerSwitchGeneration,
-          selectedChainIdAtCreate: chainId,
-          getSelectedChainId: () => this.chainsService.peekSelectedChainId?.(),
-          getOwnerSwitchGeneration: () =>
-            this.chainsService.getSwitchGeneration?.() ?? 0,
-          createdBy: "restore",
-        }
-      );
-      if (generation !== this.cardanoRuntimeGeneration) {
-        throw new StaleCardanoRuntimeError();
-      }
-    } catch (error) {
-      if (generation !== this.cardanoRuntimeGeneration) {
-        throw new StaleCardanoRuntimeError();
-      }
-      throw error;
-    }
   }
 
   private assertCardanoServiceReady(chainId?: string): void {

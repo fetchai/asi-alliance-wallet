@@ -49,23 +49,15 @@ export {
 export type { NetworkSurfacesSyncPayload } from "./network-surfaces-sync-fanout";
 
 type ChainRemovedHandler = (chainId: string, identifier: string) => void;
-type NetworkSwitchHandler = (
-  oldChainId: string | undefined,
-  newChainId: string
-) => Promise<void>;
 
 export class ChainsService {
   protected onChainRemovedHandlers: ChainRemovedHandler[] = [];
-  /** @deprecated Prefer NetworkAuthority commit observers. */
-  protected onNetworkSwitchHandlers: NetworkSwitchHandler[] = [];
 
   protected cachedChainInfos: ChainInfoWithCoreTypes[] | undefined;
+  /** Mirrors the committed authority snapshot after wire-up / hydrate. */
   protected selectedChainId: string | undefined;
-  /**
-   * Mirrors committed authority revision after wire-up (legacy name kept for
-   * Cardano restore meta / existing call sites).
-   */
-  private switchGeneration = 0;
+  /** Mirrors committed authority revision after wire-up / hydrate. */
+  private committedRevision = 0;
 
   protected chainUpdaterService!: ChainUpdaterService;
   protected interactionService!: InteractionService;
@@ -738,20 +730,8 @@ export class ChainsService {
     this.onChainRemovedHandlers.push(handler);
   }
 
-  /**
-   * @deprecated Legacy async switch handlers. Prefer authority commit observers.
-   * Not used when NetworkAuthority is wired.
-   */
-  addNetworkSwitchHandler(handler: NetworkSwitchHandler) {
-    this.onNetworkSwitchHandlers.push(handler);
-  }
-
-  getSwitchGeneration(): number {
-    return this.switchGeneration;
-  }
-
   getCommittedRevision(): number {
-    return this.switchGeneration;
+    return this.committedRevision;
   }
 
   /** Sync peek of in-memory selected chain (may be undefined before hydrate). */
@@ -851,7 +831,7 @@ export class ChainsService {
 
     const unsubscribe = this.networkAuthority.subscribe((snapshot) => {
       this.selectedChainId = snapshot.chainId;
-      this.switchGeneration = snapshot.revision;
+      this.committedRevision = snapshot.revision;
     });
     this.authorityUnsubscribers.push(unsubscribe);
   }
@@ -861,66 +841,20 @@ export class ChainsService {
     await authority.hydrate();
     const snapshot = await authority.getSnapshot();
     this.selectedChainId = snapshot.chainId;
-    this.switchGeneration = snapshot.revision;
+    this.committedRevision = snapshot.revision;
   }
 
   async getSelectedChainSnapshot(): Promise<NetworkAuthoritySnapshot> {
-    if (this.networkAuthority) {
-      return this.networkAuthority.getSnapshot();
-    }
-    const chainId = await this.getSelectedChain();
-    return {
-      chainId,
-      revision: Math.max(this.switchGeneration, 1),
-    };
+    return this.getNetworkAuthority().getSnapshot();
   }
 
   async setSelectedChain(chainId: string): Promise<void> {
-    if (this.networkAuthority) {
-      await this.networkAuthority.select(chainId);
-      return;
-    }
-
-    await this.setSelectedChainLegacy(chainId);
+    await this.getNetworkAuthority().select(chainId);
   }
 
   /** Internal UI path: returns committed `{ chainId, revision }` ack. */
   async selectChainWithAck(chainId: string): Promise<NetworkAuthoritySnapshot> {
-    if (!this.networkAuthority) {
-      await this.setSelectedChainLegacy(chainId);
-      return {
-        chainId: this.selectedChainId as string,
-        revision: Math.max(this.switchGeneration, 1),
-      };
-    }
-    return this.networkAuthority.select(chainId);
-  }
-
-  private async setSelectedChainLegacy(chainId: string): Promise<void> {
-    if (this.selectedChainId !== chainId) {
-      const oldChainId = this.selectedChainId;
-      this.switchGeneration += 1;
-      this.selectedChainId = chainId;
-      try {
-        for (const handler of this.onNetworkSwitchHandlers) {
-          await handler(oldChainId, chainId).catch((error) => {
-            console.error("Network switch handler failed:", error);
-            throw error;
-          });
-        }
-      } catch (error) {
-        this.selectedChainId = oldChainId;
-        throw error;
-      }
-      this.interactionService.dispatchEvent(WEBPAGE_PORT, "network-changed", {
-        seq: Date.now(),
-      });
-      this.interactionService.dispatchEvent(
-        WEBPAGE_PORT,
-        "keystore-changed",
-        {}
-      );
-    }
+    return this.getNetworkAuthority().select(chainId);
   }
 
   private broadcastNetworkSurfacesSync(
@@ -953,48 +887,7 @@ export class ChainsService {
     }
   }
 
-  private resolveFallbackChainId(chainInfos: ChainInfoWithCoreTypes[]): string {
-    const fallback = getDefaultFallbackChainId(chainInfos);
-    if (!fallback) {
-      throw new Error("No chain infos available");
-    }
-    return fallback;
-  }
-
   async getSelectedChain(): Promise<string> {
-    if (this.networkAuthority) {
-      return this.networkAuthority.getSelectedChainId();
-    }
-
-    const chainInfos = await this.getChainInfos();
-
-    if (!this.selectedChainId) {
-      const fallback = this.resolveFallbackChainId(chainInfos);
-      this.selectedChainId = fallback;
-      return fallback;
-    }
-
-    const selectedIdentifier = this.getChainIdentifierSafe(
-      this.selectedChainId
-    );
-    const exists =
-      selectedIdentifier != null &&
-      chainInfos.some(
-        (chainInfo) =>
-          this.getChainIdentifierSafe(chainInfo.chainId) === selectedIdentifier
-      );
-
-    if (exists) {
-      return this.selectedChainId;
-    }
-
-    const fallback = this.resolveFallbackChainId(chainInfos);
-
-    console.warn(
-      `[ChainsService] selected chain ${this.selectedChainId} is no longer available, fallback to ${fallback}`
-    );
-
-    this.selectedChainId = fallback;
-    return fallback;
+    return this.getNetworkAuthority().getSelectedChainId();
   }
 }
