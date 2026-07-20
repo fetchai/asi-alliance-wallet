@@ -29,6 +29,12 @@ export {
   syncKeyringSurfacesFromBackground,
   KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
 } from "./keyring-surfaces-sync";
+
+export {
+  applyNetworkSurfacesSyncFromBroadcast,
+  isNetworkSurfacesSyncMessage,
+  NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
+} from "./network-surfaces-sync";
 import { RegisterMode } from "@keplr-wallet/hooks";
 
 /** Pre-keystore UI: word count that will yield Cardano-capable mnemonic after import (matches persisted `mnemonicLength` / `walletSupportsCardano`). */

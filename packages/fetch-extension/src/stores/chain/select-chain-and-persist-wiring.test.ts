@@ -1,4 +1,5 @@
 import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
+import { SelectedChainApplyResult } from "./apply-selected-chain-authority";
 
 async function runGenerator(
   iterator: IterableIterator<unknown>
@@ -21,23 +22,19 @@ async function runGenerator(
 }
 
 describe("selectChainAndPersistWiring", () => {
-  it("ack success -> local commit -> persist", async () => {
+  it("ack success -> local apply -> persist", async () => {
     const calls: string[] = [];
-    let local = "cardano-preview";
 
     await runGenerator(
       selectChainAndPersistWiring(
         {
-          isInitializing: false,
-          setDeferChainIdSelect: (chainId: string) => {
-            calls.push(`defer:${chainId}`);
-          },
-          sendSetSelectedChain: async (chainId: string) => {
+          sendSelectSelectedChain: async (chainId: string) => {
             calls.push(`ack:${chainId}`);
+            return { chainId, revision: 1 };
           },
-          setSelectedChainIdLocal: (chainId: string) => {
-            calls.push(`local:${chainId}`);
-            local = chainId;
+          tryApplyBackgroundSelectedChain: (chainId, revision) => {
+            calls.push(`local:${chainId}:${revision}`);
+            return "applied";
           },
           saveLastViewChainId: async () => {
             calls.push("persist");
@@ -47,29 +44,23 @@ describe("selectChainAndPersistWiring", () => {
       )
     );
 
-    expect(calls).toEqual(["ack:fetchhub-4", "local:fetchhub-4", "persist"]);
-    expect(local).toBe("fetchhub-4");
+    expect(calls).toEqual(["ack:fetchhub-4", "local:fetchhub-4:1", "persist"]);
   });
 
   it("ack failure -> local unchanged -> persist not called", async () => {
     const calls: string[] = [];
-    let local = "cardano-preview";
 
     await expect(
       runGenerator(
         selectChainAndPersistWiring(
           {
-            isInitializing: false,
-            setDeferChainIdSelect: () => {
-              calls.push("defer");
-            },
-            sendSetSelectedChain: async () => {
+            sendSelectSelectedChain: async () => {
               calls.push("ack:fail");
               throw new Error("ack failed");
             },
-            setSelectedChainIdLocal: (chainId: string) => {
+            tryApplyBackgroundSelectedChain: (chainId) => {
               calls.push(`local:${chainId}`);
-              local = chainId;
+              return "applied";
             },
             saveLastViewChainId: async () => {
               calls.push("persist");
@@ -81,27 +72,50 @@ describe("selectChainAndPersistWiring", () => {
     ).rejects.toThrow("ack failed");
 
     expect(calls).toEqual(["ack:fail"]);
-    expect(local).toBe("cardano-preview");
   });
 
-  it("ack success + persist failure -> local updated, flow rejects", async () => {
+  it("ack success but stale revision rejects as superseded", async () => {
     const calls: string[] = [];
-    let local = "cardano-preview";
 
     await expect(
       runGenerator(
         selectChainAndPersistWiring(
           {
-            isInitializing: false,
-            setDeferChainIdSelect: () => {
-              calls.push("defer");
-            },
-            sendSetSelectedChain: async (chainId: string) => {
+            sendSelectSelectedChain: async (chainId: string) => {
               calls.push(`ack:${chainId}`);
+              return { chainId, revision: 1 };
             },
-            setSelectedChainIdLocal: (chainId: string) => {
-              calls.push(`local:${chainId}`);
-              local = chainId;
+            tryApplyBackgroundSelectedChain: (): SelectedChainApplyResult => {
+              calls.push("local:stale");
+              return "stale";
+            },
+            saveLastViewChainId: async () => {
+              calls.push("persist");
+            },
+          },
+          "fetchhub-4"
+        )
+      )
+    ).rejects.toThrow("network_switch_superseded");
+
+    expect(calls).toEqual(["ack:fetchhub-4", "local:stale"]);
+  });
+
+  it("ack success + persist failure still resolves", async () => {
+    const calls: string[] = [];
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(
+      runGenerator(
+        selectChainAndPersistWiring(
+          {
+            sendSelectSelectedChain: async (chainId: string) => {
+              calls.push(`ack:${chainId}`);
+              return { chainId, revision: 1 };
+            },
+            tryApplyBackgroundSelectedChain: (chainId, revision) => {
+              calls.push(`local:${chainId}:${revision}`);
+              return "applied";
             },
             saveLastViewChainId: async () => {
               calls.push("persist:fail");
@@ -111,13 +125,14 @@ describe("selectChainAndPersistWiring", () => {
           "fetchhub-4"
         )
       )
-    ).rejects.toThrow("persist failed");
+    ).resolves.toBeUndefined();
 
     expect(calls).toEqual([
       "ack:fetchhub-4",
-      "local:fetchhub-4",
+      "local:fetchhub-4:1",
       "persist:fail",
     ]);
-    expect(local).toBe("fetchhub-4");
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

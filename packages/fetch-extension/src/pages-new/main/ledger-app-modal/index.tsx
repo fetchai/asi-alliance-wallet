@@ -3,6 +3,7 @@ import { Modal, ModalBody } from "reactstrap";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import style from "./ledger-app-modal.module.scss";
 import { observer } from "mobx-react-lite";
+import { flowResult } from "mobx";
 import { useStore } from "../../../stores";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
@@ -74,12 +75,14 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
             onClick={(e: any) => {
               e.preventDefault();
 
-              if (prevChainId[0]) {
-                chainStore.selectChain(prevChainId[0]);
-              } else {
-                chainStore.selectChain(chainStore.chainInfos[0].chainId);
-              }
-              chainStore.saveLastViewChainId();
+              const target = prevChainId[0]
+                ? prevChainId[0]
+                : chainStore.chainInfos[0].chainId;
+              void flowResult(chainStore.selectChainAndPersist(target)).catch(
+                (error) => {
+                  console.warn("[ledger] cancel select failed:", error);
+                }
+              );
             }}
           />
           <ButtonV2

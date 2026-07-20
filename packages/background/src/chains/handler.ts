@@ -196,7 +196,8 @@ const handleAddNetworkAndSwitch: (
 ) => InternalHandler<AddNetworkAndSwitchMsg> = (service) => {
   return async (env, msg) => {
     if (await service.hasChainInfo(msg.network.chainId)) {
-      // If suggested chain info is already registered, just return.
+      // Already registered: still run the approved switch flow so selection updates.
+      await service.switchChainByChainId(env, msg.network.chainId, msg.origin);
       return;
     }
 

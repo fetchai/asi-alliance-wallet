@@ -1,12 +1,15 @@
 import { ensureSelectedChainAck } from "./ensure-selected-chain-ack";
 
 describe("ensureSelectedChainAck", () => {
-  it("resolves after successful background ack", async () => {
+  it("resolves with background ack snapshot", async () => {
     const calls: string[] = [];
 
-    await ensureSelectedChainAck(async (chainId: string) => {
-      calls.push(`ack:${chainId}`);
-    }, "fetchhub-4");
+    await expect(
+      ensureSelectedChainAck(async (chainId: string) => {
+        calls.push(`ack:${chainId}`);
+        return { chainId, revision: 2 };
+      }, "fetchhub-4")
+    ).resolves.toEqual({ chainId: "fetchhub-4", revision: 2 });
 
     expect(calls).toEqual(["ack:fetchhub-4"]);
   });

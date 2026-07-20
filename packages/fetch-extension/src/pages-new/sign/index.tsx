@@ -22,6 +22,7 @@ import { ADR36SignDocDetailsTab } from "./adr-36";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { unescapeHTML } from "@keplr-wallet/common";
 import { EthSignType } from "@keplr-wallet/types";
+import { flowResult } from "mobx";
 import { Dropdown } from "@components-v2/dropdown";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { ButtonV2 } from "@components-v2/buttons/button";
@@ -89,56 +90,84 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const signDocHelper = useSignDocHelper(feeConfig, memoConfig);
   amountConfig.setSignDocHelper(signDocHelper);
 
+  const [chainSwitchReady, setChainSwitchReady] = useState(false);
+  const [chainSwitchError, setChainSwitchError] = useState<string | null>(null);
+  const requestedChainId = signInteractionStore.waitingData?.data.chainId;
+
   useEffect(() => {
-    if (signInteractionStore.waitingData) {
-      const data = signInteractionStore.waitingData;
-      chainStore.selectChain(data.data.chainId);
-      if (data.data.signDocWrapper.isADR36SignDoc) {
-        setIsADR36WithString(data.data.isADR36WithString);
-      }
-      if (data.data.ethSignType) {
-        setEthSignType(data.data.ethSignType);
-      }
-      setOrigin(data.data.msgOrigin);
-      if (
-        !data.data.signDocWrapper.isADR36SignDoc &&
-        data.data.chainId !== data.data.signDocWrapper.chainId
-      ) {
-        // Validate the requested chain id and the chain id in the sign doc are same.
-        // If the sign doc is for ADR-36, there is no chain id in the sign doc, so no need to validate.
-        throw new Error("Chain id unmatched");
-      }
-      signDocHelper.setSignDocWrapper(data.data.signDocWrapper);
-      gasConfig.setGas(data.data.signDocWrapper.gas);
-      let memo = data.data.signDocWrapper.memo;
-      if (data.data.signDocWrapper.mode === "amino") {
-        // For amino-json sign doc, the memo is escaped by default behavior of golang's json marshaller.
-        // For normal users, show the escaped characters with unescaped form.
-        // Make sure that the actual sign doc's memo should be escaped.
-        // In this logic, memo should be escaped from account store or background's request signing function.
-        memo = unescapeHTML(memo);
-      }
-      memoConfig.setMemo(memo);
-      if (
-        (!data.isInternal || data.data.signOptions.preferNoSetFee) &&
-        data.data.signDocWrapper.fees[0]
-      ) {
-        feeConfig.setManualFee(data.data.signDocWrapper.fees[0]);
-      }
-      amountConfig.setDisableBalanceCheck(
-        !!data.data.signOptions.disableBalanceCheck
-      );
-      feeConfig.setDisableBalanceCheck(
-        !!data.data.signOptions.disableBalanceCheck
-      );
-      if (
-        data.data.signDocWrapper.granter &&
-        data.data.signDocWrapper.granter !== data.data.signer
-      ) {
-        feeConfig.setDisableBalanceCheck(true);
-      }
-      setSigner(data.data.signer);
+    if (!signInteractionStore.waitingData) {
+      setChainSwitchReady(false);
+      setChainSwitchError(null);
+      return;
     }
+
+    const data = signInteractionStore.waitingData;
+    let cancelled = false;
+    setChainSwitchReady(false);
+    setChainSwitchError(null);
+
+    void (async () => {
+      try {
+        await flowResult(chainStore.selectChainAndPersist(data.data.chainId));
+        if (cancelled) {
+          return;
+        }
+
+        if (data.data.signDocWrapper.isADR36SignDoc) {
+          setIsADR36WithString(data.data.isADR36WithString);
+        }
+        if (data.data.ethSignType) {
+          setEthSignType(data.data.ethSignType);
+        }
+        setOrigin(data.data.msgOrigin);
+        if (
+          !data.data.signDocWrapper.isADR36SignDoc &&
+          data.data.chainId !== data.data.signDocWrapper.chainId
+        ) {
+          throw new Error("Chain id unmatched");
+        }
+        signDocHelper.setSignDocWrapper(data.data.signDocWrapper);
+        gasConfig.setGas(data.data.signDocWrapper.gas);
+        let memo = data.data.signDocWrapper.memo;
+        if (data.data.signDocWrapper.mode === "amino") {
+          memo = unescapeHTML(memo);
+        }
+        memoConfig.setMemo(memo);
+        if (
+          (!data.isInternal || data.data.signOptions.preferNoSetFee) &&
+          data.data.signDocWrapper.fees[0]
+        ) {
+          feeConfig.setManualFee(data.data.signDocWrapper.fees[0]);
+        }
+        amountConfig.setDisableBalanceCheck(
+          !!data.data.signOptions.disableBalanceCheck
+        );
+        feeConfig.setDisableBalanceCheck(
+          !!data.data.signOptions.disableBalanceCheck
+        );
+        if (
+          data.data.signDocWrapper.granter &&
+          data.data.signDocWrapper.granter !== data.data.signer
+        ) {
+          feeConfig.setDisableBalanceCheck(true);
+        }
+        setSigner(data.data.signer);
+        setChainSwitchReady(true);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        console.warn("[sign] selectChainAndPersist failed:", error);
+        setChainSwitchError(
+          error instanceof Error ? error.message : String(error)
+        );
+        setChainSwitchReady(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     amountConfig,
     chainStore,
@@ -189,17 +218,27 @@ export const SignPageV2: FunctionComponent = observer(() => {
     () => ChainIdHelper.parse(selectedChainId).identifier,
     [selectedChainId]
   );
+  const requestedChainIdentifier = useMemo(
+    () =>
+      requestedChainId
+        ? ChainIdHelper.parse(requestedChainId).identifier
+        : undefined,
+    [requestedChainId]
+  );
 
-  // Check that the request is delivered
-  // and the chain is selected properly.
-  // The chain store loads the saved chain infos including the suggested chain asynchronously on init.
-  // So, it can be different the current chain and the expected selected chain for a moment.
+  // Ready only after acknowledged selection matches the requested sign chain.
   const isLoaded = (() => {
-    if (!signDocHelper.signDocWrapper) {
+    if (!chainSwitchReady || chainSwitchError) {
+      return false;
+    }
+    if (!signDocHelper.signDocWrapper || !requestedChainIdentifier) {
       return false;
     }
 
-    return currentChainIdentifier === selectedChainIdentifier;
+    return (
+      currentChainIdentifier === requestedChainIdentifier &&
+      selectedChainIdentifier === requestedChainIdentifier
+    );
   })();
 
   // If this is undefined, show the chain name on the header.
@@ -452,6 +491,43 @@ export const SignPageV2: FunctionComponent = observer(() => {
                 )}
               </div>
             </Dropdown>
+          </div>
+        ) : chainSwitchError ? (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "16px",
+              padding: "24px",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ color: "#e74c3c", maxWidth: "320px" }}>
+              Failed to switch network for this request: {chainSwitchError}
+            </div>
+            <ButtonV2
+              variant="dark"
+              text="Reject"
+              styleProps={{ height: "48px", width: "200px" }}
+              onClick={async () => {
+                if (needSetIsProcessing) {
+                  setIsProcessing(true);
+                }
+                await signInteractionStore.rejectAll();
+                if (
+                  interactionInfo.interaction &&
+                  !interactionInfo.interactionInternal
+                ) {
+                  window.close();
+                } else {
+                  navigate("/");
+                }
+              }}
+            />
           </div>
         ) : (
           <div

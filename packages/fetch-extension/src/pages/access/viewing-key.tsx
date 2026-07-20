@@ -11,6 +11,7 @@ import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { EmptyLayout } from "@layouts/empty-layout";
 import { FormattedMessage } from "react-intl";
+import { flowResult } from "mobx";
 
 export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
   const { chainStore, permissionStore } = useStore();
@@ -28,7 +29,11 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
     if (waitingPermission) {
       // XXX: You can only one chain id per the request.
       //      This limit exists on the background service.
-      chainStore.selectChain(waitingPermission.data.chainIds[0]);
+      void flowResult(
+        chainStore.selectChainAndPersist(waitingPermission.data.chainIds[0])
+      ).catch((error) => {
+        console.warn("[viewing-key] selectChainAndPersist failed:", error);
+      });
     }
   }, [chainStore, waitingPermission]);
 

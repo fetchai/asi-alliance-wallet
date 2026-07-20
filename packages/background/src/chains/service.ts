@@ -484,6 +484,8 @@ export class ChainsService {
     );
 
     await this.addChainInfo(receivedChainInfo);
+    // Complete the external request only after registry + selection are committed.
+    await this.setSelectedChain(receivedChainInfo.chainId);
   }
 
   async getSuggestedChainInfos(): Promise<ChainInfoWithRepoUpdateOptions[]> {
@@ -675,6 +677,7 @@ export class ChainsService {
     );
 
     await this.addChainInfo(receivedChainInfo);
+    await this.setSelectedChain(receivedChainInfo.chainId);
   }
 
   async switchChainByChainId(
@@ -682,20 +685,44 @@ export class ChainsService {
     chainId: string,
     origin: string
   ): Promise<void> {
-    await this.interactionService.waitApprove(
+    // Resolve the requested target before approval — selection must not follow
+    // an arbitrary interaction result if UI/result is corrupted.
+    const requested = await this.findChainInfo(chainId);
+    if (!requested) {
+      throw new Error(`There is no chain info for ${chainId}`);
+    }
+    const targetChainId = requested.chainId;
+
+    const approved = await this.interactionService.waitApprove(
       env,
       "/switch-chain-by-chainid",
       SwitchNetworkByChainIdMsg.type(),
       {
-        chainId,
+        chainId: targetChainId,
         origin,
       }
     );
+
+    if (typeof approved === "string" && approved.length > 0) {
+      const approvedCanonical = await this.findChainInfo(approved);
+      if (
+        !approvedCanonical ||
+        ChainIdHelper.parse(approvedCanonical.chainId).identifier !==
+          ChainIdHelper.parse(targetChainId).identifier
+      ) {
+        throw new Error(
+          `Approved chain ${approved} does not match requested ${targetChainId}`
+        );
+      }
+    }
+
     await this.permissionService.addPermission(
-      [chainId],
+      [targetChainId],
       getBasicAccessPermissionType(),
       [origin]
     );
+    // Selection must commit before the external switch request resolves.
+    await this.setSelectedChain(targetChainId);
   }
 
   addChainRemovedHandler(handler: ChainRemovedHandler) {

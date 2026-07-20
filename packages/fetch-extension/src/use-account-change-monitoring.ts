@@ -1,7 +1,7 @@
 /**
- * Account / keyring refresh listens on both KEYRING_SURFACES_SYNC and legacy
- * RefreshAccountList plus background `keystore-changed`; extra listeners can mean
- * duplicate UI refresh — consolidate when maintaining this area (see plan / tech debt).
+ * Account / keyring refresh listens on KEYRING_SURFACES_SYNC, network-surfaces
+ * sync, and legacy RefreshAccountList. Extra listeners can mean duplicate UI
+ * refresh — consolidate when maintaining this area.
  */
 import { useEffect, useState } from "react";
 import {
@@ -10,6 +10,10 @@ import {
 } from "@keplr-wallet/background";
 import { useStore } from "./stores";
 import { syncKeyringSurfacesFromBackground } from "./utils/keyring-surfaces-sync";
+import {
+  applyNetworkSurfacesSyncFromBroadcast,
+  isNetworkSurfacesSyncMessage,
+} from "./utils/network-surfaces-sync";
 
 function isExtensionUiContext(): boolean {
   try {
@@ -48,16 +52,28 @@ export const useAccountChangeMonitoring = () => {
       return;
     }
 
-    const onKeyringSurfacesSync = (message: unknown) => {
+    const onSurfacesSync = (message: unknown) => {
       const m = message as { type?: string };
       if (m?.type === KEYRING_SURFACES_SYNC_MESSAGE_TYPE) {
-        void syncKeyringSurfacesFromBackground(chainStore, keyRingStore);
+        void syncKeyringSurfacesFromBackground(chainStore, keyRingStore).catch(
+          (error) => {
+            console.warn("[surfaces] keyring sync failed:", error);
+          }
+        );
+        return;
+      }
+      if (isNetworkSurfacesSyncMessage(message)) {
+        void applyNetworkSurfacesSyncFromBroadcast(chainStore, message).catch(
+          (error) => {
+            console.warn("[surfaces] network sync failed:", error);
+          }
+        );
       }
     };
 
-    browser.runtime.onMessage.addListener(onKeyringSurfacesSync);
+    browser.runtime.onMessage.addListener(onSurfacesSync);
     return () => {
-      browser.runtime.onMessage.removeListener(onKeyringSurfacesSync);
+      browser.runtime.onMessage.removeListener(onSurfacesSync);
     };
   }, [chainStore, keyRingStore]);
 

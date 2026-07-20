@@ -18,12 +18,13 @@ import { ChainInfo } from "@keplr-wallet/types";
 import {
   ChainInfoWithCoreTypes,
   GetChainInfosMsg,
+  GetSelectedChainSnapshotMsg,
   RemoveSuggestedChainInfoMsg,
   TryUpdateChainMsg,
   SetChainEndpointsMsg,
   ResetChainEndpointsMsg,
   SuggestChainInfoMsg,
-  SetSelectedChainMsg,
+  SelectSelectedChainMsg,
 } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 
@@ -31,6 +32,9 @@ import { MessageRequester } from "@keplr-wallet/router";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
+import { startupSyncSelectedChainWiring } from "./startup-sync-selected-chain-wiring";
+import { SelectedChainApplyResult } from "./apply-selected-chain-authority";
+import { applyBackgroundSelectedChainCore } from "./apply-background-selected-chain-core";
 import { getDefaultFallbackChainId } from "@keplr-wallet/background/cardano-chain-policy";
 
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
@@ -38,8 +42,10 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   protected _selectedChainId: string;
 
   @observable
+  protected _acceptedRevision: number = 0;
+
+  @observable
   protected _isInitializing: boolean = false;
-  protected deferChainIdSelect: string = "";
 
   @observable
   protected chainInfoInUIConfig: {
@@ -79,6 +85,10 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   get isInitializing(): boolean {
     return this._isInitializing;
+  }
+
+  get acceptedRevision(): number {
+    return this._acceptedRevision;
   }
 
   @computed
@@ -125,19 +135,44 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @flow
   *toggleChainInfoInUI(chainId: string) {
     chainId = ChainIdHelper.parse(chainId).identifier;
-    let disableChainIds = [];
+    const enabling = this.chainInfoInUIConfig.disabledChains.includes(chainId);
 
-    if (this.chainInfoInUIConfig.disabledChains.includes(chainId)) {
+    let disableChainIds: string[];
+    if (enabling) {
       disableChainIds = this.chainInfoInUIConfig.disabledChains.filter(
         (chain) => chain !== chainId
       );
     } else {
       if (this.enabledChainInfosInUI.length === 1) {
-        // Can't turn off all chains.
         return;
       }
 
       disableChainIds = [...this.chainInfoInUIConfig.disabledChains, chainId];
+    }
+
+    const disablingSelected =
+      !enabling &&
+      ChainIdHelper.parse(this.current.chainId).identifier === chainId;
+
+    if (disablingSelected) {
+      const other = this.chainInfosInUI.find(
+        (chainInfo) =>
+          ChainIdHelper.parse(chainInfo.chainId).identifier !== chainId
+      );
+
+      if (!other) {
+        return;
+      }
+
+      try {
+        yield* this.selectChainAndPersist(other.chainId);
+      } catch (error) {
+        console.warn(
+          "[ChainStore] Failed to switch before disabling chain:",
+          error
+        );
+        return;
+      }
     }
 
     yield this.kvStore.set<{ disabledChains: string[] }>(
@@ -148,18 +183,6 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     );
 
     this.chainInfoInUIConfig.disabledChains = disableChainIds;
-
-    if (ChainIdHelper.parse(this.current.chainId).identifier === chainId) {
-      const other = this.chainInfosInUI.find(
-        (chainInfo) =>
-          ChainIdHelper.parse(chainInfo.chainId).identifier !== chainId
-      );
-
-      if (other) {
-        this.selectChain(other.chainId);
-        this.saveLastViewChainId();
-      }
-    }
   }
 
   get selectedChainId(): string {
@@ -170,40 +193,83 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     return this._showTestnet;
   }
 
+  /**
+   * Explicit selection must use selectChainAndPersist. Fire-and-forget wrapper
+   * still goes through ack; callers that care about errors should await Persist.
+   */
   @action
   selectChain(chainId: string) {
-    if (this._isInitializing) {
-      this.deferChainIdSelect = chainId;
-    }
-    this._selectedChainId = chainId;
-    const msg = new SetSelectedChainMsg(this._selectedChainId);
-    this.requester.sendMessage(BACKGROUND_PORT, msg);
+    void flowResult(this.selectChainAndPersist(chainId)).catch((error) => {
+      console.warn("[ChainStore] selectChain failed:", error);
+    });
   }
 
-  /**
-   * Awaitable network switch: local selection, background SetSelectedChain, then persist last-view chain.
-   * Prefer this (with MobX flow/flowResult) before changeKeyRing in add/import so keystore-changed handlers
-   * that call getKey already see a non-Cardano chain, avoiding Cardano-24w race with a newly added wallet.
-   */
   @flow
   *selectChainAndPersist(chainId: string) {
+    // Always send the acknowledged command. Background is hydrated before UI
+    // init finishes reading the snapshot; deferring would resolve without ack
+    // and let a stale B overwrite a later C after startup.
     yield* selectChainAndPersistWiring(
       {
-        isInitializing: this._isInitializing,
-        setDeferChainIdSelect: (id) => {
-          this.deferChainIdSelect = id;
+        sendSelectSelectedChain: (id) => {
+          const msg = new SelectSelectedChainMsg(id);
+          return this.requester.sendMessage(BACKGROUND_PORT, msg) as Promise<{
+            chainId: string;
+            revision: number;
+          }>;
         },
-        sendSetSelectedChain: (id) => {
-          const msg = new SetSelectedChainMsg(id);
-          return this.requester.sendMessage(BACKGROUND_PORT, msg);
-        },
-        setSelectedChainIdLocal: (id) => {
-          this._selectedChainId = id;
-        },
+        tryApplyBackgroundSelectedChain: (id, revision) =>
+          flowResult(this.applyBackgroundSelectedChain(id, revision)),
         saveLastViewChainId: () => flowResult(this.saveLastViewChainId()),
       },
       chainId
     );
+  }
+
+  /**
+   * Apply a background snapshot to local projection. Refreshes chain infos when
+   * the selected chain is not yet known locally (e.g. newly added custom chain).
+   * Revision is re-checked after every await before mutating local state.
+   */
+  @flow
+  *applyBackgroundSelectedChain(
+    chainId: string,
+    revision: number
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Generator<any, SelectedChainApplyResult, any> {
+    return (yield* toGenerator(
+      applyBackgroundSelectedChainCore(
+        {
+          getLocalSnapshot: () => ({
+            chainId: this._selectedChainId,
+            revision: this._acceptedRevision,
+          }),
+          setLocalSnapshot: (snapshot) => {
+            this._selectedChainId = snapshot.chainId;
+            this._acceptedRevision = snapshot.revision;
+          },
+          hasChain: (id) => this.hasChainSafe(id),
+          refreshRegistry: () => flowResult(this.getChainInfosFromBackground()),
+          onProtocolViolation: (local, incoming) => {
+            console.error(
+              "[ChainStore] equal revision with different chainId from background",
+              {
+                local: local.chainId,
+                incoming: incoming.chainId,
+                revision: incoming.revision,
+              }
+            );
+          },
+          onMissingChain: (missingId) => {
+            console.warn(
+              "[ChainStore] background selected chain is not in local registry:",
+              missingId
+            );
+          },
+        },
+        { chainId, revision }
+      )
+    )) as SelectedChainApplyResult;
   }
 
   @action
@@ -252,28 +318,31 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
     this.deferInitialQueryController.ready();
 
-    const lastViewChainId = yield* toGenerator(
-      this.kvStore.get<string>("extension_last_view_chain_id")
-    );
+    yield* startupSyncSelectedChainWiring({
+      getBackgroundSnapshot: () => {
+        const msg = new GetSelectedChainSnapshotMsg();
+        return this.requester.sendMessage(BACKGROUND_PORT, msg) as Promise<{
+          chainId: string;
+          revision: number;
+        }>;
+      },
+      tryApplyBackgroundSelectedChain: (chainId, revision) =>
+        flowResult(this.applyBackgroundSelectedChain(chainId, revision)),
+    });
 
-    if (!this.deferChainIdSelect) {
-      const chainIdToSelect =
-        lastViewChainId && this.hasChainSafe(lastViewChainId)
-          ? lastViewChainId
-          : getDefaultFallbackChainId(this.chainInfos) ||
-            this.chainInfos[0]?.chainId;
-
-      if (chainIdToSelect) {
-        yield this.kvStore.set("extension_last_view_chain_id", chainIdToSelect);
-        this.selectChain(chainIdToSelect);
-      }
+    // Cosmetic last-view mirror after successful projection; never drives authority.
+    try {
+      yield* toGenerator(
+        Promise.resolve(flowResult(this.saveLastViewChainId()))
+      );
+    } catch (error) {
+      console.warn(
+        "[ChainStore] Failed to persist last-view chain id after startup sync:",
+        error
+      );
     }
+
     this._isInitializing = false;
-
-    if (this.deferChainIdSelect) {
-      this.selectChain(this.deferChainIdSelect);
-      this.deferChainIdSelect = "";
-    }
 
     const lastViewShowTestnet = yield* toGenerator(
       this.kvStore.get<boolean>("extension_last_view_show_testnet")
@@ -316,6 +385,32 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   @flow
   *removeChainInfo(chainId: string) {
+    if (
+      this.hasChainSafe(chainId) &&
+      ChainIdHelper.parse(this._selectedChainId).identifier ===
+        ChainIdHelper.parse(chainId).identifier
+    ) {
+      const other = this.chainInfosInUI.find(
+        (chainInfo) =>
+          ChainIdHelper.parse(chainInfo.chainId).identifier !==
+          ChainIdHelper.parse(chainId).identifier
+      );
+      const fallback =
+        other?.chainId ||
+        getDefaultFallbackChainId(this.chainInfos) ||
+        this.chainInfos.find(
+          (c) =>
+            ChainIdHelper.parse(c.chainId).identifier !==
+            ChainIdHelper.parse(chainId).identifier
+        )?.chainId;
+
+      if (!fallback) {
+        throw new Error("Can't remove the only available network");
+      }
+
+      yield* this.selectChainAndPersist(fallback);
+    }
+
     const msg = new RemoveSuggestedChainInfoMsg(chainId);
     const chainInfos = yield* toGenerator(
       this.requester.sendMessage(BACKGROUND_PORT, msg)

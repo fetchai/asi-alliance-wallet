@@ -126,6 +126,166 @@ describe("ChainsService NetworkAuthority wire-up", () => {
     setSpy.mockRestore();
   });
 
+  it("switchChainByChainId selects after approval before the external handler returns", async () => {
+    const service = createTestChainsService();
+    service.wireNetworkAuthority({
+      readLegacyLastViewChainId: async () => undefined,
+    });
+    await service.hydrateNetworkAuthority();
+
+    service["interactionService"].waitApprove = jest
+      .fn()
+      .mockResolvedValue("dorado-1");
+    service["permissionService"].addPermission = jest
+      .fn()
+      .mockResolvedValue(undefined);
+
+    await service.switchChainByChainId(
+      { isInternalMsg: false } as any,
+      "dorado-1",
+      "https://dapp.example"
+    );
+
+    await expect(service.getSelectedChain()).resolves.toBe("dorado-1");
+    await expect(service.getSelectedChainSnapshot()).resolves.toEqual({
+      chainId: "dorado-1",
+      revision: expect.any(Number),
+    });
+  });
+
+  it("switchChainByChainId rejects mismatched approval result and keeps prior selection", async () => {
+    const service = createTestChainsService();
+    service.wireNetworkAuthority({
+      readLegacyLastViewChainId: async () => undefined,
+    });
+    await service.hydrateNetworkAuthority();
+    await service.setSelectedChain(PREFERRED_DEFAULT_CHAIN_ID);
+
+    service["interactionService"].waitApprove = jest
+      .fn()
+      .mockResolvedValue(PREFERRED_DEFAULT_CHAIN_ID);
+    service["permissionService"].addPermission = jest
+      .fn()
+      .mockResolvedValue(undefined);
+
+    await expect(
+      service.switchChainByChainId(
+        { isInternalMsg: false } as any,
+        "dorado-1",
+        "https://dapp.example"
+      )
+    ).rejects.toThrow(/does not match requested/);
+
+    await expect(service.getSelectedChain()).resolves.toBe(
+      PREFERRED_DEFAULT_CHAIN_ID
+    );
+  });
+
+  it("AddNetworkAndSwitch for an already-registered chain runs switch flow", async () => {
+    const service = createTestChainsService();
+    service.wireNetworkAuthority({
+      readLegacyLastViewChainId: async () => undefined,
+    });
+    await service.hydrateNetworkAuthority();
+    await service.setSelectedChain(PREFERRED_DEFAULT_CHAIN_ID);
+
+    const switchSpy = jest
+      .spyOn(service, "switchChainByChainId")
+      .mockResolvedValue(undefined);
+    const addSpy = jest.spyOn(service, "addChainByNetwork");
+
+    const { getHandler } = await import("./handler");
+    const { AddNetworkAndSwitchMsg } = await import("./messages");
+    const realMsg = new AddNetworkAndSwitchMsg({
+      chainId: "dorado-1",
+      chainName: "Dorado",
+      rpcUrl: "https://rpc.example",
+      restUrl: "https://rest.example",
+      stakeCurrency: {
+        coinDenom: "FET",
+        coinMinimalDenom: "afet",
+        coinDecimals: 18,
+      },
+      currencies: [],
+      feeCurrencies: [],
+      bip44s: [{ coinType: 118 }],
+      features: [],
+    } as any);
+    (realMsg as { origin?: string }).origin = "https://dapp.example";
+
+    const handler = getHandler(service);
+    await handler({ isInternalMsg: false } as any, realMsg);
+
+    expect(switchSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      "dorado-1",
+      "https://dapp.example"
+    );
+    expect(addSpy).not.toHaveBeenCalled();
+    switchSpy.mockRestore();
+    addSpy.mockRestore();
+  });
+
+  it("suggestChainInfo commits add then select before returning", async () => {
+    const service = createTestChainsService();
+    service.wireNetworkAuthority({
+      readLegacyLastViewChainId: async () => undefined,
+    });
+    await service.hydrateNetworkAuthority();
+
+    const custom = {
+      chainId: "custom-suggest-1",
+      chainName: "Custom Suggest",
+      rpc: "https://rpc.example",
+      rest: "https://rest.example",
+      stakeCurrency: {
+        coinDenom: "CST",
+        coinMinimalDenom: "ucst",
+        coinDecimals: 6,
+      },
+      bip44: { coinType: 118 },
+      bech32Config: {
+        bech32PrefixAccAddr: "custom",
+        bech32PrefixAccPub: "custompub",
+        bech32PrefixValAddr: "customvaloper",
+        bech32PrefixValPub: "customvaloperpub",
+        bech32PrefixConsAddr: "customvalcons",
+        bech32PrefixConsPub: "customvalconspub",
+      },
+      currencies: [
+        {
+          coinDenom: "CST",
+          coinMinimalDenom: "ucst",
+          coinDecimals: 6,
+        },
+      ],
+      feeCurrencies: [
+        {
+          coinDenom: "CST",
+          coinMinimalDenom: "ucst",
+          coinDecimals: 6,
+        },
+      ],
+      features: [],
+    };
+
+    service["interactionService"].waitApprove = jest
+      .fn()
+      .mockResolvedValue(custom);
+    service["permissionService"].addPermission = jest
+      .fn()
+      .mockResolvedValue(undefined);
+
+    await service.suggestChainInfo(
+      { isInternalMsg: false } as any,
+      custom as any,
+      "https://dapp.example"
+    );
+
+    await expect(service.hasChainInfo("custom-suggest-1")).resolves.toBe(true);
+    await expect(service.getSelectedChain()).resolves.toBe("custom-suggest-1");
+  });
+
   it("hydrated Cardano selection: KeyRing init adopts snapshot so first ensure creates one runtime", async () => {
     const kv = new MemoryKVStore("test-hydrate-cardano-ensure");
     await kv.set("network_authority_snapshot", {

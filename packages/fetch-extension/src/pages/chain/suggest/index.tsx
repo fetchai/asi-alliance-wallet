@@ -6,6 +6,7 @@ import { EmptyLayout } from "@layouts/empty-layout";
 import { FormattedMessage } from "react-intl";
 import { useInteractionInfo } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
+import { flowResult } from "mobx";
 import { useStore } from "../../../stores";
 import { ToolTip } from "@components/tooltip";
 import classNames from "classnames";
@@ -14,8 +15,7 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { useLoadingIndicator } from "@components/loading-indicator";
 
 export const ChainSuggestedPage: FunctionComponent = observer(() => {
-  const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
-    useStore();
+  const { chainSuggestStore, analyticsStore, uiConfigStore } = useStore();
   const [updateFromRepoDisabled, setUpdateFromRepoDisabled] = useState(false);
   const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
   const navigate = useNavigate();
@@ -390,13 +390,14 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                     chainSuggestStore.waitingSuggestedChainInfo?.data.chainInfo;
 
                 if (chainInfo) {
-                  await chainSuggestStore.approve({
-                    ...chainInfo,
-                    updateFromRepoDisabled,
-                  });
                   loadingIndicator.setIsLoading("chain-suggest-switch", true);
-                  chainStore.selectChain(chainInfo.chainId);
-                  chainStore.saveLastViewChainId();
+                  // Background CommitAdd → Select after approval; UI does not poll or Select.
+                  await flowResult(
+                    chainSuggestStore.approve({
+                      ...chainInfo,
+                      updateFromRepoDisabled,
+                    })
+                  );
                   analyticsStore.logEvent("approve_click");
                 }
 

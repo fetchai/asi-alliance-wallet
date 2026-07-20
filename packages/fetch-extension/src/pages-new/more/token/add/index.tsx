@@ -9,7 +9,7 @@ import { Input } from "@components-v2/form";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../../stores";
 import { useForm } from "react-hook-form";
-import { Bech32Address } from "@keplr-wallet/cosmos";
+import { Bech32Address, ChainIdHelper } from "@keplr-wallet/cosmos";
 import {
   CW20Currency,
   Erc20Currency,
@@ -21,6 +21,7 @@ import { useNotification } from "@components/notification";
 import { isAddress } from "@ethersproject/address";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { TXNTYPE } from "../../../../config";
+import { flowResult } from "mobx";
 
 interface FormData {
   contractAddress: string;
@@ -60,38 +61,87 @@ export const AddTokenPage: FunctionComponent = observer(() => {
   });
 
   const contractAddress = form.watch("contractAddress");
+  const [chainSwitchReady, setChainSwitchReady] = useState(false);
+  const [chainSwitchError, setChainSwitchError] = useState<string | null>(null);
+  const requestedTokenChainId = tokensStore.waitingSuggestedToken?.data.chainId;
 
   useEffect(() => {
-    if (tokensStore.waitingSuggestedToken) {
-      chainStore.selectChain(tokensStore.waitingSuggestedToken.data.chainId);
-      if (
-        contractAddress !==
-        tokensStore.waitingSuggestedToken.data.contractAddress
-      ) {
-        form.setValue(
-          "contractAddress",
-          tokensStore.waitingSuggestedToken.data.contractAddress
-        );
-      }
+    if (!tokensStore.waitingSuggestedToken) {
+      setChainSwitchReady(true);
+      setChainSwitchError(null);
+      return;
     }
+
+    const waiting = tokensStore.waitingSuggestedToken;
+    let cancelled = false;
+    setChainSwitchReady(false);
+    setChainSwitchError(null);
+
+    void (async () => {
+      try {
+        await flowResult(
+          chainStore.selectChainAndPersist(waiting.data.chainId)
+        );
+        if (cancelled) {
+          return;
+        }
+        if (contractAddress !== waiting.data.contractAddress) {
+          form.setValue("contractAddress", waiting.data.contractAddress);
+        }
+        setChainSwitchReady(true);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        console.warn("[token-add] selectChainAndPersist failed:", error);
+        setChainSwitchError(
+          error instanceof Error ? error.message : String(error)
+        );
+        setChainSwitchReady(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [chainStore, contractAddress, form, tokensStore.waitingSuggestedToken]);
 
+  const requestedTokenChainIdentifier = requestedTokenChainId
+    ? ChainIdHelper.parse(requestedTokenChainId).identifier
+    : undefined;
+  const projectionMatchesRequest =
+    !requestedTokenChainIdentifier ||
+    (ChainIdHelper.parse(chainStore.selectedChainId).identifier ===
+      requestedTokenChainIdentifier &&
+      ChainIdHelper.parse(chainStore.current.chainId).identifier ===
+        requestedTokenChainIdentifier);
+
+  const chainReadyForTokenWork =
+    chainSwitchReady && !chainSwitchError && projectionMatchesRequest;
+
   const isSecret20 =
+    chainReadyForTokenWork &&
     (chainStore.current.features ?? []).find(
       (feature) => feature === "secretwasm"
     ) != null;
 
   const queries = queriesStore.get(chainStore.current.chainId);
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const query = isEvm
+  const isEvm =
+    chainReadyForTokenWork &&
+    (chainStore.current.features?.includes("evm") ?? false);
+  const query = !chainReadyForTokenWork
+    ? null
+    : isEvm
     ? queries.evm.queryErc20Metadata
     : isSecret20
     ? queries.secret.querySecret20ContractInfo
     : queries.cosmwasm.querycw20ContractInfo;
-  const queryContractInfo = query.getQueryContract(contractAddress);
+  const queryContractInfo = query
+    ? query.getQueryContract(contractAddress)
+    : undefined;
 
-  const tokenInfo = queryContractInfo.tokenInfo;
+  const tokenInfo = queryContractInfo?.tokenInfo;
   const [isOpenSecret20ViewingKey, setIsOpenSecret20ViewingKey] =
     useState(false);
 
@@ -130,16 +180,17 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     ? "Currency already added"
     : undefined;
 
-  const queryError =
-    contractAddress.length &&
-    (form.formState.errors.contractAddress
-      ? form.formState.errors.contractAddress.message
-      : tokenInfo == null
-      ? (queryContractInfo.error?.data as any)?.error ||
-        queryContractInfo.error?.message
-      : undefined)
-      ? "Invalid address"
-      : undefined;
+  const queryError = !chainReadyForTokenWork
+    ? chainSwitchError || "Switching network…"
+    : contractAddress.length &&
+      (form.formState.errors.contractAddress
+        ? form.formState.errors.contractAddress.message
+        : tokenInfo == null
+        ? (queryContractInfo?.error?.data as any)?.error ||
+          queryContractInfo?.error?.message
+        : undefined)
+    ? "Invalid address"
+    : undefined;
 
   const isError = currencyAlreadyAdded || queryError;
 
@@ -304,7 +355,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
           })}
           error={isError}
           text={
-            queryContractInfo.isFetching && contractAddress.length ? (
+            queryContractInfo?.isFetching && contractAddress.length ? (
               <i className="fas fa-spinner fa-spin" />
             ) : undefined
           }
@@ -393,6 +444,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
           variant="dark"
           text=""
           disabled={
+            !chainReadyForTokenWork ||
             isError !== undefined ||
             tokenInfo == null ||
             !accountInfo.isReadyToSendTx
