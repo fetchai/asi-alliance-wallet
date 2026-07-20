@@ -559,6 +559,209 @@ describe("KeyRingService", () => {
 
       expect(resetHostRuntime).toHaveBeenCalled();
     });
+
+    it("serializes overlapping wallet switches FIFO", async () => {
+      attachMockSupervisor(service);
+
+      const order: number[] = [];
+      let markBStarted!: () => void;
+      let releaseB!: () => void;
+
+      const bStarted = new Promise<void>((resolve) => {
+        markBStarted = resolve;
+      });
+      const bRelease = new Promise<void>((resolve) => {
+        releaseB = resolve;
+      });
+
+      const changeKeyStoreFromMultiKeyStore = jest
+        .fn()
+        .mockImplementationOnce(async (index: number) => {
+          order.push(index);
+          markBStarted();
+          await bRelease;
+
+          return {
+            multiKeyStoreInfo: [{ selected: false }, { selected: true }],
+          };
+        })
+        .mockImplementationOnce(async (index: number) => {
+          order.push(index);
+
+          return {
+            multiKeyStoreInfo: [
+              { selected: false },
+              { selected: false },
+              { selected: true },
+            ],
+          };
+        });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
+        findChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+      } as any;
+      service["keyRing"] = {
+        changeKeyStoreFromMultiKeyStore,
+      } as any;
+      service["interactionService"] = {
+        dispatchEvent: jest.fn(),
+      } as any;
+      jest
+        .spyOn(service as any, "alignSelectedChainWithCurrentWalletIfNeeded")
+        .mockResolvedValue(undefined);
+
+      const switchB = service.changeKeyStoreFromMultiKeyStore(1);
+      await bStarted;
+
+      const switchC = service.changeKeyStoreFromMultiKeyStore(2);
+
+      // C must not enter the underlying keyRing method while B is held.
+      expect(changeKeyStoreFromMultiKeyStore).toHaveBeenCalledTimes(1);
+      expect(order).toEqual([1]);
+
+      releaseB();
+
+      const [resultB, resultC] = await Promise.all([switchB, switchC]);
+
+      expect(order).toEqual([1, 2]);
+      expect(changeKeyStoreFromMultiKeyStore).toHaveBeenCalledTimes(2);
+      expect(resultB.multiKeyStoreInfo[1]?.selected).toBe(true);
+      expect(resultC.multiKeyStoreInfo[2]?.selected).toBe(true);
+    });
+
+    it("continues the switch queue after a rejected switch", async () => {
+      attachMockSupervisor(service);
+
+      const order: number[] = [];
+      let markBStarted!: () => void;
+      let releaseB!: () => void;
+
+      const bStarted = new Promise<void>((resolve) => {
+        markBStarted = resolve;
+      });
+      const bRelease = new Promise<void>((resolve) => {
+        releaseB = resolve;
+      });
+
+      const changeKeyStoreFromMultiKeyStore = jest
+        .fn()
+        .mockImplementationOnce(async (index: number) => {
+          order.push(index);
+          markBStarted();
+          await bRelease;
+          throw new Error("switch B failed");
+        })
+        .mockImplementationOnce(async (index: number) => {
+          order.push(index);
+          return {
+            multiKeyStoreInfo: [
+              { selected: false },
+              { selected: false },
+              { selected: true },
+            ],
+          };
+        });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
+        findChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+      } as any;
+      service["keyRing"] = {
+        changeKeyStoreFromMultiKeyStore,
+      } as any;
+      service["interactionService"] = {
+        dispatchEvent: jest.fn(),
+      } as any;
+      jest
+        .spyOn(service as any, "alignSelectedChainWithCurrentWalletIfNeeded")
+        .mockResolvedValue(undefined);
+
+      const switchB = service.changeKeyStoreFromMultiKeyStore(1);
+      await bStarted;
+      const switchC = service.changeKeyStoreFromMultiKeyStore(2);
+
+      expect(changeKeyStoreFromMultiKeyStore).toHaveBeenCalledTimes(1);
+
+      releaseB();
+
+      await expect(switchB).rejects.toThrow("switch B failed");
+      const resultC = await switchC;
+
+      expect(order).toEqual([1, 2]);
+      expect(changeKeyStoreFromMultiKeyStore).toHaveBeenCalledTimes(2);
+      expect(resultC.multiKeyStoreInfo[2]?.selected).toBe(true);
+    });
+
+    it("keeps C blocked until B finishes post-keyring alignment", async () => {
+      attachMockSupervisor(service);
+
+      const order: string[] = [];
+      let markBAligned!: () => void;
+      let releaseBAlign!: () => void;
+
+      const bAligned = new Promise<void>((resolve) => {
+        markBAligned = resolve;
+      });
+      const bAlignRelease = new Promise<void>((resolve) => {
+        releaseBAlign = resolve;
+      });
+
+      const changeKeyStoreFromMultiKeyStore = jest
+        .fn()
+        .mockImplementationOnce(async (index: number) => {
+          order.push(`keyring:${index}`);
+          return {
+            multiKeyStoreInfo: [{ selected: false }, { selected: true }],
+          };
+        })
+        .mockImplementationOnce(async (index: number) => {
+          order.push(`keyring:${index}`);
+          return {
+            multiKeyStoreInfo: [
+              { selected: false },
+              { selected: false },
+              { selected: true },
+            ],
+          };
+        });
+
+      service["chainsService"] = {
+        getSelectedChain: jest.fn().mockResolvedValue("fetchhub-4"),
+        findChainInfo: jest.fn().mockResolvedValue({ features: [] }),
+      } as any;
+      service["keyRing"] = {
+        changeKeyStoreFromMultiKeyStore,
+      } as any;
+      service["interactionService"] = {
+        dispatchEvent: jest.fn(),
+      } as any;
+      jest
+        .spyOn(service as any, "alignSelectedChainWithCurrentWalletIfNeeded")
+        .mockImplementationOnce(async () => {
+          order.push("align:1");
+          markBAligned();
+          await bAlignRelease;
+        })
+        .mockImplementationOnce(async () => {
+          order.push("align:2");
+        });
+
+      const switchB = service.changeKeyStoreFromMultiKeyStore(1);
+      await bAligned;
+
+      const switchC = service.changeKeyStoreFromMultiKeyStore(2);
+
+      expect(changeKeyStoreFromMultiKeyStore).toHaveBeenCalledTimes(1);
+      expect(order).toEqual(["keyring:1", "align:1"]);
+
+      releaseBAlign();
+
+      await Promise.all([switchB, switchC]);
+
+      expect(order).toEqual(["keyring:1", "align:1", "keyring:2", "align:2"]);
+      expect(changeKeyStoreFromMultiKeyStore).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("Cardano runtime ensure via supervisor", () => {

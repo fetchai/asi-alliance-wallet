@@ -111,6 +111,7 @@ export const WalletDetailsView = observer(
     const notification = useNotification();
 
     const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
     const selectedWalletId =
       keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.[
         "__id__"
@@ -153,25 +154,31 @@ export const WalletDetailsView = observer(
           ? accountInfo.ethereumHexAddress
           : cachedSelectedAddress || accountInfo.ethereumHexAddress
         : "";
+    // Cardano may copy the displayed cached address only while Loading;
+    // other statuses and networks keep Loaded-only copy policy.
+    const canCopyAddress =
+      accountInfo.walletStatus === WalletStatus.Loaded ||
+      (isCardano && accountInfo.walletStatus === WalletStatus.Loading);
     const copyAddress = useCallback(
       async (address: string) => {
-        if (accountInfo.walletStatus === WalletStatus.Loaded) {
-          await navigator.clipboard.writeText(address);
-          notification.push({
-            placement: "top-center",
-            type: "success",
-            duration: 2,
-            content: intl.formatMessage({
-              id: "main.address.copied",
-            }),
-            canDelete: true,
-            transition: {
-              duration: 0.25,
-            },
-          });
+        if (!address || !canCopyAddress) {
+          return;
         }
+        await navigator.clipboard.writeText(address);
+        notification.push({
+          placement: "top-center",
+          type: "success",
+          duration: 2,
+          content: intl.formatMessage({
+            id: "main.address.copied",
+          }),
+          canDelete: true,
+          transition: {
+            duration: 0.25,
+          },
+        });
       },
-      [accountInfo.walletStatus, notification, intl]
+      [canCopyAddress, notification, intl]
     );
 
     const accountOrChainChanged =

@@ -91,6 +91,9 @@ export class KeyRingService {
 
   private keyRing!: KeyRing;
 
+  /** Serializes wallet switches so selected keystore and session material stay aligned. */
+  private keyStoreSwitchTail: Promise<void> = Promise.resolve();
+
   protected analyticsSerice!: AnalyticsService;
   protected interactionService!: InteractionService;
   public chainsService!: ChainsService;
@@ -1419,7 +1422,25 @@ Salt: ${salt}`;
     return result;
   }
 
-  public async changeKeyStoreFromMultiKeyStore(index: number): Promise<{
+  public changeKeyStoreFromMultiKeyStore(index: number): Promise<{
+    multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
+  }> {
+    const operation = this.keyStoreSwitchTail.then(
+      () => this.changeKeyStoreFromMultiKeyStoreInternal(index),
+      () => this.changeKeyStoreFromMultiKeyStoreInternal(index)
+    );
+
+    this.keyStoreSwitchTail = operation.then(
+      () => undefined,
+      () => undefined
+    );
+
+    return operation;
+  }
+
+  private async changeKeyStoreFromMultiKeyStoreInternal(
+    index: number
+  ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
     try {

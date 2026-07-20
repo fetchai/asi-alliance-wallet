@@ -224,6 +224,20 @@ export class AccountSetBase {
     // Set wallet status as loading whenever try to init.
     this._walletStatus = WalletStatus.Loading;
 
+    // Clear Cardano identity while the selected wallet key is reloading so
+    // Send and account-bound queries cannot use the previous account.
+    const isCardano =
+      this.chainGetter.hasChain(this.chainId) &&
+      (this.chainGetter.getChain(this.chainId).features?.includes("cardano") ??
+        false);
+    if (isCardano) {
+      this._bech32Address = "";
+      this._isNanoLedger = false;
+      this._isKeystone = false;
+      this._name = "";
+      this._pubKey = new Uint8Array(0);
+    }
+
     const keplr = yield* toGenerator(this.getKeplr());
     if (!isCurrentInit()) {
       return;
