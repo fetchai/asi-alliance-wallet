@@ -23,14 +23,14 @@ export enum txnTypeKey {
 export const txType: txTypes = {
   ibcTransfer: "IBC Transfer",
   send: "Send Transaction",
-  withdrawRewards: "Rewards withdrawl",
+  withdrawRewards: "Rewards Withdrawal",
   delegate: "Delegation",
   undelegate: "Undelegation",
   redelegate: "Redelegation",
   govVote: "Governance Vote",
   nativeBridgeSend: "Bridging",
-  approval: "Approve txn",
-  createSecret20ViewingKey: "Secret key creation",
+  approval: "Approve Transaction",
+  createSecret20ViewingKey: "Secret Key Creation",
 };
 export const TxnStatus: FunctionComponent<{
   txnType: string;

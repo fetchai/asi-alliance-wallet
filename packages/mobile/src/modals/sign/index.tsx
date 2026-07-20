@@ -331,7 +331,7 @@ export const SignModal: FunctionComponent<{
       )}
 
       <Button
-        text="Approve transaction"
+        text="Approve Transaction"
         textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         containerStyle={
           [

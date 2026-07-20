@@ -79,9 +79,9 @@ export const IOSLineChart: FunctionComponent<{
       disableScroll={true}
       yAxisThickness={0}
       yAxisColor={"transparent"}
-      hideYAxisText={false}
+      hideYAxisText={chartMaxValue === 0}
       yAxisTextStyle={{ color: "#9A9AA2", fontSize: 10 }}
-      yAxisLabelWidth={58}
+      yAxisLabelWidth={46}
       formatYLabel={formatYLabel}
       // x axis variable
       xAxisThickness={0}

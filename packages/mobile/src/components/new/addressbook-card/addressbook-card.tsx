@@ -228,7 +228,7 @@ export const AddressBookCardModel: FunctionComponent<{
                   "body2",
                   "font-normal",
                 ])}
-                text="Add an address"
+                text="Add an Address"
                 onPress={() => {
                   if (addAddressBook) {
                     addAddressBook(true);

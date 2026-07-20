@@ -262,22 +262,28 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
           {label}
         </Text> */}
         <View>
-          {renderButton(
-            "Low",
-            lowFeePrice,
-            lowFee,
-            selectFeeButton === "low",
-            () => {
-              setFeeButton("low");
-              // feeConfig.setFeeType("low");
-              if (pageName)
-                analyticsStore.logEvent("fee_type_select", {
-                  pageName,
-                  feeType: "low",
-                });
-            }
-          )}
-          <View style={style.flatten(["margin-top-6"]) as ViewStyle} />
+          {/* if low fee is zero or same price as average fee, don't show low fee option */}
+          {!lowFee.toDec().isZero() &&
+            lowFeePrice?.toString() !== averageFeePrice?.toString() && (
+              <React.Fragment>
+                {renderButton(
+                  "Low",
+                  lowFeePrice,
+                  lowFee,
+                  selectFeeButton === "low",
+                  () => {
+                    setFeeButton("low");
+                    // feeConfig.setFeeType("low");
+                    if (pageName)
+                      analyticsStore.logEvent("fee_type_select", {
+                        pageName,
+                        feeType: "low",
+                      });
+                  }
+                )}
+                <View style={style.flatten(["margin-top-6"]) as ViewStyle} />
+              </React.Fragment>
+            )}
           {renderButton(
             "Average",
             averageFeePrice,

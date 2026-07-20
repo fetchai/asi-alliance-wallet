@@ -132,7 +132,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
             }
             mode="outline"
             textStyle={style.flatten(["color-dark", "body3"]) as ViewStyle}
-            text="Manage networks"
+            text="Manage Networks"
             onPress={() => {
               navigation.dispatch(
                 StackActions.push("ChainList", {

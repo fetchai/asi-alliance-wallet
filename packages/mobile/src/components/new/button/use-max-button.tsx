@@ -81,7 +81,7 @@ export const UseMaxButton: FunctionComponent<{
       </View>
       <View style={style.flatten(["flex-1"]) as ViewStyle}>
         <BlurButton
-          text="Use max available"
+          text="Use Max Available"
           backgroundBlur={false}
           borderRadius={32}
           disable={disable}

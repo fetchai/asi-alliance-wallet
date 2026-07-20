@@ -394,7 +394,7 @@ export const LedgerGranterModal: FunctionComponent<{
                   } else {
                     Toast.show({
                       type: "error",
-                      text1: "Unable to open browser",
+                      text1: "Unable to Open Browser",
                     });
                   }
                 })

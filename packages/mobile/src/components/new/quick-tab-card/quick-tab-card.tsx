@@ -48,7 +48,7 @@ export const QuickTabOptionModel: FunctionComponent<{
             if (activityStore.getPendingTxnTypes[txnTypeKey.send]) {
               Toast.show({
                 type: "error",
-                text1: `${txType[txnTypeKey.send]} in progress`,
+                text1: `${txType[txnTypeKey.send]} In Progress`,
               });
               close();
               return;

@@ -171,7 +171,7 @@ export const PortfolioStakingCard: FunctionComponent<{
         rewards.pendingRewardValidatorAddresses.length === 0
       ) ? (
         <Button
-          text="Claim rewards"
+          text="Claim Rewards"
           containerStyle={
             style.flatten([
               "border-radius-64",
@@ -184,7 +184,7 @@ export const PortfolioStakingCard: FunctionComponent<{
             if (accountInfo.txTypeInProgress === "withdrawRewards") {
               Toast.show({
                 type: "error",
-                text1: `${txType[accountInfo.txTypeInProgress]} in progress`,
+                text1: `${txType[accountInfo.txTypeInProgress]} In Progress`,
               });
               return;
             }

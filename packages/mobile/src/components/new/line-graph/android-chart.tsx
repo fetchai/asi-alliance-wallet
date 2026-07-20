@@ -48,7 +48,7 @@ export const AndroidLineChart: FunctionComponent<{
   );
 
   const updatePosition = (x: number) => {
-    const YAxisWidth = apx(130);
+    const YAxisWidth = apx(100);
     const x0 = YAxisWidth; // chart starts after left Y axis
     const chartWidth = apx(750) - x0;
     const xN = x0 + chartWidth; //xN position
@@ -99,6 +99,7 @@ export const AndroidLineChart: FunctionComponent<{
   const YAxisLabels = ({ y }: any) => {
     const min = Math.min(...valueList);
     const max = Math.max(...valueList);
+    if (min === max) return null;
     return (
       <G>
         <SvgText
@@ -195,7 +196,7 @@ export const AndroidLineChart: FunctionComponent<{
       <LineChart
         style={{ height: dynamicHeight }}
         data={valueList}
-        contentInset={{ top: 20, bottom: 20, left: apx(130), right: 5 }}
+        contentInset={{ top: 20, bottom: 20, left: apx(100), right: 5 }}
         animate={false}
         curve={shape.curveNatural}
         svg={{

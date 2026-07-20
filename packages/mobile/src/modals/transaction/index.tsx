@@ -114,7 +114,7 @@ export const TransactionModal: FunctionComponent<{
       >
         {transactionState.status === TransactionStatus.Failed ? (
           <Button
-            text="Try again"
+            text="Try Again"
             mode="outline"
             size="large"
             containerStyle={

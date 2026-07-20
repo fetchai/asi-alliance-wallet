@@ -29,7 +29,7 @@ export const ClaimRewardsModal: FunctionComponent<{
       <IconWithText
         icon={<ClaimRewardIcon size={64} />}
         iconStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
-        title={"Claim rewards"}
+        title={"Claim Rewards"}
         subtitle={"Claim your pending staking rewards\nto your wallet"}
         titleStyle={style.flatten(["body1"]) as ViewStyle}
         subtitleStyle={
@@ -78,7 +78,7 @@ export const ClaimRewardsModal: FunctionComponent<{
           ]) as ViewStyle
         }
         textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
-        text={"Claim my rewards"}
+        text={"Claim My Rewards"}
         onPress={onPress}
         loading={buttonLoading}
         rippleColor="#85cc80"

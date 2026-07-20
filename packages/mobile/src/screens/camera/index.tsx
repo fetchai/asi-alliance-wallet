@@ -183,7 +183,7 @@ export const CameraScreen: FunctionComponent = () => {
                   navigation.goBack();
                   Toast.show({
                     type: "error",
-                    text1: "Please scan valid QR",
+                    text1: "Please Scan Valid QR",
                   });
                 }
               }
@@ -199,7 +199,7 @@ export const CameraScreen: FunctionComponent = () => {
         containerBottom={
           showQRButton ? (
             <Button
-              text="Show my QR code"
+              text="Show My QR Code"
               mode="light"
               size="large"
               containerStyle={

@@ -110,6 +110,7 @@ export const SelectNetwork: FunctionComponent<SelectNetworkProps> = observer(
                 "background-color-gray-10",
                 "border-width-1",
                 "border-color-gray-100",
+                "dark:border-color-gray-400",
               ]),
               disabled && { opacity: 0.4 },
             ] as ViewStyle
@@ -149,10 +150,7 @@ export const SelectNetwork: FunctionComponent<SelectNetworkProps> = observer(
               icon={
                 <Text
                   style={
-                    style.flatten([
-                      "text-caption2",
-                      "color-gray-300",
-                    ]) as ViewStyle
+                    style.flatten(["body1", "color-gray-500"]) as ViewStyle
                   }
                 >
                   ▾
