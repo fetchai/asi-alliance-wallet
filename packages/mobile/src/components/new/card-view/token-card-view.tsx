@@ -83,7 +83,7 @@ export const TokenCardView: FunctionComponent<{
                     style.flatten([
                       "body3",
                       "padding-2",
-                      "color-gray-200",
+                      "color-gray-400",
                     ]) as ViewStyle
                   }
                 >

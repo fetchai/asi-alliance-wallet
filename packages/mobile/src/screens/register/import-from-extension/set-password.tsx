@@ -1,7 +1,7 @@
 import React, { FunctionComponent, useState } from "react";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { PageWithScrollView } from "components/page";
-import { View, ViewStyle } from "react-native";
+import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
@@ -138,6 +138,29 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
+      <Text
+        style={
+          style.flatten([
+            "h1",
+            "color-black",
+            "margin-y-10",
+            "font-medium",
+          ]) as ViewStyle
+        }
+      >
+        Create wallet password
+      </Text>
+      <Text
+        style={
+          style.flatten([
+            "body2",
+            "color-gray-400",
+            "margin-bottom-18",
+          ]) as ViewStyle
+        }
+      >
+        To keep your account safe, avoid any personal information or words
+      </Text>
       <Controller
         control={control}
         rules={{

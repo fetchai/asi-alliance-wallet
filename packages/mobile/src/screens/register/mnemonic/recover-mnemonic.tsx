@@ -262,8 +262,29 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
-      <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
-
+      <Text
+        style={
+          style.flatten([
+            "h1",
+            "color-black",
+            "margin-y-10",
+            "font-medium",
+          ]) as ViewStyle
+        }
+      >
+        Import your wallet
+      </Text>
+      <Text
+        style={
+          style.flatten([
+            "body2",
+            "color-gray-400",
+            "margin-bottom-16",
+          ]) as ViewStyle
+        }
+      >
+        Enter your recovery phrase or private key
+      </Text>
       <TabBarView
         listItem={SeedType}
         selected={selectedSeed}

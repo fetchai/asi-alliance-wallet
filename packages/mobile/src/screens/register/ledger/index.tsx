@@ -443,7 +443,7 @@ export const LedgerScreen: FunctionComponent = () => {
           style={
             style.flatten([
               "text-caption2",
-              "color-gray-300",
+              "color-gray-400",
               "margin-top-4",
             ]) as ViewStyle
           }
