@@ -99,7 +99,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
       />
       {showManageTokenButton ? (
         <SettingItem
-          label="Manage tokens"
+          label="Manage Tokens"
           left={<CoinsIcon size={16} color="#151a1a" />}
           right={
             <Right
@@ -120,7 +120,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
       ) : null}
       <SettingItem
         left={<ATIcon size={16} color="#151a1a" />}
-        label="Address book"
+        label="Address Book"
         onPress={() => {
           navigation.navigate("AddressBooks", {
             screen: "AddressBook",
@@ -135,7 +135,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
       keychainStore.isBiometrySupported ||
       keychainStore.isBiometryOn ? (
         <SettingItem
-          label="Security & privacy"
+          label="Security & Privacy"
           left={<ShieldIcon size={16} color="#151a1a" />}
           onPress={() => {
             navigation.navigate("Setting", {
@@ -169,7 +169,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
           if (!networkIsConnected) {
             Toast.show({
               type: "error",
-              text1: "No internet connection",
+              text1: "No Internet Connection",
             });
             return;
           }
@@ -191,7 +191,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
         }}
       />
       <SettingItem
-        label="Sign out"
+        label="Sign Out"
         left={<SignOutIcon size={16} color="#151a1a" />}
         onPress={() => {
           setConfirmModel(true);
@@ -205,8 +205,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
       <ConfirmCardModel
         isOpen={openConfirmModel}
         close={() => setConfirmModel(false)}
-        title={"Sign out"}
-        subtitle={"Are you sure you want to sign out?"}
+        title={"Sign Out"}
+        subtitle={"Are You Sure You Want to Sign Out?"}
         confirmButtonText="Confirm"
         select={async (confirm: boolean) => {
           if (confirm) {

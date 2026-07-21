@@ -117,7 +117,7 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
         textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
-        text="Stake more"
+        text="Stake More"
         onPress={() => {
           analyticsStore.logEvent("stake_more_click", {
             pageName: "Validator Details",
@@ -163,7 +163,7 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           "background-color-dark",
         ]) as ViewStyle
       }
-      text="Stake with this validator"
+      text="Stake with This Validator"
       textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
       onPress={() => {
         analyticsStore.logEvent("stake_with_validator_click", {

@@ -219,9 +219,11 @@ export const SettingChainListScreenElement: FunctionComponent<{
               height: 22,
             }}
             resizeMode={FastImage.resizeMode.contain}
-            source={{
-              uri: chainSymbolImageUrl,
-            }}
+            source={
+              typeof chainSymbolImageUrl === "number"
+                ? chainSymbolImageUrl
+                : { uri: chainSymbolImageUrl }
+            }
           />
         ) : (
           <VectorCharacter char={chainName[0]} color="#151a1a" height={15} />

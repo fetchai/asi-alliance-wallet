@@ -115,9 +115,9 @@ export const TokenDetail: FunctionComponent = observer(() => {
                   borderRadius: 50,
                 }}
                 resizeMode={FastImage.resizeMode.contain}
-                source={{
-                  uri: tokenIcon,
-                }}
+                source={
+                  typeof tokenIcon === "number" ? tokenIcon : { uri: tokenIcon }
+                }
               />
             </View>
           ) : (

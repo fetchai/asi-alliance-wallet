@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import {
@@ -19,9 +19,15 @@ import { SimpleCardView } from "components/new/card-view/simple-card";
 import { CopyIcon } from "components/new/icon/copy-icon";
 import { useSimpleTimer } from "hooks/use-simple-timer";
 import LottieView from "lottie-react-native";
-import { useNewMnemonicConfig } from "./hook";
+import { NumWords, useNewMnemonicConfig } from "./hook";
+import { TabBarView } from "components/new/tab-bar/tab-bar";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { useStore } from "stores/index";
+
+enum MnemonicType {
+  WORDS12 = "12 words",
+  WORDS24 = "24 words",
+}
 
 export const MnemonicScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -48,6 +54,17 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
   const [toggleCheckBox, setToggleCheckBox] = useState(false);
   const [isSelected, setSelection] = useState(false);
   const { isTimedOut, setTimer } = useSimpleTimer();
+  const [selectedMnemonicType, setSelectedMnemonicType] = useState(
+    MnemonicType.WORDS12
+  );
+
+  useEffect(() => {
+    newMnemonicConfig.setNumWords(
+      selectedMnemonicType === MnemonicType.WORDS12
+        ? NumWords.WORDS12
+        : NumWords.WORDS24
+    );
+  }, [selectedMnemonicType, newMnemonicConfig]);
 
   return (
     <PageWithScrollView
@@ -82,6 +99,13 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
           in a secure offline location, and never share with anyone!
         </Text>
       </View>
+      <TabBarView
+        listItem={MnemonicType}
+        selected={selectedMnemonicType}
+        setSelected={setSelectedMnemonicType}
+        unselectedTextColorToken="color-gray-300"
+        backgroundColorToken="background-color-gray-5"
+      />
       <TouchableOpacity
         onPress={async () => {
           await Clipboard.setStringAsync(words.join(" "));

@@ -154,7 +154,7 @@ export const AccountSection: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await tx.send({ amount: [], gas: gas.toString() }, "", undefined, {
         onBroadcasted: (txHash) => {
@@ -177,7 +177,7 @@ export const AccountSection: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {
@@ -467,7 +467,7 @@ export const AccountSection: FunctionComponent<{
             ]) as ViewStyle
           }
           textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
-          text={"View portfolio"}
+          text={"View Portfolio"}
           onPress={() => {
             navigation.navigate("Portfolio");
             analyticsStore.logEvent("view_portfolio_click", {

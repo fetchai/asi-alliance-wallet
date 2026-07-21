@@ -135,7 +135,8 @@ export const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uosmo",
       coinDecimals: 6,
       coinGeckoId: "osmosis",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/osmo.png",
     },
     walletUrl:
       process.env["NODE_ENV"] === "production"
@@ -153,7 +154,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uosmo",
         coinDecimals: 6,
         coinGeckoId: "osmosis",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/osmo.png",
       },
       {
         coinDenom: "ION",
@@ -161,7 +163,7 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinDecimals: 6,
         coinGeckoId: "ion",
         coinImageUrl:
-          "https://dhj8dql1kzq2v.cloudfront.net/white/osmosis-ion.png",
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/ion.png",
       },
     ],
     feeCurrencies: [
@@ -170,7 +172,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uosmo",
         coinDecimals: 6,
         coinGeckoId: "osmosis",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/osmo.png",
         gasPriceStep: {
           low: 0,
           average: 0.025,
@@ -185,7 +188,8 @@ export const EmbedChainInfos: ChainInfo[] = [
       "wasmd_0.24+",
       "osmosis-txfees",
     ],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/osmo.png",
     txExplorer: {
       name: "Mintscan",
       txUrl: "https://www.mintscan.io/osmosis/txs/{txHash}",
@@ -2627,6 +2631,7 @@ export const EmbedChainInfos: ChainInfo[] = [
     rest: "https://rest-dorado.fetch.ai",
     chainId: "dorado-1",
     chainName: "Dorado Testnet",
+    chainSymbolImageUrl: require("./assets/image/icon/dorado.png"),
     hideInUI: true,
     isTestnet: true,
     stakeCurrency: {

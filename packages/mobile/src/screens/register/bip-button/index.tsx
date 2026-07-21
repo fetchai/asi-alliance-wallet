@@ -43,7 +43,7 @@ export const BipButtons: FunctionComponent<{
       />
 
       <BlurButton
-        text="Clear all"
+        text="Clear All"
         blurIntensity={0}
         borderRadius={32}
         backgroundBlur={false}

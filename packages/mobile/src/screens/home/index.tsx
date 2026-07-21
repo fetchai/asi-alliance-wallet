@@ -253,7 +253,10 @@ export const HomeScreen: FunctionComponent = observer(() => {
           progressViewOffset={Platform.OS === "ios" ? safeAreaInsets.top : 16}
         />
       }
-      contentContainerStyle={[style.get("flex-grow-1"), { paddingTop: 16 }]}
+      contentContainerStyle={[
+        style.get("flex-grow-1"),
+        { paddingTop: safeAreaInsets.top + 16 },
+      ]}
       containerStyle={style.flatten(["overflow-scroll"]) as ViewStyle}
       ref={scrollViewRef}
     >

@@ -81,7 +81,7 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
             style={style.flatten(["margin-top-68", "flex-1"]) as ViewStyle}
           />
           <Button
-            text="Add token"
+            text="Add Token"
             size="large"
             containerStyle={
               style.flatten([

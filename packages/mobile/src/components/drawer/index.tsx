@@ -187,9 +187,8 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                         style.flatten(["flex-row", "items-center"]) as ViewStyle
                       }
                     >
-                      <BlurBackground
-                        backgroundBlur={false}
-                        containerStyle={
+                      <View
+                        style={
                           {
                             ...style.flatten([
                               "width-32",
@@ -200,6 +199,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                               "margin-right-12",
                             ]),
                             backgroundColor: "#dddfdf",
+                            overflow: "hidden",
                           } as ViewStyle
                         }
                       >
@@ -210,9 +210,12 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                               height: 22,
                             }}
                             resizeMode={FastImage.resizeMode.contain}
-                            source={{
-                              uri: chainInfo.raw.chainSymbolImageUrl,
-                            }}
+                            source={
+                              typeof chainInfo.raw.chainSymbolImageUrl ===
+                              "number"
+                                ? chainInfo.raw.chainSymbolImageUrl
+                                : { uri: chainInfo.raw.chainSymbolImageUrl }
+                            }
                           />
                         ) : (
                           <VectorCharacter
@@ -221,7 +224,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                             height={12}
                           />
                         )}
-                      </BlurBackground>
+                      </View>
                       <Text
                         style={
                           style.flatten([

@@ -168,7 +168,7 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                 </View>
               ),
             })}
-            text="Copy to clipboard"
+            text="Copy to Clipboard"
             onPress={async () => {
               await Clipboard.setStringAsync(
                 privateDataType === "ledger" ? words["cosmos"] : words.join(" ")

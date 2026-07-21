@@ -28,7 +28,7 @@ export const ClaimCard: FunctionComponent<{
         if (activityStore.getPendingTxnTypes[txnTypeKey.withdrawRewards]) {
           Toast.show({
             type: "error",
-            text1: `${txType[txnTypeKey.withdrawRewards]} in progress`,
+            text1: `${txType[txnTypeKey.withdrawRewards]} In Progress`,
           });
           return;
         }

@@ -115,7 +115,7 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
         }
         textStyle={style.flatten(["color-white"]) as ViewStyle}
         size="large"
-        text="Start using your wallet"
+        text="Start Using Your Wallet"
         loading={isLoading}
         onPress={async () => {
           setIsLoading(true);

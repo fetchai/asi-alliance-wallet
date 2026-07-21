@@ -111,7 +111,7 @@ export const DeleteWalletScreen: FunctionComponent = () => {
             }
           />
           <Button
-            text="Back up mnemonic seed"
+            text="Back Up Mnemonic Seed"
             size="large"
             mode="outline"
             onPress={() => {

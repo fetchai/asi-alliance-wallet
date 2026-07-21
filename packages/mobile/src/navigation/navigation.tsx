@@ -62,7 +62,7 @@ export const AddressBookStackScreen: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          title: "Add an address",
+          title: "Add an Address",
           headerTitleStyle: {
             color: style.get("color-dark").color,
             fontSize: 16,
@@ -76,7 +76,7 @@ export const AddressBookStackScreen: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          title: "Edit address book",
+          title: "Edit Address Book",
           headerTitleStyle: {
             color: style.get("color-dark").color,
             fontSize: 16,
@@ -105,7 +105,7 @@ export const ChainListStackScreen: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          title: "Manage networks",
+          title: "Manage Networks",
           headerTitleStyle: {
             color: style.get("color-dark").color,
             fontSize: 16,

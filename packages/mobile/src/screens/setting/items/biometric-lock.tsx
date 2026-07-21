@@ -48,7 +48,7 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
         }}
       />
       <SettingItem
-        label="Use biometric authentication"
+        label="Use Biometric Authentication"
         left={<FingerPrintIconWithoutCircle size={16} />}
         right={
           <Switch

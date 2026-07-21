@@ -182,7 +182,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       if (e.message.includes("Unmatched mac")) {
         Toast.show({
           type: "error",
-          text1: "Biometric verification failed.",
+          text1: "Biometric Verification Failed",
           text2:
             "Your biometric data has changed. Please log in with your password and update your biometric settings.",
         });
@@ -285,7 +285,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
             }
           >
             <Text style={style.flatten(["h2", "font-medium", "color-dark"])}>
-              Welcome back
+              Welcome Back
             </Text>
             <Text
               style={
@@ -343,7 +343,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 ]) as ViewStyle
               }
               textStyle={style.flatten(["color-white"]) as ViewStyle}
-              text="Sign in"
+              text="Sign In"
               size="large"
               loading={isLoading}
               rippleColor="black@10%"
@@ -372,7 +372,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 </View>
                 <Button
                   textStyle={style.flatten(["color-dark", "h5"]) as ViewStyle}
-                  text="Use biometric authentication"
+                  text="Use Biometric Authentication"
                   mode="text"
                   loading={isBiometricLoading}
                   showLoadingSpinner={true}

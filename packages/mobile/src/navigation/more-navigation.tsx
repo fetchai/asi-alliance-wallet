@@ -22,6 +22,7 @@ import {
 import { IconButton } from "components/new/button/icon";
 import { HeaderAddIcon } from "components/header/icon";
 import { SecurityAndPrivacyScreen } from "screens/setting/screens/security-and-privacy";
+import { ChangePasswordScreen } from "screens/setting/screens/security-and-privacy/change-password";
 import { ViewPrivateDataScreen } from "screens/setting/screens/view-private-data";
 import { FetchVersionScreen } from "screens/setting/screens/version";
 import { CurrencyScreen } from "screens/setting/screens/currency";
@@ -108,6 +109,20 @@ export const MoreNavigation: FunctionComponent = () => {
         }}
         name="Setting.SecurityAndPrivacy"
         component={SecurityAndPrivacyScreen}
+      />
+      <Stack.Screen
+        options={{
+          ...TransparentHeaderOptionsPreset,
+          title: "Change Password",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
+        }}
+        name="Setting.ChangePassword"
+        component={ChangePasswordScreen}
       />
       <Stack.Screen
         name="Setting.ViewPrivateData"

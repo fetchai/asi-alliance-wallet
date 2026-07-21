@@ -420,6 +420,19 @@ export const LedgerScreen: FunctionComponent = () => {
         name="name"
         defaultValue={defaultAccountName}
       />
+      {currentName !== defaultAccountName && (
+        <Text
+          style={
+            style.flatten([
+              "text-caption2",
+              "color-gray-400",
+              "margin-top-4",
+            ]) as ViewStyle
+          }
+        >
+          * Account name for unselected networks will be {defaultAccountName}
+        </Text>
+      )}
       <SelectNetwork
         selectedNetworks={selectedNetworks}
         disabled={currentName === defaultAccountName}
@@ -436,19 +449,6 @@ export const LedgerScreen: FunctionComponent = () => {
           }
         >
           Please select at least one network
-        </Text>
-      )}
-      {currentName !== defaultAccountName && selectedNetworks.length > 0 && (
-        <Text
-          style={
-            style.flatten([
-              "text-caption2",
-              "color-gray-400",
-              "margin-top-4",
-            ]) as ViewStyle
-          }
-        >
-          * Account name for unselected networks will be {defaultAccountName}
         </Text>
       )}
       {mode === "create" && (

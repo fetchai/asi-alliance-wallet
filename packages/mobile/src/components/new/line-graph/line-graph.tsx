@@ -193,7 +193,7 @@ export const LineGraph: FunctionComponent<{
   }, [cacheKey]);
 
   return (
-    <View style={[style.flatten(["margin-top-24"])] as ViewStyle}>
+    <View style={[style.flatten(["margin-top-18"])] as ViewStyle}>
       <Text
         style={
           style.flatten([
@@ -216,6 +216,7 @@ export const LineGraph: FunctionComponent<{
       <View
         style={
           style.flatten(
+            ["margin-top-10"],
             loading ? ["items-center", "justify-center"] : []
           ) as ViewStyle
         }

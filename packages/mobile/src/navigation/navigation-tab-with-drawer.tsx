@@ -141,7 +141,7 @@ export const MainTabNavigation: FunctionComponent = () => {
         backClickCountRef.current++;
         Toast.show({
           type: "error",
-          text1: `Press back again to exit the app`,
+          text1: `Press Back Again to Exit the App`,
           visibilityTime: 3000,
         });
       }

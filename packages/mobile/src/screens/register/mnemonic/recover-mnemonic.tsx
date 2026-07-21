@@ -341,7 +341,7 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
         />
         {emptyList.length !== seedWords.length ? (
           <Button
-            text="Paste all from clipboard"
+            text="Paste All from Clipboard"
             size="large"
             mode="outline"
             textStyle={

@@ -127,7 +127,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                   "padding-x-18",
                   "padding-y-14",
                   "margin-y-6",
-                  "background-color-gray-5",
+                  "background-color-white",
                 ]) as ViewStyle
               }
               // enabled={isInTransaction}
@@ -162,7 +162,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                       style={
                         style.flatten([
                           "body3",
-                          "color-gray-300",
+                          "color-gray-400",
                           "margin-bottom-4",
                         ]) as ViewStyle
                       }
@@ -174,7 +174,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                     style={style.flatten([
                       "text-caption1",
                       "font-medium",
-                      "color-dark",
+                      "color-gray-400",
                     ])}
                   >
                     {data.address}
@@ -183,7 +183,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                 <View style={style.flatten(["flex-1"]) as ViewStyle}>
                   <IconButton
                     backgroundBlur={false}
-                    icon={<ThreeDotIcon />}
+                    icon={<ThreeDotIcon color="#151a1a" />}
                     iconStyle={style.flatten(["padding-12"]) as ViewStyle}
                     onPress={() => {
                       setSelectAddress(i);
@@ -274,7 +274,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
       </View>
       <View style={style.flatten(["margin-top-68", "flex-1"]) as ViewStyle} />
       <Button
-        text="Add an address"
+        text="Add an Address"
         size="large"
         containerStyle={
           style.flatten([

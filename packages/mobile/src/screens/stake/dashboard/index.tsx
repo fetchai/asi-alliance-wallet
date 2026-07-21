@@ -146,7 +146,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
       {(delegations && delegations.length > 0) || hasUnbonding ? (
         <React.Fragment>
           <Button
-            text="Stake more"
+            text="Stake More"
             containerStyle={
               style.flatten([
                 "border-radius-64",
@@ -222,7 +222,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
               style.flatten(["border-radius-32", "margin-top-18"]) as ViewStyle
             }
             textStyle={style.flatten(["body2"]) as ViewStyle}
-            text={"Start staking"}
+            text={"Start Staking"}
             onPress={() => {
               analyticsStore.logEvent("stake_click", {
                 chainId: chainStore.current.chainId,

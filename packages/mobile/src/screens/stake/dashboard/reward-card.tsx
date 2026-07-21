@@ -285,7 +285,7 @@ export const MyRewardCard: FunctionComponent<{
           !stakedSum.isReady
         ) ? (
           <Button
-            text={"Claim all"}
+            text={"Claim All"}
             size="small"
             containerStyle={
               style.flatten([
