@@ -94,7 +94,7 @@ export const AmountInputSection: FunctionComponent<{
           ]) as ViewStyle
         }
         containerStyle={
-          style.flatten(["margin-top-12", "padding-y-0"]) as ViewStyle
+          style.flatten(["margin-top-4", "padding-y-0"]) as ViewStyle
         }
         maxLength={20}
         placeholder="0"
@@ -203,7 +203,7 @@ export const AmountInputSection: FunctionComponent<{
         isToggleClicked={isToggleClicked}
         setIsToggleClicked={setIsToggleClicked}
         onPress={() => amountConfig.setAmount(spendableBalance)}
-        containerStyle={style.flatten(["margin-top-28"]) as ViewStyle}
+        containerStyle={style.flatten(["margin-bottom-40"]) as ViewStyle}
       />
     </React.Fragment>
   );

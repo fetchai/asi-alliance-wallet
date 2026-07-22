@@ -193,7 +193,7 @@ export const UnbondingCard: FunctionComponent<{
                             ]) as ViewStyle
                           }
                         >
-                          {formatBalance(entry.balance, 6)}
+                          {formatBalance(entry.balance)}
                         </Text>
                       </View>
                       {amountUSD ? (

@@ -44,9 +44,11 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
             height: size * imageScale,
           }}
           resizeMode={FastImage.resizeMode.contain}
-          source={{
-            uri: currencyImageUrl,
-          }}
+          source={
+            typeof currencyImageUrl === "number"
+              ? currencyImageUrl
+              : { uri: currencyImageUrl }
+          }
         />
       ) : (
         <IconButton

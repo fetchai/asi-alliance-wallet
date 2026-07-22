@@ -223,7 +223,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           }}
         >
           <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
-            {formatBalance(staked, 6)}
+            {formatBalance(staked)}
           </Text>
         </View>
       </View>
@@ -250,7 +250,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${formatBalance(staked, 6)}${Usd}`}</Text>
+      >{`Available: ${formatBalance(staked)}${Usd}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}

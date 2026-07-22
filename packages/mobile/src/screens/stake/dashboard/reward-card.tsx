@@ -610,7 +610,7 @@ const DelegateReward: FunctionComponent<{
                     style.flatten(["body3", "color-gray-300"]) as ViewStyle
                   }
                 >
-                  {formatBalance(rewards, 8)}
+                  {formatBalance(rewards, 8, false)}
                 </Text>
               </View>
             </View>

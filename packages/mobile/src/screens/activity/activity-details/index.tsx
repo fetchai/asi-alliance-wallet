@@ -237,7 +237,7 @@ export const ActivityDetails = observer(() => {
                   leadingSubtitle: formatAddress(
                     details.signerAddress
                       ? details.signerAddress
-                      : details.deligatorAddress
+                      : details?.delegatorAddress
                   ),
                 },
                 {

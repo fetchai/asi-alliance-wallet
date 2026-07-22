@@ -93,7 +93,11 @@ export const InputCardView = React.forwardRef<TextInput, InputCardViewProps>(
             <TextInput
               keyboardType={
                 keyboardType ??
-                (Platform.OS === "ios" ? "ascii-capable" : "visible-password")
+                (Platform.OS === "ios"
+                  ? "ascii-capable"
+                  : restProps.secureTextEntry
+                  ? "default"
+                  : "visible-password")
               }
               placeholderTextColor={style.flatten(["color-gray-300"]).color}
               onChangeText={(text) => {

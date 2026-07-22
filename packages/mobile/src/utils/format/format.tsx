@@ -186,7 +186,10 @@ export const formatBalance = (
       const spaceIdx = formatted.indexOf(" ");
       const numStr = formatted.slice(0, spaceIdx);
       const denom = formatted.slice(spaceIdx);
-      return `${Number(numStr).toLocaleString("en-US")}${denom}`;
+      return `${Number(numStr).toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: maxDecimals,
+      })}${denom}`;
     }
     return formatted;
   }
@@ -206,10 +209,10 @@ export const formatFiatBalance = (balance: PricePretty, maxDecimals = 2) => {
   if (numericValue < minimumValue) {
     return `< ${minimumValue.toFixed(maxDecimals)}`;
   }
-  return numericValue.toLocaleString("en-US", {
+  return `${balance?.symbol} ${numericValue.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: maxDecimals,
-  });
+  })}`;
 };
 
 export const numberLocalFormat = (number: string) => {

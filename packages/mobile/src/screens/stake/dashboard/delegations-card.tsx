@@ -22,7 +22,7 @@ import {
 import { VectorCharacter } from "components/vector-character";
 import { KeplrETCQueriesImpl } from "@keplr-wallet/stores-etc";
 import { IconButton } from "components/new/button/icon";
-import { formatBalance } from "utils/format/format";
+import { formatBalance, formatFiatBalance } from "utils/format/format";
 
 interface DeepReadonlyObject {
   queryBalances: ObservableQueryBalances;
@@ -235,7 +235,7 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {formatBalance(amount, 4)}
+                        {formatBalance(amount)}
                       </Text>
                     </View>
                     <View style={style.flatten(["items-end"])}>
@@ -250,7 +250,7 @@ export const DelegationsCard: FunctionComponent<{
                               ]) as ViewStyle
                             }
                           >
-                            {formatBalance(amountUSD as any)}
+                            {formatFiatBalance(amountUSD)}
                           </Text>
                           <Text
                             style={

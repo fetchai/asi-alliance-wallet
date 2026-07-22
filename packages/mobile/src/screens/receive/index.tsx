@@ -180,7 +180,7 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
                 </View>
               </View>
             ) : (
-              <CopyIcon size={16} iconOpacity={1} />
+              <CopyIcon size={16} iconOpacity={1} color="#151a1a" />
             )
           }
         />

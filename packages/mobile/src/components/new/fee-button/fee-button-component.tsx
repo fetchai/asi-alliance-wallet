@@ -1,5 +1,6 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import {
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -14,6 +15,7 @@ import {
   FeeType,
   IFeeConfig,
   IGasConfig,
+  IGasSimulator,
   InsufficientFeeError,
   NotLoadedFeeError,
 } from "@keplr-wallet/hooks";
@@ -37,7 +39,9 @@ export interface FeeButtonsProps {
 
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
+  gasSimulator?: IGasSimulator;
   pageName?: string;
+  onValidationChange?: (hasError: boolean) => void;
 }
 
 class FeeButtonState {
@@ -86,9 +90,9 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
           <Switch
             trackColor={{
               false: "#d0d1d1",
-              true: "#2DCE89",
+              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
             }}
-            thumbColor={feeButtonState.isGasInputOpen ? "#FFFFFF" : "#f6f6f6"}
+            thumbColor={feeButtonState.isGasInputOpen ? "#73A271" : "#9A9AA2"}
             style={[
               {
                 borderRadius: 16,
@@ -99,7 +103,11 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
               ),
             ]}
             onValueChange={() => {
-              feeButtonState.setIsGasInputOpen(!feeButtonState.isGasInputOpen);
+              const next = !feeButtonState.isGasInputOpen;
+              feeButtonState.setIsGasInputOpen(next);
+              if (!next) {
+                props.onValidationChange?.(false);
+              }
               if (props.pageName)
                 analyticsStore.logEvent("fee_advance_click", {
                   pageName: props.pageName,
@@ -109,7 +117,12 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
           />
         </View>
         {feeButtonState.isGasInputOpen || !props.feeConfig.feeCurrency ? (
-          <GasInput gasConfig={props.gasConfig} />
+          <GasInput
+            feeConfig={props.feeConfig}
+            gasConfig={props.gasConfig}
+            gasSimulator={props.gasSimulator}
+            onValidationChange={props.onValidationChange}
+          />
         ) : null}
       </React.Fragment>
     );
@@ -162,14 +175,24 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
       return <React.Fragment />;
     }
 
-    const lowFee = feeConfig.getFeeTypePretty("low");
-    const lowFeePrice = priceStore.calculatePrice(lowFee);
+    const lowFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("low")
+      : undefined;
+    const lowFeePrice = lowFee ? priceStore.calculatePrice(lowFee) : undefined;
 
-    const averageFee = feeConfig.getFeeTypePretty("average");
-    const averageFeePrice = priceStore.calculatePrice(averageFee);
+    const averageFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("average")
+      : undefined;
+    const averageFeePrice = averageFee
+      ? priceStore.calculatePrice(averageFee)
+      : undefined;
 
-    const highFee = feeConfig.getFeeTypePretty("high");
-    const highFeePrice = priceStore.calculatePrice(highFee);
+    const highFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("high")
+      : undefined;
+    const highFeePrice = highFee
+      ? priceStore.calculatePrice(highFee)
+      : undefined;
 
     let isFeeLoading = false;
 
@@ -187,7 +210,7 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
     const renderButton: (
       label: string,
       price: PricePretty | undefined,
-      amount: CoinPretty,
+      amount: CoinPretty | undefined,
       selected: boolean,
       onPress: () => void
     ) => React.ReactElement = (label, price, amount, selected, onPress) => {
@@ -244,7 +267,7 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
                 ] as ViewStyle
               }
             >
-              {amount.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+              {amount?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
             </Text>
           </RectButton>
         </BlurBackground>
@@ -263,7 +286,8 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
         </Text> */}
         <View>
           {/* if low fee is zero or same price as average fee, don't show low fee option */}
-          {!lowFee.toDec().isZero() &&
+          {lowFee &&
+            !lowFee.toDec().isZero() &&
             lowFeePrice?.toString() !== averageFeePrice?.toString() && (
               <React.Fragment>
                 {renderButton(

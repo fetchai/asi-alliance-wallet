@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react-lite";
 import {
   AmountConfig,
@@ -6,7 +6,10 @@ import {
   MemoConfig,
   RecipientConfig,
   SendGasConfig,
+  useGasSimulator,
 } from "@keplr-wallet/hooks";
+import { DenomHelper } from "@keplr-wallet/common";
+import { AsyncKVStore } from "../../common";
 import { useStore } from "stores/index";
 import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
@@ -83,6 +86,46 @@ export const SendPhase2: FunctionComponent<{
 
   const account = accountStore.getAccount(chainId);
 
+  const gasSimulatorKey = useMemo(() => {
+    if (sendConfigs.amountConfig.sendCurrency) {
+      const denomHelper = new DenomHelper(
+        sendConfigs.amountConfig.sendCurrency.coinMinimalDenom
+      );
+      if (denomHelper.type !== "native") {
+        if (denomHelper.type === "cw20") {
+          return `${denomHelper.type}/${denomHelper.contractAddress}`;
+        }
+        return denomHelper.type;
+      }
+    }
+    return "native";
+  }, [sendConfigs.amountConfig.sendCurrency]);
+
+  const gasSimulator = useGasSimulator(
+    new AsyncKVStore("gas-simulator.main.send"),
+    chainStore,
+    chainId,
+    sendConfigs.gasConfig,
+    sendConfigs.feeConfig,
+    gasSimulatorKey,
+    () => {
+      if (!sendConfigs.amountConfig.sendCurrency) {
+        throw new Error("Send currency not set");
+      }
+      if (
+        sendConfigs.amountConfig.error != null ||
+        sendConfigs.recipientConfig.error != null
+      ) {
+        throw new Error("Not ready to simulate tx");
+      }
+      return account.makeSendTokenTx(
+        sendConfigs.amountConfig.amount,
+        sendConfigs.amountConfig.sendCurrency,
+        sendConfigs.recipientConfig.recipient
+      );
+    }
+  );
+
   const netInfo = useNetInfo();
   const networkIsConnected =
     typeof netInfo.isConnected !== "boolean" || netInfo.isConnected;
@@ -95,9 +138,7 @@ export const SendPhase2: FunctionComponent<{
   const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
-    sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
-  );
+  const feePrice = sendConfigs.feeConfig.fee;
 
   const usdValue = () => {
     try {
@@ -323,7 +364,7 @@ export const SendPhase2: FunctionComponent<{
               ]) as ViewStyle
             }
           >
-            {feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+            {feePrice?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
           </Text>
           <IconButton
             backgroundBlur={false}
@@ -368,7 +409,7 @@ export const SendPhase2: FunctionComponent<{
       ) : null}
       <View style={style.flatten(["flex-1"])} />
       <Button
-        text="Review transaction"
+        text="Review Transaction"
         size="large"
         containerStyle={
           {
@@ -409,6 +450,7 @@ export const SendPhase2: FunctionComponent<{
         title={"Transaction fee"}
         feeConfig={sendConfigs.feeConfig}
         gasConfig={sendConfigs.gasConfig}
+        gasSimulator={gasSimulator}
       />
     </React.Fragment>
   );

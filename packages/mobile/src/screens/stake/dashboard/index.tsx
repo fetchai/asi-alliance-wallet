@@ -1,7 +1,6 @@
 import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import { useStyle } from "styles/index";
 import {
-  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -16,6 +15,7 @@ import { Button } from "components/button";
 import { DelegationsCard } from "./delegations-card";
 import { UnbondingCard } from "./unbonding-card";
 import { IconWithText } from "components/new/icon-with-text/icon-with-text";
+import { EarnIcon } from "components/new/icon/earn-icon";
 import {
   NavigationProp,
   ParamListBase,
@@ -195,19 +195,25 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
         <View
           style={
             style.flatten([
-              "margin-x-14",
               "height-half",
               "justify-center",
+              "items-center",
             ]) as ViewStyle
           }
         >
           <IconWithText
             icon={
-              <Image source={require("assets/image/icon/ic_staking.png")} />
+              <EarnIcon
+                size={72}
+                color1="#151a1a"
+                color2="#151a1a"
+                color3="#151a1a"
+              />
             }
+            iconStyle={{ marginBottom: 8 }}
             title={"Start staking now"}
             subtitle={
-              "Stake your assets to earn rewards and\n contribute to maintaining the networks"
+              "Stake your assets to earn rewards and\ncontribute to maintaining the networks"
             }
             titleStyle={
               [
@@ -215,13 +221,21 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
                 { marginTop: 3 },
               ] as ViewStyle
             }
-            subtitleStyle={style.flatten(["body3"]) as ViewStyle}
+            subtitleStyle={
+              style.flatten(["body3", "color-gray-300"]) as ViewStyle
+            }
+            containerStyle={style.flatten(["items-center"])}
           />
           <Button
             containerStyle={
-              style.flatten(["border-radius-32", "margin-top-18"]) as ViewStyle
+              style.flatten([
+                "border-radius-64",
+                "margin-top-18",
+                "background-color-dark",
+                "width-full",
+              ]) as ViewStyle
             }
-            textStyle={style.flatten(["body2"]) as ViewStyle}
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
             text={"Start Staking"}
             onPress={() => {
               analyticsStore.logEvent("stake_click", {
@@ -234,9 +248,6 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
                 params: {},
               });
             }}
-          />
-          <View
-            style={style.flatten(["height-page-double-pad"]) as ViewStyle}
           />
         </View>
       )}

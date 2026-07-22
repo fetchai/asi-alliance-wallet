@@ -143,7 +143,7 @@ export const SendPhase1: FunctionComponent<{
         spendableBalance={maxAmount}
       />
       {/* This is a send component */}
-      <View style={style.flatten(["margin-y-20"]) as ViewStyle}>
+      <View style={style.flatten(["margin-bottom-40"]) as ViewStyle}>
         <DropDownCardView
           containerStyle={
             style.flatten(["margin-bottom-card-gap"]) as ViewStyle
