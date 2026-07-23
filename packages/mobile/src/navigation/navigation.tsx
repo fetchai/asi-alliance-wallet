@@ -48,7 +48,7 @@ export const AddressBookStackScreen: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          title: "Address book",
+          title: "Address Book",
           headerTitleStyle: {
             color: style.get("color-dark").color,
             fontSize: 16,

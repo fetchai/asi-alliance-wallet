@@ -153,7 +153,7 @@ export const SendPhase1: FunctionComponent<{
           subHeading={`Available: ${numberLocalFormat(
             availableBalance.split(" ")[0]
           )} ${availableBalance.split(" ").slice(1).join(" ")}`}
-          trailingIcon={<ChevronDownIcon size={12} />}
+          trailingIcon={<ChevronDownIcon size={12} color="#151a1a" />}
           onPress={() => {
             setOpenAssetModel(true);
             analyticsStore.logEvent("select_token_click", {

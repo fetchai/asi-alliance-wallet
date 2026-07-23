@@ -4,7 +4,11 @@ import { BlurBackground } from "components/new/blur-background/blur-background";
 import { useStyle } from "styles/index";
 import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { formatBalance, separateNumericAndDenom } from "utils/format/format";
+import {
+  formatBalance,
+  formatFiatBalance,
+  separateNumericAndDenom,
+} from "utils/format/format";
 import { Dec } from "@keplr-wallet/unit";
 import Toast from "react-native-toast-message";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
@@ -238,42 +242,47 @@ export const MyRewardCard: FunctionComponent<{
             highlightColor={"#F6F6F6"}
           >
             <View style={style.flatten(["flex-row", "flex-wrap"]) as ViewStyle}>
-              <AnimatedNumber
-                numberForAnimated={
-                  pendingStakableRewardUSD
-                    ? pendingStakableRewardUSD
-                        .shrink(true)
-                        .maxDecimals(8)
-                        .trim(true)
-                        .toString()
-                    : totalNumber
-                }
-                includeComma={true}
-                decimalAmount={2}
-                fontSizeValue={14}
-                hookName={"withTiming"}
-                withTimingProps={{
-                  durationValue: 1000,
-                  easingValue: "linear",
-                }}
-                textColor={style.get("color-dark").color}
-              />
-              <Text
-                style={
-                  [
-                    style.flatten([
-                      "body3",
-                      "padding-left-4",
-                      "color-gray-300",
-                    ]),
-                    { lineHeight: 14 },
-                  ] as ViewStyle
-                }
-              >
-                {pendingStakableRewardUSD
-                  ? priceStore.defaultVsCurrency.toUpperCase()
-                  : totalDenom}
-              </Text>
+              {pendingStakableRewardUSD ? (
+                <Text
+                  style={
+                    [
+                      style.flatten(["body3", "color-dark"]),
+                      { lineHeight: 14 },
+                    ] as ViewStyle
+                  }
+                >
+                  {formatFiatBalance(pendingStakableRewardUSD, 8)}
+                </Text>
+              ) : (
+                <React.Fragment>
+                  <AnimatedNumber
+                    numberForAnimated={totalNumber as any}
+                    includeComma={true}
+                    decimalAmount={2}
+                    fontSizeValue={14}
+                    hookName={"withTiming"}
+                    withTimingProps={{
+                      durationValue: 1000,
+                      easingValue: "linear",
+                    }}
+                    textColor={style.get("color-dark").color}
+                  />
+                  <Text
+                    style={
+                      [
+                        style.flatten([
+                          "body3",
+                          "padding-left-4",
+                          "color-gray-300",
+                        ]),
+                        { lineHeight: 14 },
+                      ] as ViewStyle
+                    }
+                  >
+                    {totalDenom}
+                  </Text>
+                </React.Fragment>
+              )}
             </View>
           </Skeleton>
         </View>
@@ -352,7 +361,7 @@ export const MyRewardCard: FunctionComponent<{
               ] as ViewStyle
             }
           >
-            {!showRewars ? "View rewards" : "Hide rewards"}
+            {!showRewars ? "View Rewards" : "Hide Rewards"}
           </Text>
           <View style={style.flatten(["margin-left-6"]) as ViewStyle}>
             {!showRewars ? (
@@ -624,6 +633,7 @@ const DelegateReward: FunctionComponent<{
                     style.flatten([
                       "border-radius-64",
                       "border-color-gray-100",
+                      "background-color-green-250",
                       "padding-x-6",
                       "height-30",
                     ]) as ViewStyle

@@ -36,13 +36,13 @@ export const TransactionModal: FunctionComponent<{
   close,
   onHomeClick,
   onTryAgainClick,
-  buttonText = "Go to homescreen",
+  buttonText = "Go to Homescreen",
 }) => {
   const { chainStore } = useStore();
 
   const [transactionState, setTransactionState] = useState<TransactionProcess>({
     status: TransactionStatus.Pending,
-    title: "Transaction pending",
+    title: "Transaction Pending",
     subTitle:
       "Transaction has been broadcasted to blockchain and pending confirmation",
     img: require("assets/lottie/pending.json"),
@@ -53,7 +53,7 @@ export const TransactionModal: FunctionComponent<{
   useEffect(() => {
     setTransactionState({
       status: TransactionStatus.Pending,
-      title: "Transaction pending",
+      title: "Transaction Pending",
       subTitle:
         "Transaction has been broadcasted to blockchain and pending confirmation",
       img: require("assets/lottie/pending.json"),
@@ -69,7 +69,7 @@ export const TransactionModal: FunctionComponent<{
         if (tx.code == null || tx.code === 0) {
           setTransactionState({
             status: TransactionStatus.Success,
-            title: "Transaction successful",
+            title: "Transaction Successful",
             subTitle:
               "Congratulations!\nYour transaction has been completed and confirmed by the blockchain",
             img: require("assets/lottie/success.json"),
@@ -77,7 +77,7 @@ export const TransactionModal: FunctionComponent<{
         } else {
           setTransactionState({
             status: TransactionStatus.Failed,
-            title: "Transaction failed",
+            title: "Transaction Failed",
             subTitle: "Unfortunately your transaction has failed.",
             img: require("assets/lottie/failed.json"),
           });

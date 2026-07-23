@@ -76,15 +76,25 @@ export const AmountInputSection: FunctionComponent<{
     return isDecimal !== null;
   };
 
+  const displayValue =
+    isToggleClicked && amountConfig.sendCurrency["coinGeckoId"]
+      ? parseDollarAmount(inputInUsd).toString()
+      : amountConfig.amount;
+
   return (
     <React.Fragment>
       <View style={style.flatten(["flex-1"])} />
       <TextInput
         style={
-          style.flatten(
-            ["h2", "font-medium", "height-66", "flex-0", "text-center"],
-            [errorText ? "color-red-250" : "color-dark"]
-          ) as ViewStyle
+          [
+            style.flatten(
+              ["h2", "font-medium", "height-66", "flex-0", "text-center"],
+              [errorText ? "color-red-250" : "color-dark"]
+            ),
+            {
+              ...(Platform.OS === "android" && { includeFontPadding: false }),
+            },
+          ] as ViewStyle
         }
         inputContainerStyle={
           style.flatten([
@@ -121,11 +131,7 @@ export const AmountInputSection: FunctionComponent<{
         placeholderTextColor={
           errorText ? "red" : style.flatten(["color-gray-300"]).color
         }
-        value={
-          isToggleClicked && amountConfig.sendCurrency["coinGeckoId"]
-            ? parseDollarAmount(inputInUsd).toString()
-            : amountConfig.amount
-        }
+        value={displayValue}
         onChangeText={(value) => {
           if (validateDecimalNumber(value)) {
             if (value !== "0") {

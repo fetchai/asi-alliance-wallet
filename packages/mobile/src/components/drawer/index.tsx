@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useState } from "react";
 import { observer } from "mobx-react-lite";
 import {
   DrawerContentScrollView,
@@ -37,19 +37,12 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
 
     const style = useStyle();
     const [search, setSearch] = useState("");
-    const [filterChainInfos, setFilterChainInfos] = useState(
-      chainStore.chainInfosInUI
-    );
 
-    useEffect(() => {
-      const searchTrim = search.trim();
-      const newChainInfos = chainStore.chainInfosInUI.filter((chainInfo) => {
-        return chainInfo.chainName
-          .toLowerCase()
-          .includes(searchTrim.toLowerCase());
-      });
-      setFilterChainInfos(newChainInfos);
-    }, [chainStore.chainInfosInUI, search]);
+    const filterChainInfos = chainStore.chainInfosInUI.filter((chainInfo) => {
+      return chainInfo.chainName
+        .toLowerCase()
+        .includes(search?.trim().toLowerCase());
+    });
 
     return (
       <DrawerContentScrollView
@@ -197,8 +190,8 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                               "items-center",
                               "justify-center",
                               "margin-right-12",
+                              "background-color-gray-100",
                             ]),
-                            backgroundColor: "#dddfdf",
                             overflow: "hidden",
                           } as ViewStyle
                         }

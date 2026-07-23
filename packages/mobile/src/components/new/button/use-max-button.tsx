@@ -48,7 +48,7 @@ export const UseMaxButton: FunctionComponent<{
           }`}
           backgroundBlur={false}
           leftIcon={
-            <View style={style.flatten(["margin-right-8"]) as ViewStyle}>
+            <View style={style.flatten(["margin-right-2"]) as ViewStyle}>
               <ReloadIcon
                 size={21}
                 color={changeButtonDisabled ? "#DCDCE3" : "#151a1a"}

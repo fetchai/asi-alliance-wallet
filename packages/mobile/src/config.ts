@@ -260,7 +260,7 @@ export const EmbedChainInfos: ChainInfo[] = [
     rest: "https://lcd-akash.keplr.app",
     chainId: "akashnet-2",
     chainName: "Akash",
-    hideInUI: true,
+    hideInUI: false,
     stakeCurrency: {
       coinDenom: "AKT",
       coinMinimalDenom: "uakt",
@@ -1526,7 +1526,7 @@ export const EmbedChainInfos: ChainInfo[] = [
     rest: "https://lcd-axelar.keplr.app",
     chainId: "axelar-dojo-1",
     chainName: "Axelar",
-    hideInUI: true,
+    hideInUI: false,
     stakeCurrency: {
       coinDenom: "AXL",
       coinMinimalDenom: "uaxl",
@@ -2676,7 +2676,7 @@ export const EmbedChainInfos: ChainInfo[] = [
     rest: "https://rest-gemini.fetch.ai",
     chainId: "gemini-1",
     chainName: "Gemini Testnet",
-    hideInUI: false,
+    hideInUI: true,
     stakeCurrency: {
       coinDenom: "TESTFET",
       coinMinimalDenom: "atestfet",
