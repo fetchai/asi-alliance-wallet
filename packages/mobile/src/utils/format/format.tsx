@@ -159,7 +159,7 @@ export const removeComma = (value: string) => value.replace(/,/g, "");
 
 export const formatBalance = (
   balance: CoinPretty,
-  maxDecimals = 6,
+  maxDecimals = 10,
   useCoinPrettyFormatting = true
 ) => {
   const minimumValue = 1 / Math.pow(10, maxDecimals);

@@ -9,7 +9,7 @@ import {
   formatFiatBalance,
   separateNumericAndDenom,
 } from "utils/format/format";
-import { Dec } from "@keplr-wallet/unit";
+import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import Toast from "react-native-toast-message";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
 import { Button } from "components/button";
@@ -39,7 +39,7 @@ import { KeplrETCQueriesImpl } from "@keplr-wallet/stores-etc";
 import Skeleton from "react-native-reanimated-skeleton";
 
 interface ClaimData {
-  reward: string;
+  reward?: CoinPretty;
   validatorAddress: string;
 }
 
@@ -383,7 +383,7 @@ export const MyRewardCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={formatBalance(pendingStakableReward)}
+        earnedAmount={pendingStakableReward}
         onPress={handleAllClaim}
         buttonLoading={
           isSendingTx ||
@@ -421,7 +421,7 @@ const DelegateReward: FunctionComponent<{
   const [txnHash, setTxnHash] = useState<string>("");
   const [showClaimModel, setClaimModel] = useState(false);
   const [claimData, setClaimData] = useState<ClaimData>({
-    reward: "",
+    reward: undefined,
     validatorAddress: "",
   });
 
@@ -619,7 +619,7 @@ const DelegateReward: FunctionComponent<{
                     style.flatten(["body3", "color-gray-300"]) as ViewStyle
                   }
                 >
-                  {formatBalance(rewards, 8, false)}
+                  {formatBalance(rewards, 10, false)}
                 </Text>
               </View>
             </View>
@@ -666,11 +666,7 @@ const DelegateReward: FunctionComponent<{
                       pageName: "Stake",
                     });
                     setClaimData({
-                      reward: rewards
-                        .maxDecimals(10)
-                        .trim(true)
-                        .shrink(true)
-                        .toString(),
+                      reward: rewards,
                       validatorAddress: val.operator_address,
                     });
                     setClaimModel(true);

@@ -303,7 +303,7 @@ export const DelegatedCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={formatBalance(stakableReward)}
+        earnedAmount={stakableReward}
         onPress={handleClaim}
         buttonLoading={
           isSendingTx ||

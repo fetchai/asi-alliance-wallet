@@ -5,10 +5,12 @@ import { useStyle } from "styles/index";
 import { IconWithText } from "components/new/icon-with-text/icon-with-text";
 import { Button } from "components/button";
 import { ClaimRewardIcon } from "../icon/claim-reward";
+import { CoinPretty } from "@keplr-wallet/unit";
+import { formatBalance } from "utils/format/format";
 
 export const ClaimRewardsModal: FunctionComponent<{
   isOpen: boolean;
-  earnedAmount?: string;
+  earnedAmount?: CoinPretty;
   close: () => void;
   onPress?: () => void;
   buttonLoading?: boolean;
@@ -66,7 +68,7 @@ export const ClaimRewardsModal: FunctionComponent<{
               ]) as ViewStyle
             }
           >
-            {earnedAmount}
+            {earnedAmount ? formatBalance(earnedAmount) : ""}
           </Text>
         </View>
       </View>

@@ -182,9 +182,6 @@ export const LedgerGranterModal: FunctionComponent<{
                 setDevices(_devices);
                 setMainContent("Choose a wallet to connect");
                 setBluetoothMode(BluetoothMode.Device);
-              } else if (bluetoothMode != BluetoothMode.Device) {
-                setMainContent("Choose a wallet to connect");
-                setBluetoothMode(BluetoothMode.Device);
               }
             }
           },
