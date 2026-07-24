@@ -6,7 +6,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 // @ts-ignore
 import QRCode from "qrcode.react";
 import style from "./style.module.scss";
-import WalletConnect from "@walletconnect/client";
 import { Buffer } from "buffer/";
 import { Alert, Form } from "reactstrap";
 import { observer } from "mobx-react-lite";
@@ -203,30 +202,26 @@ const QRCodeView: FunctionComponent<{
   cancel: () => void;
 }> = observer(({ keyRingData, cancel }) => {
   const { chainStore } = useStore();
-
   const navigate = useNavigate();
+
   const confirm = useConfirm();
   const intl = useIntl();
 
-  const [connector, setConnector] = useState<WalletConnect | undefined>();
-  const [qrCodeData, setQRCodeData] = useState<QRCodeSharedData | undefined>();
+  const [qrFrames, setQRFrames] = useState<string[]>([]);
+  const [currentFrame, setCurrentFrame] = useState(0);
 
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
   const [isExpired, setIsExpired] = useState(false);
-  const processOnce = useRef(false);
 
   const [addressBookConfigMap] = useState(
     () =>
       new AddressBookConfigMap(new ExtensionKVStore("address-book"), chainStore)
   );
 
+  // 30-second expiry
   useEffect(() => {
     const id = setTimeout(() => {
-      if (processOnce.current) {
-        return;
-      }
-      // Hide qr code after 30 seconds.
       setIsExpired(true);
 
       confirm
@@ -242,155 +237,84 @@ const QRCodeView: FunctionComponent<{
           hideNoButton: true,
         })
         .then(() => {
-          cancelRef.current();
+          navigate("/");
         });
     }, 30000);
 
     return () => {
       clearTimeout(id);
     };
-  }, [confirm, intl]);
+  }, [confirm, intl, navigate]);
 
+  // Encrypt all keyring data + address books and split into QR frames
   useEffect(() => {
     (async () => {
-      const connector = new WalletConnect({
-        bridge: "https://wc-bridge.keplr.app",
-      });
+      const keyBytes = new Uint8Array(32);
+      crypto.getRandomValues(keyBytes);
+      const key = Buffer.from(keyBytes);
 
-      if (connector.connected) {
-        await connector.killSession();
-      }
+      const ivBytes = new Uint8Array(16);
+      crypto.getRandomValues(ivBytes);
+      const iv = Buffer.from(ivBytes);
 
-      setConnector(connector);
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (connector) {
-      connector.on("display_uri", (error, payload) => {
-        if (error) {
-          console.log(error);
-          navigate("/");
-          return;
+      const addressBooks: { [chainId: string]: AddressBookData[] } = {};
+      for (const chainInfo of chainStore.chainInfosInUI) {
+        const config = addressBookConfigMap.getAddressBookConfig(
+          chainInfo.chainId
+        );
+        await config.waitLoaded();
+        const data = toJS(config.addressBookDatas) as AddressBookData[];
+        if (data.length > 0) {
+          addressBooks[chainInfo.chainId] = data;
         }
-
-        const bytes = new Uint8Array(32);
-        crypto.getRandomValues(bytes);
-        const password = Buffer.from(bytes).toString("hex");
-
-        const uri = payload.params[0] as string;
-        setQRCodeData({
-          wcURI: uri,
-          sharedPassword: password,
-        });
-      });
-
-      connector.createSession();
-    }
-  }, [connector, navigate]);
-
-  const onConnect = (error: any) => {
-    if (error) {
-      console.log(error);
-      navigate("/");
-    }
-  };
-  const onConnectRef = useRef(onConnect);
-  onConnectRef.current = onConnect;
-
-  const onCallRequest = (error: any, payload: any) => {
-    if (!connector || !qrCodeData) {
-      return;
-    }
-
-    if (
-      isExpired ||
-      error ||
-      payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1"
-    ) {
-      console.log(error, payload?.method);
-      navigate("/");
-    } else {
-      if (processOnce.current) {
-        return;
       }
-      processOnce.current = true;
 
-      const buf = Buffer.from(JSON.stringify(keyRingData));
-
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      const iv = Buffer.from(bytes);
+      const buf = Buffer.from(
+        JSON.stringify({ keyRingDatas: keyRingData, addressBooks })
+      );
 
       const counter = new Counter(0);
       counter.setBytes(iv);
-      const aesCtr = new AES.ModeOfOperation.ctr(
-        Buffer.from(qrCodeData.sharedPassword, "hex"),
-        counter
-      );
+      const aesCtr = new AES.ModeOfOperation.ctr(key, counter);
+      const ciphertext = Buffer.from(aesCtr.encrypt(buf)).toString("hex");
 
-      (async () => {
-        const addressBooks: {
-          [chainId: string]: AddressBookData[] | undefined;
-        } = {};
+      // 800 hex chars = 400 bytes per chunk keeps each QR frame under ~1100 chars
+      const CHUNK_HEX = 800;
+      const chunks: string[] = [];
+      for (let i = 0; i < ciphertext.length; i += CHUNK_HEX) {
+        chunks.push(ciphertext.slice(i, i + CHUNK_HEX));
+      }
 
-        if (payload.params && payload.params.length > 0) {
-          for (const chainId of payload.params[0].addressBookChainIds ?? []) {
-            const addressBookConfig =
-              addressBookConfigMap.getAddressBookConfig(chainId);
+      const keyHex = key.toString("hex");
+      const ivHex = iv.toString("hex");
 
-            await addressBookConfig.waitLoaded();
-
-            addressBooks[chainId] = toJS(
-              addressBookConfig.addressBookDatas
-            ) as AddressBookData[];
-          }
-        }
-
-        const response: WCExportKeyRingDatasResponse = {
-          encrypted: {
-            ciphertext: Buffer.from(aesCtr.encrypt(buf)).toString("hex"),
-            // Hex encoded
-            iv: iv.toString("hex"),
-          },
-          addressBooks,
+      const frames = chunks.map((chunk, index) => {
+        const frame: Record<string, unknown> = {
+          type: "fetch-direct-export",
+          total: chunks.length,
+          index,
+          data: chunk,
         };
-
-        connector.approveRequest({
-          id: payload.id,
-          result: [response],
-        });
-
-        navigate("/");
-      })();
-    }
-  };
-  const onCallRequestRef = useRef(onCallRequest);
-  onCallRequestRef.current = onCallRequest;
-
-  useEffect(() => {
-    if (connector && qrCodeData) {
-      connector.on("connect", (error) => {
-        onConnectRef.current(error);
+        if (index === 0) {
+          frame["key"] = keyHex;
+          frame["iv"] = ivHex;
+        }
+        return JSON.stringify(frame);
       });
 
-      connector.on("call_request", (error, payload) => {
-        onCallRequestRef.current(error, payload);
-      });
-    }
-  }, [connector, qrCodeData]);
+      setQRFrames(frames);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Cycle through frames at 600ms each
   useEffect(() => {
-    if (connector) {
-      return () => {
-        // Kill session after 5 seconds.
-        // Delay is needed because it is possible for wc to being processing the request.
-        setTimeout(() => {
-          connector.killSession().catch(console.log);
-        }, 5000);
-      };
-    }
-  }, [connector]);
+    if (qrFrames.length === 0) return;
+    const id = setInterval(() => {
+      setCurrentFrame((f) => (f + 1) % qrFrames.length);
+    }, 600);
+    return () => clearInterval(id);
+  }, [qrFrames]);
 
   return (
     <div className={style["container"]}>
@@ -406,8 +330,8 @@ const QRCodeView: FunctionComponent<{
               });
             }
 
-            if (qrCodeData) {
-              return JSON.stringify(qrCodeData);
+            if (qrFrames.length > 0) {
+              return qrFrames[currentFrame];
             }
 
             return "";

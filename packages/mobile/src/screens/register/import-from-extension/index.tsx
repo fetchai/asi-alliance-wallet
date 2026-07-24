@@ -123,6 +123,14 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
     } catch (e) {
       console.log(e);
       setIsLoading(false);
+      // Progress errors from animated QR frame collection are expected — stay on camera
+      const msg = e?.message ?? "";
+      if (
+        msg.startsWith("Scanning QR:") ||
+        msg.startsWith("Waiting for QR frame 0")
+      ) {
+        return;
+      }
       smartNavigation.goBack();
     }
   };
