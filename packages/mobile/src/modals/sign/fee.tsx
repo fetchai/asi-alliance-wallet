@@ -112,43 +112,30 @@ export const FeeInSign: FunctionComponent<{
           ) : null}
         </React.Fragment>
       ) : (
-        <View style={style.flatten(["padding-bottom-28"]) as ViewStyle}>
-          <View
-            style={
-              style.flatten([
-                "flex-row",
-                "items-center",
-                "margin-bottom-4",
-              ]) as ViewStyle
-            }
-          >
-            <Text
-              style={
-                style.flatten([
-                  "padding-y-4",
-                  "color-gray-200",
-                  "margin-y-4",
-                ]) as ViewStyle
-              }
-            >
-              Fee
-            </Text>
-            <View style={style.get("flex-1")} />
-            <Text
-              style={style.flatten(["body3", "color-text-low"]) as ViewStyle}
-            >
-              {price ? price.toString() : "-"}
-            </Text>
-          </View>
-          <View style={style.flatten(["flex-row"])}>
-            <View style={style.get("flex-1")} />
-            <Text
-              style={
-                style.flatten(["subtitle1", "color-gray-300"]) as ViewStyle
-              }
-            >
+        <View
+          style={
+            style.flatten([
+              "flex-row",
+              "justify-between",
+              "items-center",
+              "margin-y-12",
+            ]) as ViewStyle
+          }
+        >
+          <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+            Transaction fee:
+          </Text>
+          <View style={style.flatten(["items-end"]) as ViewStyle}>
+            <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
               {fee.trim(true).toString()}
             </Text>
+            {price ? (
+              <Text
+                style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
+              >
+                {price.toString()}
+              </Text>
+            ) : null}
           </View>
         </View>
       )}

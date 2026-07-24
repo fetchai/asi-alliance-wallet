@@ -300,7 +300,7 @@ export const DelegationsCard: FunctionComponent<{
                           ]) as ViewStyle
                         }
                       >
-                        {formatBalance(reward)}
+                        {formatBalance(reward, 6)}
                       </Text>
                       <Text
                         style={

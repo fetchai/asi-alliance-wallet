@@ -25,7 +25,9 @@ export const UnbondingCard: FunctionComponent<{
       accountBech32Address
     );
 
-  const unbondings = queryUnbonding.unbondingBalances;
+  const unbondings = queryUnbonding.unbondingBalances?.filter((item) =>
+    item?.entries?.some((entry) => !entry?.balance?.toDec().isZero())
+  );
 
   const bondedValidators = queries.cosmos.queryValidators.getQueryStatus(
     Staking.BondStatus.Bonded
@@ -51,7 +53,9 @@ export const UnbondingCard: FunctionComponent<{
   ]);
 
   const unbondingEntriesCount =
-    unbondings?.flatMap((item) => item.entries).length ?? 0;
+    unbondings
+      ?.flatMap((item) => item.entries)
+      .filter((entry) => !entry?.balance?.toDec().isZero()).length ?? 0;
 
   if (unbondings.length === 0 || unbondingEntriesCount === 0) {
     return null;
@@ -112,143 +116,144 @@ export const UnbondingCard: FunctionComponent<{
 
         return (
           <React.Fragment key={ubd.validatorAddress}>
-            {ubd.entries.map((entry) => {
-              const completionTime = moment(entry.completionTime).fromNow();
-              const amountUSD = priceStore.calculatePrice(
-                entry.balance.maxDecimals(5).trim(true).shrink(true)
-              );
-
-              return (
-                <BlurBackground
-                  key={`${ubd.validatorAddress}-${entry.completionTime}`}
-                  borderRadius={12}
-                  backgroundBlur={false}
-                  containerStyle={
-                    [
-                      style.flatten([
-                        "padding-18",
-                        "flex-row",
-                        "background-color-gray-5",
-                        "margin-bottom-6",
-                      ]),
-                      containerStyle,
-                    ] as ViewStyle
-                  }
-                >
-                  <View
-                    style={
-                      style.flatten([
-                        "width-32",
-                        "margin-right-10",
-                        "margin-top-6",
-                      ]) as ViewStyle
+            {ubd.entries
+              .filter((entry) => !entry?.balance?.toDec().isZero())
+              .map((entry) => {
+                const completionTime = moment(entry.completionTime).fromNow();
+                const amountUSD = priceStore.calculatePrice(
+                  entry.balance.trim(true).shrink(true)
+                );
+                return (
+                  <BlurBackground
+                    key={`${ubd.validatorAddress}-${entry.completionTime}`}
+                    borderRadius={12}
+                    backgroundBlur={false}
+                    containerStyle={
+                      [
+                        style.flatten([
+                          "padding-18",
+                          "flex-row",
+                          "background-color-gray-5",
+                          "margin-bottom-6",
+                        ]),
+                        containerStyle,
+                      ] as ViewStyle
                     }
                   >
-                    {thumbnail || val.description.moniker === undefined ? (
-                      <ValidatorThumbnail size={32} url={thumbnail} />
-                    ) : (
-                      <BlurBackground
-                        backgroundBlur={false}
-                        containerStyle={
-                          {
-                            ...style.flatten([
-                              "width-32",
-                              "height-32",
-                              "border-radius-64",
-                              "items-center",
-                              "justify-center",
-                            ]),
-                            backgroundColor: "#dddfdf",
-                          } as ViewStyle
-                        }
-                      >
-                        <VectorCharacter
-                          char={val.description.moniker.trim()[0]}
-                          color="#151a1a"
-                          height={12}
-                        />
-                      </BlurBackground>
-                    )}
-                  </View>
-                  <View style={style.flatten(["flex-1"])}>
-                    <View style={style.flatten(["flex-row", "items-center"])}>
-                      <View style={style.flatten(["flex-1"])}>
-                        <Text
-                          style={
-                            style.flatten([
-                              "body3",
-                              "color-dark",
-                              "margin-bottom-2",
-                            ]) as ViewStyle
-                          }
-                        >
-                          {val.description.moniker?.trim()}
-                        </Text>
-                        <Text
-                          style={
-                            style.flatten([
-                              "body3",
-                              "color-gray-300",
-                              "font-medium",
-                            ]) as ViewStyle
-                          }
-                        >
-                          {formatBalance(entry.balance)}
-                        </Text>
-                      </View>
-                      {amountUSD ? (
-                        <View style={style.flatten(["items-end"])}>
-                          <View
-                            style={style.flatten(["flex-row"]) as ViewStyle}
-                          >
-                            <Text
-                              style={
-                                style.flatten([
-                                  "body3",
-                                  "color-dark",
-                                  "margin-right-2",
-                                ]) as ViewStyle
-                              }
-                            >
-                              {formatFiatBalance(amountUSD)}
-                            </Text>
-                            <Text
-                              style={
-                                style.flatten([
-                                  "body3",
-                                  "color-gray-300",
-                                ]) as ViewStyle
-                              }
-                            >
-                              {priceStore.defaultVsCurrency.toUpperCase()}
-                            </Text>
-                          </View>
-                        </View>
-                      ) : null}
-                    </View>
                     <View
                       style={
                         style.flatten([
-                          "height-1",
-                          "background-color-gray-100",
-                          "margin-y-10",
-                        ]) as ViewStyle
-                      }
-                    />
-                    <Text
-                      style={
-                        style.flatten([
-                          "text-caption2",
-                          "color-gray-300",
+                          "width-32",
+                          "margin-right-10",
+                          "margin-top-6",
                         ]) as ViewStyle
                       }
                     >
-                      {`Unbonding · Completes ${completionTime}`}
-                    </Text>
-                  </View>
-                </BlurBackground>
-              );
-            })}
+                      {thumbnail || val.description.moniker === undefined ? (
+                        <ValidatorThumbnail size={32} url={thumbnail} />
+                      ) : (
+                        <BlurBackground
+                          backgroundBlur={false}
+                          containerStyle={
+                            {
+                              ...style.flatten([
+                                "width-32",
+                                "height-32",
+                                "border-radius-64",
+                                "items-center",
+                                "justify-center",
+                              ]),
+                              backgroundColor: "#dddfdf",
+                            } as ViewStyle
+                          }
+                        >
+                          <VectorCharacter
+                            char={val.description.moniker.trim()[0]}
+                            color="#151a1a"
+                            height={12}
+                          />
+                        </BlurBackground>
+                      )}
+                    </View>
+                    <View style={style.flatten(["flex-1"])}>
+                      <View style={style.flatten(["flex-row", "items-center"])}>
+                        <View style={style.flatten(["flex-1"])}>
+                          <Text
+                            style={
+                              style.flatten([
+                                "body3",
+                                "color-dark",
+                                "margin-bottom-2",
+                              ]) as ViewStyle
+                            }
+                          >
+                            {val.description.moniker?.trim()}
+                          </Text>
+                          <Text
+                            style={
+                              style.flatten([
+                                "body3",
+                                "color-gray-300",
+                                "font-medium",
+                              ]) as ViewStyle
+                            }
+                          >
+                            {formatBalance(entry.balance)}
+                          </Text>
+                        </View>
+                        {amountUSD ? (
+                          <View style={style.flatten(["items-end"])}>
+                            <View
+                              style={style.flatten(["flex-row"]) as ViewStyle}
+                            >
+                              <Text
+                                style={
+                                  style.flatten([
+                                    "body3",
+                                    "color-dark",
+                                    "margin-right-2",
+                                  ]) as ViewStyle
+                                }
+                              >
+                                {formatFiatBalance(amountUSD)}
+                              </Text>
+                              <Text
+                                style={
+                                  style.flatten([
+                                    "body3",
+                                    "color-gray-300",
+                                  ]) as ViewStyle
+                                }
+                              >
+                                {priceStore.defaultVsCurrency.toUpperCase()}
+                              </Text>
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                      <View
+                        style={
+                          style.flatten([
+                            "height-1",
+                            "background-color-gray-100",
+                            "margin-y-10",
+                          ]) as ViewStyle
+                        }
+                      />
+                      <Text
+                        style={
+                          style.flatten([
+                            "text-caption2",
+                            "color-gray-300",
+                          ]) as ViewStyle
+                        }
+                      >
+                        {`Unbonding · Completes ${completionTime}`}
+                      </Text>
+                    </View>
+                  </BlurBackground>
+                );
+              })}
           </React.Fragment>
         );
       })}

@@ -113,10 +113,10 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           style.flatten([
             "flex-1",
             "border-radius-32",
-            "background-color-green-250",
+            "background-color-dark",
           ]) as ViewStyle
         }
-        textStyle={style.flatten(["body2", "color-dark"]) as ViewStyle}
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         text="Stake More"
         onPress={() => {
           analyticsStore.logEvent("stake_more_click", {
