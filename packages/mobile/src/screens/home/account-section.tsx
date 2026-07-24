@@ -19,11 +19,7 @@ import {
 import { ChangeWalletCardModel } from "components/new/wallet-card/change-wallet";
 import { useLoadingScreen } from "providers/loading-screen";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
-import {
-  numberLocalFormat,
-  separateNumericAndDenom,
-  titleCase,
-} from "utils/format/format";
+import { separateNumericAndDenom, titleCase } from "utils/format/format";
 import { BlurButton } from "components/new/button/blur-button";
 import { ThreeDotIcon } from "components/new/icon/three-dot";
 import { useSmartNavigation } from "navigation/smart-navigation";
@@ -580,9 +576,7 @@ export const AccountSection: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${numberLocalFormat(
-          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
+        earnedAmount={stakableReward}
         onPress={onSubmit}
         buttonLoading={loadingClaimButton}
       />

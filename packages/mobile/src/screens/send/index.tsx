@@ -20,6 +20,7 @@ import { observer } from "mobx-react-lite";
 
 export const SendScreen: FunctionComponent = observer(() => {
   const [isNext, setIsNext] = useState(false);
+  const [isMaxAmount, setIsMaxAmount] = useState(false);
   const { chainStore, accountStore, queriesStore } = useStore();
   const style = useStyle();
 
@@ -138,10 +139,15 @@ export const SendScreen: FunctionComponent = observer(() => {
         <SendPhase1
           setIsNext={setIsNext}
           sendConfigs={sendConfigs}
+          setIsMaxAmount={setIsMaxAmount}
           noChangeAccount={state.noChangeAccount}
         />
       ) : (
-        <SendPhase2 sendConfigs={sendConfigs} setIsNext={setIsNext} />
+        <SendPhase2
+          sendConfigs={sendConfigs}
+          setIsNext={setIsNext}
+          isMaxAmount={isMaxAmount}
+        />
       )}
     </PageWithScrollView>
   );

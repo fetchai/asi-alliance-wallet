@@ -35,7 +35,11 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import { GearIcon } from "components/new/icon/gear-icon";
 import { IconButton } from "components/new/button/icon";
 import { clearDecimals } from "modals/sign/messages";
-import { formatFiatBalance, numberLocalFormat } from "utils/format/format";
+import {
+  formatFiatBalance,
+  numberLocalFormat,
+  removeComma,
+} from "utils/format/format";
 
 interface SendConfigs {
   amountConfig: AmountConfig;
@@ -48,13 +52,15 @@ interface SendConfigs {
 export const SendPhase2: FunctionComponent<{
   sendConfigs: SendConfigs;
   setIsNext: any;
-}> = observer(({ sendConfigs, setIsNext }) => {
+  isMaxAmount: boolean;
+}> = observer(({ sendConfigs, setIsNext, isMaxAmount }) => {
   const {
     chainStore,
     accountStore,
     priceStore,
     analyticsStore,
     activityStore,
+    queriesStore,
   } = useStore();
 
   const [txnHash, setTxnHash] = useState<string>("");
@@ -85,6 +91,38 @@ export const SendPhase2: FunctionComponent<{
     : chainStore.current.chainId;
 
   const account = accountStore.getAccount(chainId);
+
+  const spendableBalances = queriesStore
+    .get(chainId)
+    .cosmos.querySpendableBalances.getQueryBech32Address(account.bech32Address)
+    .balances?.find(
+      (bal) =>
+        sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
+        bal.currency.coinMinimalDenom
+    );
+  const balance = spendableBalances
+    ? spendableBalances
+    : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
+
+  useEffect(() => {
+    if (!isMaxAmount) return;
+    const fee = sendConfigs.feeConfig.fee;
+    if (!fee) return;
+    try {
+      const maxAmount = balance.sub(fee);
+      if (maxAmount.toDec().isNegative()) return;
+      sendConfigs.amountConfig.setAmount(
+        removeComma(maxAmount.shrink(true).hideDenom(true).toString())
+      );
+    } catch {
+      // fee and send currency differ (e.g. CW20 send); cannot adjust
+    }
+  }, [
+    isMaxAmount,
+    sendConfigs.feeConfig.fee,
+    sendConfigs.feeConfig.feeType,
+    balance,
+  ]);
 
   const gasSimulatorKey = useMemo(() => {
     if (sendConfigs.amountConfig.sendCurrency) {
