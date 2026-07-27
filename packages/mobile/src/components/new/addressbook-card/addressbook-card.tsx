@@ -57,7 +57,7 @@ export const AddressBookCardModel: FunctionComponent<{
     const [isLoadingWallets, setIsLoadingWallets] = useState(false);
 
     useEffect(() => {
-      if (!onSelectRecipient) return;
+      if (!onSelectRecipient || !isOpen) return;
       setIsLoadingWallets(true);
       const task = InteractionManager.runAfterInteractions(async () => {
         try {
@@ -80,7 +80,7 @@ export const AddressBookCardModel: FunctionComponent<{
         }
       });
       return () => task.cancel();
-    }, []);
+    }, [isOpen]);
 
     const [filterAddressBook, setFilterAddressBook] = useState<
       IndexedItem<AddressBookData>[]

@@ -102,7 +102,7 @@ export const YourWalletsTab: FunctionComponent<{
     if (isLoadingWallets) {
       return (
         <View>
-          {[0, 1, 2].map((i) => (
+          {[0, 1].map((i) => (
             <SkeletonRow key={i} />
           ))}
         </View>
