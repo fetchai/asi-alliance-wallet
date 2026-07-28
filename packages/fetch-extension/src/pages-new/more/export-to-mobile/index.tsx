@@ -177,6 +177,7 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
         />
 
         <ButtonV2
+          type="submit"
           text={
             loading ? (
               <i className="fas fa-spinner fa-spin ml-2" />
@@ -188,7 +189,7 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
             height: "56px",
           }}
           variant="dark"
-          dataLoading={true}
+          dataLoading={loading}
           disabled={loading}
         />
       </Form>
