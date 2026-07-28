@@ -89,7 +89,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.flatten(["flex-grow-1"])}
       nestedScrollEnabled={false}
       style={{ overflow: "scroll" }}
@@ -115,9 +115,9 @@ export const TokenDetail: FunctionComponent = observer(() => {
                   borderRadius: 50,
                 }}
                 resizeMode={FastImage.resizeMode.contain}
-                source={{
-                  uri: tokenIcon,
-                }}
+                source={
+                  typeof tokenIcon === "number" ? tokenIcon : { uri: tokenIcon }
+                }
               />
             </View>
           ) : (
@@ -126,7 +126,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
                 <VectorCharacter
                   char={tokenInfo.coinDenom[0]}
                   height={Math.floor(size * 0.35)}
-                  color="white"
+                  color={style.flatten(["color-dark"]).color}
                 />
               }
               iconStyle={
@@ -135,6 +135,8 @@ export const TokenDetail: FunctionComponent = observer(() => {
                   `height-${size}`,
                   "items-center",
                   "justify-center",
+                  "background-color-gray-100",
+                  "border-radius-64",
                 ]) as ViewStyle
               }
             />
@@ -143,7 +145,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-gray-200",
+              "color-dark",
               "h4",
               "margin-y-4",
               "text-center",
@@ -177,21 +179,24 @@ export const TokenDetail: FunctionComponent = observer(() => {
               ]) as ViewStyle
             }
           >
-            <Text style={style.flatten(["body1", "color-white"]) as ViewStyle}>
+            <Text style={style.flatten(["body1", "color-dark"]) as ViewStyle}>
               Activity
             </Text>
             {isFeatureAvailable(chainStore.current.chainId) && (
               <ChipButton
                 text="Filter"
-                icon={<FilterIcon />}
+                icon={
+                  <FilterIcon color={style.flatten(["color-dark"]).color} />
+                }
                 iconStyle={style.get("padding-top-2") as ViewStyle}
                 containerStyle={
                   style.flatten([
                     "border-width-1",
-                    "border-color-gray-300",
+                    "border-color-gray-100",
                     "width-90",
                   ]) as ViewStyle
                 }
+                textStyle={style.flatten(["color-dark"]) as ViewStyle}
                 backgroundBlur={false}
                 onPress={() => {
                   setIsOpenModal(true);

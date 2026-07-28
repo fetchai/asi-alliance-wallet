@@ -10,9 +10,10 @@ import { CopyIcon } from "components/new/icon/copy-icon";
 
 export const AddressCopyable: FunctionComponent<{
   style?: ViewStyle;
+  textStyle?: ViewStyle;
   address: string;
   maxCharacters: number;
-}> = ({ style: propStyle, address, maxCharacters }) => {
+}> = ({ style: propStyle, textStyle, address, maxCharacters }) => {
   const style = useStyle();
   const { isTimedOut, setTimer } = useSimpleTimer();
 
@@ -30,7 +31,12 @@ export const AddressCopyable: FunctionComponent<{
       underlayColor={style.flatten(["color-gray-300"]).color}
       activeOpacity={0.2}
     >
-      <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+      <Text
+        style={[
+          style.flatten(["body3", "color-white@60%"]) as ViewStyle,
+          textStyle,
+        ]}
+      >
         {Bech32Address.shortenAddress(address, maxCharacters)}
       </Text>
       <View style={style.flatten(["margin-left-4", "width-20"]) as ViewStyle}>
@@ -74,7 +80,7 @@ export const AddressCopyable: FunctionComponent<{
             </View>
           </View>
         ) : (
-          <CopyIcon size={15} />
+          <CopyIcon size={15} color="#151a1a" />
         )}
       </View>
     </RectButton>

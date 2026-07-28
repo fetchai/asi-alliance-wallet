@@ -25,6 +25,11 @@ export const UseMaxButton: FunctionComponent<{
   const { priceStore } = useStore();
   const disableCurrency = ["mmk", "sar", "kwd", "aed", "bdt", "bhd"];
 
+  const changeButtonDisabled =
+    !amountConfig.sendCurrency["coinGeckoId"] ||
+    disable ||
+    disableCurrency.includes(priceStore.defaultVsCurrency);
+
   return (
     <View
       style={
@@ -43,24 +48,14 @@ export const UseMaxButton: FunctionComponent<{
           }`}
           backgroundBlur={false}
           leftIcon={
-            <View style={style.flatten(["margin-right-8"]) as ViewStyle}>
+            <View style={style.flatten(["margin-right-2"]) as ViewStyle}>
               <ReloadIcon
                 size={21}
-                color={
-                  !amountConfig.sendCurrency["coinGeckoId"] ||
-                  disable ||
-                  disableCurrency.includes(priceStore.defaultVsCurrency)
-                    ? style.get("color-white@20%").color
-                    : "white"
-                }
+                color={changeButtonDisabled ? "#DCDCE3" : "#151a1a"}
               />
             </View>
           }
-          disable={
-            !amountConfig.sendCurrency["coinGeckoId"] ||
-            disable ||
-            disableCurrency.includes(priceStore.defaultVsCurrency)
-          }
+          disable={changeButtonDisabled}
           borderRadius={32}
           onPress={() => {
             setIsToggleClicked(!isToggleClicked);
@@ -69,23 +64,24 @@ export const UseMaxButton: FunctionComponent<{
             style.flatten([
               "flex-wrap",
               "border-width-1",
+              "border-color-gray-100",
               "margin-4",
               "padding-y-4",
               "padding-x-8",
               "justify-center",
-              !amountConfig.sendCurrency["coinGeckoId"] ||
-              disable ||
-              disableCurrency.includes(priceStore.defaultVsCurrency)
-                ? "border-color-white@20%"
-                : "border-color-white@40%",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3"]) as ViewStyle}
+          textStyle={
+            style.flatten([
+              "body3",
+              changeButtonDisabled ? "color-gray-300" : "color-dark",
+            ]) as ViewStyle
+          }
         />
       </View>
       <View style={style.flatten(["flex-1"]) as ViewStyle}>
         <BlurButton
-          text="Use max available"
+          text="Use Max Available"
           backgroundBlur={false}
           borderRadius={32}
           disable={disable}
@@ -96,14 +92,19 @@ export const UseMaxButton: FunctionComponent<{
             style.flatten([
               "flex-wrap",
               "border-width-1",
-              disable ? "border-color-white@20%" : "border-color-white@40%",
+              "border-color-gray-100",
               "padding-y-4",
               "padding-x-8",
               "margin-4",
               "justify-center",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3"]) as ViewStyle}
+          textStyle={
+            style.flatten([
+              "body3",
+              disable ? "color-gray-300" : "color-dark",
+            ]) as ViewStyle
+          }
         />
       </View>
     </View>

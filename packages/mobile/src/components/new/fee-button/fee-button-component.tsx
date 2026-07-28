@@ -1,5 +1,6 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import {
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -14,6 +15,7 @@ import {
   FeeType,
   IFeeConfig,
   IGasConfig,
+  IGasSimulator,
   InsufficientFeeError,
   NotLoadedFeeError,
 } from "@keplr-wallet/hooks";
@@ -37,7 +39,9 @@ export interface FeeButtonsProps {
 
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
+  gasSimulator?: IGasSimulator;
   pageName?: string;
+  onValidationChange?: (hasError: boolean) => void;
 }
 
 class FeeButtonState {
@@ -80,26 +84,30 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
             ]) as ViewStyle
           }
         >
-          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
             Advanced Settings
           </Text>
           <Switch
             trackColor={{
-              false: "#767577",
-              true: "#5F38FB",
+              false: "#d0d1d1",
+              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
             }}
-            thumbColor={feeButtonState.isGasInputOpen ? "#FFFFFF" : "#D0BCFF66"}
+            thumbColor={feeButtonState.isGasInputOpen ? "#73A271" : "#9A9AA2"}
             style={[
               {
                 borderRadius: 16,
               },
               style.flatten(
-                ["border-color-pink-light@40%"],
+                ["border-color-gray-200"],
                 [!feeButtonState.isGasInputOpen && "border-width-1"]
               ),
             ]}
             onValueChange={() => {
-              feeButtonState.setIsGasInputOpen(!feeButtonState.isGasInputOpen);
+              const next = !feeButtonState.isGasInputOpen;
+              feeButtonState.setIsGasInputOpen(next);
+              if (!next) {
+                props.onValidationChange?.(false);
+              }
               if (props.pageName)
                 analyticsStore.logEvent("fee_advance_click", {
                   pageName: props.pageName,
@@ -109,7 +117,12 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
           />
         </View>
         {feeButtonState.isGasInputOpen || !props.feeConfig.feeCurrency ? (
-          <GasInput gasConfig={props.gasConfig} />
+          <GasInput
+            feeConfig={props.feeConfig}
+            gasConfig={props.gasConfig}
+            gasSimulator={props.gasSimulator}
+            onValidationChange={props.onValidationChange}
+          />
         ) : null}
       </React.Fragment>
     );
@@ -162,14 +175,24 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
       return <React.Fragment />;
     }
 
-    const lowFee = feeConfig.getFeeTypePretty("low");
-    const lowFeePrice = priceStore.calculatePrice(lowFee);
+    const lowFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("low")
+      : undefined;
+    const lowFeePrice = lowFee ? priceStore.calculatePrice(lowFee) : undefined;
 
-    const averageFee = feeConfig.getFeeTypePretty("average");
-    const averageFeePrice = priceStore.calculatePrice(averageFee);
+    const averageFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("average")
+      : undefined;
+    const averageFeePrice = averageFee
+      ? priceStore.calculatePrice(averageFee)
+      : undefined;
 
-    const highFee = feeConfig.getFeeTypePretty("high");
-    const highFeePrice = priceStore.calculatePrice(highFee);
+    const highFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("high")
+      : undefined;
+    const highFeePrice = highFee
+      ? priceStore.calculatePrice(highFee)
+      : undefined;
 
     let isFeeLoading = false;
 
@@ -187,42 +210,49 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
     const renderButton: (
       label: string,
       price: PricePretty | undefined,
-      amount: CoinPretty,
+      amount: CoinPretty | undefined,
       selected: boolean,
       onPress: () => void
     ) => React.ReactElement = (label, price, amount, selected, onPress) => {
       const isEvm = chainStore.current.features?.includes("evm") ?? false;
 
       return (
-        <BlurBackground borderRadius={12} blurIntensity={15}>
+        <BlurBackground
+          borderRadius={12}
+          blurIntensity={0}
+          containerStyle={
+            [{ backgroundColor: selected ? "#e0fedd" : "#f6f6f6" }] as ViewStyle
+          }
+        >
           <RectButton
             style={
-              style.flatten(
-                [
-                  "flex-row",
-                  "items-center",
-                  "justify-between",
-                  "padding-x-16",
-                  "padding-y-18",
-                ],
-                [selected && "background-color-indigo", "border-radius-12"]
-              ) as ViewStyle
+              style.flatten([
+                "flex-row",
+                "items-center",
+                "justify-between",
+                "padding-x-16",
+                "padding-y-18",
+                "border-radius-12",
+              ]) as ViewStyle
             }
+            underlayColor={selected ? "#c8f5c5" : "#e0e0e0"}
             onPress={onPress}
           >
             <View style={style.flatten(["flex-row"])}>
-              <Text
-                style={style.flatten(["body3", "color-white"]) as ViewStyle}
-              >
+              <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
                 {label}
               </Text>
               {price ? (
                 <Text
                   style={
-                    style.flatten(
-                      ["padding-top-2", "text-caption2", "margin-left-6"],
-                      [selected ? "color-white" : "color-white@60%"]
-                    ) as ViewStyle
+                    [
+                      style.flatten([
+                        "padding-top-2",
+                        "text-caption2",
+                        "margin-left-6",
+                      ]),
+                      { color: "#737676" },
+                    ] as ViewStyle
                   }
                 >
                   {price.toString()}
@@ -231,14 +261,13 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
             </View>
             <Text
               style={
-                style.flatten([
-                  "text-center",
-                  "text-caption2",
-                  "color-white@60%",
-                ]) as ViewStyle
+                [
+                  style.flatten(["text-center", "text-caption2"]),
+                  { color: "#737676" },
+                ] as ViewStyle
               }
             >
-              {amount.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+              {amount?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
             </Text>
           </RectButton>
         </BlurBackground>
@@ -256,22 +285,29 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
           {label}
         </Text> */}
         <View>
-          {renderButton(
-            "Low",
-            lowFeePrice,
-            lowFee,
-            selectFeeButton === "low",
-            () => {
-              setFeeButton("low");
-              // feeConfig.setFeeType("low");
-              if (pageName)
-                analyticsStore.logEvent("fee_type_select", {
-                  pageName,
-                  feeType: "low",
-                });
-            }
-          )}
-          <View style={style.flatten(["margin-top-6"]) as ViewStyle} />
+          {/* if low fee is zero or same price as average fee, don't show low fee option */}
+          {lowFee &&
+            !lowFee.toDec().isZero() &&
+            lowFeePrice?.toString() !== averageFeePrice?.toString() && (
+              <React.Fragment>
+                {renderButton(
+                  "Low",
+                  lowFeePrice,
+                  lowFee,
+                  selectFeeButton === "low",
+                  () => {
+                    setFeeButton("low");
+                    // feeConfig.setFeeType("low");
+                    if (pageName)
+                      analyticsStore.logEvent("fee_type_select", {
+                        pageName,
+                        feeType: "low",
+                      });
+                  }
+                )}
+                <View style={style.flatten(["margin-top-6"]) as ViewStyle} />
+              </React.Fragment>
+            )}
           {renderButton(
             "Average",
             averageFeePrice,

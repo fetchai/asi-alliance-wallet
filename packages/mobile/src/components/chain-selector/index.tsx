@@ -76,9 +76,11 @@ export const ChainSelectorModal: FunctionComponent<{
                       height: 30,
                     }}
                     resizeMode={FastImage.resizeMode.contain}
-                    source={{
-                      uri: chainImage,
-                    }}
+                    source={
+                      typeof chainImage === "number"
+                        ? chainImage
+                        : { uri: chainImage }
+                    }
                   />
                 ) : (
                   <VectorCharacter char={chainName} color="white" height={14} />

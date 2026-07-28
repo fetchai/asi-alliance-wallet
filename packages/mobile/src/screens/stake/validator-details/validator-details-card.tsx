@@ -111,9 +111,12 @@ export const ValidatorDetailsCard: FunctionComponent<{
       {validator ? (
         <BlurBackground
           borderRadius={12}
-          blurIntensity={16}
+          backgroundBlur={false}
           containerStyle={
-            [style.flatten(["padding-18"]), containerStyle] as ViewStyle
+            [
+              style.flatten(["padding-18", "background-color-gray-5"]),
+              containerStyle,
+            ] as ViewStyle
           }
         >
           <View
@@ -133,29 +136,31 @@ export const ValidatorDetailsCard: FunctionComponent<{
               />
             ) : (
               <BlurBackground
-                backgroundBlur={true}
-                blurIntensity={16}
+                backgroundBlur={false}
                 containerStyle={
-                  style.flatten([
-                    "width-32",
-                    "height-32",
-                    "border-radius-64",
-                    "items-center",
-                    "justify-center",
-                    "margin-right-10",
-                  ]) as ViewStyle
+                  {
+                    ...style.flatten([
+                      "width-32",
+                      "height-32",
+                      "border-radius-64",
+                      "items-center",
+                      "justify-center",
+                      "margin-right-10",
+                    ]),
+                    backgroundColor: "#dddfdf",
+                  } as ViewStyle
                 }
               >
                 <VectorCharacter
                   char={validator.description.moniker.trim()[0]}
-                  color="white"
+                  color="#151a1a"
                   height={12}
                 />
               </BlurBackground>
             )}
             <View>
               <Text
-                style={style.flatten(["subtitle2", "color-white"]) as ViewStyle}
+                style={style.flatten(["subtitle2", "color-dark"]) as ViewStyle}
               >
                 {validator.description.moniker?.trim()}
               </Text>
@@ -164,7 +169,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
                 style={
                   style.flatten([
                     "body3",
-                    "color-white@80%",
+                    "color-gray-300",
                     "padding-y-2",
                   ]) as ViewStyle
                 }
@@ -175,7 +180,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
           </View>
           {validator?.description.details ? (
             <Text
-              style={style.flatten(["body3", "color-white@80%"]) as ViewStyle}
+              style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
             >
               {validator?.description.details}
             </Text>
@@ -188,7 +193,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
                 <CardDivider
                   style={
                     style.flatten([
-                      "background-color-white@20%",
+                      "background-color-gray-100",
                       "height-1",
                       "margin-x-0",
                     ]) as ViewStyle
@@ -215,7 +220,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
                   >
                     <Text
                       style={
-                        style.flatten(["body3", "color-white@60%"]) as ViewStyle
+                        style.flatten(["body3", "color-gray-300"]) as ViewStyle
                       }
                     >
                       {item.title}
@@ -223,7 +228,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
                     <Text
                       style={
                         style.flatten([
-                          "color-white",
+                          "color-dark",
                           "subtitle3",
                           "flex-1",
                           "text-right",

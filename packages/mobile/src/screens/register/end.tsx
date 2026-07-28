@@ -9,7 +9,6 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "stores/index";
 import { Toggle } from "components/toggle";
 import delay from "delay";
-import { LinearGradientText } from "components/svg/linear-gradient-text";
 import { RocketIcon } from "components/new/icon/rocket";
 
 export const RegisterEndScreen: FunctionComponent = observer(() => {
@@ -45,25 +44,30 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithView
-      backgroundMode="image"
-      isTransparentHeader={true}
-      backgroundBlur={true}
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-20"]) as ViewStyle}
     >
       <View style={style.get("flex-8")} />
       <View style={style.flatten(["items-center"])}>
         <RocketIcon />
 
-        <LinearGradientText
-          text="You’re all set!"
-          color1="#CF447B"
-          color2="#F9774B"
-        />
         <Text
           style={
             style.flatten([
-              "h4",
-              "color-text-low",
+              "h2",
+              "color-dark",
+              "font-medium",
+              "margin-top-10",
+            ]) as ViewStyle
+          }
+        >
+          You’re all set!
+        </Text>
+        <Text
+          style={
+            style.flatten([
+              "body1",
+              "color-gray-400",
               "text-center",
               "margin-top-10",
             ]) as ViewStyle
@@ -75,16 +79,21 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
       {password && keychainStore.isBiometrySupported ? (
         <View
           style={
-            style.flatten([
-              "flex-row",
-              "margin-top-58",
-              "items-center",
-            ]) as ViewStyle
+            [
+              style.flatten([
+                "flex-row",
+                "margin-top-58",
+                "items-center",
+                "padding-18",
+                "border-radius-12",
+                "border-width-1",
+                "border-color-gray-100",
+                "background-color-white",
+              ]),
+            ] as ViewStyle
           }
         >
-          <Text
-            style={style.flatten(["subtitle1", "color-text-low"]) as ViewStyle}
-          >
+          <Text style={style.flatten(["subtitle1", "color-dark"]) as ViewStyle}>
             Enable Biometric
           </Text>
           <View style={style.get("flex-1")} />
@@ -100,15 +109,13 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
           style.flatten([
             "margin-top-44",
             "margin-bottom-20",
-            "background-color-white",
+            "background-color-dark",
             "border-radius-32",
           ]) as ViewStyle
         }
-        textStyle={{
-          color: "#0B1742",
-        }}
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         size="large"
-        text="Start using your wallet"
+        text="Start Using Your Wallet"
         loading={isLoading}
         onPress={async () => {
           setIsLoading(true);
@@ -127,7 +134,7 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
                 keyRingStore.multiKeyStoreInfo.length - 1
               );
             }
-            analyticsStore.logEvent("start_using_your_wallet_click", {
+            analyticsStore.logEvent("staart_using_your_wallet_click", {
               pageName: "Register",
             });
             smartNavigation.reset({

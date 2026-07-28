@@ -2,8 +2,8 @@ import React, { FunctionComponent, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
-import { ArrowDownGradientIcon } from "components/new/icon/arrow-down-gradient";
-import { ArrowUpGradientIcon } from "components/new/icon/arrow-up-gradient";
+import { ArrowDownIcon } from "components/new/icon/arrow-down";
+import { ArrowUpIcon } from "components/new/icon/arrow-up";
 import { useStyle } from "styles/index";
 import { useStore } from "stores/index";
 import {
@@ -11,7 +11,7 @@ import {
   ParamListBase,
   useNavigation,
 } from "@react-navigation/native";
-import { EarnIcon } from "components/new/icon/earn-icon";
+import { StakeIcon } from "components/new/icon/stake-icon";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { LockIcon } from "components/new/icon/lock";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
@@ -115,7 +115,7 @@ export const TokenBalanceSection: FunctionComponent<{
         <Text
           style={
             style.flatten([
-              "color-white@60%",
+              "color-gray-300",
               "text-caption2",
               "font-medium",
             ]) as ViewStyle
@@ -135,7 +135,7 @@ export const TokenBalanceSection: FunctionComponent<{
           <Text
             style={
               style.flatten([
-                "color-white",
+                "color-dark",
                 "h2",
                 "font-normal",
                 "items-center",
@@ -147,7 +147,7 @@ export const TokenBalanceSection: FunctionComponent<{
           <Text
             style={
               style.flatten([
-                "color-gray-400",
+                "color-gray-300",
                 "h2",
                 "font-normal",
                 "margin-left-8",
@@ -191,19 +191,21 @@ export const TokenBalanceSection: FunctionComponent<{
       {isVesting && !isVestingExpired(vestingEndTimeStamp) && (
         <BlurBackground
           borderRadius={12}
-          blurIntensity={16}
+          backgroundBlur={false}
           containerStyle={
-            style.flatten(["padding-18", "margin-bottom-24"]) as ViewStyle
+            style.flatten([
+              "padding-18",
+              "margin-bottom-24",
+              "background-color-gray-5",
+            ]) as ViewStyle
           }
         >
           <View style={style.flatten(["flex-row"]) as ViewStyle}>
             <View style={[style.flatten(["margin-right-12"])] as ViewStyle}>
-              <LockIcon size={13} />
+              <LockIcon size={13} color={style.flatten(["color-dark"]).color} />
             </View>
             <View style={style.flatten(["flex-1"]) as ViewStyle}>
-              <Text
-                style={style.flatten(["body2", "color-white"]) as ViewStyle}
-              >
+              <Text style={style.flatten(["body2", "color-dark"]) as ViewStyle}>
                 {`Your balance includes ${removeTrailingZeros(
                   vestingBalance()
                 )} ${totalDenom} that are still locked due to your vesting schedule`}
@@ -222,7 +224,7 @@ export const TokenBalanceSection: FunctionComponent<{
                   <Text
                     style={
                       [
-                        style.flatten(["color-indigo-250", "text-caption2"]),
+                        style.flatten(["color-dark", "text-caption2"]),
                         { lineHeight: 15 },
                       ] as ViewStyle
                     }
@@ -231,9 +233,9 @@ export const TokenBalanceSection: FunctionComponent<{
                   </Text>
                   <View style={style.flatten(["margin-left-6"]) as ViewStyle}>
                     {!showCalendar ? (
-                      <ChevronDownIcon color="#BFAFFD" size={12} />
+                      <ChevronDownIcon color="#9A9AA2" size={12} />
                     ) : (
-                      <ChevronUpIcon color="#BFAFFD" size={12} />
+                      <ChevronUpIcon color="#9A9AA2" size={12} />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -254,7 +256,7 @@ export const TokenBalanceSection: FunctionComponent<{
                   <Text
                     style={
                       [
-                        style.flatten(["color-indigo-250", "text-caption2"]),
+                        style.flatten(["color-dark", "text-caption2"]),
                         { lineHeight: 15 },
                       ] as ViewStyle
                     }
@@ -262,7 +264,7 @@ export const TokenBalanceSection: FunctionComponent<{
                     Learn more
                   </Text>
                   <View style={style.flatten(["margin-left-6"]) as ViewStyle}>
-                    <ExternalLinkIcon color="#BFAFFD" size={12} />
+                    <ExternalLinkIcon color="#9A9AA2" size={12} />
                   </View>
                 </TouchableOpacity>
               </View>
@@ -279,7 +281,7 @@ export const TokenBalanceSection: FunctionComponent<{
                   <Text
                     style={
                       style.flatten([
-                        "color-white@60%",
+                        "color-gray-300",
                         "body3",
                         "margin-bottom-4",
                         "flex-2",
@@ -291,7 +293,7 @@ export const TokenBalanceSection: FunctionComponent<{
                   <Text
                     style={
                       style.flatten([
-                        "color-white",
+                        "color-dark",
                         "body3",
                         "flex-3",
                         "text-right",
@@ -316,7 +318,7 @@ export const TokenBalanceSection: FunctionComponent<{
                     <Text
                       style={
                         style.flatten([
-                          "color-white@60%",
+                          "color-gray-300",
                           "body3",
                           "margin-bottom-4",
                           "flex-2",
@@ -328,7 +330,7 @@ export const TokenBalanceSection: FunctionComponent<{
                     <Text
                       style={
                         style.flatten([
-                          "color-white",
+                          "color-dark",
                           "body3",
                           "flex-3",
                           "text-right",
@@ -350,7 +352,7 @@ export const TokenBalanceSection: FunctionComponent<{
                   <Text
                     style={
                       style.flatten([
-                        "color-white@60%",
+                        "color-gray-300",
                         "body3",
                         "margin-bottom-4",
                         "flex-2",
@@ -362,7 +364,7 @@ export const TokenBalanceSection: FunctionComponent<{
                   <Text
                     style={
                       style.flatten([
-                        "color-white",
+                        "color-dark",
                         "body3",
                         "flex-3",
                         "text-right",
@@ -391,7 +393,7 @@ export const TokenBalanceSection: FunctionComponent<{
                     <Text
                       style={
                         style.flatten([
-                          "color-white@60%",
+                          "color-gray-300",
                           "body3",
                           "margin-bottom-4",
                         ]) as ViewStyle
@@ -413,7 +415,7 @@ export const TokenBalanceSection: FunctionComponent<{
                     <Text
                       style={
                         style.flatten([
-                          "color-white",
+                          "color-dark",
                           "body3",
                           "text-right",
                         ]) as ViewStyle
@@ -424,7 +426,7 @@ export const TokenBalanceSection: FunctionComponent<{
                     <Text
                       style={
                         style.flatten([
-                          "color-white@60%",
+                          "color-gray-300",
                           "body3",
                           "margin-left-4",
                         ]) as ViewStyle
@@ -449,7 +451,7 @@ export const TokenBalanceSection: FunctionComponent<{
                         <Text
                           style={
                             style.flatten([
-                              "color-white@60%",
+                              "color-gray-300",
                               "body3",
                               "margin-bottom-4",
                             ]) as ViewStyle
@@ -471,7 +473,7 @@ export const TokenBalanceSection: FunctionComponent<{
                         <Text
                           style={
                             style.flatten([
-                              "color-white",
+                              "color-dark",
                               "body3",
                               "text-right",
                             ]) as ViewStyle
@@ -482,7 +484,7 @@ export const TokenBalanceSection: FunctionComponent<{
                         <Text
                           style={
                             style.flatten([
-                              "color-white@60%",
+                              "color-gray-300",
                               "body3",
                               "margin-left-4",
                             ]) as ViewStyle
@@ -501,7 +503,7 @@ export const TokenBalanceSection: FunctionComponent<{
                         <Text
                           style={
                             style.flatten([
-                              "color-white@60%",
+                              "color-gray-300",
                               "body3",
                               "margin-bottom-4",
                             ]) as ViewStyle
@@ -523,7 +525,7 @@ export const TokenBalanceSection: FunctionComponent<{
                         <Text
                           style={
                             style.flatten([
-                              "color-white",
+                              "color-dark",
                               "body3",
                               "text-right",
                             ]) as ViewStyle
@@ -534,7 +536,7 @@ export const TokenBalanceSection: FunctionComponent<{
                         <Text
                           style={
                             style.flatten([
-                              "color-white@60%",
+                              "color-gray-300",
                               "body3",
                               "margin-left-4",
                             ]) as ViewStyle
@@ -565,19 +567,19 @@ export const TokenBalanceSection: FunctionComponent<{
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
           <Button
             text={"Receive"}
-            rightIcon={<ArrowDownGradientIcon size={15} />}
+            rightIcon={<ArrowDownIcon size={15} color="white" />}
             textStyle={
               style.flatten([
-                "color-indigo-900",
+                "color-white",
                 "margin-right-8",
                 "body2",
               ]) as ViewStyle
             }
             containerStyle={
               style.flatten([
-                "background-color-white",
                 "border-radius-32",
                 "margin-right-6",
+                "background-color-dark",
               ]) as ViewStyle
             }
             onPress={() => {
@@ -594,19 +596,19 @@ export const TokenBalanceSection: FunctionComponent<{
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
           <Button
             text={"Send"}
-            rightIcon={<ArrowUpGradientIcon size={15} />}
+            rightIcon={<ArrowUpIcon size={15} color="white" />}
             textStyle={
               style.flatten([
-                "color-indigo-900",
+                "color-white",
                 "margin-right-8",
                 "body2",
               ]) as ViewStyle
             }
             containerStyle={
               style.flatten([
-                "background-color-white",
                 "border-radius-32",
                 "margin-left-6",
+                "background-color-dark",
               ]) as ViewStyle
             }
             onPress={() => {
@@ -626,18 +628,14 @@ export const TokenBalanceSection: FunctionComponent<{
       <Button
         text={"Stake"}
         textStyle={
-          style.flatten([
-            "color-indigo-900",
-            "margin-x-8",
-            "body2",
-          ]) as ViewStyle
+          style.flatten(["color-white", "margin-x-8", "body2"]) as ViewStyle
         }
-        rightIcon={<EarnIcon size={15} />}
+        rightIcon={<StakeIcon size={15} color="white" />}
         containerStyle={
           style.flatten([
-            "background-color-white",
             "border-radius-32",
             "margin-bottom-16",
+            "background-color-dark",
           ]) as ViewStyle
         }
         onPress={() => {

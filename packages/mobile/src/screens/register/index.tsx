@@ -17,7 +17,6 @@ import { CardModal } from "modals/card";
 import { DownloadIcon } from "components/icon";
 import { GoogleIcon } from "components/new/icon/google";
 import { HeaderAddIcon, HeaderBackButtonIcon } from "components/header/icon";
-import { LinearGradientText } from "components/svg/linear-gradient-text";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { IconButton } from "components/new/button/icon";
 import { BluetoothIcon } from "components/new/icon/bluetooth-icon";
@@ -46,10 +45,14 @@ const SelectWalletOptionCard: FunctionComponent<{
     <React.Fragment>
       <TouchableOpacity onPress={onPress} activeOpacity={1}>
         <BlurBackground
-          blurIntensity={12}
+          blurIntensity={6}
           borderRadius={16}
           containerStyle={
-            style.flatten(["padding-18", "flex-row"]) as ViewStyle
+            style.flatten([
+              "padding-18",
+              "flex-row",
+              "background-color-gray-5",
+            ]) as ViewStyle
           }
         >
           <IconButton
@@ -65,20 +68,22 @@ const SelectWalletOptionCard: FunctionComponent<{
             backgroundBlur={true}
             blurIntensity={25}
           />
-          <View style={style.flatten(["padding-x-24"]) as ViewStyle}>
+          <View
+            style={style.flatten(["padding-left-12", "flex-1"]) as ViewStyle}
+          >
             <Text
               style={
                 style.flatten([
                   "subtitle2",
-                  "margin-bottom-10",
-                  "color-white",
+                  "margin-bottom-6",
+                  "color-black",
                 ]) as ViewStyle
               }
             >
               {title}
             </Text>
             <Text
-              style={style.flatten(["color-gray-100", "body3"]) as ViewStyle}
+              style={style.flatten(["color-gray-400", "body3"]) as ViewStyle}
             >
               {desc}
             </Text>
@@ -118,8 +123,7 @@ export const RegisterIntroScreen: FunctionComponent = () => {
 
   return (
     <PageWithView
-      backgroundMode="image"
-      isTransparentHeader={true}
+      backgroundMode="secondary"
       style={[
         style.flatten(["padding-x-page"]) as ViewStyle,
         {
@@ -135,9 +139,10 @@ export const RegisterIntroScreen: FunctionComponent = () => {
         >
           <View style={style.flatten(["items-center"]) as ViewStyle}>
             <Image
-              source={require("assets/logo/logo.png")}
+              source={require("assets/logo/logo-black.png")}
               style={{
                 aspectRatio: 2.977,
+                height: 60,
               }}
               resizeMode="contain"
               fadeDuration={0}
@@ -145,7 +150,7 @@ export const RegisterIntroScreen: FunctionComponent = () => {
           </View>
           {isBackBtnVisible ? (
             <IconButton
-              icon={<HeaderBackButtonIcon color="white" size={21} />}
+              icon={<HeaderBackButtonIcon color="#151a1a" size={21} />}
               backgroundBlur={false}
               onPress={() => navigation.goBack()}
               containerStyle={style.flatten(["absolute"])}
@@ -174,25 +179,19 @@ export const RegisterIntroScreen: FunctionComponent = () => {
                   style.flatten([
                     "h1",
                     "font-normal",
-                    "color-white",
-                    "padding-top-10",
+                    "color-black",
                   ]) as ViewStyle
                 }
               >
-                Welcome to your
+                {"Welcome to your\nASI Alliance Wallet"}
               </Text>
-              <LinearGradientText
-                text="ASI Alliance Wallet"
-                color1="#CF447B"
-                color2="#F9774B"
-                textCenter={false}
-              />
               <Text
                 style={
                   style.flatten([
-                    "body1",
-                    "color-gray-100",
-                    "padding-y-24",
+                    "body2",
+                    "color-gray-400",
+                    "margin-top-16",
+                    "margin-bottom-8",
                   ]) as ViewStyle
                 }
               >
@@ -200,7 +199,7 @@ export const RegisterIntroScreen: FunctionComponent = () => {
               </Text>
             </View>
             <SelectWalletOptionCard
-              img={<HeaderAddIcon color="white" size={17} />}
+              img={<HeaderAddIcon color="black" size={17} />}
               title="Create a new wallet"
               desc="Create a wallet to store, send, receive and invest in thousands of crypto assets"
               onPress={() => {
@@ -213,7 +212,7 @@ export const RegisterIntroScreen: FunctionComponent = () => {
               }}
             />
             <SelectWalletOptionCard
-              img={<DownloadIcon color="white" size={16} />}
+              img={<DownloadIcon color="black" size={16} />}
               title="Import a wallet"
               desc="Access your existing wallet using a recovery phrase / private key"
               onPress={() => {
@@ -380,7 +379,7 @@ export const NewWalletModal: FunctionComponent<{
         title="Create new seed phrase"
         leadingIcon={
           <BlurBackground blurIntensity={18}>
-            <KeyIconLarge />
+            <KeyIconLarge color="black" />
           </BlurBackground>
         }
         containerStyle={
@@ -439,7 +438,7 @@ export const ImportExistingWalletModal: FunctionComponent<{
         title="Use a seed phrase or a private key"
         leadingIcon={
           <BlurBackground blurIntensity={18}>
-            <KeyIconLarge />
+            <KeyIconLarge color="black" />
           </BlurBackground>
         }
         containerStyle={
@@ -454,7 +453,7 @@ export const ImportExistingWalletModal: FunctionComponent<{
         title="Connect hardware wallet"
         leadingIcon={
           <BlurBackground blurIntensity={18}>
-            <BluetoothIcon width={30} height={30} />
+            <BluetoothIcon width={30} height={30} color="black" />
           </BlurBackground>
         }
         containerStyle={

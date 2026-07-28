@@ -4,7 +4,7 @@ import Svg, { Path } from "react-native-svg";
 export const SimpleAppleIcon: FunctionComponent<{
   size?: number;
   color?: string;
-}> = ({ size = 12, color = "white" }) => {
+}> = ({ size = 12, color = "#151a1a" }) => {
   return (
     <Svg
       width={size}

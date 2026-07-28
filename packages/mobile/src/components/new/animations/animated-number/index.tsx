@@ -9,6 +9,7 @@ interface Props {
   decimalAmount?: number;
   includeComma?: boolean;
   fontSizeValue?: number;
+  textColor?: string;
   hookName: "withTiming" | "withSpring";
   containerStyle?: ViewStyle;
   comaStyle?: ViewStyle;
@@ -34,6 +35,7 @@ export function AnimatedNumber({
   withTimingProps,
   withSpringProps,
   fontSizeValue = 50,
+  textColor = "white",
   containerStyle,
   comaStyle,
 }: Props) {
@@ -83,6 +85,7 @@ export function AnimatedNumber({
                 numberSymbol={Number(numberSymbol)}
                 hookName={hookName}
                 containerStyle={containerStyle}
+                textColor={textColor}
                 listProperties={
                   hookName === "withTiming"
                     ? {
@@ -106,12 +109,9 @@ export function AnimatedNumber({
               <Text
                 style={
                   [
-                    style.flatten([
-                      "color-white",
-                      "font-normal",
-                      "overflow-hidden",
-                    ]),
+                    style.flatten(["font-normal", "overflow-hidden"]),
                     {
+                      color: textColor,
                       fontSize: fontSizeValue,
                       lineHeight: lineHeight,
                     },

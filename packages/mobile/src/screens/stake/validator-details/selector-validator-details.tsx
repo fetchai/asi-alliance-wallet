@@ -4,11 +4,11 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { ValidatorDetailsCard } from "./validator-details-card";
 import { useStyle } from "styles/index";
 import { observer } from "mobx-react-lite";
-// import { UnbondingCard } from "./unbonding-card";
 import { View, ViewStyle } from "react-native";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { useStore } from "stores/index";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const SelectorValidatorDetailsScreen: FunctionComponent = observer(
   () => {
@@ -32,34 +32,57 @@ export const SelectorValidatorDetailsScreen: FunctionComponent = observer(
     const validatorAddress = route.params.validatorAddress;
 
     const style = useStyle();
+    const safeAreaInsets = useSafeAreaInsets();
 
     return (
       <PageWithScrollView
-        backgroundMode="image"
-        contentContainerStyle={style.get("flex-grow-1")}
-        style={style.flatten(["padding-x-page"]) as ViewStyle}
+        backgroundMode="secondary"
+        contentContainerStyle={{
+          paddingBottom: Math.max(safeAreaInsets.bottom, 16) + 80,
+        }}
+        style={
+          style.flatten([
+            "padding-x-page",
+            "padding-y-16",
+            "overflow-scroll",
+          ]) as ViewStyle
+        }
+        fixed={
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "flex-end",
+              paddingHorizontal: 16,
+              paddingBottom: Math.max(safeAreaInsets.bottom, 16),
+              paddingTop: 16,
+            }}
+          >
+            <Button
+              containerStyle={
+                style.flatten([
+                  "border-radius-32",
+                  "background-color-dark",
+                ]) as ViewStyle
+              }
+              textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+              text="Choose this validator"
+              onPress={() => {
+                analyticsStore.logEvent("choose_validator_click", {
+                  pageName: "Validator Details",
+                });
+                smartNavigation.navigateSmart("Redelegate", {
+                  validatorAddress: prevSelectValidator,
+                  selectedValidatorAddress: validatorAddress,
+                });
+              }}
+            />
+          </View>
+        }
       >
         <ValidatorDetailsCard
-          containerStyle={style.flatten(["margin-y-card-gap"]) as ViewStyle}
+          containerStyle={style.flatten(["margin-bottom-16"]) as ViewStyle}
           validatorAddress={validatorAddress}
         />
-
-        <View style={style.flatten(["flex-1"])} />
-
-        <Button
-          containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
-          text="Choose this validator"
-          onPress={() => {
-            analyticsStore.logEvent("choose_validator_click", {
-              pageName: "Validator Details",
-            });
-            smartNavigation.navigateSmart("Redelegate", {
-              validatorAddress: prevSelectValidator,
-              selectedValidatorAddress: validatorAddress,
-            });
-          }}
-        />
-        <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
       </PageWithScrollView>
     );
   }

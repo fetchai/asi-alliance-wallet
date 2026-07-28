@@ -2,6 +2,7 @@ import React, { FunctionComponent, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { PageWithScrollView } from "components/page";
 import { Platform, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { MarkdownView } from "react-native-markdown-view";
 import { useStyle } from "styles/index";
 import { Button } from "components/button";
 import { useStore } from "stores/index";
@@ -56,24 +57,24 @@ export const TallyVoteInfoView: FunctionComponent<{
   const backgroundColorDefinitions = (() => {
     switch (vote) {
       case "yes":
-        return "background-color-indigo-600";
       case "no":
-        return "background-color-indigo";
       case "noWithVeto":
-        return "background-color-indigo-300";
       case "abstain":
-        return "background-color-indigo-200";
+      default:
+        return "background-color-green-250";
     }
   })();
 
   return (
     <BlurBackground
       borderRadius={12}
+      backgroundBlur={false}
       containerStyle={
         style.flatten([
           "height-56",
           "margin-bottom-6",
           "justify-center",
+          "background-color-gray-100",
         ]) as ViewStyle
       }
     >
@@ -105,7 +106,7 @@ export const TallyVoteInfoView: FunctionComponent<{
           style={
             style.flatten([
               "body3",
-              "color-white",
+              "color-dark",
               "margin-right-6",
             ]) as ViewStyle
           }
@@ -114,7 +115,7 @@ export const TallyVoteInfoView: FunctionComponent<{
           <BlurButton
             text={"You voted"}
             backgroundBlur={false}
-            leftIcon={<CheckIcon color="white" size={11} />}
+            leftIcon={<CheckIcon color="#151a1a" size={11} />}
             borderRadius={4}
             containerStyle={
               style.flatten([
@@ -122,14 +123,14 @@ export const TallyVoteInfoView: FunctionComponent<{
                 "padding-x-8",
                 "padding-y-4",
                 "justify-center",
-                "border-color-white@60%",
+                "border-color-gray-100",
               ]) as ViewStyle
             }
             textStyle={
               style.flatten([
                 "text-caption2",
                 "font-medium",
-                "color-white",
+                "color-dark",
                 "margin-0",
               ]) as ViewStyle
             }
@@ -179,7 +180,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
               style.flatten([
                 "h3",
                 "font-normal",
-                "color-white",
+                "color-dark",
                 "margin-bottom-12",
               ]) as ViewStyle
             }
@@ -189,13 +190,21 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
           >
             {proposal.title}
           </Text>
-          <Text
-            numberOfLines={4}
-            ellipsizeMode="head"
-            style={style.flatten(["body2", "color-white"]) as ViewStyle}
+          <MarkdownView
+            styles={{
+              text: {
+                color: "#9A9AA2",
+                fontSize: 14,
+                lineHeight: 22,
+              },
+              paragraph: {
+                marginTop: 0,
+                marginBottom: 8,
+              },
+            }}
           >
-            {proposal.description}
-          </Text>
+            {proposal.description || ""}
+          </MarkdownView>
           <View
             style={
               style.flatten([
@@ -221,7 +230,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
                   style={
                     style.flatten([
                       "text-caption2",
-                      "color-white@60%",
+                      "color-gray-300",
                       "margin-bottom-6",
                     ]) as ViewStyle
                   }
@@ -230,7 +239,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
                 </Text>
                 <Text
                   style={
-                    style.flatten(["text-caption2", "color-white"]) as ViewStyle
+                    style.flatten(["text-caption2", "color-dark"]) as ViewStyle
                   }
                 >
                   {moment(proposal.raw.voting_start_time)
@@ -243,7 +252,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
                   style={
                     style.flatten([
                       "text-caption2",
-                      "color-white@60%",
+                      "color-gray-300",
                       "margin-bottom-6",
                     ]) as ViewStyle
                   }
@@ -252,7 +261,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
                 </Text>
                 <Text
                   style={
-                    style.flatten(["text-caption2", "color-white"]) as ViewStyle
+                    style.flatten(["text-caption2", "color-dark"]) as ViewStyle
                   }
                 >
                   {moment(proposal.raw.voting_end_time)
@@ -268,7 +277,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
               heading="View full text of the proposal"
               leadingIconComponent={
                 <IconButton
-                  icon={<FileIcon />}
+                  icon={<FileIcon color="#151a1a" />}
                   blurIntensity={20}
                   borderRadius={50}
                   iconStyle={
@@ -281,9 +290,13 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
                   }
                 />
               }
-              trailingIconComponent={<ExternalLinkIcon />}
+              trailingIconComponent={<ExternalLinkIcon color="#151a1a" />}
               cardStyle={
-                style.flatten(["padding-y-18", "margin-bottom-16"]) as ViewStyle
+                style.flatten([
+                  "padding-y-18",
+                  "margin-bottom-16",
+                  "background-color-gray-50",
+                ]) as ViewStyle
               }
               onPress={() => {
                 analyticsStore.logEvent(
@@ -306,7 +319,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
               style={
                 style.flatten([
                   "text-caption2",
-                  "color-white@60%",
+                  "color-gray-300",
                   "margin-bottom-10",
                 ]) as ViewStyle
               }
@@ -316,19 +329,22 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
             <View>
               <BlurBackground
                 borderRadius={6}
+                backgroundBlur={false}
                 containerStyle={
-                  style.flatten(["height-30", "justify-center"]) as ViewStyle
+                  style.flatten([
+                    "height-30",
+                    "justify-center",
+                    "background-color-gray-100",
+                  ]) as ViewStyle
                 }
               >
                 <View
                   style={
                     StyleSheet.flatten([
-                      style.flatten([
-                        "height-30",
-                        "background-color-orange-500",
-                        "border-radius-6",
-                      ]),
+                      style.flatten(["height-30", "border-radius-6"]),
                       {
+                        backgroundColor: style.get("background-color-green-250")
+                          .backgroundColor,
                         width: `${parseFloat(
                           proposal.turnout.toDec().toString(1)
                         )}%`,
@@ -340,7 +356,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
                   style={
                     style.flatten([
                       "body3",
-                      "color-white",
+                      "color-dark",
                       "absolute",
                       "margin-left-12",
                     ]) as ViewStyle
@@ -374,10 +390,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
           />
         </View>
       ) : (
-        <LoadingSpinner
-          color={style.flatten(["color-white"]).color}
-          size={20}
-        />
+        <LoadingSpinner color={style.flatten(["color-dark"]).color} size={20} />
       )}
     </React.Fragment>
   );
@@ -488,7 +501,7 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction rejected",
+            text1: "Transaction Rejected",
           });
           return;
         } else {
@@ -512,7 +525,7 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       containerStyle={style.flatten(["overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
@@ -524,13 +537,17 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
         size="large"
         mode={voteText === "Change your vote" ? "outline" : "fill"}
         containerStyle={
-          style.flatten(
-            ["border-radius-64", "margin-top-16"],
-            [voteText === "Change your vote" && "border-color-white@20%"]
-          ) as ViewStyle
+          {
+            ...style.flatten(
+              ["border-radius-64", "margin-top-16"],
+              [voteText === "Change your vote" && "border-color-gray-100"]
+            ),
+            ...(voteText !== "Change your vote" && {
+              backgroundColor: style.get("color-dark").color,
+            }),
+          } as ViewStyle
         }
-        textStyle={style.flatten(["body2"]) as ViewStyle}
-        rippleColor="black@50%"
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         loading={isSendingTx}
         showLoadingSpinner={true}
         disabled={!voteEnabled || !account.isReadyToSendTx || isSendingTx}
@@ -538,7 +555,7 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
           if (activityStore.getPendingTxnTypes[txnTypeKey.govVote]) {
             Toast.show({
               type: "error",
-              text1: `${txType[txnTypeKey.govVote]} in progress`,
+              text1: `${txType[txnTypeKey.govVote]} In Progress`,
             });
             return;
           }

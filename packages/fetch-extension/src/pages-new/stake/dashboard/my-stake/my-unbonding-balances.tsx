@@ -29,7 +29,9 @@ export const MyUnbondingValidators = observer(
         account.bech32Address
       );
 
-    const unbondings = queryUnbonding.unbondingBalances;
+    const unbondings = queryUnbonding.unbondingBalances?.filter((item) =>
+      item?.entries?.some((entry) => !entry?.balance?.toDec().isZero())
+    );
 
     const bondedValidators = queries.cosmos.queryValidators.getQueryStatus(
       Staking.BondStatus.Bonded
@@ -59,9 +61,9 @@ export const MyUnbondingValidators = observer(
       return map;
     }, [validators]);
 
-    const unbondingBalancesCount = unbondings?.flatMap(
-      (item) => item.entries
-    ).length;
+    const unbondingBalancesCount = unbondings
+      ?.flatMap((item) => item.entries)
+      .filter((entry) => !entry?.balance?.toDec().isZero()).length;
 
     if (unbondings.length === 0 || unbondingBalancesCount === 0) {
       return null;
@@ -119,97 +121,99 @@ export const MyUnbondingValidators = observer(
 
             return (
               <React.Fragment key={ubd.validatorAddress}>
-                {ubd.entries.map((entry) => {
-                  const remainingTime = formatDistanceToNow(
-                    new Date(entry.completionTime),
-                    { addSuffix: true }
-                  );
-                  const amountFiatCurrency = priceStore.calculatePrice(
-                    entry?.balance?.maxDecimals(5).trim(true).shrink(true),
-                    fiatCurrency
-                  );
+                {ubd.entries
+                  .filter((entry) => !entry?.balance?.toDec().isZero())
+                  .map((entry) => {
+                    const remainingTime = formatDistanceToNow(
+                      new Date(entry.completionTime),
+                      { addSuffix: true }
+                    );
+                    const amountFiatCurrency = priceStore.calculatePrice(
+                      entry?.balance?.maxDecimals(5).trim(true).shrink(true),
+                      fiatCurrency
+                    );
 
-                  const amount =
-                    parseFloat(
-                      entry.balance.hideDenom(true).toString() || "0"
-                    ) >= 0.000001
-                      ? entry.balance
-                          .maxDecimals(6)
-                          .trim(true)
-                          .shrink(true)
-                          .toString()
-                      : `< 0.000001 ${entry?.balance?.denom || ""}`;
+                    const amount =
+                      parseFloat(
+                        entry.balance.hideDenom(true).toString() || "0"
+                      ) >= 0.000001
+                        ? entry.balance
+                            .maxDecimals(6)
+                            .trim(true)
+                            .shrink(true)
+                            .toString()
+                        : `< 0.000001 ${entry?.balance?.denom || ""}`;
 
-                  return (
-                    <GlassCard
-                      key={`${ubd.validatorAddress}-${entry.completionTime}`}
-                    >
-                      <div className={styles["validator-div"]}>
-                        {thumbnail ? (
-                          <img src={thumbnail} alt="validator" />
-                        ) : (
-                          <div className={styles["validator-avatar"]}>
-                            {val.description.moniker?.[0]?.toUpperCase()}
-                          </div>
-                        )}
-
-                        <div className={styles["validator-details"]}>
-                          <div className={styles["validator-top"]}>
-                            <div className={styles["left-col"]}>
-                              <div style={{ fontWeight: 400 }}>
-                                {val.description.moniker}
-                              </div>
-
-                              <span
-                                className={styles["validator-currency"]}
-                                style={{ color: "var(--font-secondary)" }}
-                              >
-                                {amount}
-                              </span>
+                    return (
+                      <GlassCard
+                        key={`${ubd.validatorAddress}-${entry.completionTime}`}
+                      >
+                        <div className={styles["validator-div"]}>
+                          {thumbnail ? (
+                            <img src={thumbnail} alt="validator" />
+                          ) : (
+                            <div className={styles["validator-avatar"]}>
+                              {val.description.moniker?.[0]?.toUpperCase()}
                             </div>
-                            {amountFiatCurrency && (
-                              <div className={styles["right-col"]}>
-                                <span className={styles["amount"]}>
-                                  {amountFiatCurrency
-                                    .shrink(true)
-                                    .maxDecimals(6)
-                                    .trim(true)
-                                    .toString()}
-                                </span>
+                          )}
+
+                          <div className={styles["validator-details"]}>
+                            <div className={styles["validator-top"]}>
+                              <div className={styles["left-col"]}>
+                                <div style={{ fontWeight: 400 }}>
+                                  {val.description.moniker}
+                                </div>
+
                                 <span
                                   className={styles["validator-currency"]}
                                   style={{ color: "var(--font-secondary)" }}
                                 >
-                                  {" "}
-                                  {fiatCurrency.toUpperCase()}
+                                  {amount}
                                 </span>
                               </div>
-                            )}
-                          </div>
+                              {amountFiatCurrency && (
+                                <div className={styles["right-col"]}>
+                                  <span className={styles["amount"]}>
+                                    {amountFiatCurrency
+                                      .shrink(true)
+                                      .maxDecimals(6)
+                                      .trim(true)
+                                      .toString()}
+                                  </span>
+                                  <span
+                                    className={styles["validator-currency"]}
+                                    style={{ color: "var(--font-secondary)" }}
+                                  >
+                                    {" "}
+                                    {fiatCurrency.toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
 
-                          <div
-                            style={{
-                              width: "100%",
-                              height: "1px",
-                              background: "var(--bg-grey-dark)",
-                            }}
-                          />
-
-                          <div className={styles["validator-bottom"]}>
-                            <span
+                            <div
                               style={{
-                                fontSize: "12px",
-                                color: "var(--font-secondary)",
+                                width: "100%",
+                                height: "1px",
+                                background: "var(--bg-grey-dark)",
                               }}
-                            >
-                              Unbonding • Completes {remainingTime}
-                            </span>
+                            />
+
+                            <div className={styles["validator-bottom"]}>
+                              <span
+                                style={{
+                                  fontSize: "12px",
+                                  color: "var(--font-secondary)",
+                                }}
+                              >
+                                Unbonding • Completes {remainingTime}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </GlassCard>
-                  );
-                })}
+                      </GlassCard>
+                    );
+                  })}
               </React.Fragment>
             );
           })}

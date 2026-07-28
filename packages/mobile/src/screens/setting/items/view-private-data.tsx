@@ -21,7 +21,7 @@ export const SettingViewPrivateDataItem: FunctionComponent = () => {
     <React.Fragment>
       <SettingItem
         label={getPrivateDataTitle(keyRingStore.keyRingType)}
-        left={<KeyIconSmall />}
+        left={<KeyIconSmall color="#151a1a" />}
         onPress={() => {
           setIsOpenModal(true);
           analyticsStore.logEvent("view_mnemonic_seed_click", {

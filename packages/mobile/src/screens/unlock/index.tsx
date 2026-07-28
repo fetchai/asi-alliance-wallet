@@ -182,7 +182,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       if (e.message.includes("Unmatched mac")) {
         Toast.show({
           type: "error",
-          text1: "Biometric verification failed.",
+          text1: "Biometric Verification Failed",
           text2:
             "Your biometric data has changed. Please log in with your password and update your biometric settings.",
         });
@@ -251,7 +251,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   return (
     <React.Fragment>
       <ScreenBackground
-        backgroundMode="image"
+        backgroundMode="secondary"
         backgroundBlur={true}
         isTransparentHeader={true}
       />
@@ -270,9 +270,10 @@ export const UnlockScreen: FunctionComponent = observer(() => {
         >
           <View style={style.flatten(["items-center"]) as ViewStyle}>
             <Image
-              source={require("assets/logo/logo.png")}
+              source={require("assets/logo/logo-black.png")}
               style={{
                 aspectRatio: 2.977,
+                height: 60,
               }}
               resizeMode="contain"
               fadeDuration={0}
@@ -283,15 +284,15 @@ export const UnlockScreen: FunctionComponent = observer(() => {
               style.flatten(["margin-x-page", "margin-top-34"]) as ViewStyle
             }
           >
-            <Text style={style.flatten(["h2", "font-medium", "color-white"])}>
-              Welcome back
+            <Text style={style.flatten(["h2", "font-medium", "color-dark"])}>
+              Welcome Back
             </Text>
             <Text
               style={
                 style.flatten([
                   "h6",
                   "font-medium",
-                  "color-gray-100",
+                  "color-gray-300",
                   "margin-top-12",
                 ]) as ViewStyle
               }
@@ -321,6 +322,8 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 )
               }
               containerStyle={style.flatten(["margin-y-20"]) as ViewStyle}
+              labelStyle={{ color: "#737676" } as ViewStyle}
+              inputStyle={{ color: style.get("color-dark").color } as ViewStyle}
               secureTextEntry={!showPassword}
               value={password}
               returnKeyType="done"
@@ -333,9 +336,14 @@ export const UnlockScreen: FunctionComponent = observer(() => {
             />
             <Button
               containerStyle={
-                style.flatten(["border-radius-32", "margin-y-10"]) as ViewStyle
+                style.flatten([
+                  "border-radius-32",
+                  "margin-y-10",
+                  "background-color-dark",
+                ]) as ViewStyle
               }
-              text="Sign in"
+              textStyle={style.flatten(["color-white"]) as ViewStyle}
+              text="Sign In"
               size="large"
               loading={isLoading}
               rippleColor="black@10%"
@@ -357,18 +365,18 @@ export const UnlockScreen: FunctionComponent = observer(() => {
               >
                 <View style={style.flatten(["items-center"]) as ViewStyle}>
                   {Platform.OS === "android" ? (
-                    <FingerprintIcon color={style.get("color-white").color} />
+                    <FingerprintIcon color={"#151a1a"} />
                   ) : (
-                    <FaceDetectIcon color={style.get("color-blue-400").color} />
+                    <FaceDetectIcon color={"#151a1a"} />
                   )}
                 </View>
                 <Button
-                  textStyle={style.flatten(["color-white", "h5"]) as ViewStyle}
-                  text="Use biometric authentication"
+                  textStyle={style.flatten(["color-dark", "h5"]) as ViewStyle}
+                  text="Use Biometric Authentication"
                   mode="text"
                   loading={isBiometricLoading}
                   showLoadingSpinner={true}
-                  loaderColor="white"
+                  loaderColor={style.get("color-dark").color}
                 />
               </View>
             </TouchableOpacity>

@@ -64,10 +64,15 @@ export const ProposalFilterModal: FunctionComponent<{
         text="Save changes"
         size="large"
         containerStyle={
-          style.flatten(["border-radius-64", "margin-top-18"]) as ViewStyle
+          {
+            ...style.flatten([
+              "border-radius-64",
+              "margin-top-18",
+              "background-color-dark",
+            ]),
+          } as ViewStyle
         }
-        textStyle={style.flatten(["body2"]) as ViewStyle}
-        rippleColor="black@50%"
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         disabled={select === selectedIndex}
         onPress={() => {
           setSelectedIndex(select);
@@ -89,29 +94,32 @@ const ProposalStatusButton: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      blurIntensity={15}
-      containerStyle={style.flatten(["margin-bottom-6"]) as ViewStyle}
+      backgroundBlur={false}
+      containerStyle={
+        [
+          style.flatten(["margin-bottom-6", "background-color-gray-5"]),
+          id === selectedIndex ? { backgroundColor: "#e0fedd" } : null,
+        ] as ViewStyle
+      }
     >
       <RectButton
         style={
-          style.flatten(
-            [
-              "flex-row",
-              "items-center",
-              "justify-between",
-              "border-radius-12",
-              "padding-x-12",
-              "padding-y-18",
-            ],
-            [id === selectedIndex && "background-color-indigo"]
-          ) as ViewStyle
+          style.flatten([
+            "flex-row",
+            "items-center",
+            "justify-between",
+            "border-radius-12",
+            "padding-x-12",
+            "padding-y-18",
+          ]) as ViewStyle
         }
+        underlayColor="#e0fedd"
         onPress={() => {
           if (handleCheck) handleCheck(id);
         }}
       >
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
-          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
             {text}
           </Text>
         </View>

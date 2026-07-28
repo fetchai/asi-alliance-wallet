@@ -3,12 +3,14 @@ import React, { FunctionComponent } from "react";
 import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { IconWithText } from "components/new/icon-with-text/icon-with-text";
-import { GradientButton } from "../button/gradient-button";
+import { Button } from "components/button";
 import { ClaimRewardIcon } from "../icon/claim-reward";
+import { CoinPretty } from "@keplr-wallet/unit";
+import { formatBalance } from "utils/format/format";
 
 export const ClaimRewardsModal: FunctionComponent<{
   isOpen: boolean;
-  earnedAmount?: string;
+  earnedAmount?: CoinPretty;
   close: () => void;
   onPress?: () => void;
   buttonLoading?: boolean;
@@ -29,10 +31,8 @@ export const ClaimRewardsModal: FunctionComponent<{
       <IconWithText
         icon={<ClaimRewardIcon size={64} />}
         iconStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
-        title={"Claim rewards"}
-        subtitle={
-          "Transaction has been broadcasted to\nblockchain and pending confirmation"
-        }
+        title={"Claim Rewards"}
+        subtitle={"Claim your pending staking rewards\nto your wallet"}
         titleStyle={style.flatten(["body1"]) as ViewStyle}
         subtitleStyle={
           style.flatten(["body3", "padding-y-0", "margin-top-6"]) as ViewStyle
@@ -44,7 +44,7 @@ export const ClaimRewardsModal: FunctionComponent<{
             "flex-row",
             "items-center",
             "border-width-1",
-            "border-color-white@20%",
+            "border-color-gray-100",
             "border-radius-12",
             "padding-12",
             "margin-y-24",
@@ -53,7 +53,7 @@ export const ClaimRewardsModal: FunctionComponent<{
       >
         <Text
           style={
-            style.flatten(["body3", "color-white@60%", "flex-2"]) as ViewStyle
+            style.flatten(["body3", "color-gray-300", "flex-2"]) as ViewStyle
           }
         >
           You’ve earned
@@ -63,21 +63,27 @@ export const ClaimRewardsModal: FunctionComponent<{
             style={
               style.flatten([
                 "subtitle3",
-                "color-white",
+                "color-dark",
                 "text-right",
               ]) as ViewStyle
             }
           >
-            {earnedAmount}
+            {earnedAmount ? formatBalance(earnedAmount) : ""}
           </Text>
         </View>
       </View>
-      <GradientButton
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
-        textStyle={style.flatten(["body3"]) as ViewStyle}
-        text={"Claim my rewards"}
+      <Button
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-green-250",
+          ]) as ViewStyle
+        }
+        textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
+        text={"Claim My Rewards"}
         onPress={onPress}
         loading={buttonLoading}
+        rippleColor="#85cc80"
       />
     </CardModal>
   );

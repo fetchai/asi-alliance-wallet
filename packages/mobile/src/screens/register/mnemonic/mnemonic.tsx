@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import {
@@ -19,9 +19,15 @@ import { SimpleCardView } from "components/new/card-view/simple-card";
 import { CopyIcon } from "components/new/icon/copy-icon";
 import { useSimpleTimer } from "hooks/use-simple-timer";
 import LottieView from "lottie-react-native";
-import { useNewMnemonicConfig } from "./hook";
+import { NumWords, useNewMnemonicConfig } from "./hook";
+import { TabBarView } from "components/new/tab-bar/tab-bar";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { useStore } from "stores/index";
+
+enum MnemonicType {
+  WORDS12 = "12 words",
+  WORDS24 = "24 words",
+}
 
 export const MnemonicScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -48,10 +54,21 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
   const [toggleCheckBox, setToggleCheckBox] = useState(false);
   const [isSelected, setSelection] = useState(false);
   const { isTimedOut, setTimer } = useSimpleTimer();
+  const [selectedMnemonicType, setSelectedMnemonicType] = useState(
+    MnemonicType.WORDS12
+  );
+
+  useEffect(() => {
+    newMnemonicConfig.setNumWords(
+      selectedMnemonicType === MnemonicType.WORDS12
+        ? NumWords.WORDS12
+        : NumWords.WORDS24
+    );
+  }, [selectedMnemonicType, newMnemonicConfig]);
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -60,7 +77,7 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
           style={
             style.flatten([
               "h1",
-              "color-white",
+              "color-black",
               "font-normal",
               "margin-bottom-16",
             ]) as ViewStyle
@@ -71,7 +88,7 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-gray-200",
+              "color-gray-400",
               "body2",
               "margin-bottom-8",
             ]) as ViewStyle
@@ -82,6 +99,13 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
           in a secure offline location, and never share with anyone!
         </Text>
       </View>
+      <TabBarView
+        listItem={MnemonicType}
+        selected={selectedMnemonicType}
+        setSelected={setSelectedMnemonicType}
+        unselectedTextColorToken="color-gray-300"
+        backgroundColorToken="background-color-gray-5"
+      />
       <TouchableOpacity
         onPress={async () => {
           await Clipboard.setStringAsync(words.join(" "));
@@ -91,10 +115,14 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
       >
         <SimpleCardView
           heading={words.join(" ")}
-          headingMode={"gradient"}
-          headingStyle={style.flatten(["body3"]) as ViewStyle}
+          headingMode={"normal"}
+          backgroundBlur={false}
+          headingStyle={style.flatten(["body3", "color-black"]) as ViewStyle}
           cardStyle={
-            style.flatten(["margin-y-10", "margin-bottom-24"]) as ViewStyle
+            [
+              style.flatten(["margin-y-10", "margin-bottom-24"]),
+              { backgroundColor: "#f6f6f6" },
+            ] as ViewStyle
           }
           trailingIconComponent={
             isTimedOut ? (
@@ -151,7 +179,7 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
                 </View>
               </View>
             ) : (
-              <CopyIcon size={18} />
+              <CopyIcon size={18} color="black" />
             )
           }
         />
@@ -171,11 +199,16 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
           disabled={false}
           value={toggleCheckBox}
           onValueChange={(newValue) => setToggleCheckBox(newValue)}
+          tintColor={style.flatten(["color-gray-100"]).color}
           onCheckColor="white"
-          onTintColor="white"
+          onFillColor="#73A271"
+          onTintColor="#73A271"
           lineWidth={2}
           boxType="square"
-          tintColors={{ true: "white", false: "#C6C6CD" }}
+          tintColors={{
+            true: "#73A271",
+            false: style.flatten(["color-gray-100"]).color,
+          }}
           style={
             style.flatten([
               "width-16",
@@ -188,7 +221,7 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-gray-100",
+              "color-gray-400",
               "body2",
               "font-normal",
               "margin-left-12",
@@ -214,12 +247,17 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
           disabled={false}
           value={isSelected}
           onValueChange={(newValue) => setSelection(newValue)}
+          tintColor={style.flatten(["color-gray-100"]).color}
           onCheckColor="white"
-          onTintColor="white"
+          onFillColor="#73A271"
+          onTintColor="#73A271"
           lineWidth={2}
           aria-busy={true}
           boxType="square"
-          tintColors={{ true: "white", false: "#C6C6CD" }}
+          tintColors={{
+            true: "#73A271",
+            false: style.flatten(["color-gray-100"]).color,
+          }}
           style={
             style.flatten([
               "width-16",
@@ -232,7 +270,7 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-gray-100",
+              "color-gray-400",
               "body2",
               "font-normal",
               "margin-left-12",
@@ -245,12 +283,17 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
       </TouchableOpacity>
       <View style={style.flatten(["flex-1"])} />
       <Button
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
         text="Continue"
         size="large"
         rippleColor="black@10%"
         disabled={!isSelected || !toggleCheckBox}
-        textStyle={style.flatten(["body2"]) as ViewStyle}
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         onPress={() => {
           smartNavigation.navigateSmart("Register.VerifyMnemonic", {
             registerConfig,

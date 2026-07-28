@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import { BIP44HDPath } from "@keplr-wallet/background";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -12,7 +12,13 @@ import { Button } from "components/button";
 import { Controller, useForm } from "react-hook-form";
 import { useStore } from "stores/index";
 import { useSmartNavigation } from "navigation/smart-navigation";
-import { isPrivateKey, trimWordsStr } from "utils/format/format";
+import { SelectNetwork } from "components/new/select-network";
+import {
+  isPrivateKey,
+  trimWordsStr,
+  getNextDefaultAccountName,
+  validateAccountName,
+} from "utils/format/format";
 import { PasswordValidateView } from "components/new/password-validate/password-validate";
 import { CheckIcon } from "components/new/icon/check";
 import { XmarkIcon } from "components/new/icon/xmark";
@@ -49,11 +55,16 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const [password, setPassword] = useState("");
   const [mode] = useState(registerConfig.mode);
   const [isCreating, setIsCreating] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
 
   const smartNavigation = useSmartNavigation();
 
   const style = useStyle();
-  const { analyticsStore } = useStore();
+  const { analyticsStore, keyRingStore } = useStore();
+  const defaultAccountName = getNextDefaultAccountName(
+    keyRingStore.multiKeyStoreInfo
+  );
 
   useEffect(() => {
     setValue("mnemonic", mnemonic, {
@@ -67,10 +78,15 @@ export const CreateAccountScreen: FunctionComponent = () => {
     setFocus,
     setValue,
     getValues,
+    watch,
     formState: { errors },
   } = useForm<FormData>();
 
+  const currentName = watch("name", defaultAccountName);
+
   const submit = handleSubmit(async () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsCreating(true);
     setShowPassword(false);
 
@@ -81,7 +97,9 @@ export const CreateAccountScreen: FunctionComponent = () => {
         getValues("name").trim(),
         mnemonic,
         getValues("password"),
-        bip44HDPath
+        bip44HDPath,
+        {},
+        selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "seed",
@@ -92,7 +110,9 @@ export const CreateAccountScreen: FunctionComponent = () => {
       await registerConfig.createPrivateKey(
         getValues("name"),
         privateKey,
-        getValues("password")
+        getValues("password"),
+        {},
+        selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "seed",
@@ -114,6 +134,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
         },
       ],
     });
+    isSubmittingRef.current = false;
     setIsCreating(false);
   });
 
@@ -144,7 +165,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -152,7 +173,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-black",
             "margin-y-10",
             "font-medium",
           ]) as ViewStyle
@@ -160,23 +181,22 @@ export const CreateAccountScreen: FunctionComponent = () => {
       >
         {title}
       </Text>
-      <Text style={style.flatten(["h6", "color-gray-200"]) as ViewStyle}>
+      <Text style={style.flatten(["body2", "color-gray-400"]) as ViewStyle}>
         To keep your account safe, avoid any personal information or words
       </Text>
       <Controller
         control={control}
         rules={{
           required: "Name is required",
-          validate: (value: string) => {
-            if (value.trim().length < 3) {
-              return "Name at least 3 characters";
-            }
-          },
+          validate: (value: string) =>
+            validateAccountName(value, keyRingStore.multiKeyStoreInfo, mode),
         }}
         render={({ field: { onChange, onBlur, value, ref } }) => {
           return (
             <InputCardView
               label="Account name"
+              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               containerStyle={style.flatten(["margin-top-18"]) as ViewStyle}
               returnKeyType={mode === "add" ? "done" : "next"}
               onSubmitEditing={() => {
@@ -193,21 +213,11 @@ export const CreateAccountScreen: FunctionComponent = () => {
                 onChange(value.trim());
               }}
               onChangeText={(text: string) => {
-                text = text.replace(
-                  /[~`!#$%^&*()+={}\[\]|\\:;"'<>,.?/₹•€£]/,
-                  ""
-                );
-                if (text[0] === " " || text[0] === "-") {
-                  return;
-                }
-                if (
-                  (text[text.length - 1] === "-" && text[text.length - 2]) ===
-                  "-"
-                ) {
-                  return;
-                }
-                text = text.replace(/ {1,}/g, " ");
-                onChange(text);
+                const filtered = text
+                  .trimStart()
+                  .replace(/[^a-zA-Z0-9 @_\-\.\(\)]/g, "")
+                  .replace(/ {2,}/g, " ");
+                onChange(filtered);
               }}
               value={value}
               maxLength={30}
@@ -216,8 +226,39 @@ export const CreateAccountScreen: FunctionComponent = () => {
           );
         }}
         name="name"
-        defaultValue=""
+        defaultValue={defaultAccountName}
       />
+      {currentName !== defaultAccountName && (
+        <Text
+          style={
+            style.flatten([
+              "text-caption2",
+              "color-gray-400",
+              "margin-top-4",
+            ]) as ViewStyle
+          }
+        >
+          * Account name for unselected networks will be {defaultAccountName}
+        </Text>
+      )}
+      <SelectNetwork
+        selectedNetworks={selectedNetworks}
+        disabled={currentName === defaultAccountName}
+        onMultiSelectChange={setSelectedNetworks}
+      />
+      {currentName !== defaultAccountName && selectedNetworks.length === 0 && (
+        <Text
+          style={
+            style.flatten([
+              "text-caption2",
+              "color-red-400",
+              "margin-top-4",
+            ]) as ViewStyle
+          }
+        >
+          Please select at least one network
+        </Text>
+      )}
       {mode === "create" && (
         <React.Fragment>
           <Controller
@@ -236,6 +277,8 @@ export const CreateAccountScreen: FunctionComponent = () => {
               return (
                 <InputCardView
                   label="Password"
+                  labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+                  inputStyle={style.flatten(["color-black"]) as ViewStyle}
                   keyboardType={"default"}
                   secureTextEntry={!showPassword}
                   containerStyle={style.flatten(["margin-top-8"]) as ViewStyle}
@@ -252,7 +295,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
                   rightIcon={
                     !showPassword ? (
                       <IconButton
-                        icon={<EyeIcon />}
+                        icon={<EyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -260,7 +303,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
                       />
                     ) : (
                       <IconButton
-                        icon={<HideEyeIcon />}
+                        icon={<HideEyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -383,15 +426,17 @@ export const CreateAccountScreen: FunctionComponent = () => {
         containerStyle={
           style.flatten([
             "margin-y-18",
-            "background-color-white",
+            "background-color-dark",
+            "color-white",
             "border-radius-32",
           ]) as ViewStyle
         }
-        textStyle={{
-          color: "#0B1742",
-        }}
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         text="Confirm"
         size="large"
+        disabled={
+          currentName !== defaultAccountName && selectedNetworks.length === 0
+        }
         loading={isCreating}
         onPress={() => {
           submit();

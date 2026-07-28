@@ -34,7 +34,7 @@ export const FetchVersionScreen: FunctionComponent = () => {
   }
 
   return (
-    <PageWithScrollView backgroundMode="image">
+    <PageWithScrollView backgroundMode="secondary">
       <TouchableWithoutFeedback
         onPress={() => {
           testErrorReportRef.current++;

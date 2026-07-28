@@ -41,15 +41,16 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
         >
           <ChipButton
             text="Filter"
-            icon={<FilterIcon />}
+            icon={<FilterIcon color="#151a1a" />}
             iconStyle={style.get("padding-top-2") as ViewStyle}
             containerStyle={
               style.flatten([
                 "border-width-1",
-                "border-color-white@20%",
+                "border-color-gray-100",
               ]) as ViewStyle
             }
             backgroundBlur={false}
+            textStyle={style.flatten(["color-dark"]) as ViewStyle}
           />
         </HeaderRightButton>
       ),
@@ -88,8 +89,8 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
 
     proposals = proposals.filter(
       (proposal) =>
-        proposal.title.toLowerCase().includes(search.trim().toLowerCase()) ||
-        proposal.id.includes(search)
+        proposal?.title?.toLowerCase().includes(search.trim().toLowerCase()) ||
+        proposal?.id?.includes(search)
     );
 
     return { data: proposals };
@@ -97,7 +98,7 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       containerStyle={style.flatten(["overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
@@ -107,12 +108,13 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
       >
         <InputCardView
           placeholder="Search by title or Proposal ID"
-          placeholderTextColor={"white"}
+          placeholderTextColor={"#9A9AA2"}
           value={search}
           onChangeText={(text: string) => {
             setSearch(text);
           }}
-          rightIcon={<SearchIcon size={12} />}
+          rightIcon={<SearchIcon size={12} color="#151a1a" />}
+          inputStyle={{ color: style.get("color-dark").color } as any}
         />
       </View>
       {sections.data.length !== 0 ? (
@@ -121,8 +123,13 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
             <BlurBackground
               key={proposal.id}
               borderRadius={12}
-              blurIntensity={16}
-              containerStyle={style.flatten(["margin-y-6"]) as ViewStyle}
+              backgroundBlur={false}
+              containerStyle={
+                style.flatten([
+                  "margin-y-6",
+                  "background-color-gray-5",
+                ]) as ViewStyle
+              }
             >
               <GovernanceCardBody proposalId={proposal.id} />
             </BlurBackground>

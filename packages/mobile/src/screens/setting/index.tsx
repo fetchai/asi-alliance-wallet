@@ -61,7 +61,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollViewInBottomTabView
-      backgroundMode="image"
+      backgroundMode="secondary"
       isTransparentHeader={true}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       contentContainerStyle={{
@@ -74,7 +74,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
           style.flatten([
             "h1",
             "font-normal",
-            "color-white",
+            "color-dark",
             "margin-top-16",
             "margin-bottom-20",
           ]) as ViewStyle
@@ -85,7 +85,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
       <SettingSectionTitle title="Account" />
       <SettingItem
         label="Currency"
-        left={<CurrencyIcon size={16} />}
+        left={<CurrencyIcon size={16} color="#151a1a" />}
         right={<Right paragraph={priceStore.defaultVsCurrency.toUpperCase()} />}
         onPress={() => {
           navigation.navigate("Setting", {
@@ -99,8 +99,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
       />
       {showManageTokenButton ? (
         <SettingItem
-          label="Manage tokens"
-          left={<CoinsIcon size={16} />}
+          label="Manage Tokens"
+          left={<CoinsIcon size={16} color="#151a1a" />}
           right={
             <Right
               paragraph={tokensStore
@@ -119,8 +119,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
         />
       ) : null}
       <SettingItem
-        left={<ATIcon size={16} />}
-        label="Address book"
+        left={<ATIcon size={16} color="#151a1a" />}
+        label="Address Book"
         onPress={() => {
           navigation.navigate("AddressBooks", {
             screen: "AddressBook",
@@ -135,8 +135,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
       keychainStore.isBiometrySupported ||
       keychainStore.isBiometryOn ? (
         <SettingItem
-          label="Security & privacy"
-          left={<ShieldIcon size={16} />}
+          label="Security & Privacy"
+          left={<ShieldIcon size={16} color="#151a1a" />}
           onPress={() => {
             navigation.navigate("Setting", {
               screen: "Setting.SecurityAndPrivacy",
@@ -148,10 +148,10 @@ export const SettingScreen: FunctionComponent = observer(() => {
         />
       ) : null}
       <SettingSectionTitle title="Others" />
-      {chainStore.current.govUrl && (
+      {!chainStore.current.features?.includes("evm") && (
         <SettingItem
           label="Proposals"
-          left={<ProposalIcon />}
+          left={<ProposalIcon color="#151a1a" />}
           onPress={() => {
             navigation.navigate("Setting", {
               screen: "Governance",
@@ -164,12 +164,12 @@ export const SettingScreen: FunctionComponent = observer(() => {
       )}
       <SettingItem
         label="Guide"
-        left={<GuideIcon />}
+        left={<GuideIcon color="#151a1a" />}
         onPress={() => {
           if (!networkIsConnected) {
             Toast.show({
               type: "error",
-              text1: "No internet connection",
+              text1: "No Internet Connection",
             });
             return;
           }
@@ -183,7 +183,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
       />
       <SettingItem
         label="Version"
-        left={<BranchIcon size={16} />}
+        left={<BranchIcon size={16} color="#151a1a" />}
         onPress={() => {
           navigation.navigate("Setting", {
             screen: "Setting.Version",
@@ -191,8 +191,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
         }}
       />
       <SettingItem
-        label="Sign out"
-        left={<SignOutIcon size={16} />}
+        label="Sign Out"
+        left={<SignOutIcon size={16} color="#151a1a" />}
         onPress={() => {
           setConfirmModel(true);
           analyticsStore.logEvent("sign_out_click", {
@@ -205,8 +205,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
       <ConfirmCardModel
         isOpen={openConfirmModel}
         close={() => setConfirmModel(false)}
-        title={"Sign out"}
-        subtitle={"Are you sure you want to sign out?"}
+        title={"Sign Out"}
+        subtitle={"Are You Sure You Want to Sign Out?"}
         confirmButtonText="Confirm"
         select={async (confirm: boolean) => {
           if (confirm) {

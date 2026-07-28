@@ -75,12 +75,12 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
             "items-center",
             "border-radius-64",
             "border-width-1",
-            "border-color-white@40%",
+            "border-color-gray-100",
           ]) as ViewStyle
         }
       >
         <Text
-          style={style.flatten(["text-caption2", "color-white"]) as ViewStyle}
+          style={style.flatten(["text-caption2", "color-dark"]) as ViewStyle}
         >
           {item}
         </Text>
@@ -90,18 +90,19 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
       <BlurBackground
         borderRadius={12}
-        blurIntensity={10}
+        backgroundBlur={false}
         containerStyle={
           style.flatten([
             "margin-top-24",
             "padding-x-16",
             "padding-y-24",
+            "background-color-gray-5",
           ]) as ViewStyle
         }
       >
@@ -122,7 +123,7 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                     style.flatten([
                       "h4",
                       "margin-bottom-8",
-                      "color-white",
+                      "color-dark",
                       "text-center",
                       "width-full",
                     ]) as ViewStyle
@@ -136,7 +137,7 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                   style.flatten([
                     "h6",
                     "margin-bottom-30",
-                    "color-white",
+                    "color-dark",
                   ]) as ViewStyle
                 }
               >
@@ -147,17 +148,17 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
         </View>
         <View style={style.flatten(["width-full"]) as ViewStyle}>
           <Button
-            mode="outline"
+            mode="fill"
             containerStyle={
               style.flatten(
-                ["border-radius-32", "margin-top-38", "border-color-white@40%"],
-                [isTimedOut && "border-color-green-400"]
+                ["border-radius-32", "margin-top-38", "background-color-dark"],
+                [isTimedOut && "background-color-vibrant-green-500"]
               ) as ViewStyle
             }
             textStyle={
               style.flatten(
                 ["text-button1", "color-white"],
-                [isTimedOut && "color-green-400"]
+                [isTimedOut && "color-white"]
               ) as ViewStyle
             }
             {...(isTimedOut && {
@@ -167,7 +168,7 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                 </View>
               ),
             })}
-            text="Copy to clipboard"
+            text="Copy to Clipboard"
             onPress={async () => {
               await Clipboard.setStringAsync(
                 privateDataType === "ledger" ? words["cosmos"] : words.join(" ")

@@ -1,7 +1,6 @@
 import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import { useStyle } from "styles/index";
 import {
-  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -14,7 +13,9 @@ import { MyRewardCard } from "./reward-card";
 import { useStore } from "stores/index";
 import { Button } from "components/button";
 import { DelegationsCard } from "./delegations-card";
+import { UnbondingCard } from "./unbonding-card";
 import { IconWithText } from "components/new/icon-with-text/icon-with-text";
+import { EarnIcon } from "components/new/icon/earn-icon";
 import {
   NavigationProp,
   ParamListBase,
@@ -23,6 +24,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Dec } from "@keplr-wallet/unit";
 import { PageWithScrollView } from "components/page";
 import { observer } from "mobx-react-lite";
 import { useFocusedScreen } from "providers/focused-screen";
@@ -62,7 +64,15 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
     queries.cosmos.queryDelegations.getQueryBech32Address(
       account.bech32Address
     );
-  const delegations = queryDelegations.delegations;
+  const delegations = queryDelegations.delegations.filter((d) =>
+    new Dec(d.balance.amount).gt(new Dec(0))
+  );
+
+  const queryUnbondingDelegations =
+    queries.cosmos.queryUnbondingDelegations.getQueryBech32Address(
+      account.bech32Address
+    );
+  const hasUnbonding = !queryUnbondingDelegations.total.toDec().isZero();
 
   useEffect(() => {
     if (scrollViewRef.current) {
@@ -104,7 +114,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={[
         style.get("flex-grow-1"),
@@ -114,7 +124,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
       ]}
       refreshControl={
         <RefreshControl
-          tintColor={"white"}
+          tintColor={"black"}
           refreshing={refreshing}
           onRefresh={onRefresh}
           progressViewOffset={isTab ? (Platform.OS === "ios" ? 0 : 48) : 0}
@@ -126,7 +136,7 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-dark",
             "margin-top-16",
             "margin-bottom-14",
             "font-normal",
@@ -136,15 +146,18 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
         Stake
       </Text>
       <StakeCard />
-      {delegations && delegations.length > 0 ? (
+      {(delegations && delegations.length > 0) || hasUnbonding ? (
         <React.Fragment>
           <Button
-            text="Stake more"
+            text="Stake More"
             containerStyle={
-              style.flatten(["border-radius-64", "margin-y-32"]) as ViewStyle
+              style.flatten([
+                "border-radius-64",
+                "margin-y-32",
+                "background-color-dark",
+              ]) as ViewStyle
             }
-            rippleColor="black@50%"
-            textStyle={style.flatten(["body2"]) as ViewStyle}
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
             onPress={() => {
               analyticsStore.logEvent("stake_click", {
                 chainId: chainStore.current.chainId,
@@ -157,36 +170,53 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
               });
             }}
           />
-          <MyRewardCard
-            queries={queries}
-            queryDelegations={queryDelegations}
-            containerStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
-          />
-
-          <DelegationsCard
-            containerStyle={style.flatten(["margin-y-6"]) as ViewStyle}
-            queries={queries}
-            queryDelegations={queryDelegations}
-            accountBech32Address={account.bech32Address}
-          />
+          {delegations && delegations.length > 0 && (
+            <React.Fragment>
+              <MyRewardCard
+                queries={queries}
+                queryDelegations={queryDelegations}
+                containerStyle={
+                  style.flatten(["margin-bottom-24"]) as ViewStyle
+                }
+              />
+              <DelegationsCard
+                containerStyle={style.flatten(["margin-y-6"]) as ViewStyle}
+                queries={queries}
+                queryDelegations={queryDelegations}
+                accountBech32Address={account.bech32Address}
+              />
+            </React.Fragment>
+          )}
+          {hasUnbonding && (
+            <UnbondingCard
+              containerStyle={style.flatten(["margin-y-6"]) as ViewStyle}
+              accountBech32Address={account.bech32Address}
+            />
+          )}
         </React.Fragment>
       ) : (
         <View
           style={
             style.flatten([
-              "margin-x-14",
               "height-half",
               "justify-center",
+              "items-center",
             ]) as ViewStyle
           }
         >
           <IconWithText
             icon={
-              <Image source={require("assets/image/icon/ic_staking.png")} />
+              <EarnIcon
+                size={72}
+                color1="#151a1a"
+                color2="#151a1a"
+                color3="#151a1a"
+              />
             }
+            iconStyle={{ marginBottom: 8 }}
             title={"Start staking now"}
             subtitle={
-              "Stake your assets to earn rewards and\n contribute to maintaining the networks"
+              "Stake your assets to earn rewards and\ncontribute to maintaining the networks"
             }
             titleStyle={
               [
@@ -194,14 +224,22 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
                 { marginTop: 3 },
               ] as ViewStyle
             }
-            subtitleStyle={style.flatten(["body3"]) as ViewStyle}
+            subtitleStyle={
+              style.flatten(["body3", "color-gray-300"]) as ViewStyle
+            }
+            containerStyle={style.flatten(["items-center"])}
           />
           <Button
             containerStyle={
-              style.flatten(["border-radius-32", "margin-top-18"]) as ViewStyle
+              style.flatten([
+                "border-radius-64",
+                "margin-top-18",
+                "background-color-dark",
+                "width-full",
+              ]) as ViewStyle
             }
-            textStyle={style.flatten(["body2"]) as ViewStyle}
-            text={"Start staking"}
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+            text={"Start Staking"}
             onPress={() => {
               analyticsStore.logEvent("stake_click", {
                 chainId: chainStore.current.chainId,
@@ -213,9 +251,6 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
                 params: {},
               });
             }}
-          />
-          <View
-            style={style.flatten(["height-page-double-pad"]) as ViewStyle}
           />
         </View>
       )}

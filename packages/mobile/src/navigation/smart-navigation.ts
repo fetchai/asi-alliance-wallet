@@ -131,6 +131,9 @@ const { SmartNavigatorProvider, useSmartNavigation } =
       "Setting.SecurityAndPrivacy": {
         upperScreenName: "Setting",
       },
+      "Setting.ChangePassword": {
+        upperScreenName: "Setting",
+      },
       "Setting.Endpoint": {
         upperScreenName: "Setting",
       },
