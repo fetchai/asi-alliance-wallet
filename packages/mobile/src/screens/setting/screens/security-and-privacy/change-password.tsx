@@ -45,6 +45,12 @@ export const ChangePasswordScreen: FunctionComponent = observer(() => {
   >();
   const [isLoading, setIsLoading] = useState(false);
 
+  const currentPasswordErrors = currentPassword
+    ? checkPasswordValidity(currentPassword)
+    : [];
+  const isCurrentPasswordValid =
+    currentPassword.length > 0 && currentPasswordErrors.length === 0;
+
   const newPasswordErrors = newPassword
     ? checkPasswordValidity(newPassword)
     : [];
@@ -56,7 +62,7 @@ export const ChangePasswordScreen: FunctionComponent = observer(() => {
     confirmPassword.length > 0 && confirmPassword === newPassword;
 
   const canSubmit =
-    currentPassword.length >= 8 &&
+    isCurrentPasswordValid &&
     isNewPasswordValid &&
     isDifferentFromCurrent &&
     passwordsMatch &&
@@ -110,7 +116,12 @@ export const ChangePasswordScreen: FunctionComponent = observer(() => {
         containerStyle={style.flatten(["margin-top-18"]) as ViewStyle}
         secureTextEntry={!showCurrent}
         value={currentPassword}
-        error={currentPasswordError}
+        error={
+          currentPasswordError ||
+          (currentPassword && currentPasswordErrors.length > 0
+            ? "Password must be at least 8 characters with uppercase, lowercase, and special character"
+            : undefined)
+        }
         returnKeyType="next"
         onChangeText={(text: string) => {
           setCurrentPassword(text.trim());
@@ -261,11 +272,14 @@ export const ChangePasswordScreen: FunctionComponent = observer(() => {
         disabled={!canSubmit}
         loading={isLoading}
         containerStyle={
-          style.flatten([
-            "border-radius-64",
-            "margin-y-18",
-            "background-color-dark",
-          ]) as ViewStyle
+          [
+            style.flatten([
+              "border-radius-64",
+              "margin-y-18",
+              "background-color-dark",
+            ]),
+            { opacity: canSubmit ? 1 : 0.8 },
+          ] as ViewStyle
         }
         textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         onPress={handleChangePassword}

@@ -24,6 +24,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Dec } from "@keplr-wallet/unit";
 import { PageWithScrollView } from "components/page";
 import { observer } from "mobx-react-lite";
 import { useFocusedScreen } from "providers/focused-screen";
@@ -63,7 +64,9 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
     queries.cosmos.queryDelegations.getQueryBech32Address(
       account.bech32Address
     );
-  const delegations = queryDelegations.delegations;
+  const delegations = queryDelegations.delegations.filter((d) =>
+    new Dec(d.balance.amount).gt(new Dec(0))
+  );
 
   const queryUnbondingDelegations =
     queries.cosmos.queryUnbondingDelegations.getQueryBech32Address(

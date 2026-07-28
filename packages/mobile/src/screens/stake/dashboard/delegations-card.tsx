@@ -319,12 +319,12 @@ export const DelegationsCard: FunctionComponent<{
               </BlurBackground>
             );
           })
-        ) : (
+        ) : !queryDelegations.response && !queryDelegations.error ? (
           <ActivityIndicator
             size="large"
             color={style.get("color-dark").color}
           />
-        )}
+        ) : null}
       </React.Fragment>
     );
   }
