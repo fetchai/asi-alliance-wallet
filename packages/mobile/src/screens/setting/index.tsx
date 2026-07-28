@@ -148,7 +148,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
         />
       ) : null}
       <SettingSectionTitle title="Others" />
-      {chainStore.current.govUrl && (
+      {!chainStore.current.features?.includes("evm") && (
         <SettingItem
           label="Proposals"
           left={<ProposalIcon color="#151a1a" />}

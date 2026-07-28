@@ -2071,6 +2071,8 @@ export const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/injective/images/inj.png",
     features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
   },
   {
@@ -2676,6 +2678,7 @@ export const EmbedChainInfos: ChainInfo[] = [
     rest: "https://rest-gemini.fetch.ai",
     chainId: "gemini-1",
     chainName: "Gemini Testnet",
+    isTestnet: true,
     hideInUI: true,
     stakeCurrency: {
       coinDenom: "TESTFET",
