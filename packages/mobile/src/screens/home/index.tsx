@@ -173,7 +173,7 @@ export const HomeScreen: FunctionComponent = observer(() => {
         setRefreshing(false);
       });
     },
-    [accountStore, chainStore, priceStore, queriesStore]
+    [account, queries, priceStore]
   );
 
   function autoRefreshBalances(isLoading: boolean) {
