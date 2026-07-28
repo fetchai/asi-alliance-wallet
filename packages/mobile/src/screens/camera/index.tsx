@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useCallback, useState } from "react";
+import React, { FunctionComponent, useCallback, useRef, useState } from "react";
 import { useStyle } from "styles/index";
 import { PageWithView } from "components/page";
 import { useStore } from "stores/index";
@@ -62,6 +62,10 @@ export const CameraScreen: FunctionComponent = () => {
   // To prevent the reading while changing to other screen after processing the result.
   // Expectedly, screen should be moved to other after processing the result.
   const [isCompleted, setIsCompleted] = useState(false);
+  // Ref-based guard so the lock is visible immediately across all closures,
+  // preventing a concurrent camera callback from resetting isLoading before
+  // the primary async operation (e.g. biometric auth) completes.
+  const isProcessingRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,6 +73,7 @@ export const CameraScreen: FunctionComponent = () => {
       // the `isCompleted` state would remain as true because the screen in the stack is not unmounted.
       // So, we should reset the `isComplete` state whenever getting focused.
       setIsCompleted(false);
+      isProcessingRef.current = false;
     }, [])
   );
 
@@ -95,104 +100,110 @@ export const CameraScreen: FunctionComponent = () => {
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         isLoading={isLoading}
         onBarcodeScanned={async ({ data }) => {
-          if (!isLoading && !isCompleted) {
-            setIsLoading(true);
-            try {
-              if (data.startsWith("wc:")) {
-                await walletConnectStore.initClient(data);
+          if (isProcessingRef.current || isCompleted) {
+            return;
+          }
+          isProcessingRef.current = true;
+          setIsLoading(true);
+          let succeeded = false;
+          try {
+            if (data.startsWith("wc:")) {
+              await walletConnectStore.initClient(data);
 
-                smartNavigation.navigateSmart("Home", {});
-              } else {
-                const isBech32Address = (() => {
-                  try {
-                    // Check that the data is bech32 address.
-                    // If this is not valid bech32 address, it will throw an error.
-                    Bech32Address.validate(data);
-                  } catch {
-                    return false;
-                  }
-                  return true;
-                })();
-
-                if (isBech32Address) {
-                  const prefix = data.slice(0, data.indexOf("1"));
-                  let chainId: string | undefined;
-                  if (
-                    prefix.toLowerCase() === "fetch" &&
-                    chainStore.current.chainId === CHAIN_ID_DORADO
-                  ) {
-                    chainId = chainStore.current.chainId;
-                  } else {
-                    const chainInfo = chainStore.chainInfosInUI.find(
-                      (chainInfo) =>
-                        chainInfo.bech32Config.bech32PrefixAccAddr === prefix
-                    );
-                    chainId = chainInfo?.chainId;
-                  }
-
-                  if (chainId) {
-                    if (route.params.recipientConfig) {
-                      route.params.recipientConfig.setRawRecipient(data);
-                      navigation.goBack();
-                    } else {
-                      smartNavigation.pushSmart("Send", {
-                        chainId: chainId,
-                        recipient: data,
-                      });
-                    }
-                  } else {
-                    smartNavigation.navigateSmart("Home", {});
-                  }
-                } else if (!route.params.recipientConfig) {
-                  const sharedData =
-                    parseQRCodeDataForImportFromExtension(data);
-
-                  const improted = await importFromExtension(
-                    sharedData,
-                    chainStore.chainInfosInUI.map(
-                      (chainInfo) => chainInfo.chainId
-                    )
-                  );
-
-                  // In this case, there are other accounts definitely.
-                  // So, there is no need to consider the password.
-                  await registerExportedKeyRingDatas(
-                    keyRingStore,
-                    registerConfig,
-                    improted.KeyRingDatas,
-                    ""
-                  );
-
-                  await registerExportedAddressBooks(
-                    addressBookConfigMap,
-                    improted.addressBooks
-                  );
-
-                  smartNavigation.reset({
-                    index: 0,
-                    routes: [
-                      {
-                        name: "Register",
-                        params: {
-                          screen: "Register.End",
-                        },
-                      },
-                    ],
-                  });
-                } else {
-                  navigation.goBack();
-                  Toast.show({
-                    type: "error",
-                    text1: "Please Scan Valid QR",
-                  });
+              smartNavigation.navigateSmart("Home", {});
+            } else {
+              const isBech32Address = (() => {
+                try {
+                  // Check that the data is bech32 address.
+                  // If this is not valid bech32 address, it will throw an error.
+                  Bech32Address.validate(data);
+                } catch {
+                  return false;
                 }
-              }
+                return true;
+              })();
 
-              setIsCompleted(true);
-            } catch (e) {
-              console.log(e);
-            } finally {
-              setIsLoading(false);
+              if (isBech32Address) {
+                const prefix = data.slice(0, data.indexOf("1"));
+                let chainId: string | undefined;
+                if (
+                  prefix.toLowerCase() === "fetch" &&
+                  chainStore.current.chainId === CHAIN_ID_DORADO
+                ) {
+                  chainId = chainStore.current.chainId;
+                } else {
+                  const chainInfo = chainStore.chainInfosInUI.find(
+                    (chainInfo) =>
+                      chainInfo.bech32Config.bech32PrefixAccAddr === prefix
+                  );
+                  chainId = chainInfo?.chainId;
+                }
+
+                if (chainId) {
+                  if (route.params.recipientConfig) {
+                    route.params.recipientConfig.setRawRecipient(data);
+                    navigation.goBack();
+                  } else {
+                    smartNavigation.pushSmart("Send", {
+                      chainId: chainId,
+                      recipient: data,
+                    });
+                  }
+                } else {
+                  smartNavigation.navigateSmart("Home", {});
+                }
+              } else if (!route.params.recipientConfig) {
+                const sharedData = parseQRCodeDataForImportFromExtension(data);
+
+                const improted = await importFromExtension(
+                  sharedData,
+                  chainStore.chainInfosInUI.map(
+                    (chainInfo) => chainInfo.chainId
+                  )
+                );
+
+                // In this case, there are other accounts definitely.
+                // So, there is no need to consider the password.
+                await registerExportedKeyRingDatas(
+                  keyRingStore,
+                  registerConfig,
+                  improted.KeyRingDatas,
+                  ""
+                );
+
+                await registerExportedAddressBooks(
+                  addressBookConfigMap,
+                  improted.addressBooks
+                );
+
+                smartNavigation.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: "Register",
+                      params: {
+                        screen: "Register.End",
+                      },
+                    },
+                  ],
+                });
+              } else {
+                navigation.goBack();
+                Toast.show({
+                  type: "error",
+                  text1: "Please Scan Valid QR",
+                });
+              }
+            }
+
+            setIsCompleted(true);
+            succeeded = true;
+          } catch (e) {
+            console.log(e);
+          } finally {
+            setIsLoading(false);
+            if (!succeeded) {
+              isProcessingRef.current = false;
             }
           }
         }}

@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState } from "react";
+import React, { FunctionComponent, useRef, useState } from "react";
 import { FullScreenCameraView } from "components/camera";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { useStore } from "stores/index";
@@ -61,15 +61,17 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
   const smartNavigation = useSmartNavigation();
 
   const [isLoading, setIsLoading] = useState(false);
+  const isLoadingRef = useRef(false);
 
   const onBarcodeScanned = async ({ data }: { data: string }) => {
-    if (isLoading) {
+    if (isLoadingRef.current) {
       return;
     }
 
     try {
       const sharedData = parseQRCodeDataForImportFromExtension(data);
 
+      isLoadingRef.current = true;
       setIsLoading(true);
 
       const imported = await importFromExtension(
@@ -122,6 +124,7 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
       }
     } catch (e) {
       console.log(e);
+      isLoadingRef.current = false;
       setIsLoading(false);
       // Progress errors from animated QR frame collection are expected — stay on camera
       const msg = e?.message ?? "";
