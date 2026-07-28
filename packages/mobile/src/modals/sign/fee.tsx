@@ -125,15 +125,25 @@ export const FeeInSign: FunctionComponent<{
           <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
             Transaction fee:
           </Text>
-          <View style={style.flatten(["items-end"]) as ViewStyle}>
+          <View
+            style={
+              style.flatten(["flex", "flex-row", "items-end"]) as ViewStyle
+            }
+          >
             <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
-              {fee.trim(true).toString()}
+              {fee.trim(true).toMetricPrefix(isEvm).toString()}
             </Text>
             {price ? (
               <Text
-                style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
+                style={
+                  style.flatten([
+                    "body3",
+                    "color-gray-300",
+                    "margin-left-1",
+                  ]) as ViewStyle
+                }
               >
-                {price.toString()}
+                ({price.toString()})
               </Text>
             ) : null}
           </View>

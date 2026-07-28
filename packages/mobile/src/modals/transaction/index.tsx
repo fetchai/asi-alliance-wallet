@@ -8,6 +8,11 @@ import { CosmosTxTracer } from "@keplr-wallet/stores";
 import { Buffer } from "buffer";
 import { useStore } from "stores/index";
 import LottieView from "lottie-react-native";
+import {
+  NavigationProp,
+  ParamListBase,
+  useNavigation,
+} from "@react-navigation/native";
 
 enum TransactionStatus {
   Pending,
@@ -39,6 +44,7 @@ export const TransactionModal: FunctionComponent<{
   buttonText = "Go to Homescreen",
 }) => {
   const { chainStore } = useStore();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const [transactionState, setTransactionState] = useState<TransactionProcess>({
     status: TransactionStatus.Pending,
@@ -150,6 +156,28 @@ export const TransactionModal: FunctionComponent<{
             onHomeClick();
           }}
         />
+        {transactionState.status === TransactionStatus.Success ? (
+          <Button
+            text="View Details"
+            mode="outline"
+            size="large"
+            containerStyle={
+              style.flatten([
+                "border-radius-64",
+                "border-color-gray-100",
+                "margin-top-12",
+              ]) as ViewStyle
+            }
+            textStyle={style.flatten(["color-dark", "body2"]) as ViewStyle}
+            onPress={() => {
+              close();
+              navigation.navigate("Others", {
+                screen: "ActivityDetails",
+                params: { id: txnHash.toUpperCase() },
+              });
+            }}
+          />
+        ) : null}
       </IconWithText>
     </CardModal>
   );

@@ -34,10 +34,9 @@ import { txnTypeKey, txType } from "components/new/txn-status.tsx";
 import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-modal";
 import { GearIcon } from "components/new/icon/gear-icon";
 import { IconButton } from "components/new/button/icon";
-import { clearDecimals } from "modals/sign/messages";
 import {
+  formatBalance,
   formatFiatBalance,
-  numberLocalFormat,
   removeComma,
 } from "utils/format/format";
 
@@ -197,17 +196,12 @@ export const SendPhase2: FunctionComponent<{
     }
   };
 
-  function getAmountLabel() {
+  function getAmountCoinPretty(): CoinPretty {
     const amountConfig = sendConfigs.amountConfig;
     let dec = new Dec(amountConfig.amount ? amountConfig.amount : "0");
     dec = dec.mul(DecUtils.getTenExponentNInPrecisionRange(decimals));
     const amountInNumber = dec.truncate().toString();
-
-    return `${clearDecimals(
-      new CoinPretty(amountConfig.sendCurrency, new Int(amountInNumber))
-        .hideDenom(true)
-        .toString()
-    )} ${amountConfig.sendCurrency.coinDenom}`;
+    return new CoinPretty(amountConfig.sendCurrency, new Int(amountInNumber));
   }
 
   useEffect(() => {
@@ -335,9 +329,7 @@ export const SendPhase2: FunctionComponent<{
               style.flatten(["color-gray-300", "text-caption2"]) as ViewStyle
             }
           >
-            {`${numberLocalFormat(getAmountLabel().split(" ")[0])} ${
-              getAmountLabel().split(" ")[1]
-            }`}
+            {formatBalance(getAmountCoinPretty())}
           </Text>
         </View>
         <BlurButton
