@@ -30,23 +30,21 @@ export const LoadingIndicatorProvider: FunctionComponent = ({ children }) => {
   return (
     <LoadingIndicatorContext.Provider
       value={{
-        setIsLoading: (type: string, isLoading: boolean) => {
-          const loading = loadingList.find((loading) => loading.type === type);
-
-          if (loading) {
-            if (loading.isLoading === isLoading) {
-              return;
+        setIsLoading: (type: string, nextIsLoading: boolean) => {
+          setLoadingList((current) => {
+            const index = current.findIndex((loading) => loading.type === type);
+            if (index >= 0) {
+              if (current[index].isLoading === nextIsLoading) {
+                return current;
+              }
+              return current.map((loading, i) =>
+                i === index
+                  ? { type: loading.type, isLoading: nextIsLoading }
+                  : loading
+              );
             }
-            loading.isLoading = isLoading;
-            setLoadingList(loadingList.concat());
-          } else {
-            setLoadingList(
-              loadingList.concat({
-                type,
-                isLoading,
-              })
-            );
-          }
+            return current.concat({ type, isLoading: nextIsLoading });
+          });
         },
         isLoading: (type: string) => {
           const loading = loadingList.find((loading) => loading.type === type);
