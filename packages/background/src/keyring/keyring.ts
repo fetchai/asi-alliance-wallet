@@ -98,6 +98,8 @@ export class KeyRing {
     string,
     { address: Uint8Array; pubKey: Uint8Array }
   > = new Map();
+  private cardanoKeyFlights: Map<string, Promise<Key>> = new Map();
+  private cardanoKeyGeneration = 0;
   private cacheManager: AddressCacheManager;
 
   private loaded: boolean;
@@ -214,7 +216,9 @@ export class KeyRing {
    * Persistent cache is preserved to avoid re-derivation on unlock.
    */
   public clearCardanoMemoryCache(): void {
+    this.cardanoKeyGeneration += 1;
     this.cardanoKeyCache.clear();
+    this.cardanoKeyFlights.clear();
   }
 
   public async loadGenericChainCache(chainId: string): Promise<
@@ -2179,6 +2183,74 @@ export class KeyRing {
       },
       changed: true,
     };
+  }
+
+  /**
+   * Resolve one Cardano key without starting NetworkRuntime or Blockfrost.
+   */
+  public getCardanoKeyForKeyStore(
+    chainId: string,
+    keyStore: KeyStore
+  ): Promise<Key> {
+    const storeId = KeyRing.getKeyStoreId(keyStore);
+    const keyId = `cardano:${chainId}:${storeId}`;
+    const unlockSessionId = this.unlockSessionId;
+    const password = this.password;
+
+    const cached = this.cardanoKeyCache.get(keyId);
+    if (cached) {
+      return Promise.resolve({
+        algo: "cardano_address_only",
+        pubKey: new Uint8Array(),
+        address: cached.address,
+        isKeystone: false,
+        isNanoLedger: false,
+      });
+    }
+
+    const existingFlight = this.cardanoKeyFlights.get(keyId);
+    if (existingFlight) {
+      return existingFlight;
+    }
+
+    const cardanoKeyGeneration = this.cardanoKeyGeneration;
+    const flight = (async () => {
+      const { CardanoService } = await import("../cardano/service");
+      const key = await new CardanoService().deriveKeyFromKeyStore(
+        keyStore as any,
+        password,
+        this.crypto,
+        chainId
+      );
+
+      if (
+        this.unlockSessionId === unlockSessionId &&
+        this.cardanoKeyGeneration === cardanoKeyGeneration
+      ) {
+        this.cardanoKeyCache.set(keyId, {
+          address: key.address,
+          pubKey: key.pubKey,
+        });
+      }
+
+      return key;
+    })();
+
+    this.cardanoKeyFlights.set(keyId, flight);
+    flight.then(
+      () => {
+        if (this.cardanoKeyFlights.get(keyId) === flight) {
+          this.cardanoKeyFlights.delete(keyId);
+        }
+      },
+      () => {
+        if (this.cardanoKeyFlights.get(keyId) === flight) {
+          this.cardanoKeyFlights.delete(keyId);
+        }
+      }
+    );
+
+    return flight;
   }
 
   /**

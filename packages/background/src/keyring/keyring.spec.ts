@@ -776,6 +776,237 @@ describe("getKeysForCardano cold-cache offline path", () => {
   });
 });
 
+describe("getCardanoKeyForKeyStore", () => {
+  const chainId = "cardano-preprod";
+  const derivedKey = {
+    algo: "cardano_address_only",
+    pubKey: new Uint8Array(),
+    address: Buffer.from("addr_test1qz_single_flight", "utf8"),
+    isKeystone: false,
+    isNanoLedger: false,
+  };
+
+  const createSubject = () => {
+    const keyStore = {
+      version: "1.2" as const,
+      type: "mnemonic" as const,
+      curve: KeyCurves.secp256k1,
+      meta: {
+        __id__: "w-cardano-single-flight",
+        mnemonicLength: "24",
+      },
+      bip44HDPath: {
+        account: 0,
+        change: 0,
+        addressIndex: 0,
+      },
+      crypto: {
+        kdf: "scrypt",
+      },
+    };
+    const keyRing = makeKeyRing(
+      new MemoryKVStore("keyring-cardano-single-flight")
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [keyStore];
+    (keyRing as any).keyStore = keyStore;
+    (keyRing as any).password = "pw";
+    (keyRing as any).unlockSessionId = "session-1";
+
+    return {
+      keyRing,
+      keyStore,
+      keyId: `cardano:${chainId}:${keyStore.meta.__id__}`,
+    };
+  };
+
+  const deferred = <T>() => {
+    let resolve!: (value: T) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  };
+
+  const flushAsyncStart = () =>
+    new Promise<void>((resolve) => setImmediate(resolve));
+
+  it("shares one derivation between concurrent calls", async () => {
+    const { keyRing, keyStore } = createSubject();
+    const pending = deferred<any>();
+    const { CardanoService } = await import("../cardano/service");
+    const deriveSpy = jest
+      .spyOn(CardanoService.prototype, "deriveKeyFromKeyStore")
+      .mockReturnValue(pending.promise);
+
+    try {
+      const first = keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any);
+      const second = keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any);
+
+      expect(second).toBe(first);
+      await flushAsyncStart();
+      expect(deriveSpy).toHaveBeenCalledTimes(1);
+
+      pending.resolve(derivedKey);
+
+      await expect(Promise.all([first, second])).resolves.toEqual([
+        derivedKey,
+        derivedKey,
+      ]);
+    } finally {
+      deriveSpy.mockRestore();
+    }
+  });
+
+  it("returns a cached address with the get-key response shape", async () => {
+    const { keyRing, keyStore, keyId } = createSubject();
+    const { CardanoService } = await import("../cardano/service");
+    const deriveSpy = jest.spyOn(
+      CardanoService.prototype,
+      "deriveKeyFromKeyStore"
+    );
+    const address = Buffer.from("addr_test1qz_cached", "utf8");
+
+    (keyRing as any).cardanoKeyCache.set(keyId, {
+      address,
+      pubKey: Uint8Array.from([0xab, 0xcd]),
+    });
+
+    try {
+      await expect(
+        keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any)
+      ).resolves.toEqual({
+        algo: "cardano_address_only",
+        pubKey: new Uint8Array(),
+        address,
+        isKeystone: false,
+        isNanoLedger: false,
+      });
+      expect(deriveSpy).not.toHaveBeenCalled();
+    } finally {
+      deriveSpy.mockRestore();
+    }
+  });
+
+  it("retries after a derivation rejects", async () => {
+    const { keyRing, keyStore } = createSubject();
+    const { CardanoService } = await import("../cardano/service");
+    const deriveSpy = jest
+      .spyOn(CardanoService.prototype, "deriveKeyFromKeyStore")
+      .mockRejectedValueOnce(new Error("derive failed"))
+      .mockResolvedValueOnce(derivedKey as any);
+
+    try {
+      await expect(
+        keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any)
+      ).rejects.toThrow("derive failed");
+      await expect(
+        keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any)
+      ).resolves.toEqual(derivedKey);
+      expect(deriveSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      deriveSpy.mockRestore();
+    }
+  });
+
+  it("does not cache a derivation from an expired unlock session", async () => {
+    const { keyRing, keyStore, keyId } = createSubject();
+    const pending = deferred<any>();
+    const { CardanoService } = await import("../cardano/service");
+    const deriveSpy = jest
+      .spyOn(CardanoService.prototype, "deriveKeyFromKeyStore")
+      .mockReturnValue(pending.promise);
+
+    try {
+      const flight = keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any);
+      await flushAsyncStart();
+
+      (keyRing as any).unlockSessionId = "session-2";
+      keyRing.clearCardanoMemoryCache();
+      pending.resolve(derivedKey);
+
+      await expect(flight).resolves.toEqual(derivedKey);
+      expect((keyRing as any).cardanoKeyCache.has(keyId)).toBe(false);
+    } finally {
+      deriveSpy.mockRestore();
+    }
+  });
+
+  it("does not let an older flight remove its replacement", async () => {
+    const { keyRing, keyStore, keyId } = createSubject();
+    const firstPending = deferred<any>();
+    const secondPending = deferred<any>();
+    const { CardanoService } = await import("../cardano/service");
+    const deriveSpy = jest
+      .spyOn(CardanoService.prototype, "deriveKeyFromKeyStore")
+      .mockReturnValueOnce(firstPending.promise)
+      .mockReturnValueOnce(secondPending.promise);
+
+    try {
+      const first = keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any);
+      await flushAsyncStart();
+
+      keyRing.clearCardanoMemoryCache();
+      const second = keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any);
+      await flushAsyncStart();
+      expect(deriveSpy).toHaveBeenCalledTimes(2);
+
+      firstPending.resolve(derivedKey);
+      await expect(first).resolves.toEqual(derivedKey);
+      expect((keyRing as any).cardanoKeyFlights.get(keyId)).toBe(second);
+
+      secondPending.resolve(derivedKey);
+      await expect(second).resolves.toEqual(derivedKey);
+      expect((keyRing as any).cardanoKeyFlights.has(keyId)).toBe(false);
+    } finally {
+      deriveSpy.mockRestore();
+    }
+  });
+
+  it("does not let an invalidated flight overwrite the replacement cache", async () => {
+    const { keyRing, keyStore, keyId } = createSubject();
+    const firstPending = deferred<any>();
+    const secondPending = deferred<any>();
+    const firstKey = {
+      ...derivedKey,
+      address: Buffer.from("addr_test1qz_first", "utf8"),
+    };
+    const secondKey = {
+      ...derivedKey,
+      address: Buffer.from("addr_test1qz_second", "utf8"),
+    };
+    const { CardanoService } = await import("../cardano/service");
+    const deriveSpy = jest
+      .spyOn(CardanoService.prototype, "deriveKeyFromKeyStore")
+      .mockReturnValueOnce(firstPending.promise)
+      .mockReturnValueOnce(secondPending.promise);
+
+    try {
+      const first = keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any);
+      await flushAsyncStart();
+
+      keyRing.clearCardanoMemoryCache();
+      const second = keyRing.getCardanoKeyForKeyStore(chainId, keyStore as any);
+      await flushAsyncStart();
+
+      secondPending.resolve(secondKey);
+      await expect(second).resolves.toEqual(secondKey);
+
+      firstPending.resolve(firstKey);
+      await expect(first).resolves.toEqual(firstKey);
+      expect((keyRing as any).cardanoKeyCache.get(keyId)).toEqual({
+        address: secondKey.address,
+        pubKey: secondKey.pubKey,
+      });
+    } finally {
+      deriveSpy.mockRestore();
+    }
+  });
+});
+
 function makeKeyRing(kvStore: MemoryKVStore) {
   return new KeyRing(
     [],

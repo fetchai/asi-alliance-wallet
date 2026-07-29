@@ -543,12 +543,7 @@ export class KeyRingService {
       if (walletShouldLeaveCardanoChain(ks)) {
         throw new Error(CARDANO_ENSURE_MESSAGE.MNEMONIC_24);
       }
-      return await this.cardanoService.deriveKeyFromKeyStore(
-        ks as any,
-        this.keyRing.currentPassword,
-        this.crypto,
-        chainId
-      );
+      return await this.keyRing.getCardanoKeyForKeyStore(chainId, ks);
     }
 
     const ethereumKeyFeatures =

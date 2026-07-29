@@ -271,22 +271,24 @@ describe("KeyRingService", () => {
     });
 
     it("getKey uses offline KeyContext without NetworkRuntime ensure", async () => {
-      const mockDerive = jest.fn().mockResolvedValue({
+      const key = {
         algo: "cardano_address_only",
         pubKey: new Uint8Array(),
         address: Buffer.from("addr_test1qq"),
         isNanoLedger: false,
         isKeystone: false,
-      });
+      };
+      const keyStore = {
+        type: "mnemonic",
+        meta: { mnemonicLength: "24" },
+      };
+      const getCardanoKeyForKeyStore = jest.fn().mockResolvedValue(key);
       const restoreFromKeyStore = jest.fn();
       const { ensureReady } = attachMockSupervisor(service);
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
-        getCurrentKeyStore: jest.fn().mockReturnValue({
-          type: "mnemonic",
-          meta: { mnemonicLength: "24" },
-        }),
-        currentPassword: "pw",
+        getCurrentKeyStore: jest.fn().mockReturnValue(keyStore),
+        getCardanoKeyForKeyStore,
       } as any;
       service["chainsService"] = {
         getSelectedChain: jest.fn().mockResolvedValue("cosmoshub-4"),
@@ -297,22 +299,13 @@ describe("KeyRingService", () => {
         isReady: jest.fn().mockReturnValue(false),
         isKeyAgentReady: jest.fn().mockReturnValue(false),
         restoreFromKeyStore,
-        deriveKeyFromKeyStore: mockDerive,
         getKey: jest.fn(),
       } as any;
 
-      await expect(service.getKey("cardano-preprod")).resolves.toEqual({
-        algo: "cardano_address_only",
-        pubKey: new Uint8Array(),
-        address: Buffer.from("addr_test1qq"),
-        isNanoLedger: false,
-        isKeystone: false,
-      });
-      expect(mockDerive).toHaveBeenCalledWith(
-        expect.anything(),
-        "pw",
-        expect.anything(),
-        "cardano-preprod"
+      await expect(service.getKey("cardano-preprod")).resolves.toEqual(key);
+      expect(getCardanoKeyForKeyStore).toHaveBeenCalledWith(
+        "cardano-preprod",
+        keyStore
       );
       expect(restoreFromKeyStore).not.toHaveBeenCalled();
       expect(ensureReady).not.toHaveBeenCalled();
@@ -796,7 +789,11 @@ describe("KeyRingService", () => {
 
     it("concurrent key + transaction: key path skips supervisor ensure", async () => {
       const { ensureReady } = attachMockSupervisor(service);
-      const deriveKeyFromKeyStore = jest.fn().mockResolvedValue({
+      const keyStore = {
+        type: "mnemonic",
+        meta: { mnemonicLength: "24" },
+      };
+      const getCardanoKeyForKeyStore = jest.fn().mockResolvedValue({
         algo: "cardano_address_only",
         pubKey: new Uint8Array(),
         address: Buffer.from("addr_test1_offline"),
@@ -815,15 +812,11 @@ describe("KeyRingService", () => {
       } as any;
       service["keyRing"] = {
         status: KeyRingStatus.UNLOCKED,
-        getCurrentKeyStore: jest.fn().mockReturnValue({
-          type: "mnemonic",
-          meta: { mnemonicLength: "24" },
-        }),
-        currentPassword: "pw",
+        getCurrentKeyStore: jest.fn().mockReturnValue(keyStore),
+        getCardanoKeyForKeyStore,
       } as any;
       service["cardanoService"] = {
         restoreFromKeyStore: jest.fn(),
-        deriveKeyFromKeyStore,
         isReadyForChain: jest.fn().mockReturnValue(true),
         isReady: jest.fn().mockReturnValue(true),
         getRuntimeState: jest.fn().mockReturnValue("ready"),
@@ -834,7 +827,10 @@ describe("KeyRingService", () => {
         service.ensureCardanoServiceReady("cardano-preview")
       ).resolves.toBeUndefined();
 
-      expect(deriveKeyFromKeyStore).toHaveBeenCalledTimes(1);
+      expect(getCardanoKeyForKeyStore).toHaveBeenCalledWith(
+        "cardano-preview",
+        keyStore
+      );
       expect(ensureReady).toHaveBeenCalledTimes(1);
       expect(
         service["cardanoService"].restoreFromKeyStore

@@ -16,6 +16,7 @@ import { ExtensionKVStore } from "@keplr-wallet/common";
 import { init, ScryptParams } from "@keplr-wallet/background";
 import scrypt from "scrypt-js";
 import { Buffer } from "buffer/";
+import { runScryptExclusive } from "./scrypt-queue";
 
 import {
   CommunityChainInfoRepo,
@@ -40,13 +41,15 @@ const { initFn } = init(
       return Promise.resolve(crypto.getRandomValues(array));
     },
     scrypt: async (text: string, params: ScryptParams) => {
-      return await scrypt.scrypt(
-        Buffer.from(text),
-        Buffer.from(params.salt, "hex"),
-        params.n,
-        params.r,
-        params.p,
-        params.dklen
+      return await runScryptExclusive(() =>
+        scrypt.scrypt(
+          Buffer.from(text),
+          Buffer.from(params.salt, "hex"),
+          params.n,
+          params.r,
+          params.p,
+          params.dklen
+        )
       );
     },
   },
