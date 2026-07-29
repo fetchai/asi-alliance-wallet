@@ -48,7 +48,11 @@ describe("NetworkAuthority", () => {
         chainId: "dorado-1",
         revision: 7,
       });
-      const { authority, publisher } = createTestNetworkAuthority({ kvStore });
+      const observed: NetworkAuthoritySnapshot[] = [];
+      const { authority, publisher } = createTestNetworkAuthority({
+        kvStore,
+        observers: [(snapshot) => observed.push(snapshot)],
+      });
 
       await authority.hydrate();
 
@@ -57,6 +61,7 @@ describe("NetworkAuthority", () => {
         revision: 7,
       });
       expect(publisher.publishInternalSurfacesSync).not.toHaveBeenCalled();
+      expect(observed).toEqual([{ chainId: "dorado-1", revision: 7 }]);
     });
 
     it("repairs missing durable chain at stored.revision + 1 before ready", async () => {
@@ -215,6 +220,7 @@ describe("NetworkAuthority", () => {
         observers: [(snapshot) => observed.push(snapshot)],
       });
       await authority.hydrate();
+      observed.length = 0;
       publisher.publishInternalSurfacesSync.mockClear();
       publisher.publishWebpageNetworkChanged.mockClear();
 
@@ -292,13 +298,15 @@ describe("NetworkAuthority", () => {
           (snapshot) => second.push(snapshot),
         ],
       });
-      await authority.hydrate();
-      publisher.publishInternalSurfacesSync.mockClear();
-      publisher.publishWebpageNetworkChanged.mockClear();
-
       const warn = jest
         .spyOn(console, "warn")
         .mockImplementation(() => undefined);
+
+      await authority.hydrate();
+      second.length = 0;
+      publisher.publishInternalSurfacesSync.mockClear();
+      publisher.publishWebpageNetworkChanged.mockClear();
+      warn.mockClear();
 
       await expect(authority.select("dorado-1")).resolves.toEqual({
         chainId: "dorado-1",

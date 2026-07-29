@@ -401,6 +401,71 @@ describe("ChainsService NetworkAuthority wire-up", () => {
       )
     ).toThrow(/requires NetworkAuthority/);
   });
+
+  it("failed startup hydrate then recovery syncs mirrors and Cardano supervisor", async () => {
+    const kv = new MemoryKVStore("test-hydrate-startup-recovery");
+    await kv.set("network_authority_snapshot", {
+      chainId: "cardano-mainnet",
+      revision: 4,
+    });
+
+    let authorityReads = 0;
+    const originalGet = kv.get.bind(kv);
+    kv.get = (async (key: string) => {
+      if (key === "network_authority_snapshot") {
+        authorityReads += 1;
+        if (authorityReads === 1) {
+          throw new Error("transient kv read failure");
+        }
+      }
+      return originalGet(key);
+    }) as typeof kv.get;
+
+    const chainsService = new ChainsService(kv, CARDANO_TEST_CHAINS);
+    chainsService.init(
+      { replaceChainInfo: async (c: ChainInfo) => c } as any,
+      { dispatchEvent: jest.fn() } as any,
+      {} as any
+    );
+    chainsService.wireNetworkAuthority({
+      readLegacyLastViewChainId: async () => undefined,
+    });
+
+    // Mimic background initFn + Router.listen: hydrate failure must not leave
+    // the startup latch unresolved.
+    let initLatchResolved = false;
+    await (async () => {
+      try {
+        await chainsService.hydrateNetworkAuthority();
+      } catch {
+        // Continue startup so router messages can proceed.
+      }
+      initLatchResolved = true;
+    })();
+    expect(initLatchResolved).toBe(true);
+    expect(chainsService.peekSelectedChainId()).toBeUndefined();
+    expect(chainsService.getCommittedRevision()).toBe(0);
+
+    const host = new MemoryCardanoRuntimeHost();
+    const supervisor = new CardanoRuntimeSupervisor({
+      host,
+      isCardanoChain: (id) => chainsService.isCardanoFeatureSync(id),
+    });
+    chainsService.subscribeNetworkAuthority((snapshot, previous) => {
+      supervisor.onAuthorityCommitted(snapshot, previous);
+    });
+
+    // Recovery without calling hydrateNetworkAuthority again: ensureHydrated
+    // succeeds and notifies observers so mirrors/supervisor stay consistent.
+    await expect(chainsService.getSelectedChainSnapshot()).resolves.toEqual({
+      chainId: "cardano-mainnet",
+      revision: 4,
+    });
+    expect(chainsService.peekSelectedChainId()).toBe("cardano-mainnet");
+    expect(chainsService.getCommittedRevision()).toBe(4);
+    expect(supervisor.getOwnerChainId()).toBe("cardano-mainnet");
+    expect(supervisor.getOwnerRevision()).toBe(4);
+  });
 });
 
 describe("CardanoService advertised readiness", () => {

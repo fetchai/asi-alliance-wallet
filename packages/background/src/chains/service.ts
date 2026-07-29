@@ -786,7 +786,8 @@ export class ChainsService {
 
   /**
    * Attach durable selected-chain authority. Call once during background init
-   * before hydrate, together with CardanoRuntimeSupervisor subscription.
+   * before hydrate. Startup may continue if hydrate fails; mirrors are synced
+   * from authority observers when hydrate later succeeds.
    */
   wireNetworkAuthority(options: {
     readLegacyLastViewChainId: () => Promise<string | undefined>;

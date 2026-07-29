@@ -175,6 +175,9 @@ export class NetworkAuthority {
     if (storedRaw === undefined || storedRaw === null) {
       await this.hydrateFromLegacyOrFallback(chainInfos);
       this.hydrated = true;
+      // Notify so ChainsService mirrors sync even if startup hydrate was retried
+      // via ensureHydrated after an earlier failure (no revision bump / publish).
+      this.notifyObserversOfCurrentSnapshot(undefined);
       return;
     }
 
@@ -203,6 +206,8 @@ export class NetworkAuthority {
         revision: stored.revision,
       };
       this.hydrated = true;
+      // Silent load still notifies mirrors/supervisor for post-failure recovery.
+      this.notifyObserversOfCurrentSnapshot(undefined);
       return;
     }
 
@@ -217,6 +222,25 @@ export class NetworkAuthority {
       { publish: true, notifyObservers: true }
     );
     this.hydrated = true;
+  }
+
+  private notifyObserversOfCurrentSnapshot(
+    previous: NetworkAuthoritySnapshot | undefined
+  ): void {
+    if (!this.snapshot) {
+      return;
+    }
+    const next = { ...this.snapshot };
+    for (const observer of this.observers) {
+      try {
+        observer(next, previous);
+      } catch (error) {
+        console.warn(
+          "[NetworkAuthority] hydrate observer failed after hydrate:",
+          error
+        );
+      }
+    }
   }
 
   private async hydrateFromLegacyOrFallback(

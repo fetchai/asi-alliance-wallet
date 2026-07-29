@@ -169,8 +169,9 @@ export class KeyRingService {
       }
     });
 
-    // Hydrate completes before KeyRing init and does not notify observers.
-    // Adopt the already-committed snapshot so the first ensure is not stale.
+    // Prefer adopting mirrors after a successful hydrateNetworkAuthority().
+    // If startup hydrate failed and later recovered via ensureHydrated, authority
+    // observers notify and onAuthorityCommitted updates ownership instead.
     const hydratedChainId = this.chainsService.peekSelectedChainId();
     const hydratedRevision = this.chainsService.getCommittedRevision();
     if (hydratedChainId != null && hydratedRevision >= 1) {

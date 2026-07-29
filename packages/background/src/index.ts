@@ -206,7 +206,14 @@ export function init(
           );
         },
       });
-      await chainsService.hydrateNetworkAuthority();
+      try {
+        await chainsService.hydrateNetworkAuthority();
+      } catch (e) {
+        console.error(
+          "[background] Failed to hydrate network authority during startup:",
+          e
+        );
+      }
       ledgerService.init(interactionService);
       keystoneService.init(interactionService);
       keyRingService.init(
