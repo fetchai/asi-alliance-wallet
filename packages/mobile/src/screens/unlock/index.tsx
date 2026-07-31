@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Alert,
   Image,
   Platform,
   Text,
@@ -77,7 +78,8 @@ enum AutoBiomtricStatus {
 const useAutoBiomtric = (
   keychainStore: KeychainStore,
   tryEnabled: boolean,
-  callback: (isLoading: boolean) => void
+  callback: (isLoading: boolean) => void,
+  onError?: (e: Error) => void
 ) => {
   const [status, setStatus] = useState(AutoBiomtricStatus.NO_NEED);
   const tryBiometricAutoOnce = useRef(false);
@@ -103,6 +105,7 @@ const useAutoBiomtric = (
         } catch (e) {
           console.log(e);
           setStatus(AutoBiomtricStatus.FAILED);
+          if (onError) onError(e);
         } finally {
           callback(false);
         }
@@ -134,6 +137,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   const safeAreaInsets = useSafeAreaInsets();
 
   const navigateToHomeOnce = useRef(false);
+  const biometricNeedsReset = useRef(false);
   const navigateToHome = useCallback(async () => {
     if (!navigateToHomeOnce.current) {
       analyticsStore.logEvent("sign_in_click");
@@ -149,6 +153,18 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     keyRingStore.status === KeyRingStatus.LOCKED,
     (isLoading) => {
       setIsBiometricLoading(isLoading);
+    },
+    (e) => {
+      if (e?.message?.includes("Unmatched mac")) {
+        biometricNeedsReset.current = true;
+        keychainStore.reset();
+        Toast.show({
+          type: "error",
+          text1: "Biometric Verification Failed",
+          text2:
+            "Your password or biometric data has changed. Sign in with your password to re-enable it.",
+        });
+      }
     }
   );
 
@@ -180,11 +196,13 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     } catch (e) {
       console.log(e);
       if (e.message.includes("Unmatched mac")) {
+        biometricNeedsReset.current = true;
+        keychainStore.reset();
         Toast.show({
           type: "error",
           text1: "Biometric Verification Failed",
           text2:
-            "Your biometric data has changed. Please log in with your password and update your biometric settings.",
+            "Your password or biometric data has changed. Sign in with your password to re-enable it.",
         });
       } else if (!e.message.includes("code: 13")) {
         Toast.show({
@@ -238,9 +256,41 @@ export const UnlockScreen: FunctionComponent = observer(() => {
 
   useEffect(() => {
     if (keyRingStore.status === KeyRingStatus.UNLOCKED) {
-      navigateToHome();
+      if (biometricNeedsReset.current) {
+        biometricNeedsReset.current = false;
+        const biometryLabel =
+          keychainStore.biometryType === "FaceID"
+            ? "Face ID"
+            : keychainStore.biometryType === "TouchID"
+            ? "Touch ID"
+            : "Biometric Login";
+        Alert.alert(
+          `Re-enable ${biometryLabel}`,
+          `Your ${biometryLabel} was disabled because your credentials changed. Re-enable it now?`,
+          [
+            {
+              text: "Not Now",
+              style: "cancel",
+              onPress: () => navigateToHome(),
+            },
+            {
+              text: "Re-enable",
+              onPress: async () => {
+                try {
+                  await keychainStore.turnOnBiometry(password);
+                } catch (e) {
+                  console.log(e);
+                }
+                navigateToHome();
+              },
+            },
+          ]
+        );
+      } else {
+        navigateToHome();
+      }
     }
-  }, [keyRingStore.status, navigateToHome]);
+  }, [keyRingStore.status, navigateToHome, keychainStore, password]);
 
   if (
     [KeyRingStatus.EMPTY, KeyRingStatus.NOTLOADED].includes(keyRingStore.status)
@@ -253,7 +303,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       <ScreenBackground
         backgroundMode="secondary"
         backgroundBlur={true}
-        isTransparentHeader={true}
+        hasFloatingHeader={true}
       />
       <View
         style={
@@ -364,15 +414,21 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 }
               >
                 <View style={style.flatten(["items-center"]) as ViewStyle}>
-                  {Platform.OS === "android" ? (
-                    <FingerprintIcon color={"#151a1a"} />
-                  ) : (
+                  {keychainStore.biometryType === "FaceID" ? (
                     <FaceDetectIcon color={"#151a1a"} />
+                  ) : (
+                    <FingerprintIcon color={"#151a1a"} />
                   )}
                 </View>
                 <Button
                   textStyle={style.flatten(["color-dark", "h5"]) as ViewStyle}
-                  text="Use Biometric Authentication"
+                  text={
+                    keychainStore.biometryType === "FaceID"
+                      ? "Use Face ID"
+                      : keychainStore.biometryType === "TouchID"
+                      ? "Use Touch ID"
+                      : "Use Biometric Authentication"
+                  }
                   mode="text"
                   loading={isBiometricLoading}
                   showLoadingSpinner={true}

@@ -25,7 +25,7 @@ const checkPasswordValidity = (value: string): string[] => {
 };
 
 export const ChangePasswordScreen: FunctionComponent = observer(() => {
-  const { keyRingStore } = useStore();
+  const { keyRingStore, keychainStore } = useStore();
   const style = useStyle();
   const navigation = useNavigation();
 
@@ -79,9 +79,48 @@ export const ChangePasswordScreen: FunctionComponent = observer(() => {
         return;
       }
       await keyRingStore.updatePassword(currentPassword, newPassword);
-      Alert.alert("Success", "Password changed successfully", [
-        { text: "OK", onPress: () => navigation.goBack() },
-      ]);
+
+      if (keychainStore.isBiometryOn) {
+        const biometryLabel =
+          keychainStore.biometryType === "FaceID"
+            ? "Face ID"
+            : keychainStore.biometryType === "TouchID"
+            ? "Touch ID"
+            : "Biometric Authentication";
+        Alert.alert("Success", "Password changed successfully", [
+          {
+            text: "OK",
+            onPress: () => {
+              Alert.alert(
+                "Update Biometric",
+                `Would you like to update your ${biometryLabel} to use the new password?`,
+                [
+                  {
+                    text: "Not Now",
+                    style: "cancel",
+                    onPress: () => navigation.goBack(),
+                  },
+                  {
+                    text: `Update ${biometryLabel}`,
+                    onPress: async () => {
+                      try {
+                        await keychainStore.turnOnBiometry(newPassword);
+                      } catch (e) {
+                        console.log(e);
+                      }
+                      navigation.goBack();
+                    },
+                  },
+                ]
+              );
+            },
+          },
+        ]);
+      } else {
+        Alert.alert("Success", "Password changed successfully", [
+          { text: "OK", onPress: () => navigation.goBack() },
+        ]);
+      }
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Unable to change password");
     } finally {
@@ -107,6 +146,7 @@ export const ChangePasswordScreen: FunctionComponent = observer(() => {
   return (
     <PageWithScrollView
       backgroundMode="secondary"
+      hasFloatingHeader={true}
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >

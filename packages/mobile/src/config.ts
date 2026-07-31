@@ -2640,6 +2640,7 @@ export const EmbedChainInfos: ChainInfo[] = [
       coinDenom: "TESTFET",
       coinMinimalDenom: "atestfet",
       coinDecimals: 18,
+      coinGeckoId: "fetch-ai",
     },
     bip44: {
       coinType: 118,
@@ -2650,6 +2651,7 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "TESTFET",
         coinMinimalDenom: "atestfet",
         coinDecimals: 18,
+        coinGeckoId: "fetch-ai",
       },
       {
         coinDenom: "MOBX",
@@ -2662,6 +2664,7 @@ export const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "TESTFET",
         coinMinimalDenom: "atestfet",
         coinDecimals: 18,
+        coinGeckoId: "fetch-ai",
         gasPriceStep: {
           low: 0,
           average: 5000000000,
