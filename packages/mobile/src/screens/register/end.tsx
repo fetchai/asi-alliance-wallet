@@ -94,7 +94,11 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
           }
         >
           <Text style={style.flatten(["subtitle1", "color-dark"]) as ViewStyle}>
-            Enable Biometric
+            {keychainStore.biometryType === "FaceID"
+              ? "Enable Face ID"
+              : keychainStore.biometryType === "TouchID"
+              ? "Enable Touch ID"
+              : "Enable Biometric"}
           </Text>
           <View style={style.get("flex-1")} />
           <Toggle

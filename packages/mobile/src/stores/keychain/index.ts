@@ -8,6 +8,9 @@ export class KeychainStore {
   protected _isBiometrySupported: boolean = false;
 
   @observable
+  protected _biometryType: Keychain.BIOMETRY_TYPE | null = null;
+
+  @observable
   protected _isBiometryOn: boolean = false;
 
   @observable
@@ -32,6 +35,10 @@ export class KeychainStore {
 
   get isBiometrySupported(): boolean {
     return this._isBiometrySupported;
+  }
+
+  get biometryType(): Keychain.BIOMETRY_TYPE | null {
+    return this._biometryType;
   }
 
   get isBiometryOn(): boolean {
@@ -148,6 +155,7 @@ export class KeychainStore {
       Keychain.getSupportedBiometryType(KeychainStore.defaultOptions)
     );
     this._isBiometrySupported = type != null;
+    this._biometryType = type;
   }
 
   @flow

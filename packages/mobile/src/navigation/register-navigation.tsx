@@ -2,6 +2,7 @@ import React, { FunctionComponent } from "react";
 import { useStyle } from "styles/index";
 import { TransitionPresets } from "@react-navigation/stack";
 import {
+  HeaderLeftBackLightButton,
   HeaderOnSecondaryScreenOptionsPreset,
   TransparentHeaderOptionsPreset,
 } from "components/header";
@@ -73,8 +74,8 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.MigrateETH"
         component={MigrateETHScreen}
@@ -90,8 +91,8 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.Ledger"
         component={LedgerScreen}
@@ -100,6 +101,7 @@ export const RegisterNavigation: FunctionComponent = () => {
         options={{
           ...TransparentHeaderOptionsPreset,
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.TorusSignIn"
         component={TorusSignInScreen}
@@ -107,8 +109,8 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.ImportFromExtension.Intro"
         component={ImportFromExtensionIntroScreen}
@@ -123,8 +125,8 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.ImportFromExtension.SetPassword"
         component={ImportFromExtensionSetPasswordScreen}
