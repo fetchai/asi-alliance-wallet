@@ -673,6 +673,8 @@ const DelegateReward: FunctionComponent<{
                   }}
                   disabled={!account.isReadyToSendTx}
                   loading={isSendingTx == val.operator_address}
+                  showLoadingSpinner={true}
+                  loaderColor={style.get("color-dark").color}
                 />
               </View>
             ) : null}

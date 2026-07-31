@@ -39,6 +39,7 @@ export const Button: FunctionComponent<{
   leftIcon,
   rightIcon,
   loading = false,
+  loaderColor,
   showLoadingSpinner = false,
   disabled = false,
   onPress,
@@ -364,7 +365,7 @@ export const Button: FunctionComponent<{
           >
             {showLoadingSpinner ? (
               <LoadingSpinner
-                color={style.flatten(["color-white"]).color}
+                color={loaderColor ?? style.flatten(["color-white"]).color}
                 size={20}
               />
             ) : (

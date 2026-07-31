@@ -98,6 +98,7 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
               feeButtonState.setIsGasInputOpen(next);
               if (!next) {
                 props.onValidationChange?.(false);
+                props.feeConfig.setFeeType(props.selectFeeButton ?? "average");
               }
               if (props.pageName)
                 analyticsStore.logEvent("fee_advance_click", {

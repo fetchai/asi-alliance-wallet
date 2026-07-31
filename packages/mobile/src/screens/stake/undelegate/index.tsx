@@ -129,9 +129,13 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
     : "";
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
-    sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
-  );
+  const feePrice = sendConfigs.feeConfig.isManual
+    ? sendConfigs.feeConfig.fee
+    : sendConfigs.feeConfig.getFeeTypePretty(
+        sendConfigs.feeConfig.feeType
+          ? sendConfigs.feeConfig.feeType
+          : "average"
+      );
 
   const unstakeBalance = async () => {
     if (!networkIsConnected) {
@@ -319,7 +323,9 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
               ]) as ViewStyle
             }
           >
-            {feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+            {feePrice
+              ? feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+              : ""}
           </Text>
           <IconButton
             backgroundBlur={false}
