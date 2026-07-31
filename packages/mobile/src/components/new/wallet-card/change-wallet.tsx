@@ -1,8 +1,9 @@
 import React, { FunctionComponent } from "react";
 import { CardModal } from "modals/card";
-import { Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { RectButton } from "components/rect-button";
+import { TouchableOpacity } from "react-native-gesture-handler";
 import { CheckIcon } from "components/new/icon/check";
 import { EditIcon } from "components/new/icon/edit";
 import { Button } from "components/button";

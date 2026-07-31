@@ -1,6 +1,6 @@
 import React, { FunctionComponent } from "react";
 import { BlurView } from "expo-blur";
-import { ViewStyle } from "react-native";
+import { View, ViewStyle } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 
 export const BlurBackground: FunctionComponent<{
@@ -19,39 +19,28 @@ export const BlurBackground: FunctionComponent<{
   onPress,
   children,
 }) => {
-  return onPress ? (
-    <TouchableOpacity activeOpacity={0.6} onPress={onPress}>
-      <BlurView
-        intensity={backgroundBlur ? blurIntensity : 0}
-        tint={blurType}
-        // blurReductionFactor={1}
-        // experimentalBlurMethod="dimezisBlurView"
-        style={[
-          {
-            borderRadius: borderRadius,
-            overflow: "hidden",
-          },
-          containerStyle,
-        ]}
-      >
-        {children}
-      </BlurView>
-    </TouchableOpacity>
-  ) : (
+  const containerStyleMerged = [
+    { borderRadius, overflow: "hidden" as const },
+    containerStyle,
+  ];
+
+  const content = backgroundBlur ? (
     <BlurView
-      intensity={backgroundBlur ? blurIntensity : 0}
+      intensity={blurIntensity}
       tint={blurType}
-      // blurReductionFactor={1}
-      // experimentalBlurMethod="dimezisBlurView"
-      style={[
-        {
-          borderRadius: borderRadius,
-          overflow: "hidden",
-        },
-        containerStyle,
-      ]}
+      style={containerStyleMerged}
     >
       {children}
     </BlurView>
+  ) : (
+    <View style={containerStyleMerged}>{children}</View>
+  );
+
+  return onPress ? (
+    <TouchableOpacity activeOpacity={0.6} onPress={onPress}>
+      {content}
+    </TouchableOpacity>
+  ) : (
+    content
   );
 };

@@ -27,7 +27,15 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
       <PasswordInputModal
         title={
           !isTurnOffBiometryFallback
-            ? "Enable Biometric Authentication"
+            ? keychainStore.biometryType === "FaceID"
+              ? "Enable Face ID"
+              : keychainStore.biometryType === "TouchID"
+              ? "Enable Touch ID"
+              : "Enable Biometric Authentication"
+            : keychainStore.biometryType === "FaceID"
+            ? "Disable Face ID"
+            : keychainStore.biometryType === "TouchID"
+            ? "Disable Touch ID"
             : "Disable Biometric Authentication"
         }
         isOpen={isOpenModal}
@@ -48,7 +56,13 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
         }}
       />
       <SettingItem
-        label="Use Biometric Authentication"
+        label={
+          keychainStore.biometryType === "FaceID"
+            ? "Use Face ID"
+            : keychainStore.biometryType === "TouchID"
+            ? "Use Touch ID"
+            : "Use Biometric Authentication"
+        }
         left={<FingerPrintIconWithoutCircle size={16} />}
         right={
           <Switch
@@ -57,13 +71,6 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
               true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
             }}
             thumbColor={keychainStore.isBiometryOn ? "#73A271" : "#9A9AA2"}
-            style={[
-              {
-                borderRadius: 16,
-                borderWidth: 1,
-              },
-              style.flatten(["border-color-gray-100"]),
-            ]}
             onValueChange={async (value) => {
               if (value) {
                 setIsOpenModal(true);

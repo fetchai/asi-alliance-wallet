@@ -65,13 +65,6 @@ export const GasInput: FunctionComponent<{
             true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
           }}
           thumbColor={autoEnabled ? "#73A271" : "#9A9AA2"}
-          style={[
-            {
-              borderRadius: 16,
-              borderWidth: 1,
-            },
-            style.flatten(["border-color-gray-100"]),
-          ]}
           onValueChange={() => setAutoEnabled(!autoEnabled)}
           value={autoEnabled}
         />
