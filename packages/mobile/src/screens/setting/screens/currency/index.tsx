@@ -30,6 +30,7 @@ export const CurrencyScreen: FunctionComponent = observer(() => {
   return (
     <PageWithScrollView
       backgroundMode="secondary"
+      hasFloatingHeader={true}
       style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
     >
       {currencyItems.map((item) => {

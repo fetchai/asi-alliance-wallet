@@ -62,7 +62,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
   return (
     <PageWithScrollViewInBottomTabView
       backgroundMode="secondary"
-      isTransparentHeader={true}
+      hasFloatingHeader={true}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       contentContainerStyle={{
         paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,

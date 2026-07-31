@@ -112,6 +112,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
   return addressBookConfig.addressBookDatas.length > 0 ? (
     <PageWithScrollView
       backgroundMode="secondary"
+      hasFloatingHeader={true}
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -247,6 +248,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
   ) : (
     <PageWithScrollView
       backgroundMode="secondary"
+      hasFloatingHeader={true}
       contentContainerStyle={style.flatten(["flex-grow-1"])}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       scrollEnabled={false}
