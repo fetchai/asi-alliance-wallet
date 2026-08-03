@@ -23,14 +23,14 @@ export enum txnTypeKey {
 export const txType: txTypes = {
   ibcTransfer: "IBC Transfer",
   send: "Send Transaction",
-  withdrawRewards: "Rewards withdrawl",
+  withdrawRewards: "Rewards Withdrawal",
   delegate: "Delegation",
   undelegate: "Undelegation",
   redelegate: "Redelegation",
   govVote: "Governance Vote",
   nativeBridgeSend: "Bridging",
-  approval: "Approve txn",
-  createSecret20ViewingKey: "Secret key creation",
+  approval: "Approve Transaction",
+  createSecret20ViewingKey: "Secret Key Creation",
 };
 export const TxnStatus: FunctionComponent<{
   txnType: string;
@@ -50,7 +50,8 @@ export const TxnStatus: FunctionComponent<{
             "padding-x-18",
             "padding-y-12",
             "border-width-1",
-            "border-color-indigo-20",
+            "border-color-gray-100",
+            "background-color-gray-5",
           ]),
           containerStyle,
         ] as ViewStyle
@@ -59,7 +60,7 @@ export const TxnStatus: FunctionComponent<{
       <Text
         style={
           [
-            style.flatten(["color-white", "body3"]),
+            style.flatten(["color-dark", "body3"]),
             { lineHeight: 16 },
           ] as ViewStyle
         }
@@ -67,10 +68,7 @@ export const TxnStatus: FunctionComponent<{
         {`${txnType} in progress`}
       </Text>
       <View style={style.flatten(["margin-left-8"]) as ViewStyle}>
-        <ActivityIndicator
-          size="small"
-          color={style.get("color-white").color}
-        />
+        <ActivityIndicator size="small" color={style.get("color-dark").color} />
       </View>
     </BlurBackground>
   );

@@ -8,7 +8,6 @@ import { observer } from "mobx-react-lite";
 import { GovActivityRow } from "screens/activity/gov-proposals/activity-row";
 import { govOptions, processFilters } from "screens/activity/utils";
 import { FilterItem, FilterView } from "components/filter";
-import { isFeatureAvailable } from "utils/index";
 
 export const GovProposalsTab: FunctionComponent<{
   isOpenModal: boolean;
@@ -28,7 +27,6 @@ export const GovProposalsTab: FunctionComponent<{
   }) => {
     const style = useStyle();
     const { chainStore, queriesStore, activityStore } = useStore();
-    const current = chainStore.current;
 
     const queries = queriesStore.get(chainStore.current.chainId);
     const proposalLoading = queries.cosmos.queryGovernance.isFetching;
@@ -84,14 +82,12 @@ export const GovProposalsTab: FunctionComponent<{
 
     return (
       <React.Fragment>
-        {isFeatureAvailable(current.chainId) &&
-        nodes.length > 0 &&
-        !proposalLoading ? (
+        {nodes.length > 0 && !proposalLoading ? (
           renderList(nodes)
         ) : proposalLoading ? (
           <ActivityIndicator
             size="large"
-            color={style.get("color-white").color}
+            color={style.get("color-dark").color}
           />
         ) : (
           <NoActivityView />

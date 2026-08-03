@@ -33,6 +33,11 @@ import * as Location from "expo-location";
 import { LocationAccuracy } from "expo-location";
 import DeviceInfo from "react-native-device-info";
 import { LedgerLocationErrorModel } from "modals/ledger/ledger-error";
+import { SelectNetwork } from "components/new/select-network";
+import {
+  getNextDefaultAccountName,
+  validateAccountName,
+} from "utils/format/format";
 
 interface FormData {
   name: string;
@@ -64,7 +69,7 @@ export const LedgerScreen: FunctionComponent = () => {
 
   const style = useStyle();
 
-  const { analyticsStore, ledgerInitStore } = useStore();
+  const { analyticsStore, ledgerInitStore, keyRingStore } = useStore();
 
   const smartNavigation = useSmartNavigation();
 
@@ -77,10 +82,17 @@ export const LedgerScreen: FunctionComponent = () => {
     handleSubmit,
     setFocus,
     getValues,
+    watch,
     formState: { errors },
   } = useForm<FormData>();
 
+  const defaultAccountName = getNextDefaultAccountName(
+    keyRingStore.multiKeyStoreInfo
+  );
+  const currentName = watch("name", defaultAccountName);
+
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [isBLEAvailable, setIsBLEAvailable] = useState(false);
@@ -288,7 +300,8 @@ export const LedgerScreen: FunctionComponent = () => {
         getValues("name"),
         getValues("password"),
         bip44Option.bip44HDPath,
-        "Cosmos"
+        "Cosmos",
+        selectedNetworks
       );
       analyticsStore.setUserProperties({
         registerType: "ledger",
@@ -344,7 +357,7 @@ export const LedgerScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -352,7 +365,7 @@ export const LedgerScreen: FunctionComponent = () => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-black",
             "margin-y-10",
             "font-medium",
           ]) as ViewStyle
@@ -360,23 +373,22 @@ export const LedgerScreen: FunctionComponent = () => {
       >
         Connect hardware wallet
       </Text>
-      <Text style={style.flatten(["h6", "color-gray-200"]) as ViewStyle}>
+      <Text style={style.flatten(["body2", "color-gray-400"]) as ViewStyle}>
         To keep your account safe, avoid any personal information or words
       </Text>
       <Controller
         control={control}
         rules={{
           required: "Name is required",
-          validate: (value: string) => {
-            if (value.trim().length < 3) {
-              return "Name at least 3 characters";
-            }
-          },
+          validate: (value: string) =>
+            validateAccountName(value, keyRingStore.multiKeyStoreInfo, mode),
         }}
         render={({ field: { onChange, onBlur, value, ref } }) => {
           return (
             <InputCardView
               label="Account name"
+              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               containerStyle={style.flatten(["margin-top-18"]) as ViewStyle}
               returnKeyType={mode === "add" ? "done" : "next"}
               onSubmitEditing={() => {
@@ -393,21 +405,11 @@ export const LedgerScreen: FunctionComponent = () => {
                 onChange(value.trim());
               }}
               onChangeText={(text: string) => {
-                text = text.replace(
-                  /[~`!#$%^&*()+={}\[\]|\\:;"'<>,.?/₹•€£]/,
-                  ""
-                );
-                if (text[0] === " " || text[0] === "-") {
-                  return;
-                }
-                if (
-                  (text[text.length - 1] === "-" && text[text.length - 2]) ===
-                  "-"
-                ) {
-                  return;
-                }
-                text = text.replace(/ {1,}/g, " ");
-                onChange(text);
+                const filtered = text
+                  .trimStart()
+                  .replace(/[^a-zA-Z0-9 @_\-\.\(\)]/g, "")
+                  .replace(/ {2,}/g, " ");
+                onChange(filtered);
               }}
               value={value}
               maxLength={30}
@@ -416,8 +418,39 @@ export const LedgerScreen: FunctionComponent = () => {
           );
         }}
         name="name"
-        defaultValue=""
+        defaultValue={defaultAccountName}
       />
+      {currentName !== defaultAccountName && (
+        <Text
+          style={
+            style.flatten([
+              "text-caption2",
+              "color-gray-400",
+              "margin-top-4",
+            ]) as ViewStyle
+          }
+        >
+          * Account name for unselected networks will be {defaultAccountName}
+        </Text>
+      )}
+      <SelectNetwork
+        selectedNetworks={selectedNetworks}
+        disabled={currentName === defaultAccountName}
+        onMultiSelectChange={setSelectedNetworks}
+      />
+      {currentName !== defaultAccountName && selectedNetworks.length === 0 && (
+        <Text
+          style={
+            style.flatten([
+              "text-caption2",
+              "color-red-400",
+              "margin-top-4",
+            ]) as ViewStyle
+          }
+        >
+          Please select at least one network
+        </Text>
+      )}
       {mode === "create" && (
         <React.Fragment>
           <Controller
@@ -436,6 +469,8 @@ export const LedgerScreen: FunctionComponent = () => {
               return (
                 <InputCardView
                   label="Password"
+                  labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+                  inputStyle={style.flatten(["color-black"]) as ViewStyle}
                   keyboardType={"default"}
                   containerStyle={style.flatten(["margin-top-8"]) as ViewStyle}
                   secureTextEntry={!showPassword}
@@ -452,7 +487,7 @@ export const LedgerScreen: FunctionComponent = () => {
                   rightIcon={
                     !showPassword ? (
                       <IconButton
-                        icon={<EyeIcon />}
+                        icon={<EyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -460,7 +495,7 @@ export const LedgerScreen: FunctionComponent = () => {
                       />
                     ) : (
                       <IconButton
-                        icon={<HideEyeIcon />}
+                        icon={<HideEyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -582,20 +617,21 @@ export const LedgerScreen: FunctionComponent = () => {
         containerStyle={
           style.flatten([
             "margin-y-18",
-            "background-color-white",
+            "background-color-dark",
             "border-radius-32",
           ]) as ViewStyle
         }
-        textStyle={{
-          color: "#0B1742",
-        }}
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         text="Continue"
         size="large"
         loading={isCreating}
         onPress={() => {
           submit();
         }}
-        disabled={!isBLEAvailable}
+        disabled={
+          !isBLEAvailable ||
+          (currentName !== defaultAccountName && selectedNetworks.length === 0)
+        }
       />
       {
         <LedgerLocationErrorModel

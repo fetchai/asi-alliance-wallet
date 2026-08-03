@@ -5,10 +5,8 @@ import { useStyle } from "styles/index";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { Button } from "components/button";
-import { GradientButton } from "components/new/button/gradient-button";
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
-import LinearGradient from "react-native-linear-gradient";
 import { Dec } from "@keplr-wallet/unit";
 import { TransactionModal } from "modals/transaction";
 import { ClaimRewardsModal } from "components/new/claim-reward-model";
@@ -18,7 +16,7 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import { txnTypeKey, txType } from "components/new/txn-status.tsx";
-import { numberLocalFormat } from "utils/format/format";
+import { formatBalance } from "utils/format/format";
 
 export const DelegatedCard: FunctionComponent<{
   containerStyle?: ViewStyle;
@@ -62,7 +60,7 @@ export const DelegatedCard: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -77,7 +75,7 @@ export const DelegatedCard: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await account.cosmos.sendWithdrawDelegationRewardMsgs(
         [validatorAddress],
@@ -108,7 +106,7 @@ export const DelegatedCard: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {
@@ -138,112 +136,76 @@ export const DelegatedCard: FunctionComponent<{
 
   return (
     <React.Fragment>
-      <LinearGradient
-        colors={["#F9774B", "#CF447B"]}
-        start={{ y: 0.0, x: 1.0 }}
-        end={{ y: 1.0, x: 0.0 }}
-        style={
+      <BlurBackground
+        borderRadius={12}
+        backgroundBlur={false}
+        containerStyle={
           [
-            style.flatten(["border-radius-12", "flex-row"]),
+            {
+              ...style.flatten(["padding-14"]),
+              backgroundColor: "#e3fee1",
+            },
             containerStyle,
-            { padding: 1.85 },
           ] as ViewStyle
         }
       >
-        <BlurBackground
-          borderRadius={10}
-          blurIntensity={16}
-          containerStyle={
+        <View
+          style={
             style.flatten([
-              "padding-14",
-              "flex-1",
-              "background-color-indigo-900",
+              "flex-row",
+              "justify-between",
+              "margin-bottom-12",
             ]) as ViewStyle
           }
         >
-          <View
+          <Text
+            style={
+              style.flatten(["body3", "color-gray-300", "flex-1"]) as ViewStyle
+            }
+          >
+            Staked amount
+          </Text>
+          <Text
             style={
               style.flatten([
-                "flex-row",
-                "justify-between",
-                "margin-bottom-4",
+                "color-dark",
+                "subtitle3",
+                "text-right",
               ]) as ViewStyle
             }
           >
-            <Text
-              style={
-                style.flatten([
-                  "body3",
-                  "color-white@60%",
-                  "flex-1",
-                ]) as ViewStyle
-              }
-            >
-              Staked amount
-            </Text>
-            <Text
-              style={
-                style.flatten([
-                  "color-white",
-                  "subtitle3",
-                  "flex-1",
-                  "text-right",
-                ]) as ViewStyle
-              }
-            >
-              {`${numberLocalFormat(
-                staked
-                  .trim(true)
-                  .shrink(true)
-                  .maxDecimals(10)
-                  .toString()
-                  .split(" ")[0]
-              )} ${staked.trim(true).shrink(true).toString().split(" ")[1]}`}
-            </Text>
-          </View>
-          <View
+            {formatBalance(staked, 10, false)}
+          </Text>
+        </View>
+        <View
+          style={
+            style.flatten([
+              "flex-row",
+              "justify-between",
+              "margin-bottom-4",
+            ]) as ViewStyle
+          }
+        >
+          <Text
+            style={
+              style.flatten(["body3", "color-gray-300", "flex-1"]) as ViewStyle
+            }
+          >
+            Earned rewards
+          </Text>
+          <Text
             style={
               style.flatten([
-                "flex-row",
-                "justify-between",
-                "margin-bottom-4",
+                "color-dark",
+                "subtitle3",
+                "text-right",
               ]) as ViewStyle
             }
           >
-            <Text
-              style={
-                style.flatten([
-                  "body3",
-                  "color-white@60%",
-                  "flex-1",
-                ]) as ViewStyle
-              }
-            >
-              Earned rewards
-            </Text>
-            <Text
-              style={
-                style.flatten([
-                  "color-white",
-                  "subtitle3",
-                  "flex-1",
-                  "text-right",
-                ]) as ViewStyle
-              }
-            >
-              {`${numberLocalFormat(
-                stakableReward
-                  .trim(true)
-                  .shrink(true)
-                  .maxDecimals(10)
-                  .toString()
-                  .split(" ")[0]
-              )} ${
-                stakableReward.trim(true).shrink(true).toString().split(" ")[1]
-              }`}
-            </Text>
-          </View>
-          {/* <View
+            {formatBalance(stakableReward, 10, false)}
+          </Text>
+        </View>
+        {/* <View
         style={
           style.flatten([
             "flex-row",
@@ -259,75 +221,74 @@ export const DelegatedCard: FunctionComponent<{
           {"123 FET"}
         </Text>
       </View> */}
+        <Button
+          text="Unstake"
+          size="small"
+          containerStyle={
+            style.flatten([
+              "border-radius-32",
+              "margin-top-12",
+              "background-color-dark",
+            ]) as ViewStyle
+          }
+          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
+          onPress={() => {
+            analyticsStore.logEvent("unstake_click", {
+              chainId: chainStore.current.chainId,
+              chainName: chainStore.current.chainName,
+              pageName: "Validator Detail",
+            });
+            if (
+              activityStore.getPendingTxnTypes[txnTypeKey.undelegate] ||
+              activityStore.getPendingTxnTypes[txnTypeKey.redelegate] ||
+              activityStore.getPendingTxnTypes[txnTypeKey.delegate]
+            ) {
+              Toast.show({
+                type: "error",
+                text1: `${txnInProgressMessage()} In Progress`,
+              });
+              return;
+            }
+            smartNavigation.navigateSmart("Undelegate", {
+              validatorAddress,
+            });
+          }}
+        />
+        {!(
+          !networkIsConnected ||
+          !account.isReadyToSendTx ||
+          stakableReward.toDec().equals(new Dec(0))
+        ) ? (
           <Button
-            text="Unstake"
-            mode="outline"
+            text="Claim Rewards"
             size="small"
             containerStyle={
-              style.flatten([
-                "border-radius-32",
-                "margin-top-12",
-                "border-color-white@40%",
-              ]) as ViewStyle
+              {
+                ...style.flatten(["border-radius-32", "margin-top-12"]),
+                backgroundColor: style.get("background-color-green-250")
+                  .backgroundColor,
+              } as ViewStyle
             }
-            textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
+            textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
             onPress={() => {
-              analyticsStore.logEvent("unstake_click", {
-                chainId: chainStore.current.chainId,
-                chainName: chainStore.current.chainName,
-                pageName: "Validator Detail",
-              });
               if (
-                activityStore.getPendingTxnTypes[txnTypeKey.undelegate] ||
-                activityStore.getPendingTxnTypes[txnTypeKey.redelegate] ||
-                activityStore.getPendingTxnTypes[txnTypeKey.delegate]
+                activityStore.getPendingTxnTypes[txnTypeKey.withdrawRewards]
               ) {
                 Toast.show({
                   type: "error",
-                  text1: `${txnInProgressMessage()} in progress`,
+                  text1: `${txType[txnTypeKey.withdrawRewards]} In Progress`,
                 });
                 return;
               }
-              smartNavigation.navigateSmart("Undelegate", {
-                validatorAddress,
+              analyticsStore.logEvent("claim_staking_reward_click", {
+                pageName: "Validator Details",
               });
+              setClaimModel(true);
             }}
+            loading={isSendingTx}
           />
-          {!(
-            !networkIsConnected ||
-            !account.isReadyToSendTx ||
-            stakableReward.toDec().equals(new Dec(0))
-          ) ? (
-            <GradientButton
-              text="Claim rewards"
-              size="small"
-              containerStyle={
-                style.flatten([
-                  "border-radius-32",
-                  "margin-top-12",
-                ]) as ViewStyle
-              }
-              textStyle={style.flatten(["body3"]) as ViewStyle}
-              onPress={() => {
-                if (
-                  activityStore.getPendingTxnTypes[txnTypeKey.withdrawRewards]
-                ) {
-                  Toast.show({
-                    type: "error",
-                    text1: `${txType[txnTypeKey.withdrawRewards]} in progress`,
-                  });
-                  return;
-                }
-                analyticsStore.logEvent("claim_staking_reward_click", {
-                  pageName: "Validator Details",
-                });
-                setClaimModel(true);
-              }}
-              loading={isSendingTx}
-            />
-          ) : null}
-        </BlurBackground>
-      </LinearGradient>
+        ) : null}
+      </BlurBackground>
       <TransactionModal
         isOpen={showTransectionModal}
         close={() => {
@@ -342,9 +303,7 @@ export const DelegatedCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${numberLocalFormat(
-          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
+        earnedAmount={stakableReward}
         onPress={handleClaim}
         buttonLoading={
           isSendingTx ||

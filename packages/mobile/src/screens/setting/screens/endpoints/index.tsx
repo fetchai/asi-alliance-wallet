@@ -108,6 +108,7 @@ export const SettingEndpointsPage: FunctionComponent = () => {
   return (
     <PageWithScrollView
       backgroundMode="image"
+      hasFloatingHeader={true}
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >

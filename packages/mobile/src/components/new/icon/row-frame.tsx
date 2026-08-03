@@ -6,7 +6,7 @@ export const RowFrame: FunctionComponent = () => {
     <Svg width="390" height="75" viewBox="0 0 268 63" fill="none">
       <Path
         d="M40.0742 32.2966C40.0742 28.8191 42.8933 26 46.3709 26H221.628C225.105 26 227.924 28.8191 227.924 32.2966V53.2855C227.924 56.763 225.105 59.5821 221.628 59.5821H46.3709C42.8933 59.5821 40.0742 56.763 40.0742 53.2855V32.2966Z"
-        fill="#1A2550"
+        fill="#DCDCE3"
       />
       <Rect
         x="46.3711"
@@ -14,8 +14,8 @@ export const RowFrame: FunctionComponent = () => {
         width="20.4641"
         height="16.7911"
         rx="1.57416"
-        fill="white"
-        fillOpacity="0.2"
+        fill="#A1A3A3"
+        fillOpacity="0.3"
       />
       <Rect
         x="73.1328"
@@ -23,8 +23,8 @@ export const RowFrame: FunctionComponent = () => {
         width="27.2855"
         height="6.29665"
         rx="1.57416"
-        fill="white"
-        fillOpacity="0.2"
+        fill="#A1A3A3"
+        fillOpacity="0.3"
       />
       <Rect
         x="73.1328"
@@ -32,15 +32,15 @@ export const RowFrame: FunctionComponent = () => {
         width="27.2855"
         height="6.29665"
         rx="1.57416"
-        fill="white"
-        fillOpacity="0.2"
+        fill="#A1A3A3"
+        fillOpacity="0.3"
       />
       <Circle
         cx="104.616"
         cy="47.5138"
         r="1.04944"
-        fill="white"
-        fillOpacity="0.2"
+        fill="#A1A3A3"
+        fillOpacity="0.3"
       />
       <Rect
         x="108.814"
@@ -48,8 +48,8 @@ export const RowFrame: FunctionComponent = () => {
         width="27.2855"
         height="6.29665"
         rx="1.57416"
-        fill="white"
-        fillOpacity="0.2"
+        fill="#A1A3A3"
+        fillOpacity="0.3"
       />
       <Rect
         x="177.551"
@@ -57,8 +57,8 @@ export const RowFrame: FunctionComponent = () => {
         width="27.2855"
         height="6.29665"
         rx="1.57416"
-        fill="white"
-        fillOpacity="0.2"
+        fill="#A1A3A3"
+        fillOpacity="0.3"
       />
       <Rect
         x="207.984"
@@ -66,13 +66,13 @@ export const RowFrame: FunctionComponent = () => {
         width="13.6427"
         height="6.29665"
         rx="1.57416"
-        fill="white"
-        fillOpacity="0.2"
+        fill="#A1A3A3"
+        fillOpacity="0.3"
       />
       <G filter="url(#filter0_d_1564_5983)">
         <Path
           d="M23.5 21.4078C23.5 17.3166 26.8166 14 30.9078 14H237.092C241.183 14 244.5 17.3166 244.5 21.4078V46.1006C244.5 50.1918 241.183 53.5084 237.092 53.5084H30.9078C26.8166 53.5084 23.5 50.1918 23.5 46.1006V21.4078Z"
-          fill="#26315A"
+          fill="#EAEAEA"
         />
         <Rect
           x="30.9082"
@@ -80,8 +80,8 @@ export const RowFrame: FunctionComponent = () => {
           width="24.0754"
           height="19.7542"
           rx="1.85196"
-          fill="white"
-          fillOpacity="0.2"
+          fill="#A1A3A3"
+          fillOpacity="0.3"
         />
         <Rect
           x="62.3906"
@@ -89,8 +89,8 @@ export const RowFrame: FunctionComponent = () => {
           width="32.1006"
           height="7.40782"
           rx="1.85196"
-          fill="white"
-          fillOpacity="0.2"
+          fill="#A1A3A3"
+          fillOpacity="0.3"
         />
         <Rect
           x="62.3906"
@@ -98,15 +98,15 @@ export const RowFrame: FunctionComponent = () => {
           width="32.1006"
           height="7.40782"
           rx="1.85196"
-          fill="white"
-          fillOpacity="0.2"
+          fill="#A1A3A3"
+          fillOpacity="0.3"
         />
         <Circle
           cx="99.4299"
           cy="39.3098"
           r="1.23464"
-          fill="white"
-          fillOpacity="0.2"
+          fill="#A1A3A3"
+          fillOpacity="0.3"
         />
         <Rect
           x="104.369"
@@ -114,8 +114,8 @@ export const RowFrame: FunctionComponent = () => {
           width="32.1006"
           height="7.40782"
           rx="1.85196"
-          fill="white"
-          fillOpacity="0.2"
+          fill="#A1A3A3"
+          fillOpacity="0.3"
         />
         <Rect
           x="185.238"
@@ -123,8 +123,8 @@ export const RowFrame: FunctionComponent = () => {
           width="32.1006"
           height="7.40782"
           rx="1.85196"
-          fill="white"
-          fillOpacity="0.2"
+          fill="#A1A3A3"
+          fillOpacity="0.3"
         />
         <Rect
           x="221.043"
@@ -132,75 +132,75 @@ export const RowFrame: FunctionComponent = () => {
           width="16.0503"
           height="7.40782"
           rx="1.85196"
-          fill="white"
-          fillOpacity="0.2"
+          fill="#A1A3A3"
+          fillOpacity="0.3"
         />
       </G>
       <G filter="url(#filter1_d_1564_5983)">
         <Path
           d="M4 9.32787C4 4.51467 7.90188 0.612793 12.7151 0.612793H255.285C260.098 0.612793 264 4.51467 264 9.32788V38.3782C264 43.1914 260.098 47.0932 255.285 47.0932H12.7151C7.90188 47.0932 4 43.1914 4 38.3782V9.32787Z"
-          fill="#333D64"
+          fill="#F6F6F6"
         />
         <Rect
-          opacity="0.2"
+          opacity="0.5"
           x="12.7148"
           y="12.2329"
           width="23.24"
           height="23.2402"
           rx="11.62"
-          fill="white"
+          fill="#A1A3A3"
         />
         <Rect
-          opacity="0.2"
+          opacity="0.5"
           x="44.6699"
           y="12.959"
           width="37.7654"
           height="8.71508"
           rx="2.17877"
-          fill="white"
+          fill="#A1A3A3"
         />
         <Rect
-          opacity="0.2"
+          opacity="0.5"
           x="44.6699"
           y="26.0317"
           width="37.7654"
           height="8.71508"
           rx="2.17877"
-          fill="white"
+          fill="#A1A3A3"
         />
         <Circle
-          opacity="0.2"
+          opacity="0.5"
           cx="88.2455"
           cy="30.389"
           r="1.45251"
-          fill="white"
+          fill="#A1A3A3"
         />
         <Rect
-          opacity="0.2"
+          opacity="0.5"
           x="94.0547"
           y="26.0317"
           width="37.7654"
           height="8.71508"
           rx="2.17877"
-          fill="white"
+          fill="#A1A3A3"
         />
         <Rect
-          opacity="0.2"
+          opacity="0.5"
           x="194.279"
           y="19.4956"
           width="37.7654"
           height="8.71508"
           rx="2.17877"
-          fill="white"
+          fill="#A1A3A3"
         />
         <Rect
-          opacity="0.2"
+          opacity="0.5"
           x="236.402"
           y="19.4956"
           width="18.8827"
           height="8.71508"
           rx="2.17877"
-          fill="white"
+          fill="#A1A3A3"
         />
       </G>
     </Svg>

@@ -8,7 +8,8 @@ export const TabPanel: FunctionComponent<{
   tabs: any[];
   activeTab: any;
   setActiveTab: any;
-}> = ({ tabs, activeTab, setActiveTab }) => {
+  variant?: "dark" | "light";
+}> = ({ tabs, activeTab, setActiveTab, variant = "dark" }) => {
   const style = useStyle();
   const [prevSelectedId, setPrevSelectedId] = useState<any>(tabs[0].index);
 
@@ -16,14 +17,22 @@ export const TabPanel: FunctionComponent<{
     const selected = item.id === activeTab.id;
     return (
       <BlurButton
-        backgroundBlur={selected}
+        backgroundBlur={variant === "light" ? false : selected}
         disable={selected}
         text={item.id}
         borderRadius={32}
         textStyle={
           style.flatten(
             ["text-caption1"],
-            [selected ? "color-white" : "color-white@60%"]
+            [
+              variant === "light"
+                ? selected
+                  ? "color-dark"
+                  : "color-gray-300"
+                : selected
+                ? "color-white"
+                : "color-white@60%",
+            ]
           ) as ViewStyle
         }
         containerStyle={
@@ -34,6 +43,9 @@ export const TabPanel: FunctionComponent<{
                 (Dimensions.get("window").width - (40 + tabs.length)) /
                 tabs.length,
             },
+            variant === "light" && selected
+              ? style.flatten(["background-color-gray-55"])
+              : null,
           ] as ViewStyle
         }
         onPress={() => {

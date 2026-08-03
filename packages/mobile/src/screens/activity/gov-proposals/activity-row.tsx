@@ -1,6 +1,6 @@
 import React, { FunctionComponent } from "react";
 import { View, Text, TouchableOpacity, ViewStyle } from "react-native";
-import { useStyle } from "styles/index";
+import { ColorPalette, useStyle } from "styles/index";
 import {
   NavigationProp,
   ParamListBase,
@@ -40,7 +40,7 @@ export const GovActivityRow: FunctionComponent<{
   function getVote(vote: string) {
     switch (vote.toUpperCase()) {
       default:
-      case "Yes":
+      case "YES":
         return "Yes";
 
       case "NO":
@@ -51,6 +51,28 @@ export const GovActivityRow: FunctionComponent<{
 
       case "NO_WITH_VETO":
         return "No with veto";
+    }
+  }
+
+  function getVoteBadgeColors(vote: string): {
+    backgroundColor: string;
+    color: string;
+  } {
+    switch (vote.toUpperCase()) {
+      case "YES":
+        return {
+          backgroundColor: ColorPalette["green-250"],
+          color: ColorPalette["dark"],
+        };
+      case "ABSTAIN":
+        return {
+          backgroundColor: ColorPalette["gray-55"],
+          color: ColorPalette["dark"],
+        };
+      case "NO":
+      case "NO_WITH_VETO":
+      default:
+        return { backgroundColor: "#FEE1E1", color: "#B24D4D" };
     }
   }
 
@@ -76,7 +98,7 @@ export const GovActivityRow: FunctionComponent<{
             style.flatten([
               "body3",
               "padding-y-6",
-              "color-white",
+              "color-dark",
               "font-medium",
             ]) as ViewStyle
           }
@@ -87,7 +109,7 @@ export const GovActivityRow: FunctionComponent<{
           style={
             style.flatten([
               "body3",
-              "color-white@60%",
+              "color-gray-300",
               "font-medium",
             ]) as ViewStyle
           }
@@ -101,34 +123,19 @@ export const GovActivityRow: FunctionComponent<{
       <View style={style.flatten(["margin-right-16"]) as ViewStyle}>
         <BlurButton
           text={getVote(vote)}
-          borderRadius={4}
+          borderRadius={5}
           backgroundBlur={false}
           textStyle={
             [
-              style.flatten(
-                ["text-caption2"],
-                [
-                  vote.toString() == "YES" || vote.toString() == "ABSTAIN"
-                    ? "color-indigo-900"
-                    : "color-white",
-                ]
-              ),
-              { lineHeight: 14 },
+              style.flatten(["text-caption2"]),
+              { lineHeight: 14, color: getVoteBadgeColors(vote).color },
             ] as ViewStyle
           }
           containerStyle={
-            style.flatten(
-              ["padding-x-8", "margin-y-4"],
-              [
-                vote === "YES"
-                  ? "background-color-vibrant-green-500"
-                  : vote === "ABSTAIN"
-                  ? "background-color-yellow-500"
-                  : vote === "NO"
-                  ? "background-color-vibrant-red-600"
-                  : "background-color-vibrant-red-500",
-              ]
-            ) as ViewStyle
+            [
+              style.flatten(["padding-x-12", "margin-y-4"]),
+              { backgroundColor: getVoteBadgeColors(vote).backgroundColor },
+            ] as ViewStyle
           }
         />
       </View>

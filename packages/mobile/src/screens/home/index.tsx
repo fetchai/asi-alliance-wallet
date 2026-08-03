@@ -173,7 +173,7 @@ export const HomeScreen: FunctionComponent = observer(() => {
         setRefreshing(false);
       });
     },
-    [accountStore, chainStore, priceStore, queriesStore]
+    [account, queries, priceStore]
   );
 
   function autoRefreshBalances(isLoading: boolean) {
@@ -244,23 +244,18 @@ export const HomeScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollViewInBottomTabView
-      backgroundMode={"image"}
-      isTransparentHeader={true}
+      backgroundMode={"secondary"}
       refreshControl={
         <RefreshControl
-          tintColor={"white"}
+          tintColor={"black"}
           refreshing={refreshing}
           onRefresh={() => autoRefreshBalances(true)}
-          progressViewOffset={
-            Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48
-          }
+          progressViewOffset={Platform.OS === "ios" ? safeAreaInsets.top : 16}
         />
       }
       contentContainerStyle={[
         style.get("flex-grow-1"),
-        {
-          paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
-        },
+        { paddingTop: safeAreaInsets.top + 16 },
       ]}
       containerStyle={style.flatten(["overflow-scroll"]) as ViewStyle}
       ref={scrollViewRef}

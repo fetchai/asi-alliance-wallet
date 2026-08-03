@@ -68,7 +68,7 @@ const ThemeStatusBar: FunctionComponent = () => {
     <StatusBar
       translucent={true}
       backgroundColor="#ffffff00"
-      barStyle={"light-content"}
+      barStyle={"dark-content"}
     />
   );
 };

@@ -27,22 +27,15 @@ export const AutoLockScreen: FunctionComponent = observer(() => {
       <SettingItem
         label="Auto Lock"
         paragraph="Automatically lock wallet when it is in background"
-        style={style.flatten(["height-72", "padding-18"]) as ViewStyle}
+        style={style.flatten(["padding-18"]) as ViewStyle}
         left={<AutoLockTimer size={24} />}
         right={
           <Switch
             trackColor={{
-              false: "#767577",
-              true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
+              false: "#DCDCE3",
+              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
             }}
-            thumbColor={isAutoLockOn ? "#5F38FB" : "#D0BCFF66"}
-            style={[
-              {
-                borderRadius: 16,
-                borderWidth: 1,
-              },
-              style.flatten(["border-color-pink-light@40%"]),
-            ]}
+            thumbColor={isAutoLockOn ? "#73A271" : "#9A9AA2"}
             onValueChange={handleAutoLockToggle}
             value={isAutoLockOn}
             accessibilityLabel="Toggle Auto Lock"

@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useRef } from "react";
-import { useStyle } from "styles/index";
+import { ColorPalette, useStyle } from "styles/index";
 import { useStore } from "stores/index";
 import {
   DrawerActions,
@@ -19,7 +19,7 @@ import { MoreIcon } from "components/new/icon/more-icon";
 import { AppState, BackHandler, View, ViewStyle } from "react-native";
 import { IconButton } from "components/new/button/icon";
 import { BorderlessButton } from "react-native-gesture-handler";
-import { BlurredBottomTabBar } from "components/bottom-tabbar";
+import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { HomeNavigation } from "navigation/home-navigation";
 import { DrawerContent } from "components/drawer";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -141,7 +141,7 @@ export const MainTabNavigation: FunctionComponent = () => {
         backClickCountRef.current++;
         Toast.show({
           type: "error",
-          text1: `Press back again to exit the app`,
+          text1: `Press Back Again to Exit the App`,
           visibilityTime: 3000,
         });
       }
@@ -165,21 +165,31 @@ export const MainTabNavigation: FunctionComponent = () => {
               case "HomeTab":
                 return (
                   <IconButton
-                    icon={<HomeIcon isSelected={focused} />}
+                    icon={
+                      <HomeIcon
+                        isSelected={focused}
+                        color={focused ? "#151a1a" : "#737676"}
+                      />
+                    }
                     bottomText={screenNames.Home}
-                    backgroundBlur={focused}
+                    backgroundBlur={false}
                     borderRadius={32}
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-white" : "color-white@60%",
+                        focused ? "color-dark" : "color-gray-300",
                       ]) as ViewStyle
                     }
                     iconStyle={
-                      style.flatten([
-                        "padding-y-8",
-                        "padding-x-24",
-                        "margin-bottom-6",
-                      ]) as ViewStyle
+                      {
+                        ...style.flatten([
+                          "padding-y-8",
+                          "padding-x-24",
+                          "margin-bottom-6",
+                        ]),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
+                      } as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
                   />
@@ -189,24 +199,29 @@ export const MainTabNavigation: FunctionComponent = () => {
                   <IconButton
                     icon={
                       focused ? (
-                        <StakeIcon isSelected={true} />
+                        <StakeIcon isSelected={true} color="#151a1a" />
                       ) : (
-                        <StakeIcon color={"#FFFFFF90"} />
+                        <StakeIcon color={"#737676"} />
                       )
                     }
                     bottomText={screenNames.Stake}
                     borderRadius={32}
-                    backgroundBlur={focused}
+                    backgroundBlur={false}
                     iconStyle={
-                      style.flatten([
-                        "padding-y-8",
-                        "padding-x-24",
-                        "margin-bottom-6",
-                      ]) as ViewStyle
+                      {
+                        ...style.flatten([
+                          "padding-y-8",
+                          "padding-x-24",
+                          "margin-bottom-6",
+                        ]),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
+                      } as ViewStyle
                     }
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-white" : "color-white@60%",
+                        focused ? "color-dark" : "color-gray-300",
                       ]) as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
@@ -215,7 +230,13 @@ export const MainTabNavigation: FunctionComponent = () => {
               case "InboxTab":
                 return (
                   <IconButton
-                    icon={<UpDownArrowIcon />}
+                    icon={
+                      <UpDownArrowIcon
+                        color1="#151a1a"
+                        color2="#151a1a"
+                        color3="#151a1a"
+                      />
+                    }
                     borderRadius={64}
                     backgroundBlur={false}
                     onPress={() => {
@@ -223,15 +244,14 @@ export const MainTabNavigation: FunctionComponent = () => {
                       analyticsStore.logEvent("fund_transfer_tab_click");
                     }}
                     iconStyle={
-                      style.flatten([
-                        "padding-16",
-                        "background-color-white",
-                      ]) as ViewStyle
+                      {
+                        ...style.flatten(["padding-16"]),
+                        backgroundColor: style.get("background-color-green-250")
+                          .backgroundColor,
+                      } as ViewStyle
                     }
                     bottomTextStyle={
-                      style.flatten([
-                        focused ? "color-white" : "color-white@60%",
-                      ]) as ViewStyle
+                      style.flatten(["color-gray-300"]) as ViewStyle
                     }
                   />
                 );
@@ -240,24 +260,29 @@ export const MainTabNavigation: FunctionComponent = () => {
                   <IconButton
                     icon={
                       focused ? (
-                        <ClockIcon isSelected={true} />
+                        <ClockIcon isSelected={true} color="#151a1a" />
                       ) : (
-                        <ClockIcon color={"#FFFFFF90"} />
+                        <ClockIcon color={"#737676"} />
                       )
                     }
                     bottomText={screenNames.Activity}
                     borderRadius={32}
-                    backgroundBlur={focused}
+                    backgroundBlur={false}
                     iconStyle={
-                      style.flatten([
-                        "padding-y-8",
-                        "padding-x-24",
-                        "margin-bottom-6",
-                      ]) as ViewStyle
+                      {
+                        ...style.flatten([
+                          "padding-y-8",
+                          "padding-x-24",
+                          "margin-bottom-6",
+                        ]),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
+                      } as ViewStyle
                     }
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-white" : "color-white@60%",
+                        focused ? "color-dark" : "color-gray-300",
                       ]) as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
@@ -266,20 +291,25 @@ export const MainTabNavigation: FunctionComponent = () => {
               case "MoreTab":
                 return (
                   <IconButton
-                    icon={<MoreIcon color={focused ? "white" : "#FFFFFF90"} />}
+                    icon={<MoreIcon color={focused ? "#151a1a" : "#737676"} />}
                     bottomText={screenNames.More}
                     borderRadius={32}
-                    backgroundBlur={focused}
+                    backgroundBlur={false}
                     iconStyle={
-                      style.flatten([
-                        "padding-y-8",
-                        "padding-x-24",
-                        "margin-bottom-6",
-                      ]) as ViewStyle
+                      {
+                        ...style.flatten([
+                          "padding-y-8",
+                          "padding-x-24",
+                          "margin-bottom-6",
+                        ]),
+                        ...(focused
+                          ? { backgroundColor: ColorPalette["gray-55"] }
+                          : {}),
+                      } as ViewStyle
                     }
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-white" : "color-white@60%",
+                        focused ? "color-dark" : "color-gray-300",
                       ]) as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
@@ -313,18 +343,21 @@ export const MainTabNavigation: FunctionComponent = () => {
           tabBarActiveTint: true,
           tabBarInactiveTint: false,
           tabBarStyle: {
-            backgroundColor: style.get("color-indigo-900").color,
+            backgroundColor: "#ffffff",
             shadowColor: style.get("color-transparent").color,
             elevation: 0,
             paddingVertical: 16,
             paddingHorizontal: 20,
             height: 100 + insets.bottom,
-            borderTopWidth: 0,
+            borderTopWidth: 1,
+            borderTopColor: "#DCDCE3",
           },
           showLabel: false,
         })}
         tabBar={(props) => (
-          <BlurredBottomTabBar {...props} enabledScreens={["Home"]} />
+          <View style={{ position: "absolute", bottom: 0, width: "100%" }}>
+            <BottomTabBar {...props} />
+          </View>
         )}
       >
         <Tab.Screen name="HomeTab" component={HomeNavigation} />

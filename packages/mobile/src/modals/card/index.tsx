@@ -43,14 +43,14 @@ export const CardModal: FunctionComponent<{
       animationOut={"slideOutDown"}
       animationInTiming={500}
       animationOutTiming={500}
-      backdropColor={style.get("color-indigo-backdrop").color}
+      backdropColor={style.get("color-dark").color}
     >
       <GestureHandlerRootView style={{ flex: 1, justifyContent: "flex-end" }}>
         <View
           style={[
             StyleSheet.flatten([
               style.flatten([
-                "background-color-indigo-900",
+                "background-color-white",
                 "border-radius-top-left-32",
                 "border-radius-top-right-32",
                 "overflow-hidden",
@@ -81,7 +81,7 @@ export const CardModal: FunctionComponent<{
                       style.flatten([
                         "subtitle2",
                         "color-text-high",
-                        "color-white",
+                        "color-dark",
                         "flex-3",
                       ]),
                       titleStyle,
@@ -94,7 +94,7 @@ export const CardModal: FunctionComponent<{
               {showCloseButton && close ? (
                 <View style={style.flatten(["flex-1", "items-end"])}>
                   <IconButton
-                    icon={<XmarkIcon color={"white"} />}
+                    icon={<XmarkIcon color={"black"} />}
                     backgroundBlur={false}
                     blurIntensity={20}
                     borderRadius={50}
@@ -105,7 +105,7 @@ export const CardModal: FunctionComponent<{
                         "items-center",
                         "justify-center",
                         "border-width-1",
-                        "border-color-white@20%",
+                        "border-color-gray-200",
                       ]) as ViewStyle
                     }
                     onPress={() => close()}

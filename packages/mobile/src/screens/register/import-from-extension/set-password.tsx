@@ -1,7 +1,7 @@
 import React, { FunctionComponent, useState } from "react";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { PageWithScrollView } from "components/page";
-import { View, ViewStyle } from "react-native";
+import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
@@ -134,10 +134,33 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
+      <Text
+        style={
+          style.flatten([
+            "h1",
+            "color-black",
+            "margin-y-10",
+            "font-medium",
+          ]) as ViewStyle
+        }
+      >
+        Create wallet password
+      </Text>
+      <Text
+        style={
+          style.flatten([
+            "body2",
+            "color-gray-400",
+            "margin-bottom-18",
+          ]) as ViewStyle
+        }
+      >
+        To keep your account safe, avoid any personal information or words
+      </Text>
       <Controller
         control={control}
         rules={{
@@ -153,6 +176,8 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
           return (
             <InputCardView
               label="Password"
+              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               keyboardType={"default"}
               secureTextEntry={!showPassword}
               returnKeyType="next"
@@ -168,7 +193,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
               rightIcon={
                 !showPassword ? (
                   <IconButton
-                    icon={<EyeIcon />}
+                    icon={<EyeIcon color="black" />}
                     backgroundBlur={false}
                     onPress={() => {
                       setShowPassword(!showPassword);
@@ -176,7 +201,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
                   />
                 ) : (
                   <IconButton
-                    icon={<HideEyeIcon />}
+                    icon={<HideEyeIcon color="black" />}
                     backgroundBlur={false}
                     onPress={() => {
                       setShowPassword(!showPassword);
@@ -300,7 +325,13 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
           setShowPassword(false);
           submit();
         }}
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
       />
       {/* Mock element for bottom padding */}
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />

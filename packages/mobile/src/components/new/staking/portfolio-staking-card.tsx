@@ -9,7 +9,7 @@ import { Dec } from "@keplr-wallet/unit";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { TransactionModal } from "modals/transaction";
-import { GradientButton } from "components/new/button/gradient-button";
+import { Button } from "components/button";
 import { ClaimRewardsModal } from "../claim-reward-model";
 import {
   NavigationProp,
@@ -19,7 +19,6 @@ import {
 import { StakeCard } from "screens/stake/dashboard/stake-card";
 import { txType } from "components/new/txn-status.tsx";
 import { observer } from "mobx-react-lite";
-import { numberLocalFormat } from "utils/format/format";
 
 export const PortfolioStakingCard: FunctionComponent<{
   cardStyle?: ViewStyle;
@@ -95,7 +94,7 @@ export const PortfolioStakingCard: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await tx.send({ amount: [], gas: gas.toString() }, "", undefined, {
         onBroadcasted: (txHash) => {
@@ -115,7 +114,7 @@ export const PortfolioStakingCard: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {
@@ -139,10 +138,14 @@ export const PortfolioStakingCard: FunctionComponent<{
 
   return (
     <BlurBackground
-      blurIntensity={10}
+      backgroundBlur={false}
       containerStyle={
         [
-          style.flatten(["padding-18", "border-radius-16"]),
+          style.flatten([
+            "padding-18",
+            "border-radius-16",
+            "background-color-gray-5",
+          ]),
           cardStyle,
         ] as ViewStyle
       }
@@ -150,7 +153,7 @@ export const PortfolioStakingCard: FunctionComponent<{
       <Text
         style={
           style.flatten([
-            "color-white",
+            "color-dark",
             "subtitle3",
             "margin-bottom-20",
           ]) as ViewStyle
@@ -166,19 +169,21 @@ export const PortfolioStakingCard: FunctionComponent<{
         stakable.toDec().lte(new Dec(0)) ||
         rewards.pendingRewardValidatorAddresses.length === 0
       ) ? (
-        <GradientButton
-          text="Claim rewards"
-          size="default"
+        <Button
+          text="Claim Rewards"
           containerStyle={
-            style.flatten(["border-radius-64", "margin-top-20"]) as ViewStyle
+            style.flatten([
+              "border-radius-64",
+              "margin-top-20",
+              "background-color-dark",
+            ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3"]) as ViewStyle}
-          rippleColor="black@50%"
+          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
           onPress={() => {
             if (accountInfo.txTypeInProgress === "withdrawRewards") {
               Toast.show({
                 type: "error",
-                text1: `${txType[accountInfo.txTypeInProgress]} in progress`,
+                text1: `${txType[accountInfo.txTypeInProgress]} In Progress`,
               });
               return;
             }
@@ -204,9 +209,7 @@ export const PortfolioStakingCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${numberLocalFormat(
-          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
+        earnedAmount={stakableReward}
         onPress={onSubmit}
         buttonLoading={
           isSendingTx || accountInfo.txTypeInProgress === "withdrawRewards"

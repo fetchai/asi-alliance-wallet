@@ -27,7 +27,8 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { txnTypeKey } from "components/new/txn-status.tsx";
-import { numberLocalFormat } from "utils/format/format";
+import { formatBalance, formatFiatBalance } from "utils/format/format";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const RedelegateScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -65,6 +66,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
   } = useStore();
 
   const style = useStyle();
+  const safeAreaInsets = useSafeAreaInsets();
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -135,7 +137,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
   useEffect(() => {
     const inputValueInUsd = convertToUsd(staked);
@@ -146,22 +148,20 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
     ? ` (${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
 
-  const availableBalance = `${staked
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${Usd}`;
-
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
-    sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
-  );
+  const feePrice = sendConfigs.feeConfig.isManual
+    ? sendConfigs.feeConfig.fee
+    : sendConfigs.feeConfig.getFeeTypePretty(
+        sendConfigs.feeConfig.feeType
+          ? sendConfigs.feeConfig.feeType
+          : "average"
+      );
 
   const redelegateAmount = async () => {
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -201,7 +201,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction rejected",
+            text1: "Transaction Rejected",
           });
           return;
         } else {
@@ -224,63 +224,68 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
-      contentContainerStyle={style.get("flex-grow-1")}
+      contentContainerStyle={{
+        paddingBottom: Math.max(safeAreaInsets.bottom, 16) + 80,
+      }}
+      fixed={
+        <View
+          pointerEvents="box-none"
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            paddingHorizontal: 16,
+            paddingBottom: Math.max(safeAreaInsets.bottom, 16),
+            paddingTop: 16,
+          }}
+        >
+          <Button
+            text="Confirm"
+            disabled={!account.isReadyToSendTx || !txStateIsValid}
+            loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
+            containerStyle={
+              style.flatten([
+                "border-radius-32",
+                "background-color-dark",
+              ]) as ViewStyle
+            }
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+            onPress={redelegateAmount}
+          />
+        </View>
+      }
     >
-      <View
-        style={
-          style.flatten([
-            "flex-row",
-            "items-center",
-            "border-width-1",
-            "border-color-white@20%",
-            "border-radius-12",
-            "padding-12",
-            "justify-between",
-            "margin-y-16",
-          ]) as ViewStyle
-        }
-      >
+      <View style={style.flatten(["margin-y-16"]) as ViewStyle}>
         <Text
           style={
-            style.flatten(["body3", "color-white@60%", "flex-1"]) as ViewStyle
+            style.flatten([
+              "body3",
+              "color-gray-300",
+              "margin-bottom-8",
+            ]) as ViewStyle
           }
         >
           Current staked amount
         </Text>
-        <Text
-          style={
-            style.flatten([
-              "subtitle3",
-              "color-white",
-              "flex-1",
-              "text-right",
-            ]) as ViewStyle
-          }
+        <View
+          style={{
+            backgroundColor: "#f6f6f6",
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+          }}
         >
-          {`${numberLocalFormat(
-            staked
-              .trim(true)
-              .shrink(true)
-              .maxDecimals(6)
-              .toString()
-              .split(" ")[0]
-          )} ${
-            staked
-              .trim(true)
-              .shrink(true)
-              .maxDecimals(6)
-              .toString()
-              .split(" ")[1]
-          }`}
-        </Text>
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
+            {formatBalance(staked)}
+          </Text>
+        </View>
       </View>
       <Text
         style={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "margin-bottom-8",
           ]) as ViewStyle
         }
@@ -291,7 +296,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "border-width-1",
-            "border-color-white@20%",
+            "border-color-gray-100",
             "border-radius-12",
             "padding-x-18",
             "padding-y-12",
@@ -299,15 +304,19 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           {srcValidator ? srcValidator.description.moniker : "..."}
         </Text>
       </View>
-
       <DropDownCardView
-        containerStyle={style.flatten(["margin-bottom-16"]) as ViewStyle}
+        containerStyle={
+          {
+            ...style.flatten(["margin-bottom-16"]),
+            backgroundColor: "#f6f6f6",
+          } as ViewStyle
+        }
         mainHeadingrStyle={style.flatten(["body3"]) as ViewStyle}
-        headingrStyle={style.flatten(["body3", "color-white@60%"]) as ViewStyle}
+        headingrStyle={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
         mainHeading="To"
         heading={
           dstValidator ? dstValidator.description.moniker : "Choose validator"
@@ -316,8 +325,8 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           <ChevronRightIcon
             color={
               activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
-                ? style.get("color-white@20%").color
-                : "white"
+                ? "#DCDCE3"
+                : "#151a1a"
             }
           />
         }
@@ -334,7 +343,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "margin-y-0",
             "margin-bottom-8",
           ]) as ViewStyle
@@ -346,14 +355,12 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
       <Text
         style={
           style.flatten([
-            "color-white@60%",
+            "color-gray-300",
             "text-caption2",
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${numberLocalFormat(availableBalance.split(" ")[0])} ${
-        availableBalance.split(" ")[1]
-      }`}</Text>
+      >{`Available: ${formatBalance(staked)}${Usd}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}
@@ -365,7 +372,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -386,7 +393,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -394,12 +401,14 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             style={
               style.flatten([
                 "body3",
-                "color-white",
+                "color-dark",
                 "margin-right-6",
               ]) as ViewStyle
             }
           >
-            {feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+            {feePrice
+              ? feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+              : ""}
           </Text>
           <IconButton
             backgroundBlur={false}
@@ -407,8 +416,8 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
-                    ? style.get("color-white@20%").color
-                    : "white"
+                    ? "#DCDCE3"
+                    : "#151a1a"
                 }
               />
             }
@@ -421,7 +430,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
                 "border-width-1",
                 activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
                   ? "border-color-white@20%"
-                  : "border-color-white@40%",
+                  : "border-color-gray-100",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
@@ -444,18 +453,6 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             : sendConfigs.feeConfig.error.message}
         </Text>
       ) : null}
-      <View style={style.flatten(["flex-1"])} />
-      <Button
-        text="Confirm"
-        disabled={!account.isReadyToSendTx || !txStateIsValid}
-        loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
-        containerStyle={
-          style.flatten(["margin-top-16", "border-radius-32"]) as ViewStyle
-        }
-        textStyle={style.flatten(["body2"]) as ViewStyle}
-        onPress={redelegateAmount}
-      />
-      <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
       <TransactionModal
         isOpen={showTransectionModal}
         close={() => {

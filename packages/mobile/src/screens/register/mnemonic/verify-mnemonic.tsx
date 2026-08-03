@@ -1,14 +1,20 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { PageWithScrollView } from "components/page";
-import { FlatList, Text, View, ViewStyle } from "react-native";
-import { useStyle } from "styles/index";
+import {
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
+import { ColorPalette, useStyle } from "styles/index";
 import { WordChip } from "components/mnemonic";
 import { Button } from "components/button";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { NewMnemonicConfig } from "./hook";
 import { RegisterConfig } from "@keplr-wallet/hooks";
-import { RectButton } from "components/rect-button";
+import { BlurBackground } from "components/new/blur-background/blur-background";
 import { BIP44AdvancedButton, useBIP44Option } from "screens/register/bip44";
 import { BipButtons } from "screens/register/bip-button";
 
@@ -107,7 +113,7 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -115,7 +121,7 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-black",
             "margin-y-18",
             "font-normal",
           ]) as ViewStyle
@@ -170,18 +176,22 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
           data={candidateWords}
           keyExtractor={(_, index) => index.toString()}
           renderItem={renderButtonItem}
-          numColumns={4}
+          numColumns={3}
           scrollEnabled={false}
         />
         <Button
           containerStyle={
-            style.flatten(["border-radius-32", "margin-top-24"]) as ViewStyle
+            style.flatten([
+              "border-radius-32",
+              "margin-top-24",
+              "background-color-dark",
+            ]) as ViewStyle
           }
           text="Continue"
           size="large"
           loading={isCreating}
           disabled={wordSet.join(" ") !== newMnemonicConfig.mnemonic}
-          textStyle={style.flatten(["body2"]) as ViewStyle}
+          textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
           onPress={async () => {
             setIsCreating(true);
             smartNavigation.navigateSmart("Register.CreateAccount", {
@@ -210,34 +220,38 @@ const WordButton: FunctionComponent<{
   const style = useStyle();
 
   return (
-    <RectButton
-      style={
-        style.flatten(
-          [
-            "padding-y-6",
-            "margin-4",
-            "flex-1",
-            "border-radius-32",
-            "border-width-1",
-            "border-color-white@40%",
-          ],
-          [used && "border-color-white@20%"]
-        ) as ViewStyle
-      }
+    <TouchableOpacity
+      activeOpacity={0.6}
       onPress={onPress}
-      rippleColor={"black@50%"}
+      style={style.flatten(["flex-1", "margin-4"]) as ViewStyle}
     >
-      <Text
-        style={
-          style.flatten(
-            ["text-caption2", "color-white", "text-center"],
-            [used && "color-white@20%"]
-          ) as ViewStyle
+      <BlurBackground
+        backgroundBlur={false}
+        containerStyle={
+          [
+            style.flatten([
+              "padding-y-8",
+              "items-center",
+              "border-radius-64",
+              "border-width-1",
+              "border-color-gray-100",
+            ]),
+            used && { backgroundColor: ColorPalette["gray-55"] },
+          ] as ViewStyle
         }
       >
-        {word}
-      </Text>
-    </RectButton>
+        <Text
+          style={
+            style.flatten(
+              ["text-caption2"],
+              [used ? "color-gray-300" : "color-dark"]
+            ) as ViewStyle
+          }
+        >
+          {word}
+        </Text>
+      </BlurBackground>
+    </TouchableOpacity>
   );
 };
 

@@ -6,7 +6,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 // @ts-ignore
 import QRCode from "qrcode.react";
 import style from "./style.module.scss";
-import WalletConnect from "@walletconnect/client";
 import { Buffer } from "buffer/";
 import { Alert, Form } from "reactstrap";
 import { observer } from "mobx-react-lite";
@@ -26,31 +25,9 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useNotification } from "@components/notification";
 
-function safeRejectWalletConnectRequest(
-  connector: WalletConnect,
-  requestId: unknown,
-  message: string
-): void {
-  if (requestId == null) {
-    return;
-  }
-  try {
-    connector.rejectRequest({
-      id: requestId as number,
-      error: { message },
-    });
-  } catch {
-    // Best-effort: connector may already be closed.
-  }
-}
-
 export interface QRCodeSharedData {
   // The uri for the wallet connect
   wcURI: string;
-  // Session-bound identifier to prevent cross-session replay.
-  sessionId: string;
-  // One-time token that must be echoed by the importer.
-  requestToken: string;
   // The temporary password for encrypt/descrypt the key datas.
   // This must not be shared the other than the extension and mobile.
   sharedPassword: string;
@@ -179,6 +156,7 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
             }
             onSetExportKeyRingDatas(keyRingData);
           } catch (e) {
+            console.log("Fail to decrypt: " + e.message);
             setError("password", {
               message: intl.formatMessage({
                 id: "setting.export-to-mobile.input.password.error.invalid",
@@ -199,6 +177,7 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
         />
 
         <ButtonV2
+          type="submit"
           text={
             loading ? (
               <i className="fas fa-spinner fa-spin ml-2" />
@@ -224,296 +203,119 @@ const QRCodeView: FunctionComponent<{
   cancel: () => void;
 }> = observer(({ keyRingData, cancel }) => {
   const { chainStore } = useStore();
-
   const navigate = useNavigate();
+
   const confirm = useConfirm();
   const intl = useIntl();
 
-  const [connector, setConnector] = useState<WalletConnect | undefined>();
-  const [qrCodeData, setQRCodeData] = useState<QRCodeSharedData | undefined>();
+  const [qrFrames, setQRFrames] = useState<string[]>([]);
+  const [currentFrame, setCurrentFrame] = useState(0);
 
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
   const [isExpired, setIsExpired] = useState(false);
-  const processOnce = useRef(false);
 
   const [addressBookConfigMap] = useState(
     () =>
       new AddressBookConfigMap(new ExtensionKVStore("address-book"), chainStore)
   );
 
+  // 30-second expiry
   useEffect(() => {
     const id = setTimeout(() => {
-      if (processOnce.current) {
-        return;
-      }
-      // Hide qr code after 30 seconds.
       setIsExpired(true);
 
       confirm
         .confirm({
-          paragraph: intl.formatMessage({
-            id: "setting.export-to-mobile.qr-code-view.session-expired",
-          }),
-          yes: intl.formatMessage({
-            id: "setting.export-to-mobile.qr-code-view.session-expired-cta",
-          }),
+          paragraph: intl.formatMessage(
+            {
+              id: "setting.export-to-mobile.qr-code-view.session-expired",
+            },
+            {
+              forceYes: true,
+            }
+          ),
           hideNoButton: true,
         })
         .then(() => {
-          cancelRef.current();
+          navigate("/");
         });
     }, 30000);
 
     return () => {
       clearTimeout(id);
     };
-  }, [confirm, intl]);
+  }, [confirm, intl, navigate]);
 
+  // Encrypt all keyring data + address books and split into QR frames
   useEffect(() => {
     (async () => {
-      const connector = new WalletConnect({
-        bridge: "https://wc-bridge.keplr.app",
-      });
+      const keyBytes = new Uint8Array(32);
+      crypto.getRandomValues(keyBytes);
+      const key = Buffer.from(keyBytes);
 
-      if (connector.connected) {
-        await connector.killSession();
+      const ivBytes = new Uint8Array(16);
+      crypto.getRandomValues(ivBytes);
+      const iv = Buffer.from(ivBytes);
+
+      const addressBooks: { [chainId: string]: AddressBookData[] } = {};
+      for (const chainInfo of chainStore.chainInfosInUI) {
+        const config = addressBookConfigMap.getAddressBookConfig(
+          chainInfo.chainId
+        );
+        await config.waitLoaded();
+        const data = toJS(config.addressBookDatas) as AddressBookData[];
+        if (data.length > 0) {
+          addressBooks[chainInfo.chainId] = data;
+        }
       }
 
-      setConnector(connector);
+      const buf = Buffer.from(
+        JSON.stringify({ keyRingDatas: keyRingData, addressBooks })
+      );
+
+      const counter = new Counter(0);
+      counter.setBytes(iv);
+      const aesCtr = new AES.ModeOfOperation.ctr(key, counter);
+      const ciphertext = Buffer.from(aesCtr.encrypt(buf)).toString("hex");
+
+      // 800 hex chars = 400 bytes per chunk keeps each QR frame under ~1100 chars
+      const CHUNK_HEX = 800;
+      const chunks: string[] = [];
+      for (let i = 0; i < ciphertext.length; i += CHUNK_HEX) {
+        chunks.push(ciphertext.slice(i, i + CHUNK_HEX));
+      }
+
+      const keyHex = key.toString("hex");
+      const ivHex = iv.toString("hex");
+
+      const frames = chunks.map((chunk, index) => {
+        const frame: Record<string, unknown> = {
+          type: "fetch-direct-export",
+          total: chunks.length,
+          index,
+          data: chunk,
+        };
+        if (index === 0) {
+          frame["key"] = keyHex;
+          frame["iv"] = ivHex;
+        }
+        return JSON.stringify(frame);
+      });
+
+      setQRFrames(frames);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Cycle through frames at 600ms each
   useEffect(() => {
-    if (connector) {
-      connector.on("display_uri", (error, payload) => {
-        if (error) {
-          navigate("/");
-          return;
-        }
-
-        const bytes = new Uint8Array(32);
-        crypto.getRandomValues(bytes);
-        const password = Buffer.from(bytes).toString("hex");
-        const sessionBytes = new Uint8Array(16);
-        crypto.getRandomValues(sessionBytes);
-        const sessionId = Buffer.from(sessionBytes).toString("hex");
-        const tokenBytes = new Uint8Array(16);
-        crypto.getRandomValues(tokenBytes);
-        const requestToken = Buffer.from(tokenBytes).toString("hex");
-
-        const uri = payload.params[0] as string;
-        setQRCodeData({
-          wcURI: uri,
-          sessionId,
-          requestToken,
-          sharedPassword: password,
-        });
-      });
-
-      connector.createSession();
-    }
-  }, [connector, navigate]);
-
-  const onConnect = (error: any) => {
-    if (error) {
-      navigate("/");
-    }
-  };
-  const onConnectRef = useRef(onConnect);
-  onConnectRef.current = onConnect;
-
-  const onCallRequest = (error: any, payload: any) => {
-    if (!connector || !qrCodeData) {
-      return;
-    }
-
-    const reqParams = payload?.params?.[0] ?? {};
-
-    if (isExpired) {
-      safeRejectWalletConnectRequest(
-        connector,
-        payload?.id,
-        "Export request expired"
-      );
-      navigate("/");
-      return;
-    }
-
-    if (error) {
-      safeRejectWalletConnectRequest(
-        connector,
-        payload?.id,
-        "Export request failed"
-      );
-      navigate("/");
-      return;
-    }
-
-    if (
-      payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1"
-    ) {
-      safeRejectWalletConnectRequest(
-        connector,
-        payload?.id,
-        "Invalid export request method"
-      );
-      navigate("/");
-      return;
-    }
-
-    const sid = reqParams.sessionId;
-    const tok = reqParams.requestToken;
-    const hasSid = sid !== undefined && sid !== null && String(sid).length > 0;
-    const hasTok = tok !== undefined && tok !== null && String(tok).length > 0;
-
-    let handshakeOk = false;
-    if (!hasSid && !hasTok) {
-      // Legacy mobile: no session-bound fields in the custom request.
-      handshakeOk = true;
-    } else if (hasSid && hasTok) {
-      if (sid === qrCodeData.sessionId && tok === qrCodeData.requestToken) {
-        handshakeOk = true;
-      }
-    }
-
-    if (!handshakeOk) {
-      safeRejectWalletConnectRequest(
-        connector,
-        payload?.id,
-        "Invalid export session handshake"
-      );
-      navigate("/");
-      return;
-    }
-
-    if (processOnce.current) {
-      safeRejectWalletConnectRequest(
-        connector,
-        payload?.id,
-        "Export already in progress"
-      );
-      return;
-    }
-    processOnce.current = true;
-
-    const buf = Buffer.from(JSON.stringify(keyRingData));
-
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    const iv = Buffer.from(bytes);
-
-    const counter = new Counter(0);
-    counter.setBytes(iv);
-    const aesCtr = new AES.ModeOfOperation.ctr(
-      Buffer.from(qrCodeData.sharedPassword, "hex"),
-      counter
-    );
-
-    (async () => {
-      let approved = false;
-      try {
-        const peerName = connector.peerMeta?.name || "Unknown app";
-        const peerUrl = connector.peerMeta?.url || "unknown";
-        const ok = await confirm.confirm({
-          title: "Confirm export to connected app",
-          paragraph: `Connected app: ${peerName} (${peerUrl}). Export wallet data now?`,
-          yes: "Export",
-          no: "Cancel",
-        });
-
-        if (!ok) {
-          safeRejectWalletConnectRequest(
-            connector,
-            payload?.id,
-            "User cancelled export"
-          );
-          navigate("/");
-          return;
-        }
-
-        const addressBooks: {
-          [chainId: string]: AddressBookData[] | undefined;
-        } = {};
-
-        if (payload.params && payload.params.length > 0) {
-          for (const chainId of payload.params[0].addressBookChainIds ?? []) {
-            if (typeof chainId !== "string" || !chainStore.hasChain(chainId)) {
-              continue;
-            }
-
-            const addressBookConfig =
-              addressBookConfigMap.getAddressBookConfig(chainId);
-
-            await addressBookConfig.waitLoaded();
-
-            addressBooks[chainId] = toJS(
-              addressBookConfig.addressBookDatas
-            ) as AddressBookData[];
-          }
-        }
-
-        const response: WCExportKeyRingDatasResponse = {
-          encrypted: {
-            ciphertext: Buffer.from(aesCtr.encrypt(buf)).toString("hex"),
-            // Hex encoded
-            iv: iv.toString("hex"),
-          },
-          addressBooks,
-        };
-
-        if (payload?.id == null) {
-          navigate("/");
-          return;
-        }
-
-        connector.approveRequest({
-          id: payload.id,
-          result: [response],
-        });
-
-        approved = true;
-        navigate("/");
-      } catch (e) {
-        safeRejectWalletConnectRequest(
-          connector,
-          payload?.id,
-          e instanceof Error ? e.message : "Export failed"
-        );
-        navigate("/");
-      } finally {
-        if (!approved) {
-          processOnce.current = false;
-        }
-      }
-    })();
-  };
-  const onCallRequestRef = useRef(onCallRequest);
-  onCallRequestRef.current = onCallRequest;
-
-  useEffect(() => {
-    if (connector && qrCodeData) {
-      connector.on("connect", (error) => {
-        onConnectRef.current(error);
-      });
-
-      connector.on("call_request", (error, payload) => {
-        onCallRequestRef.current(error, payload);
-      });
-    }
-  }, [connector, qrCodeData]);
-
-  useEffect(() => {
-    if (connector) {
-      return () => {
-        // Kill session after 5 seconds.
-        // Delay is needed because it is possible for wc to being processing the request.
-        setTimeout(() => {
-          connector.killSession().catch(() => {});
-        }, 5000);
-      };
-    }
-  }, [connector]);
+    if (qrFrames.length === 0) return;
+    const id = setInterval(() => {
+      setCurrentFrame((f) => (f + 1) % qrFrames.length);
+    }, 600);
+    return () => clearInterval(id);
+  }, [qrFrames]);
 
   return (
     <div className={style["container"]}>
@@ -529,15 +331,15 @@ const QRCodeView: FunctionComponent<{
               });
             }
 
-            if (qrCodeData) {
-              return JSON.stringify(qrCodeData);
+            if (qrFrames.length > 0) {
+              return qrFrames[currentFrame];
             }
 
             return "";
           })()}
         />
         <div className={style["message"]}>
-          <FormattedMessage id="setting.export-to-mobile.qr-code-view.message" />
+          Scan this QR code on ASI Mobile Wallet to export your accounts.
         </div>
         <Alert className={style["alert"]}>
           <img src={require("@assets/svg/wireframe/alert.svg")} alt="" />
@@ -548,11 +350,10 @@ const QRCodeView: FunctionComponent<{
               gap: "6px",
             }}
           >
-            <div className={style["text"]}>
-              <FormattedMessage id="setting.export-to-mobile.qr-code-view.warning-title" />
-            </div>
+            <div className={style["text"]}>Only scan on ASI Mobile Wallet</div>
             <p className={style["lightText"]}>
-              <FormattedMessage id="setting.export-to-mobile.qr-code-view.warning-description" />
+              Scanning the QR code outside of ASI Mobile Wallet can lead to loss
+              of funds
             </p>
           </div>
         </Alert>

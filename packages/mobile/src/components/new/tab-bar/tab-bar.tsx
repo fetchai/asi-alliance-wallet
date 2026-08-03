@@ -1,6 +1,5 @@
-import { CardDivider } from "components/card";
-import React, { FunctionComponent, useState } from "react";
-import { Dimensions, FlatList, View, ViewStyle } from "react-native";
+import React, { FunctionComponent } from "react";
+import { Dimensions, FlatList, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { BlurButton } from "../button/blur-button";
 import { BlurBackground } from "../blur-background/blur-background";
@@ -11,15 +10,17 @@ export const TabBarView: FunctionComponent<{
   setSelected: any;
   contentContainerStyle?: ViewStyle;
   containerStyle?: ViewStyle;
+  unselectedTextColorToken?: string;
+  backgroundColorToken?: string;
 }> = ({
   listItem,
   selected,
   setSelected,
   contentContainerStyle,
   containerStyle,
+  unselectedTextColorToken,
+  backgroundColorToken,
 }) => {
-  const [prevSelected, setPrevSelected] = useState(0);
-
   const style = useStyle();
 
   const renderItem = ({ item }: any) => {
@@ -32,15 +33,17 @@ export const TabBarView: FunctionComponent<{
         textStyle={
           style.flatten(
             ["text-caption1", "padding-x-4"],
-            [select && "color-indigo-900"]
+            [
+              select
+                ? "color-white"
+                : (unselectedTextColorToken as any) || "color-gray-300",
+            ]
           ) as ViewStyle
         }
         containerStyle={
           [
-            style.flatten(
-              ["justify-center"],
-              [select && "background-color-white"]
-            ),
+            style.flatten(["justify-center"]),
+            select ? style.flatten(["background-color-dark"]) : {},
             {
               width:
                 (Dimensions.get("window").width -
@@ -51,26 +54,8 @@ export const TabBarView: FunctionComponent<{
         }
         onPress={() => {
           setSelected(item);
-          setPrevSelected(Object.values(listItem).indexOf(item) - 1);
         }}
       />
-    );
-  };
-
-  const renderSeparator = (item: any) => {
-    const select = item.leadingItem === selected;
-    const prevSelect =
-      Object.values(listItem).indexOf(item.leadingItem) === prevSelected;
-
-    return (
-      <View style={style.flatten(["justify-center"])}>
-        {!select && !prevSelect ? (
-          <CardDivider
-            vertical={true}
-            style={style.flatten(["height-12"]) as ViewStyle}
-          />
-        ) : null}
-      </View>
     );
   };
 
@@ -79,7 +64,11 @@ export const TabBarView: FunctionComponent<{
       borderRadius={12}
       containerStyle={
         [
-          style.flatten(["margin-y-10", "padding-2"]),
+          style.flatten(
+            ["margin-y-10", "padding-2"],
+            [(backgroundColorToken as any) || undefined]
+          ),
+          { backgroundColor: "#f6f6f6" },
           containerStyle,
         ] as ViewStyle
       }
@@ -89,7 +78,6 @@ export const TabBarView: FunctionComponent<{
         renderItem={renderItem}
         horizontal={true}
         extraData={selected}
-        ItemSeparatorComponent={renderSeparator}
         contentContainerStyle={[
           style.flatten(["justify-center", "items-center"]),
           contentContainerStyle,

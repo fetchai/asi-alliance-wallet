@@ -60,7 +60,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={
         [
           style.flatten(["flex-grow-1"]),
@@ -69,6 +69,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
           },
         ] as ViewStyle
       }
+      hasFloatingHeader={true}
       style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
     >
       <View
@@ -85,7 +86,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
           style={StyleSheet.flatten([
             style.flatten([
               "body3",
-              "color-platinum-100",
+              "color-dark",
               "margin-right-18",
             ]) as ViewStyle,
           ])}
@@ -94,18 +95,10 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
         </Text>
         <Switch
           trackColor={{
-            false: "#767577",
-            true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
+            false: "#DCDCE3",
+            true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
           }}
-          thumbColor={isEnabled ? "#5F38FB" : "#D0BCFF66"}
-          style={[
-            {
-              borderRadius: 16,
-              borderWidth: 1,
-              // transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
-            },
-            style.flatten(["border-color-pink-light@40%"]),
-          ]}
+          thumbColor={isEnabled ? "#73A271" : "#9A9AA2"}
           onValueChange={(isToggleOn) => {
             chainStore.toggleMultipleChainInfoInUI(
               filterChainInfos
@@ -122,12 +115,11 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
       </View>
       <InputCardView
         placeholder="Search"
-        placeholderTextColor={"white"}
         value={search}
         onChangeText={(text: string) => {
           setSearch(text);
         }}
-        rightIcon={<SearchIcon size={12} />}
+        rightIcon={<SearchIcon size={12} color="black" />}
         containerStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
       />
       {/* <FlatList
@@ -185,7 +177,7 @@ export const SettingChainListScreenElement: FunctionComponent<{
 
   return (
     <BlurBackground
-      blurIntensity={15}
+      backgroundBlur={false}
       borderRadius={12}
       containerStyle={
         style.flatten([
@@ -194,20 +186,24 @@ export const SettingChainListScreenElement: FunctionComponent<{
           "items-center",
           "margin-y-2",
           "padding-x-12",
+          "background-color-gray-5",
         ]) as ViewStyle
       }
     >
       <BlurBackground
-        backgroundBlur={true}
+        backgroundBlur={false}
         containerStyle={
-          style.flatten([
-            "width-32",
-            "height-32",
-            "border-radius-64",
-            "items-center",
-            "justify-center",
-            "margin-right-12",
-          ]) as ViewStyle
+          {
+            ...style.flatten([
+              "width-32",
+              "height-32",
+              "border-radius-64",
+              "items-center",
+              "justify-center",
+              "margin-right-12",
+            ]),
+            backgroundColor: "#dddfdf",
+          } as ViewStyle
         }
       >
         {chainSymbolImageUrl ? (
@@ -217,16 +213,18 @@ export const SettingChainListScreenElement: FunctionComponent<{
               height: 22,
             }}
             resizeMode={FastImage.resizeMode.contain}
-            source={{
-              uri: chainSymbolImageUrl,
-            }}
+            source={
+              typeof chainSymbolImageUrl === "number"
+                ? chainSymbolImageUrl
+                : { uri: chainSymbolImageUrl }
+            }
           />
         ) : (
-          <VectorCharacter char={chainName[0]} color="white" height={15} />
+          <VectorCharacter char={chainName[0]} color="#151a1a" height={15} />
         )}
       </BlurBackground>
       <View style={style.flatten(["justify-center"]) as ViewStyle}>
-        <Text style={style.flatten(["subtitle3", "color-white"]) as ViewStyle}>
+        <Text style={style.flatten(["subtitle3", "color-dark"]) as ViewStyle}>
           {titleCase(chainName)}
         </Text>
       </View>
@@ -234,18 +232,10 @@ export const SettingChainListScreenElement: FunctionComponent<{
       <View>
         <Switch
           trackColor={{
-            false: "#767577",
-            true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
+            false: "#DCDCE3",
+            true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
           }}
-          thumbColor={!disabled ? "#5F38FB" : "#D0BCFF66"}
-          style={[
-            {
-              borderRadius: 16,
-              borderWidth: 1,
-              // transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
-            },
-            style.flatten(["border-color-pink-light@40%"]),
-          ]}
+          thumbColor={!disabled ? "#73A271" : "#9A9AA2"}
           onValueChange={(_) => {
             chainStore.toggleChainInfoInUI(chainId);
           }}

@@ -33,10 +33,14 @@ export const TokenCardView: FunctionComponent<{
     <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
       <BlurBackground
         borderRadius={12}
-        blurIntensity={16}
+        backgroundBlur={false}
         containerStyle={
           [
-            style.flatten(["padding-18", "justify-center"]),
+            style.flatten([
+              "padding-18",
+              "justify-center",
+              "background-color-gray-5",
+            ]),
             containerStyle,
           ] as ViewStyle
         }
@@ -65,7 +69,7 @@ export const TokenCardView: FunctionComponent<{
                 <Text
                   style={
                     [
-                      style.flatten(["body3", "padding-2", "color-white"]),
+                      style.flatten(["body3", "padding-2", "color-dark"]),
                       titleStyle,
                     ] as ViewStyle
                   }
@@ -79,7 +83,7 @@ export const TokenCardView: FunctionComponent<{
                     style.flatten([
                       "body3",
                       "padding-2",
-                      "color-white@60%",
+                      "color-gray-400",
                     ]) as ViewStyle
                   }
                 >
@@ -104,7 +108,7 @@ export const TokenCardView: FunctionComponent<{
                   style={
                     style.flatten([
                       "body3",
-                      "color-white",
+                      "color-dark",
                       "font-medium",
                     ]) as ViewStyle
                   }

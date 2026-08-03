@@ -18,7 +18,9 @@ import {
   EditAddressBookScreen,
 } from "screens/setting/screens/address-book";
 import { PageScrollPositionProvider } from "providers/page-scroll-position";
-import { BlurHeaderOptionsPreset } from "components/header";
+import { TransparentHeaderOptionsPreset } from "components/header";
+import { HeaderLeftBackLightButton } from "components/header/button";
+import { getPlatformFontFamily } from "styles/builder/utils";
 import { FocusedScreenProvider } from "providers/focused-screen";
 
 import { SmartNavigatorProvider } from "navigation/smart-navigation";
@@ -45,25 +47,42 @@ export const AddressBookStackScreen: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
-
-          title: "Address book",
+          ...TransparentHeaderOptionsPreset,
+          title: "Address Book",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="AddressBook"
         component={AddressBookScreen}
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
-          title: "Add an address",
+          ...TransparentHeaderOptionsPreset,
+          title: "Add an Address",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="AddAddressBook"
         component={AddAddressBookScreen}
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
-          title: "Edit address book",
+          ...TransparentHeaderOptionsPreset,
+          title: "Edit Address Book",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="EditAddressBook"
         component={EditAddressBookScreen}
@@ -85,8 +104,14 @@ export const ChainListStackScreen: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
-          title: "Manage networks",
+          ...TransparentHeaderOptionsPreset,
+          title: "Manage Networks",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Setting.ChainList"
         component={SettingChainListScreen}

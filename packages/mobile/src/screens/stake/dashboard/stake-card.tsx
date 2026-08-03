@@ -6,7 +6,11 @@ import { CardDivider } from "components/card";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
 import { useStore } from "stores/index";
-import { isVestingExpired, separateNumericAndDenom } from "utils/format/format";
+import {
+  formatBalance,
+  isVestingExpired,
+  separateNumericAndDenom,
+} from "utils/format/format";
 import { AnimatedNumber } from "components/new/animations/animated-number";
 import Skeleton from "react-native-reanimated-skeleton";
 import { VestingType } from "@keplr-wallet/stores";
@@ -55,10 +59,11 @@ export const StakeCard: FunctionComponent = () => {
   );
 
   const stakableReward = rewards.stakableReward;
-  const stakedSum = delegated.add(unbonding);
+  const stakedSum = delegated;
   const stakableBal = stakable.shrink(true).trim(true).toString();
   const stakedBal = stakedSum.shrink(true).trim(true).toString();
   const rewardsBal = stakableReward.shrink(true).trim(true).toString();
+  const unbondingBal = unbonding.shrink(true).trim(true).toString();
 
   const { numericPart: stakableBalNumber, denomPart: stakableDenom } =
     separateNumericAndDenom(stakableBal);
@@ -66,6 +71,8 @@ export const StakeCard: FunctionComponent = () => {
     separateNumericAndDenom(stakedBal);
   const { numericPart: rewardsBalNumber, denomPart: rewardDenom } =
     separateNumericAndDenom(rewardsBal);
+  const { numericPart: unbondingBalNumber, denomPart: unbondingDenom } =
+    separateNumericAndDenom(unbondingBal);
 
   const vestingInfo = queries.cosmos.queryAccount.getQueryBech32Address(
     accountInfo.bech32Address
@@ -120,12 +127,14 @@ export const StakeCard: FunctionComponent = () => {
   const total =
     parseFloat(stakableBalNumber) +
     parseFloat(stakedBalNumber) +
-    parseFloat(rewardsBalNumber);
+    parseFloat(rewardsBalNumber) +
+    parseFloat(unbondingBalNumber);
 
   let stakablePercentage = 0;
   let stakedPercentage = 0;
   let rewardsPercentage = 0;
   let vestingPercentage = 0;
+  let unbondingPercentage = 0;
   if (total > 0) {
     stakablePercentage =
       total >= spendableNumber
@@ -137,23 +146,29 @@ export const StakeCard: FunctionComponent = () => {
       isVesting && !isVestingExpired(vestingEndTimeStamp)
         ? (parseFloat(vestingBalance()) / total) * 100
         : 0;
+    unbondingPercentage = (parseFloat(unbondingBalNumber) / total) * 100;
   }
+
+  const stakableBalance = formatBalance(stakable, 2, false);
+  const stakedBalance = formatBalance(stakedSum, 2, false);
+  const rewardsBalance = formatBalance(stakableReward, 2, false);
+  const unbondingBalance = formatBalance(unbonding, 2, false);
+
   const pieData = [
     {
-      color: "#F9774B",
+      color: "#FAB29B",
       value: rewardsPercentage,
       focused:
         Math.round(stakablePercentage) == 0 &&
         Math.round(rewardsPercentage) > 0,
     },
-
     {
-      color: "#5F38FB",
+      color: "#2DA6CF",
       value: stakedPercentage,
       focused: Math.round(stakedPercentage) > 0,
     },
     {
-      color: "#CFC3FE",
+      color: style.get("color-green-250").color,
       value: stakablePercentage,
       focused:
         Math.round(rewardsPercentage) == 0 &&
@@ -162,13 +177,16 @@ export const StakeCard: FunctionComponent = () => {
         Math.round(stakablePercentage) > 0,
     },
     {
-      color: "#9F88FD",
+      color: "#3A5638",
       value: vestingPercentage,
       focused:
         Math.round(stakedPercentage) == 0 &&
         Math.round(stakablePercentage) == 0 &&
         Math.round(vestingPercentage) > 0,
     },
+    ...(parseFloat(unbondingBalNumber) > 0
+      ? [{ color: "#F4B400", value: unbondingPercentage, focused: false }]
+      : []),
   ];
 
   const renderLine = (color: string) => {
@@ -188,7 +206,8 @@ export const StakeCard: FunctionComponent = () => {
   const legendComponentItem = [
     {
       title: "Available",
-      lineColor: "#CFC3FE",
+      lineColor: style.get("color-green-250").color,
+      formattedBalance: stakableBalance,
       balance: spendableNumber,
       denom: stakableDenom,
       percentageValue: stakablePercentage,
@@ -196,7 +215,8 @@ export const StakeCard: FunctionComponent = () => {
     },
     {
       title: "Staked",
-      lineColor: "#5F38FB",
+      lineColor: "#2DA6CF",
+      formattedBalance: stakedBalance,
       balance: stakedBalNumber,
       denom: stakedDenom,
       percentageValue: stakedPercentage,
@@ -204,7 +224,8 @@ export const StakeCard: FunctionComponent = () => {
     },
     {
       title: "Staking rewards",
-      lineColor: "#F9774B",
+      lineColor: "#FAB29B",
+      formattedBalance: rewardsBalance,
       balance: rewardsBalNumber,
       denom: rewardDenom,
       percentageValue: rewardsPercentage,
@@ -213,11 +234,25 @@ export const StakeCard: FunctionComponent = () => {
     isVesting && !isVestingExpired(vestingEndTimeStamp)
       ? {
           title: "Vesting",
-          lineColor: "#9F88FD",
+          lineColor: "#3A5638",
+          formattedBalance: `${Number(vestingBalance()).toFixed(
+            2
+          )} ${rewardDenom}`,
           balance: vestingBalance(),
           denom: rewardDenom,
           percentageValue: vestingPercentage,
           dollarValue: spendableBalances.balances[0],
+        }
+      : null,
+    parseFloat(unbondingBalNumber) > 0
+      ? {
+          title: "Unbonding",
+          lineColor: "#F4B400",
+          formattedBalance: unbondingBalance,
+          balance: unbondingBalNumber,
+          denom: unbondingDenom || stakedDenom,
+          percentageValue: unbondingPercentage,
+          dollarValue: unbonding,
         }
       : null,
   ];
@@ -237,7 +272,7 @@ export const StakeCard: FunctionComponent = () => {
                   <Text
                     style={
                       style.flatten([
-                        "color-white@60%",
+                        "color-gray-300",
                         "body3",
                         "margin-bottom-4",
                         "width-122",
@@ -266,57 +301,73 @@ export const StakeCard: FunctionComponent = () => {
                     containerStyle={
                       style.flatten(["margin-left-2"]) as ViewStyle
                     }
-                    boneColor={style.get("color-white@20%").color}
-                    highlightColor={style.get("color-white@60%").color}
+                    boneColor={"#DCDCE3"}
+                    highlightColor={"#F6F6F6"}
                   >
                     <View
                       style={
                         style.flatten(["flex-row", "flex-wrap"]) as ViewStyle
                       }
                     >
-                      <AnimatedNumber
-                        numberForAnimated={parseFloat(
-                          parseFloat(item.balance).toFixed(2)
-                        )}
-                        includeComma={true}
-                        decimalAmount={2}
-                        fontSizeValue={16}
-                        hookName={"withTiming"}
-                        withTimingProps={{
-                          durationValue: 1000,
-                          easingValue: "linear",
-                        }}
-                      />
+                      {parseFloat(item.balance) >= 0.01 ? (
+                        <React.Fragment>
+                          <AnimatedNumber
+                            numberForAnimated={parseFloat(
+                              parseFloat(item.balance).toFixed(2)
+                            )}
+                            includeComma={true}
+                            decimalAmount={2}
+                            fontSizeValue={16}
+                            hookName={"withTiming"}
+                            withTimingProps={{
+                              durationValue: 1000,
+                              easingValue: "linear",
+                            }}
+                            textColor={style.flatten(["color-dark"]).color}
+                          />
+                          <Text
+                            style={
+                              [
+                                style.flatten([
+                                  "color-dark",
+                                  "subtitle2",
+                                  "padding-left-4",
+                                ]),
+                                { lineHeight: 16 },
+                              ] as ViewStyle
+                            }
+                          >
+                            {`${item.denom}`}
+                          </Text>
+                        </React.Fragment>
+                      ) : (
+                        <Text
+                          style={
+                            [
+                              style.flatten(["color-dark", "subtitle2"]),
+                              { lineHeight: 16 },
+                            ] as ViewStyle
+                          }
+                        >
+                          {item.formattedBalance}
+                        </Text>
+                      )}
                       <Text
                         style={
                           [
-                            style.flatten([
-                              "color-white",
-                              "subtitle2",
-                              "padding-left-4",
-                            ]),
-                            { lineHeight: 16 },
-                          ] as ViewStyle
-                        }
-                      >
-                        {`${item.denom}`}
-                      </Text>
-                      <Text
-                        style={
-                          [
-                            style.flatten(["color-white@60%", "subtitle2"]),
+                            style.flatten(["color-gray-300", "subtitle2"]),
                             { lineHeight: 18 },
                           ] as ViewStyle
                         }
                       >
-                        {`(${item.percentageValue.toFixed(2)}%)`}
+                        {` (${item.percentageValue.toFixed(2)}%)`}
                       </Text>
                     </View>
                     {priceStore.calculatePrice(item.dollarValue)?.toString() ? (
                       <Text
                         style={
                           style.flatten([
-                            "color-white@60%",
+                            "color-gray-300",
                             "body3",
                           ]) as ViewStyle
                         }
@@ -349,7 +400,7 @@ export const StakeCard: FunctionComponent = () => {
             sectionAutoFocus
             radius={62}
             innerRadius={38}
-            innerCircleColor={"#232B5D"}
+            innerCircleColor={"#f6f6f6"}
             focusOnPress={true}
           />
         </View>
