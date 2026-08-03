@@ -19,7 +19,7 @@ import { AssetCardModel } from "components/new/asset-card-model/asset-card-model
 import { ChangeWalletCardModel } from "components/new/wallet-card/change-wallet";
 import { useLoadingScreen } from "providers/loading-screen";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { numberLocalFormat, removeComma } from "utils/format/format";
+import { formatBalance, removeComma } from "utils/format/format";
 
 interface SendConfigs {
   amountConfig: AmountConfig;
@@ -106,11 +106,6 @@ export const SendPhase1: FunctionComponent<{
       ? `(${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
       : "";
 
-    const availableBalance = `${balance
-      .shrink(true)
-      .maxDecimals(6)
-      .toString()}${Usd ? ` ${Usd}` : ""}`;
-
     const maxAmount = React.useMemo(() => {
       try {
         const feeCurrency = sendConfigs.feeConfig.feeCurrencies?.[0];
@@ -155,9 +150,7 @@ export const SendPhase1: FunctionComponent<{
             }
             mainHeading="Asset"
             heading={sendConfigs.amountConfig.sendCurrency.coinDenom}
-            subHeading={`Available: ${numberLocalFormat(
-              availableBalance.split(" ")[0]
-            )} ${availableBalance.split(" ").slice(1).join(" ")}`}
+            subHeading={`Available: ${formatBalance(balance, 4)} ${Usd}`}
             trailingIcon={<ChevronDownIcon size={12} color="#151a1a" />}
             onPress={() => {
               setOpenAssetModel(true);

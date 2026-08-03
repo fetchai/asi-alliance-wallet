@@ -20,7 +20,7 @@ export const PageWithSectionList: FunctionComponent<
   SectionListProps<any, any> & {
     containerStyle?: ViewStyle;
     backgroundMode: BackgroundMode;
-    isTransparentHeader?: boolean;
+    hasFloatingHeader?: boolean;
   }
 > = (props) => {
   const style = useStyle();
@@ -34,7 +34,7 @@ export const PageWithSectionList: FunctionComponent<
     containerStyle,
     backgroundMode,
     indicatorStyle,
-    isTransparentHeader,
+    hasFloatingHeader,
     ...restProps
   } = props;
 
@@ -42,7 +42,7 @@ export const PageWithSectionList: FunctionComponent<
     <React.Fragment>
       <ScreenBackground
         backgroundMode={backgroundMode}
-        isTransparentHeader={isTransparentHeader}
+        hasFloatingHeader={hasFloatingHeader}
       />
       <SafeAreaView
         style={StyleSheet.flatten([

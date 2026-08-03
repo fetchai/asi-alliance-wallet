@@ -83,6 +83,7 @@ export const EditAddressBookScreen: FunctionComponent = observer(() => {
   return (
     <PageWithScrollView
       backgroundMode="secondary"
+      hasFloatingHeader={true}
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >

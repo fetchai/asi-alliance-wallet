@@ -69,6 +69,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
           },
         ] as ViewStyle
       }
+      hasFloatingHeader={true}
       style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
     >
       <View
@@ -98,13 +99,6 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
             true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
           }}
           thumbColor={isEnabled ? "#73A271" : "#9A9AA2"}
-          style={[
-            {
-              borderRadius: 16,
-              borderWidth: 1,
-            },
-            style.flatten(["border-color-gray-100"]),
-          ]}
           onValueChange={(isToggleOn) => {
             chainStore.toggleMultipleChainInfoInUI(
               filterChainInfos
@@ -242,13 +236,6 @@ export const SettingChainListScreenElement: FunctionComponent<{
             true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
           }}
           thumbColor={!disabled ? "#73A271" : "#9A9AA2"}
-          style={[
-            {
-              borderRadius: 16,
-              borderWidth: 1,
-            },
-            style.flatten(["border-color-gray-100"]),
-          ]}
           onValueChange={(_) => {
             chainStore.toggleChainInfoInUI(chainId);
           }}

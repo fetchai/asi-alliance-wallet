@@ -52,7 +52,8 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
   const unbondings = queries.cosmos.queryUnbondingDelegations
     .getQueryBech32Address(account.bech32Address)
     .unbondingBalances.find(
-      (unbonding) => unbonding.validatorAddress === validatorAddress
+      (unbonding: { validatorAddress: string }) =>
+        unbonding.validatorAddress === validatorAddress
     );
 
   const style = useStyle();
@@ -198,6 +199,7 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
       }
       fixed={
         <View
+          pointerEvents="box-none"
           style={{
             flex: 1,
             justifyContent: "flex-end",

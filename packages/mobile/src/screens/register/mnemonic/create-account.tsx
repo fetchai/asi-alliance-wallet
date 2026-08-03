@@ -57,6 +57,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const [isCreating, setIsCreating] = useState(false);
   const isSubmittingRef = useRef(false);
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+  const [submitError, setSubmitError] = useState<string | undefined>();
 
   const smartNavigation = useSmartNavigation();
 
@@ -89,53 +90,72 @@ export const CreateAccountScreen: FunctionComponent = () => {
     isSubmittingRef.current = true;
     setIsCreating(true);
     setShowPassword(false);
+    setSubmitError(undefined);
 
-    const mnemonic = trimWordsStr(getValues("mnemonic"));
+    try {
+      const mnemonic = trimWordsStr(getValues("mnemonic"));
 
-    if (!isPrivateKey(mnemonic)) {
-      await registerConfig.createMnemonic(
-        getValues("name").trim(),
-        mnemonic,
-        getValues("password"),
-        bip44HDPath,
-        {},
-        selectedNetworks
-      );
-      analyticsStore.setUserProperties({
-        registerType: "seed",
-        accountType: "mnemonic",
+      if (!isPrivateKey(mnemonic)) {
+        await registerConfig.createMnemonic(
+          getValues("name").trim(),
+          mnemonic,
+          getValues("password"),
+          bip44HDPath,
+          {},
+          selectedNetworks
+        );
+        analyticsStore.setUserProperties({
+          registerType: "seed",
+          accountType: "mnemonic",
+        });
+      } else {
+        const privateKey = Buffer.from(
+          mnemonic.trim().replace("0x", ""),
+          "hex"
+        );
+        await registerConfig.createPrivateKey(
+          getValues("name"),
+          privateKey,
+          getValues("password"),
+          {},
+          selectedNetworks
+        );
+        analyticsStore.setUserProperties({
+          registerType: "seed",
+          accountType: "privateKey",
+        });
+      }
+
+      analyticsStore.logEvent("register_done_click", {
+        pageName: "Register",
       });
-    } else {
-      const privateKey = Buffer.from(mnemonic.trim().replace("0x", ""), "hex");
-      await registerConfig.createPrivateKey(
-        getValues("name"),
-        privateKey,
-        getValues("password"),
-        {},
-        selectedNetworks
-      );
-      analyticsStore.setUserProperties({
-        registerType: "seed",
-        accountType: "privateKey",
-      });
-    }
-
-    analyticsStore.logEvent("register_done_click", {
-      pageName: "Register",
-    });
-    smartNavigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: "Register.End",
-          params: {
-            password: getValues("password"),
+      smartNavigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: "Register.End",
+            params: {
+              password: getValues("password"),
+            },
           },
-        },
-      ],
-    });
-    isSubmittingRef.current = false;
-    setIsCreating(false);
+        ],
+      });
+    } catch (e: any) {
+      const msg: string = e?.message ?? "";
+      if (
+        msg.toLowerCase().includes("mnemonic") ||
+        msg.toLowerCase().includes("seed")
+      ) {
+        setSubmitError(
+          "Invalid seed phrase. Please go back and check your words."
+        );
+      } else {
+        setSubmitError(msg || "Failed to create account. Please try again.");
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      setIsCreating(false);
+    }
   });
 
   const checkPasswordValidity = (value: string) => {
@@ -422,6 +442,31 @@ export const CreateAccountScreen: FunctionComponent = () => {
       )}
 
       <View style={style.flatten(["flex-1"])} />
+      {submitError ? (
+        <View
+          style={
+            style.flatten([
+              "border-width-1",
+              "border-radius-12",
+              "border-color-red-400",
+              "padding-10",
+              "margin-bottom-12",
+            ]) as ViewStyle
+          }
+        >
+          <Text
+            style={
+              style.flatten([
+                "color-red-400",
+                "body2",
+                "text-center",
+              ]) as ViewStyle
+            }
+          >
+            {submitError}
+          </Text>
+        </View>
+      ) : null}
       <Button
         containerStyle={
           style.flatten([

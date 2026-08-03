@@ -49,6 +49,7 @@ export const SelectorValidatorDetailsScreen: FunctionComponent = observer(
         }
         fixed={
           <View
+            pointerEvents="box-none"
             style={{
               flex: 1,
               justifyContent: "flex-end",

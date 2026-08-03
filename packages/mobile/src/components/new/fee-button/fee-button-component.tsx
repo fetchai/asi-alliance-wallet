@@ -93,20 +93,12 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
               true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
             }}
             thumbColor={feeButtonState.isGasInputOpen ? "#73A271" : "#9A9AA2"}
-            style={[
-              {
-                borderRadius: 16,
-              },
-              style.flatten(
-                ["border-color-gray-200"],
-                [!feeButtonState.isGasInputOpen && "border-width-1"]
-              ),
-            ]}
             onValueChange={() => {
               const next = !feeButtonState.isGasInputOpen;
               feeButtonState.setIsGasInputOpen(next);
               if (!next) {
                 props.onValidationChange?.(false);
+                props.feeConfig.setFeeType(props.selectFeeButton ?? "average");
               }
               if (props.pageName)
                 analyticsStore.logEvent("fee_advance_click", {

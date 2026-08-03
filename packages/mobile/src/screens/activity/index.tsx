@@ -79,7 +79,7 @@ export const ActivityScreen = observer(() => {
   return (
     <PageWithViewInBottomTabView
       backgroundMode={"secondary"}
-      isTransparentHeader={true}
+      hasFloatingHeader={true}
       style={{
         paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
         flexGrow: 1,

@@ -183,7 +183,7 @@ export const RegisterIntroScreen: FunctionComponent = () => {
                   ]) as ViewStyle
                 }
               >
-                {"Welcome to your\nASI Alliance Wallet"}
+                {"Welcome to \nASI Alliance Wallet"}
               </Text>
               <Text
                 style={

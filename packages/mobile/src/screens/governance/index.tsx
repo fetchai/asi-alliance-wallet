@@ -99,6 +99,7 @@ export const GovernanceScreen: FunctionComponent = observer(() => {
   return (
     <PageWithScrollView
       backgroundMode="secondary"
+      hasFloatingHeader={true}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       containerStyle={style.flatten(["overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}

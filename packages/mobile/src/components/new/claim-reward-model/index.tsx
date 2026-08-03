@@ -26,7 +26,7 @@ export const ClaimRewardsModal: FunctionComponent<{
       isOpen={isOpen}
       disableGesture={true}
       close={close}
-      showCloseButton={false}
+      showCloseButton={true}
     >
       <IconWithText
         icon={<ClaimRewardIcon size={64} />}
@@ -83,6 +83,8 @@ export const ClaimRewardsModal: FunctionComponent<{
         text={"Claim My Rewards"}
         onPress={onPress}
         loading={buttonLoading}
+        showLoadingSpinner={true}
+        loaderColor={style.get("color-dark").color}
         rippleColor="#85cc80"
       />
     </CardModal>

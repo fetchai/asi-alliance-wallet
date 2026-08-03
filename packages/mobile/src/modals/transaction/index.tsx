@@ -105,7 +105,12 @@ export const TransactionModal: FunctionComponent<{
   }
 
   return (
-    <CardModal isOpen={isOpen} disableGesture={true}>
+    <CardModal
+      isOpen={isOpen}
+      disableGesture={true}
+      showCloseButton={true}
+      close={close}
+    >
       <IconWithText
         icon={
           <LottieView
