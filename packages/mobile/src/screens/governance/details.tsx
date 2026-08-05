@@ -31,6 +31,7 @@ import { Buffer } from "buffer";
 import Toast from "react-native-toast-message";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { txnTypeKey, txType } from "components/new/txn-status.tsx";
+import { ActivityEnum } from "screens/activity";
 
 export type VoteType = "Yes" | "No" | "NoWithVeto" | "Abstain" | "Unspecified";
 export const TallyVoteInfoView: FunctionComponent<{
@@ -582,6 +583,14 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
         buttonText="Go to Home"
         onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={onSubmit}
+        onViewDetailsClick={() => {
+          navigation.navigate("MainTab", {
+            screen: "ActivityTab",
+            params: {
+              tabId: ActivityEnum.GovProposals,
+            },
+          });
+        }}
       />
     </PageWithScrollView>
   );
