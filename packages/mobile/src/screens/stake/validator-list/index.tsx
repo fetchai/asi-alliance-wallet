@@ -283,7 +283,7 @@ const ValidatorItem: FunctionComponent<{
     ? prevSelectedValidator
     : "";
 
-  return validator ? (
+  return validator && !validator.jailed ? (
     prevSelectValidatorAdress !== validatorAddress ? (
       <StakeValidatorCardView
         containerStyle={

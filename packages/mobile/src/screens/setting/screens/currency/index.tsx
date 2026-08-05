@@ -31,7 +31,10 @@ export const CurrencyScreen: FunctionComponent = observer(() => {
     <PageWithScrollView
       backgroundMode="secondary"
       hasFloatingHeader={true}
-      style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
+      contentContainerStyle={
+        style.flatten(["padding-top-0", "margin-top-16"]) as ViewStyle
+      }
+      style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
       {currencyItems.map((item) => {
         const isSelected = item.key === priceStore.defaultVsCurrency;

@@ -26,7 +26,13 @@ export const SecurityAndPrivacyScreen: FunctionComponent = observer(() => {
     <PageWithScrollView
       backgroundMode="secondary"
       hasFloatingHeader={true}
-      contentContainerStyle={style.flatten(["flex-grow-1"])}
+      contentContainerStyle={
+        style.flatten([
+          "flex-grow-1",
+          "margin-top-16",
+          "padding-top-0",
+        ]) as ViewStyle
+      }
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       scrollEnabled={false}
     >

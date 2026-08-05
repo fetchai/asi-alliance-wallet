@@ -6,14 +6,7 @@ import React, {
 } from "react";
 import { observer } from "mobx-react-lite";
 import { useStore } from "stores/index";
-import {
-  Platform,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-  ViewStyle,
-} from "react-native";
+import { StyleSheet, Switch, Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import FastImage from "react-native-fast-image";
 import { VectorCharacter } from "components/vector-character";
@@ -70,7 +63,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
         ] as ViewStyle
       }
       hasFloatingHeader={true}
-      style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
+      style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
       <View
         style={
@@ -96,7 +89,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
         <Switch
           trackColor={{
             false: "#DCDCE3",
-            true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
+            true: "#DCDCE3",
           }}
           thumbColor={isEnabled ? "#73A271" : "#9A9AA2"}
           onValueChange={(isToggleOn) => {
@@ -233,7 +226,7 @@ export const SettingChainListScreenElement: FunctionComponent<{
         <Switch
           trackColor={{
             false: "#DCDCE3",
-            true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
+            true: "#DCDCE3",
           }}
           thumbColor={!disabled ? "#73A271" : "#9A9AA2"}
           onValueChange={(_) => {
