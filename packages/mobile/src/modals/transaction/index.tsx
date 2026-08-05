@@ -31,6 +31,7 @@ export const TransactionModal: FunctionComponent<{
   close: () => void;
   onTryAgainClick: () => void;
   onHomeClick: () => void;
+  onFailed?: (log: string) => void;
   txnHash: string;
   chainId: string;
   buttonText?: string;
@@ -41,6 +42,7 @@ export const TransactionModal: FunctionComponent<{
   close,
   onHomeClick,
   onTryAgainClick,
+  onFailed,
   buttonText = "Go to Homescreen",
 }) => {
   const { chainStore } = useStore();
@@ -81,6 +83,8 @@ export const TransactionModal: FunctionComponent<{
             img: require("assets/lottie/success.json"),
           });
         } else {
+          const log = tx.raw_log || tx.log || "";
+          onFailed?.(log);
           setTransactionState({
             status: TransactionStatus.Failed,
             title: "Transaction Failed",
@@ -109,7 +113,10 @@ export const TransactionModal: FunctionComponent<{
       isOpen={isOpen}
       disableGesture={true}
       showCloseButton={true}
-      close={close}
+      close={() => {
+        close();
+        onHomeClick();
+      }}
     >
       <IconWithText
         icon={
@@ -161,7 +168,7 @@ export const TransactionModal: FunctionComponent<{
             onHomeClick();
           }}
         />
-        {transactionState.status === TransactionStatus.Success ? (
+        {!!txnHash && transactionState.status === TransactionStatus.Success ? (
           <Button
             text="View Details"
             mode="outline"

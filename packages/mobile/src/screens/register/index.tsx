@@ -342,7 +342,7 @@ export const NewWalletModal: FunctionComponent<{
   return (
     <CardModal
       isOpen={isOpen}
-      title="Create a new wallet"
+      title="Create a New Wallet"
       close={() => close()}
     >
       <TokenCardView
@@ -420,7 +420,7 @@ export const ImportExistingWalletModal: FunctionComponent<{
   return (
     <CardModal
       isOpen={isOpen}
-      title="Import existing wallet"
+      title="Import Existing Wallet"
       close={() => close()}
     >
       <TokenCardView

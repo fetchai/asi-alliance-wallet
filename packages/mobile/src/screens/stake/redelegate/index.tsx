@@ -22,6 +22,7 @@ import { UseMaxButton } from "components/new/button/use-max-button";
 import { MemoInputView } from "components/new/card-view/memo-input";
 import { TransactionModal } from "modals/transaction";
 import { IconButton } from "components/new/button/icon";
+import { CircleExclamationIcon } from "components/new/icon/circle-exclamation";
 import { GearIcon } from "components/new/icon/gear-icon";
 import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-modal";
 import { useNetInfo } from "@react-native-community/netinfo";
@@ -311,7 +312,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
       <DropDownCardView
         containerStyle={
           {
-            ...style.flatten(["margin-bottom-16"]),
+            ...style.flatten(["margin-bottom-8"]),
             backgroundColor: "#f6f6f6",
           } as ViewStyle
         }
@@ -338,6 +339,31 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         }}
         disable={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
       />
+      <View
+        style={
+          style.flatten([
+            "margin-bottom-16",
+            "padding-12",
+            "background-color-gray-50",
+            "flex-row",
+            "border-radius-12",
+          ]) as ViewStyle
+        }
+      >
+        <View
+          style={
+            [style.flatten(["margin-top-4", "margin-right-10"])] as ViewStyle
+          }
+        >
+          <CircleExclamationIcon />
+        </View>
+        <Text
+          style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}
+        >
+          Once you redelegate to a validator, you won&apos;t be able to
+          redelegate from that validator for ~21 days
+        </Text>
+      </View>
       <StakeAmountInput
         label="Amount"
         labelStyle={
@@ -460,8 +486,27 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to activity screen"
-        onHomeClick={() => navigation.navigate("ActivityTab", {})}
+        buttonText="Go to Home"
+        onFailed={(log) => {
+          if (log.includes("too many redelegation entries")) {
+            Toast.show({
+              type: "error",
+              text1: "Redelegation limit reached",
+              text2:
+                "You have too many active redelegations between these validators. Wait for one to complete and try again.",
+            });
+          } else if (
+            log.includes("redelegation to this validator already in progress")
+          ) {
+            Toast.show({
+              type: "error",
+              text1: "Redelegation in progress",
+              text2:
+                "A redelegation to this validator is already in progress. Wait for it to complete before redelegating again.",
+            });
+          }
+        }}
+        onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={redelegateAmount}
       />
       <TransactionFeeModel

@@ -28,7 +28,6 @@ import { CheckIcon } from "components/new/icon/check";
 import moment from "moment";
 import { TransactionModal } from "modals/transaction";
 import { Buffer } from "buffer";
-import { ActivityEnum } from "screens/activity";
 import Toast from "react-native-toast-message";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { txnTypeKey, txType } from "components/new/txn-status.tsx";
@@ -580,15 +579,8 @@ export const GovernanceDetailsScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to activity screen"
-        onHomeClick={() => {
-          navigation.navigate("MainTab", {
-            screen: "ActivityTab",
-            params: {
-              tabId: ActivityEnum.GovProposals,
-            },
-          });
-        }}
+        buttonText="Go to Home"
+        onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={onSubmit}
       />
     </PageWithScrollView>

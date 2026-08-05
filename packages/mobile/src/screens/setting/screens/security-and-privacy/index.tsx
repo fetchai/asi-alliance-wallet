@@ -27,7 +27,7 @@ export const SecurityAndPrivacyScreen: FunctionComponent = observer(() => {
       backgroundMode="secondary"
       hasFloatingHeader={true}
       contentContainerStyle={style.flatten(["flex-grow-1"])}
-      style={style.flatten(["padding-x-page", "margin-top-16"]) as ViewStyle}
+      style={style.flatten(["padding-x-page"]) as ViewStyle}
       scrollEnabled={false}
     >
       {showPrivateData && <SettingViewPrivateDataItem />}
