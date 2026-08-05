@@ -137,34 +137,19 @@ export class CardanoKeyRing {
     return true;
   }
 
+  /**
+   * Return capability markers only. KeyAgent creation belongs to the lazy
+   * restore/getKey path and must not block wallet persistence during import.
+   */
   public async getMetaFromMnemonic(
     mnemonic: string,
     _password: string,
-    chainId?: string
+    _chainId?: string
   ): Promise<Record<string, string>> {
     const mnemonicWords = mnemonic.trim().split(/\s+/);
     if (mnemonicWords.length !== 24) {
       return {};
     }
-
-    const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
-    const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
-
-    const network = this.resolveNetworkOrThrow(chainId);
-    const cardanoChainId = await getCardanoChainIdFromNetwork(network);
-
-    const bip32Ed25519 = await SodiumBip32Ed25519.create();
-
-    await InMemoryKeyAgent.fromBip39MnemonicWords(
-      {
-        mnemonicWords,
-        accountIndex: 0,
-        purpose: CARDANO_PURPOSE,
-        chainId: cardanoChainId,
-        getPassphrase: async () => new Uint8Array(),
-      },
-      { bip32Ed25519, logger: console }
-    );
 
     return {
       cardano: "true",

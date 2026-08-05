@@ -200,10 +200,7 @@ export class CardanoService {
     }
   }
 
-  /**
-   * Get Cardano-specific metadata (serialized agent etc.) from mnemonic.
-   * Used when creating new KeyStore.
-   */
+  /** Get lightweight Cardano capability metadata for a new KeyStore. */
   async createMetaFromMnemonic(
     mnemonic: string,
     password: string,

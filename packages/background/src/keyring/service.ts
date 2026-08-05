@@ -411,15 +411,8 @@ export class KeyRingService {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    let currentChainId: string | undefined;
-    try {
-      currentChainId = await this.chainsService.getSelectedChain();
-    } catch (error) {
-      console.warn("Failed to get current chainId for Cardano meta:", error);
-    }
-
     const cardanoMeta = await this.cardanoService
-      .createMetaFromMnemonic(mnemonic, password, currentChainId)
+      .createMetaFromMnemonic(mnemonic, password)
       .catch((error) => {
         console.error("Failed to create Cardano meta:", error);
         return {};
