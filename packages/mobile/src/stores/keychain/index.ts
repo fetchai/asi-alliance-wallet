@@ -2,6 +2,7 @@ import { flow, makeObservable, observable } from "mobx";
 import * as Keychain from "react-native-keychain";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { KeyRingStore } from "@keplr-wallet/stores";
+import { Platform } from "react-native";
 
 export class KeychainStore {
   @observable
@@ -156,16 +157,38 @@ export class KeychainStore {
     // No need to await.
     this.restore();
     this.restoreAutoLock();
+    // iOS only: restore last known type so the label stays correct when
+    // Face ID is temporarily unavailable (not enrolled / no app permission).
+    if (Platform.OS === "ios") {
+      this.restoreBiometryType();
+    }
 
     const type = yield* toGenerator(Keychain.getSupportedBiometryType());
     this._isBiometrySupported = type != null;
-    this._biometryType = type;
+    if (type != null) {
+      this._biometryType = type;
+      if (Platform.OS === "ios") {
+        yield this.kvStore.set("lastBiometryType", type);
+      }
+    }
+    // iOS: if type is null, _biometryType keeps the value from restoreBiometryType()
+    // Android: _biometryType is set to null when type is null (unchanged behaviour)
   }
 
   @flow
   protected *restore() {
     const saved = yield* toGenerator(this.kvStore.get("isBiometryOn"));
     this._isBiometryOn = saved === true;
+  }
+
+  @flow
+  protected *restoreBiometryType() {
+    const saved = yield* toGenerator(
+      this.kvStore.get<string>("lastBiometryType")
+    );
+    if (saved) {
+      this._biometryType = saved as Keychain.BIOMETRY_TYPE;
+    }
   }
 
   @flow
