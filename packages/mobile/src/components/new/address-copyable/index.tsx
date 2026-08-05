@@ -48,12 +48,14 @@ export const AddressCopyable: FunctionComponent<{
                 style.flatten([
                   "width-20",
                   "height-20",
+                  "border-radius-32",
                   "items-center",
                   "justify-center",
+                  "background-color-green-400",
                 ]) as ViewStyle
               }
             >
-              <CheckIcon size={15} color="#ffffff" />
+              <CheckIcon size={10} color="#ffffff" />
             </View>
           ) : (
             <View style={style.flatten(["margin-left-2"]) as ViewStyle}>
@@ -80,11 +82,11 @@ export const AddressCopyable: FunctionComponent<{
                     colorFilters={[
                       {
                         keypath: "Shape Layer 2",
-                        color: style.flatten(["color-gray-200"]).color,
+                        color: style.flatten(["color-green-400"]).color,
                       },
                       {
                         keypath: "Shape Layer 1",
-                        color: style.flatten(["color-gray-300"]).color,
+                        color: style.flatten(["color-green-400"]).color,
                       },
                       {
                         keypath: "Layer 1 Outlines",

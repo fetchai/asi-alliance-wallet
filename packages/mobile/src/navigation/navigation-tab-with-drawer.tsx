@@ -239,10 +239,6 @@ export const MainTabNavigation: FunctionComponent = () => {
                     }
                     borderRadius={64}
                     backgroundBlur={false}
-                    onPress={() => {
-                      setQuickOptionEnable(true);
-                      analyticsStore.logEvent("fund_transfer_tab_click");
-                    }}
                     iconStyle={
                       {
                         ...style.flatten(["padding-16"]),
@@ -362,7 +358,17 @@ export const MainTabNavigation: FunctionComponent = () => {
       >
         <Tab.Screen name="HomeTab" component={HomeNavigation} />
         <Tab.Screen name="StakeTab" component={StakingDashboardScreen} />
-        <Tab.Screen name="InboxTab" component={SettingScreen} />
+        <Tab.Screen
+          name="InboxTab"
+          component={SettingScreen}
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              setQuickOptionEnable(true);
+              analyticsStore.logEvent("fund_transfer_tab_click");
+            },
+          }}
+        />
         <Tab.Screen name="ActivityTab" component={ActivityScreen} />
         <Tab.Screen name="MoreTab" component={SettingScreen} />
       </Tab.Navigator>

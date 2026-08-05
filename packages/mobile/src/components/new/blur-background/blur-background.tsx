@@ -1,7 +1,6 @@
 import React, { FunctionComponent } from "react";
 import { BlurView } from "expo-blur";
-import { View, ViewStyle } from "react-native";
-import { TouchableOpacity } from "react-native-gesture-handler";
+import { View, ViewStyle, TouchableOpacity } from "react-native";
 
 export const BlurBackground: FunctionComponent<{
   borderRadius?: number;

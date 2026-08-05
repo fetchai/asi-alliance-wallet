@@ -50,6 +50,7 @@ export const PageWithScrollView = forwardRef<
     backgroundMode,
     backgroundBlur,
     hasFloatingHeader,
+    contentContainerStyle,
     ...restProps
   } = props;
 
@@ -97,10 +98,13 @@ export const PageWithScrollView = forwardRef<
               "overflow-visible",
             ]) as ViewStyle,
             propStyle,
+          ])}
+          contentContainerStyle={StyleSheet.flatten([
             hasFloatingHeader &&
               Platform.OS === "ios" && {
                 paddingTop: headerHeight - insets.top,
               },
+            contentContainerStyle as ViewStyle,
           ])}
           keyboardOpeningTime={0}
           onScroll={Animated.event(
