@@ -2,17 +2,16 @@ import React, { FunctionComponent } from "react";
 import { StoreProvider } from "./stores";
 import { StyleProvider } from "./styles";
 import { IntlProvider } from "react-intl";
-import { Platform, StatusBar, View } from "react-native";
+import { Platform, StatusBar } from "react-native";
 
 import { InteractionModalsProvider } from "providers/interaction-modals-provider";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LoadingScreenProvider } from "providers/loading-screen";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
-import { BaseToastProps } from "react-native-toast-message/lib/src/types";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "utils/toast-config";
 import { AppNavigation } from "navigation/navigation";
-import { XmarkIcon } from "components/new/icon/xmark";
 
 if (Platform.OS === "android") {
   // https://github.com/web-ridge/react-native-paper-dates/releases/tag/v0.2.15
@@ -71,56 +70,6 @@ const ThemeStatusBar: FunctionComponent = () => {
       barStyle={"dark-content"}
     />
   );
-};
-
-const toastConfig = {
-  /*
-    Overwrite 'success' type,
-    by modifying the existing `BaseToast` component
-  */
-  success: (props: BaseToastProps) => (
-    <BaseToast
-      {...props}
-      text1NumberOfLines={2}
-      text2NumberOfLines={2}
-      style={{ borderLeftColor: "#69C779" }}
-      renderTrailingIcon={() => (
-        <View
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            marginHorizontal: 12,
-          }}
-        >
-          <XmarkIcon color={"black"} />
-        </View>
-      )}
-      onPress={Toast.hide}
-    />
-  ),
-  /*
-    Overwrite 'error' type,
-    by modifying the existing `ErrorToast` component
-  */
-  error: (props: BaseToastProps) => (
-    <ErrorToast
-      {...props}
-      text1NumberOfLines={2}
-      text2NumberOfLines={2}
-      renderTrailingIcon={() => (
-        <View
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            marginHorizontal: 12,
-          }}
-        >
-          <XmarkIcon color={"black"} />
-        </View>
-      )}
-      onPress={Toast.hide}
-    />
-  ),
 };
 
 const AppBody: FunctionComponent = () => {
