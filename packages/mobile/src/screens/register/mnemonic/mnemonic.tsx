@@ -284,10 +284,10 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
       <View style={style.flatten(["flex-1"])} />
       <Button
         containerStyle={
-          style.flatten([
-            "border-radius-32",
-            "background-color-dark",
-          ]) as ViewStyle
+          [
+            style.flatten(["border-radius-32", "background-color-dark"]),
+            { opacity: !isSelected || !toggleCheckBox ? 0.8 : 1 },
+          ] as ViewStyle
         }
         text="Continue"
         size="large"

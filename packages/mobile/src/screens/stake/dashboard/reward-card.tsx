@@ -397,8 +397,8 @@ export const MyRewardCard: FunctionComponent<{
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to activity screen"
-        onHomeClick={() => navigation.navigate("ActivityTab", {})}
+        buttonText="Go to Home"
+        onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={handleAllClaim}
       />
     </BlurBackground>
@@ -693,8 +693,8 @@ const DelegateReward: FunctionComponent<{
         close={() => setTransectionModal(false)}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to activity screen"
-        onHomeClick={() => navigation.navigate("ActivityTab", {})}
+        buttonText="Go to Home"
+        onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={() => handleClaim(claimData.validatorAddress)}
       />
     </React.Fragment>

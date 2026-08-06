@@ -31,6 +31,8 @@ export const TransactionModal: FunctionComponent<{
   close: () => void;
   onTryAgainClick: () => void;
   onHomeClick: () => void;
+  onViewDetailsClick?: () => void;
+  onFailed?: (log: string) => void;
   txnHash: string;
   chainId: string;
   buttonText?: string;
@@ -40,7 +42,9 @@ export const TransactionModal: FunctionComponent<{
   isOpen,
   close,
   onHomeClick,
+  onViewDetailsClick,
   onTryAgainClick,
+  onFailed,
   buttonText = "Go to Homescreen",
 }) => {
   const { chainStore } = useStore();
@@ -81,6 +85,8 @@ export const TransactionModal: FunctionComponent<{
             img: require("assets/lottie/success.json"),
           });
         } else {
+          const log = tx.raw_log || tx.log || "";
+          onFailed?.(log);
           setTransactionState({
             status: TransactionStatus.Failed,
             title: "Transaction Failed",
@@ -100,6 +106,33 @@ export const TransactionModal: FunctionComponent<{
     };
   }, [chainId, chainStore, txnHash]);
 
+  const viewDetailsButton = (
+    <Button
+      text="View Details"
+      mode="outline"
+      size="large"
+      containerStyle={
+        style.flatten([
+          "border-radius-64",
+          "border-color-gray-100",
+          "margin-top-12",
+        ]) as ViewStyle
+      }
+      textStyle={style.flatten(["color-dark", "body2"]) as ViewStyle}
+      onPress={() => {
+        close();
+        if (onViewDetailsClick) {
+          onViewDetailsClick();
+        } else {
+          navigation.navigate("Others", {
+            screen: "ActivityDetails",
+            params: { id: txnHash.toUpperCase() },
+          });
+        }
+      }}
+    />
+  );
+
   if (!isOpen) {
     return null;
   }
@@ -109,7 +142,10 @@ export const TransactionModal: FunctionComponent<{
       isOpen={isOpen}
       disableGesture={true}
       showCloseButton={true}
-      close={close}
+      close={() => {
+        close();
+        onHomeClick();
+      }}
     >
       <IconWithText
         icon={
@@ -126,44 +162,27 @@ export const TransactionModal: FunctionComponent<{
         {transactionState.status === TransactionStatus.Failed ? (
           <Button
             text="Try Again"
-            mode="outline"
             size="large"
             containerStyle={
               style.flatten([
                 "border-radius-64",
-                "border-color-gray-100",
+                "background-color-dark",
                 "margin-top-18",
               ]) as ViewStyle
             }
-            textStyle={style.flatten(["color-dark", "body2"]) as ViewStyle}
+            textStyle={style.flatten(["color-white", "body2"]) as ViewStyle}
             onPress={() => {
               close();
               onTryAgainClick();
             }}
           />
         ) : null}
-        <Button
-          text={buttonText}
-          size="large"
-          containerStyle={
-            style.flatten(
-              ["border-radius-64", "background-color-dark"],
-              [
-                transactionState.status === TransactionStatus.Failed
-                  ? "margin-top-12"
-                  : "margin-top-18",
-              ]
-            ) as ViewStyle
-          }
-          textStyle={style.flatten(["color-white", "body2"]) as ViewStyle}
-          onPress={() => {
-            close();
-            onHomeClick();
-          }}
-        />
-        {transactionState.status === TransactionStatus.Success ? (
+        {!!txnHash && transactionState.status === TransactionStatus.Failed
+          ? viewDetailsButton
+          : null}
+        {transactionState.status === TransactionStatus.Failed ? (
           <Button
-            text="View Details"
+            text={buttonText}
             mode="outline"
             size="large"
             containerStyle={
@@ -173,16 +192,33 @@ export const TransactionModal: FunctionComponent<{
                 "margin-top-12",
               ]) as ViewStyle
             }
-            textStyle={style.flatten(["color-dark", "body2"]) as ViewStyle}
+            textStyle={style.flatten(["body2", "color-dark"]) as ViewStyle}
             onPress={() => {
               close();
-              navigation.navigate("Others", {
-                screen: "ActivityDetails",
-                params: { id: txnHash.toUpperCase() },
-              });
+              onHomeClick();
             }}
           />
-        ) : null}
+        ) : (
+          <Button
+            text={buttonText}
+            size="large"
+            containerStyle={
+              style.flatten([
+                "border-radius-64",
+                "background-color-dark",
+                "margin-top-12",
+              ]) as ViewStyle
+            }
+            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+            onPress={() => {
+              close();
+              onHomeClick();
+            }}
+          />
+        )}
+        {!!txnHash && transactionState.status === TransactionStatus.Success
+          ? viewDetailsButton
+          : null}
       </IconWithText>
     </CardModal>
   );

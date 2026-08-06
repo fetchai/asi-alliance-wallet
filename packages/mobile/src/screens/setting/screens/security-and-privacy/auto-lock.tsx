@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
-import { Platform, Switch, View, ViewStyle } from "react-native";
+import { Switch, View, ViewStyle } from "react-native";
 import { observer } from "mobx-react-lite";
 import { SettingItem } from "screens/setting/components";
 import { AutoLockTimer } from "components/new/icon/timer-icon";
@@ -33,7 +33,7 @@ export const AutoLockScreen: FunctionComponent = observer(() => {
           <Switch
             trackColor={{
               false: "#DCDCE3",
-              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
+              true: "#DCDCE3",
             }}
             thumbColor={isAutoLockOn ? "#73A271" : "#9A9AA2"}
             onValueChange={handleAutoLockToggle}

@@ -59,6 +59,9 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | undefined>();
 
+  const isNetworkSelectionRequired =
+    currentName !== defaultAccountName && selectedNetworks.length === 0;
+
   const smartNavigation = useSmartNavigation();
 
   const style = useStyle();
@@ -266,7 +269,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
         disabled={currentName === defaultAccountName}
         onMultiSelectChange={setSelectedNetworks}
       />
-      {currentName !== defaultAccountName && selectedNetworks.length === 0 && (
+      {isNetworkSelectionRequired && (
         <Text
           style={
             style.flatten([
@@ -469,19 +472,20 @@ export const CreateAccountScreen: FunctionComponent = () => {
       ) : null}
       <Button
         containerStyle={
-          style.flatten([
-            "margin-y-18",
-            "background-color-dark",
-            "color-white",
-            "border-radius-32",
-          ]) as ViewStyle
+          [
+            style.flatten([
+              "margin-y-18",
+              "background-color-dark",
+              "color-white",
+              "border-radius-32",
+            ]),
+            { opacity: isNetworkSelectionRequired ? 0.8 : 1 },
+          ] as ViewStyle
         }
         textStyle={style.flatten(["color-white"]) as ViewStyle}
         text="Confirm"
         size="large"
-        disabled={
-          currentName !== defaultAccountName && selectedNetworks.length === 0
-        }
+        disabled={isNetworkSelectionRequired}
         loading={isCreating}
         onPress={() => {
           submit();

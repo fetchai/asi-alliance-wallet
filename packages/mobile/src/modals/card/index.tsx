@@ -6,6 +6,8 @@ import Modal from "react-native-modal";
 import { useStyle } from "styles/index";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "utils/toast-config";
 
 export const CardModal: FunctionComponent<{
   isOpen: boolean;
@@ -127,6 +129,8 @@ export const CardModal: FunctionComponent<{
           </KeyboardAwareScrollView>
         </View>
       </GestureHandlerRootView>
+      {/* Rendered inside the modal so toasts appear above the native modal layer */}
+      <Toast config={toastConfig} />
     </Modal>
   );
 };

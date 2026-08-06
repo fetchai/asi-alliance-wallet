@@ -1,6 +1,5 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import {
-  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -90,7 +89,7 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
           <Switch
             trackColor={{
               false: "#d0d1d1",
-              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
+              true: "#DCDCE3",
             }}
             thumbColor={feeButtonState.isGasInputOpen ? "#73A271" : "#9A9AA2"}
             onValueChange={() => {

@@ -6,7 +6,7 @@ import { useStyle } from "styles/index";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { Controller, useForm } from "react-hook-form";
 import { PageWithScrollView } from "components/page";
-import { Text, View, ViewStyle } from "react-native";
+import { Platform, Text, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
 import Web3Auth, { LOGIN_PROVIDER } from "@web3auth/react-native-sdk";
 import * as SecureStore from "expo-secure-store";
@@ -90,6 +90,11 @@ const useWeb3AuthSignIn = (
       await web3auth.login({
         loginProvider: type,
       });
+
+      // iOS: first login sometimes needs a re-init to pick up the session.
+      if (!web3auth.connected && Platform.OS === "ios") {
+        await web3auth.init();
+      }
 
       if (web3auth.connected) {
         const privateKey = await getPrivateKey(privateKeyProvider);

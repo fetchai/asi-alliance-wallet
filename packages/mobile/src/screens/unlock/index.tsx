@@ -99,6 +99,13 @@ const useAutoBiomtric = (
       tryBiometricAutoOnce.current = true;
       (async () => {
         try {
+          // iOS only: if Face ID/Touch ID is not enrolled in Settings, skip the
+          // native prompt entirely to avoid the system "incorrect passphrase" dialog.
+          if (Platform.OS === "ios" && !keychainStore.isBiometrySupported) {
+            setStatus(AutoBiomtricStatus.FAILED);
+            callback(false);
+            return;
+          }
           callback(true);
           await keychainStore.tryUnlockWithBiometry();
           setStatus(AutoBiomtricStatus.SUCCESS);
@@ -187,6 +194,22 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   const [showPassword, setShowPassword] = useState(false);
 
   const tryBiometric = useCallback(async () => {
+    // iOS only: if Face ID/Touch ID is not enrolled in Settings, show a clear
+    // message instead of triggering the system "incorrect passphrase" dialog.
+    if (Platform.OS === "ios" && !keychainStore.isBiometrySupported) {
+      const biometryLabel =
+        keychainStore.biometryType === "FaceID"
+          ? "Face ID"
+          : keychainStore.biometryType === "TouchID"
+          ? "Touch ID"
+          : "Face ID";
+      Toast.show({
+        type: "error",
+        text1: `${biometryLabel} not available`,
+        text2: `Please enable ${biometryLabel} in iOS Settings and try again.`,
+      });
+      return;
+    }
     try {
       setIsBiometricLoading(true);
       // Because javascript is synchronous language, the loadnig state change would not delivered to the UI thread
@@ -195,7 +218,14 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       await keychainStore.tryUnlockWithBiometry();
     } catch (e) {
       console.log(e);
-      if (e.message.includes("Unmatched mac")) {
+      const msg: string = e?.message ?? "";
+      const biometryLabel =
+        keychainStore.biometryType === "FaceID"
+          ? "Face ID"
+          : keychainStore.biometryType === "TouchID"
+          ? "Touch ID"
+          : "Biometric authentication";
+      if (msg.includes("Unmatched mac")) {
         biometricNeedsReset.current = true;
         keychainStore.reset();
         Toast.show({
@@ -204,10 +234,14 @@ export const UnlockScreen: FunctionComponent = observer(() => {
           text2:
             "Your password or biometric data has changed. Sign in with your password to re-enable it.",
         });
-      } else if (!e.message.includes("code: 13")) {
+      } else if (msg.includes("code: 13") || msg.includes("user cancel")) {
+        // User dismissed the prompt no toast needed
+      } else {
         Toast.show({
           type: "error",
-          text1: `${e.message.slice(e.message.indexOf("msg:") + 5)}`,
+          text1: `${biometryLabel} unavailable`,
+          text2:
+            "Please ensure it is set up and this app has permission in Settings.",
         });
       }
       setIsBiometricLoading(false);
@@ -347,7 +381,15 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 ]) as ViewStyle
               }
             >
-              Enter your password or use biometric authentication to sign in
+              {Platform.OS === "ios"
+                ? `Enter your password or use ${
+                    keychainStore.biometryType === "FaceID"
+                      ? "Face ID"
+                      : keychainStore.biometryType === "TouchID"
+                      ? "Touch ID"
+                      : "biometric authentication"
+                  } to sign in`
+                : "Enter your password or use biometric authentication to sign in"}
             </Text>
             <InputCardView
               label={"Password"}
@@ -414,7 +456,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 }
               >
                 <View style={style.flatten(["items-center"]) as ViewStyle}>
-                  {keychainStore.biometryType === "FaceID" ? (
+                  {keychainStore.biometryType === "FaceID" ||
+                  (Platform.OS === "ios" &&
+                    keychainStore.biometryType !== "TouchID") ? (
                     <FaceDetectIcon color={"#151a1a"} />
                   ) : (
                     <FingerprintIcon color={"#151a1a"} />
@@ -427,6 +471,8 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                       ? "Use Face ID"
                       : keychainStore.biometryType === "TouchID"
                       ? "Use Touch ID"
+                      : Platform.OS === "ios"
+                      ? "Use Face ID"
                       : "Use Biometric Authentication"
                   }
                   mode="text"

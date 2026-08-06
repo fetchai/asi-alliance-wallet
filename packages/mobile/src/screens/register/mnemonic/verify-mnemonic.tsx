@@ -181,11 +181,17 @@ export const VerifyMnemonicScreen: FunctionComponent = () => {
         />
         <Button
           containerStyle={
-            style.flatten([
-              "border-radius-32",
-              "margin-top-24",
-              "background-color-dark",
-            ]) as ViewStyle
+            [
+              style.flatten([
+                "border-radius-32",
+                "margin-top-24",
+                "background-color-dark",
+              ]),
+              {
+                opacity:
+                  wordSet.join(" ") !== newMnemonicConfig.mnemonic ? 0.8 : 1,
+              },
+            ] as ViewStyle
           }
           text="Continue"
           size="large"

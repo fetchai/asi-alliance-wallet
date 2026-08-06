@@ -61,6 +61,8 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
             ? "Use Face ID"
             : keychainStore.biometryType === "TouchID"
             ? "Use Touch ID"
+            : Platform.OS === "ios"
+            ? "Use Face ID"
             : "Use Biometric Authentication"
         }
         left={<FingerPrintIconWithoutCircle size={16} />}
@@ -68,7 +70,7 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
           <Switch
             trackColor={{
               false: "#DCDCE3",
-              true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
+              true: "#DCDCE3",
             }}
             thumbColor={keychainStore.isBiometryOn ? "#73A271" : "#9A9AA2"}
             onValueChange={async (value) => {
