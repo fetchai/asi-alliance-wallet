@@ -13,8 +13,6 @@ import { useStyle } from "styles/index";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { usePageRegisterScrollYValue, useSetFocusedScreen } from "./utils";
 import { BackgroundMode, ScreenBackground } from "./background";
-import { useHeaderHeight } from "@react-navigation/elements";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const AnimatedKeyboardAwareScrollView = Animated.createAnimatedComponent(
   KeyboardAwareScrollView
@@ -38,8 +36,6 @@ export const PageWithScrollView = forwardRef<
 
   useSetFocusedScreen();
   const scrollY = usePageRegisterScrollYValue();
-  const headerHeight = useHeaderHeight();
-  const insets = useSafeAreaInsets();
 
   const {
     style: propStyle,
@@ -50,7 +46,6 @@ export const PageWithScrollView = forwardRef<
     backgroundMode,
     backgroundBlur,
     hasFloatingHeader,
-    contentContainerStyle,
     ...restProps
   } = props;
 
@@ -98,13 +93,6 @@ export const PageWithScrollView = forwardRef<
               "overflow-visible",
             ]) as ViewStyle,
             propStyle,
-          ])}
-          contentContainerStyle={StyleSheet.flatten([
-            hasFloatingHeader &&
-              Platform.OS === "ios" && {
-                paddingTop: headerHeight - insets.top,
-              },
-            contentContainerStyle as ViewStyle,
           ])}
           keyboardOpeningTime={0}
           onScroll={Animated.event(

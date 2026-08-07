@@ -18,7 +18,18 @@ import {
   EditAddressBookScreen,
 } from "screens/setting/screens/address-book";
 import { PageScrollPositionProvider } from "providers/page-scroll-position";
-import { TransparentHeaderOptionsPreset } from "components/header";
+import {
+  HeaderOnSecondaryScreenOptionsPreset,
+  TransparentHeaderOptionsPreset,
+} from "components/header";
+import { Platform } from "react-native";
+
+// On iOS, list content scrolls behind the transparent header — use an opaque/blur
+// header to cover it. Android is unaffected so keep the transparent header there.
+const SecondaryScreenHeaderPreset =
+  Platform.OS === "ios"
+    ? HeaderOnSecondaryScreenOptionsPreset
+    : TransparentHeaderOptionsPreset;
 import { HeaderLeftBackLightButton } from "components/header/button";
 import { getPlatformFontFamily } from "styles/builder/utils";
 import { FocusedScreenProvider } from "providers/focused-screen";
@@ -104,7 +115,7 @@ export const ChainListStackScreen: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
+          ...SecondaryScreenHeaderPreset,
           title: "Manage Networks",
           headerTitleStyle: {
             color: style.get("color-dark").color,
