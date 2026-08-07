@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UpDownArrowIcon } from "components/new/icon/up-down-arrow";
 import { ClockIcon } from "components/new/icon/clock-icon";
 import { MoreIcon } from "components/new/icon/more-icon";
-import { AppState, BackHandler, View, ViewStyle } from "react-native";
+import { AppState, BackHandler, Platform, View, ViewStyle } from "react-native";
 import { IconButton } from "components/new/button/icon";
 import { BorderlessButton } from "react-native-gesture-handler";
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
@@ -71,7 +71,9 @@ export const MainTabNavigation: FunctionComponent = () => {
         keychainStore.isAutoLockOn &&
         !(
           focusedScreen.name?.startsWith("Register") ||
-          focusedScreen.name?.startsWith("Setting.SecurityAndPrivacy")
+          (Platform.OS === "ios" &&
+            nextAppState === "inactive" &&
+            focusedScreen.name?.startsWith("Setting.SecurityAndPrivacy"))
         )
       ) {
         try {

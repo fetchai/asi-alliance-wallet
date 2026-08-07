@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   Alert,
+  AppState,
   Image,
   Platform,
   Text,
@@ -155,9 +156,19 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     navigateToHomeOnce.current = true;
   }, [accountStore, chainStore, navigation]);
 
+  const [isAppActive, setIsAppActive] = useState(
+    AppState.currentState === "active"
+  );
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      setIsAppActive(next === "active");
+    });
+    return () => sub.remove();
+  }, []);
+
   const autoBiometryStatus = useAutoBiomtric(
     keychainStore,
-    keyRingStore.status === KeyRingStatus.LOCKED,
+    keyRingStore.status === KeyRingStatus.LOCKED && isAppActive,
     (isLoading) => {
       setIsBiometricLoading(isLoading);
     },
