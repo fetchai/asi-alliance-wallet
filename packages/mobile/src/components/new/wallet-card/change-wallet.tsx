@@ -176,8 +176,8 @@ export const ChangeWalletCardModel: FunctionComponent<{
                         style.flatten([
                           keyStore?.selected ? "h7" : "body3",
                           "color-dark",
+                          "flex-shrink-1",
                         ]),
-                        { flexShrink: 1 },
                       ] as ViewStyle
                     }
                   >
