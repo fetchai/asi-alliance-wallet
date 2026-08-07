@@ -512,7 +512,6 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to Home"
         onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={stakeAmount}
       />
