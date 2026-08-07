@@ -245,8 +245,26 @@ export const UnlockScreen: FunctionComponent = observer(() => {
           text2:
             "Your password or biometric data has changed. Sign in with your password to re-enable it.",
         });
-      } else if (msg.includes("code: 13") || msg.includes("user cancel")) {
-        // User dismissed the prompt no toast needed
+      } else if (
+        msg.includes("code: 13") ||
+        String(e?.code) === "-2" ||
+        msg.toLowerCase().includes("user cancel") ||
+        msg.toLowerCase().includes("cancelled by user")
+      ) {
+        // User dismissed the prompt — no toast needed
+        // code: 13 = Android BiometricPrompt.ERROR_NEGATIVE_BUTTON (Cancel button pressed)
+        // e.code "-2" = iOS LAErrorUserCancel
+      } else if (
+        Platform.OS === "ios" &&
+        (msg.toLowerCase().includes("lockout") ||
+          String(e?.code) === "-8" ||
+          msg.toLowerCase().includes("too many"))
+      ) {
+        Toast.show({
+          type: "error",
+          text1: `Too many failed ${biometryLabel} attempts`,
+          text2: "Sign in with your password and try again later.",
+        });
       } else {
         Toast.show({
           type: "error",
