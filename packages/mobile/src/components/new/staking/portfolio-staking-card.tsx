@@ -202,7 +202,6 @@ export const PortfolioStakingCard: FunctionComponent<{
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to Home"
         onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={onSubmit}
       />

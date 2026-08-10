@@ -63,7 +63,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
         ] as ViewStyle
       }
       hasFloatingHeader={true}
-      style={style.flatten(["padding-x-page"]) as ViewStyle}
+      style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
     >
       <View
         style={

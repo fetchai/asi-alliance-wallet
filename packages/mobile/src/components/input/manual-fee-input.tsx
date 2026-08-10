@@ -199,6 +199,7 @@ export const ManualFeeInput: FunctionComponent<{
     setGasLimitError(validateGasLimit(value));
 
     const gasLimit = parseInt(value) || 0;
+    if (!Number.isFinite(gasLimit)) return;
     if (lastEdited === "price") {
       const gasPrice = parseFloat(gasPriceRaw) || 0;
       const feeMinimal = gasPrice * gasLimit;
@@ -263,6 +264,7 @@ export const ManualFeeInput: FunctionComponent<{
         }
         containerStyle={style.flatten(["margin-bottom-16"]) as ViewStyle}
         keyboardType="numeric"
+        maxLength={15}
         error={gasLimitError || undefined}
       />
     </React.Fragment>

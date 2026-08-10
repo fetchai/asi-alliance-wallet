@@ -2,11 +2,19 @@ import React, { FunctionComponent } from "react";
 import { useStyle } from "styles/index";
 import { TransitionPresets } from "@react-navigation/stack";
 import { Stack } from "./navigation";
-import { ViewStyle } from "react-native";
+import { Platform, ViewStyle } from "react-native";
 import {
   HeaderRightButton,
+  HeaderOnSecondaryScreenOptionsPreset,
   TransparentHeaderOptionsPreset,
 } from "components/header";
+
+// On iOS, list content scrolls behind the transparent header — use an opaque/blur
+// header to cover it. Android is unaffected so keep the transparent header there.
+const SecondaryScreenHeaderPreset =
+  Platform.OS === "ios"
+    ? HeaderOnSecondaryScreenOptionsPreset
+    : TransparentHeaderOptionsPreset;
 import { HeaderLeftBackLightButton } from "components/header/button";
 import { getPlatformFontFamily } from "styles/builder/utils";
 import { useStore } from "stores/index";
@@ -153,7 +161,7 @@ export const MoreNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
+          ...SecondaryScreenHeaderPreset,
           title: "Currency",
           headerTitleStyle: {
             color: style.get("color-dark").color,

@@ -422,14 +422,29 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
-        <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
-          <Text
-            style={
+        <View
+          style={
+            [
               style.flatten([
-                "body3",
-                "color-dark",
-                "margin-right-6",
-              ]) as ViewStyle
+                "flex-row",
+                "items-center",
+                "flex-1",
+                "justify-end",
+              ]),
+            ] as ViewStyle
+          }
+        >
+          <Text
+            numberOfLines={1}
+            style={
+              [
+                style.flatten([
+                  "body3",
+                  "color-dark",
+                  "margin-x-6",
+                  "flex-shrink-1",
+                ]),
+              ] as ViewStyle
             }
           >
             {feePrice
@@ -486,23 +501,22 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to Home"
         onFailed={(log) => {
           if (log.includes("too many redelegation entries")) {
             Toast.show({
               type: "error",
               text1: "Redelegation limit reached",
               text2:
-                "You have too many active redelegations between these validators. Wait for one to complete and try again.",
+                "Too many active redelegations between these validators. Try again later.",
             });
           } else if (
             log.includes("redelegation to this validator already in progress")
           ) {
             Toast.show({
               type: "error",
-              text1: "Redelegation in progress",
+              text1: "Redelegation already active",
               text2:
-                "A redelegation to this validator is already in progress. Wait for it to complete before redelegating again.",
+                "Wait for the existing redelegation to complete before trying again.",
             });
           }
         }}

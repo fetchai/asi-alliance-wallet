@@ -432,14 +432,29 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
-        <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
-          <Text
-            style={
+        <View
+          style={
+            [
               style.flatten([
-                "body3",
-                "color-dark",
-                "margin-right-6",
-              ]) as ViewStyle
+                "flex-row",
+                "items-center",
+                "flex-1",
+                "justify-end",
+              ]),
+            ] as ViewStyle
+          }
+        >
+          <Text
+            numberOfLines={1}
+            style={
+              [
+                style.flatten([
+                  "body3",
+                  "color-dark",
+                  "margin-x-6",
+                  "flex-shrink-1",
+                ]),
+              ] as ViewStyle
             }
           >
             {feePrice
@@ -512,7 +527,6 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to Home"
         onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={stakeAmount}
       />

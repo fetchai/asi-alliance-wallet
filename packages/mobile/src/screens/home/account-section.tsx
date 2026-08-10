@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
-import { Text, View, ViewStyle } from "react-native";
+import { Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { ChipButton } from "components/new/chip";
@@ -20,7 +20,6 @@ import { ChangeWalletCardModel } from "components/new/wallet-card/change-wallet"
 import { useLoadingScreen } from "providers/loading-screen";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
 import { separateNumericAndDenom, titleCase } from "utils/format/format";
-import { BlurButton } from "components/new/button/blur-button";
 import { ThreeDotIcon } from "components/new/icon/three-dot";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { CameraPermissionModal } from "components/new/camera-permission-model/camera-permission";
@@ -450,11 +449,14 @@ export const AccountSection: FunctionComponent<{
             </Text>
           </View>
         ) : null}
-        <BlurButton
-          backgroundBlur={false}
-          containerStyle={
+        <TouchableOpacity
+          activeOpacity={0.6}
+          style={
             style.flatten([
+              "flex-row",
+              "items-center",
               "padding-x-12",
+              "padding-y-6",
               "border-width-1",
               "border-color-gray-100",
               "margin-top-24",
@@ -462,15 +464,17 @@ export const AccountSection: FunctionComponent<{
               "background-color-dark",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
-          text={"View Portfolio"}
           onPress={() => {
             navigation.navigate("Portfolio");
             analyticsStore.logEvent("view_portfolio_click", {
               pageName: "Home",
             });
           }}
-        />
+        >
+          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+            View Portfolio
+          </Text>
+        </TouchableOpacity>
       </View>
       <WalletCardModel
         isOpen={isOpenModal}
@@ -569,7 +573,6 @@ export const AccountSection: FunctionComponent<{
         }}
         txnHash={txnObj.txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to Home"
         onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={onSubmit}
       />
