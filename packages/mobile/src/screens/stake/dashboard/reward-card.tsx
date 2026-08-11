@@ -327,6 +327,7 @@ export const MyRewardCard: FunctionComponent<{
               });
               setClaimModel(true);
             }}
+            showLoadingSpinner={true}
             loading={isSendingTx}
             disabled={
               !account.isReadyToSendTx ||
