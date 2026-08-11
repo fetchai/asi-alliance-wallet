@@ -170,17 +170,11 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
                         colorFilters={[
                           {
                             keypath: "Shape Layer 2",
-                            color: style.flatten([
-                              "color-gray-200",
-                              "dark:color-platinum-200",
-                            ]).color,
+                            color: style.flatten(["color-green-400"]).color,
                           },
                           {
                             keypath: "Shape Layer 1",
-                            color: style.flatten([
-                              "color-gray-300",
-                              "dark:color-platinum-200",
-                            ]).color,
+                            color: style.flatten(["color-green-400"]).color,
                           },
                           {
                             keypath: "Layer 1 Outlines",
