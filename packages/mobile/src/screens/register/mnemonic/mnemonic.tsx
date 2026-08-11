@@ -2,6 +2,7 @@ import React, { FunctionComponent, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import {
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,6 +18,7 @@ import { Button } from "components/button";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { SimpleCardView } from "components/new/card-view/simple-card";
 import { CopyIcon } from "components/new/icon/copy-icon";
+import { CheckIcon } from "components/new/icon/check";
 import { useSimpleTimer } from "hooks/use-simple-timer";
 import LottieView from "lottie-react-native";
 import { NumWords, useNewMnemonicConfig } from "./hook";
@@ -126,58 +128,76 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
           }
           trailingIconComponent={
             isTimedOut ? (
-              <View style={style.flatten(["margin-left-2"]) as ViewStyle}>
+              Platform.OS === "ios" ? (
                 <View
-                  style={style.flatten(["width-20", "height-20"]) as ViewStyle}
+                  style={
+                    style.flatten([
+                      "width-20",
+                      "height-20",
+                      "border-radius-32",
+                      "items-center",
+                      "justify-center",
+                      "background-color-green-400",
+                    ]) as ViewStyle
+                  }
                 >
+                  <CheckIcon size={10} color="#ffffff" />
+                </View>
+              ) : (
+                <View style={style.flatten(["margin-left-2"]) as ViewStyle}>
                   <View
-                    style={StyleSheet.flatten([
-                      style.flatten([
-                        "absolute",
-                        "justify-center",
-                        "items-center",
-                      ]),
-                      {
-                        left: 0,
-                        right: 4,
-                        top: 0,
-                        bottom: 0,
-                      },
-                    ])}
+                    style={
+                      style.flatten(["width-20", "height-20"]) as ViewStyle
+                    }
                   >
-                    <LottieView
-                      // TODO: Change color of animated check button according to theme.
-                      source={require("assets/lottie/check.json")}
-                      colorFilters={[
+                    <View
+                      style={StyleSheet.flatten([
+                        style.flatten([
+                          "absolute",
+                          "justify-center",
+                          "items-center",
+                        ]),
                         {
-                          keypath: "Shape Layer 2",
-                          color: style.flatten([
-                            "color-gray-200",
-                            "dark:color-platinum-200",
-                          ]).color,
+                          left: 0,
+                          right: 4,
+                          top: 0,
+                          bottom: 0,
                         },
-                        {
-                          keypath: "Shape Layer 1",
-                          color: style.flatten([
-                            "color-gray-300",
-                            "dark:color-platinum-200",
-                          ]).color,
-                        },
-                        {
-                          keypath: "Layer 1 Outlines",
-                          color: style.flatten(["color-white"]).color,
-                        },
-                      ]}
-                      autoPlay
-                      speed={2}
-                      loop={false}
-                      style={
-                        style.flatten(["width-80", "height-80"]) as ViewStyle
-                      }
-                    />
+                      ])}
+                    >
+                      <LottieView
+                        source={require("assets/lottie/check.json")}
+                        colorFilters={[
+                          {
+                            keypath: "Shape Layer 2",
+                            color: style.flatten([
+                              "color-gray-200",
+                              "dark:color-platinum-200",
+                            ]).color,
+                          },
+                          {
+                            keypath: "Shape Layer 1",
+                            color: style.flatten([
+                              "color-gray-300",
+                              "dark:color-platinum-200",
+                            ]).color,
+                          },
+                          {
+                            keypath: "Layer 1 Outlines",
+                            color: style.flatten(["color-white"]).color,
+                          },
+                        ]}
+                        autoPlay
+                        speed={2}
+                        loop={false}
+                        style={
+                          style.flatten(["width-80", "height-80"]) as ViewStyle
+                        }
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
+              )
             ) : (
               <CopyIcon size={18} color="black" />
             )

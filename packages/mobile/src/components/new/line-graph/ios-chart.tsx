@@ -99,6 +99,7 @@ export const IOSLineChart: FunctionComponent<{
         activatePointersOnLongPress: true,
         autoAdjustPointerLabelPosition: true,
         showPointerStrip: true,
+        pointerEvents: "none",
         pointerLabelComponent: (items: any) => {
           return (
             <View

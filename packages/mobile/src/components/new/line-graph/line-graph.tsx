@@ -220,6 +220,13 @@ export const LineGraph: FunctionComponent<{
             loading ? ["items-center", "justify-center"] : []
           ) as ViewStyle
         }
+        // react-native-gifted-charts (iOS) and the Android PanResponder both
+        // mount an invisible touch-capture layer that bleeds a few pixels
+        // above the chart's own box, stealing taps meant for the "View
+        // Portfolio" button rendered just above it. `none` removes this
+        // whole subtree from hit-testing so those taps pass through — this
+        // does trade away the long-press scrub/tooltip on iOS.
+        pointerEvents="none"
       >
         {Platform.OS == "ios" ? (
           <IOSLineChart
