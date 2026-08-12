@@ -173,9 +173,19 @@ const createMockServer = () => {
 
   return {
     port,
-    closeServer: () => {
-      server.close();
-    },
+    closeServer: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+        (
+          server as typeof server & { closeAllConnections?: () => void }
+        ).closeAllConnections?.();
+      }),
     getQueryCount: () => {
       return queryCount;
     },
@@ -185,7 +195,7 @@ const createMockServer = () => {
 describe("Test phishing list service", () => {
   let eachService: PhishingListService | undefined;
   let port: number = -1;
-  let closeServer: (() => void) | undefined;
+  let closeServer: (() => Promise<void>) | undefined;
   let getQueryCount: () => number;
 
   const notMockSetInterval = setInterval;
@@ -200,14 +210,14 @@ describe("Test phishing list service", () => {
     getQueryCount = server.getQueryCount;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (eachService) {
       eachService.stop();
       eachService = undefined;
     }
 
     if (closeServer) {
-      closeServer();
+      await closeServer();
       closeServer = undefined;
     }
 

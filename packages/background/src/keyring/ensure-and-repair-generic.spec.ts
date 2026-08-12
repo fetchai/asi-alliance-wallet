@@ -106,7 +106,6 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
     expect(checkConsistency).toHaveBeenCalledWith(
       "evmos_9001-2",
       ["w1"],
-      ["Wallet 1"],
       "w1",
       evmAddressHex,
       false
@@ -142,14 +141,13 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
     expect(checkConsistency).toHaveBeenCalledWith(
       "fetchhub-4",
       ["w1"],
-      ["Wallet 1"],
       "w1",
       cosmosAddressHex,
       false
     );
   });
 
-  it("uses nameByChain for generic consistency check", async () => {
+  it("does not use presentation names as cache consistency input", async () => {
     const { service, checkConsistency } = makeService({
       chainId: "fetchhub-4",
       features: [],
@@ -188,7 +186,6 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
     expect(checkConsistency).toHaveBeenCalledWith(
       "fetchhub-4",
       ["w1"],
-      ["Fetch Name"],
       "w1",
       cosmosAddressHex,
       false

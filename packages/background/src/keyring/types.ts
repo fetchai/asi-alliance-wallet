@@ -51,12 +51,16 @@ export interface CommonCrypto {
   scrypt: (text: string, params: ScryptParams) => Promise<Uint8Array>;
 }
 
+export type ScryptPriority = "interactive" | "background";
+
 export interface ScryptParams {
   dklen: number;
   salt: string;
   n: number;
   r: number;
   p: number;
+  /** Runtime-only scheduling hint. It is not persisted in new keystores. */
+  executionPriority?: ScryptPriority;
 }
 
 export interface ExportKeyRingData {

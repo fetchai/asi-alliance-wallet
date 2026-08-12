@@ -7,6 +7,7 @@ import {
   SignMode,
   SupportedCurve,
   Key,
+  ScryptPriority,
 } from "./types";
 import {
   Hash,
@@ -17,7 +18,7 @@ import {
   KeyCurve,
   KeyCurves,
 } from "@keplr-wallet/crypto";
-import { KVStore } from "@keplr-wallet/common";
+import { KVStore, MultiGet } from "@keplr-wallet/common";
 import { LedgerApp, LedgerService } from "../ledger";
 import { ChainInfo, EthSignType } from "@keplr-wallet/types";
 import { Env, WEBPAGE_PORT } from "@keplr-wallet/router";
@@ -53,6 +54,35 @@ type SessionKeyStoreMaterial =
     }
   | { type: "keystone"; keystonePublicKey: KeystoneKeyringData };
 
+type UnlockSessionContext = {
+  password: string;
+  unlockSessionId: string;
+};
+
+type LegacyMirrorFingerprints = {
+  selected: string;
+  multi: string;
+};
+
+type LegacyMirrorState =
+  | {
+      status: "pending";
+      previous: LegacyMirrorFingerprints;
+      target: LegacyMirrorFingerprints;
+    }
+  | {
+      status: "synced";
+      fingerprint: LegacyMirrorFingerprints;
+    };
+
+type PersistedKeyRingState = {
+  selectedId: string | null;
+  keyStores: KeyStore[];
+  /** Diagnostic generation; source selection relies on mirror fingerprints. */
+  revision?: number;
+  legacyMirror?: LegacyMirrorState;
+};
+
 export type MultiKeyStoreInfoElem = Pick<
   KeyStore,
   "version" | "type" | "meta" | "bip44HDPath" | "coinTypeForChain" | "curve"
@@ -70,7 +100,36 @@ export {
 
 const KeyStoreKey = "key-store";
 const KeyMultiStoreKey = "key-multi-store";
+const KeyRingStateV2Key = "keyring-state:v2";
+const KeyRingPersistenceKeys = [
+  KeyRingStateV2Key,
+  KeyStoreKey,
+  KeyMultiStoreKey,
+] as const;
 const ErrUndefinedLedgerKeeper = new Error("Ledger keeper is not defined");
+const UNLOCK_MAINTENANCE_GRACE_MS = 5000;
+const UNLOCK_CACHE_WARMUP_GRACE_MS = 5000;
+
+type KeyRingPersistenceSnapshot = {
+  persisted: unknown;
+  incrementalNumber?: unknown;
+  legacy: {
+    selected: unknown;
+    multi: unknown;
+  };
+};
+
+type ResolvedKeyRingState = {
+  keyStores: KeyStore[];
+  selectedId: string | null;
+  selectedFingerprint: string | null;
+};
+
+function hasMultiGet(kvStore: KVStore): kvStore is KVStore & MultiGet {
+  return (
+    typeof (kvStore as KVStore & Partial<MultiGet>).multiGet === "function"
+  );
+}
 
 // Cardano constants moved to CardanoService
 
@@ -114,7 +173,24 @@ export class KeyRing {
   private _keystonePublicKeyCache?: KeystoneKeyringData;
   // Cardano-specific handling moved to CardanoService
 
-  private keyStore: KeyStore | null;
+  /**
+   * The selected keystore is identified inside multiKeyStore instead of being
+   * stored as a second, independently mutable copy.
+   */
+  private selectedKeyStoreId: string | null = null;
+
+  private get keyStore(): KeyStore | null {
+    if (!this.selectedKeyStoreId) {
+      return null;
+    }
+
+    return (
+      this.multiKeyStore.find(
+        (keyStore) =>
+          KeyRing.getKeyStoreId(keyStore) === this.selectedKeyStoreId
+      ) ?? null
+    );
+  }
 
   public getCurrentKeyStore(): KeyStore | null {
     return this.keyStore;
@@ -128,6 +204,31 @@ export class KeyRing {
 
   private password: string = "";
   private unlockSessionId: string = "";
+  private lifecycleGeneration = 0;
+  private unlockCacheWarmupTimer?: ReturnType<typeof setTimeout>;
+  private unlockMaintenanceTimer?: ReturnType<typeof setTimeout>;
+  private unlockMaintenanceFlight?: Promise<void>;
+  private unlockMaintenanceFlightSessionId = "";
+  private detachedBackgroundWork = new Set<Promise<void>>();
+  private disposed = false;
+  private disposeFlight?: Promise<void>;
+  private initialKeyCreationInProgress = false;
+  private unlockInProgress = false;
+  /** Prevent an older mirror finalization from overwriting a newer v2 save. */
+  private persistStateTail: Promise<void> = Promise.resolve();
+  /**
+   * Serialize wallet-array commit stages. Expensive device/KDF/decrypt work is
+   * prepared before entering this queue; the callback must rebuild its change
+   * from the then-current array and keep the queue until persistence settles.
+   */
+  private keyRingMutationTail: Promise<void> = Promise.resolve();
+  private pendingAddOperations = 0;
+  /**
+   * Serialize only wallet-ID allocation. This is deliberately independent of
+   * persistStateTail: ID monotonicity and keyring-generation persistence have
+   * different failure and ordering semantics.
+   */
+  private idAllocationTail: Promise<void> = Promise.resolve();
 
   /**
    * Run cache migration once per unlock session to avoid delay on every wallet switch.
@@ -158,57 +259,22 @@ export class KeyRing {
       crypto: this.crypto,
       embedChainInfos: this.embedChainInfos,
     });
-    this.keyStore = null;
     this.multiKeyStore = [];
   }
 
   public async loadCardanoChainCache(
-    chainId: string
+    chainId: string,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<Record<string, { address: string; pubKey: string }>> {
-    return await this.cacheManager.loadCardanoCache(chainId);
+    return await this.cacheManager.loadCardanoCache(chainId, options);
   }
 
   public async saveCardanoChainCache(
     chainId: string,
-    cache: Record<string, { address: string; pubKey: string }>
+    cache: Record<string, { address: string; pubKey: string }>,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<void> {
-    await this.cacheManager.saveCardanoCache(chainId, cache);
-  }
-
-  /**
-   * Clear all caches when wallet is added
-   * This ensures cache consistency after adding a new wallet
-   */
-  private async clearCachesOnWalletAdd(walletId: string): Promise<void> {
-    if (!walletId) return;
-
-    try {
-      await this.cacheManager.clearAllCaches();
-    } catch (e: unknown) {
-      console.error(
-        `[KeyRing] Failed to clear caches after wallet addition:`,
-        e
-      );
-      // Continue execution - cache operations are not critical for core functionality
-    }
-  }
-
-  /**
-   * Clear all caches when wallet is deleted
-   * This ensures cache consistency after deleting a wallet
-   */
-  private async clearCachesOnWalletDelete(walletId: string): Promise<void> {
-    if (!walletId) return;
-
-    try {
-      await this.cacheManager.clearAllCaches();
-    } catch (e: unknown) {
-      console.error(
-        `[KeyRing] Failed to clear caches after wallet deletion:`,
-        e
-      );
-      // Continue execution - cache operations are not critical for core functionality
-    }
+    await this.cacheManager.saveCardanoCache(chainId, cache, options);
   }
 
   /**
@@ -221,18 +287,35 @@ export class KeyRing {
     this.cardanoKeyFlights.clear();
   }
 
-  public async loadGenericChainCache(chainId: string): Promise<
+  private removeCardanoMemoryCacheForWallet(walletId: string): void {
+    if (!walletId) return;
+
+    // Invalidate single-key flights created by getCardanoKeyForKeyStore so
+    // they cannot repopulate the memory cache after this cleanup completes.
+    this.cardanoKeyGeneration += 1;
+    for (const info of this.embedChainInfos) {
+      if (info?.features?.includes("cardano")) {
+        const keyId = `cardano:${info.chainId}:${walletId}`;
+        this.cardanoKeyCache.delete(keyId);
+        this.cardanoKeyFlights.delete(keyId);
+      }
+    }
+  }
+
+  public async loadGenericChainCache(
+    chainId: string,
+    options?: { scryptPriority?: ScryptPriority }
+  ): Promise<
     Record<
       string,
       {
         address: string;
         name?: string;
         pubKey?: string;
-        mnemonicLength?: string;
       }
     >
   > {
-    return await this.cacheManager.loadGenericCache(chainId);
+    return await this.cacheManager.loadGenericCache(chainId, options);
   }
 
   public async saveGenericChainCache(
@@ -243,11 +326,11 @@ export class KeyRing {
         address: string;
         name?: string;
         pubKey?: string;
-        mnemonicLength?: string;
       }
-    >
+    >,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<void> {
-    await this.cacheManager.saveGenericCache(chainId, cache);
+    await this.cacheManager.saveGenericCache(chainId, cache, options);
   }
 
   /**
@@ -448,6 +531,25 @@ export class KeyRing {
     return this.loadKey(coinType, useEthereumAddress);
   }
 
+  private async beginInitialKeyCreation(): Promise<void> {
+    if (this.initialKeyCreationInProgress) {
+      throw new Error("Key ring initialization is already in progress");
+    }
+
+    this.initialKeyCreationInProgress = true;
+    try {
+      if (this.status === KeyRingStatus.NOTLOADED) {
+        await this.restore();
+      }
+      if (this.status !== KeyRingStatus.EMPTY) {
+        throw new Error("Key ring is not loaded or not empty");
+      }
+    } catch (e: unknown) {
+      this.initialKeyCreationInProgress = false;
+      throw e;
+    }
+  }
+
   public async createMnemonicKey(
     kdf: "scrypt" | "sha256" | "pbkdf2",
     mnemonic: string,
@@ -459,51 +561,48 @@ export class KeyRing {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status === KeyRingStatus.NOTLOADED) {
-      await this.restore();
-    }
-    if (this.status !== KeyRingStatus.EMPTY) {
-      throw new Error("Key ring is not loaded or not empty");
-    }
-
-    const words = mnemonic.trim().split(/\s+/);
-    const mnemonicLength = words.length.toString();
-    const metaWithMnemonicLength = {
-      ...meta,
-      mnemonicLength: mnemonicLength,
-    };
-
-    // Cardano meta injected by KeyRingService when needed
-    this.mnemonicMasterSeed = Mnemonic.generateMasterSeedFromMnemonic(mnemonic);
-    this.keyStore = await KeyRing.CreateMnemonicKeyStore(
-      this.crypto,
-      kdf,
-      mnemonic,
-      password,
-      await this.assignKeyStoreIdMeta(metaWithMnemonicLength),
-      bip44HDPath,
-      curve
-    );
-    this.password = password;
-    this.multiKeyStore.push(this.keyStore);
-    await this.save();
+    await this.beginInitialKeyCreation();
 
     try {
-      const walletId = KeyRing.getKeyStoreId(this.keyStore);
-      await this.clearCachesOnWalletAdd(walletId);
-    } catch (e: unknown) {
-      console.error(
-        `[KeyRing] Failed to clear caches after wallet addition:`,
-        e
-      );
-      // Continue execution - cache operations are not critical for core functionality
-    }
+      const words = mnemonic.trim().split(/\s+/);
+      const mnemonicLength = words.length.toString();
+      const metaWithMnemonicLength = {
+        ...meta,
+        mnemonicLength: mnemonicLength,
+      };
 
-    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
-    return {
-      status: this.status,
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
+      // Cardano meta injected by KeyRingService when needed
+      const mnemonicMasterSeed =
+        Mnemonic.generateMasterSeedFromMnemonic(mnemonic);
+      const keyStore = await KeyRing.CreateMnemonicKeyStore(
+        this.crypto,
+        kdf,
+        mnemonic,
+        password,
+        await this.assignKeyStoreIdMeta(metaWithMnemonicLength),
+        bip44HDPath,
+        curve
+      );
+      this.multiKeyStore.push(keyStore);
+      const unlockSessionId = this.activateUnlockSession(password);
+      this.commitActiveKeyStoreForSession(
+        keyStore,
+        {
+          type: "mnemonic",
+          mnemonicMasterSeed,
+        },
+        { password, unlockSessionId }
+      );
+      await this.save();
+
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+      return {
+        status: this.status,
+        multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
+      };
+    } finally {
+      this.initialKeyCreationInProgress = false;
+    }
   }
 
   public async createPrivateKey(
@@ -516,33 +615,34 @@ export class KeyRing {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status === KeyRingStatus.NOTLOADED) {
-      await this.restore();
+    await this.beginInitialKeyCreation();
+
+    try {
+      const keyStore = await KeyRing.CreatePrivateKeyStore(
+        this.crypto,
+        kdf,
+        privateKey,
+        password,
+        await this.assignKeyStoreIdMeta(meta),
+        curve
+      );
+      this.multiKeyStore.push(keyStore);
+      const unlockSessionId = this.activateUnlockSession(password);
+      this.commitActiveKeyStoreForSession(
+        keyStore,
+        { type: "privateKey", privateKey: new Uint8Array(privateKey) },
+        { password, unlockSessionId }
+      );
+      await this.save();
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+
+      return {
+        status: this.status,
+        multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
+      };
+    } finally {
+      this.initialKeyCreationInProgress = false;
     }
-
-    if (this.status !== KeyRingStatus.EMPTY) {
-      throw new Error("Key ring is not loaded or not empty");
-    }
-
-    this.privateKey = privateKey;
-    this.keyStore = await KeyRing.CreatePrivateKeyStore(
-      this.crypto,
-      kdf,
-      privateKey,
-      password,
-      await this.assignKeyStoreIdMeta(meta),
-      curve
-    );
-    this.password = password;
-    this.multiKeyStore.push(this.keyStore);
-
-    await this.save();
-    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
-
-    return {
-      status: this.status,
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
   }
 
   public async createKeystoneKey(
@@ -555,53 +655,43 @@ export class KeyRing {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status === KeyRingStatus.NOTLOADED) {
-      await this.restore();
-    }
-
-    if (this.status !== KeyRingStatus.EMPTY) {
-      throw new Error("Key ring is not loaded or not empty");
-    }
-    if (!this.ledgerKeeper) {
-      throw ErrUndefinedLedgerKeeper;
-    }
-
-    // Get public key first
-    const publicKey = await this.keystoneService.getPubkey(env, bip44HDPath);
-
-    const keyStore = await KeyRing.CreateKeystoneKeyStore(
-      this.crypto,
-      kdf,
-      publicKey,
-      password,
-      await this.assignKeyStoreIdMeta(meta),
-      bip44HDPath
-    );
-
-    this.password = password;
-    this.keyStore = keyStore;
-    this.multiKeyStore.push(this.keyStore);
-    this.keystonePublicKey = publicKey;
-
-    await this.save();
+    await this.beginInitialKeyCreation();
 
     try {
-      const walletId = KeyRing.getKeyStoreId(this.keyStore);
-      await this.clearCachesOnWalletAdd(walletId);
-    } catch (e: unknown) {
-      console.error(
-        `[KeyRing] Failed to clear caches after wallet addition:`,
-        e
+      if (!this.ledgerKeeper) {
+        throw ErrUndefinedLedgerKeeper;
+      }
+
+      // Get public key first
+      const publicKey = await this.keystoneService.getPubkey(env, bip44HDPath);
+
+      const keyStore = await KeyRing.CreateKeystoneKeyStore(
+        this.crypto,
+        kdf,
+        publicKey,
+        password,
+        await this.assignKeyStoreIdMeta(meta),
+        bip44HDPath
       );
-      // Continue execution - cache operations are not critical for core functionality
+
+      this.multiKeyStore.push(keyStore);
+      const unlockSessionId = this.activateUnlockSession(password);
+      this.commitActiveKeyStoreForSession(
+        keyStore,
+        { type: "keystone", keystonePublicKey: publicKey },
+        { password, unlockSessionId }
+      );
+      await this.save();
+
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+
+      return {
+        status: this.status,
+        multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
+      };
+    } finally {
+      this.initialKeyCreationInProgress = false;
     }
-
-    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
-
-    return {
-      status: this.status,
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
   }
 
   public async createLedgerKey(
@@ -615,66 +705,54 @@ export class KeyRing {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status === KeyRingStatus.NOTLOADED) {
-      await this.restore();
-    }
-
-    if (this.status !== KeyRingStatus.EMPTY) {
-      throw new Error("Key ring is not loaded or not empty");
-    }
-
-    if (cosmosLikeApp) {
-      meta = {
-        ...meta,
-        __ledger__cosmos_app_like__: cosmosLikeApp,
-      };
-    }
-
-    // Get public key first
-    const publicKey = await this.ledgerKeeper.getPublicKey(
-      env,
-      LedgerApp.Cosmos,
-      bip44HDPath,
-      cosmosLikeApp
-    );
-
-    const pubKeys = {
-      [LedgerApp.Cosmos]: publicKey,
-    };
-
-    const keyStore = await KeyRing.CreateLedgerKeyStore(
-      this.crypto,
-      kdf,
-      pubKeys,
-      password,
-      await this.assignKeyStoreIdMeta(meta),
-      bip44HDPath
-    );
-
-    this.password = password;
-    this.keyStore = keyStore;
-    this.multiKeyStore.push(this.keyStore);
-
-    this.ledgerPublicKeyCache = pubKeys;
-
-    await this.save();
+    await this.beginInitialKeyCreation();
 
     try {
-      const walletId = KeyRing.getKeyStoreId(this.keyStore);
-      await this.clearCachesOnWalletAdd(walletId);
-    } catch (e: unknown) {
-      console.error(
-        `[KeyRing] Failed to clear caches after wallet addition:`,
-        e
-      );
-      // Continue execution - cache operations are not critical for core functionality
-    }
+      if (cosmosLikeApp) {
+        meta = {
+          ...meta,
+          __ledger__cosmos_app_like__: cosmosLikeApp,
+        };
+      }
 
-    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
-    return {
-      status: this.status,
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
+      // Get public key first
+      const publicKey = await this.ledgerKeeper.getPublicKey(
+        env,
+        LedgerApp.Cosmos,
+        bip44HDPath,
+        cosmosLikeApp
+      );
+
+      const pubKeys = {
+        [LedgerApp.Cosmos]: publicKey,
+      };
+
+      const keyStore = await KeyRing.CreateLedgerKeyStore(
+        this.crypto,
+        kdf,
+        pubKeys,
+        password,
+        await this.assignKeyStoreIdMeta(meta),
+        bip44HDPath
+      );
+
+      this.multiKeyStore.push(keyStore);
+      const unlockSessionId = this.activateUnlockSession(password);
+      this.commitActiveKeyStoreForSession(
+        keyStore,
+        { type: "ledger", ledgerPublicKeyCache: pubKeys },
+        { password, unlockSessionId }
+      );
+      await this.save();
+
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+      return {
+        status: this.status,
+        multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
+      };
+    } finally {
+      this.initialKeyCreationInProgress = false;
+    }
   }
 
   public lock() {
@@ -682,7 +760,7 @@ export class KeyRing {
       throw new Error("Key ring is not unlocked");
     }
     this.cacheMigrationDoneThisSession = false;
-    this.unlockSessionId = "";
+    this.invalidateUnlockSession();
     this.clearSessionKeyStoreMaterial();
     this.clearCaches();
     this.password = "";
@@ -692,13 +770,146 @@ export class KeyRing {
     this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
   }
 
+  private activateUnlockSession(password: string): string {
+    if (this.disposed) {
+      throw new Error("Key ring is disposed");
+    }
+    this.cancelUnlockCacheWarmup();
+    this.cancelUnlockMaintenance();
+    this.lifecycleGeneration += 1;
+    this.password = password;
+    const unlockSessionId = this.createUnlockSessionId();
+    this.unlockSessionId = unlockSessionId;
+    this.cacheManager.setPassword(password);
+    this.clearCardanoMemoryCache();
+    this.scheduleUnlockCacheWarmup(password, unlockSessionId);
+    return unlockSessionId;
+  }
+
+  private invalidateUnlockSession(): number {
+    this.cancelUnlockCacheWarmup();
+    this.cancelUnlockMaintenance();
+    this.lifecycleGeneration += 1;
+    this.unlockSessionId = "";
+    return this.lifecycleGeneration;
+  }
+
+  private captureUnlockSession(): UnlockSessionContext {
+    if (
+      this.status !== KeyRingStatus.UNLOCKED ||
+      !this.password ||
+      !this.unlockSessionId
+    ) {
+      throw new Error("Key ring is locked or changing state");
+    }
+    return {
+      password: this.password,
+      unlockSessionId: this.unlockSessionId,
+    };
+  }
+
+  private assertUnlockSessionCurrent(
+    password: string,
+    unlockSessionId: string
+  ): void {
+    if (!this.isUnlockSessionCurrent(password, unlockSessionId)) {
+      throw new Error("Key ring session changed while operation was running");
+    }
+  }
+
+  private runKeyRingMutation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.keyRingMutationTail.then(operation);
+    this.keyRingMutationTail = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  }
+
+  private finishPendingAdd(session: UnlockSessionContext): void {
+    this.pendingAddOperations = Math.max(0, this.pendingAddOperations - 1);
+    if (
+      this.pendingAddOperations === 0 &&
+      this.multiKeyStore.length === 0 &&
+      this.selectedKeyStoreId === null &&
+      this.isUnlockSessionCurrent(session.password, session.unlockSessionId)
+    ) {
+      this.invalidateUnlockSession();
+      this.clearSessionKeyStoreMaterial();
+      this.clearCaches();
+      this.password = "";
+      this.cacheManager.setPassword("");
+    }
+  }
+
+  private async commitPreparedKeyStoreAddition(
+    keyStore: KeyStore,
+    material: SessionKeyStoreMaterial,
+    session: UnlockSessionContext
+  ): Promise<MultiKeyStoreInfoWithSelected> {
+    return await this.runKeyRingMutation(async () => {
+      this.assertUnlockSessionCurrent(
+        session.password,
+        session.unlockSessionId
+      );
+      const shouldSelectAddedWallet = this.selectedKeyStoreId === null;
+      this.multiKeyStore = [...this.multiKeyStore, keyStore];
+      this.rememberSessionKeyStoreMaterial(keyStore, material);
+      if (shouldSelectAddedWallet) {
+        this.commitActiveKeyStoreForSession(keyStore, material, session);
+      }
+      await this.save();
+      if (shouldSelectAddedWallet) {
+        this.interactionService.dispatchEvent(
+          WEBPAGE_PORT,
+          "status-changed",
+          {}
+        );
+      }
+      return this.getMultiKeyStoreInfo();
+    });
+  }
+
   private clearSessionKeyStoreMaterial(): void {
+    for (const material of this.sessionKeyStoreMaterial.values()) {
+      this.clearSessionMaterialBytes(material);
+    }
     this.sessionKeyStoreMaterial.clear();
   }
 
   private removeSessionKeyStoreMaterial(walletId: string): void {
     if (walletId) {
+      const material = this.sessionKeyStoreMaterial.get(walletId);
+      if (material) {
+        this.clearSessionMaterialBytes(material);
+      }
       this.sessionKeyStoreMaterial.delete(walletId);
+    }
+  }
+
+  private clearSessionMaterialBytes(material: SessionKeyStoreMaterial): void {
+    if (material.type === "mnemonic") {
+      material.mnemonicMasterSeed.fill(0);
+    } else if (material.type === "privateKey") {
+      material.privateKey.fill(0);
+    }
+  }
+
+  /**
+   * Keep material that was already available while creating a keystore in the
+   * current unlock session. This avoids immediately decrypting the same store
+   * again when the newly imported wallet is selected.
+   */
+  private rememberSessionKeyStoreMaterial(
+    keyStore: KeyStore,
+    material: SessionKeyStoreMaterial
+  ): void {
+    const walletId = KeyRing.getKeyStoreId(keyStore);
+    if (walletId) {
+      this.sessionKeyStoreMaterial.set(
+        walletId,
+        this.cloneSessionKeyStoreMaterial(material)
+      );
     }
   }
 
@@ -742,7 +953,7 @@ export class KeyRing {
   private applySessionKeyStoreMaterial(
     material: SessionKeyStoreMaterial
   ): void {
-    this.clearCaches();
+    this.clearActiveKeyStoreCaches();
     switch (material.type) {
       case "mnemonic":
         this._mnemonicMasterSeed = new Uint8Array(material.mnemonicMasterSeed);
@@ -779,41 +990,49 @@ export class KeyRing {
     const type = KeyRing.getTypeOfKeyStore(keyStore);
 
     if (type === "mnemonic") {
-      const mnemonic = Buffer.from(
-        await Crypto.decrypt(this.crypto, keyStore, password)
-      ).toString();
-      return {
-        type: "mnemonic",
-        mnemonicMasterSeed: Mnemonic.generateMasterSeedFromMnemonic(mnemonic),
-      };
+      const decrypted = await Crypto.decrypt(this.crypto, keyStore, password);
+      const plaintext = Buffer.from(decrypted);
+      try {
+        const mnemonic = plaintext.toString();
+        return {
+          type: "mnemonic",
+          mnemonicMasterSeed: Mnemonic.generateMasterSeedFromMnemonic(mnemonic),
+        };
+      } finally {
+        plaintext.fill(0);
+        decrypted.fill(0);
+      }
     }
 
     if (type === "privateKey") {
-      return {
-        type: "privateKey",
-        privateKey: Buffer.from(
-          Buffer.from(
-            await Crypto.decrypt(this.crypto, keyStore, password)
-          ).toString(),
-          "hex"
-        ),
-      };
+      const decrypted = await Crypto.decrypt(this.crypto, keyStore, password);
+      const plaintext = Buffer.from(decrypted);
+      try {
+        return {
+          type: "privateKey",
+          privateKey: Buffer.from(plaintext.toString(), "hex"),
+        };
+      } finally {
+        plaintext.fill(0);
+        decrypted.fill(0);
+      }
     }
 
     if (type === "ledger") {
       const pubKeys: Record<string, Uint8Array> = {};
       const cipherText = await Crypto.decrypt(this.crypto, keyStore, password);
+      const plaintext = Buffer.from(cipherText);
 
       try {
-        const encodedPubkeys = JSON.parse(Buffer.from(cipherText).toString());
+        const encodedPubkeys = JSON.parse(plaintext.toString());
         Object.keys(encodedPubkeys).forEach(
           (k) => (pubKeys[k] = Buffer.from(encodedPubkeys[k], "hex"))
         );
       } catch {
-        pubKeys[LedgerApp.Cosmos] = Buffer.from(
-          Buffer.from(cipherText).toString(),
-          "hex"
-        );
+        pubKeys[LedgerApp.Cosmos] = Buffer.from(plaintext.toString(), "hex");
+      } finally {
+        plaintext.fill(0);
+        cipherText.fill(0);
       }
 
       return { type: "ledger", ledgerPublicKeyCache: pubKeys };
@@ -821,91 +1040,423 @@ export class KeyRing {
 
     if (type === "keystone") {
       const cipherText = await Crypto.decrypt(this.crypto, keyStore, password);
+      const plaintext = Buffer.from(cipherText);
       try {
         return {
           type: "keystone",
           keystonePublicKey: JSON.parse(
-            Buffer.from(cipherText).toString()
+            plaintext.toString()
           ) as KeystoneKeyringData,
         };
       } catch (e: any) {
         throw new Error("Unexpected content of Keystone public keys");
+      } finally {
+        plaintext.fill(0);
+        cipherText.fill(0);
       }
     }
 
     throw new Error("Unexpected type of keyring");
   }
 
-  /**
-   * Reload active keystore secrets during account switch without unlock side effects
-   * (status-changed, mnemonic-length background work, cache migration).
-   */
-  private async reloadActiveKeyStoreForSwitch(password: string): Promise<void> {
-    if (!this.keyStore || this.type === "none") {
-      throw new Error("Key ring not initialized");
+  private async decryptKeyStoreText(
+    keyStore: KeyStore,
+    password: string,
+    options?: { priority?: ScryptPriority }
+  ): Promise<string> {
+    const decrypted = await Crypto.decrypt(
+      this.crypto,
+      keyStore,
+      password,
+      options
+    );
+    const plaintext = Buffer.from(decrypted);
+    try {
+      return plaintext.toString();
+    } finally {
+      plaintext.fill(0);
+      decrypted.fill(0);
     }
-    if (this.password !== password) {
-      throw new Error("Invalid password");
-    }
+  }
 
-    const walletId = KeyRing.getKeyStoreId(this.keyStore);
+  private async resolveSessionKeyStoreMaterial(
+    keyStore: KeyStore,
+    password: string
+  ): Promise<SessionKeyStoreMaterial> {
+    const walletId = KeyRing.getKeyStoreId(keyStore);
     const cached = this.sessionKeyStoreMaterial.get(walletId);
-    const material = cached
+    return cached
       ? this.cloneSessionKeyStoreMaterial(cached)
       : this.cloneSessionKeyStoreMaterial(
-          await this.decryptKeyStoreToMaterial(this.keyStore, password)
+          await this.decryptKeyStoreToMaterial(keyStore, password)
         );
+  }
 
-    if (!cached) {
-      this.sessionKeyStoreMaterial.set(walletId, material);
+  private commitActiveKeyStoreForSession(
+    keyStore: KeyStore,
+    material: SessionKeyStoreMaterial,
+    session: UnlockSessionContext
+  ): void {
+    this.assertUnlockSessionCurrent(session.password, session.unlockSessionId);
+
+    const walletId = KeyRing.getKeyStoreId(keyStore);
+    if (!this.sessionKeyStoreMaterial.has(walletId)) {
+      this.rememberSessionKeyStoreMaterial(keyStore, material);
     }
 
+    // Publish the selected keystore and its signing material in the same
+    // synchronous turn, after all asynchronous work and session validation.
+    this.selectKeyStore(keyStore);
     this.applySessionKeyStoreMaterial(material);
-    this.clearCardanoMemoryCache();
+  }
+
+  private selectKeyStore(keyStore: KeyStore | null): void {
+    if (!keyStore) {
+      this.selectedKeyStoreId = null;
+      return;
+    }
+
+    const selectedId = KeyRing.getKeyStoreId(keyStore);
+    if (
+      !this.multiKeyStore.some(
+        (candidate) => KeyRing.getKeyStoreId(candidate) === selectedId
+      )
+    ) {
+      throw new Error("Selected key store is not in the keyring");
+    }
+
+    this.selectedKeyStoreId = selectedId;
+  }
+
+  /**
+   * Resolve and atomically publish a selected keystore without unlock side
+   * effects (events, mnemonic-length work, cache migration).
+   */
+  private async reloadActiveKeyStoreForSwitch(
+    keyStore: KeyStore,
+    session: UnlockSessionContext
+  ): Promise<void> {
+    this.assertUnlockSessionCurrent(session.password, session.unlockSessionId);
+    const material = await this.resolveSessionKeyStoreMaterial(
+      keyStore,
+      session.password
+    );
+    this.commitActiveKeyStoreForSession(keyStore, material, session);
   }
 
   public async unlock(password: string) {
-    if (!this.keyStore || this.type === "none") {
+    const keyStore = this.keyStore;
+    if (!keyStore || this.type === "none") {
       throw new Error("Key ring not initialized");
     }
-
-    const walletId = KeyRing.getKeyStoreId(this.keyStore);
-    const material = this.cloneSessionKeyStoreMaterial(
-      await this.decryptKeyStoreToMaterial(this.keyStore, password)
-    );
-    this.sessionKeyStoreMaterial.set(walletId, material);
-    this.applySessionKeyStoreMaterial(material);
-
-    this.password = password;
-    this.unlockSessionId = `kr_sess_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2)}`;
-    this.cacheManager.setPassword(password);
-    this.clearCardanoMemoryCache();
-    await this.calculateMnemonicLengthInBackground(password);
-
-    if (!this.cacheMigrationDoneThisSession) {
-      try {
-        await this.migrateCacheToEncrypted();
-        this.cacheMigrationDoneThisSession = true;
-      } catch (e: unknown) {
-        console.error(`[KeyRing] Cache migration failed:`, e);
-        // Continue execution - migration failure doesn't break core functionality
-      }
+    if (this.status !== KeyRingStatus.LOCKED) {
+      throw new Error("Key ring is not locked");
+    }
+    if (this.unlockInProgress) {
+      throw new Error("Key ring unlock is already in progress");
     }
 
-    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+    const lifecycleGeneration = this.lifecycleGeneration;
+    const walletId = KeyRing.getKeyStoreId(keyStore);
+    let pendingMaterial: SessionKeyStoreMaterial | undefined;
+    this.unlockInProgress = true;
+    try {
+      pendingMaterial = this.cloneSessionKeyStoreMaterial(
+        await this.decryptKeyStoreToMaterial(keyStore, password)
+      );
+      if (
+        this.lifecycleGeneration !== lifecycleGeneration ||
+        this.status !== KeyRingStatus.LOCKED ||
+        this.keyStore !== keyStore
+      ) {
+        throw new Error("Key ring changed while unlock was running");
+      }
+
+      this.clearSessionKeyStoreMaterial();
+      this.sessionKeyStoreMaterial.set(walletId, pendingMaterial);
+      this.applySessionKeyStoreMaterial(pendingMaterial);
+      pendingMaterial = undefined;
+
+      const unlockSessionId = this.activateUnlockSession(password);
+      this.assertUnlockSessionCurrent(password, unlockSessionId);
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
+      this.scheduleUnlockMaintenance(password, unlockSessionId);
+    } finally {
+      if (pendingMaterial) {
+        this.clearSessionMaterialBytes(pendingMaterial);
+      }
+      this.unlockInProgress = false;
+    }
   }
 
   public getCurrentUnlockSessionId(): string {
     return this.unlockSessionId;
   }
 
+  private createUnlockSessionId(): string {
+    return `kr_sess_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2)}`;
+  }
+
+  private isUnlockSessionCurrent(
+    password: string,
+    unlockSessionId: string
+  ): boolean {
+    return (
+      !this.disposed &&
+      unlockSessionId.length > 0 &&
+      this.unlockSessionId === unlockSessionId &&
+      this.password === password
+    );
+  }
+
+  private cancelUnlockCacheWarmup(): void {
+    if (this.unlockCacheWarmupTimer !== undefined) {
+      clearTimeout(this.unlockCacheWarmupTimer);
+      this.unlockCacheWarmupTimer = undefined;
+    }
+  }
+
+  /**
+   * Address-cache KDF work is best-effort idle work. Keeping its actual scrypt
+   * behind a cancellable grace period lets an immediate wallet switch enqueue
+   * the target keystore decrypt before background warm-up occupies scrypt.
+   */
+  private scheduleUnlockCacheWarmup(
+    password: string,
+    unlockSessionId: string
+  ): void {
+    if (
+      this.disposed ||
+      !this.isUnlockSessionCurrent(password, unlockSessionId)
+    ) {
+      return;
+    }
+
+    this.cancelUnlockCacheWarmup();
+    const lifecycleGeneration = this.lifecycleGeneration;
+    const timer = setTimeout(() => {
+      if (this.unlockCacheWarmupTimer === timer) {
+        this.unlockCacheWarmupTimer = undefined;
+      }
+      if (
+        this.lifecycleGeneration !== lifecycleGeneration ||
+        !this.isUnlockSessionCurrent(password, unlockSessionId)
+      ) {
+        return;
+      }
+
+      this.trackDetachedBackgroundWork(
+        this.cacheManager.warmSharedDerivedKey().catch((e: unknown) => {
+          // A lock or password transition intentionally invalidates an in-flight
+          // warm-up. Report failures only while they still belong to this session.
+          if (
+            this.lifecycleGeneration === lifecycleGeneration &&
+            this.isUnlockSessionCurrent(password, unlockSessionId)
+          ) {
+            throw e;
+          }
+        }),
+        "[KeyRing] Failed to warm address-cache derived key:"
+      );
+    }, UNLOCK_CACHE_WARMUP_GRACE_MS);
+    this.unlockCacheWarmupTimer = timer;
+    (timer as ReturnType<typeof setTimeout> & { unref?: () => void }).unref?.();
+  }
+
+  private rescheduleUnlockCacheWarmupIfCurrent(
+    session: UnlockSessionContext
+  ): void {
+    if (
+      !this.disposed &&
+      this.isUnlockSessionCurrent(session.password, session.unlockSessionId)
+    ) {
+      this.scheduleUnlockCacheWarmup(session.password, session.unlockSessionId);
+    }
+  }
+
+  private cancelUnlockMaintenance(): void {
+    if (this.unlockMaintenanceTimer !== undefined) {
+      clearTimeout(this.unlockMaintenanceTimer);
+      this.unlockMaintenanceTimer = undefined;
+    }
+  }
+
+  private scheduleUnlockMaintenance(
+    password: string,
+    unlockSessionId: string
+  ): void {
+    if (this.disposed) {
+      return;
+    }
+    this.cancelUnlockMaintenance();
+    const timer = setTimeout(() => {
+      if (this.unlockMaintenanceTimer === timer) {
+        this.unlockMaintenanceTimer = undefined;
+      }
+      if (!this.isUnlockSessionCurrent(password, unlockSessionId)) {
+        return;
+      }
+      if (
+        this.unlockMaintenanceFlight &&
+        this.unlockMaintenanceFlightSessionId === unlockSessionId
+      ) {
+        return;
+      }
+      void this.runUnlockMaintenance(password, unlockSessionId).catch(
+        (e: unknown) => {
+          if (this.isUnlockSessionCurrent(password, unlockSessionId)) {
+            console.error(`[KeyRing] Unlock maintenance failed:`, e);
+          }
+        }
+      );
+    }, UNLOCK_MAINTENANCE_GRACE_MS);
+    this.unlockMaintenanceTimer = timer;
+    (timer as ReturnType<typeof setTimeout> & { unref?: () => void }).unref?.();
+  }
+
+  private rescheduleUnlockMaintenanceIfCurrent(
+    session: UnlockSessionContext
+  ): void {
+    if (
+      !this.disposed &&
+      this.isUnlockSessionCurrent(session.password, session.unlockSessionId)
+    ) {
+      this.scheduleUnlockMaintenance(session.password, session.unlockSessionId);
+    }
+  }
+
+  private async runUnlockMaintenance(
+    password: string,
+    unlockSessionId: string
+  ): Promise<void> {
+    if (this.disposed) {
+      return;
+    }
+
+    const existingFlight = this.unlockMaintenanceFlight;
+    if (existingFlight) {
+      const existingSessionId = this.unlockMaintenanceFlightSessionId;
+      if (existingSessionId === unlockSessionId) {
+        await existingFlight;
+        return;
+      }
+
+      try {
+        await existingFlight;
+      } catch {
+        // The caller that started the old session's flight owns its error.
+      }
+
+      // If a newer session had to wait for an older run to stop, start its own
+      // run once the old one has released the single-flight slot.
+      if (
+        !this.disposed &&
+        this.isUnlockSessionCurrent(password, unlockSessionId)
+      ) {
+        await this.runUnlockMaintenance(password, unlockSessionId);
+      }
+      return;
+    }
+
+    const flight = this.performUnlockMaintenance(password, unlockSessionId);
+    const trackedFlight = flight.finally(() => {
+      if (this.unlockMaintenanceFlight === trackedFlight) {
+        this.unlockMaintenanceFlight = undefined;
+        this.unlockMaintenanceFlightSessionId = "";
+      }
+    });
+    this.unlockMaintenanceFlight = trackedFlight;
+    this.unlockMaintenanceFlightSessionId = unlockSessionId;
+    await trackedFlight;
+  }
+
+  private trackDetachedBackgroundWork(
+    work: Promise<void>,
+    failureMessage: string
+  ): void {
+    const tracked = work
+      .catch((e: unknown) => {
+        if (!this.disposed) {
+          console.error(failureMessage, e);
+        }
+      })
+      .finally(() => {
+        this.detachedBackgroundWork.delete(tracked);
+      });
+    this.detachedBackgroundWork.add(tracked);
+  }
+
+  /**
+   * Stops timers and waits until already-started maintenance owned by this
+   * instance has settled. A disposed KeyRing must not be reused.
+   */
+  public dispose(): Promise<void> {
+    if (!this.disposeFlight) {
+      this.disposeFlight = this.performDispose();
+    }
+    return this.disposeFlight;
+  }
+
+  private async performDispose(): Promise<void> {
+    this.disposed = true;
+    this.cancelUnlockCacheWarmup();
+    this.cancelUnlockMaintenance();
+    this.lifecycleGeneration += 1;
+    this.unlockSessionId = "";
+    this.clearSessionKeyStoreMaterial();
+    this.clearCaches();
+    this.clearCardanoMemoryCache();
+    this.password = "";
+    this.cacheManager.setPassword("");
+
+    // Work may finish and remove itself while the snapshot is being awaited.
+    // Loop so disposal also owns work that was detached immediately before it.
+    while (
+      this.unlockMaintenanceFlight ||
+      this.detachedBackgroundWork.size > 0
+    ) {
+      const pending = [
+        ...(this.unlockMaintenanceFlight ? [this.unlockMaintenanceFlight] : []),
+        ...this.detachedBackgroundWork,
+      ];
+      await Promise.allSettled(pending);
+    }
+  }
+
+  private async performUnlockMaintenance(
+    password: string,
+    unlockSessionId: string
+  ): Promise<void> {
+    await this.calculateMnemonicLengthInBackground(password, unlockSessionId);
+
+    if (
+      !this.isUnlockSessionCurrent(password, unlockSessionId) ||
+      this.cacheMigrationDoneThisSession
+    ) {
+      return;
+    }
+
+    try {
+      await this.migrateCacheToEncrypted();
+      if (this.isUnlockSessionCurrent(password, unlockSessionId)) {
+        this.cacheMigrationDoneThisSession = true;
+      }
+    } catch (e: unknown) {
+      if (this.isUnlockSessionCurrent(password, unlockSessionId)) {
+        console.error(`[KeyRing] Cache migration failed:`, e);
+      }
+      // Migration is best effort and will be retried in the next session.
+    }
+  }
+
   /**
    * Calculate mnemonicLength for all keystores in background after unlock
    */
   private async calculateMnemonicLengthInBackground(
-    password: string
+    password: string,
+    unlockSessionId: string
   ): Promise<void> {
     try {
       const keystoresNeedingCalculation = this.multiKeyStore
@@ -927,41 +1478,75 @@ export class KeyRing {
       );
 
       let hasUpdatedMnemonicLength = false;
+      let successCount = 0;
 
-      const promises = keystoresNeedingCalculation.map(
-        async ({ ks, index }) => {
-          try {
-            const decrypted = await Crypto.decrypt(this.crypto, ks, password);
-            const mnemonic = Buffer.from(decrypted).toString();
-            const words = mnemonic.trim().split(/\s+/);
-            const newLen = words.length.toString();
-
-            ks.meta = { ...(ks.meta ?? {}), mnemonicLength: newLen };
-            hasUpdatedMnemonicLength = true;
-
-            this.interactionService.dispatchEvent(
-              WEBPAGE_PORT,
-              "mnemonic-length-progress",
-              {
-                completed: index + 1,
-                total: keystoresNeedingCalculation.length,
-                walletId: ks.meta?.["__id__"],
-                mnemonicLength: newLen,
-              }
-            );
-
-            return { success: true, index, mnemonicLength: newLen };
-          } catch (e: any) {
-            return { success: false, index, error: e?.message };
-          }
+      // Run sequentially so locking the wallet prevents any not-yet-started
+      // background decryptions from retaining and using the old password.
+      for (let index = 0; index < keystoresNeedingCalculation.length; index++) {
+        if (!this.isUnlockSessionCurrent(password, unlockSessionId)) {
+          return;
         }
-      );
 
-      const results = await Promise.all(promises);
-      const successCount = results.filter((r) => r.success).length;
+        const { ks } = keystoresNeedingCalculation[index];
+        try {
+          const mnemonic = await this.decryptKeyStoreText(ks, password, {
+            priority: "background",
+          });
 
-      if (hasUpdatedMnemonicLength) {
+          if (!this.isUnlockSessionCurrent(password, unlockSessionId)) {
+            return;
+          }
+
+          const walletId = KeyRing.getKeyStoreId(ks);
+          const currentKeyStore = this.multiKeyStore.find(
+            (candidate) => KeyRing.getKeyStoreId(candidate) === walletId
+          );
+          if (!currentKeyStore || currentKeyStore.meta?.["mnemonicLength"]) {
+            continue;
+          }
+
+          const newLen = mnemonic.trim().split(/\s+/).length.toString();
+
+          currentKeyStore.meta = {
+            ...(currentKeyStore.meta ?? {}),
+            mnemonicLength: newLen,
+          };
+          hasUpdatedMnemonicLength = true;
+          successCount += 1;
+
+          this.interactionService.dispatchEvent(
+            WEBPAGE_PORT,
+            "mnemonic-length-progress",
+            {
+              completed: index + 1,
+              total: keystoresNeedingCalculation.length,
+              walletId,
+              mnemonicLength: newLen,
+            }
+          );
+        } catch {
+          // One corrupt keystore must not stop maintenance for the others.
+        }
+      }
+
+      if (
+        hasUpdatedMnemonicLength &&
+        this.isUnlockSessionCurrent(password, unlockSessionId)
+      ) {
         await this.save();
+        if (this.isUnlockSessionCurrent(password, unlockSessionId)) {
+          // Existing consumers refresh Cardano capability from status-changed;
+          // mnemonic-length-* events are informational and are not wired to UI.
+          this.interactionService.dispatchEvent(
+            WEBPAGE_PORT,
+            "status-changed",
+            {}
+          );
+        }
+      }
+
+      if (!this.isUnlockSessionCurrent(password, unlockSessionId)) {
+        return;
       }
 
       this.interactionService.dispatchEvent(
@@ -973,13 +1558,15 @@ export class KeyRing {
         }
       );
     } catch (e: any) {
-      this.interactionService.dispatchEvent(
-        WEBPAGE_PORT,
-        "mnemonic-length-error",
-        {
-          error: e?.message,
-        }
-      );
+      if (this.isUnlockSessionCurrent(password, unlockSessionId)) {
+        this.interactionService.dispatchEvent(
+          WEBPAGE_PORT,
+          "mnemonic-length-error",
+          {
+            error: e?.message,
+          }
+        );
+      }
     }
   }
 
@@ -1007,7 +1594,9 @@ export class KeyRing {
       }
 
       if (isCardano) {
-        const existingCache = await this.loadCardanoChainCache(chainId);
+        const existingCache = await this.loadCardanoChainCache(chainId, {
+          scryptPriority: "background",
+        });
         const activeAddr = Buffer.from(activeKey.address).toString("utf8");
         const activePub =
           activeKey.algo === "ed25519" ||
@@ -1022,17 +1611,16 @@ export class KeyRing {
 
         await this.saveCardanoChainCache(chainId, existingCache);
       } else {
-        const existingCache = await this.loadGenericChainCache(chainId);
+        const existingCache = await this.loadGenericChainCache(chainId, {
+          scryptPriority: "background",
+        });
         const activeAddr = Buffer.from(activeKey.address).toString("hex");
         const activePubKey = Buffer.from(activeKey.pubKey).toString("hex");
-        const walletInfo = this.multiKeyStore[activeWalletIndex];
-        const mnemonicLength = walletInfo?.meta?.["mnemonicLength"];
 
         existingCache[activeWalletId] = {
           address: activeAddr,
           name: walletNames[activeWalletIndex],
           pubKey: activePubKey,
-          mnemonicLength: mnemonicLength,
         };
 
         await this.saveGenericChainCache(chainId, existingCache);
@@ -1043,49 +1631,911 @@ export class KeyRing {
     }
   }
 
+  private static isPersistedKeyStore(value: unknown): value is KeyStore {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+
+    const keyStore = value as Record<string, unknown>;
+    if (
+      !["1", "1.1", "1.2"].includes(keyStore["version"] as string) ||
+      !["mnemonic", "privateKey", "ledger", "keystone"].includes(
+        keyStore["type"] as string
+      ) ||
+      // `curve` only exists in keystores written after 2022; absent means the
+      // historical secp256k1. Requiring it here would reject every pre-2022
+      // wallet and, through the all-or-nothing legacy check, make the whole
+      // keyring unrestorable. restore() backfills it instead.
+      (keyStore["curve"] !== undefined &&
+        keyStore["curve"] !== KeyCurves.secp256k1) ||
+      !keyStore["meta"] ||
+      typeof keyStore["meta"] !== "object" ||
+      Array.isArray(keyStore["meta"]) ||
+      Object.values(keyStore["meta"] as Record<string, unknown>).some(
+        (entry) => typeof entry !== "string"
+      ) ||
+      !KeyRing.isPersistedCrypto(keyStore["crypto"])
+    ) {
+      return false;
+    }
+
+    if (
+      keyStore["key"] !== undefined &&
+      (typeof keyStore["key"] !== "string" || keyStore["key"].length === 0)
+    ) {
+      return false;
+    }
+
+    if (keyStore["bip44HDPath"] !== undefined) {
+      if (
+        !keyStore["bip44HDPath"] ||
+        typeof keyStore["bip44HDPath"] !== "object" ||
+        Array.isArray(keyStore["bip44HDPath"])
+      ) {
+        return false;
+      }
+      const path = keyStore["bip44HDPath"] as Record<string, unknown>;
+      if (
+        !KeyRing.isBip44Index(path["account"]) ||
+        (path["change"] !== 0 && path["change"] !== 1) ||
+        !KeyRing.isBip44Index(path["addressIndex"])
+      ) {
+        return false;
+      }
+    }
+
+    if (keyStore["coinTypeForChain"] !== undefined) {
+      if (
+        !keyStore["coinTypeForChain"] ||
+        typeof keyStore["coinTypeForChain"] !== "object" ||
+        Array.isArray(keyStore["coinTypeForChain"]) ||
+        Object.values(
+          keyStore["coinTypeForChain"] as Record<string, unknown>
+        ).some(
+          (coinType) =>
+            coinType !== undefined && !KeyRing.isBip44Index(coinType)
+        )
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private static isBip44Index(value: unknown): value is number {
+    return (
+      typeof value === "number" &&
+      Number.isInteger(value) &&
+      value >= 0 &&
+      value <= 0x7fffffff
+    );
+  }
+
+  private static isHex(value: unknown, bytes?: number): value is string {
+    return (
+      typeof value === "string" &&
+      value.length > 0 &&
+      value.length % 2 === 0 &&
+      (bytes === undefined || value.length === bytes * 2) &&
+      /^[0-9a-f]+$/i.test(value)
+    );
+  }
+
+  private static isPersistedCrypto(value: unknown): boolean {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+
+    const crypto = value as Record<string, unknown>;
+    if (
+      crypto["cipher"] !== "aes-128-ctr" ||
+      !crypto["cipherparams"] ||
+      typeof crypto["cipherparams"] !== "object" ||
+      Array.isArray(crypto["cipherparams"]) ||
+      !KeyRing.isHex(
+        (crypto["cipherparams"] as Record<string, unknown>)["iv"],
+        16
+      ) ||
+      !KeyRing.isHex(crypto["ciphertext"]) ||
+      !KeyRing.isHex(crypto["mac"], 32) ||
+      !["scrypt", "sha256", "pbkdf2"].includes(crypto["kdf"] as string) ||
+      !crypto["kdfparams"] ||
+      typeof crypto["kdfparams"] !== "object" ||
+      Array.isArray(crypto["kdfparams"])
+    ) {
+      return false;
+    }
+
+    const params = crypto["kdfparams"] as Record<string, unknown>;
+    if (!KeyRing.isHex(params["salt"], 32)) {
+      return false;
+    }
+
+    if (crypto["kdf"] === "scrypt") {
+      const n = params["n"];
+      return (
+        params["dklen"] === 32 &&
+        typeof n === "number" &&
+        Number.isSafeInteger(n) &&
+        n >= 2 &&
+        n <= 1_048_576 &&
+        (n & (n - 1)) === 0 &&
+        typeof params["r"] === "number" &&
+        Number.isSafeInteger(params["r"]) &&
+        params["r"] > 0 &&
+        params["r"] <= 32 &&
+        typeof params["p"] === "number" &&
+        Number.isSafeInteger(params["p"]) &&
+        params["p"] > 0 &&
+        params["p"] <= 16
+      );
+    }
+
+    // Historical sha256/pbkdf2 keystores were produced with the same params
+    // object as scrypt, but their current runtime only consumes the salt and
+    // uses a fixed 32-byte output. Accept both that historical shape and the
+    // minimal shape actually consumed by the runtime.
+    return true;
+  }
+
+  private static isPersistedKeyRingState(
+    value: unknown
+  ): value is PersistedKeyRingState {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+
+    const state = value as Partial<PersistedKeyRingState>;
+    return (
+      (state.selectedId === null || typeof state.selectedId === "string") &&
+      Array.isArray(state.keyStores) &&
+      state.keyStores.every((keyStore) => KeyRing.isPersistedKeyStore(keyStore))
+    );
+  }
+
+  private static isLegacyMirrorFingerprints(
+    value: unknown
+  ): value is LegacyMirrorFingerprints {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+    const fingerprints = value as Partial<LegacyMirrorFingerprints>;
+    return (
+      typeof fingerprints.selected === "string" &&
+      typeof fingerprints.multi === "string"
+    );
+  }
+
+  private static isLegacyMirrorState(
+    value: unknown
+  ): value is LegacyMirrorState {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+    const mirror = value as Partial<LegacyMirrorState> & {
+      previous?: unknown;
+      target?: unknown;
+      fingerprint?: unknown;
+    };
+    if (mirror.status === "synced") {
+      return KeyRing.isLegacyMirrorFingerprints(mirror.fingerprint);
+    }
+    if (mirror.status === "pending") {
+      return (
+        KeyRing.isLegacyMirrorFingerprints(mirror.previous) &&
+        KeyRing.isLegacyMirrorFingerprints(mirror.target)
+      );
+    }
+    return false;
+  }
+
+  private static canonicalizeForFingerprint(value: unknown): unknown {
+    if (value === undefined) {
+      return { __keyringUndefined__: true };
+    }
+    if (
+      value === null ||
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return value;
+    }
+    if (value instanceof Uint8Array) {
+      return { __keyringBytes__: Buffer.from(value).toString("hex") };
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => KeyRing.canonicalizeForFingerprint(item));
+    }
+    if (typeof value === "object") {
+      const canonical: Record<string, unknown> = {};
+      for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+        const child = (value as Record<string, unknown>)[key];
+        if (child !== undefined) {
+          canonical[key] = KeyRing.canonicalizeForFingerprint(child);
+        }
+      }
+      return canonical;
+    }
+    return String(value);
+  }
+
+  private static clonePersistedValue<T>(value: T): T {
+    if (
+      value === null ||
+      value === undefined ||
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return value;
+    }
+    if (value instanceof Uint8Array) {
+      return new Uint8Array(value) as T;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => KeyRing.clonePersistedValue(item)) as T;
+    }
+    if (typeof value === "object") {
+      const clone: Record<string, unknown> = {};
+      for (const [key, child] of Object.entries(
+        value as Record<string, unknown>
+      )) {
+        clone[key] = KeyRing.clonePersistedValue(child);
+      }
+      return clone as T;
+    }
+    return value;
+  }
+
+  private static fingerprintLegacyValue(value: unknown): string {
+    const canonical = JSON.stringify(KeyRing.canonicalizeForFingerprint(value));
+    return `sha256:${Buffer.from(Hash.sha256(Buffer.from(canonical))).toString(
+      "hex"
+    )}`;
+  }
+
+  /**
+   * Proves that two persistence entries contain the same saved key material
+   * without decrypting it. User-editable metadata (including name and
+   * nameByChain) and __id__ are deliberately excluded; crypto/ciphertext and
+   * the derivation/signing context must match exactly. A mismatch is treated
+   * as ambiguity and both entries are retained.
+   */
+  private static fingerprintPersistedKeyStore(keyStore: KeyStore): string {
+    return KeyRing.fingerprintLegacyValue({
+      type: keyStore.type,
+      // Normalised so backfilling an absent `curve` cannot change a keystore's
+      // identity: the same ciphertext must keep the same fingerprint whether or
+      // not the field has been repaired yet.
+      curve: keyStore.curve ?? KeyCurves.secp256k1,
+      crypto: keyStore.crypto,
+      key: keyStore.key,
+      bip44HDPath: keyStore.bip44HDPath,
+      coinTypeForChain: keyStore.coinTypeForChain,
+    });
+  }
+
+  private static mergeLegacyUserMetadata(
+    current: KeyStore,
+    legacy: KeyStore
+  ): KeyStore {
+    const meta = { ...(current.meta ?? {}) };
+    for (const key of KeyRing.SAFE_META_KEYS) {
+      if (
+        key !== "__id__" &&
+        legacy.meta &&
+        Object.prototype.hasOwnProperty.call(legacy.meta, key)
+      ) {
+        meta[key] = legacy.meta[key];
+      }
+    }
+    return { ...current, meta };
+  }
+
+  private static mergePersistedKeyStoreStates(
+    canonicalKeyStores: KeyStore[],
+    legacyKeyStores: KeyStore[]
+  ): { keyStores: KeyStore[]; changed: boolean } {
+    const keyStores: KeyStore[] = [];
+    const indexByFingerprint = new Map<string, number>();
+    let changed = false;
+
+    const append = (source: KeyStore, legacyMetadataWins: boolean) => {
+      const keyStore = KeyRing.clonePersistedValue(source);
+      const fingerprint = KeyRing.fingerprintPersistedKeyStore(keyStore);
+      const existingIndex = indexByFingerprint.get(fingerprint);
+      if (existingIndex === undefined) {
+        indexByFingerprint.set(fingerprint, keyStores.length);
+        keyStores.push(keyStore);
+        return;
+      }
+
+      // Matching immutable persistence fingerprints prove identity. Keep the
+      // first stable ID, while a later legacy copy may supply user metadata.
+      changed = true;
+      if (legacyMetadataWins) {
+        keyStores[existingIndex] = KeyRing.mergeLegacyUserMetadata(
+          keyStores[existingIndex],
+          keyStore
+        );
+      }
+    };
+
+    for (const keyStore of canonicalKeyStores) {
+      append(keyStore, false);
+    }
+    for (const keyStore of legacyKeyStores) {
+      append(keyStore, true);
+    }
+
+    return { keyStores, changed };
+  }
+
+  private static getLegacyMirrorFingerprints(
+    selected: unknown,
+    multi: unknown
+  ): LegacyMirrorFingerprints {
+    return {
+      selected: KeyRing.fingerprintLegacyValue(selected),
+      multi: KeyRing.fingerprintLegacyValue(multi),
+    };
+  }
+
+  private static legacyMirrorFingerprintsEqual(
+    a: LegacyMirrorFingerprints,
+    b: LegacyMirrorFingerprints
+  ): boolean {
+    return a.selected === b.selected && a.multi === b.multi;
+  }
+
+  private async readKeyRingPersistenceSnapshot(
+    includeIncrementalNumber = false
+  ): Promise<KeyRingPersistenceSnapshot> {
+    if (hasMultiGet(this.kvStore)) {
+      const keys = includeIncrementalNumber
+        ? [...KeyRingPersistenceKeys, "incrementalNumber"]
+        : [...KeyRingPersistenceKeys];
+      const values = await this.kvStore.multiGet(keys);
+      return {
+        persisted: values[KeyRingStateV2Key],
+        incrementalNumber: includeIncrementalNumber
+          ? values["incrementalNumber"]
+          : undefined,
+        legacy: {
+          selected: values[KeyStoreKey],
+          multi: values[KeyMultiStoreKey],
+        },
+      };
+    }
+
+    const [persisted, selected, multi, incrementalNumber] = await Promise.all([
+      this.kvStore.get<unknown>(KeyRingStateV2Key),
+      this.kvStore.get<unknown>(KeyStoreKey),
+      this.kvStore.get<unknown>(KeyMultiStoreKey),
+      includeIncrementalNumber
+        ? this.kvStore.get<unknown>("incrementalNumber")
+        : Promise.resolve(undefined),
+    ]);
+    return {
+      persisted,
+      incrementalNumber,
+      legacy: { selected, multi },
+    };
+  }
+
+  private async resolveLegacyKeyRingState(
+    legacyMulti: unknown,
+    legacySelected: unknown
+  ): Promise<ResolvedKeyRingState | null> {
+    if (KeyRing.isPersistedKeyRingState(legacyMulti)) {
+      // Compatibility with the short-lived development format that stored
+      // the v2 object under key-multi-store before the versioned key existed.
+      const keyStores = KeyRing.clonePersistedValue(legacyMulti.keyStores);
+      const selectedKeyStore = legacyMulti.selectedId
+        ? keyStores.find(
+            (keyStore) => keyStore.meta?.["__id__"] === legacyMulti.selectedId
+          )
+        : undefined;
+      return {
+        keyStores,
+        selectedId: legacyMulti.selectedId,
+        selectedFingerprint: selectedKeyStore
+          ? KeyRing.fingerprintPersistedKeyStore(selectedKeyStore)
+          : null,
+      };
+    }
+
+    if (
+      legacyMulti !== undefined &&
+      legacyMulti !== null &&
+      !Array.isArray(legacyMulti)
+    ) {
+      console.warn(
+        "[KeyRing] Unrecognized legacy multi-key state; ignoring legacy storage"
+      );
+      return null;
+    }
+
+    const keyStores = Array.isArray(legacyMulti)
+      ? KeyRing.clonePersistedValue(legacyMulti as KeyStore[])
+      : [];
+    if (!keyStores.every((keyStore) => KeyRing.isPersistedKeyStore(keyStore))) {
+      return null;
+    }
+
+    if (
+      legacySelected !== undefined &&
+      legacySelected !== null &&
+      !KeyRing.isPersistedKeyStore(legacySelected)
+    ) {
+      return null;
+    }
+    const selectedKeyStore = KeyRing.isPersistedKeyStore(legacySelected)
+      ? KeyRing.clonePersistedValue(legacySelected)
+      : null;
+
+    // Before multi-wallet support only key-store existed. A stopped legacy
+    // save can also publish a newly selected wallet before updating the array.
+    // Append the selected copy even when __id__ collides. The immutable
+    // fingerprint merge later proves whether this is the same saved keystore
+    // or a distinct ciphertext that must be retained.
+    if (selectedKeyStore) {
+      keyStores.push(selectedKeyStore);
+    }
+
+    const legacySelectedId = selectedKeyStore?.meta?.["__id__"];
+    const selectedFingerprint = selectedKeyStore
+      ? KeyRing.fingerprintPersistedKeyStore(selectedKeyStore)
+      : keyStores[0]
+      ? KeyRing.fingerprintPersistedKeyStore(keyStores[0])
+      : null;
+    const selectedId =
+      typeof legacySelectedId === "string" && legacySelectedId.length > 0
+        ? legacySelectedId
+        : keyStores[0]?.meta?.["__id__"] ?? null;
+
+    return { keyStores, selectedId, selectedFingerprint };
+  }
+
+  private static numericKeyStoreId(id: string): number | null {
+    if (!/^(0|[1-9]\d*)$/.test(id)) {
+      return null;
+    }
+    const numeric = Number(id);
+    return Number.isSafeInteger(numeric) ? numeric : null;
+  }
+
+  private async synchronizeIncrementalNumberFloor(
+    existingIds: Set<string>,
+    storedIncrementalNumber: unknown
+  ): Promise<void> {
+    const operation = this.idAllocationTail.then(async () => {
+      const current =
+        typeof storedIncrementalNumber === "number" &&
+        Number.isSafeInteger(storedIncrementalNumber) &&
+        storedIncrementalNumber >= 0
+          ? storedIncrementalNumber
+          : 0;
+      let floor = current;
+      for (const id of existingIds) {
+        const numeric = KeyRing.numericKeyStoreId(id);
+        if (numeric !== null && numeric > floor) {
+          floor = numeric;
+        }
+      }
+      if (floor > current) {
+        await this.kvStore.set("incrementalNumber", floor);
+      }
+    });
+    this.idAllocationTail = operation.then(
+      () => undefined,
+      () => undefined
+    );
+    await operation;
+  }
+
+  private async normalizeRestoredKeyStoreIds(
+    keyStores: KeyStore[],
+    selectedId: string | null,
+    selectedFingerprint: string | null,
+    storedIncrementalNumber: unknown
+  ): Promise<{
+    keyStores: KeyStore[];
+    selectedId: string | null;
+    changed: boolean;
+  }> {
+    const normalized = KeyRing.clonePersistedValue(keyStores);
+    const selectedIndex = (() => {
+      if (selectedFingerprint) {
+        const index = normalized.findIndex(
+          (keyStore) =>
+            KeyRing.fingerprintPersistedKeyStore(keyStore) ===
+            selectedFingerprint
+        );
+        if (index >= 0) {
+          return index;
+        }
+      }
+      if (selectedId) {
+        // A historical duplicate ID is intrinsically ambiguous. With no
+        // selected-record fingerprint, the first occurrence deterministically
+        // remains selected and retains the old ID.
+        const index = normalized.findIndex(
+          (keyStore) => keyStore.meta?.["__id__"] === selectedId
+        );
+        if (index >= 0) {
+          return index;
+        }
+      }
+      return normalized.length > 0 ? 0 : -1;
+    })();
+
+    const existingIds = new Set<string>();
+    for (const keyStore of normalized) {
+      const id = keyStore.meta?.["__id__"];
+      if (typeof id === "string" && id.length > 0) {
+        existingIds.add(id);
+      }
+    }
+    await this.synchronizeIncrementalNumberFloor(
+      existingIds,
+      storedIncrementalNumber
+    );
+
+    const claimedIds = new Set<string>();
+    let changed = false;
+    for (const keyStore of normalized) {
+      const currentId = keyStore.meta?.["__id__"];
+      if (
+        typeof currentId === "string" &&
+        currentId.length > 0 &&
+        !claimedIds.has(currentId)
+      ) {
+        claimedIds.add(currentId);
+        continue;
+      }
+
+      let nextId: string;
+      do {
+        nextId = String(await this.getIncrementalNumber());
+      } while (existingIds.has(nextId) || claimedIds.has(nextId));
+      keyStore.meta = { ...(keyStore.meta ?? {}), __id__: nextId };
+      existingIds.add(nextId);
+      claimedIds.add(nextId);
+      changed = true;
+    }
+
+    const normalizedSelectedId =
+      selectedIndex >= 0
+        ? normalized[selectedIndex]?.meta?.["__id__"] ?? null
+        : null;
+    return {
+      keyStores: normalized,
+      selectedId: normalizedSelectedId,
+      changed: changed || normalizedSelectedId !== selectedId,
+    };
+  }
+
+  private persistKeyRingState(
+    keyStores: KeyStore[],
+    selectedId: string | null,
+    beforeCanonicalCommit?: () => void
+  ): Promise<void> {
+    const keyStoresSnapshot = KeyRing.clonePersistedValue(keyStores);
+    const operation = this.persistStateTail.then(() =>
+      this.performPersistKeyRingState(
+        keyStoresSnapshot,
+        selectedId,
+        beforeCanonicalCommit
+      )
+    );
+    this.persistStateTail = operation.catch(() => undefined);
+    return operation;
+  }
+
+  private async performPersistKeyRingState(
+    keyStores: KeyStore[],
+    selectedId: string | null,
+    beforeCanonicalCommit?: () => void
+  ): Promise<void> {
+    if (
+      selectedId &&
+      !keyStores.some(
+        (keyStore) => KeyRing.getKeyStoreId(keyStore) === selectedId
+      )
+    ) {
+      throw new Error("Selected key store is not in the persisted keyring");
+    }
+
+    const { persisted: previousPersisted, legacy } =
+      await this.readKeyRingPersistenceSnapshot();
+    const previousRevision =
+      KeyRing.isPersistedKeyRingState(previousPersisted) &&
+      Number.isSafeInteger(previousPersisted.revision) &&
+      (previousPersisted.revision as number) >= 0
+        ? (previousPersisted.revision as number)
+        : 0;
+    const revision = previousRevision + 1;
+    const selectedKeyStore = selectedId
+      ? keyStores.find(
+          (keyStore) => KeyRing.getKeyStoreId(keyStore) === selectedId
+        ) ?? null
+      : null;
+    const previousFingerprints = KeyRing.getLegacyMirrorFingerprints(
+      legacy.selected,
+      legacy.multi
+    );
+    const targetFingerprints = KeyRing.getLegacyMirrorFingerprints(
+      selectedKeyStore,
+      keyStores
+    );
+    const pendingState: PersistedKeyRingState = {
+      selectedId,
+      keyStores,
+      revision,
+      legacyMirror: {
+        status: "pending",
+        previous: previousFingerprints,
+        target: targetFingerprints,
+      },
+    };
+
+    // Commit the complete canonical generation before touching either legacy
+    // key. If the worker stops after this write, restore can distinguish the
+    // previous/target values from a genuine edit made by an older version.
+    beforeCanonicalCommit?.();
+    await this.kvStore.set<PersistedKeyRingState>(
+      KeyRingStateV2Key,
+      pendingState
+    );
+
+    const mirrorComplete = await this.mirrorLegacyKeyRingState(
+      keyStores,
+      selectedId
+    );
+    if (!mirrorComplete) {
+      return;
+    }
+
+    // Finalization is recoverable: a pending v2 whose two legacy fingerprints
+    // already equal target is equivalent to this synced state and is repaired
+    // on the next restore/save. Do not report a failed wallet save after the
+    // canonical generation and both rollback mirrors are durable.
+    try {
+      await this.kvStore.set<PersistedKeyRingState>(KeyRingStateV2Key, {
+        selectedId,
+        keyStores,
+        revision,
+        legacyMirror: {
+          status: "synced",
+          fingerprint: targetFingerprints,
+        },
+      });
+    } catch (e: unknown) {
+      console.warn(
+        "[KeyRing] Failed to finalize legacy rollback mirror state:",
+        e
+      );
+    }
+  }
+
+  private async mirrorLegacyKeyRingState(
+    keyStores: KeyStore[],
+    selectedId: string | null
+  ): Promise<boolean> {
+    const selectedKeyStore = selectedId
+      ? keyStores.find(
+          (keyStore) => KeyRing.getKeyStoreId(keyStore) === selectedId
+        ) ?? null
+      : null;
+
+    const [selectedResult, multiResult] = await Promise.allSettled([
+      this.kvStore.set<KeyStore>(KeyStoreKey, selectedKeyStore),
+      this.kvStore.set<KeyStore[]>(KeyMultiStoreKey, keyStores),
+    ]);
+
+    if (selectedResult.status === "rejected") {
+      console.warn(
+        "[KeyRing] Failed to update legacy selected-key rollback mirror:",
+        selectedResult.reason
+      );
+    }
+    if (multiResult.status === "rejected") {
+      console.warn(
+        "[KeyRing] Failed to update legacy multi-key rollback mirror:",
+        multiResult.reason
+      );
+    }
+    return (
+      selectedResult.status === "fulfilled" &&
+      multiResult.status === "fulfilled"
+    );
+  }
+
   public async save() {
-    await this.kvStore.set<KeyStore>(KeyStoreKey, this.keyStore);
-    await this.kvStore.set<KeyStore[]>(KeyMultiStoreKey, this.multiKeyStore);
+    await this.persistKeyRingState(this.multiKeyStore, this.selectedKeyStoreId);
   }
 
   public async restore() {
-    const keyStore = await this.kvStore.get<KeyStore>(KeyStoreKey);
-    if (!keyStore) {
-      this.keyStore = null;
-    } else {
-      this.keyStore = keyStore;
+    if (this.disposed) {
+      throw new Error("Key ring is disposed");
     }
 
-    const multiKeyStore = await this.kvStore.get<KeyStore[]>(KeyMultiStoreKey);
-    if (!multiKeyStore) {
-      // Restore the multi keystore if key store exist 13t multi Key store is empty.
-      // This case will occur if extension is updated from the prior version that doesn't support the multi key store.
-      // This line ensures the backward compatibility.
-      if (keyStore) {
-        keyStore.meta = await this.assignKeyStoreIdMeta({});
-        this.multiKeyStore = [keyStore];
+    const { persisted, legacy, incrementalNumber } =
+      await this.readKeyRingPersistenceSnapshot(true);
+    let selectedId: string | null = null;
+    let selectedFingerprint: string | null = null;
+    let shouldSave = false;
+
+    if (KeyRing.isPersistedKeyRingState(persisted)) {
+      const actualLegacyFingerprints = KeyRing.getLegacyMirrorFingerprints(
+        legacy.selected,
+        legacy.multi
+      );
+      const mirror = KeyRing.isLegacyMirrorState(persisted.legacyMirror)
+        ? persisted.legacyMirror
+        : undefined;
+      let legacyWasEditedByOlderVersion = false;
+
+      if (!mirror) {
+        // A pre-metadata mismatch is intrinsically ambiguous: it can be a
+        // failed mirror or a real write from an older version. Merge every
+        // structurally usable legacy ciphertext by immutable fingerprint so
+        // neither interpretation can destroy a unique wallet.
+        const restoredLegacy = await this.resolveLegacyKeyRingState(
+          legacy.multi,
+          legacy.selected
+        );
+        const merged = KeyRing.mergePersistedKeyStoreStates(
+          persisted.keyStores,
+          restoredLegacy?.keyStores ?? []
+        );
+        this.multiKeyStore = merged.keyStores;
+        const canonicalSelected = persisted.selectedId
+          ? persisted.keyStores.find(
+              (keyStore) => keyStore.meta?.["__id__"] === persisted.selectedId
+            )
+          : undefined;
+        selectedId = canonicalSelected
+          ? persisted.selectedId
+          : restoredLegacy?.selectedId ?? persisted.selectedId;
+        selectedFingerprint = canonicalSelected
+          ? KeyRing.fingerprintPersistedKeyStore(canonicalSelected)
+          : restoredLegacy?.selectedFingerprint ?? null;
+        shouldSave = true;
+      } else if (mirror.status === "synced") {
+        legacyWasEditedByOlderVersion = !KeyRing.legacyMirrorFingerprintsEqual(
+          actualLegacyFingerprints,
+          mirror.fingerprint
+        );
       } else {
-        this.multiKeyStore = [];
+        const selectedIsKnown =
+          actualLegacyFingerprints.selected === mirror.previous.selected ||
+          actualLegacyFingerprints.selected === mirror.target.selected;
+        const multiIsKnown =
+          actualLegacyFingerprints.multi === mirror.previous.multi ||
+          actualLegacyFingerprints.multi === mirror.target.multi;
+
+        // Any previous/target combination is an interrupted two-key mirror and
+        // v2 wins. A value outside both sets was written later by an older
+        // extension and must be imported instead of being overwritten.
+        legacyWasEditedByOlderVersion = !selectedIsKnown || !multiIsKnown;
+        if (!legacyWasEditedByOlderVersion) {
+          shouldSave = true;
+        }
       }
-      await this.save();
+
+      if (!mirror) {
+        // State was resolved by the conservative pre-metadata merge above.
+      } else if (legacyWasEditedByOlderVersion) {
+        const restoredLegacy = await this.resolveLegacyKeyRingState(
+          legacy.multi,
+          legacy.selected
+        );
+        if (restoredLegacy) {
+          const merged = KeyRing.mergePersistedKeyStoreStates(
+            persisted.keyStores,
+            restoredLegacy.keyStores
+          );
+          this.multiKeyStore = merged.keyStores;
+          selectedId = restoredLegacy.selectedId;
+          selectedFingerprint = restoredLegacy.selectedFingerprint;
+          shouldSave = true;
+        } else {
+          console.warn(
+            "[KeyRing] Legacy rollback state changed but is invalid; keeping v2 state"
+          );
+          const canonical = KeyRing.mergePersistedKeyStoreStates(
+            persisted.keyStores,
+            []
+          );
+          this.multiKeyStore = canonical.keyStores;
+          selectedId = persisted.selectedId;
+          const selectedKeyStore = persisted.selectedId
+            ? persisted.keyStores.find(
+                (keyStore) => keyStore.meta?.["__id__"] === persisted.selectedId
+              )
+            : undefined;
+          selectedFingerprint = selectedKeyStore
+            ? KeyRing.fingerprintPersistedKeyStore(selectedKeyStore)
+            : null;
+          shouldSave = true;
+        }
+      } else {
+        const canonical = KeyRing.mergePersistedKeyStoreStates(
+          persisted.keyStores,
+          []
+        );
+        this.multiKeyStore = canonical.keyStores;
+        selectedId = persisted.selectedId;
+        const selectedKeyStore = persisted.selectedId
+          ? persisted.keyStores.find(
+              (keyStore) => keyStore.meta?.["__id__"] === persisted.selectedId
+            )
+          : undefined;
+        selectedFingerprint = selectedKeyStore
+          ? KeyRing.fingerprintPersistedKeyStore(selectedKeyStore)
+          : null;
+        shouldSave = shouldSave || canonical.changed;
+      }
     } else {
-      this.multiKeyStore = multiKeyStore;
+      if (persisted !== undefined) {
+        console.warn(
+          "[KeyRing] Unrecognized v2 keyring state; falling back to legacy storage"
+        );
+      }
+
+      const restoredLegacy = await this.resolveLegacyKeyRingState(
+        legacy.multi,
+        legacy.selected
+      );
+      if (
+        !restoredLegacy ||
+        (persisted !== undefined && restoredLegacy.keyStores.length === 0)
+      ) {
+        throw new Error(
+          "Unable to restore key ring: unrecognized legacy multi-key state. Preserve the existing storage and restore it with a compatible wallet version."
+        );
+      }
+      const merged = KeyRing.mergePersistedKeyStoreStates(
+        [],
+        restoredLegacy.keyStores
+      );
+      this.multiKeyStore = merged.keyStores;
+      selectedId = restoredLegacy.selectedId;
+      selectedFingerprint = restoredLegacy.selectedFingerprint;
+
+      shouldSave = true;
     }
+
+    const normalized = await this.normalizeRestoredKeyStoreIds(
+      this.multiKeyStore,
+      selectedId,
+      selectedFingerprint,
+      incrementalNumber
+    );
+    this.multiKeyStore = normalized.keyStores;
+    selectedId = normalized.selectedId;
+    shouldSave = shouldSave || normalized.changed;
+
+    const resolvedSelectedKeyStore = selectedId
+      ? this.multiKeyStore.find(
+          (keyStore) => keyStore.meta?.["__id__"] === selectedId
+        ) ?? null
+      : null;
+    this.selectKeyStore(resolvedSelectedKeyStore);
 
     let hasSanitizedLegacySensitiveMeta = false;
-    if (this.keyStore) {
-      const { sanitized, changed } = this.stripLegacySensitiveMeta(
-        this.keyStore
-      );
-      this.keyStore = sanitized;
-      hasSanitizedLegacySensitiveMeta =
-        hasSanitizedLegacySensitiveMeta || changed;
-    }
+    let hasBackfilledLegacyCurve = false;
     this.multiKeyStore = this.multiKeyStore.map((ks) => {
       const { sanitized, changed } = this.stripLegacySensitiveMeta(ks);
       hasSanitizedLegacySensitiveMeta =
         hasSanitizedLegacySensitiveMeta || changed;
-      return sanitized;
+      const backfill = KeyRing.backfillLegacyCurve(sanitized);
+      hasBackfilledLegacyCurve = hasBackfilledLegacyCurve || backfill.changed;
+      return backfill.backfilled;
     });
 
     let hasLegacyKeyStore = false;
@@ -1094,14 +2544,6 @@ export class KeyRing {
     // So, some chain can have the multiple bip44 coin type (one is the standard coin type and other is the legacy coin type).
     // We should support the legacy coin type, so we determined that the coin type ties with the keystore.
     // To decrease the barrier of existing users, set the alternative coin type by force if the keystore version is prior than 1.2.
-    if (this.keyStore) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      if (this.keyStore.version === "1" || this.keyStore.version === "1.1") {
-        hasLegacyKeyStore = true;
-        this.updateLegacyKeyStore(this.keyStore);
-      }
-    }
     for (const keyStore of this.multiKeyStore) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -1110,7 +2552,12 @@ export class KeyRing {
         this.updateLegacyKeyStore(keyStore);
       }
     }
-    if (hasLegacyKeyStore || hasSanitizedLegacySensitiveMeta) {
+    if (
+      shouldSave ||
+      hasLegacyKeyStore ||
+      hasSanitizedLegacySensitiveMeta ||
+      hasBackfilledLegacyCurve
+    ) {
       await this.save();
     }
 
@@ -1154,51 +2601,31 @@ export class KeyRing {
   }
 
   public async setKeyStoreCoinType(chainId: string, coinType: number) {
-    if (!this.keyStore) {
+    const session = this.captureUnlockSession();
+    const keyStore = this.keyStore;
+    if (!keyStore) {
       throw new Error("Key store is empty");
     }
 
     if (
-      this.keyStore.coinTypeForChain &&
-      this.keyStore.coinTypeForChain[
-        ChainIdHelper.parse(chainId).identifier
-      ] !== undefined
+      keyStore.coinTypeForChain &&
+      keyStore.coinTypeForChain[ChainIdHelper.parse(chainId).identifier] !==
+        undefined
     ) {
       throw new Error("Coin type already set");
     }
 
-    this.keyStore.coinTypeForChain = {
-      ...this.keyStore.coinTypeForChain,
+    keyStore.coinTypeForChain = {
+      ...keyStore.coinTypeForChain,
       [ChainIdHelper.parse(chainId).identifier]: coinType,
     };
 
-    const keyStoreInMulti = this.multiKeyStore.find((keyStore) => {
-      return (
-        KeyRing.getKeyStoreId(keyStore) ===
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        KeyRing.getKeyStoreId(this.keyStore!)
-      );
-    });
-
-    if (keyStoreInMulti) {
-      keyStoreInMulti.coinTypeForChain = {
-        ...this.keyStore.coinTypeForChain,
-      };
-    }
-
+    this.assertUnlockSessionCurrent(session.password, session.unlockSessionId);
     await this.save();
   }
 
   public removeAllKeyStoreCoinType(chainId: string) {
     const identifier = ChainIdHelper.parse(chainId).identifier;
-
-    if (this.keyStore) {
-      const coinTypeForChain = this.keyStore.coinTypeForChain;
-      if (coinTypeForChain) {
-        delete coinTypeForChain[identifier];
-        this.keyStore.coinTypeForChain = coinTypeForChain;
-      }
-    }
 
     for (const keyStore of this.multiKeyStore) {
       const coinTypeForChain = keyStore.coinTypeForChain;
@@ -1208,7 +2635,10 @@ export class KeyRing {
       }
     }
 
-    this.save();
+    this.trackDetachedBackgroundWork(
+      this.save(),
+      "[KeyRing] Failed to persist removed coin type:"
+    );
   }
 
   public async deleteKeyRing(
@@ -1218,83 +2648,168 @@ export class KeyRing {
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
     keyStoreChanged: boolean;
   }> {
-    if (this.status !== KeyRingStatus.UNLOCKED) {
-      throw new Error("Key ring is not unlocked");
-    }
-
-    if (this.password !== password) {
+    const session = this.captureUnlockSession();
+    if (session.password !== password) {
       throw new Error("Invalid password");
     }
-
-    const keyStore = this.multiKeyStore[index];
-
-    if (!keyStore) {
-      throw new Error("Key store is empty");
-    }
-
-    const multiKeyStore = this.multiKeyStore
-      .slice(0, index)
-      .concat(this.multiKeyStore.slice(index + 1));
-
-    // Make sure that password is valid.
-    await Crypto.decrypt(this.crypto, keyStore, password);
-
-    let keyStoreChanged = false;
-    if (this.keyStore) {
-      // If key store is currently selected key store
-      if (
-        KeyRing.getKeyStoreId(keyStore) === KeyRing.getKeyStoreId(this.keyStore)
-      ) {
-        // If there is a key store left
-        if (multiKeyStore.length > 0) {
-          // Lock key store at first
-          await this.lock();
-          // Select first key store
-          this.keyStore = multiKeyStore[0];
-          // And unlock it
-          await this.unlock(password);
-        } else {
-          // Else clear keyring.
-          this.keyStore = null;
-          this.mnemonicMasterSeed = undefined;
-          this.privateKey = undefined;
-          this.ledgerPublicKeyCache = undefined;
-        }
-
-        keyStoreChanged = true;
-      }
-    }
-
-    this.multiKeyStore = multiKeyStore;
-    await this.save();
+    this.cancelUnlockMaintenance();
 
     try {
-      const deletedId = KeyRing.getKeyStoreId(keyStore);
+      const keyStore = this.multiKeyStore[index];
 
-      this.removeSessionKeyStoreMaterial(deletedId);
+      if (!keyStore) {
+        throw new Error("Key store is empty");
+      }
 
-      await this.clearCachesOnWalletDelete(deletedId);
+      const targetId = KeyRing.getKeyStoreId(keyStore);
+      const targetFingerprint = KeyRing.fingerprintPersistedKeyStore(keyStore);
+      const isTarget = (candidate: KeyStore): boolean =>
+        KeyRing.getKeyStoreId(candidate) === targetId &&
+        KeyRing.fingerprintPersistedKeyStore(candidate) === targetFingerprint;
 
-      for (const info of this.embedChainInfos) {
-        if (info?.features?.includes("cardano")) {
-          const keyId = `cardano:${info.chainId}:${deletedId}`;
-          this.cardanoKeyCache.delete(keyId);
+      // Make sure that password is valid.
+      const validationPlaintext = await Crypto.decrypt(
+        this.crypto,
+        keyStore,
+        password
+      );
+      validationPlaintext.fill(0);
+      this.assertUnlockSessionCurrent(
+        session.password,
+        session.unlockSessionId
+      );
+
+      let keyStoreChanged = false;
+      let remainingCount = 0;
+      for (;;) {
+        this.assertUnlockSessionCurrent(
+          session.password,
+          session.unlockSessionId
+        );
+        const currentTarget = this.multiKeyStore.find(isTarget);
+        if (!currentTarget) {
+          throw new Error("Key store changed while deletion was running");
+        }
+        const targetIsSelected = this.selectedKeyStoreId === targetId;
+        const preparedReplacement = targetIsSelected
+          ? this.multiKeyStore.find((candidate) => !isTarget(candidate)) ?? null
+          : null;
+        const preparedReplacementFingerprint = preparedReplacement
+          ? KeyRing.fingerprintPersistedKeyStore(preparedReplacement)
+          : null;
+        let replacementMaterial: SessionKeyStoreMaterial | undefined;
+        try {
+          if (preparedReplacement) {
+            replacementMaterial = await this.resolveSessionKeyStoreMaterial(
+              preparedReplacement,
+              session.password
+            );
+          }
+          this.assertUnlockSessionCurrent(
+            session.password,
+            session.unlockSessionId
+          );
+
+          const committed = await this.runKeyRingMutation(async () => {
+            this.assertUnlockSessionCurrent(
+              session.password,
+              session.unlockSessionId
+            );
+            const latestTarget = this.multiKeyStore.find(isTarget);
+            if (!latestTarget) {
+              throw new Error("Key store changed while deletion was running");
+            }
+            const remaining = this.multiKeyStore.filter(
+              (candidate) => !isTarget(candidate)
+            );
+            const latestTargetIsSelected = this.selectedKeyStoreId === targetId;
+            const latestReplacement = latestTargetIsSelected
+              ? remaining[0] ?? null
+              : null;
+            if (
+              latestTargetIsSelected &&
+              ((latestReplacement === null) !==
+                (preparedReplacement === null) ||
+                (latestReplacement !== null &&
+                  (KeyRing.getKeyStoreId(latestReplacement) !==
+                    KeyRing.getKeyStoreId(preparedReplacement as KeyStore) ||
+                    KeyRing.fingerprintPersistedKeyStore(latestReplacement) !==
+                      preparedReplacementFingerprint)))
+            ) {
+              return false;
+            }
+
+            this.multiKeyStore = remaining;
+            if (latestTargetIsSelected) {
+              if (latestReplacement && replacementMaterial) {
+                this.commitActiveKeyStoreForSession(
+                  latestReplacement,
+                  replacementMaterial,
+                  session
+                );
+              } else {
+                this.selectKeyStore(null);
+                this.clearActiveKeyStoreCaches();
+              }
+            }
+
+            await this.save();
+            keyStoreChanged = latestTargetIsSelected;
+            remainingCount = remaining.length;
+            this.removeSessionKeyStoreMaterial(targetId);
+            this.removeCardanoMemoryCacheForWallet(targetId);
+
+            if (remaining.length === 0 && this.pendingAddOperations === 0) {
+              this.invalidateUnlockSession();
+              this.clearSessionKeyStoreMaterial();
+              this.password = "";
+              this.cacheManager.setPassword("");
+            }
+            return true;
+          });
+          if (committed) {
+            break;
+          }
+        } finally {
+          if (replacementMaterial) {
+            this.clearSessionMaterialBytes(replacementMaterial);
+          }
         }
       }
-    } catch (e: unknown) {
-      console.error(
-        `[KeyRing] Failed to clean caches after wallet deletion:`,
-        e
+
+      if (keyStoreChanged) {
+        this.interactionService.dispatchEvent(
+          WEBPAGE_PORT,
+          "status-changed",
+          {}
+        );
+      }
+
+      // removeWalletFromAllCaches records an in-memory tombstone before its
+      // first await. Selective physical cleanup remains best effort so lock can
+      // safely abort decrypting blobs that may contain retained wallets. When
+      // no wallets remain, the detached full-clear path instead nulls every
+      // known blob without a password, cache decrypt, or scrypt.
+      const cacheCleanup =
+        remainingCount === 0
+          ? this.cacheManager.removeWalletFromAllCaches(targetId, {
+              mode: "full-clear",
+            })
+          : this.cacheManager.removeWalletFromAllCaches(targetId);
+      this.trackDetachedBackgroundWork(
+        cacheCleanup,
+        "[KeyRing] Failed to clean caches after wallet deletion:"
       );
-      // Continue execution - cache cleanup failure is not critical
+
+      const result = {
+        multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
+        keyStoreChanged,
+      };
+
+      return result;
+    } finally {
+      this.rescheduleUnlockMaintenanceIfCurrent(session);
     }
-
-    const result = {
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-      keyStoreChanged,
-    };
-
-    return result;
   }
 
   public async updateNameKeyRing(
@@ -1302,9 +2817,7 @@ export class KeyRing {
     name: string,
     nameByChain?: string
   ): Promise<MultiKeyStoreInfoWithSelected> {
-    if (this.status !== KeyRingStatus.UNLOCKED) {
-      throw new Error("Key ring is not unlocked");
-    }
+    const session = this.captureUnlockSession();
 
     const keyStore = this.multiKeyStore[index];
 
@@ -1318,21 +2831,8 @@ export class KeyRing {
       keyStore.meta = { ...keyStore.meta, nameByChain };
     }
 
-    // If select key store and changed store are same, sync keystore
-    if (
-      this.keyStore &&
-      KeyRing.getKeyStoreId(this.keyStore) === KeyRing.getKeyStoreId(keyStore)
-    ) {
-      this.keyStore = keyStore;
-    }
+    this.assertUnlockSessionCurrent(session.password, session.unlockSessionId);
     await this.save();
-
-    try {
-      await this.cacheManager.clearAllCaches();
-    } catch (e: unknown) {
-      console.error(`[KeyRing] Failed to clear caches after wallet rename:`, e);
-      // Continue execution - cache operations are not critical for core functionality
-    }
 
     return this.getMultiKeyStoreInfo();
   }
@@ -1689,17 +3189,10 @@ export class KeyRing {
       throw new Error("Key store is empty");
     }
 
-    if (keyStore.type === "mnemonic") {
-      // If password is invalid, error will be thrown.
-      return Buffer.from(
-        await Crypto.decrypt(this.crypto, keyStore, password)
-      ).toString();
-    } else {
-      // If password is invalid, error will be thrown.
-      return Buffer.from(
-        await Crypto.decrypt(this.crypto, keyStore, password)
-      ).toString();
-    }
+    // If password is invalid, error will be thrown. The returned string is an
+    // unavoidable immutable API value; controlled byte buffers are zeroed by
+    // decryptKeyStoreText before this method resolves.
+    return await this.decryptKeyStoreText(keyStore, password);
   }
 
   public get canSetPath(): boolean {
@@ -1715,42 +3208,54 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
-      throw new Error("Key ring is locked or not initialized");
-    }
-
-    const words = mnemonic.trim().split(/\s+/);
-    const mnemonicLength = words.length.toString();
-    const metaWithMnemonicLength = {
-      ...meta,
-      mnemonicLength: mnemonicLength,
-    };
-
-    // Preserve previous behaviour — coin type is determined later when the
-    // key is actually used. No need to pre-compute it here.
-    const keyStore = await KeyRing.CreateMnemonicKeyStore(
-      this.crypto,
-      kdf,
-      mnemonic,
-      this.password,
-      await this.assignKeyStoreIdMeta(metaWithMnemonicLength),
-      bip44HDPath,
-      curve
-    );
-    this.multiKeyStore.push(keyStore);
-    await this.save();
+    const session = this.captureUnlockSession();
+    this.pendingAddOperations += 1;
+    this.cancelUnlockMaintenance();
+    let preparedMaterial: SessionKeyStoreMaterial | undefined;
 
     try {
-      const walletId = KeyRing.getKeyStoreId(keyStore);
-      await this.clearCachesOnWalletAdd(walletId);
-    } catch (e: unknown) {
-      console.error(`[KeyRing] Failed to add wallet to Cardano caches:`, e);
-      // Continue execution - cache operations are not critical for core functionality
-    }
+      const words = mnemonic.trim().split(/\s+/);
+      const mnemonicLength = words.length.toString();
+      const metaWithMnemonicLength = {
+        ...meta,
+        mnemonicLength: mnemonicLength,
+      };
 
-    return {
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
+      // Preserve previous behaviour — coin type is determined later when the
+      // key is actually used. No need to pre-compute it here.
+      const keyStore = await KeyRing.CreateMnemonicKeyStore(
+        this.crypto,
+        kdf,
+        mnemonic,
+        session.password,
+        await this.assignKeyStoreIdMeta(metaWithMnemonicLength),
+        bip44HDPath,
+        curve
+      );
+      this.assertUnlockSessionCurrent(
+        session.password,
+        session.unlockSessionId
+      );
+      preparedMaterial = {
+        type: "mnemonic",
+        mnemonicMasterSeed: Mnemonic.generateMasterSeedFromMnemonic(mnemonic),
+      };
+      const multiKeyStoreInfo = await this.commitPreparedKeyStoreAddition(
+        keyStore,
+        preparedMaterial,
+        session
+      );
+
+      return {
+        multiKeyStoreInfo,
+      };
+    } finally {
+      if (preparedMaterial) {
+        this.clearSessionMaterialBytes(preparedMaterial);
+      }
+      this.finishPendingAdd(session);
+      this.rescheduleUnlockMaintenanceIfCurrent(session);
+    }
   }
 
   public async addPrivateKey(
@@ -1761,33 +3266,44 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
-      throw new Error("Key ring is locked or not initialized");
-    }
-
-    const keyStore = await KeyRing.CreatePrivateKeyStore(
-      this.crypto,
-      kdf,
-      privateKey,
-      this.password,
-      await this.assignKeyStoreIdMeta(meta),
-      curve
-    );
-    this.multiKeyStore.push(keyStore);
-
-    await this.save();
+    const session = this.captureUnlockSession();
+    this.pendingAddOperations += 1;
+    this.cancelUnlockMaintenance();
+    let preparedMaterial: SessionKeyStoreMaterial | undefined;
 
     try {
-      const walletId = KeyRing.getKeyStoreId(keyStore);
-      await this.clearCachesOnWalletAdd(walletId);
-    } catch (e: unknown) {
-      console.error(`[KeyRing] Failed to add wallet to Cardano caches:`, e);
-      // Continue execution - cache operations are not critical for core functionality
-    }
+      const keyStore = await KeyRing.CreatePrivateKeyStore(
+        this.crypto,
+        kdf,
+        privateKey,
+        session.password,
+        await this.assignKeyStoreIdMeta(meta),
+        curve
+      );
+      this.assertUnlockSessionCurrent(
+        session.password,
+        session.unlockSessionId
+      );
+      preparedMaterial = {
+        type: "privateKey",
+        privateKey: new Uint8Array(privateKey),
+      };
+      const multiKeyStoreInfo = await this.commitPreparedKeyStoreAddition(
+        keyStore,
+        preparedMaterial,
+        session
+      );
 
-    return {
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
+      return {
+        multiKeyStoreInfo,
+      };
+    } finally {
+      if (preparedMaterial) {
+        this.clearSessionMaterialBytes(preparedMaterial);
+      }
+      this.finishPendingAdd(session);
+      this.rescheduleUnlockMaintenanceIfCurrent(session);
+    }
   }
 
   public async addKeystoneKey(
@@ -1798,41 +3314,51 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
-      throw new Error("Key ring is locked or not initialized");
-    }
-
-    if (!this.ledgerKeeper) {
-      throw ErrUndefinedLedgerKeeper;
-    }
-
-    // Get public key first
-    const publicKey = await this.keystoneService.getPubkey(env, bip44HDPath);
-
-    const keyStore = await KeyRing.CreateKeystoneKeyStore(
-      this.crypto,
-      kdf,
-      publicKey,
-      this.password,
-      await this.assignKeyStoreIdMeta(meta),
-      bip44HDPath
-    );
-
-    this.multiKeyStore.push(keyStore);
-
-    await this.save();
+    const session = this.captureUnlockSession();
+    this.pendingAddOperations += 1;
+    this.cancelUnlockMaintenance();
+    let preparedMaterial: SessionKeyStoreMaterial | undefined;
 
     try {
-      const walletId = KeyRing.getKeyStoreId(keyStore);
-      await this.clearCachesOnWalletAdd(walletId);
-    } catch (e: unknown) {
-      console.error(`[KeyRing] Failed to add wallet to Cardano caches:`, e);
-      // Continue execution - cache operations are not critical for core functionality
-    }
+      if (!this.ledgerKeeper) {
+        throw ErrUndefinedLedgerKeeper;
+      }
 
-    return {
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
+      // Get public key first
+      const publicKey = await this.keystoneService.getPubkey(env, bip44HDPath);
+
+      const keyStore = await KeyRing.CreateKeystoneKeyStore(
+        this.crypto,
+        kdf,
+        publicKey,
+        session.password,
+        await this.assignKeyStoreIdMeta(meta),
+        bip44HDPath
+      );
+      this.assertUnlockSessionCurrent(
+        session.password,
+        session.unlockSessionId
+      );
+      preparedMaterial = {
+        type: "keystone",
+        keystonePublicKey: publicKey,
+      };
+      const multiKeyStoreInfo = await this.commitPreparedKeyStoreAddition(
+        keyStore,
+        preparedMaterial,
+        session
+      );
+
+      return {
+        multiKeyStoreInfo,
+      };
+    } finally {
+      if (preparedMaterial) {
+        this.clearSessionMaterialBytes(preparedMaterial);
+      }
+      this.finishPendingAdd(session);
+      this.rescheduleUnlockMaintenanceIfCurrent(session);
+    }
   }
 
   public async addLedgerKey(
@@ -1844,9 +3370,10 @@ export class KeyRing {
   ): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
-      throw new Error("Key ring is locked or not initialized");
-    }
+    const session = this.captureUnlockSession();
+    this.pendingAddOperations += 1;
+    this.cancelUnlockMaintenance();
+    let preparedMaterial: SessionKeyStoreMaterial | undefined;
 
     if (cosmosLikeApp) {
       meta = {
@@ -1855,59 +3382,83 @@ export class KeyRing {
       };
     }
 
-    // Get public key first
-    const publicKey = await this.ledgerKeeper.getPublicKey(
-      env,
-      LedgerApp.Cosmos,
-      bip44HDPath,
-      cosmosLikeApp
-    );
-
-    const pubKeys = {
-      [LedgerApp.Cosmos]: publicKey,
-    };
-
-    const keyStore = await KeyRing.CreateLedgerKeyStore(
-      this.crypto,
-      kdf,
-      pubKeys,
-      this.password,
-      await this.assignKeyStoreIdMeta(meta),
-      bip44HDPath
-    );
-
-    this.multiKeyStore.push(keyStore);
-
-    await this.save();
-
     try {
-      const walletId = KeyRing.getKeyStoreId(keyStore);
-      await this.clearCachesOnWalletAdd(walletId);
-    } catch (e: unknown) {
-      console.error(`[KeyRing] Failed to add wallet to Cardano caches:`, e);
-      // Continue execution - cache operations are not critical for core functionality
-    }
+      // Get public key first
+      const publicKey = await this.ledgerKeeper.getPublicKey(
+        env,
+        LedgerApp.Cosmos,
+        bip44HDPath,
+        cosmosLikeApp
+      );
 
-    return {
-      multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
-    };
+      const pubKeys = {
+        [LedgerApp.Cosmos]: publicKey,
+      };
+
+      const keyStore = await KeyRing.CreateLedgerKeyStore(
+        this.crypto,
+        kdf,
+        pubKeys,
+        session.password,
+        await this.assignKeyStoreIdMeta(meta),
+        bip44HDPath
+      );
+      this.assertUnlockSessionCurrent(
+        session.password,
+        session.unlockSessionId
+      );
+      preparedMaterial = {
+        type: "ledger",
+        ledgerPublicKeyCache: pubKeys,
+      };
+      const multiKeyStoreInfo = await this.commitPreparedKeyStoreAddition(
+        keyStore,
+        preparedMaterial,
+        session
+      );
+
+      return {
+        multiKeyStoreInfo,
+      };
+    } finally {
+      if (preparedMaterial) {
+        this.clearSessionMaterialBytes(preparedMaterial);
+      }
+      this.finishPendingAdd(session);
+      this.rescheduleUnlockMaintenanceIfCurrent(session);
+    }
   }
 
   public async changeKeyStoreFromMultiKeyStore(index: number): Promise<{
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    if (this.status !== KeyRingStatus.UNLOCKED || this.password == "") {
-      throw new Error("Key ring is locked or not initialized");
-    }
+    const session = this.captureUnlockSession();
 
     const keyStore = this.multiKeyStore[index];
     if (!keyStore) {
       throw new Error("Invalid keystore");
     }
 
-    this.keyStore = keyStore;
+    this.cancelUnlockCacheWarmup();
+    this.cancelUnlockMaintenance();
 
-    await this.reloadActiveKeyStoreForSwitch(this.password);
+    try {
+      await this.reloadActiveKeyStoreForSwitch(keyStore, session);
+    } catch (e: unknown) {
+      if (
+        this.isUnlockSessionCurrent(session.password, session.unlockSessionId)
+      ) {
+        this.scheduleUnlockCacheWarmup(
+          session.password,
+          session.unlockSessionId
+        );
+        this.scheduleUnlockMaintenance(
+          session.password,
+          session.unlockSessionId
+        );
+      }
+      throw e;
+    }
 
     try {
       const currentChainId = await this.chainsService.getSelectedChain();
@@ -1933,175 +3484,174 @@ export class KeyRing {
           : "Unnamed Account";
         return walletName;
       });
-      const activeWalletId = KeyRing.getKeyStoreId(this.keyStore);
-      void (async () => {
-        try {
-          if (!isCardano) {
-            let cachedActiveAddress = "";
-            let hasFullCache = false;
+      const activeWalletId = KeyRing.getKeyStoreId(keyStore);
+      const cacheUpdate = (async () => {
+        if (!isCardano) {
+          let cachedActiveAddress = "";
+          let hasFullCache = false;
 
-            try {
-              const cache = await this.loadGenericChainCache(currentChainId);
-              const activeEntry = activeWalletId
-                ? cache[activeWalletId]
-                : undefined;
-              if (activeEntry?.address) {
-                cachedActiveAddress = activeEntry.address;
-              }
-              hasFullCache =
-                walletIds.length > 0 &&
-                walletIds.every((id) => Boolean(cache[id]?.address));
-            } catch {
-              // Skip cache-based checks if cache cannot be read
+          try {
+            const cache = await this.loadGenericChainCache(currentChainId, {
+              scryptPriority: "background",
+            });
+            const activeEntry = activeWalletId
+              ? cache[activeWalletId]
+              : undefined;
+            if (activeEntry?.address) {
+              cachedActiveAddress = activeEntry.address;
             }
+            hasFullCache =
+              walletIds.length > 0 &&
+              walletIds.every((id) => Boolean(cache[id]?.address));
+          } catch {
+            // Skip cache-based checks if cache cannot be read
+          }
 
-            let activeWalletAddress = cachedActiveAddress;
-            let keys: Key[] | undefined;
+          let activeWalletAddress = cachedActiveAddress;
+          let keys: Key[] | undefined;
 
-            if (!activeWalletAddress) {
-              const useEthereumAddress = (
-                await this.chainsService.getChainEthereumKeyFeatures(
-                  currentChainId
-                )
-              ).address;
-              keys = await this.getKeys(currentChainId, useEthereumAddress);
-              const activeWalletIndex = walletIds.indexOf(activeWalletId);
-              activeWalletAddress =
-                activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
-                  ? Buffer.from(keys[activeWalletIndex].address).toString("hex")
-                  : "";
+          if (!activeWalletAddress) {
+            const useEthereumAddress = (
+              await this.chainsService.getChainEthereumKeyFeatures(
+                currentChainId
+              )
+            ).address;
+            keys = await this.getKeys(currentChainId, useEthereumAddress, {
+              scryptPriority: "background",
+            });
+            const activeWalletIndex = walletIds.indexOf(activeWalletId);
+            activeWalletAddress =
+              activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
+                ? Buffer.from(keys[activeWalletIndex].address).toString("hex")
+                : "";
 
-              await this.updateCacheForActiveWallet(
-                currentChainId,
-                keys,
-                walletIds,
-                walletNames,
-                activeWalletId,
-                isCardano
+            await this.updateCacheForActiveWallet(
+              currentChainId,
+              keys,
+              walletIds,
+              walletNames,
+              activeWalletId,
+              isCardano
+            );
+          }
+
+          if (activeWalletAddress && hasFullCache) {
+            const consistencyResult = await this.cacheManager.checkConsistency(
+              currentChainId,
+              walletIds,
+              activeWalletId,
+              activeWalletAddress,
+              isCardano
+            );
+
+            if (!consistencyResult.isConsistent) {
+              console.warn(
+                `[KeyRing] Cache inconsistency after wallet switch for ${currentChainId}:`,
+                consistencyResult.issues
               );
-            }
+              await this.clearAllAddressCaches();
 
-            if (activeWalletAddress && hasFullCache) {
-              const consistencyResult =
-                await this.cacheManager.checkConsistency(
-                  currentChainId,
-                  walletIds,
-                  walletNames,
-                  activeWalletId,
-                  activeWalletAddress,
-                  isCardano
+              try {
+                const seq = Date.now();
+                this.interactionService.dispatchEvent(
+                  WEBPAGE_PORT,
+                  "clear-cache",
+                  {
+                    seq,
+                  }
                 );
-
-              if (!consistencyResult.isConsistent) {
-                console.warn(
-                  `[KeyRing] Cache inconsistency after wallet switch for ${currentChainId}:`,
-                  consistencyResult.issues
+              } catch (e: unknown) {
+                console.error(
+                  `[KeyRing] Failed to dispatch clear-cache event:`,
+                  e
                 );
-                await this.clearAllAddressCaches();
-
-                try {
-                  const seq = Date.now();
-                  this.interactionService.dispatchEvent(
-                    WEBPAGE_PORT,
-                    "clear-cache",
-                    {
-                      seq,
-                    }
-                  );
-                } catch (e: unknown) {
-                  console.error(
-                    `[KeyRing] Failed to dispatch clear-cache event:`,
-                    e
-                  );
-                  // Continue execution - event dispatch failure is not critical
-                }
-              }
-            }
-          } else {
-            let cachedActiveAddress = "";
-            let hasFullCache = false;
-
-            try {
-              const cache = await this.loadCardanoChainCache(currentChainId);
-              const activeEntry = activeWalletId
-                ? cache[activeWalletId]
-                : undefined;
-              if (
-                activeEntry?.address &&
-                isValidCardanoAddress(activeEntry.address)
-              ) {
-                cachedActiveAddress = activeEntry.address;
-              }
-              hasFullCache =
-                walletIds.length > 0 &&
-                walletIds.every((id) => Boolean(cache[id]?.address));
-            } catch {
-              // Skip cache-based checks if cache cannot be read
-            }
-
-            let activeWalletAddress = cachedActiveAddress;
-            let keys: Key[] | undefined;
-
-            if (!activeWalletAddress || !hasFullCache) {
-              keys = await this.getKeysForCardano(currentChainId);
-              const activeWalletIndex = walletIds.indexOf(activeWalletId);
-              activeWalletAddress =
-                activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
-                  ? Buffer.from(keys[activeWalletIndex].address).toString(
-                      "utf8"
-                    )
-                  : "";
-
-              await this.updateCacheForActiveWallet(
-                currentChainId,
-                keys,
-                walletIds,
-                walletNames,
-                activeWalletId,
-                isCardano
-              );
-            }
-
-            if (activeWalletAddress && hasFullCache) {
-              const consistencyResult =
-                await this.cacheManager.checkConsistency(
-                  currentChainId,
-                  walletIds,
-                  walletNames,
-                  activeWalletId,
-                  activeWalletAddress,
-                  isCardano
-                );
-
-              if (!consistencyResult.isConsistent) {
-                await this.clearAllAddressCaches();
-
-                try {
-                  const seq = Date.now();
-                  this.interactionService.dispatchEvent(
-                    WEBPAGE_PORT,
-                    "clear-cache",
-                    {
-                      seq,
-                    }
-                  );
-                } catch (e: unknown) {
-                  console.error(
-                    `[KeyRing] Failed to dispatch clear-cache event:`,
-                    e
-                  );
-                  // Continue execution - event dispatch failure is not critical
-                }
+                // Continue execution - event dispatch failure is not critical
               }
             }
           }
-        } catch (e: unknown) {
-          console.error(
-            `[KeyRing] Failed to update caches after wallet switch:`,
-            e
-          );
+        } else {
+          let cachedActiveAddress = "";
+          let hasFullCache = false;
+
+          try {
+            const cache = await this.loadCardanoChainCache(currentChainId, {
+              scryptPriority: "background",
+            });
+            const activeEntry = activeWalletId
+              ? cache[activeWalletId]
+              : undefined;
+            if (
+              activeEntry?.address &&
+              isValidCardanoAddress(activeEntry.address)
+            ) {
+              cachedActiveAddress = activeEntry.address;
+            }
+            hasFullCache =
+              walletIds.length > 0 &&
+              walletIds.every((id) => Boolean(cache[id]?.address));
+          } catch {
+            // Skip cache-based checks if cache cannot be read
+          }
+
+          let activeWalletAddress = cachedActiveAddress;
+          let keys: Key[] | undefined;
+
+          if (!activeWalletAddress || !hasFullCache) {
+            keys = await this.getKeysForCardano(currentChainId, {
+              scryptPriority: "background",
+            });
+            const activeWalletIndex = walletIds.indexOf(activeWalletId);
+            activeWalletAddress =
+              activeWalletIndex >= 0 && keys[activeWalletIndex]?.address
+                ? Buffer.from(keys[activeWalletIndex].address).toString("utf8")
+                : "";
+
+            await this.updateCacheForActiveWallet(
+              currentChainId,
+              keys,
+              walletIds,
+              walletNames,
+              activeWalletId,
+              isCardano
+            );
+          }
+
+          if (activeWalletAddress && hasFullCache) {
+            const consistencyResult = await this.cacheManager.checkConsistency(
+              currentChainId,
+              walletIds,
+              activeWalletId,
+              activeWalletAddress,
+              isCardano
+            );
+
+            if (!consistencyResult.isConsistent) {
+              await this.clearAllAddressCaches();
+
+              try {
+                const seq = Date.now();
+                this.interactionService.dispatchEvent(
+                  WEBPAGE_PORT,
+                  "clear-cache",
+                  {
+                    seq,
+                  }
+                );
+              } catch (e: unknown) {
+                console.error(
+                  `[KeyRing] Failed to dispatch clear-cache event:`,
+                  e
+                );
+                // Continue execution - event dispatch failure is not critical
+              }
+            }
+          }
         }
       })();
+      this.trackDetachedBackgroundWork(
+        cacheUpdate,
+        "[KeyRing] Failed to update caches after wallet switch:"
+      );
     } catch (e: unknown) {
       console.error(
         `[KeyRing] Failed to schedule cache updates after wallet switch:`,
@@ -2110,7 +3660,24 @@ export class KeyRing {
       // Continue execution - consistency check failure is not critical
     }
 
-    await this.save();
+    try {
+      this.assertUnlockSessionCurrent(
+        session.password,
+        session.unlockSessionId
+      );
+      await this.save();
+    } catch (e: unknown) {
+      this.rescheduleUnlockCacheWarmupIfCurrent(session);
+      this.rescheduleUnlockMaintenanceIfCurrent(session);
+      throw e;
+    }
+
+    if (
+      this.isUnlockSessionCurrent(session.password, session.unlockSessionId)
+    ) {
+      this.scheduleUnlockCacheWarmup(session.password, session.unlockSessionId);
+      this.scheduleUnlockMaintenance(session.password, session.unlockSessionId);
+    }
     return {
       multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
     };
@@ -2129,10 +3696,7 @@ export class KeyRing {
           ? { coinTypeForChain: keyStore.coinTypeForChain }
           : {}),
         bip44HDPath: keyStore.bip44HDPath,
-        selected: this.keyStore
-          ? KeyRing.getKeyStoreId(keyStore) ===
-            KeyRing.getKeyStoreId(this.keyStore)
-          : false,
+        selected: KeyRing.getKeyStoreId(keyStore) === this.selectedKeyStoreId,
       });
     }
 
@@ -2186,11 +3750,33 @@ export class KeyRing {
   }
 
   /**
+   * Keystores written before `curve` existed are implicitly secp256k1, the only
+   * curve this keyring has ever derived. Ledger and Keystone never read the
+   * field, so those wallets kept working without it, but mnemonic and
+   * privateKey signing switches on it and fails. Repair it once on restore so
+   * the field is present everywhere it is later assumed.
+   */
+  private static backfillLegacyCurve(keyStore: KeyStore): {
+    backfilled: KeyStore;
+    changed: boolean;
+  } {
+    if (keyStore?.curve !== undefined) {
+      return { backfilled: keyStore, changed: false };
+    }
+
+    return {
+      backfilled: { ...keyStore, curve: KeyCurves.secp256k1 },
+      changed: true,
+    };
+  }
+
+  /**
    * Resolve one Cardano key without starting NetworkRuntime or Blockfrost.
    */
   public getCardanoKeyForKeyStore(
     chainId: string,
-    keyStore: KeyStore
+    keyStore: KeyStore,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<Key> {
     const storeId = KeyRing.getKeyStoreId(keyStore);
     const keyId = `cardano:${chainId}:${storeId}`;
@@ -2199,9 +3785,12 @@ export class KeyRing {
 
     const cached = this.cardanoKeyCache.get(keyId);
     if (cached) {
+      // Serve the cached pubKey, not an empty one: getKeysForCardano writes
+      // this result back into the memory and persisted address caches, so
+      // dropping it here would overwrite a good entry with `pubKey: ""`.
       return Promise.resolve({
         algo: "cardano_address_only",
-        pubKey: new Uint8Array(),
+        pubKey: cached.pubKey,
         address: cached.address,
         isKeystone: false,
         isNanoLedger: false,
@@ -2214,30 +3803,64 @@ export class KeyRing {
     }
 
     const cardanoKeyGeneration = this.cardanoKeyGeneration;
-    const flight = (async () => {
-      const { CardanoService } = await import("../cardano/service");
-      const key = await new CardanoService().deriveKeyFromKeyStore(
-        keyStore as any,
-        password,
-        this.crypto,
-        chainId
-      );
-
-      if (
-        this.unlockSessionId === unlockSessionId &&
-        this.cardanoKeyGeneration === cardanoKeyGeneration
-      ) {
-        this.cardanoKeyCache.set(keyId, {
-          address: key.address,
-          pubKey: key.pubKey,
-        });
+    const derivationHandle = import("../cardano/service").then(
+      ({ CardanoService }) => {
+        const result = new CardanoService().deriveKeyFromKeyStore(
+          keyStore as any,
+          password,
+          this.crypto,
+          chainId,
+          { scryptPriority: options?.scryptPriority }
+        );
+        return {
+          result,
+          // Keep compatibility with test doubles and older local service
+          // implementations while production exposes actual SDK completion.
+          completion: result.completion ?? result,
+        };
       }
-
-      return key;
-    })();
+    );
+    const ownedCompletion = derivationHandle
+      .then(({ completion }) => completion)
+      .then((key) => {
+        if (
+          this.unlockSessionId === unlockSessionId &&
+          this.cardanoKeyGeneration === cardanoKeyGeneration &&
+          this.multiKeyStore.some(
+            (candidate) => KeyRing.getKeyStoreId(candidate) === storeId
+          )
+        ) {
+          this.cardanoKeyCache.set(keyId, {
+            address: key.address,
+            pubKey: key.pubKey,
+          });
+        }
+        return key;
+      });
+    const flight = derivationHandle.then(async ({ result }) => {
+      try {
+        const key = await result;
+        // On success, preserve the existing contract that cache publication and
+        // flight cleanup are observable before the caller resumes.
+        await ownedCompletion;
+        return key;
+      } catch (error) {
+        const isCallerTimeout =
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          (error as { code?: unknown }).code === "cardano_key_context_timeout";
+        if (!isCallerTimeout) {
+          // A definitive failure settled the real operation, so release the
+          // slot before allowing a later independent call to try again.
+          await ownedCompletion.catch(() => undefined);
+        }
+        throw error;
+      }
+    });
 
     this.cardanoKeyFlights.set(keyId, flight);
-    flight.then(
+    ownedCompletion.then(
       () => {
         if (this.cardanoKeyFlights.get(keyId) === flight) {
           this.cardanoKeyFlights.delete(keyId);
@@ -2261,34 +3884,43 @@ export class KeyRing {
    * (`cardano_unsupported` / `cardano_derivation_failed`).
    */
   public async getKeysForCardano(
-    chainId: string
+    chainId: string,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<(Key & { name: string })[]> {
-    if (!this.password) {
-      throw new Error("Keyring is locked");
-    }
+    const session = this.captureUnlockSession();
+    const cardanoKeyGeneration = this.cardanoKeyGeneration;
+    const keyStores = [...this.multiKeyStore];
+    const isBulkContextCurrent = () =>
+      this.cardanoKeyGeneration === cardanoKeyGeneration &&
+      this.isUnlockSessionCurrent(session.password, session.unlockSessionId);
+    const isWalletCurrent = (walletId: string) =>
+      isBulkContextCurrent() &&
+      this.multiKeyStore.some(
+        (keyStore) => KeyRing.getKeyStoreId(keyStore) === walletId
+      );
 
     const keys: (Key & { name: string })[] = [];
-    const persistent = await this.loadCardanoChainCache(chainId);
+    let persistent: Record<string, { address: string; pubKey: string }> = {};
+    try {
+      persistent = await this.loadCardanoChainCache(chainId, options);
+    } catch (e: unknown) {
+      console.warn(
+        `[KeyRing] Failed to load Cardano cache for ${chainId}; rebuilding:`,
+        e
+      );
+    }
 
     const validIds = new Set(
-      this.multiKeyStore.map((s) => KeyRing.getKeyStoreId(s))
+      keyStores.map((keyStore) => KeyRing.getKeyStoreId(keyStore))
     );
-    let cacheMutated = false;
     for (const id of Object.keys(persistent)) {
       if (!validIds.has(id)) {
         delete persistent[id];
-        cacheMutated = true;
       }
     }
-    if (cacheMutated) {
-      await this.saveCardanoChainCache(chainId, persistent);
-    }
+    // The final best-effort save below also persists tombstone pruning.
 
-    // Lazy import to avoid cyclic deps at module load time
-    const { CardanoService } = await import("../cardano/service");
-
-    for (let i = 0; i < this.multiKeyStore.length; i++) {
-      const keyStore = this.multiKeyStore[i];
+    for (const keyStore of keyStores) {
       let nameByChain;
 
       try {
@@ -2331,10 +3963,12 @@ export class KeyRing {
           const pubKeyBytes = pubKeyRaw
             ? Buffer.from(pubKeyRaw, looksHex ? "hex" : "utf8")
             : new Uint8Array(0);
-          this.cardanoKeyCache.set(keyId, {
-            address: addressBytes,
-            pubKey: pubKeyBytes,
-          });
+          if (isWalletCurrent(storeId)) {
+            this.cardanoKeyCache.set(keyId, {
+              address: addressBytes,
+              pubKey: pubKeyBytes,
+            });
+          }
           keys.push({
             name: walletName,
             algo: "cardano_address_only",
@@ -2358,12 +3992,11 @@ export class KeyRing {
         } else {
           // As a last resort, decrypt to check word length
           try {
-            const decrypted = await Crypto.decrypt(
-              this.crypto,
+            const mnemonic = await this.decryptKeyStoreText(
               keyStore,
-              this.password
+              session.password,
+              { priority: options?.scryptPriority ?? "interactive" }
             );
-            const mnemonic = Buffer.from(decrypted).toString();
             const words = mnemonic.trim().split(/\s+/);
             shouldTryCardano = words.length === 24;
           } catch (e) {
@@ -2379,20 +4012,19 @@ export class KeyRing {
       if (shouldTryCardano) {
         try {
           // Offline KeyContext only — never spin up NetworkRuntime / Blockfrost.
-          const key = await new CardanoService().deriveKeyFromKeyStore(
-            keyStore as any,
-            this.password,
-            this.crypto,
-            chainId
-          );
-          this.cardanoKeyCache.set(keyId, {
-            address: key.address,
-            pubKey: key.pubKey,
+          const key = await this.getCardanoKeyForKeyStore(chainId, keyStore, {
+            scryptPriority: options?.scryptPriority ?? "interactive",
           });
-          persistent[storeId] = {
-            address: Buffer.from(key.address).toString("utf8"),
-            pubKey: Buffer.from(key.pubKey).toString("hex"),
-          };
+          if (isWalletCurrent(storeId)) {
+            this.cardanoKeyCache.set(keyId, {
+              address: key.address,
+              pubKey: key.pubKey,
+            });
+            persistent[storeId] = {
+              address: Buffer.from(key.address).toString("utf8"),
+              pubKey: Buffer.from(key.pubKey).toString("hex"),
+            };
+          }
           keys.push({ ...key, name: walletName });
           continue;
         } catch (error) {
@@ -2416,7 +4048,27 @@ export class KeyRing {
       });
     }
 
-    await this.saveCardanoChainCache(chainId, persistent);
+    if (isBulkContextCurrent()) {
+      const currentWalletIds = new Set(
+        this.multiKeyStore.map((keyStore) => KeyRing.getKeyStoreId(keyStore))
+      );
+      const persistentSnapshot: Record<
+        string,
+        { address: string; pubKey: string }
+      > = {};
+      for (const [walletId, entry] of Object.entries(persistent)) {
+        if (currentWalletIds.has(walletId)) {
+          persistentSnapshot[walletId] = entry;
+        }
+      }
+
+      this.trackDetachedBackgroundWork(
+        this.saveCardanoChainCache(chainId, persistentSnapshot, {
+          scryptPriority: options?.scryptPriority ?? "interactive",
+        }),
+        `[KeyRing] Failed to save rebuilt Cardano cache for ${chainId}:`
+      );
+    }
 
     return keys;
   }
@@ -2430,11 +4082,8 @@ export class KeyRing {
   }
 
   async updatePassword(oldPassword: string, newPassword: string) {
-    if (!this.password) {
-      throw new Error("Keyring is locked");
-    }
-
-    if (this.password !== oldPassword) {
+    const session = this.captureUnlockSession();
+    if (session.password !== oldPassword) {
       throw new Error("Invalid password");
     }
 
@@ -2442,48 +4091,138 @@ export class KeyRing {
       throw new Error("New password must be different");
     }
 
+    const transitionGeneration = this.invalidateUnlockSession();
     this.clearSessionKeyStoreMaterial();
-
-    const newMultiKeyStore: KeyStore[] = [];
-
-    for (const keyStore of this.multiKeyStore) {
-      if (keyStore.type) {
-        const decrypted = await Crypto.decrypt(
-          this.crypto,
-          keyStore,
-          oldPassword
-        );
-        const originalPayload = Buffer.from(decrypted).toString();
-
-        const reEncrypted = await Crypto.encrypt(
-          this.crypto,
-          keyStore.crypto.kdf,
-          keyStore.type,
-          keyStore.curve,
-          originalPayload,
-          newPassword,
-          keyStore.meta as Record<string, string>,
-          keyStore.bip44HDPath
-        );
-
-        if (
-          this.keyStore &&
-          KeyRing.getKeyStoreId(reEncrypted) ===
-            KeyRing.getKeyStoreId(this.keyStore)
-        ) {
-          this.keyStore = reEncrypted;
-        }
-
-        newMultiKeyStore.push(reEncrypted);
+    const selectedWalletId = this.selectedKeyStoreId ?? undefined;
+    let durableCommitted = false;
+    const assertPasswordTransitionCurrent = () => {
+      if (
+        this.lifecycleGeneration !== transitionGeneration ||
+        this.password !== oldPassword ||
+        this.unlockSessionId !== ""
+      ) {
+        throw new Error("Key ring session changed while password was updating");
       }
+    };
+
+    try {
+      const newMultiKeyStore: KeyStore[] = [];
+
+      for (const keyStore of this.multiKeyStore) {
+        if (keyStore.type) {
+          assertPasswordTransitionCurrent();
+          const decrypted = await Crypto.decrypt(
+            this.crypto,
+            keyStore,
+            oldPassword
+          );
+          try {
+            assertPasswordTransitionCurrent();
+            const reEncrypted = await Crypto.encrypt(
+              this.crypto,
+              keyStore.crypto.kdf,
+              keyStore.type,
+              keyStore.curve,
+              decrypted,
+              newPassword,
+              keyStore.meta as Record<string, string>,
+              keyStore.bip44HDPath
+            );
+
+            assertPasswordTransitionCurrent();
+            reEncrypted.coinTypeForChain = KeyRing.clonePersistedValue(
+              keyStore.coinTypeForChain
+            );
+            newMultiKeyStore.push(reEncrypted);
+          } finally {
+            decrypted.fill(0);
+          }
+        }
+      }
+
+      if (
+        selectedWalletId &&
+        !newMultiKeyStore.some(
+          (keyStore) => KeyRing.getKeyStoreId(keyStore) === selectedWalletId
+        )
+      ) {
+        throw new Error(
+          "Selected key store disappeared while updating password"
+        );
+      }
+
+      // Existing address caches are encrypted with the old password. Clear
+      // them before committing the new session so no caller can observe a
+      // mixed old/new password state.
+      assertPasswordTransitionCurrent();
+      await this.cacheManager.clearAllCaches();
+
+      assertPasswordTransitionCurrent();
+
+      // Persist the complete new generation before publishing it in memory.
+      // A failed write therefore leaves both disk and the live session on the
+      // old password instead of exposing a partially committed transition.
+      await this.runKeyRingMutation(async () => {
+        await this.persistKeyRingState(
+          newMultiKeyStore,
+          selectedWalletId ?? null,
+          assertPasswordTransitionCurrent
+        );
+        durableCommitted = true;
+
+        // From this point on, durable storage accepts the new password. Memory
+        // publication is synchronous and cannot turn that successful commit
+        // into a caller-visible error. A concurrent lock remains authoritative
+        // for session state, but not for the committed password generation.
+        this.multiKeyStore = newMultiKeyStore;
+        this.selectKeyStore(
+          selectedWalletId
+            ? newMultiKeyStore.find(
+                (keyStore) =>
+                  KeyRing.getKeyStoreId(keyStore) === selectedWalletId
+              ) ?? null
+            : null
+        );
+        if (
+          this.lifecycleGeneration === transitionGeneration &&
+          this.password === oldPassword &&
+          this.unlockSessionId === ""
+        ) {
+          this.activateUnlockSession(newPassword);
+          this.cacheMigrationDoneThisSession = true;
+        }
+      });
+
+      try {
+        this.interactionService.dispatchEvent(
+          WEBPAGE_PORT,
+          "status-changed",
+          {}
+        );
+      } catch (e: unknown) {
+        console.warn(
+          "[KeyRing] Password change committed but status notification failed:",
+          e
+        );
+      }
+    } catch (e: unknown) {
+      if (durableCommitted) {
+        console.warn(
+          "[KeyRing] Password change committed; post-commit memory finalization was incomplete:",
+          e
+        );
+        return;
+      }
+      if (
+        this.lifecycleGeneration === transitionGeneration &&
+        this.password === oldPassword &&
+        this.unlockSessionId === ""
+      ) {
+        const restoredSessionId = this.activateUnlockSession(oldPassword);
+        this.scheduleUnlockMaintenance(oldPassword, restoredSessionId);
+      }
+      throw e;
     }
-
-    // Replace entire keystore array
-    this.multiKeyStore = newMultiKeyStore;
-    this.password = newPassword;
-
-    await this.save();
-    this.interactionService.dispatchEvent(WEBPAGE_PORT, "status-changed", {});
   }
 
   async exportKeyRingDatas(password: string): Promise<ExportKeyRingData[]> {
@@ -2502,9 +4241,7 @@ export class KeyRing {
 
       switch (type) {
         case "mnemonic": {
-          const mnemonic = Buffer.from(
-            await Crypto.decrypt(this.crypto, keyStore, password)
-          ).toString();
+          const mnemonic = await this.decryptKeyStoreText(keyStore, password);
 
           result.push({
             bip44HDPath: keyStore.bip44HDPath ?? {
@@ -2522,9 +4259,7 @@ export class KeyRing {
           break;
         }
         case "privateKey": {
-          const privateKey = Buffer.from(
-            await Crypto.decrypt(this.crypto, keyStore, password)
-          ).toString();
+          const privateKey = await this.decryptKeyStoreText(keyStore, password);
 
           result.push({
             bip44HDPath: keyStore.bip44HDPath ?? {
@@ -2616,11 +4351,11 @@ export class KeyRing {
     bip44HDPath: BIP44HDPath
   ): Promise<KeyStore> {
     const publicKeyMap: Record<string, string> = {};
-    Object.keys(publicKeys)
-      .filter((k) => publicKeys[k] != null)
-      .forEach(
-        (k) => (publicKeyMap[k] = Buffer.from(publicKeys[k]!).toString("hex"))
-      );
+    for (const [key, publicKey] of Object.entries(publicKeys)) {
+      if (publicKey) {
+        publicKeyMap[key] = Buffer.from(publicKey).toString("hex");
+      }
+    }
 
     return await Crypto.encrypt(
       crypto,
@@ -2637,7 +4372,8 @@ export class KeyRing {
   private async assignKeyStoreIdMeta(meta: { [key: string]: string }): Promise<{
     [key: string]: string;
   }> {
-    // `__id__` is used to distinguish the key store.
+    // Monotonic, never-reused `__id__` values are a correctness/security
+    // contract for selectedKeyStoreId, signing context, and address caches.
     return Object.assign({}, meta, {
       __id__: (await this.getIncrementalNumber()).toString(),
     });
@@ -2685,14 +4421,23 @@ export class KeyRing {
   }
 
   private async getIncrementalNumber(): Promise<number> {
-    let num = await this.kvStore.get<number>("incrementalNumber");
-    if (num === undefined) {
-      num = 0;
-    }
-    num++;
+    // The serialized read-modify-write makes successful allocations monotonic
+    // and prevents a deleted wallet ID from ever being issued again.
+    const allocation = this.idAllocationTail.then(async () => {
+      let num = await this.kvStore.get<number>("incrementalNumber");
+      if (num === undefined) {
+        num = 0;
+      }
+      num++;
 
-    await this.kvStore.set("incrementalNumber", num);
-    return num;
+      await this.kvStore.set("incrementalNumber", num);
+      return num;
+    });
+    this.idAllocationTail = allocation.then(
+      () => undefined,
+      () => undefined
+    );
+    return await allocation;
   }
 
   // XXX: There are other way to handle tx with ethermint on ledger.
@@ -2737,31 +4482,48 @@ export class KeyRing {
   }
 
   public async initializeNonDefaultLedgerApp(env: Env, ledgerApp: LedgerApp) {
-    if (!this.keyStore) {
+    const session = this.captureUnlockSession();
+    const keyStore = this.keyStore;
+    if (!keyStore) {
       throw new Error("Keystore is empty");
     }
 
-    if (this.keyStore.type !== "ledger") {
+    if (keyStore.type !== "ledger") {
       throw new Error("Keystore is not ledger");
     }
 
-    if (!this.ledgerPublicKeyCache) {
+    const ledgerPublicKeyCache = this.ledgerPublicKeyCache;
+    if (!ledgerPublicKeyCache) {
       throw new Error("Ledger not initialized");
     }
 
-    const cached = this.ledgerPublicKeyCache[ledgerApp];
+    const cached = ledgerPublicKeyCache[ledgerApp];
     if (cached) {
       throw new Error(`Ledger app (${ledgerApp}) has been initialized`);
     }
 
+    const walletId = KeyRing.getKeyStoreId(keyStore);
+    const bip44HDPath = keyStore.bip44HDPath ?? {
+      account: 0,
+      change: 0,
+      addressIndex: 0,
+    };
+
     const pubKey = await this.ledgerKeeper.getPublicKey(
       env,
       ledgerApp,
-      KeyRing.getKeyStoreBIP44Path(this.keyStore)
+      KeyRing.getKeyStoreBIP44Path(keyStore)
     );
 
+    this.assertUnlockSessionCurrent(session.password, session.unlockSessionId);
+    if (this.keyStore !== keyStore) {
+      throw new Error(
+        "Active key store changed while Ledger app was initializing"
+      );
+    }
+
     const pubKeys = {
-      ...this.ledgerPublicKeyCache,
+      ...ledgerPublicKeyCache,
       [ledgerApp]: pubKey,
     };
 
@@ -2769,48 +4531,55 @@ export class KeyRing {
     // to persist the new public key.
     const newKeyStore = await KeyRing.CreateLedgerKeyStore(
       this.crypto,
-      this.keyStore.crypto.kdf,
+      keyStore.crypto.kdf,
       pubKeys,
-      this.password,
-      this.keyStore.meta ?? {},
-      this.keyStore.bip44HDPath ?? {
-        account: 0,
-        change: 0,
-        addressIndex: 0,
-      }
+      session.password,
+      keyStore.meta ?? {},
+      bip44HDPath
     );
 
-    // Replace the keystore in the MultiKeyStore
-    let index: number | undefined;
-    this.multiKeyStore.forEach((k, i) => {
-      if (
-        this.keyStore &&
-        KeyRing.getKeyStoreId(this.keyStore) === KeyRing.getKeyStoreId(k)
-      ) {
-        index = i;
-      }
-    });
+    this.assertUnlockSessionCurrent(session.password, session.unlockSessionId);
+    if (this.keyStore !== keyStore) {
+      throw new Error(
+        "Active key store changed while Ledger app was initializing"
+      );
+    }
 
-    if (index === undefined) {
+    // Replace the keystore in the MultiKeyStore
+    const index = this.multiKeyStore.findIndex(
+      (candidate) => KeyRing.getKeyStoreId(candidate) === walletId
+    );
+
+    if (index < 0) {
       throw new Error("Could not find keystore in keyring");
     }
 
     // Update local cache
     this.ledgerPublicKeyCache = pubKeys;
+    this.rememberSessionKeyStoreMaterial(newKeyStore, {
+      type: "ledger",
+      ledgerPublicKeyCache: pubKeys,
+    });
 
-    // Persist keystore changes
-    this.keyStore = newKeyStore;
     this.multiKeyStore[index] = newKeyStore;
+    this.commitActiveKeyStoreForSession(
+      newKeyStore,
+      {
+        type: "ledger",
+        ledgerPublicKeyCache: pubKeys,
+      },
+      session
+    );
 
-    // No need to wait.
-    this.save();
+    await this.save();
 
     return pubKey;
   }
 
   public async getKeys(
     chainId: string,
-    useEthereumAddress: boolean
+    useEthereumAddress: boolean,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<(Key & { name: string })[]> {
     const keys: (Key & { name: string })[] = [];
 
@@ -2818,25 +4587,36 @@ export class KeyRing {
       throw new Error("Keyring is locked");
     }
 
-    const persistent = await this.loadGenericChainCache(chainId);
+    let persistent: Record<
+      string,
+      {
+        address: string;
+        name?: string;
+        pubKey?: string;
+      }
+    > = {};
+    try {
+      persistent = await this.loadGenericChainCache(chainId, options);
+    } catch (e: unknown) {
+      console.warn(
+        `[KeyRing] Failed to load generic cache for ${chainId}; rebuilding:`,
+        e
+      );
+    }
 
     const validIds = new Set(
       this.multiKeyStore.map((s) => KeyRing.getKeyStoreId(s))
     );
-    let needsCacheClear = false;
     for (const id of Object.keys(persistent)) {
       if (!validIds.has(id)) {
         delete persistent[id];
       }
       if (persistent[id] && !persistent[id].pubKey) {
         delete persistent[id];
-        needsCacheClear = true;
       }
     }
 
-    if (needsCacheClear) {
-      await this.saveGenericChainCache(chainId, persistent);
-    }
+    // The final best-effort save below also persists stale-entry pruning.
 
     for (const keyStore of this.multiKeyStore) {
       const defaultCoinType = useEthereumAddress ? 60 : 118;
@@ -2860,6 +4640,7 @@ export class KeyRing {
         : "Unnamed Account";
 
       const storeId = KeyRing.getKeyStoreId(keyStore);
+      const sessionMaterial = this.sessionKeyStoreMaterial.get(storeId);
 
       const persisted = persistent[storeId];
       if (persisted && persisted.address && persisted.pubKey) {
@@ -2877,7 +4658,6 @@ export class KeyRing {
               .toLowerCase();
             if (hex.toLowerCase() !== expectedEth) {
               delete persistent[storeId];
-              needsCacheClear = true;
             } else {
               keys.push({
                 name: walletName,
@@ -2891,7 +4671,6 @@ export class KeyRing {
             }
           } catch {
             delete persistent[storeId];
-            needsCacheClear = true;
           }
         } else {
           keys.push({
@@ -2908,13 +4687,16 @@ export class KeyRing {
 
       switch (keyStore.type) {
         case "mnemonic": {
-          const mnemonic = Buffer.from(
-            await Crypto.decrypt(this.crypto, keyStore, this.password)
-          ).toString();
           // const type = keyStore.type ?? "mnemonic";
           const path = `m/44'/${coinType}'/${keyStore.bip44HDPath?.account}'/${keyStore.bip44HDPath?.change}/${keyStore.bip44HDPath?.addressIndex}`;
           const mnemonicMasterSeed =
-            Mnemonic.generateMasterSeedFromMnemonic(mnemonic);
+            sessionMaterial?.type === "mnemonic"
+              ? new Uint8Array(sessionMaterial.mnemonicMasterSeed)
+              : Mnemonic.generateMasterSeedFromMnemonic(
+                  await this.decryptKeyStoreText(keyStore, this.password, {
+                    priority: options?.scryptPriority ?? "interactive",
+                  })
+                );
           const _privKey = Mnemonic.generatePrivateKeyFromMasterSeed(
             mnemonicMasterSeed,
             path
@@ -2976,12 +4758,15 @@ export class KeyRing {
         }
         case "privateKey": {
           let privKey;
-          const privateKey = Buffer.from(
-            Buffer.from(
-              await Crypto.decrypt(this.crypto, keyStore, this.password)
-            ).toString(),
-            "hex"
-          );
+          const privateKey =
+            sessionMaterial?.type === "privateKey"
+              ? new Uint8Array(sessionMaterial.privateKey)
+              : Buffer.from(
+                  await this.decryptKeyStoreText(keyStore, this.password, {
+                    priority: options?.scryptPriority ?? "interactive",
+                  }),
+                  "hex"
+                );
           switch (keyStore.curve) {
             case KeyCurves.secp256k1:
               privKey = new PrivKeySecp256k1(privateKey);
@@ -3036,12 +4821,14 @@ export class KeyRing {
           break;
         }
         case "keystone": {
-          const cipherText = await Crypto.decrypt(
-            this.crypto,
-            keyStore,
-            this.password
-          );
-          const key = JSON.parse(Buffer.from(cipherText).toString());
+          const key =
+            sessionMaterial?.type === "keystone"
+              ? JSON.parse(JSON.stringify(sessionMaterial.keystonePublicKey))
+              : JSON.parse(
+                  await this.decryptKeyStoreText(keyStore, this.password, {
+                    priority: options?.scryptPriority ?? "interactive",
+                  })
+                );
 
           if (!key) {
             throw new Error("CoinType is not available");
@@ -3074,31 +4861,41 @@ export class KeyRing {
           break;
         }
         case "ledger": {
-          const cipherText = await Crypto.decrypt(
-            this.crypto,
-            keyStore,
-            this.password
-          );
-
           const pubKeys: Record<string, Uint8Array> = {};
 
-          try {
-            const encodedPubkeys = JSON.parse(
-              Buffer.from(cipherText).toString()
+          if (sessionMaterial?.type === "ledger") {
+            for (const [app, pubKey] of Object.entries(
+              sessionMaterial.ledgerPublicKeyCache
+            )) {
+              if (pubKey) {
+                pubKeys[app] = new Uint8Array(pubKey);
+              }
+            }
+          } else {
+            const encodedText = await this.decryptKeyStoreText(
+              keyStore,
+              this.password,
+              { priority: options?.scryptPriority ?? "interactive" }
             );
-            Object.keys(encodedPubkeys).forEach(
-              (k) => (pubKeys[k] = Buffer.from(encodedPubkeys[k], "hex"))
-            );
-          } catch (e) {
-            // Decode as bytes (Legacy representation)
-            pubKeys[LedgerApp.Cosmos] = Buffer.from(
-              Buffer.from(cipherText).toString(),
-              "hex"
-            );
+
+            try {
+              const encodedPubkeys = JSON.parse(encodedText);
+              Object.keys(encodedPubkeys).forEach(
+                (k) => (pubKeys[k] = Buffer.from(encodedPubkeys[k], "hex"))
+              );
+            } catch (e) {
+              // Decode as bytes (Legacy representation)
+              pubKeys[LedgerApp.Cosmos] = Buffer.from(encodedText, "hex");
+            }
           }
 
           if (useEthereumAddress) {
             const pubKey = pubKeys[LedgerApp.Ethereum];
+            if (!pubKey) {
+              throw new Error(
+                `No ${LedgerApp.Ethereum} public key. Initialize ${LedgerApp.Ethereum} app on Ledger by selecting the chain in the extension`
+              );
+            }
             // Generate the Ethereum address for this public key
             const address = computeAddress(pubKey);
 
@@ -3129,17 +4926,28 @@ export class KeyRing {
       }
     }
 
-    await this.saveGenericChainCache(chainId, persistent);
+    this.trackDetachedBackgroundWork(
+      this.saveGenericChainCache(chainId, persistent, {
+        scryptPriority: options?.scryptPriority ?? "interactive",
+      }),
+      `[KeyRing] Failed to save rebuilt generic cache for ${chainId}:`
+    );
 
     return keys;
   }
 
-  private clearCaches() {
+  private clearActiveKeyStoreCaches(): void {
+    this._privateKey?.fill(0);
+    this._mnemonicMasterSeed?.fill(0);
     this._privateKey = undefined;
     this._mnemonicMasterSeed = undefined;
     this._ledgerPublicKeyCache = undefined;
     this._keystonePublicKeyCache = undefined;
     this.cached = new Map();
+  }
+
+  private clearCaches(): void {
+    this.clearActiveKeyStoreCaches();
     this.clearCardanoMemoryCache();
   }
 

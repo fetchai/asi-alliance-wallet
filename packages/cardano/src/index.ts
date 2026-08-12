@@ -7,7 +7,14 @@ export * from "./wallet/util";
 
 export { CardanoWalletManager } from "./wallet-manager";
 export { CardanoKeyRing } from "./cardano-keyring";
-export { CardanoKeyContext } from "./cardano-key-context";
+export {
+  CARDANO_KEY_CONTEXT_DEADLINE_MS,
+  CARDANO_KEY_CONTEXT_TIMEOUT_CODE,
+  CardanoKeyContext,
+  CardanoKeyContextTimeoutError,
+  isCardanoKeyContextTimeoutError,
+} from "./cardano-key-context";
+export type { CardanoKeyContextDerivation } from "./cardano-key-context";
 export { CardanoAccount } from "./cardano-account";
 export {
   CARDANO_RUNTIME_INACTIVE_CODE,

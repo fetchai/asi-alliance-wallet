@@ -55,6 +55,25 @@ import {
   getAssetsFromValue,
 } from "./cardano-pending-history";
 
+export type TrackedCardanoKeyDerivation = Promise<Key> & {
+  /** Actual SDK completion; may outlive the bounded caller promise. */
+  readonly completion?: Promise<Key>;
+};
+
+export const CARDANO_OFFLINE_DERIVATION_DEADLINE_MS = 10_000;
+
+type BoundedCardanoKeyContext = typeof CardanoKeyContext & {
+  derive: (
+    params: {
+      mnemonicWords: string[];
+      chainId: string;
+      accountIndex?: number;
+      passphrase?: Uint8Array;
+    },
+    timeoutMs: number
+  ) => { completion: Promise<Key>; result: Promise<Key> };
+};
+
 /**
  * Thin wrapper around @keplr-wallet/cardano that makes Cardano logic look like
  * any other chain for the background level. This keeps KeyRing chain-independent,
@@ -137,13 +156,7 @@ export class CardanoService {
       getOwnerSwitchGeneration?: () => number | undefined;
       selectedChainIdAtCreate?: string;
       getSelectedChainId?: () => string | undefined;
-      createdBy?:
-        | "getKey"
-        | "networkSwitch"
-        | "syncStatus"
-        | "listAccounts"
-        | "restore"
-        | "unknown";
+      createdBy?: "restore";
       runtimeLease?: CardanoRuntimeLease;
     }
   ): Promise<void> {
@@ -154,7 +167,11 @@ export class CardanoService {
 
     const decryptFn = crypto
       ? (keyStore: KeyStore, pwd: string) =>
-          Crypto.decrypt(crypto, keyStore as KeyringKeyStore, pwd)
+          Crypto.decrypt(crypto, keyStore as KeyringKeyStore, pwd, {
+            // restoreFromKeyStore is currently reachable only from the
+            // transaction-mode NetworkRuntime readiness path.
+            priority: "interactive",
+          })
       : undefined;
 
     const resolveBlockfrostConfig = createBlockfrostConfigResolver(
@@ -315,41 +332,71 @@ export class CardanoService {
    * Offline address derivation (KeyContext). Never publishes NetworkRuntime
    * (`this.keyRing`), never creates Blockfrost / PersonalWallet.
    */
-  async deriveKeyFromKeyStore(
+  deriveKeyFromKeyStore(
     store: KeyStore,
     password: string,
     crypto: any | undefined,
-    chainId: string
-  ): Promise<Key> {
-    if (!chainId) {
-      throw new Error("network_context_missing");
+    chainId: string,
+    options?: {
+      scryptPriority?: "interactive" | "background";
+      deadlineMs?: number;
     }
+  ): TrackedCardanoKeyDerivation {
+    // Preparation intentionally stays outside the Cardano SDK deadline. Scrypt
+    // ownership/deadlines have a separate lifecycle contract and are not changed
+    // by this Cardano-specific liveness boundary.
+    const prepared = (async () => {
+      if (!chainId) {
+        throw new Error("network_context_missing");
+      }
 
-    let decryptedMnemonic: string;
-    if (crypto) {
-      const decrypted = await Crypto.decrypt(
-        crypto,
-        store as KeyringKeyStore,
-        password
-      );
-      decryptedMnemonic = Buffer.from(decrypted).toString();
-    } else if (store.key) {
-      decryptedMnemonic = store.key;
-    } else {
-      throw new Error(
-        "keyStore.key is undefined for Cardano key context and no crypto provided"
-      );
-    }
+      let decryptedMnemonic: string;
+      if (crypto) {
+        const decrypted = await Crypto.decrypt(
+          crypto,
+          store as KeyringKeyStore,
+          password,
+          { priority: options?.scryptPriority }
+        );
+        decryptedMnemonic = Buffer.from(decrypted).toString();
+      } else if (store.key) {
+        decryptedMnemonic = store.key;
+      } else {
+        throw new Error(
+          "keyStore.key is undefined for Cardano key context and no crypto provided"
+        );
+      }
 
-    const mnemonicWords = decryptedMnemonic.trim().split(/\s+/);
-    const accountIndex = store.bip44HDPath?.account ?? 0;
-    const context = await CardanoKeyContext.create({
-      mnemonicWords,
-      chainId,
-      accountIndex,
-      passphrase: new Uint8Array(),
+      return {
+        mnemonicWords: decryptedMnemonic.trim().split(/\s+/),
+        chainId,
+        accountIndex: store.bip44HDPath?.account ?? 0,
+        passphrase: new Uint8Array(),
+      };
+    })();
+
+    const contextDerivation = prepared.then((params) =>
+      (CardanoKeyContext as BoundedCardanoKeyContext).derive(
+        params,
+        options?.deadlineMs ?? CARDANO_OFFLINE_DERIVATION_DEADLINE_MS
+      )
+    );
+    const completion = contextDerivation.then(
+      (derivation) => derivation.completion
+    );
+    const result = contextDerivation.then((derivation) => derivation.result);
+
+    // Direct callers may only observe `result`. Keep the actual operation's
+    // rejection owned even when it settles after the caller timed out.
+    void completion.catch(() => undefined);
+    Object.defineProperty(result, "completion", {
+      configurable: false,
+      enumerable: false,
+      value: completion,
+      writable: false,
     });
-    return context.getKey();
+
+    return result as TrackedCardanoKeyDerivation;
   }
 
   /**

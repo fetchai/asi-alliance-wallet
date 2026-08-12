@@ -1,5 +1,5 @@
 import { KVStore } from "@keplr-wallet/common";
-import { CommonCrypto } from "./types";
+import { CommonCrypto, ScryptPriority } from "./types";
 import { Crypto } from "./crypto";
 import { Buffer } from "buffer/";
 
@@ -7,7 +7,6 @@ export interface CacheEntry {
   address: string;
   name?: string;
   pubKey?: string;
-  mnemonicLength?: string;
 }
 
 export interface CacheData {
@@ -26,17 +25,58 @@ export interface CacheManagerConfig {
   embedChainInfos: any[];
 }
 
+class LockWaitTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LockWaitTimeoutError";
+  }
+}
+
+class CacheDecryptionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CacheDecryptionError";
+  }
+}
+
+class CacheSessionUnavailableError extends Error {
+  constructor(message = "Address-cache password/session is unavailable") {
+    super(message);
+    this.name = "CacheSessionUnavailableError";
+  }
+}
+
+class CachePasswordChangedError extends CacheSessionUnavailableError {
+  constructor() {
+    super("Address-cache password changed while crypto was running");
+    this.name = "CachePasswordChangedError";
+  }
+}
+
 export class AddressCacheManager {
   private static readonly CARDANO_CACHE_PREFIX = "cardano_addr_cache:";
   private static readonly GENERIC_CACHE_PREFIX = "addr_cache:";
   private static readonly ENCRYPTION_FAILURE_PREFIX =
     "cache_encryption_failed:";
-  private static readonly LOCK_TIMEOUT_MS = 5000;
+  private static readonly CACHE_KDF_SALT_KEY = "address_cache_kdf_salt:v1";
+  /** Maximum time a queued operation may wait to acquire a chain lock. */
+  private static readonly LOCK_TIMEOUT_MS = 30000;
 
   private kvStore: KVStore;
   private crypto: CommonCrypto;
   private password?: string;
   private embedChainInfos: any[];
+  private cacheCrypto: CommonCrypto;
+  private cacheDerivedKeys = new Map<string, Uint8Array>();
+  private cacheDerivedKeyFlights = new Map<string, Promise<Uint8Array>>();
+  private cacheDerivedKeyGeneration = 0;
+  private sharedCacheSaltFlight?: Promise<string>;
+  private cacheWriteTails = new Map<string, Promise<void>>();
+  private cacheWriteRevisions = new Map<string, number>();
+  // Tombstones are safe only because wallet IDs are monotonic and never reused.
+  // Keep them for the lifetime of this manager so late writes cannot resurrect
+  // a deleted wallet or suppress a future wallet under a recycled ID.
+  private deletedWalletIds = new Set<string>();
 
   // Per-chain locks to prevent race conditions
   private operationLocks: Map<string, Promise<void>> = new Map();
@@ -46,6 +86,211 @@ export class AddressCacheManager {
     this.crypto = config.crypto;
     this.password = config.password;
     this.embedChainInfos = config.embedChainInfos;
+    this.cacheCrypto = {
+      rng: (array) => this.crypto.rng(array),
+      scrypt: (text, params) => this.deriveCacheKey(text, params),
+    };
+  }
+
+  private async deriveCacheKey(
+    password: string,
+    params: Parameters<CommonCrypto["scrypt"]>[1]
+  ): Promise<Uint8Array> {
+    if (!this.password || password !== this.password) {
+      throw new CachePasswordChangedError();
+    }
+
+    const cacheKey = [
+      params.salt,
+      params.dklen,
+      params.n,
+      params.r,
+      params.p,
+    ].join(":");
+    const generation = this.cacheDerivedKeyGeneration;
+    const cached = this.cacheDerivedKeys.get(cacheKey);
+    if (cached) {
+      return new Uint8Array(cached);
+    }
+
+    const existingFlight = this.cacheDerivedKeyFlights.get(cacheKey);
+    if (existingFlight) {
+      const derivedKey = await existingFlight;
+      if (
+        generation !== this.cacheDerivedKeyGeneration ||
+        password !== this.password
+      ) {
+        derivedKey.fill(0);
+        throw new CachePasswordChangedError();
+      }
+      return new Uint8Array(derivedKey);
+    }
+
+    const flight = this.crypto.scrypt(password, params).then((derivedKey) => {
+      const stableKey = new Uint8Array(derivedKey);
+      derivedKey.fill(0);
+      if (
+        generation === this.cacheDerivedKeyGeneration &&
+        password === this.password
+      ) {
+        this.cacheDerivedKeys.set(cacheKey, stableKey);
+        return stableKey;
+      }
+      stableKey.fill(0);
+      throw new CachePasswordChangedError();
+    });
+    this.cacheDerivedKeyFlights.set(cacheKey, flight);
+
+    try {
+      const derivedKey = await flight;
+      if (
+        generation !== this.cacheDerivedKeyGeneration ||
+        password !== this.password
+      ) {
+        derivedKey.fill(0);
+        throw new CachePasswordChangedError();
+      }
+      return new Uint8Array(derivedKey);
+    } finally {
+      if (this.cacheDerivedKeyFlights.get(cacheKey) === flight) {
+        this.cacheDerivedKeyFlights.delete(cacheKey);
+      }
+    }
+  }
+
+  private clearCacheDerivedKeys(): void {
+    this.cacheDerivedKeyGeneration += 1;
+    for (const derivedKey of this.cacheDerivedKeys.values()) {
+      derivedKey.fill(0);
+    }
+    this.cacheDerivedKeys.clear();
+    this.cacheDerivedKeyFlights.clear();
+  }
+
+  /**
+   * Serialize the final KV commit per cache blob and attach a session revision
+   * to it. If the generation changes while storage is awaiting, this commit
+   * either yields to an already queued newer revision or clears its own value
+   * before releasing the per-key tail.
+   *
+   * "Stale" here means the write no longer matches the live runtime generation,
+   * not that its ciphertext became unreadable: a plain lock also bumps the
+   * generation, so a blob that the next unlock could still have decrypted with
+   * the same password is dropped too. That is a deliberate fail-closed choice —
+   * the cache is derivable state, and the cost is a rebuild after unlock.
+   */
+  private async commitEncryptedCacheWrite(
+    key: string,
+    encrypted: string,
+    password: string,
+    generation: number
+  ): Promise<void> {
+    const revision = (this.cacheWriteRevisions.get(key) ?? 0) + 1;
+    this.cacheWriteRevisions.set(key, revision);
+    const previous = this.cacheWriteTails.get(key) ?? Promise.resolve();
+    const operation = previous.then(async () => {
+      if (
+        generation !== this.cacheDerivedKeyGeneration ||
+        password !== this.password
+      ) {
+        throw new CachePasswordChangedError();
+      }
+      if (this.cacheWriteRevisions.get(key) !== revision) {
+        return;
+      }
+
+      await this.kvStore.set(key, encrypted);
+
+      if (
+        generation !== this.cacheDerivedKeyGeneration ||
+        password !== this.password
+      ) {
+        if (this.cacheWriteRevisions.get(key) === revision) {
+          await this.kvStore.set(key, null as any);
+        }
+        throw new CachePasswordChangedError();
+      }
+      // A newer same-session write, if any, is queued on this exact tail and
+      // will be the final value after this operation releases it.
+    });
+    const tail = operation.then(
+      () => undefined,
+      () => undefined
+    );
+    this.cacheWriteTails.set(key, tail);
+    try {
+      await operation;
+    } finally {
+      if (this.cacheWriteTails.get(key) === tail) {
+        this.cacheWriteTails.delete(key);
+      }
+    }
+  }
+
+  /**
+   * New writes converge on one session-memoizable KDF key. Existing encrypted
+   * blobs intentionally keep their embedded salts until their chain is used
+   * and normally resaved: eager rewriting would pay the same scrypt cost for
+   * every network at unlock, including networks the user never opens.
+   */
+  private getSharedCacheSalt(): Promise<string> {
+    if (!this.sharedCacheSaltFlight) {
+      this.sharedCacheSaltFlight = (async () => {
+        const stored = await this.kvStore.get<string>(
+          AddressCacheManager.CACHE_KDF_SALT_KEY
+        );
+        if (stored && /^[0-9a-f]{64}$/i.test(stored)) {
+          return stored;
+        }
+
+        const random = new Uint8Array(32);
+        const salt = Buffer.from(await this.crypto.rng(random)).toString("hex");
+        await this.kvStore.set(AddressCacheManager.CACHE_KDF_SALT_KEY, salt);
+        return salt;
+      })().catch((e: unknown) => {
+        this.sharedCacheSaltFlight = undefined;
+        throw e;
+      });
+    }
+    return this.sharedCacheSaltFlight;
+  }
+
+  /**
+   * Pay the shared address-cache KDF cost before background cache maintenance
+   * can acquire a per-chain lock. The KeyRing schedules this as idle work, and
+   * background priority lets a later interactive decrypt pass it while it is
+   * still queued. No per-chain lock is held during this KDF.
+   */
+  async warmSharedDerivedKey(): Promise<void> {
+    if (!this.password || typeof this.crypto.scrypt !== "function") {
+      return;
+    }
+
+    const password = this.password;
+    const generation = this.cacheDerivedKeyGeneration;
+    const salt = await this.getSharedCacheSalt();
+    if (
+      generation !== this.cacheDerivedKeyGeneration ||
+      password !== this.password
+    ) {
+      throw new CachePasswordChangedError();
+    }
+    const derivedKey = await this.deriveCacheKey(password, {
+      salt,
+      dklen: 32,
+      n: 131072,
+      r: 8,
+      p: 1,
+      executionPriority: "background",
+    });
+    derivedKey.fill(0);
+
+    if (
+      generation !== this.cacheDerivedKeyGeneration ||
+      password !== this.password
+    ) {
+      throw new CachePasswordChangedError();
+    }
   }
 
   /**
@@ -56,43 +301,48 @@ export class AddressCacheManager {
     operation: () => Promise<T>
   ): Promise<T> {
     const existingLock = this.operationLocks.get(lockKey) || Promise.resolve();
-
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    const newLock = existingLock
-      .then(async () => {
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(
-              new Error(
-                `Lock timeout for ${lockKey} after ${AddressCacheManager.LOCK_TIMEOUT_MS}ms`
-              )
-            );
-          }, AddressCacheManager.LOCK_TIMEOUT_MS);
-        });
-
-        try {
-          const result = await Promise.race([operation(), timeoutPromise]);
-          return result;
-        } finally {
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-        }
-      })
-      .finally(() => {
-        if (this.operationLocks.get(lockKey) === newLockVoid) {
-          this.operationLocks.delete(lockKey);
-        }
+    let cancelled = false;
+    let resolveResult!: (value: T | PromiseLike<T>) => void;
+    let rejectResult!: (reason?: unknown) => void;
+    const result = new Promise<T>((resolve, reject) => {
+      resolveResult = resolve;
+      rejectResult = reject;
+    });
+    const timeoutId = setTimeout(() => {
+      cancelled = true;
+      const error = new LockWaitTimeoutError(
+        `Lock timeout waiting for ${lockKey} after ${AddressCacheManager.LOCK_TIMEOUT_MS}ms`
+      );
+      console.warn("[AddressCacheManager] Cache lock wait timed out", {
+        lockKey,
+        timeoutMs: AddressCacheManager.LOCK_TIMEOUT_MS,
       });
+      rejectResult(error);
+    }, AddressCacheManager.LOCK_TIMEOUT_MS);
 
-    const newLockVoid = newLock.then(
-      () => {},
-      () => {}
-    );
-    this.operationLocks.set(lockKey, newLockVoid);
+    // Never time out a running operation: promises cannot be cancelled, and
+    // releasing the lock while one still mutates storage breaks exclusion.
+    // The timeout only cancels this entry while it is waiting for its turn.
+    const queuedOperation = existingLock.then(async () => {
+      if (cancelled) {
+        return;
+      }
+      clearTimeout(timeoutId);
+      try {
+        resolveResult(await operation());
+      } catch (e: unknown) {
+        rejectResult(e);
+      }
+    });
 
-    return newLock;
+    const trackedLock = queuedOperation.finally(() => {
+      if (this.operationLocks.get(lockKey) === trackedLock) {
+        this.operationLocks.delete(lockKey);
+      }
+    });
+    this.operationLocks.set(lockKey, trackedLock);
+
+    return result;
   }
 
   /**
@@ -115,6 +365,12 @@ export class AddressCacheManager {
 
   /** Heuristic transient error classifier. */
   private isTransientError(e: unknown): boolean {
+    // Retrying a saturated chain lock only repeats the full wait window and
+    // cannot make the operation ahead of us complete any sooner.
+    if (e instanceof LockWaitTimeoutError) {
+      return false;
+    }
+
     const msg = this.formatError(e);
     return /timeout|temporar(y|ily)|network|busy/i.test(msg);
   }
@@ -130,6 +386,9 @@ export class AddressCacheManager {
   }
 
   setPassword(password: string): void {
+    if (this.password !== password) {
+      this.clearCacheDerivedKeys();
+    }
     this.password = password;
   }
 
@@ -164,39 +423,105 @@ export class AddressCacheManager {
   /**
    * Encrypt cache data using AES-128-CTR + KDF scrypt
    */
-  private async encryptCacheData(data: CacheData): Promise<string> {
+  private async encryptCacheData(
+    data: CacheData,
+    priority: ScryptPriority
+  ): Promise<string> {
     if (!this.password) {
       throw new Error("Password not set - cannot encrypt cache");
     }
 
+    const password = this.password;
+    const generation = this.cacheDerivedKeyGeneration;
+    const salt = await this.getSharedCacheSalt();
+    if (
+      generation !== this.cacheDerivedKeyGeneration ||
+      password !== this.password
+    ) {
+      throw new CachePasswordChangedError();
+    }
+
     const encrypted = await Crypto.encryptBlob(
-      this.crypto,
+      this.cacheCrypto,
       "scrypt",
       JSON.stringify(data),
-      this.password,
-      { cacheType: "address_cache" }
+      password,
+      { cacheType: "address_cache" },
+      {
+        priority,
+        salt,
+      }
     );
+    if (
+      generation !== this.cacheDerivedKeyGeneration ||
+      password !== this.password
+    ) {
+      throw new CachePasswordChangedError();
+    }
     return JSON.stringify(encrypted);
   }
 
   /**
    * Decrypt cache data
    */
-  private async decryptCacheData(encryptedData: string): Promise<CacheData> {
+  private async decryptCacheData(
+    encryptedData: string,
+    priority: ScryptPriority
+  ): Promise<CacheData> {
     if (!this.password) {
-      throw new Error("Password not set - cannot decrypt cache");
+      throw new CacheSessionUnavailableError(
+        "Password not set - cannot decrypt cache"
+      );
     }
+
+    const password = this.password;
+    const generation = this.cacheDerivedKeyGeneration;
 
     try {
       const encrypted = JSON.parse(encryptedData);
       const decrypted = await Crypto.decryptBlob(
-        this.crypto,
+        this.cacheCrypto,
         encrypted,
-        this.password
+        password,
+        { priority }
       );
-      return JSON.parse(Buffer.from(decrypted).toString());
+      const plaintext = Buffer.from(decrypted);
+      try {
+        if (
+          generation !== this.cacheDerivedKeyGeneration ||
+          password !== this.password
+        ) {
+          throw new CachePasswordChangedError();
+        }
+        return JSON.parse(plaintext.toString());
+      } finally {
+        plaintext.fill(0);
+        decrypted.fill(0);
+      }
     } catch (e: unknown) {
+      if (
+        generation !== this.cacheDerivedKeyGeneration ||
+        password !== this.password
+      ) {
+        throw new CachePasswordChangedError();
+      }
+      if (e instanceof CacheSessionUnavailableError) {
+        throw e;
+      }
       throw new Error(`Failed to decrypt cache data: ${this.formatError(e)}`);
+    }
+  }
+
+  private assertCacheSessionCurrent(
+    password: string | undefined,
+    generation: number
+  ): void {
+    if (
+      !password ||
+      generation !== this.cacheDerivedKeyGeneration ||
+      password !== this.password
+    ) {
+      throw new CacheSessionUnavailableError();
     }
   }
 
@@ -218,11 +543,25 @@ export class AddressCacheManager {
     return `${AddressCacheManager.ENCRYPTION_FAILURE_PREFIX}${cacheType}:${chainId}`;
   }
 
+  private filterDeletedWallets<T>(cache: Record<string, T>): Record<string, T> {
+    const filtered: Record<string, T> = {};
+    for (const [walletId, entry] of Object.entries(cache)) {
+      if (!this.deletedWalletIds.has(walletId)) {
+        filtered[walletId] = entry;
+      }
+    }
+    return filtered;
+  }
+
   /**
    * Internal: Load Cardano cache without lock
    */
   private async _loadCardanoCacheUnsafe(
-    chainId: string
+    chainId: string,
+    options: {
+      priority: ScryptPriority;
+      throwOnDecryptFailure?: boolean;
+    } = { priority: "interactive" }
   ): Promise<Record<string, { address: string; pubKey: string }>> {
     const key = this.getCardanoCacheKey(chainId);
     const data = await this.kvStore.get<
@@ -233,11 +572,19 @@ export class AddressCacheManager {
 
     if (this.isEncryptedCacheData(data)) {
       if (!this.password) {
+        if (options.throwOnDecryptFailure) {
+          throw new CacheSessionUnavailableError(
+            "Password not set while removing wallet from encrypted cache"
+          );
+        }
         return {};
       }
 
       try {
-        const decrypted = await this.decryptCacheData(data as string);
+        const decrypted = await this.decryptCacheData(
+          data as string,
+          options.priority
+        );
         const result: Record<string, { address: string; pubKey: string }> = {};
         for (const [walletId, entry] of Object.entries(decrypted)) {
           result[walletId] = {
@@ -247,8 +594,21 @@ export class AddressCacheManager {
         }
         return result;
       } catch (e: unknown) {
+        if (e instanceof CacheSessionUnavailableError) {
+          throw e;
+        }
+        if (options.throwOnDecryptFailure) {
+          throw new CacheDecryptionError(this.formatError(e));
+        }
         return {};
       }
+    }
+
+    if (typeof data === "string") {
+      if (options.throwOnDecryptFailure) {
+        throw new CacheDecryptionError("Invalid encrypted Cardano cache blob");
+      }
+      return {};
     }
 
     return data as Record<string, { address: string; pubKey: string }>;
@@ -258,11 +618,27 @@ export class AddressCacheManager {
    * Load Cardano cache for specific chain
    */
   async loadCardanoCache(
-    chainId: string
+    chainId: string,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<Record<string, { address: string; pubKey: string }>> {
+    const priority = options?.scryptPriority ?? "interactive";
+    if (priority === "interactive") {
+      // KV replaces the encrypted blob atomically, so a read observes either
+      // the previous complete blob or the next complete blob. Do not wait for
+      // a background writer that may itself be queued behind interactive
+      // scrypt work: that would invert priorities before this decrypt can even
+      // enter the interactive queue. Background read-modify-write paths keep
+      // using the per-chain lock below.
+      return this.withRetry(() =>
+        this._loadCardanoCacheUnsafe(chainId, { priority })
+      );
+    }
+
     return this.withRetry(() =>
       this.withLock(`cardano:${chainId}`, () =>
-        this._loadCardanoCacheUnsafe(chainId)
+        this._loadCardanoCacheUnsafe(chainId, {
+          priority,
+        })
       )
     );
   }
@@ -272,7 +648,8 @@ export class AddressCacheManager {
    */
   private async _saveCardanoCacheUnsafe(
     chainId: string,
-    cache: Record<string, { address: string; pubKey: string }>
+    cache: Record<string, { address: string; pubKey: string }>,
+    options: { priority: ScryptPriority } = { priority: "background" }
   ): Promise<void> {
     const key = this.getCardanoCacheKey(chainId);
     const failureKey = this.getEncryptionFailureKey(chainId, "cardano");
@@ -280,20 +657,41 @@ export class AddressCacheManager {
     if (!this.password) {
       return;
     }
+    const password = this.password;
+    const generation = this.cacheDerivedKeyGeneration;
 
     try {
       const cacheData: CacheData = {};
-      for (const [walletId, entry] of Object.entries(cache)) {
+      for (const [walletId, entry] of Object.entries(
+        this.filterDeletedWallets(cache)
+      )) {
         cacheData[walletId] = {
           address: entry.address,
           pubKey: entry.pubKey,
         };
       }
 
-      const encrypted = await this.encryptCacheData(cacheData);
-      await this.kvStore.set(key, encrypted);
+      const encrypted = await this.encryptCacheData(
+        cacheData,
+        options.priority
+      );
+      if (
+        generation !== this.cacheDerivedKeyGeneration ||
+        password !== this.password
+      ) {
+        throw new CachePasswordChangedError();
+      }
+      await this.commitEncryptedCacheWrite(
+        key,
+        encrypted,
+        password,
+        generation
+      );
       await this.kvStore.set(failureKey, null as any);
     } catch (e: unknown) {
+      if (e instanceof CachePasswordChangedError) {
+        throw e;
+      }
       const errorMessage = this.formatError(e);
       await this.kvStore.set(failureKey, errorMessage as any);
       throw new Error(
@@ -307,11 +705,14 @@ export class AddressCacheManager {
    */
   async saveCardanoCache(
     chainId: string,
-    cache: Record<string, { address: string; pubKey: string }>
+    cache: Record<string, { address: string; pubKey: string }>,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<void> {
     return this.withRetry(() =>
       this.withLock(`cardano:${chainId}`, () =>
-        this._saveCardanoCacheUnsafe(chainId, cache)
+        this._saveCardanoCacheUnsafe(chainId, cache, {
+          priority: options?.scryptPriority ?? "background",
+        })
       )
     );
   }
@@ -319,14 +720,19 @@ export class AddressCacheManager {
   /**
    * Internal: Load Generic cache without lock
    */
-  private async _loadGenericCacheUnsafe(chainId: string): Promise<
+  private async _loadGenericCacheUnsafe(
+    chainId: string,
+    options: {
+      priority: ScryptPriority;
+      throwOnDecryptFailure?: boolean;
+    } = { priority: "interactive" }
+  ): Promise<
     Record<
       string,
       {
         address: string;
         name?: string;
         pubKey?: string;
-        mnemonicLength?: string;
       }
     >
   > {
@@ -339,7 +745,6 @@ export class AddressCacheManager {
             address: string;
             name?: string;
             pubKey?: string;
-            mnemonicLength?: string;
           }
         >
     >(key);
@@ -348,18 +753,25 @@ export class AddressCacheManager {
 
     if (this.isEncryptedCacheData(data)) {
       if (!this.password) {
+        if (options.throwOnDecryptFailure) {
+          throw new CacheSessionUnavailableError(
+            "Password not set while removing wallet from encrypted cache"
+          );
+        }
         return {};
       }
 
       try {
-        const decrypted = await this.decryptCacheData(data as string);
+        const decrypted = await this.decryptCacheData(
+          data as string,
+          options.priority
+        );
         const result: Record<
           string,
           {
             address: string;
             name?: string;
             pubKey?: string;
-            mnemonicLength?: string;
           }
         > = {};
         for (const [walletId, entry] of Object.entries(decrypted)) {
@@ -367,13 +779,25 @@ export class AddressCacheManager {
             address: entry.address,
             name: entry.name,
             pubKey: entry.pubKey,
-            mnemonicLength: entry.mnemonicLength,
           };
         }
         return result;
       } catch (e: unknown) {
+        if (e instanceof CacheSessionUnavailableError) {
+          throw e;
+        }
+        if (options.throwOnDecryptFailure) {
+          throw new CacheDecryptionError(this.formatError(e));
+        }
         return {};
       }
+    }
+
+    if (typeof data === "string") {
+      if (options.throwOnDecryptFailure) {
+        throw new CacheDecryptionError("Invalid encrypted generic cache blob");
+      }
+      return {};
     }
 
     return data as Record<
@@ -382,7 +806,6 @@ export class AddressCacheManager {
         address: string;
         name?: string;
         pubKey?: string;
-        mnemonicLength?: string;
       }
     >;
   }
@@ -390,20 +813,35 @@ export class AddressCacheManager {
   /**
    * Load Generic cache for specific chain
    */
-  async loadGenericCache(chainId: string): Promise<
+  async loadGenericCache(
+    chainId: string,
+    options?: { scryptPriority?: ScryptPriority }
+  ): Promise<
     Record<
       string,
       {
         address: string;
         name?: string;
         pubKey?: string;
-        mnemonicLength?: string;
       }
     >
   > {
+    const priority = options?.scryptPriority ?? "interactive";
+    if (priority === "interactive") {
+      // See loadCardanoCache(): interactive immutable reads must be able to
+      // enqueue their decrypt even while background cache maintenance owns the
+      // write lock. This also covers legacy blobs with per-blob KDF salts,
+      // which cannot benefit from warming the new shared salt.
+      return this.withRetry(() =>
+        this._loadGenericCacheUnsafe(chainId, { priority })
+      );
+    }
+
     return this.withRetry(() =>
       this.withLock(`generic:${chainId}`, () =>
-        this._loadGenericCacheUnsafe(chainId)
+        this._loadGenericCacheUnsafe(chainId, {
+          priority,
+        })
       )
     );
   }
@@ -419,9 +857,9 @@ export class AddressCacheManager {
         address: string;
         name?: string;
         pubKey?: string;
-        mnemonicLength?: string;
       }
-    >
+    >,
+    options: { priority: ScryptPriority } = { priority: "background" }
   ): Promise<void> {
     const key = this.getGenericCacheKey(chainId);
     const failureKey = this.getEncryptionFailureKey(chainId, "generic");
@@ -429,10 +867,14 @@ export class AddressCacheManager {
     if (!this.password) {
       return;
     }
+    const password = this.password;
+    const generation = this.cacheDerivedKeyGeneration;
 
     try {
       const cacheData: CacheData = {};
-      for (const [walletId, entry] of Object.entries(cache)) {
+      for (const [walletId, entry] of Object.entries(
+        this.filterDeletedWallets(cache)
+      )) {
         cacheData[walletId] = {
           address: entry.address,
           name: entry.name,
@@ -440,10 +882,27 @@ export class AddressCacheManager {
         };
       }
 
-      const encrypted = await this.encryptCacheData(cacheData);
-      await this.kvStore.set(key, encrypted);
+      const encrypted = await this.encryptCacheData(
+        cacheData,
+        options.priority
+      );
+      if (
+        generation !== this.cacheDerivedKeyGeneration ||
+        password !== this.password
+      ) {
+        throw new CachePasswordChangedError();
+      }
+      await this.commitEncryptedCacheWrite(
+        key,
+        encrypted,
+        password,
+        generation
+      );
       await this.kvStore.set(failureKey, null as any);
     } catch (e: unknown) {
+      if (e instanceof CachePasswordChangedError) {
+        throw e;
+      }
       const errorMessage = this.formatError(e);
       await this.kvStore.set(failureKey, errorMessage as any);
       throw new Error(
@@ -463,13 +922,15 @@ export class AddressCacheManager {
         address: string;
         name?: string;
         pubKey?: string;
-        mnemonicLength?: string;
       }
-    >
+    >,
+    options?: { scryptPriority?: ScryptPriority }
   ): Promise<void> {
     return this.withRetry(() =>
       this.withLock(`generic:${chainId}`, () =>
-        this._saveGenericCacheUnsafe(chainId, cache)
+        this._saveGenericCacheUnsafe(chainId, cache, {
+          priority: options?.scryptPriority ?? "background",
+        })
       )
     );
   }
@@ -480,86 +941,63 @@ export class AddressCacheManager {
   async checkConsistency(
     chainId: string,
     walletIds: string[],
-    walletNames: string[],
     activeWalletId: string,
     activeWalletAddress: string,
     isCardano: boolean
   ): Promise<ConsistencyCheckResult> {
-    const lockKey = isCardano ? `cardano:${chainId}` : `generic:${chainId}`;
+    return this.withRetry(async () => {
+      const issues: string[] = [];
 
-    return this.withRetry(() =>
-      this.withLock(lockKey, async () => {
-        const issues: string[] = [];
+      try {
+        const cache = isCardano
+          ? await this._loadCardanoCacheUnsafe(chainId, {
+              priority: "background",
+            })
+          : await this._loadGenericCacheUnsafe(chainId, {
+              priority: "background",
+            });
 
-        try {
-          const cache = isCardano
-            ? await this._loadCardanoCacheUnsafe(chainId)
-            : await this._loadGenericCacheUnsafe(chainId);
+        const cacheIds = Object.keys(cache);
 
-          const cacheIds = Object.keys(cache);
+        const setCacheIds = new Set(cacheIds);
 
-          if (cacheIds.length !== walletIds.length) {
-            issues.push(
-              `Wallet count mismatch: cache has ${cacheIds.length}, expected ${walletIds.length}`
-            );
-          }
-
-          const setCacheIds = new Set(cacheIds);
-          const setWalletIds = new Set(walletIds);
-
-          if (!walletIds.every((id) => setCacheIds.has(id))) {
-            issues.push("Missing wallet IDs in cache");
-          }
-
-          if (!cacheIds.every((id) => setWalletIds.has(id))) {
-            issues.push("Extra wallet IDs in cache");
-          }
-
-          for (let i = 0; i < walletIds.length; i++) {
-            const id = walletIds[i];
-            const expectedName = walletNames[i];
-            const cachedEntry = cache[id];
-
-            if (cachedEntry && "name" in cachedEntry) {
-              const cachedName = cachedEntry.name;
-              if (cachedName && cachedName !== expectedName) {
-                issues.push(
-                  `Name mismatch for wallet ${id}: cached "${cachedName}", expected "${expectedName}"`
-                );
-              }
-            }
-          }
-
-          if (activeWalletId && cache[activeWalletId]) {
-            const cachedAddr = cache[activeWalletId].address || "";
-
-            if (cachedAddr !== activeWalletAddress) {
-              issues.push(
-                `Active wallet address mismatch: cached "${cachedAddr.slice(
-                  0,
-                  10
-                )}...", expected "${activeWalletAddress.slice(0, 10)}..."`
-              );
-            }
-          } else if (activeWalletId) {
-            issues.push(
-              `Missing cache entry for active wallet ${activeWalletId}`
-            );
-          }
-
-          return {
-            isConsistent: issues.length === 0,
-            issues,
-          };
-        } catch (e: unknown) {
-          issues.push(`Failed to check consistency: ${this.formatError(e)}`);
-          return {
-            isConsistent: false,
-            issues,
-          };
+        if (!walletIds.every((id) => setCacheIds.has(id))) {
+          issues.push("Missing wallet IDs in cache");
         }
-      })
-    );
+
+        // Extra IDs are harmless tombstones left by wallet deletion and are
+        // pruned the next time this chain cache is rebuilt. Cache names are
+        // presentation-only; callers must use current keystore metadata.
+
+        if (activeWalletId && cache[activeWalletId]) {
+          const cachedAddr = cache[activeWalletId].address || "";
+
+          if (cachedAddr !== activeWalletAddress) {
+            issues.push(
+              `Active wallet address mismatch: cached "${cachedAddr.slice(
+                0,
+                10
+              )}...", expected "${activeWalletAddress.slice(0, 10)}..."`
+            );
+          }
+        } else if (activeWalletId) {
+          issues.push(
+            `Missing cache entry for active wallet ${activeWalletId}`
+          );
+        }
+
+        return {
+          isConsistent: issues.length === 0,
+          issues,
+        };
+      } catch (e: unknown) {
+        issues.push(`Failed to check consistency: ${this.formatError(e)}`);
+        return {
+          isConsistent: false,
+          issues,
+        };
+      }
+    });
   }
 
   /**
@@ -591,62 +1029,111 @@ export class AddressCacheManager {
   }
 
   /**
-   * Add wallet to all caches
+   * Remove wallet from all caches
    */
-  async addWalletToAllCaches(
+  async removeWalletFromAllCaches(
     walletId: string,
-    walletName: string
+    options?: { mode?: "selective" | "full-clear" }
   ): Promise<void> {
     if (!walletId) return;
 
-    try {
-      for (const info of this.embedChainInfos) {
-        if (info?.features?.includes("cardano")) {
-          const cache = await this.loadCardanoCache(info.chainId);
-          if (cache[walletId] === undefined) {
-            cache[walletId] = { address: "", pubKey: "" };
-            await this.saveCardanoCache(info.chainId, cache);
-          }
-        } else {
-          const cache = await this.loadGenericCache(info.chainId);
-          if (cache[walletId] === undefined) {
-            cache[walletId] = { address: "", name: walletName };
-            await this.saveGenericCache(info.chainId, cache);
-          }
-        }
-      }
-    } catch (e: unknown) {
-      console.error(
-        `[AddressCacheManager] Wallet addition to cache failed:`,
-        e
-      );
-      // Continue execution - cache operations are not critical for core functionality
+    // Record the deletion before the first await. Any older snapshot that is
+    // already in flight will be filtered when it eventually reaches save.
+    this.deletedWalletIds.add(walletId);
+
+    if (options?.mode === "full-clear") {
+      // No wallet entries can be retained after the last wallet is removed.
+      // Delete the complete known blobs without a password or cache crypto.
+      await this.clearAllCaches();
+      return;
     }
-  }
 
-  /**
-   * Remove wallet from all caches
-   */
-  async removeWalletFromAllCaches(walletId: string): Promise<void> {
-    if (!walletId) return;
+    const cleanupPassword = this.password;
+    const cleanupGeneration = this.cacheDerivedKeyGeneration;
 
     try {
       for (const info of this.embedChainInfos) {
-        if (info?.features?.includes("cardano")) {
-          const cache = await this.loadCardanoCache(info.chainId);
-          if (cache[walletId] !== undefined) {
-            delete cache[walletId];
-            await this.saveCardanoCache(info.chainId, cache);
-          }
-        } else {
-          const cache = await this.loadGenericCache(info.chainId);
-          if (cache[walletId] !== undefined) {
-            delete cache[walletId];
-            await this.saveGenericCache(info.chainId, cache);
-          }
-        }
+        const isCardano = info?.features?.includes("cardano");
+        const lockKey = isCardano
+          ? `cardano:${info.chainId}`
+          : `generic:${info.chainId}`;
+
+        await this.withRetry(() =>
+          this.withLock(lockKey, async () => {
+            this.assertCacheSessionCurrent(cleanupPassword, cleanupGeneration);
+            if (isCardano) {
+              let cache: Record<string, { address: string; pubKey: string }>;
+              try {
+                cache = await this._loadCardanoCacheUnsafe(info.chainId, {
+                  priority: "background",
+                  throwOnDecryptFailure: true,
+                });
+              } catch (e: unknown) {
+                if (!(e instanceof CacheDecryptionError)) {
+                  throw e;
+                }
+                this.assertCacheSessionCurrent(
+                  cleanupPassword,
+                  cleanupGeneration
+                );
+                // The wallet cannot be removed selectively from an unreadable
+                // encrypted blob with the current password, so delete the
+                // whole cache for privacy.
+                await this.kvStore.set(
+                  this.getCardanoCacheKey(info.chainId),
+                  null as any
+                );
+                return;
+              }
+              if (cache[walletId] !== undefined) {
+                this.assertCacheSessionCurrent(
+                  cleanupPassword,
+                  cleanupGeneration
+                );
+                delete cache[walletId];
+                await this._saveCardanoCacheUnsafe(info.chainId, cache);
+              }
+              return;
+            }
+
+            let cache: Record<
+              string,
+              { address: string; name?: string; pubKey?: string }
+            >;
+            try {
+              cache = await this._loadGenericCacheUnsafe(info.chainId, {
+                priority: "background",
+                throwOnDecryptFailure: true,
+              });
+            } catch (e: unknown) {
+              if (!(e instanceof CacheDecryptionError)) {
+                throw e;
+              }
+              this.assertCacheSessionCurrent(
+                cleanupPassword,
+                cleanupGeneration
+              );
+              await this.kvStore.set(
+                this.getGenericCacheKey(info.chainId),
+                null as any
+              );
+              return;
+            }
+            if (cache[walletId] !== undefined) {
+              this.assertCacheSessionCurrent(
+                cleanupPassword,
+                cleanupGeneration
+              );
+              delete cache[walletId];
+              await this._saveGenericCacheUnsafe(info.chainId, cache);
+            }
+          })
+        );
       }
     } catch (e: unknown) {
+      if (e instanceof CacheSessionUnavailableError) {
+        return;
+      }
       console.error(
         `[AddressCacheManager] Wallet removal from cache failed:`,
         e
@@ -665,63 +1152,80 @@ export class AddressCacheManager {
 
     try {
       for (const info of this.embedChainInfos) {
-        if (info?.features?.includes("cardano")) {
-          const chainId = info.chainId;
-          const key = this.getCardanoCacheKey(chainId);
-          const data = await this.kvStore.get<any>(key);
+        const isCardano = info?.features?.includes("cardano");
+        const chainId = info.chainId;
+        const lockKey = isCardano ? `cardano:${chainId}` : `generic:${chainId}`;
 
-          if (data && !this.isEncryptedCacheData(data)) {
-            await this.saveCardanoCache(
-              chainId,
-              data as Record<string, { address: string; pubKey: string }>
-            );
-            const loaded = await this.loadCardanoCache(chainId);
-            if (
-              !this.compareCardanoCaches(
-                data as Record<string, { address: string; pubKey: string }>,
-                loaded
-              )
-            ) {
-              await this.kvStore.set(
-                `cache_migration_review_needed:${chainId}`,
-                true as any
-              );
-              throw new Error(
-                `Cardano cache migration validation failed for ${chainId}`
-              );
-            }
-          }
-        } else {
-          const chainId = info.chainId;
-          const key = this.getGenericCacheKey(chainId);
-          const data = await this.kvStore.get<any>(key);
+        await this.withRetry(() =>
+          this.withLock(lockKey, async () => {
+            if (isCardano) {
+              const key = this.getCardanoCacheKey(chainId);
+              const data = await this.kvStore.get<any>(key);
 
-          if (data && !this.isEncryptedCacheData(data)) {
-            await this.saveGenericCache(
-              chainId,
-              data as Record<string, { address: string; name?: string }>
-            );
-            const loaded = await this.loadGenericCache(chainId);
-            if (
-              !this.compareGenericCaches(
-                data as Record<string, { address: string; name?: string }>,
-                loaded
-              )
-            ) {
-              await this.kvStore.set(
-                `cache_migration_review_needed:${chainId}`,
-                true as any
-              );
-              throw new Error(
-                `Generic cache migration validation failed for ${chainId}`
-              );
+              if (
+                data &&
+                typeof data !== "string" &&
+                !this.isEncryptedCacheData(data)
+              ) {
+                const plainCache = data as Record<
+                  string,
+                  { address: string; pubKey: string }
+                >;
+                const expectedCache = this.filterDeletedWallets(plainCache);
+                await this._saveCardanoCacheUnsafe(chainId, plainCache);
+                const loaded = await this._loadCardanoCacheUnsafe(chainId, {
+                  priority: "background",
+                });
+                if (!this.compareCardanoCaches(expectedCache, loaded)) {
+                  await this.kvStore.set(
+                    `cache_migration_review_needed:${chainId}`,
+                    true as any
+                  );
+                  throw new Error(
+                    `Cardano cache migration validation failed for ${chainId}`
+                  );
+                }
+              }
+              return;
             }
-          }
-        }
+
+            const key = this.getGenericCacheKey(chainId);
+            const data = await this.kvStore.get<any>(key);
+
+            if (
+              data &&
+              typeof data !== "string" &&
+              !this.isEncryptedCacheData(data)
+            ) {
+              const plainCache = data as Record<
+                string,
+                {
+                  address: string;
+                  name?: string;
+                  pubKey?: string;
+                }
+              >;
+              const expectedCache = this.filterDeletedWallets(plainCache);
+              await this._saveGenericCacheUnsafe(chainId, plainCache);
+              const loaded = await this._loadGenericCacheUnsafe(chainId, {
+                priority: "background",
+              });
+              if (!this.compareGenericCaches(expectedCache, loaded)) {
+                await this.kvStore.set(
+                  `cache_migration_review_needed:${chainId}`,
+                  true as any
+                );
+                throw new Error(
+                  `Generic cache migration validation failed for ${chainId}`
+                );
+              }
+            }
+          })
+        );
       }
     } catch (e: unknown) {
       console.error(`[AddressCacheManager] Cache migration failed:`, e);
-      // Continue execution - migration failure doesn't break core functionality
+      throw e;
     }
   }
 
@@ -742,8 +1246,22 @@ export class AddressCacheManager {
   }
 
   private compareGenericCaches(
-    a: Record<string, { address: string; name?: string }>,
-    b: Record<string, { address: string; name?: string }>
+    a: Record<
+      string,
+      {
+        address: string;
+        name?: string;
+        pubKey?: string;
+      }
+    >,
+    b: Record<
+      string,
+      {
+        address: string;
+        name?: string;
+        pubKey?: string;
+      }
+    >
   ): boolean {
     const aKeys = Object.keys(a).sort();
     const bKeys = Object.keys(b).sort();
@@ -752,6 +1270,7 @@ export class AddressCacheManager {
       if (aKeys[i] !== bKeys[i]) return false;
     for (const id of aKeys) {
       if ((a[id]?.address || "") !== (b[id]?.address || "")) return false;
+      if ((a[id]?.pubKey || "") !== (b[id]?.pubKey || "")) return false;
       if ((a[id]?.name || "") !== (b[id]?.name || "")) {
         // Name mismatch is allowed historically
       }

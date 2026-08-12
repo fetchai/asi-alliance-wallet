@@ -41,15 +41,21 @@ const { initFn } = init(
       return Promise.resolve(crypto.getRandomValues(array));
     },
     scrypt: async (text: string, params: ScryptParams) => {
-      return await runScryptExclusive(() =>
-        scrypt.scrypt(
-          Buffer.from(text),
-          Buffer.from(params.salt, "hex"),
-          params.n,
-          params.r,
-          params.p,
-          params.dklen
-        )
+      return await runScryptExclusive(
+        (signal, reportProgress) =>
+          scrypt.scrypt(
+            Buffer.from(text),
+            Buffer.from(params.salt, "hex"),
+            params.n,
+            params.r,
+            params.p,
+            params.dklen,
+            () => {
+              reportProgress();
+              return signal.aborted;
+            }
+          ),
+        params.executionPriority
       );
     },
   },

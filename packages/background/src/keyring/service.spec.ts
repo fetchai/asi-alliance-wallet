@@ -124,6 +124,41 @@ describe("KeyRingService", () => {
     });
   });
 
+  describe("restore", () => {
+    it("does not replace a live unlocked keyring from persisted state", async () => {
+      const restore = jest.fn();
+      const multiKeyStoreInfo = [{ selected: true }];
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        restore,
+        getMultiKeyStoreInfo: jest.fn().mockReturnValue(multiKeyStoreInfo),
+      } as any;
+
+      await expect(service.restore()).resolves.toEqual({
+        status: KeyRingStatus.UNLOCKED,
+        multiKeyStoreInfo,
+      });
+      expect(restore).not.toHaveBeenCalled();
+    });
+
+    it("still restores persisted state while the keyring is not unlocked", async () => {
+      let status = KeyRingStatus.LOCKED;
+      const restore = jest.fn().mockImplementation(() => {
+        status = KeyRingStatus.LOCKED;
+      });
+      service["keyRing"] = {
+        get status() {
+          return status;
+        },
+        restore,
+        getMultiKeyStoreInfo: jest.fn().mockReturnValue([]),
+      } as any;
+
+      await service.restore();
+      expect(restore).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("enable", () => {
     it("should throw error when keyring is empty", async () => {
       // Mock keyring status
@@ -433,9 +468,14 @@ describe("KeyRingService", () => {
         {} as any,
         {} as any
       );
+      let keyRingStatus = KeyRingStatus.LOCKED;
       service["keyRing"] = {
-        unlock: jest.fn().mockResolvedValue(undefined),
-        status: KeyRingStatus.UNLOCKED,
+        unlock: jest.fn().mockImplementation(async () => {
+          keyRingStatus = KeyRingStatus.UNLOCKED;
+        }),
+        get status() {
+          return keyRingStatus;
+        },
         getCurrentKeyStore: jest.fn().mockReturnValue({
           type: "mnemonic",
           meta: { mnemonicLength: "24" },
@@ -487,9 +527,14 @@ describe("KeyRingService", () => {
       );
       const resetHostRuntime = jest.fn();
       service["cardanoRuntimeSupervisor"].resetHostRuntime = resetHostRuntime;
+      let keyRingStatus = KeyRingStatus.LOCKED;
       service["keyRing"] = {
-        unlock: jest.fn().mockResolvedValue(undefined),
-        status: KeyRingStatus.UNLOCKED,
+        unlock: jest.fn().mockImplementation(async () => {
+          keyRingStatus = KeyRingStatus.UNLOCKED;
+        }),
+        get status() {
+          return keyRingStatus;
+        },
         getCurrentKeyStore: jest.fn().mockReturnValue({
           type: "mnemonic",
           meta: { mnemonicLength: "24" },
@@ -505,6 +550,38 @@ describe("KeyRingService", () => {
       );
       expect(localCardano.restoreFromKeyStore).not.toHaveBeenCalled();
       expect(resetHostRuntime).toHaveBeenCalled();
+    });
+
+    it("accepts the correct password when another surface already unlocked", async () => {
+      const unlock = jest.fn();
+      const checkPassword = jest.fn().mockReturnValue(true);
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        unlock,
+        checkPassword,
+      } as any;
+
+      await expect(service.unlock("password")).resolves.toBe(
+        KeyRingStatus.UNLOCKED
+      );
+      expect(checkPassword).toHaveBeenCalledWith("password");
+      expect(unlock).not.toHaveBeenCalled();
+    });
+
+    it("rejects a wrong password when another surface already unlocked", async () => {
+      const unlock = jest.fn();
+      const checkPassword = jest.fn().mockReturnValue(false);
+      service["keyRing"] = {
+        status: KeyRingStatus.UNLOCKED,
+        unlock,
+        checkPassword,
+      } as any;
+
+      await expect(service.unlock("wrong-password")).rejects.toThrow(
+        "Invalid password"
+      );
+      expect(checkPassword).toHaveBeenCalledWith("wrong-password");
+      expect(unlock).not.toHaveBeenCalled();
     });
   });
 

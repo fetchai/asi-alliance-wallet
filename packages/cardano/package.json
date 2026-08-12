@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "build": "tsc --build",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@blockfrost/blockfrost-js": "^5.5.0",

@@ -1,6 +1,51 @@
 import { CardanoService } from "./service";
+import { Crypto } from "../keyring/crypto";
 
 describe("CardanoService restoreFromKeyStore detached cleanup", () => {
+  it("uses interactive scrypt for transaction runtime restore", async () => {
+    const service = new CardanoService();
+    const store = {
+      type: "mnemonic",
+      meta: {},
+      version: "1.2",
+      curve: "ed25519",
+      crypto: {},
+    } as any;
+    const commonCrypto = {} as any;
+    const restoringKeyRing = {
+      restore: jest.fn(
+        async (
+          keyStore: unknown,
+          password: string,
+          decryptFn: (store: unknown, password: string) => Promise<unknown>
+        ) => {
+          await decryptFn(keyStore, password);
+        }
+      ),
+      isKeyAgentReady: jest.fn().mockReturnValue(true),
+      getWalletManager: jest.fn().mockReturnValue(undefined),
+    };
+    service["keyRing"] = restoringKeyRing as any;
+    const decryptSpy = jest
+      .spyOn(Crypto, "decrypt")
+      .mockResolvedValue(new Uint8Array());
+
+    try {
+      await service.restoreFromKeyStore(
+        store,
+        "pw",
+        commonCrypto,
+        "cardano-preview",
+        { createdBy: "restore" }
+      );
+      expect(decryptSpy).toHaveBeenCalledWith(commonCrypto, store, "pw", {
+        priority: "interactive",
+      });
+    } finally {
+      decryptSpy.mockRestore();
+    }
+  });
+
   it("disposes wallet manager when restore completes after reset detached it", async () => {
     const service = new CardanoService();
     const dispose = jest.fn();

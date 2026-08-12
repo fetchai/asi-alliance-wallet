@@ -5,6 +5,109 @@ import {
   type CardanoNetwork,
 } from "./utils/network";
 
+export const CARDANO_KEY_CONTEXT_DEADLINE_MS = 10_000;
+export const CARDANO_KEY_CONTEXT_TIMEOUT_CODE = "cardano_key_context_timeout";
+
+export class CardanoKeyContextTimeoutError extends Error {
+  readonly code = CARDANO_KEY_CONTEXT_TIMEOUT_CODE;
+
+  constructor(readonly timeoutMs: number) {
+    super(`Cardano key context timed out after ${timeoutMs}ms`);
+    this.name = "CardanoKeyContextTimeoutError";
+    Object.setPrototypeOf(this, CardanoKeyContextTimeoutError.prototype);
+  }
+}
+
+export function isCardanoKeyContextTimeoutError(
+  error: unknown
+): error is CardanoKeyContextTimeoutError {
+  return (
+    error instanceof CardanoKeyContextTimeoutError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === CARDANO_KEY_CONTEXT_TIMEOUT_CODE)
+  );
+}
+
+type SodiumBip32Ed25519Provider = Awaited<
+  ReturnType<
+    typeof import("@cardano-sdk/crypto")["SodiumBip32Ed25519"]["create"]
+  >
+>;
+
+let sodiumBip32Ed25519Provider: SodiumBip32Ed25519Provider | undefined;
+let sodiumBip32Ed25519Flight: Promise<SodiumBip32Ed25519Provider> | undefined;
+
+/**
+ * Process-scoped provider single-flight. It owns only the stateless Sodium
+ * provider; mnemonic words, passphrases, and wallet key agents stay per-call.
+ */
+async function getSodiumBip32Ed25519Provider(): Promise<SodiumBip32Ed25519Provider> {
+  if (sodiumBip32Ed25519Provider) {
+    return sodiumBip32Ed25519Provider;
+  }
+  if (sodiumBip32Ed25519Flight) {
+    return sodiumBip32Ed25519Flight;
+  }
+
+  const flight = import("@cardano-sdk/crypto").then(({ SodiumBip32Ed25519 }) =>
+    SodiumBip32Ed25519.create()
+  );
+  sodiumBip32Ed25519Flight = flight;
+  flight.then(
+    (provider) => {
+      if (sodiumBip32Ed25519Flight === flight) {
+        sodiumBip32Ed25519Provider = provider;
+        sodiumBip32Ed25519Flight = undefined;
+      }
+    },
+    () => {
+      if (sodiumBip32Ed25519Flight === flight) {
+        sodiumBip32Ed25519Flight = undefined;
+      }
+    }
+  );
+  return flight;
+}
+
+export type CardanoKeyContextDerivation = {
+  /** Settles only when the underlying, non-cancellable SDK work settles. */
+  completion: Promise<Key>;
+  /** Bounded caller view of completion. */
+  result: Promise<Key>;
+};
+
+function withDeadline<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let callerSettled = false;
+    const timer = setTimeout(() => {
+      if (!callerSettled) {
+        callerSettled = true;
+        reject(new CardanoKeyContextTimeoutError(timeoutMs));
+      }
+    }, timeoutMs);
+    (timer as ReturnType<typeof setTimeout> & { unref?: () => void }).unref?.();
+
+    operation.then(
+      (value) => {
+        if (!callerSettled) {
+          callerSettled = true;
+          clearTimeout(timer);
+          resolve(value);
+        }
+      },
+      (error) => {
+        if (!callerSettled) {
+          callerSettled = true;
+          clearTimeout(timer);
+          reject(error);
+        }
+      }
+    );
+  });
+}
+
 /**
  * Offline Cardano key context: InMemoryKeyAgent + deriveAddress only.
  * Must never create CardanoWalletManager, Blockfrost clients, or polling.
@@ -56,10 +159,12 @@ export class CardanoKeyContext {
     const accountIndex = params.accountIndex ?? 0;
     const passphrase = params.passphrase ?? new Uint8Array();
 
-    const { SodiumBip32Ed25519 } = await import("@cardano-sdk/crypto");
-    const { InMemoryKeyAgent } = await import("@cardano-sdk/key-management");
-    const cardanoChainId = await getCardanoChainIdFromNetwork(network);
-    const bip32Ed25519 = await SodiumBip32Ed25519.create();
+    const [{ InMemoryKeyAgent }, cardanoChainId, bip32Ed25519] =
+      await Promise.all([
+        import("@cardano-sdk/key-management"),
+        getCardanoChainIdFromNetwork(network),
+        getSodiumBip32Ed25519Provider(),
+      ]);
 
     const keyAgent = await InMemoryKeyAgent.fromBip39MnemonicWords(
       {
@@ -73,6 +178,30 @@ export class CardanoKeyContext {
     );
 
     return new CardanoKeyContext(keyAgent, network, chainId);
+  }
+
+  /**
+   * Starts one bounded offline address derivation while preserving an owned
+   * completion promise for SDK calls that cannot be cancelled.
+   */
+  static derive(
+    params: {
+      mnemonicWords: string[];
+      chainId: string;
+      accountIndex?: number;
+      passphrase?: Uint8Array;
+    },
+    timeoutMs = CARDANO_KEY_CONTEXT_DEADLINE_MS
+  ): CardanoKeyContextDerivation {
+    const completion = (async () => {
+      const context = await CardanoKeyContext.create(params);
+      return await context.getKey();
+    })();
+
+    return {
+      completion,
+      result: withDeadline(completion, timeoutMs),
+    };
   }
 
   async getKey(): Promise<Key> {
@@ -94,4 +223,10 @@ export class CardanoKeyContext {
       throw new Error("Failed to generate Cardano address");
     }
   }
+}
+
+/** Test-only reset; production callers must keep the process-wide provider. */
+export function resetCardanoKeyContextProviderForTests(): void {
+  sodiumBip32Ed25519Provider = undefined;
+  sodiumBip32Ed25519Flight = undefined;
 }

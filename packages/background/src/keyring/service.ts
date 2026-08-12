@@ -3,7 +3,7 @@ import {
   KeyRingStatus,
   MultiKeyStoreInfoWithSelected,
 } from "./keyring";
-import { Key, KeyStoreMetaKnown } from "./types";
+import { Key, KeyStoreMetaKnown, ScryptPriority } from "./types";
 import { CardanoService } from "../cardano/service";
 import {
   CardanoRuntimeSupervisor,
@@ -234,8 +234,12 @@ export class KeyRingService {
     const isCardano = chainInfo.features?.includes("cardano") ?? false;
     const isEvm = chainInfo.features?.includes("evm") ?? false;
     const keys = isCardano
-      ? await this.keyRing.getKeysForCardano(chainId)
-      : await this.keyRing.getKeys(chainId, isEvm);
+      ? await this.keyRing.getKeysForCardano(chainId, {
+          scryptPriority: "background",
+        })
+      : await this.keyRing.getKeys(chainId, isEvm, {
+          scryptPriority: "background",
+        });
     await this.ensureAndRepairAddressCaches(chainId, keys, {
       isCardano,
       isEvm,
@@ -246,7 +250,11 @@ export class KeyRingService {
     status: KeyRingStatus;
     multiKeyStoreInfo: MultiKeyStoreInfoWithSelected;
   }> {
-    await this.keyRing.restore();
+    // Opening another extension surface must not replace the live keystore
+    // objects while their decrypted material belongs to the current session.
+    if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
+      await this.keyRing.restore();
+    }
     return {
       status: this.keyRing.status,
       multiKeyStoreInfo: this.keyRing.getMultiKeyStoreInfo(),
@@ -373,7 +381,7 @@ export class KeyRingService {
       ) => void | Promise<unknown>;
       const out = sendMessage(payload);
       if (out != null && typeof (out as Promise<unknown>).then === "function") {
-        void (out as Promise<unknown>).catch(() => {});
+        void (out as Promise<unknown>).catch(() => undefined);
       }
     } catch {
       // noop
@@ -495,6 +503,13 @@ export class KeyRingService {
   }
 
   async unlock(password: string): Promise<KeyRingStatus> {
+    if (this.keyRing.status === KeyRingStatus.UNLOCKED) {
+      if (!this.keyRing.checkPassword(password)) {
+        throw new Error("Invalid password");
+      }
+      return this.keyRing.status;
+    }
+
     await this.keyRing.unlock(password);
 
     const ks = this.keyRing.getCurrentKeyStore();
@@ -1569,12 +1584,15 @@ Salt: ${salt}`;
     )) as string;
   }
 
-  async getKeys(chainId: string): Promise<(Key & { name: string })[]> {
+  async getKeys(
+    chainId: string,
+    options?: { scryptPriority?: ScryptPriority }
+  ): Promise<(Key & { name: string })[]> {
     const chainInfo = await this.chainsService.getChainInfo(chainId);
     const isCardano = chainInfo.features?.includes("cardano") ?? false;
 
     if (isCardano) {
-      const keys = await this.keyRing.getKeysForCardano(chainId);
+      const keys = await this.keyRing.getKeysForCardano(chainId, options);
       // Skip ensureAndRepairAddressCaches for performance - getKeysForCardano() already handles caching
       return keys;
     }
@@ -1582,7 +1600,11 @@ Salt: ${salt}`;
     const useEthereumAddress = (
       await this.chainsService.getChainEthereumKeyFeatures(chainId)
     ).address;
-    const keys = await this.keyRing.getKeys(chainId, useEthereumAddress);
+    const keys = await this.keyRing.getKeys(
+      chainId,
+      useEthereumAddress,
+      options
+    );
     // Skip ensureAndRepairAddressCaches for performance - getKeys() already handles caching
     return keys;
   }
@@ -1624,9 +1646,6 @@ Salt: ${salt}`;
     const walletIds = walletInfos.map(
       (w) => (w.meta as KeyStoreMetaKnown)?.["__id__"] || ""
     );
-    const walletNames = walletInfos.map(
-      (w) => (w.meta as KeyStoreMetaKnown)?.["name"] || "Unnamed Account"
-    );
     const genericWalletNames = flags.isCardano
       ? []
       : walletInfos.map((walletInfo) =>
@@ -1655,7 +1674,9 @@ Salt: ${salt}`;
     });
 
     if (flags.isCardano) {
-      const cache = await this.keyRing.loadCardanoChainCache(chainId);
+      const cache = await this.keyRing.loadCardanoChainCache(chainId, {
+        scryptPriority: "background",
+      });
       if (Object.keys(cache).length === 0) {
         const next: Record<string, { address: string; pubKey: string }> = {};
         walletIds.forEach((id, idx) => {
@@ -1673,7 +1694,9 @@ Salt: ${salt}`;
     }
 
     if (!flags.isCardano) {
-      const cache = await this.keyRing.loadGenericChainCache(chainId);
+      const cache = await this.keyRing.loadGenericChainCache(chainId, {
+        scryptPriority: "background",
+      });
       if (Object.keys(cache).length === 0) {
         const next: Record<
           string,
@@ -1681,32 +1704,24 @@ Salt: ${salt}`;
             address: string;
             name?: string;
             pubKey?: string;
-            mnemonicLength?: string;
           }
         > = {};
         walletIds.forEach((id, idx) => {
           const key = keys[idx];
-          const walletInfo = walletInfos[idx];
           const addressHex = key
             ? Buffer.from(key.address).toString("hex")
             : "";
           const pubKeyHex = key ? Buffer.from(key.pubKey).toString("hex") : "";
-          const mnemonicLength = walletInfo?.meta?.["mnemonicLength"];
           next[id] = {
             address: addressHex,
             name: genericWalletNames[idx],
             pubKey: pubKeyHex,
-            mnemonicLength: mnemonicLength,
           };
         });
         await this.keyRing.saveGenericChainCache(chainId, next);
         return;
       }
     }
-
-    const consistencyWalletNames = flags.isCardano
-      ? walletNames
-      : genericWalletNames;
 
     const activeKey = selectedIndex >= 0 ? keys[selectedIndex] : null;
     const activeAddressForCheck =
@@ -1720,7 +1735,6 @@ Salt: ${salt}`;
       await this.keyRing.addressCacheManager.checkConsistency(
         chainId,
         walletIds,
-        consistencyWalletNames,
         activeWalletId,
         activeAddressForCheck,
         flags.isCardano
@@ -1753,22 +1767,18 @@ Salt: ${salt}`;
             address: string;
             name?: string;
             pubKey?: string;
-            mnemonicLength?: string;
           }
         > = {};
         walletIds.forEach((id, idx) => {
           const key = keys[idx];
-          const walletInfo = walletInfos[idx];
           const addressHex = key
             ? Buffer.from(key.address).toString("hex")
             : "";
           const pubKeyHex = key ? Buffer.from(key.pubKey).toString("hex") : "";
-          const mnemonicLength = walletInfo?.meta?.["mnemonicLength"];
           next[id] = {
             address: addressHex,
             name: genericWalletNames[idx],
             pubKey: pubKeyHex,
-            mnemonicLength: mnemonicLength,
           };
         });
         await this.keyRing.saveGenericChainCache(chainId, next);

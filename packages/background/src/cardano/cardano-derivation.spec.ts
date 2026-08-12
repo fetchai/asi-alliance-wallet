@@ -3,6 +3,7 @@ import {
   CardanoWalletManager,
   getBlockfrostConfigs,
 } from "@keplr-wallet/cardano";
+import { CardanoService } from "./service";
 
 const keyAgentFactory = jest.fn();
 
@@ -86,6 +87,60 @@ describe("Cardano derivation regressions", () => {
       await keyAgentFactory.mock.calls[1][0].getPassphrase();
     expect(initialPassphrase).toEqual(switchedPassphrase);
     expect(switchedPassphrase).toEqual(new Uint8Array());
+  });
+
+  it("bounds offline KeyContext creation and address derivation with a typed timeout", async () => {
+    jest.useFakeTimers();
+    let finishAddress!: (value: { address: string }) => void;
+    const addressGate = new Promise<{ address: string }>((resolve) => {
+      finishAddress = resolve;
+    });
+    keyAgentFactory.mockResolvedValue({
+      deriveAddress: jest.fn().mockReturnValue(addressGate),
+    });
+    const walletManagerSpy = jest.spyOn(CardanoWalletManager, "create");
+    walletManagerSpy.mockClear();
+
+    try {
+      const result = new CardanoService().deriveKeyFromKeyStore(
+        keyStore as any,
+        "wallet-password",
+        undefined,
+        "cardano-preprod",
+        { deadlineMs: 1_000 }
+      );
+      for (let i = 0; i < 10; i++) {
+        await Promise.resolve();
+      }
+
+      jest.advanceTimersByTime(1_000);
+      await expect(result).rejects.toMatchObject({
+        name: "CardanoKeyContextTimeoutError",
+        code: "cardano_key_context_timeout",
+        timeoutMs: 1_000,
+      });
+      expect(result.completion).toBeDefined();
+      expect(walletManagerSpy).not.toHaveBeenCalled();
+
+      finishAddress({ address: "addr_test1_late_service" });
+      await expect(result.completion).resolves.toMatchObject({
+        address: Buffer.from("addr_test1_late_service", "utf8"),
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("preserves invalid-chain rejection outside the timeout classification", async () => {
+    const result = new CardanoService().deriveKeyFromKeyStore(
+      keyStore as any,
+      "wallet-password",
+      undefined,
+      "cosmoshub-4",
+      { deadlineMs: 1_000 }
+    );
+
+    await expect(result).rejects.toThrow(/network_context_invalid_chain/);
   });
 });
 

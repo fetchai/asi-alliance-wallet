@@ -925,7 +925,7 @@ const handleListAccountsMsg: (
           }
 
           return {
-            name: entry?.name || walletNames[idx],
+            name: walletNames[idx],
             algo: "secp256k1",
             pubKey: pubKeyHex
               ? Buffer.from(pubKeyHex, "hex")

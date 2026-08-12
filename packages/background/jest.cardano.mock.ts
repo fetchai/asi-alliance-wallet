@@ -1,6 +1,16 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import { InMemoryKeyAgent } from "@cardano-sdk/key-management";
 
+export {
+  CARDANO_KEY_CONTEXT_DEADLINE_MS,
+  CARDANO_KEY_CONTEXT_TIMEOUT_CODE,
+  CardanoKeyContext,
+  CardanoKeyContextTimeoutError,
+  isCardanoKeyContextTimeoutError,
+  resetCardanoKeyContextProviderForTests,
+} from "../cardano/src/cardano-key-context";
+export type { CardanoKeyContextDerivation } from "../cardano/src/cardano-key-context";
+
 type WalletLike = { hasWallet: () => boolean; dispose?: () => void };
 
 const defaultWallet: WalletLike = { hasWallet: () => true };
