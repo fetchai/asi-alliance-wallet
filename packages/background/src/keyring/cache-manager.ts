@@ -330,6 +330,9 @@ export class AddressCacheManager {
       });
       rejectResult(error);
     }, AddressCacheManager.LOCK_TIMEOUT_MS);
+    (
+      timeoutId as ReturnType<typeof setTimeout> & { unref?: () => void }
+    ).unref?.();
 
     // Never time out a running operation: promises cannot be cancelled, and
     // releasing the lock while one still mutates storage breaks exclusion.

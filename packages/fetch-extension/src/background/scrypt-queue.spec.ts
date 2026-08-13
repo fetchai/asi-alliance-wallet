@@ -1,7 +1,6 @@
 import {
   runScryptExclusive,
   SCRYPT_INACTIVITY_TIMEOUT_MS,
-  ScryptInactivityTimeoutError,
 } from "./scrypt-queue";
 
 type ScryptQueueModule = typeof import("./scrypt-queue");
@@ -86,28 +85,29 @@ describe("runScryptExclusive", () => {
   });
 
   it("rejects timed-out caller and waiters without starting another working set", async () => {
+    const queue = loadIsolatedQueue();
     jest.useFakeTimers();
     try {
       let stalledSignal: AbortSignal | undefined;
       let finishStalled!: (value: string) => void;
       let interactiveRan = false;
       let backgroundRan = false;
-      const stalled = runScryptExclusive(async (signal) => {
+      const stalled = queue.runScryptExclusive(async (signal) => {
         stalledSignal = signal;
         return await new Promise<string>((resolve) => {
           finishStalled = resolve;
         });
       });
-      const interactive = runScryptExclusive(async () => {
+      const interactive = queue.runScryptExclusive(async () => {
         interactiveRan = true;
         return "interactive";
       });
-      const background = runScryptExclusive(async () => {
+      const background = queue.runScryptExclusive(async () => {
         backgroundRan = true;
         return "background";
       }, "background");
       const stalledRejection = expect(stalled).rejects.toBeInstanceOf(
-        ScryptInactivityTimeoutError
+        queue.ScryptInactivityTimeoutError
       );
 
       await Promise.resolve();
@@ -120,18 +120,18 @@ describe("runScryptExclusive", () => {
 
       await stalledRejection;
       await expect(interactive).rejects.toBeInstanceOf(
-        ScryptInactivityTimeoutError
+        queue.ScryptInactivityTimeoutError
       );
       await expect(background).rejects.toBeInstanceOf(
-        ScryptInactivityTimeoutError
+        queue.ScryptInactivityTimeoutError
       );
       expect(stalledSignal?.aborted).toBe(true);
       expect(interactiveRan).toBe(false);
       expect(backgroundRan).toBe(false);
 
-      const duringWedge = runScryptExclusive(async () => "during-wedge");
+      const duringWedge = queue.runScryptExclusive(async () => "during-wedge");
       await expect(duringWedge).rejects.toBeInstanceOf(
-        ScryptInactivityTimeoutError
+        queue.ScryptInactivityTimeoutError
       );
 
       // Leave fake timers so the late underlying settle is delivered on the
@@ -142,37 +142,40 @@ describe("runScryptExclusive", () => {
         queueMicrotask(() => queueMicrotask(resolve));
       });
 
-      await expect(runScryptExclusive(async () => "recovered")).resolves.toBe(
-        "recovered"
-      );
+      await expect(
+        queue.runScryptExclusive(async () => "recovered")
+      ).resolves.toBe("recovered");
     } finally {
       jest.useRealTimers();
     }
   });
 
   it("drains exactly once after a timed-out operation rejects late", async () => {
+    const queue = loadIsolatedQueue();
     jest.useFakeTimers();
     try {
       let rejectUnderlying!: (error: Error) => void;
       let nextStarts = 0;
-      const stalled = runScryptExclusive(
+      const stalled = queue.runScryptExclusive(
         async () =>
           await new Promise<string>((_resolve, reject) => {
             rejectUnderlying = reject;
           })
       );
-      const queued = runScryptExclusive(async () => {
+      const queued = queue.runScryptExclusive(async () => {
         nextStarts += 1;
         return "queued";
       });
       const timeout = expect(stalled).rejects.toBeInstanceOf(
-        ScryptInactivityTimeoutError
+        queue.ScryptInactivityTimeoutError
       );
 
       await Promise.resolve();
-      jest.advanceTimersByTime(SCRYPT_INACTIVITY_TIMEOUT_MS);
+      jest.advanceTimersByTime(queue.SCRYPT_INACTIVITY_TIMEOUT_MS);
       await timeout;
-      await expect(queued).rejects.toBeInstanceOf(ScryptInactivityTimeoutError);
+      await expect(queued).rejects.toBeInstanceOf(
+        queue.ScryptInactivityTimeoutError
+      );
       expect(nextStarts).toBe(0);
 
       jest.useRealTimers();
@@ -183,7 +186,7 @@ describe("runScryptExclusive", () => {
       expect(nextStarts).toBe(0);
 
       await expect(
-        runScryptExclusive(async () => {
+        queue.runScryptExclusive(async () => {
           nextStarts += 1;
           return "next";
         })

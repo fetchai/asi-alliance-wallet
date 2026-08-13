@@ -61,6 +61,16 @@ function inactivityTimeoutError(): ScryptInactivityTimeoutError {
   return new ScryptInactivityTimeoutError(SCRYPT_INACTIVITY_TIMEOUT_MS);
 }
 
+/**
+ * No-op in the browser, where timers are numbers. In Node — that is, under the
+ * test runner — it stops a pending timer from holding the process open. The
+ * recovery timer below is meant to fire, so on the wedge path no clearTimeout
+ * ever reaches it and this is the only thing keeping a run from hanging.
+ */
+function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
+  (timer as ReturnType<typeof setTimeout> & { unref?: () => void }).unref?.();
+}
+
 function rejectQueuedWaiters(reason: Error): void {
   const pending = interactiveQueue.splice(0).concat(backgroundQueue.splice(0));
   consecutiveInteractive = 0;
@@ -164,7 +174,9 @@ function drainQueue(): void {
         attemptWedgeRecovery,
         SCRYPT_WEDGE_RECOVERY_DELAY_MS
       );
+      unrefTimer(recovery);
     }, SCRYPT_INACTIVITY_TIMEOUT_MS);
+    unrefTimer(watchdog);
   };
   const releaseAfterUnderlyingSettle = (): void => {
     if (underlyingSettled) {
