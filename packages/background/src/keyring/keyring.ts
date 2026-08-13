@@ -817,6 +817,20 @@ export class KeyRing {
     }
   }
 
+  /**
+   * Serializes the logical commit of every keystore mutation. This is not
+   * redundant with the per-mutation re-read of `multiKeyStore`: a commit stage
+   * stays open across its `save()`, and the code after that await may act on
+   * conclusions drawn before it. `deleteKeyRing` is the concrete case — it
+   * tears the unlock session down when the wallet it removed was the last one,
+   * and without this tail a concurrent add can publish a wallet and drop
+   * `pendingAddOperations` back to zero inside that window, so the delete wipes
+   * the password of a wallet that now exists.
+   *
+   * Pinned by "holds an add outside the wallet array until the delete commit
+   * stage settles" in `keyring.spec.ts`; that test reddens if the tail is
+   * dropped for `Promise.resolve().then(operation)` or a direct `operation()`.
+   */
   private runKeyRingMutation<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.keyRingMutationTail.then(operation);
     this.keyRingMutationTail = result.then(

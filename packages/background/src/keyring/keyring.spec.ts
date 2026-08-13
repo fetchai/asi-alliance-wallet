@@ -2010,6 +2010,109 @@ describe("reloadActiveKeyStoreForSwitch session material cache", () => {
     );
   });
 
+  it("holds an add outside the wallet array until the delete commit stage settles", async () => {
+    const kvStore = new MemoryKVStore("keyring-mutation-tail-serialization");
+    const keyRing = makeKeyRing(kvStore);
+    const deleted = createKeyStore({ __id__: "w1", name: "Only wallet" });
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [deleted];
+    selectKeyStore(keyRing, deleted);
+    (keyRing as any).password = "pw";
+    (keyRing as any).unlockSessionId = "session-mutation-tail";
+    (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1]);
+    (keyRing as any).sessionKeyStoreMaterial.set("w1", {
+      type: "mnemonic",
+      mnemonicMasterSeed: new Uint8Array([1]),
+    });
+    await keyRing.save();
+
+    jest.spyOn(Crypto, "decrypt").mockResolvedValue(Buffer.from("validated"));
+    let releaseAddEncryption!: () => void;
+    let markAddEncryptionStarted!: () => void;
+    const addEncryptionGate = new Promise<void>((resolve) => {
+      releaseAddEncryption = resolve;
+    });
+    const addEncryptionStarted = new Promise<void>((resolve) => {
+      markAddEncryptionStarted = resolve;
+    });
+    jest
+      .spyOn(Crypto, "encrypt")
+      .mockImplementation(
+        async (_crypto, _kdf, type, curve, _text, _password, meta) => {
+          markAddEncryptionStarted();
+          await addEncryptionGate;
+          return { ...createKeyStore(meta), type, curve };
+        }
+      );
+
+    // Hold the delete inside its commit stage: the wallet array is already
+    // emptied in memory, but the persist has not resolved yet.
+    const realSave = keyRing.save.bind(keyRing);
+    let saveCalls = 0;
+    let releaseDeleteSave!: () => void;
+    let markDeleteSaveStarted!: () => void;
+    const deleteSaveGate = new Promise<void>((resolve) => {
+      releaseDeleteSave = resolve;
+    });
+    const deleteSaveStarted = new Promise<void>((resolve) => {
+      markDeleteSaveStarted = resolve;
+    });
+    jest.spyOn(keyRing, "save").mockImplementation(async () => {
+      saveCalls += 1;
+      if (saveCalls === 1) {
+        markDeleteSaveStarted();
+        await deleteSaveGate;
+      }
+      await realSave();
+    });
+
+    // The add has to be in flight before the delete empties the array, because
+    // an add cannot capture an unlock session once no wallet is selected.
+    const addition = keyRing.addPrivateKey(
+      "scrypt",
+      new Uint8Array(32).fill(5),
+      { name: "Added" }
+    );
+    await addEncryptionStarted;
+
+    const deletion = keyRing.deleteKeyRing(0, "pw");
+    await deleteSaveStarted;
+    expect((keyRing as any).multiKeyStore).toHaveLength(0);
+
+    releaseAddEncryption();
+    // The add has finished every heavy step and is now waiting on the mutation
+    // tail alone; give it several turns to prove it cannot get past it.
+    for (let round = 0; round < 5; round += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+
+    // Serialization invariant: the logical commit of the add may not interleave
+    // with the delete commit that is still running. Without the mutation tail
+    // the add publishes its wallet and persists it here, and the delete then
+    // resumes with a stale "no wallets left" conclusion.
+    expect((keyRing as any).pendingAddOperations).toBe(1);
+    expect(saveCalls).toBe(1);
+    expect((keyRing as any).multiKeyStore).toHaveLength(0);
+
+    releaseDeleteSave();
+    await Promise.all([deletion, addition]);
+
+    // The delete must not tear down the unlock session of the wallet the add
+    // published, and the added wallet must survive both in memory and on disk.
+    expect((keyRing as any).password).toBe("pw");
+    expect((keyRing as any).unlockSessionId).not.toBe("");
+    expect(keyRing.status).toBe(KeyRingStatus.UNLOCKED);
+    expect(
+      (keyRing as any).multiKeyStore.map((wallet: any) => wallet.meta["name"])
+    ).toEqual(["Added"]);
+    expect(keyRing.getCurrentKeyStore()?.meta["name"]).toBe("Added");
+
+    const restarted = makeKeyRing(kvStore);
+    await restarted.restore();
+    expect(restarted.getMultiKeyStoreInfo()).toHaveLength(1);
+    expect(restarted.getCurrentKeyStore()?.meta["name"]).toBe("Added");
+  });
+
   it("selects the retained wallet when selected deletion races with add", async () => {
     const kvStore = new MemoryKVStore("keyring-selected-delete-with-add");
     const keyRing = makeKeyRing(kvStore);
