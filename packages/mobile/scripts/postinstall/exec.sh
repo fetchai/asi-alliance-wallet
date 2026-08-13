@@ -19,6 +19,10 @@ cp ${DIR}/restart-fix/JSCRuntime.cpp ${DIR}/../../node_modules/react-native/Reac
 
 . ${DIR}/android/fix-android-legacy-dependency.sh
 . ${DIR}/android/fix-android-splash-screen-flash.sh
+. ${DIR}/android/fix-android-expo-modules-core-permissions.sh
+. ${DIR}/android/fix-android-reanimated-ndk27-warnings.sh
+. ${DIR}/android/fix-android-scrypt-16kb.sh
+. ${DIR}/android/fix-android-async-storage-getviewmanagers.sh
 
 . ${DIR}/ios/fix-ios-blur-view.sh
 . ${DIR}/ios/fix-ios-legacy-pods.sh
