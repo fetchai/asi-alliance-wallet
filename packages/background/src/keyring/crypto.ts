@@ -59,6 +59,66 @@ function deriveKey(
   }
 }
 
+export type BlobMacContext = {
+  storageKey: string;
+  chainId: string;
+};
+
+export type EncryptedBlob = {
+  version: "1.0" | "1.1";
+  crypto: {
+    cipher: "aes-128-ctr";
+    cipherparams: { iv: string };
+    kdf: "scrypt" | "sha256" | "pbkdf2";
+    kdfparams: ScryptParams;
+    ciphertext: string;
+    mac: string;
+  };
+  meta: Record<string, string>;
+};
+
+const ADDRESS_CACHE_MAC_DOMAIN = Buffer.from("address-cache-mac-v1", "utf8");
+
+function encodeLengthPrefixed(parts: Uint8Array[]): Buffer {
+  const chunks: Buffer[] = [];
+  for (const part of parts) {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(part.byteLength, 0);
+    chunks.push(len, Buffer.from(part));
+  }
+  return Buffer.concat(chunks);
+}
+
+/**
+ * v1.0 MAC is sha256(derivedKey[16:32] ‖ ciphertext).
+ * v1.1 also binds IV, KV storage key and chainId so blobs that share one KDF
+ * key cannot be relocated under another storage entry.
+ */
+function buildBlobMacPayload(
+  derivedKey: Uint8Array,
+  ciphertext: Uint8Array,
+  bound?: {
+    iv: Uint8Array;
+    storageKey: string;
+    chainId: string;
+  }
+): Buffer {
+  const macKey = Buffer.from(derivedKey.subarray(derivedKey.length / 2));
+  if (!bound) {
+    return Buffer.concat([macKey, Buffer.from(ciphertext)]);
+  }
+  return Buffer.concat([
+    macKey,
+    ADDRESS_CACHE_MAC_DOMAIN,
+    encodeLengthPrefixed([
+      bound.iv,
+      Buffer.from(bound.storageKey, "utf8"),
+      Buffer.from(bound.chainId, "utf8"),
+    ]),
+    Buffer.from(ciphertext),
+  ]);
+}
+
 export class Crypto {
   public static async encrypt(
     crypto: CommonCrypto,
@@ -136,19 +196,12 @@ export class Crypto {
     text: string,
     password: string,
     meta: Record<string, string>,
-    options?: { priority?: ScryptPriority; salt?: string }
-  ): Promise<{
-    version: "1.0";
-    crypto: {
-      cipher: "aes-128-ctr";
-      cipherparams: { iv: string };
-      kdf: "scrypt" | "sha256" | "pbkdf2";
-      kdfparams: ScryptParams;
-      ciphertext: string;
-      mac: string;
-    };
-    meta: Record<string, string>;
-  }> {
+    options?: {
+      priority?: ScryptPriority;
+      salt?: string;
+      macContext?: BlobMacContext;
+    }
+  ): Promise<EncryptedBlob> {
     let random: Uint8Array;
     let salt = options?.salt;
     if (salt && !/^[0-9a-f]{64}$/i.test(salt)) {
@@ -181,13 +234,19 @@ export class Crypto {
       counter.setBytes(iv);
       const aesCtr = new AES.ModeOfOperation.ctr(derivedKey, counter);
       const ciphertext = Buffer.from(aesCtr.encrypt(buf));
-      macPayload = Buffer.concat([
-        Buffer.from(derivedKey.subarray(derivedKey.length / 2)),
-        ciphertext,
-      ]);
+      const macContext = options?.macContext;
+      if (macContext) {
+        macPayload = buildBlobMacPayload(derivedKey, ciphertext, {
+          iv,
+          storageKey: macContext.storageKey,
+          chainId: macContext.chainId,
+        });
+      } else {
+        macPayload = buildBlobMacPayload(derivedKey, ciphertext);
+      }
       const mac = Hash.sha256(macPayload);
       return {
-        version: "1.0",
+        version: macContext ? "1.1" : "1.0",
         crypto: {
           cipher: "aes-128-ctr",
           cipherparams: { iv: iv.toString("hex") },
@@ -207,21 +266,27 @@ export class Crypto {
 
   public static async decryptBlob(
     crypto: CommonCrypto,
-    blob: {
-      version: "1.0";
-      crypto: {
-        cipher: "aes-128-ctr";
-        cipherparams: { iv: string };
-        kdf: "scrypt" | "sha256" | "pbkdf2";
-        kdfparams: ScryptParams;
-        ciphertext: string;
-        mac: string;
-      };
-      meta: Record<string, string>;
-    },
+    blob: EncryptedBlob,
     password: string,
-    options?: { priority?: ScryptPriority }
+    options?: { priority?: ScryptPriority; macContext?: BlobMacContext }
   ): Promise<Uint8Array> {
+    if (blob.version !== "1.0" && blob.version !== "1.1") {
+      throw new Error(`Unsupported encrypted blob version: ${blob.version}`);
+    }
+    if (blob.version === "1.1" && !options?.macContext) {
+      throw new Error("macContext required for encrypted blob version 1.1");
+    }
+    // A caller that supplies a macContext is asking for a domain-bound MAC, so
+    // never silently fall back to the unbound v1.0 payload for it. Without this
+    // the two payload shapes collide: v1.0 MACs `macKey ‖ ciphertext`, so a v1.1
+    // blob re-presented as v1.0 with `ciphertext' = DOMAIN ‖ lenPrefixed(...) ‖
+    // ciphertext` reproduces the v1.1 payload byte for byte and verifies.
+    if (blob.version === "1.0" && options?.macContext) {
+      throw new Error(
+        "Domain-bound macContext cannot verify an unbound version 1.0 blob"
+      );
+    }
+
     const derivedKey = await deriveKey(
       crypto,
       blob.crypto.kdf as "scrypt" | "sha256" | "pbkdf2",
@@ -231,14 +296,21 @@ export class Crypto {
     );
     let macPayload: Uint8Array | undefined;
     try {
+      const iv = Buffer.from(blob.crypto.cipherparams.iv, "hex");
       const counter = new Counter(0);
-      counter.setBytes(Buffer.from(blob.crypto.cipherparams.iv, "hex"));
+      counter.setBytes(iv);
       const aesCtr = new AES.ModeOfOperation.ctr(derivedKey, counter);
       const ciphertext = Buffer.from(blob.crypto.ciphertext, "hex");
-      macPayload = Buffer.concat([
-        Buffer.from(derivedKey.subarray(derivedKey.length / 2)),
-        ciphertext,
-      ]);
+      if (blob.version === "1.1") {
+        const macContext = options!.macContext!;
+        macPayload = buildBlobMacPayload(derivedKey, ciphertext, {
+          iv,
+          storageKey: macContext.storageKey,
+          chainId: macContext.chainId,
+        });
+      } else {
+        macPayload = buildBlobMacPayload(derivedKey, ciphertext);
+      }
       const mac = Hash.sha256(macPayload);
       if (!Buffer.from(mac).equals(Buffer.from(blob.crypto.mac, "hex"))) {
         throw new Error("Unmatched mac");

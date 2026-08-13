@@ -15,7 +15,7 @@ describe("AddressCacheManager security", () => {
     jest.spyOn(Crypto, "encryptBlob").mockImplementation(
       async (_crypto, _kdf, data) =>
         ({
-          version: "1.0",
+          version: "1.1",
           crypto: {
             cipher: "aes-128-ctr",
             cipherparams: { iv: "a".repeat(32) },
@@ -153,7 +153,7 @@ describe("AddressCacheManager security", () => {
     }
   });
 
-  it("does not let a background lock block an interactive legacy decrypt", async () => {
+  it("does not let a background lock block an interactive decrypt", async () => {
     const kvStore = new MemoryKVStore(
       "cache-manager-interactive-legacy-lock-bypass"
     );
@@ -164,7 +164,13 @@ describe("AddressCacheManager security", () => {
       JSON.stringify({ current: { address: "legacy-address" } }),
       "test-password",
       { cacheType: "address_cache" },
-      { priority: "background" }
+      {
+        priority: "background",
+        macContext: {
+          storageKey: "addr_cache:legacy-chain",
+          chainId: "legacy-chain",
+        },
+      }
     );
     scryptSpy.mockClear();
     await kvStore.set("addr_cache:legacy-chain", JSON.stringify(legacyBlob));
@@ -216,7 +222,13 @@ describe("AddressCacheManager security", () => {
       JSON.stringify({ current: { address: "legacy-address" } }),
       "test-password",
       { cacheType: "address_cache" },
-      { priority: "background" }
+      {
+        priority: "background",
+        macContext: {
+          storageKey: "addr_cache:legacy-chain",
+          chainId: "legacy-chain",
+        },
+      }
     );
     scryptSpy.mockClear();
     await kvStore.set("addr_cache:legacy-chain", JSON.stringify(legacyBlob));
@@ -315,7 +327,7 @@ describe("AddressCacheManager security", () => {
       .spyOn(Crypto, "encryptBlob")
       .mockImplementation(async (_c, _k, data) => {
         return {
-          version: "1.0",
+          version: "1.1",
           crypto: {
             cipher: "aes-128-ctr",
             cipherparams: { iv: "a".repeat(32) },
@@ -410,7 +422,7 @@ describe("AddressCacheManager security", () => {
           await migrationEncryptGate;
         }
         return {
-          version: "1.0",
+          version: "1.1",
           crypto: {
             cipher: "aes-128-ctr",
             cipherparams: { iv: "a".repeat(32) },
@@ -465,7 +477,7 @@ describe("AddressCacheManager security", () => {
     jest.spyOn(Crypto, "encryptBlob").mockImplementation(
       async (_c, _k, data) =>
         ({
-          version: "1.0",
+          version: "1.1",
           crypto: {
             cipher: "aes-128-ctr",
             cipherparams: { iv: "a".repeat(32) },
@@ -538,7 +550,7 @@ describe("AddressCacheManager security", () => {
     jest.spyOn(Crypto, "encryptBlob").mockImplementation(
       async (_c, _k, data) =>
         ({
-          version: "1.0",
+          version: "1.1",
           crypto: {
             cipher: "aes-128-ctr",
             cipherparams: { iv: "a".repeat(32) },
@@ -869,7 +881,7 @@ describe("AddressCacheManager security", () => {
       ],
     });
     const unreadableBlob = JSON.stringify({
-      version: "1.0",
+      version: "1.1",
       crypto: {
         cipher: "aes-128-ctr",
         cipherparams: { iv: "a".repeat(32) },
@@ -905,7 +917,7 @@ describe("AddressCacheManager security", () => {
       ],
     });
     const readableBlob = JSON.stringify({
-      version: "1.0",
+      version: "1.1",
       crypto: {
         cipher: "aes-128-ctr",
         cipherparams: { iv: "a".repeat(32) },
@@ -1251,7 +1263,7 @@ describe("AddressCacheManager security", () => {
       embedChainInfos: [],
     });
     const encryptSpy = jest.spyOn(Crypto, "encryptBlob").mockResolvedValue({
-      version: "1.0",
+      version: "1.1",
       crypto: {
         cipher: "aes-128-ctr",
         cipherparams: { iv: "a".repeat(32) },
@@ -1285,6 +1297,10 @@ describe("AddressCacheManager security", () => {
       {
         priority: "background",
         salt: expect.stringMatching(/^[0-9a-f]{64}$/),
+        macContext: {
+          storageKey: "addr_cache:cosmoshub-4",
+          chainId: "cosmoshub-4",
+        },
       }
     );
   });
@@ -1307,7 +1323,13 @@ describe("AddressCacheManager security", () => {
       expect.anything(),
       expect.anything(),
       "test-password",
-      { priority: "interactive" }
+      {
+        priority: "interactive",
+        macContext: {
+          storageKey: "addr_cache:cosmoshub-4",
+          chainId: "cosmoshub-4",
+        },
+      }
     );
 
     await manager.loadGenericCache("cosmoshub-4", {
@@ -1317,7 +1339,13 @@ describe("AddressCacheManager security", () => {
       expect.anything(),
       expect.anything(),
       "test-password",
-      { priority: "background" }
+      {
+        priority: "background",
+        macContext: {
+          storageKey: "addr_cache:cosmoshub-4",
+          chainId: "cosmoshub-4",
+        },
+      }
     );
   });
 
@@ -1366,11 +1394,206 @@ describe("AddressCacheManager security", () => {
       secondBlob.crypto.cipherparams.iv
     );
     expect(scrypt.mock.calls[0][1].executionPriority).toBe("background");
+    expect(firstBlob.version).toBe("1.1");
+    expect(secondBlob.version).toBe("1.1");
 
     manager.setPassword("");
     manager.setPassword("test-password");
     await manager.loadGenericCache("cosmoshub-4");
     expect(scrypt).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a shared-salt blob relocated under another chain storage key", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-domain-mac-swap");
+    let randomByte = 1;
+    const crypto = {
+      rng: async (array: Uint8Array) => {
+        array.fill(randomByte++);
+        return array;
+      },
+      scrypt: async () =>
+        Uint8Array.from({ length: 32 }, (_, index) => index + 3),
+    } as any;
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto,
+      password: "test-password",
+      embedChainInfos: [],
+    });
+
+    await manager.saveGenericCache("cosmoshub-4", {
+      victim: { address: "cosmos1victim" },
+    });
+    const cosmosBlob = await kvStore.get<string>("addr_cache:cosmoshub-4");
+    expect(cosmosBlob).toBeDefined();
+    expect(JSON.parse(cosmosBlob as string).version).toBe("1.1");
+
+    await kvStore.set("addr_cache:osmosis-1", cosmosBlob);
+    await expect(manager.loadGenericCache("osmosis-1")).resolves.toEqual({});
+    await expect(manager.loadGenericCache("cosmoshub-4")).resolves.toEqual({
+      victim: { address: "cosmos1victim" },
+    });
+  });
+
+  it("rejects a shared-salt Cardano blob relocated under another chain storage key", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-domain-mac-swap-cardano");
+    let randomByte = 1;
+    const crypto = {
+      rng: async (array: Uint8Array) => {
+        array.fill(randomByte++);
+        return array;
+      },
+      scrypt: async () =>
+        Uint8Array.from({ length: 32 }, (_, index) => index + 4),
+    } as any;
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto,
+      password: "test-password",
+      embedChainInfos: [
+        { chainId: "cardano-mainnet", features: ["cardano"] },
+        { chainId: "cardano-preview", features: ["cardano"] },
+      ],
+    });
+
+    await manager.saveCardanoCache("cardano-mainnet", {
+      victim: { address: "addr1victim", pubKey: "" },
+    });
+    const mainnetBlob = await kvStore.get<string>(
+      "cardano_addr_cache:cardano-mainnet"
+    );
+    expect(JSON.parse(mainnetBlob as string).version).toBe("1.1");
+
+    // The Cardano key namespace is separated by its own prefix, so a blob
+    // relocated between Cardano networks must fail its MAC exactly like the
+    // generic path does.
+    await kvStore.set("cardano_addr_cache:cardano-preview", mainnetBlob);
+    await expect(manager.loadCardanoCache("cardano-preview")).resolves.toEqual(
+      {}
+    );
+    await expect(manager.loadCardanoCache("cardano-mainnet")).resolves.toEqual({
+      victim: { address: "addr1victim", pubKey: "" },
+    });
+  });
+
+  it("binds Cardano cache crypto to its own storage key and chain id", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-cardano-mac-context");
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [{ chainId: "cardano-preview", features: ["cardano"] }],
+    });
+    const encryptSpy = jest.spyOn(Crypto, "encryptBlob").mockImplementation(
+      async (_c, _k, data) =>
+        ({
+          version: "1.1",
+          crypto: {
+            cipher: "aes-128-ctr",
+            cipherparams: { iv: "a".repeat(32) },
+            kdf: "scrypt",
+            kdfparams: { salt: "b".repeat(64) },
+            ciphertext: Buffer.from(data).toString("hex"),
+            mac: "c".repeat(64),
+          },
+        } as any)
+    );
+    const decryptSpy = jest
+      .spyOn(Crypto, "decryptBlob")
+      .mockImplementation(async (_c, data) =>
+        Buffer.from((data as any).crypto.ciphertext, "hex")
+      );
+
+    await manager.saveCardanoCache("cardano-preview", {
+      w1: { address: "addr1abc", pubKey: "" },
+    });
+    expect(encryptSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      "test-password",
+      expect.anything(),
+      expect.objectContaining({
+        macContext: {
+          storageKey: "cardano_addr_cache:cardano-preview",
+          chainId: "cardano-preview",
+        },
+      })
+    );
+
+    await manager.loadCardanoCache("cardano-preview");
+    expect(decryptSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "test-password",
+      expect.objectContaining({
+        macContext: {
+          storageKey: "cardano_addr_cache:cardano-preview",
+          chainId: "cardano-preview",
+        },
+      })
+    );
+  });
+
+  it("hard-rejects a legacy v1.0 shared-salt blob: cold miss on load, cold overwrite on save", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-domain-mac-legacy-reject");
+    let randomByte = 1;
+    const crypto = {
+      rng: async (array: Uint8Array) => {
+        array.fill(randomByte++);
+        return array;
+      },
+      scrypt: async () =>
+        Uint8Array.from({ length: 32 }, (_, index) => index + 5),
+    } as any;
+    const salt = "11".repeat(32);
+    await kvStore.set("address_cache_kdf_salt:v1", salt);
+
+    // A blob exactly as a pre-domain-separation build would have written it:
+    // already on the shared salt, but with an unbound v1.0 MAC.
+    const legacyBlob = await Crypto.encryptBlob(
+      crypto,
+      "scrypt",
+      JSON.stringify({ legacy: { address: "cosmos1legacy" } }),
+      "test-password",
+      { cacheType: "address_cache" },
+      { salt }
+    );
+    expect(legacyBlob.version).toBe("1.0");
+    await kvStore.set("addr_cache:cosmoshub-4", JSON.stringify(legacyBlob));
+
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto,
+      password: "test-password",
+      embedChainInfos: [],
+    });
+
+    // Never decrypted: isEncryptedCacheData rejects "1.0", so this reads as
+    // a cold miss rather than as the legacy plaintext.
+    const decryptSpy = jest.spyOn(Crypto, "decryptBlob");
+    await expect(manager.loadGenericCache("cosmoshub-4")).resolves.toEqual({});
+    // Pins the rejection to isEncryptedCacheData specifically. Without this the
+    // decryptBlob guard ("macContext cannot verify an unbound 1.0 blob") would
+    // produce the same empty result, so reverting the version check here would
+    // leave the assertion above green and the layering silently undone.
+    expect(decryptSpy).not.toHaveBeenCalled();
+    decryptSpy.mockRestore();
+
+    // The caller never saw "legacy" (the load above returned nothing), so a
+    // subsequent save cannot merge it back in either — it is gone for good,
+    // same as any other cold-rebuilt cache entry.
+    await manager.saveGenericCache("cosmoshub-4", {
+      added: { address: "cosmos1added" },
+    });
+    const rewritten = JSON.parse(
+      (await kvStore.get<string>("addr_cache:cosmoshub-4")) as string
+    );
+    expect(rewritten.version).toBe("1.1");
+
+    await expect(manager.loadGenericCache("cosmoshub-4")).resolves.toEqual({
+      added: { address: "cosmos1added" },
+    });
   });
 
   it("warms the shared address-cache key with background priority", async () => {
@@ -1534,7 +1757,7 @@ describe("AddressCacheManager security", () => {
     jest.spyOn(Crypto, "encryptBlob").mockImplementation(
       async (_crypto, _kdf, _text, password) =>
         ({
-          version: "1.0",
+          version: "1.1",
           crypto: {
             cipher: "aes-128-ctr",
             cipherparams: { iv: "11".repeat(16) },
@@ -1607,7 +1830,7 @@ describe("AddressCacheManager security", () => {
     await kvStore.set(
       "addr_cache:cosmoshub-4",
       JSON.stringify({
-        version: "1.0",
+        version: "1.1",
         crypto: {
           cipher: "aes-128-ctr",
           cipherparams: { iv: "11".repeat(16) },

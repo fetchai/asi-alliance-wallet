@@ -239,10 +239,13 @@ export class AddressCacheManager {
   }
 
   /**
-   * New writes converge on one session-memoizable KDF key. Existing encrypted
-   * blobs intentionally keep their embedded salts until their chain is used
-   * and normally resaved: eager rewriting would pay the same scrypt cost for
-   * every network at unlock, including networks the user never opens.
+   * New writes converge on one session-memoizable KDF key. Blobs written
+   * before the domain-bound MAC (version "1.0", whether on an individual
+   * per-blob salt or already on this shared salt) are never decrypted with
+   * it or resaved from their old content: isEncryptedCacheData rejects them
+   * outright, and the chain's cache is rebuilt cold the next time that chain
+   * is used. Rewriting stays lazy and per-chain — never eager across every
+   * network at unlock.
    */
   private getSharedCacheSalt(): Promise<string> {
     if (!this.sharedCacheSaltFlight) {
@@ -492,6 +495,14 @@ export class AddressCacheManager {
 
   /**
    * Check if stored cache data is encrypted (new format) or plain text (legacy format).
+   *
+   * Only "1.1" is accepted. Version "1.0" MACs an unbound payload — no IV,
+   * storage key or chainId — so a "1.0" blob copied onto another network's
+   * KV key, or a captured "1.0" blob replayed after its key has since been
+   * rewritten to "1.1", both still verify. A "1.0" blob is therefore treated
+   * like any other unrecognized string: it is never decrypted, the chain's
+   * cache reads as a cold miss, and the next save overwrites it with "1.1".
+   * See item 1 / item 39 in the open-tasks handoff.
    */
   private isEncryptedCacheData(data: any): boolean {
     if (typeof data !== "string") return false;
@@ -499,7 +510,7 @@ export class AddressCacheManager {
       const parsed = JSON.parse(data);
       const c = parsed?.crypto;
       return (
-        parsed?.version === "1.0" &&
+        parsed?.version === "1.1" &&
         c &&
         typeof c.cipher === "string" &&
         c.cipher === "aes-128-ctr" &&
@@ -519,7 +530,8 @@ export class AddressCacheManager {
    */
   private async encryptCacheData(
     data: CacheData,
-    priority: ScryptPriority
+    priority: ScryptPriority,
+    macContext: { storageKey: string; chainId: string }
   ): Promise<string> {
     if (!this.password) {
       throw new Error("Password not set - cannot encrypt cache");
@@ -544,6 +556,7 @@ export class AddressCacheManager {
       {
         priority,
         salt,
+        macContext,
       }
     );
     if (
@@ -560,7 +573,8 @@ export class AddressCacheManager {
    */
   private async decryptCacheData(
     encryptedData: string,
-    priority: ScryptPriority
+    priority: ScryptPriority,
+    macContext: { storageKey: string; chainId: string }
   ): Promise<CacheData> {
     if (!this.password) {
       throw new CacheSessionUnavailableError(
@@ -577,7 +591,7 @@ export class AddressCacheManager {
         this.cacheCrypto,
         encrypted,
         password,
-        { priority }
+        { priority, macContext }
       );
       const plaintext = Buffer.from(decrypted);
       try {
@@ -680,7 +694,8 @@ export class AddressCacheManager {
       try {
         const decrypted = await this.decryptCacheData(
           data as string,
-          options.priority
+          options.priority,
+          { storageKey: key, chainId }
         );
         const result: Record<string, { address: string; pubKey: string }> = {};
         for (const [walletId, entry] of Object.entries(decrypted)) {
@@ -765,7 +780,8 @@ export class AddressCacheManager {
 
       const encrypted = await this.encryptCacheData(
         cacheData,
-        options.priority
+        options.priority,
+        { storageKey: key, chainId }
       );
       if (
         generation !== this.cacheDerivedKeyGeneration ||
@@ -870,7 +886,8 @@ export class AddressCacheManager {
       try {
         const decrypted = await this.decryptCacheData(
           data as string,
-          options.priority
+          options.priority,
+          { storageKey: key, chainId }
         );
         const result: Record<
           string,
@@ -985,7 +1002,8 @@ export class AddressCacheManager {
 
       const encrypted = await this.encryptCacheData(
         cacheData,
-        options.priority
+        options.priority,
+        { storageKey: key, chainId }
       );
       if (
         generation !== this.cacheDerivedKeyGeneration ||
