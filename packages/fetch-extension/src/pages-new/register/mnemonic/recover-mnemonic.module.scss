@@ -84,6 +84,12 @@
     .mnemonicWordFormGroup {
       flex: 1;
     }
+
+    .mnemonicWordContainer {
+      .mnemonicWordInputWrapper {
+        width: 335px;
+      }
+    }
   }
 
   column-gap: 8px;
@@ -99,20 +105,30 @@
       width: 40px;
     }
 
+    .mnemonicWordInputWrapper {
+      position: relative;
+      width: 100%;
+    }
+
     .mnemonicWordFormGroup {
       margin-bottom: 0;
       width: 100%;
     }
 
-    .mnemonicWord {
-      border-radius: 12px !important;
-      padding-right: 10px;
-      border-right: 1px solid $border-grey;
+    .mnemonicWordToggle {
+      position: absolute;
+      right: 18px;
+      top: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      z-index: 4;
     }
 
-    .mnemonicWord:focus,
-    .mnemonicWord:hover {
-      border-right: 1px solid $border-sky-focus;
+    .mnemonicWord {
+      border-radius: 12px !important;
+      padding-right: 32px;
     }
   }
 }

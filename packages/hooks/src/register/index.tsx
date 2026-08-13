@@ -137,16 +137,19 @@ export class RegisterConfig {
     password: string,
     bip44HDPath: BIP44HDPath,
     meta: Record<string, string> = {},
-    selectedNetworks: string[] = []
+    selectedNetworks: string[] = [],
+    chainInfos?: any[],
+    accountStore?: any
   ) {
     this._isLoading = true;
     const defaultName = this.getNextDefaultAccountName();
+    const finalName = (name || "").trim() || defaultName;
 
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
         nameByChain: JSON.stringify(
           Object.fromEntries(
-            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+            selectedNetworks.map((id) => [id, finalName]) // only selected networks
           )
         ),
       });
@@ -161,7 +164,9 @@ export class RegisterConfig {
             name: defaultName,
             ...meta,
           },
-          bip44HDPath
+          bip44HDPath,
+          chainInfos ?? [],
+          accountStore
         );
       } else {
         yield this.keyRingStore.addMnemonicKey(
@@ -219,12 +224,13 @@ export class RegisterConfig {
   ) {
     this._isLoading = true;
     const defaultName = this.getNextDefaultAccountName();
+    const finalName = (name || "").trim() || defaultName;
     const meta = {};
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
         nameByChain: JSON.stringify(
           Object.fromEntries(
-            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+            selectedNetworks.map((id) => [id, finalName]) // only selected networks
           )
         ),
       });
@@ -269,12 +275,13 @@ export class RegisterConfig {
   ) {
     this._isLoading = true;
     const defaultName = this.getNextDefaultAccountName();
+    const finalName = (name || "").trim() || defaultName;
 
     if (selectedNetworks.length > 0) {
       Object.assign(meta, {
         nameByChain: JSON.stringify(
           Object.fromEntries(
-            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+            selectedNetworks.map((id) => [id, finalName]) // only selected networks
           )
         ),
       });

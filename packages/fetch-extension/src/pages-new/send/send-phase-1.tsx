@@ -10,10 +10,23 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { Label } from "reactstrap";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { CoinPretty, Dec } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { removeComma } from "@utils/format";
 import style from "./style.module.scss";
 import { SendConfigs } from "./types";
+import {
+  BuildSendAdaTxDraftMsg,
+  CardanoSyncStatusResponse,
+  DiscardSendAdaTxDraftMsg,
+  GetCardanoSyncStatusMsg,
+  GetMaxSpendableAdaMsg,
+} from "@keplr-wallet/background";
+import type { BuildSendAdaTxDraftResult } from "@keplr-wallet/background";
+import { lovelacesToAdaString } from "@keplr-wallet/cardano";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { CARDANO_NATIVE_TOKEN_TYPE } from "@keplr-wallet/stores";
+import { getCardanoAdaBelowMinimumError } from "./send-phase-2-helpers";
 
 interface SendPhase1Props {
   sendConfigs: SendConfigs;
@@ -28,6 +41,10 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
     const { chainStore, accountStore, analyticsStore } = useStore();
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const [isMaxAmount, setIsMaxAmount] = useState(false);
+    const [
+      cardanoProtocolMinOutputLovelace,
+      setCardanoProtocolMinOutputLovelace,
+    ] = useState<string | null>(null);
     const navigate = useNavigate();
     const intl = useIntl();
     useEffect(() => {
@@ -35,17 +52,193 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
       setFromPhase1(true);
     }, []);
 
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+    const cardanoDenom = chainStore.current.stakeCurrency.coinDenom;
+    const nativeAdaCoinDecimals = chainStore.current.stakeCurrency.coinDecimals;
+    const sendCurrency = sendConfigs.amountConfig.sendCurrency;
+    const sendCurrencyCoinDecimals =
+      sendCurrency?.coinDecimals ?? nativeAdaCoinDecimals;
+    const isNativeAdaSend =
+      new DenomHelper(sendCurrency.coinMinimalDenom).type === "native";
+
+    useEffect(() => {
+      if (!isCardano || !isNativeAdaSend) {
+        setCardanoProtocolMinOutputLovelace(null);
+        return;
+      }
+
+      const bech32Address = accountInfo.bech32Address?.trim();
+      if (!bech32Address) {
+        setCardanoProtocolMinOutputLovelace(null);
+        return;
+      }
+
+      let cancelled = false;
+      setCardanoProtocolMinOutputLovelace(null);
+      void (async () => {
+        try {
+          const requester = new InExtensionMessageRequester();
+          const syncStatus = (await requester.sendMessage(
+            BACKGROUND_PORT,
+            new GetCardanoSyncStatusMsg(
+              chainStore.current.chainId,
+              document.hidden ? "background" : "foreground"
+            )
+          )) as CardanoSyncStatusResponse | undefined;
+
+          if (
+            cancelled ||
+            syncStatus?.state !== "ready_with_data" ||
+            !syncStatus?.isSettled
+          ) {
+            return;
+          }
+
+          const res = (await requester.sendMessage(
+            BACKGROUND_PORT,
+            new BuildSendAdaTxDraftMsg(
+              bech32Address,
+              "0",
+              undefined,
+              chainStore.current.chainId,
+              undefined,
+              true
+            )
+          )) as BuildSendAdaTxDraftResult | null;
+
+          if (cancelled) {
+            if (res?.kind === "draft") {
+              void requester
+                .sendMessage(
+                  BACKGROUND_PORT,
+                  new DiscardSendAdaTxDraftMsg(res.draftId)
+                )
+                .catch(() => {});
+            }
+            return;
+          }
+
+          if (res?.kind === "minimum_violation" && res.minimumOutputLovelace) {
+            setCardanoProtocolMinOutputLovelace(res.minimumOutputLovelace);
+          } else if (res?.kind === "draft") {
+            void requester
+              .sendMessage(
+                BACKGROUND_PORT,
+                new DiscardSendAdaTxDraftMsg(res.draftId)
+              )
+              .catch(() => {});
+          }
+        } catch {
+          if (!cancelled) {
+            setCardanoProtocolMinOutputLovelace(null);
+          }
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [
+      isCardano,
+      isNativeAdaSend,
+      accountInfo.bech32Address,
+      chainStore.current.chainId,
+    ]);
+
+    const cardanoAdaMinError =
+      isCardano && isNativeAdaSend
+        ? getCardanoAdaBelowMinimumError({
+            amountStr: sendConfigs.amountConfig.amount ?? "",
+            minimumOutputLovelace: cardanoProtocolMinOutputLovelace,
+            sendCurrencyCoinDecimals,
+            cardanoDenom,
+            nativeAdaCoinDecimals,
+            amountError: sendConfigs.amountConfig.error,
+          })
+        : null;
+
     return (
       <div>
         <CoinInput
-          onPress={() => {
+          onPress={async () => {
+            const denomHelper = new DenomHelper(
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom
+            );
+            const isTokenSend = denomHelper.type === CARDANO_NATIVE_TOKEN_TYPE;
+
+            if (isCardano && !isTokenSend) {
+              const decimals =
+                sendConfigs.amountConfig.sendCurrency.coinDecimals ?? 6;
+              const requester = new InExtensionMessageRequester();
+
+              // Lace-like: use GetMaxSpendableAda only when wallet is synced
+              try {
+                const syncStatus = (await requester.sendMessage(
+                  BACKGROUND_PORT,
+                  new GetCardanoSyncStatusMsg(
+                    chainStore.current.chainId,
+                    document.hidden ? "background" : "foreground"
+                  )
+                )) as CardanoSyncStatusResponse | undefined;
+
+                if (
+                  syncStatus?.state === "ready_with_data" &&
+                  syncStatus?.isSettled
+                ) {
+                  const maxLovelace = (await requester.sendMessage(
+                    BACKGROUND_PORT,
+                    new GetMaxSpendableAdaMsg(
+                      chainStore.current.chainId,
+                      accountInfo.bech32Address,
+                      sendConfigs.recipientConfig.recipient || undefined,
+                      sendConfigs.memoConfig.memo || undefined
+                    )
+                  )) as string;
+
+                  if (maxLovelace && maxLovelace !== "0") {
+                    sendConfigs.amountConfig.setAmount(
+                      lovelacesToAdaString(maxLovelace, decimals)
+                    );
+                    return;
+                  }
+                }
+              } catch {
+                // Fall through to REST fallback
+              }
+
+              // Fallback: use last known balance (REST) when not synced or GetMaxSpendableAda fails
+              const feeBuffer = new CoinPretty(
+                sendConfigs.amountConfig.sendCurrency,
+                new Int(500_000) // 0.5 ADA conservative buffer for fees
+              );
+              const maxAmount = balance.sub(feeBuffer);
+              const safeMaxAmount = maxAmount.toDec().isNegative()
+                ? new CoinPretty(
+                    sendConfigs.amountConfig.sendCurrency,
+                    new Int(0)
+                  )
+                : maxAmount;
+              const actualAmount = safeMaxAmount
+                .shrink(true)
+                .hideDenom(true)
+                .toString();
+              sendConfigs.amountConfig.setAmount(removeComma(actualAmount));
+              return;
+            }
+
+            // Cosmos / EVM: subtract fee from spendable balance
             const fees = sendConfigs.feeConfig.getFeeTypePrettyForFeeCurrency(
               sendConfigs?.feeConfig?.feeCurrencies?.[0],
-              sendConfigs.feeConfig.feeType ?? "average" // fee type is not set at this point, so default to average
+              sendConfigs.feeConfig.feeType ?? "average"
             );
-            // subtract fee from balance to set max amount to avoid insufficient balance error
-            const actualAmount = balance
-              .sub(fees)
+            const maxAmount = balance.sub(fees);
+            const safeMaxAmount = maxAmount.toDec().isNegative()
+              ? new CoinPretty(
+                  sendConfigs.amountConfig.sendCurrency,
+                  new Int(0)
+                )
+              : maxAmount;
+            const actualAmount = safeMaxAmount
               .shrink(true)
               .hideDenom(true)
               .toString();
@@ -93,6 +286,22 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
             return undefined;
           })()}
         />
+        {cardanoAdaMinError ? (
+          <div
+            className={style["sendInlineAlert"]}
+            style={{
+              background: "rgba(220, 53, 69, 0.1)",
+              border: "1px solid rgba(220, 53, 69, 0.3)",
+              color: "#dc3545",
+            }}
+          >
+            <i
+              className="fas fa-exclamation-circle"
+              style={{ marginRight: "8px" }}
+            />
+            {cardanoAdaMinError}
+          </div>
+        ) : null}
         <TokenSelectorDropdown amountConfig={sendConfigs.amountConfig} />
         <Label className={style["label"]}>Send from</Label>
         <Card
@@ -121,7 +330,8 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           variant="dark"
           disabled={Boolean(
             sendConfigs.amountConfig.amount === "" ||
-              sendConfigs.amountConfig.error
+              sendConfigs.amountConfig.error ||
+              cardanoAdaMinError
           )}
           text="Next"
           onClick={() => {

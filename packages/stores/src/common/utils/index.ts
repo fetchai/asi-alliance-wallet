@@ -217,7 +217,7 @@ export const decodeGrantAuthorization = (rawGrant: any): Grant => {
 export const decodeIBCClientState = (anyClientState?: {
   typeUrl: string;
   value: string;
-}) => {
+}): Record<string, unknown> => {
   if (!anyClientState) return { "@type": "" };
 
   const { typeUrl, value } = anyClientState;

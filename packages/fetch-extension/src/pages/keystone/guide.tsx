@@ -5,6 +5,13 @@ import SwiperClass, { Navigation, Pagination } from "swiper";
 import "swiper/swiper-bundle.min.css";
 import style from "./style.module.scss";
 
+const KEYSTONE_TUTORIAL_IMAGES: Record<number, string> = {
+  1: require("../../public/assets/img/keystone/tutorial1.png"),
+  2: require("../../public/assets/img/keystone/tutorial2.png"),
+  3: require("../../public/assets/img/keystone/tutorial3.png"),
+  4: require("../../public/assets/img/keystone/tutorial4.png"),
+};
+
 export function Guide({ onScan }: { onScan(): void }) {
   const [stepIndex, setStepIndex] = useState(0);
   const onActiveIndexChange = (swiper: SwiperClass) => {
@@ -23,10 +30,7 @@ export function Guide({ onScan }: { onScan(): void }) {
         >
           {[1, 2, 3, 4].map((e: number) => (
             <SwiperSlide className={style["item"]} key={e}>
-              <img
-                src={require(`../../public/assets/img/keystone/tutorial${e}.png`)}
-                width="285"
-              />
+              <img src={KEYSTONE_TUTORIAL_IMAGES[e]} width="285" />
             </SwiperSlide>
           ))}
           <div id="swiper-prev" className={style["prev"]}>

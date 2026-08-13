@@ -10,6 +10,7 @@ import { Bech32Address } from "@keplr-wallet/cosmos";
 import axios from "axios";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { ChainInfo } from "@keplr-wallet/types";
+import { flowResult } from "mobx";
 
 export const AddEvmChain: FunctionComponent = () => {
   const navigate = useNavigate();
@@ -244,11 +245,11 @@ export const AddEvmChain: FunctionComponent = () => {
 
   const isValid = !hasErrors && newChainInfo.rpc && newChainInfo.chainId;
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     try {
-      chainStore.addCustomChainInfo(newChainInfo);
-      chainStore.selectChain(newChainInfo.chainId);
+      await flowResult(chainStore.addCustomChainInfo(newChainInfo));
+      await flowResult(chainStore.selectChainAndPersist(newChainInfo.chainId));
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new EVM chain",
       });

@@ -8,7 +8,13 @@ import {
   GetNetworkMsg,
   SwitchNetworkByChainIdMsg,
   AddNetworkAndSwitchMsg,
-  SetSelectedChainMsg,
+  GetSelectedChainIdMsg,
+  GetSelectedChainSnapshotMsg,
+  SelectSelectedChainMsg,
+  GetNetworkProjectionMsg,
+  IssueSignSwitchTicketMsg,
+  GetSignSwitchTicketValidMsg,
+  ClearSignSwitchTicketMsg,
 } from "./messages";
 import { ROUTE } from "./constants";
 import { getHandler } from "./handler";
@@ -18,7 +24,13 @@ export function init(router: Router, service: ChainsService): void {
   router.registerMessage(GetChainInfosMsg);
   router.registerMessage(GetChainInfosWithoutEndpointsMsg);
   router.registerMessage(SuggestChainInfoMsg);
-  router.registerMessage(SetSelectedChainMsg);
+  router.registerMessage(GetSelectedChainIdMsg);
+  router.registerMessage(GetSelectedChainSnapshotMsg);
+  router.registerMessage(GetNetworkProjectionMsg);
+  router.registerMessage(SelectSelectedChainMsg);
+  router.registerMessage(IssueSignSwitchTicketMsg);
+  router.registerMessage(GetSignSwitchTicketValidMsg);
+  router.registerMessage(ClearSignSwitchTicketMsg);
   router.registerMessage(RemoveSuggestedChainInfoMsg);
   router.registerMessage(GetNetworkMsg);
   router.registerMessage(ListNetworksMsg);

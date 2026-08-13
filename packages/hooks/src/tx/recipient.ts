@@ -208,7 +208,7 @@ export class RecipientConfig
 
   @computed
   get error(): Error | undefined {
-    const rawRecipient = this.rawRecipient.trim();
+    const rawRecipient = this._rawRecipient.trim();
 
     if (!rawRecipient) {
       return new EmptyAddressError("Address is empty");
@@ -258,6 +258,47 @@ export class RecipientConfig
       }
     }
 
+    const isCardano = this.chainInfo.features?.includes("cardano");
+    if (isCardano) {
+      if (!rawRecipient) {
+        return undefined;
+      }
+
+      let isValid: boolean;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-extraneous-dependencies, @typescript-eslint/no-var-requires
+        const { Cardano } = require("@cardano-sdk/core");
+        if (
+          Cardano &&
+          Cardano.isAddress &&
+          typeof Cardano.isAddress === "function"
+        ) {
+          isValid = Cardano.isAddress(rawRecipient);
+        } else {
+          // Fallback to format check if SDK function not available
+          isValid =
+            rawRecipient.startsWith("addr1") || // Shelley mainnet
+            rawRecipient.startsWith("addr_test") || // Shelley testnet
+            rawRecipient.startsWith("Ae2") || // Byron Icarus mainnet
+            rawRecipient.startsWith("DdzFF") || // Byron Daedalus mainnet
+            rawRecipient.startsWith("$"); // Handle
+        }
+      } catch (error) {
+        isValid =
+          rawRecipient.startsWith("addr1") || // Shelley mainnet
+          rawRecipient.startsWith("addr_test") || // Shelley testnet
+          rawRecipient.startsWith("Ae2") || // Byron Icarus mainnet
+          rawRecipient.startsWith("DdzFF") || // Byron Daedalus mainnet
+          rawRecipient.startsWith("$"); // Handle
+      }
+
+      if (!isValid) {
+        return new InvalidBech32Error("Invalid Cardano address format");
+      }
+      return undefined;
+    }
+
+    // Not Cardano, use standard Bech32 validation
     try {
       Bech32Address.validate(this.recipient, this.bech32Prefix);
     } catch (e) {
@@ -265,7 +306,7 @@ export class RecipientConfig
         `Invalid bech32: ${e.message || e.toString()}`
       );
     }
-    return;
+    return undefined;
   }
 
   get rawRecipient(): string {

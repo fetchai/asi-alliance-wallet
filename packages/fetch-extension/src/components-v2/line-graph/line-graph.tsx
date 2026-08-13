@@ -161,6 +161,21 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     }
   }
 
+  const yAxisLabelAlignmentPlugin = useMemo(
+    () => ({
+      beforeDraw: (chart: any) => {
+        if (!chart?.ctx) return;
+        chart.ctx.save();
+        chart.ctx.textAlign = "right";
+      },
+      afterDraw: (chart: any) => {
+        if (!chart?.ctx) return;
+        chart.ctx.restore();
+      },
+    }),
+    []
+  );
+
   return (
     <div
       className={classNames(
@@ -181,6 +196,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
       ) : (
         <Line
           data={chartData}
+          plugins={[yAxisLabelAlignmentPlugin]}
           options={{
             ...chartOptions,
             scales: {

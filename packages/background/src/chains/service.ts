@@ -18,6 +18,7 @@ import { InteractionService } from "../interaction";
 import { Env, WEBPAGE_PORT } from "@keplr-wallet/router";
 import { SuggestChainInfoMsg, SwitchNetworkByChainIdMsg } from "./messages";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { getDefaultFallbackChainId } from "./default-chain";
 import { validateBasicChainInfoType } from "@keplr-wallet/chain-validator";
 import { getBasicAccessPermissionType, PermissionService } from "../permission";
 import { Mutable, Optional } from "utility-types";
@@ -30,6 +31,27 @@ import {
   IBCCurrency,
   ERC20Currency,
 } from "@fetchai/wallet-types";
+import { NetworkAuthority } from "./authority/network-authority";
+import {
+  NetworkAuthorityCommitObserver,
+  NetworkAuthoritySnapshot,
+} from "./authority/types";
+import {
+  issueSignSwitchTicket,
+  isSignSwitchTicketValid,
+  type SignSwitchTicket,
+} from "./sign-switch-ticket";
+import {
+  NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
+  notifyNetworkSurfacesSyncListeners,
+} from "./network-surfaces-sync-fanout";
+
+export { NETWORK_SURFACES_SYNC_MESSAGE_TYPE } from "./network-surfaces-sync-fanout";
+export {
+  addNetworkSurfacesSyncListener,
+  notifyNetworkSurfacesSyncListeners,
+} from "./network-surfaces-sync-fanout";
+export type { NetworkSurfacesSyncPayload } from "./network-surfaces-sync-fanout";
 
 type ChainRemovedHandler = (chainId: string, identifier: string) => void;
 
@@ -37,13 +59,20 @@ export class ChainsService {
   protected onChainRemovedHandlers: ChainRemovedHandler[] = [];
 
   protected cachedChainInfos: ChainInfoWithCoreTypes[] | undefined;
+  /** Mirrors the committed authority snapshot after wire-up / hydrate. */
   protected selectedChainId: string | undefined;
+  /** Mirrors committed authority revision after wire-up / hydrate. */
+  private committedRevision = 0;
 
   protected chainUpdaterService!: ChainUpdaterService;
   protected interactionService!: InteractionService;
   public permissionService!: PermissionService;
 
   protected readonly kvStoreForSuggestChain: KVStore;
+
+  private networkAuthority: NetworkAuthority | undefined;
+  private signSwitchTicket: SignSwitchTicket | null = null;
+  private authorityUnsubscribers: Array<() => void> = [];
 
   constructor(
     protected readonly kvStore: KVStore,
@@ -154,6 +183,28 @@ export class ChainsService {
 
   clearCachedChainInfos() {
     this.cachedChainInfos = undefined;
+  }
+
+  private getChainIdentifierSafe(chainId: string): string | undefined {
+    try {
+      return ChainIdHelper.parse(chainId).identifier;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async findChainInfo(
+    chainId: string
+  ): Promise<ChainInfoWithCoreTypes | undefined> {
+    const identifier = this.getChainIdentifierSafe(chainId);
+    if (!identifier) {
+      return undefined;
+    }
+
+    return (await this.getChainInfos()).find(
+      (chainInfo) =>
+        this.getChainIdentifierSafe(chainInfo.chainId) === identifier
+    );
   }
 
   async getChainInfo(chainId: string): Promise<ChainInfoWithCoreTypes> {
@@ -406,14 +457,7 @@ export class ChainsService {
   }
 
   async hasChainInfo(chainId: string): Promise<boolean> {
-    return (
-      (await this.getChainInfos()).find((chainInfo) => {
-        return (
-          ChainIdHelper.parse(chainInfo.chainId).identifier ===
-          ChainIdHelper.parse(chainId).identifier
-        );
-      }) != null
-    );
+    return (await this.findChainInfo(chainId)) != null;
   }
 
   async suggestChainInfo(
@@ -440,16 +484,6 @@ export class ChainsService {
       updateFromRepoDisabled: receivedChainInfo.updateFromRepoDisabled,
     };
 
-    if (receivedChainInfo.updateFromRepoDisabled) {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added with updateFromRepoDisabled`
-      );
-    } else {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added`
-      );
-    }
-
     await this.permissionService.addPermission(
       [chainInfo.chainId],
       getBasicAccessPermissionType(),
@@ -457,6 +491,8 @@ export class ChainsService {
     );
 
     await this.addChainInfo(receivedChainInfo);
+    // Complete the external request only after registry + selection are committed.
+    await this.setSelectedChain(receivedChainInfo.chainId);
   }
 
   async getSuggestedChainInfos(): Promise<ChainInfoWithRepoUpdateOptions[]> {
@@ -468,6 +504,17 @@ export class ChainsService {
   }
 
   async addChainInfo(chainInfo: ChainInfoWithRepoUpdateOptions): Promise<void> {
+    if (this.networkAuthority) {
+      await this.networkAuthority.commitAddChain(chainInfo);
+      return;
+    }
+    await this.commitAddChainInfo(chainInfo);
+  }
+
+  /** Registry write only — must run inside the authority FIFO when wired. */
+  private async commitAddChainInfo(
+    chainInfo: ChainInfoWithRepoUpdateOptions
+  ): Promise<void> {
     if (await this.hasChainInfo(chainInfo.chainId)) {
       throw new Error("Same chain is already registered");
     }
@@ -496,6 +543,24 @@ export class ChainsService {
       throw new Error("Can't remove the embedded chain");
     }
 
+    if (this.networkAuthority) {
+      await this.networkAuthority.commitRemoveChain(chainId);
+      return;
+    }
+
+    await this.commitRemoveChainInfo(chainId);
+  }
+
+  /** Registry write only — must run inside the authority FIFO when wired. */
+  private async commitRemoveChainInfo(chainId: string): Promise<void> {
+    if (!(await this.hasChainInfo(chainId))) {
+      throw new Error("Chain is not registered");
+    }
+
+    if ((await this.getChainInfo(chainId)).embeded) {
+      throw new Error("Can't remove the embedded chain");
+    }
+
     const savedChainInfos =
       (await this.kvStoreForSuggestChain.get<ChainInfoWithRepoUpdateOptions[]>(
         "chain-infos"
@@ -513,14 +578,25 @@ export class ChainsService {
       resultChainInfo
     );
 
-    // Clear the updated chain info.
-    await this.chainUpdaterService.clearUpdatedProperty(chainId);
+    this.clearCachedChainInfos();
 
-    for (const chainRemovedHandler of this.onChainRemovedHandlers) {
-      chainRemovedHandler(chainId, ChainIdHelper.parse(chainId).identifier);
+    // Best-effort cleanup after the registry commit is durable.
+    try {
+      await this.chainUpdaterService.clearUpdatedProperty(chainId);
+    } catch (error) {
+      console.warn(
+        "[ChainsService] clearUpdatedProperty failed after remove:",
+        error
+      );
     }
 
-    this.clearCachedChainInfos();
+    for (const chainRemovedHandler of this.onChainRemovedHandlers) {
+      try {
+        chainRemovedHandler(chainId, ChainIdHelper.parse(chainId).identifier);
+      } catch (error) {
+        console.warn("[ChainsService] chain removed handler failed:", error);
+      }
+    }
   }
 
   async getChainEthereumKeyFeatures(
@@ -601,16 +677,6 @@ export class ChainsService {
       updateFromRepoDisabled: receivedChainInfo.updateFromRepoDisabled,
     };
 
-    if (receivedChainInfo.updateFromRepoDisabled) {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added with updateFromRepoDisabled`
-      );
-    } else {
-      console.log(
-        `Chain ${receivedChainInfo.chainName}(${receivedChainInfo.chainId}) added`
-      );
-    }
-
     await this.permissionService.addPermission(
       [chainInfo.chainId],
       getBasicAccessPermissionType(),
@@ -618,6 +684,7 @@ export class ChainsService {
     );
 
     await this.addChainInfo(receivedChainInfo);
+    await this.setSelectedChain(receivedChainInfo.chainId);
   }
 
   async switchChainByChainId(
@@ -625,48 +692,311 @@ export class ChainsService {
     chainId: string,
     origin: string
   ): Promise<void> {
-    const receivedChainId = (await this.interactionService.waitApprove(
+    // Resolve the requested target before approval — selection must not follow
+    // an arbitrary interaction result if UI/result is corrupted.
+    const requested = await this.findChainInfo(chainId);
+    if (!requested) {
+      throw new Error(`There is no chain info for ${chainId}`);
+    }
+    const targetChainId = requested.chainId;
+
+    const approved = await this.interactionService.waitApprove(
       env,
       "/switch-chain-by-chainid",
       SwitchNetworkByChainIdMsg.type(),
       {
-        chainId,
+        chainId: targetChainId,
         origin,
       }
-    )) as string;
+    );
+
+    if (typeof approved === "string" && approved.length > 0) {
+      const approvedCanonical = await this.findChainInfo(approved);
+      if (
+        !approvedCanonical ||
+        ChainIdHelper.parse(approvedCanonical.chainId).identifier !==
+          ChainIdHelper.parse(targetChainId).identifier
+      ) {
+        throw new Error(
+          `Approved chain ${approved} does not match requested ${targetChainId}`
+        );
+      }
+    }
+
     await this.permissionService.addPermission(
-      [chainId],
+      [targetChainId],
       getBasicAccessPermissionType(),
       [origin]
     );
-    console.log(`Switched to chain with chainId ${receivedChainId}`);
+    // Selection must commit before the external switch request resolves.
+    await this.setSelectedChain(targetChainId);
   }
 
   addChainRemovedHandler(handler: ChainRemovedHandler) {
     this.onChainRemovedHandlers.push(handler);
   }
 
-  setSelectedChain(chainId: string) {
-    if (this.selectedChainId !== chainId) {
-      this.selectedChainId = chainId;
-      this.interactionService.dispatchEvent(
-        WEBPAGE_PORT,
-        "network-changed",
-        {}
+  getCommittedRevision(): number {
+    return this.committedRevision;
+  }
+
+  /** Sync peek of in-memory selected chain (may be undefined before hydrate). */
+  peekSelectedChainId(): string | undefined {
+    return this.selectedChainId;
+  }
+
+  /**
+   * Sync Cardano feature check from cache/embed (no await).
+   * Used by RuntimeSupervisor commit observers.
+   */
+  isCardanoFeatureSync(chainId: string): boolean {
+    const identifier = this.getChainIdentifierSafe(chainId);
+    if (identifier == null) {
+      return false;
+    }
+    const infos: Array<{ chainId: string; features?: string[] }> =
+      this.cachedChainInfos ??
+      this.embedChainInfos.map((chainInfo) => ({
+        chainId: chainInfo.chainId,
+        features: chainInfo.features,
+      }));
+    const found = infos.find(
+      (chainInfo) =>
+        this.getChainIdentifierSafe(chainInfo.chainId) === identifier
+    );
+    return found?.features?.includes("cardano") ?? false;
+  }
+
+  getNetworkAuthority(): NetworkAuthority {
+    if (!this.networkAuthority) {
+      throw new Error("NetworkAuthority is not wired");
+    }
+    return this.networkAuthority;
+  }
+
+  hasNetworkAuthority(): boolean {
+    return this.networkAuthority != null;
+  }
+
+  subscribeNetworkAuthority(
+    observer: NetworkAuthorityCommitObserver
+  ): () => void {
+    return this.getNetworkAuthority().subscribe(observer);
+  }
+
+  /**
+   * Attach durable selected-chain authority. Call once during background init
+   * before hydrate. Startup may continue if hydrate fails; mirrors are synced
+   * from authority observers when hydrate later succeeds.
+   */
+  wireNetworkAuthority(options: {
+    readLegacyLastViewChainId: () => Promise<string | undefined>;
+  }): void {
+    if (this.networkAuthority) {
+      throw new Error("NetworkAuthority is already wired");
+    }
+
+    this.networkAuthority = new NetworkAuthority({
+      kvStore: this.kvStore,
+      registry: {
+        getChainInfos: async () => this.getChainInfos(),
+        findCanonicalChainId: async (chainId) => {
+          const info = await this.findChainInfo(chainId);
+          return info?.chainId;
+        },
+        commitAddChain: (chainInfo) => this.commitAddChainInfo(chainInfo),
+        commitRemoveChain: (chainId) => this.commitRemoveChainInfo(chainId),
+      },
+      readLegacyLastViewChainId: options.readLegacyLastViewChainId,
+      resolveFallbackChainId: (chainInfos) => {
+        const fallback = getDefaultFallbackChainId(chainInfos);
+        if (!fallback) {
+          throw new Error("No chain infos available");
+        }
+        return fallback;
+      },
+      publisher: {
+        publishInternalSurfacesSync: (snapshot) => {
+          this.broadcastNetworkSurfacesSync(snapshot);
+        },
+        publishWebpageNetworkChanged: (opaqueSeq) => {
+          this.interactionService.dispatchEvent(
+            WEBPAGE_PORT,
+            "network-changed",
+            {
+              seq: opaqueSeq,
+            }
+          );
+          this.interactionService.dispatchEvent(
+            WEBPAGE_PORT,
+            "keystore-changed",
+            {}
+          );
+        },
+      },
+    });
+
+    const unsubscribe = this.networkAuthority.subscribe((snapshot) => {
+      this.selectedChainId = snapshot.chainId;
+      this.committedRevision = snapshot.revision;
+    });
+    this.authorityUnsubscribers.push(unsubscribe);
+  }
+
+  async hydrateNetworkAuthority(): Promise<void> {
+    const authority = this.getNetworkAuthority();
+    await authority.hydrate();
+    const snapshot = await authority.getSnapshot();
+    this.selectedChainId = snapshot.chainId;
+    this.committedRevision = snapshot.revision;
+  }
+
+  async getSelectedChainSnapshot(): Promise<NetworkAuthoritySnapshot> {
+    return this.getNetworkAuthority().getSnapshot();
+  }
+
+  /**
+   * Authoritative UI projection: selection + chainInfos under the authority FIFO.
+   */
+  async getNetworkProjection(): Promise<{
+    selection: NetworkAuthoritySnapshot;
+    chainInfos: ChainInfoWithCoreTypes[];
+  }> {
+    const authority = this.getNetworkAuthority();
+    return authority.runSerialized(async () => {
+      const selection = authority.getCommittedSnapshotUnchecked();
+      const chainInfos = await this.getChainInfos();
+      const found = chainInfos.some(
+        (info) => info.chainId === selection.chainId
       );
-      this.interactionService.dispatchEvent(
-        WEBPAGE_PORT,
-        "keystore-changed",
-        {}
-      );
+      if (!found) {
+        throw new Error(
+          "Network projection selection is not present in chain registry"
+        );
+      }
+      return { selection, chainInfos };
+    });
+  }
+
+  /** Registry/endpoint mutations: notify all surfaces without bumping revision. */
+  async notifyProjectionInvalidation(): Promise<void> {
+    await this.getNetworkAuthority().publishProjectionInvalidation();
+  }
+
+  async setSelectedChain(chainId: string): Promise<void> {
+    await this.getNetworkAuthority().select(chainId);
+  }
+
+  /** Internal UI path: returns committed `{ chainId, revision }` ack. */
+  async selectChainWithAck(chainId: string): Promise<NetworkAuthoritySnapshot> {
+    return this.getNetworkAuthority().select(chainId);
+  }
+
+  /**
+   * After Select ACK for a live Cardano sign CTA: bind ticket at current
+   * authority revision. Any later Select invalidates via revision mismatch.
+   */
+  async issueSignSwitchTicket(
+    interactionId: string,
+    chainId: string
+  ): Promise<{ ok: true }> {
+    const snapshot = await this.getSelectedChainSnapshot();
+    const chainIdsMatch = (a: string, b: string) => {
+      try {
+        return (
+          ChainIdHelper.parse(a).identifier ===
+          ChainIdHelper.parse(b).identifier
+        );
+      } catch {
+        return a === b;
+      }
+    };
+    this.signSwitchTicket = issueSignSwitchTicket(
+      snapshot,
+      interactionId,
+      chainId,
+      chainIdsMatch
+    );
+    return { ok: true };
+  }
+
+  async isSignSwitchTicketValid(
+    interactionId: string,
+    expectedChainId: string
+  ): Promise<boolean> {
+    const snapshot = await this.getSelectedChainSnapshot();
+    const chainIdsMatch = (a: string, b: string) => {
+      try {
+        return (
+          ChainIdHelper.parse(a).identifier ===
+          ChainIdHelper.parse(b).identifier
+        );
+      } catch {
+        return a === b;
+      }
+    };
+    return isSignSwitchTicketValid(
+      this.signSwitchTicket,
+      snapshot,
+      interactionId,
+      expectedChainId,
+      chainIdsMatch
+    );
+  }
+
+  clearSignSwitchTicket(interactionId?: string): { ok: true } {
+    if (
+      interactionId == null ||
+      this.signSwitchTicket?.interactionId === interactionId
+    ) {
+      this.signSwitchTicket = null;
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Registry chainId string drift repair: only rewrites selection when it still
+   * names the same identity as `canonicalChainId`.
+   */
+  async alignSelectedCanonicalIfCurrent(
+    canonicalChainId: string
+  ): Promise<NetworkAuthoritySnapshot | null> {
+    return this.getNetworkAuthority().alignSelectedCanonicalIfCurrent(
+      canonicalChainId
+    );
+  }
+
+  private broadcastNetworkSurfacesSync(
+    snapshot: NetworkAuthoritySnapshot
+  ): void {
+    notifyNetworkSurfacesSyncListeners(snapshot);
+
+    try {
+      const g = globalThis as {
+        browser?: { runtime?: { sendMessage?: (message: unknown) => unknown } };
+        chrome?: { runtime?: { sendMessage?: (message: unknown) => unknown } };
+      };
+      const rt = g.browser?.runtime ?? g.chrome?.runtime;
+      if (!rt?.sendMessage) {
+        return;
+      }
+      const sendMessage = rt.sendMessage as (
+        message: unknown
+      ) => void | Promise<unknown>;
+      const out = sendMessage({
+        type: NETWORK_SURFACES_SYNC_MESSAGE_TYPE,
+        chainId: snapshot.chainId,
+        revision: snapshot.revision,
+      });
+      if (out && typeof (out as Promise<unknown>).catch === "function") {
+        (out as Promise<unknown>).catch(() => undefined);
+      }
+    } catch {
+      // Best-effort fan-out; commit already succeeded.
     }
   }
 
   async getSelectedChain(): Promise<string> {
-    if (!this.selectedChainId) {
-      return (await this.getChainInfos())[0].chainId;
-    }
-
-    return this.selectedChainId;
+    return this.getNetworkAuthority().getSelectedChainId();
   }
 }

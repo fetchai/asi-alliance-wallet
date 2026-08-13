@@ -8,13 +8,13 @@ import { useInteractionInfo } from "@keplr-wallet/hooks";
 import { EmptyLayout } from "@layouts/empty-layout";
 import classNames from "classnames";
 import { observer } from "mobx-react-lite";
+import { flowResult } from "mobx";
 import { FormattedMessage } from "react-intl";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 
 export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
-  const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
-    useStore();
+  const { chainSuggestStore, analyticsStore, uiConfigStore } = useStore();
   const [updateFromRepoDisabled, setUpdateFromRepoDisabled] = useState(false);
   const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
   const navigate = useNavigate();
@@ -377,12 +377,13 @@ export const ApproveAddChainByNetworkPage: FunctionComponent = observer(() => {
                     chainSuggestStore.waitingSuggestedChainInfo?.data.chainInfo;
 
                 if (chainInfo) {
-                  await chainSuggestStore.approve({
-                    ...chainInfo,
-                    updateFromRepoDisabled,
-                  });
-                  chainStore.selectChain(chainInfo.chainId);
-                  chainStore.saveLastViewChainId();
+                  // Background CommitAdd → Select after approval; UI does not poll or Select.
+                  await flowResult(
+                    chainSuggestStore.approve({
+                      ...chainInfo,
+                      updateFromRepoDisabled,
+                    })
+                  );
                 }
 
                 if (

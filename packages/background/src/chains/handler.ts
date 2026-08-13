@@ -9,7 +9,13 @@ import {
   ListNetworksMsg,
   AddNetworkAndSwitchMsg,
   SwitchNetworkByChainIdMsg,
-  SetSelectedChainMsg,
+  GetSelectedChainIdMsg,
+  GetSelectedChainSnapshotMsg,
+  SelectSelectedChainMsg,
+  GetNetworkProjectionMsg,
+  IssueSignSwitchTicketMsg,
+  GetSignSwitchTicketValidMsg,
+  ClearSignSwitchTicketMsg,
 } from "./messages";
 import { ChainInfo } from "@keplr-wallet/types";
 
@@ -30,10 +36,40 @@ export const getHandler: (service: ChainsService) => Handler = (service) => {
           env,
           msg as SuggestChainInfoMsg
         );
-      case SetSelectedChainMsg:
-        return handleSetSelectedChainMsg(service)(
+      case GetSelectedChainIdMsg:
+        return handleGetSelectedChainIdMsg(service)(
           env,
-          msg as SetSelectedChainMsg
+          msg as GetSelectedChainIdMsg
+        );
+      case GetSelectedChainSnapshotMsg:
+        return handleGetSelectedChainSnapshotMsg(service)(
+          env,
+          msg as GetSelectedChainSnapshotMsg
+        );
+      case GetNetworkProjectionMsg:
+        return handleGetNetworkProjectionMsg(service)(
+          env,
+          msg as GetNetworkProjectionMsg
+        );
+      case SelectSelectedChainMsg:
+        return handleSelectSelectedChainMsg(service)(
+          env,
+          msg as SelectSelectedChainMsg
+        );
+      case IssueSignSwitchTicketMsg:
+        return handleIssueSignSwitchTicketMsg(service)(
+          env,
+          msg as IssueSignSwitchTicketMsg
+        );
+      case GetSignSwitchTicketValidMsg:
+        return handleGetSignSwitchTicketValidMsg(service)(
+          env,
+          msg as GetSignSwitchTicketValidMsg
+        );
+      case ClearSignSwitchTicketMsg:
+        return handleClearSignSwitchTicketMsg(service)(
+          env,
+          msg as ClearSignSwitchTicketMsg
         );
       case AddNetworkAndSwitchMsg:
         return handleAddNetworkAndSwitch(service)(
@@ -89,11 +125,64 @@ const handleGetChainInfosWithoutEndpointsMsg: (
   };
 };
 
-const handleSetSelectedChainMsg: (
+const handleGetSelectedChainIdMsg: (
   service: ChainsService
-) => InternalHandler<SetSelectedChainMsg> = (service) => {
+) => InternalHandler<GetSelectedChainIdMsg> = (service) => {
+  return async () => {
+    const chainId = await service.getSelectedChain();
+    return { chainId };
+  };
+};
+
+const handleGetSelectedChainSnapshotMsg: (
+  service: ChainsService
+) => InternalHandler<GetSelectedChainSnapshotMsg> = (service) => {
+  return async () => {
+    return await service.getSelectedChainSnapshot();
+  };
+};
+
+const handleGetNetworkProjectionMsg: (
+  service: ChainsService
+) => InternalHandler<GetNetworkProjectionMsg> = (service) => {
+  return async () => {
+    return await service.getNetworkProjection();
+  };
+};
+
+const handleSelectSelectedChainMsg: (
+  service: ChainsService
+) => InternalHandler<SelectSelectedChainMsg> = (service) => {
   return async (_, msg) => {
-    service.setSelectedChain(msg.chainId);
+    return await service.selectChainWithAck(msg.chainId);
+  };
+};
+
+const handleIssueSignSwitchTicketMsg: (
+  service: ChainsService
+) => InternalHandler<IssueSignSwitchTicketMsg> = (service) => {
+  return async (_, msg) => {
+    return await service.issueSignSwitchTicket(msg.interactionId, msg.chainId);
+  };
+};
+
+const handleGetSignSwitchTicketValidMsg: (
+  service: ChainsService
+) => InternalHandler<GetSignSwitchTicketValidMsg> = (service) => {
+  return async (_, msg) => {
+    const valid = await service.isSignSwitchTicketValid(
+      msg.interactionId,
+      msg.expectedChainId
+    );
+    return { valid };
+  };
+};
+
+const handleClearSignSwitchTicketMsg: (
+  service: ChainsService
+) => InternalHandler<ClearSignSwitchTicketMsg> = (service) => {
+  return async (_, msg) => {
+    return service.clearSignSwitchTicket(msg.interactionId);
   };
 };
 
@@ -153,7 +242,8 @@ const handleAddNetworkAndSwitch: (
 ) => InternalHandler<AddNetworkAndSwitchMsg> = (service) => {
   return async (env, msg) => {
     if (await service.hasChainInfo(msg.network.chainId)) {
-      // If suggested chain info is already registered, just return.
+      // Already registered: still run the approved switch flow so selection updates.
+      await service.switchChainByChainId(env, msg.network.chainId, msg.origin);
       return;
     }
 

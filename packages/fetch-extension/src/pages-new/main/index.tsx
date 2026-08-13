@@ -19,6 +19,8 @@ import { WalletDetailsView } from "./wallet-details";
 import { WalletOptions } from "./wallet-options";
 import { useLanguage } from "../../languages";
 import { useLoadingIndicator } from "@components/loading-indicator";
+import { CardanoBlockfrostRateLimitBanner } from "@components-v2/cardano/blockfrost-rate-limit-banner";
+import { useCardanoBlockfrostLimit } from "./use-cardano-blockfrost-limit";
 
 export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
@@ -50,6 +52,15 @@ export const MainPage: FunctionComponent = observer(() => {
 
   const current = chainStore.current;
   const currentChainId = current.chainId;
+
+  const isCardanoChain =
+    !chainStore.isInitializing &&
+    (current.features?.includes("cardano") ?? false);
+
+  const blockfrostLimit = useCardanoBlockfrostLimit(
+    isCardanoChain ? currentChainId : undefined,
+    isCardanoChain
+  );
 
   const prevChainId = useRef<string | undefined>();
   useEffect(() => {
@@ -114,6 +125,11 @@ export const MainPage: FunctionComponent = observer(() => {
         setIsSelectWalletOpen={setIsSelectWalletOpen}
         tokenState={tokenState}
       />
+      {isCardanoChain && blockfrostLimit ? (
+        <div style={{ marginTop: "12px" }}>
+          <CardanoBlockfrostRateLimitBanner presentation={blockfrostLimit} />
+        </div>
+      ) : null}
       <LineGraphView
         setTokenState={setTokenState}
         tokenName={chainStore.current.feeCurrencies[0].coinGeckoId}

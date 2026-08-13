@@ -20,8 +20,7 @@ import {
 import * as manifest from "../../manifest.v3.json";
 import { useConfirm } from "@components/confirm";
 import { isRunningInSidePanel, toggleSidePanel } from "@utils/side-panel";
-import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
-// import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../config.ui.var";
+import { getNativeBridgeModeByChainId } from "@utils/native-bridge-mode";
 
 export const MorePage: FunctionComponent = () => {
   const [sidePanelSupported, setSidePanelSupported] = useState(false);
@@ -82,7 +81,10 @@ export const MorePage: FunctionComponent = () => {
       )
     : false;
 
-  const isBridgeSupported = chainId === CHAIN_ID_FETCHHUB || chainId === "1";
+  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+
+  const isBridgeSupported = getNativeBridgeModeByChainId(chainId) !== "none";
 
   return (
     <HeaderLayout
@@ -135,7 +137,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!currentChain.features?.includes("evm") && (
+      {!isEvm && !isCardano && (
         <Card
           leftImageStyle={{ background: "transparent", height: "16px" }}
           style={{ marginBottom: "8px" }}
@@ -190,35 +192,37 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {!chainStore.current.features?.includes("evm") &&
-        chainId !== "noble-1" && (
-          <Card
-            leftImageStyle={{ background: "transparent" }}
-            style={{ marginBottom: "8px" }}
-            leftImage={require("@assets/svg/wireframe/voting-power.svg")}
-            heading={"Proposals"}
-            onClick={(e: any) => {
-              e.preventDefault();
-              analyticsStore.logEvent("proposal_view_click", {
-                pageName: "More",
-              });
-              navigate("/proposal");
-            }}
-          />
-        )}
-      <Card
-        leftImageStyle={{ background: "transparent" }}
-        style={{ marginBottom: "6px" }}
-        leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
-        heading={"Manage Tokens"}
-        onClick={() => {
-          navigate("/more/token/manage");
-          analyticsStore.logEvent("manage_tokens_click", {
-            pageName: "More",
-          });
-        }}
-      />
-      {!chainStore.current.features?.includes("evm") && (
+      {!isEvm && !isCardano && chainId !== "noble-1" && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/voting-power.svg")}
+          heading={"Proposals"}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("proposal_view_click", {
+              pageName: "More",
+            });
+            navigate("/proposal");
+          }}
+        />
+      )}
+
+      {!isCardano && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "6px" }}
+          leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+          heading={"Manage Tokens"}
+          onClick={() => {
+            navigate("/more/token/manage");
+            analyticsStore.logEvent("manage_tokens_click", {
+              pageName: "More",
+            });
+          }}
+        />
+      )}
+      {!isEvm && !isCardano ? (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "5px" }}
@@ -236,6 +240,8 @@ export const MorePage: FunctionComponent = () => {
           heading="Manual Sign & Broadcast"
           subheading={!isRunningInSidePanel() ? "Opens in side panel" : ""}
         />
+      ) : (
+        ""
       )}
       <Card
         leftImageStyle={{ background: "transparent", height: "18px" }}

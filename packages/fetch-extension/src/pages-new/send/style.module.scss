@@ -102,8 +102,20 @@
   margin-top: 16px;
 }
 
-// .transactionFeeContainer {
-//   width: 94%;
-//   bottom: 100px;
-//   position: fixed;
-// }
+.transactionFeeContainer {
+  margin-top: 24px;
+}
+
+.sendAlertsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.sendInlineAlert {
+  text-align: center;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}

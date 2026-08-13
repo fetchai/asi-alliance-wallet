@@ -8,7 +8,8 @@ import { Card } from "@components-v2/card";
 
 export const SecurityPrivacyPage: FunctionComponent = () => {
   const navigate = useNavigate();
-  const { analyticsStore, keyRingStore } = useStore();
+  const { analyticsStore, keyRingStore, chainStore } = useStore();
+  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
   const [accountIndex, setAccountIndex] = useState<number>(0);
 
   const intl = useIntl();
@@ -122,6 +123,7 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
         <Card
           leftImage={require("@assets/svg/wireframe/auto-lock-timer.svg")}
           style={{
+            marginBottom: isCardano ? "8px" : undefined,
             paddingLeft: "18px",
           }}
           leftImageStyle={{
@@ -137,6 +139,18 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
             });
           }}
         />
+        {isCardano ? (
+          <Card
+            leftImageStyle={{ background: "transparent" }}
+            style={{ padding: "18px" }}
+            leftImage={require("@assets/svg/wireframe/manage-tokens.svg")}
+            heading="Blockfrost API"
+            subheading="Use your own API key for Cardano"
+            onClick={() => {
+              navigate("/setting/cardano/blockfrost-api");
+            }}
+          />
+        ) : null}
       </div>
     </HeaderLayout>
   );

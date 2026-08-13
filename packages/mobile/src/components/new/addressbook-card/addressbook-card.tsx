@@ -62,15 +62,18 @@ export const AddressBookCardModel: FunctionComponent<{
       const task = InteractionManager.runAfterInteractions(async () => {
         try {
           const requester = new RNMessageRequesterInternal();
-          const accounts = await requester.sendMessage(
+          const result = await requester.sendMessage(
             BACKGROUND_PORT,
             new ListAccountsMsg()
           );
+          if (result.error) {
+            throw new Error(result.error);
+          }
           const selectedIndex = keyRingStore.multiKeyStoreInfo.findIndex(
             (k) => k.selected
           );
           setWalletAddresses(
-            accounts
+            result.accounts
               .map((a) => a.bech32Address)
               .filter((_, i) => i !== selectedIndex)
           );

@@ -6,11 +6,19 @@ import { formatAddress } from "@utils/format";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
 import { useStore } from "../../stores";
+import { useNotification } from "@components/notification";
 import style from "./style.module.scss";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { Skeleton } from "@components-v2/skeleton-loader";
+import { addressCacheStore } from "../../utils/address-cache-store";
+import {
+  hasRequiredAddresses,
+  mergePartialCacheData,
+  normalizeCacheData,
+} from "../../utils/cache-validation";
+import { isCardanoChain, walletSupportsCardano } from "../../utils";
 import { NoResults } from "@components-v2/no-results";
 
 interface YourWalletProps {
@@ -21,11 +29,21 @@ interface YourWalletProps {
 export const YourWallets: FunctionComponent<YourWalletProps> = observer(
   ({ selectWalletFromList, onBackButton }) => {
     const [searchTerm, setSearchTerm] = useState("");
-    const [addresses, setAddresses] = useState<string[]>([]);
+    const [addressesById, setAddressesById] = useState<Record<string, string>>(
+      {}
+    );
+    const [isLoadingAddresses, setIsLoadingAddresses] = useState<boolean>(true);
     const intl = useIntl();
+    const notification = useNotification();
     const { chainStore, keyRingStore } = useStore();
 
     const chainId = chainStore.current.chainId;
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+
+    const currentWalletIds = keyRingStore.multiKeyStoreInfo.map(
+      (ks) => ks.meta?.["__id__"] || ""
+    );
+    const walletIdsKey = currentWalletIds.join(",");
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
@@ -52,35 +70,110 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
       return;
     };
 
-    const accountsAddress = async () => {
-      const requester = new InExtensionMessageRequester();
-      const msg = new ListAccountsMsg();
-      const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
-      const selectedAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
-        (value) => value.selected
-      );
+    const syncAddressesFromBackground = async (abortSignal?: AbortSignal) => {
+      setIsLoadingAddresses(true);
+      try {
+        const existingCache = addressCacheStore.getCache(chainId);
+        const hasAnyCachedAddress =
+          Object.keys(existingCache).length > 0 &&
+          Object.values(existingCache).some((addr) => Boolean(addr));
+        setAddressesById(existingCache);
 
-      const isEvm = chainStore.current.features?.includes("evm") ?? false;
-      const addresses = accounts
-        .map((account) => {
-          if (isEvm) {
-            return account.EVMAddress;
+        const isCurrentChainCardano = isCardanoChain(
+          chainStore.getChain(chainId)
+        );
+
+        const requiredWalletIds: string[] = isCurrentChainCardano
+          ? keyRingStore.multiKeyStoreInfo
+              .filter((ks) => walletSupportsCardano(ks))
+              .map((ks) => ks.meta?.["__id__"] || "")
+          : currentWalletIds;
+
+        const shouldSyncFromBackend =
+          Object.keys(existingCache).length === 0 ||
+          !hasRequiredAddresses(existingCache, requiredWalletIds);
+
+        if (!shouldSyncFromBackend) {
+          setIsLoadingAddresses(false);
+          return;
+        }
+
+        setIsLoadingAddresses(!hasAnyCachedAddress);
+        const requester = new InExtensionMessageRequester();
+        const msg = new ListAccountsMsg();
+        const result = await requester.sendMessage(BACKGROUND_PORT, msg);
+
+        if (abortSignal?.aborted) {
+          return;
+        }
+
+        if (result.error) {
+          notification.push({
+            placement: "top-center",
+            type: "danger",
+            duration: 4,
+            content: result.error,
+            canDelete: true,
+            transition: { duration: 0.25 },
+          });
+          setIsLoadingAddresses(false);
+          return;
+        }
+
+        const { accounts } = result;
+        const snapshotWalletIds = [...currentWalletIds];
+        const fetchedById: Record<string, string> = {};
+        snapshotWalletIds.forEach((walletId, idx) => {
+          const account = accounts[idx];
+          if (account && walletId) {
+            fetchedById[walletId] = isEvm
+              ? account.EVMAddress
+              : account.bech32Address;
           }
+        });
 
-          return account.bech32Address;
-        })
-        .filter((_, index) => index !== selectedAccountIndex);
+        await addressCacheStore.atomicCacheUpdate(chainId, (currentCache) => {
+          const normalizedCache = normalizeCacheData(
+            currentCache,
+            snapshotWalletIds
+          );
+          const fetchedAddresses = snapshotWalletIds.map(
+            (id) => fetchedById[id] || ""
+          );
+          const mergedCache = mergePartialCacheData(
+            normalizedCache,
+            snapshotWalletIds,
+            fetchedAddresses
+          );
+          return { newCache: mergedCache, result: mergedCache };
+        });
 
-      setAddresses(addresses);
+        const syncedCache = addressCacheStore.getCache(chainId);
+        setAddressesById(syncedCache);
+      } finally {
+        if (!abortSignal?.aborted) {
+          setIsLoadingAddresses(false);
+        }
+      }
     };
 
     useEffect(() => {
-      accountsAddress();
-    }, []);
+      const abort = new AbortController();
+      syncAddressesFromBackground(abort.signal);
+      return () => {
+        abort.abort();
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [walletIdsKey, chainId]);
 
-    const keyRingList = keyRingStore.multiKeyStoreInfo.filter(
-      (keyStore) => !keyStore.selected
-    );
+    const isCurrentChainCardano = isCardanoChain(chainStore.current);
+
+    const keyRingList = keyRingStore.multiKeyStoreInfo
+      .filter((keyStore) => !keyStore.selected)
+      .filter((keyStore) => {
+        if (!isCurrentChainCardano) return true;
+        return walletSupportsCardano(keyStore);
+      });
 
     return (
       <div className={style["container"]}>
@@ -103,6 +196,10 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                 id: "setting.keyring.unnamed-account",
               });
 
+            const walletId = keyStore.meta?.["__id__"] || "";
+            const address = walletId ? addressesById[walletId] : "";
+            const hasAddress = Boolean(address);
+
             return (
               <Card
                 key={i}
@@ -121,23 +218,23 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                   </React.Fragment>
                 }
                 subheading={
-                  addresses[i] ? (
-                    formatAddress(addresses[i])
-                  ) : (
+                  hasAddress ? (
+                    formatAddress(address)
+                  ) : isLoadingAddresses ? (
                     <Skeleton height="14px" width="100px" />
+                  ) : (
+                    ""
                   )
                 }
                 style={{
                   padding: "18px 16px",
                 }}
-                disabled={addresses?.length === 0}
+                disabled={!hasAddress}
                 onClick={async (e: any) => {
-                  if (addresses?.[i]) {
-                    e.preventDefault();
-                    const address = addresses[i];
-                    selectWalletFromList(address);
-                    onBackButton?.();
-                  }
+                  if (!hasAddress) return;
+                  e.preventDefault();
+                  selectWalletFromList(address);
+                  onBackButton?.();
                 }}
               />
             );

@@ -1,4 +1,5 @@
 import classnames from "classnames";
+import { flowResult } from "mobx";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent } from "react";
 import { useIntl } from "react-intl";
@@ -32,17 +33,25 @@ const ChainElement: FunctionComponent<{
             toChainName: chainInfo.chainName,
           };
         }
-        chainStore.selectChain(chainInfo.chainId);
-        chainStore.saveLastViewChainId();
-        chatStore.userDetailsStore.resetUser();
-        proposalStore.resetProposals();
-        chatStore.messagesStore.resetChatList();
-        chatStore.messagesStore.setIsChatSubscriptionActive(false);
-        messageAndGroupListenerUnsubscribe();
-        navigate("/");
-        if (Object.values(properties).length > 0) {
-          analyticsStore.logEvent("chain_change_click", properties);
-        }
+        void (async () => {
+          try {
+            await flowResult(
+              chainStore.selectChainAndPersist(chainInfo.chainId)
+            );
+          } catch (error) {
+            console.warn("[ChainList] selectChainAndPersist failed:", error);
+            return;
+          }
+          chatStore.userDetailsStore.resetUser();
+          proposalStore.resetProposals();
+          chatStore.messagesStore.resetChatList();
+          chatStore.messagesStore.setIsChatSubscriptionActive(false);
+          messageAndGroupListenerUnsubscribe();
+          navigate("/");
+          if (Object.values(properties).length > 0) {
+            analyticsStore.logEvent("chain_change_click", properties);
+          }
+        })();
       }}
     >
       {chainInfo.chainName}

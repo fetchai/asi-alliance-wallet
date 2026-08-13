@@ -1,4 +1,11 @@
-import { observable, action, computed, makeObservable, flow } from "mobx";
+import {
+  observable,
+  computed,
+  makeObservable,
+  flow,
+  flowResult,
+  runInAction,
+} from "mobx";
 
 import {
   ChainInfoInner,
@@ -10,30 +17,61 @@ import {
 import { ChainInfo } from "@keplr-wallet/types";
 import {
   ChainInfoWithCoreTypes,
-  GetChainInfosMsg,
+  GetNetworkProjectionMsg,
   RemoveSuggestedChainInfoMsg,
   TryUpdateChainMsg,
   SetChainEndpointsMsg,
   ResetChainEndpointsMsg,
+  SelectSelectedChainMsg,
 } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 
 import { MessageRequester } from "@keplr-wallet/router";
-import { KVStore, toGenerator } from "@keplr-wallet/common";
+import {
+  KVStore,
+  toGenerator,
+  createNetworkProjectionController,
+  createProjectionHydrationGate,
+  applyNetworkProjectionBundle,
+  armEndpointsQueryRefresh,
+  createEndpointsQueryRefreshLatch,
+  disarmEndpointsQueryRefresh,
+  noteEndpointsMutationSyncOutcome,
+  shouldRefreshQueriesOnAcceptedApply,
+  type EndpointsQueryRefreshLatch,
+  type NetworkProjectionController,
+  type ProjectionHydrationGate,
+  type ProjectionApplyResult,
+  type ProjectionSyncOutcome,
+} from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
+import { getDefaultFallbackChainId } from "@keplr-wallet/background/cardano-chain-policy";
+import { selectChainAndPersistWiring } from "./select-chain-and-persist-wiring";
+import {
+  pickFallbackWhenHidingChains,
+  toChainIdentifierSet,
+} from "./chain-ui-visibility";
 
 export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @observable
   protected _selectedChainId: string;
 
+  /** 0 = placeholder / not yet projected from background. */
+  @observable
+  protected _acceptedRevision: number = 0;
+
   @observable
   protected _isInitializing: boolean = false;
-  protected deferChainIdSelect: string = "";
 
   @observable
   protected chainInfoInUIConfig: {
     disabledChains: string[];
   };
+
+  protected readonly projectionController: NetworkProjectionController;
+  protected readonly projectionHydrationGate: ProjectionHydrationGate;
+  protected readonly endpointsQueryRefreshLatch: EndpointsQueryRefreshLatch =
+    createEndpointsQueryRefreshLatch();
 
   constructor(
     protected readonly kvStore: KVStore,
@@ -58,6 +96,28 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
       disabledChains: [],
     };
 
+    this.projectionController = createNetworkProjectionController({
+      pullBundle: () => this.pullProjectionBundle(),
+      applyBundle: (bundle) => this.applyProjectionBundle(bundle),
+      onPullError: (error) => {
+        console.warn("[ChainStore] network projection pull failed:", error);
+      },
+    });
+
+    this.projectionHydrationGate = createProjectionHydrationGate({
+      releaseInitialQueries: () => {
+        this.deferInitialQueryController.ready();
+      },
+      setInitializing: (value) => {
+        runInAction(() => {
+          this._isInitializing = value;
+        });
+      },
+      onFirstSuccess: () => {
+        void flowResult(this.finishProjectionBootstrap());
+      },
+    });
+
     makeObservable(this);
 
     this.init();
@@ -65,6 +125,31 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
   get isInitializing(): boolean {
     return this._isInitializing;
+  }
+
+  get acceptedRevision(): number {
+    return this._acceptedRevision;
+  }
+
+  get projectionReady(): boolean {
+    return this.projectionController.projectionReady;
+  }
+
+  /** One controller per ChainStore; UI surfaces call invalidate/syncNow. */
+  getNetworkProjectionController(): NetworkProjectionController {
+    return this.projectionController;
+  }
+
+  invalidateNetworkProjection(): void {
+    this.projectionController.invalidate();
+  }
+
+  syncNetworkProjection(): Promise<ProjectionSyncOutcome> {
+    return this.projectionController.syncNow();
+  }
+
+  cancelPendingNetworkProjectionRetry(): void {
+    this.projectionController.cancelPendingRetry();
   }
 
   @computed
@@ -111,19 +196,44 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   @flow
   *toggleChainInfoInUI(chainId: string) {
     chainId = ChainIdHelper.parse(chainId).identifier;
-    let disableChainIds = [];
+    const enabling = this.chainInfoInUIConfig.disabledChains.includes(chainId);
 
-    if (this.chainInfoInUIConfig.disabledChains.includes(chainId)) {
+    let disableChainIds: string[];
+    if (enabling) {
       disableChainIds = this.chainInfoInUIConfig.disabledChains.filter(
         (chain) => chain !== chainId
       );
     } else {
       if (this.enabledChainInfosInUI.length === 1) {
-        // Can't turn off all chains.
         return;
       }
 
       disableChainIds = [...this.chainInfoInUIConfig.disabledChains, chainId];
+    }
+
+    const disablingSelected =
+      !enabling &&
+      ChainIdHelper.parse(this.current.chainId).identifier === chainId;
+
+    if (disablingSelected) {
+      const other = this.chainInfosInUI.find(
+        (chainInfo) =>
+          ChainIdHelper.parse(chainInfo.chainId).identifier !== chainId
+      );
+
+      if (!other) {
+        return;
+      }
+
+      try {
+        yield* this.selectChainAndPersist(other.chainId);
+      } catch (error) {
+        console.warn(
+          "[ChainStore] Failed to switch before disabling chain:",
+          error
+        );
+        return;
+      }
     }
 
     yield this.kvStore.set<{ disabledChains: string[] }>(
@@ -134,23 +244,12 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     );
 
     this.chainInfoInUIConfig.disabledChains = disableChainIds;
-
-    if (ChainIdHelper.parse(this.current.chainId).identifier === chainId) {
-      const other = this.chainInfosInUI.find(
-        (chainInfo) =>
-          ChainIdHelper.parse(chainInfo.chainId).identifier !== chainId
-      );
-
-      if (other) {
-        this.selectChain(other.chainId);
-        this.saveLastViewChainId();
-      }
-    }
   }
 
   @flow
   *toggleMultipleChainInfoInUI(chainIds: string[], isVisible: boolean) {
     let disableChainIds = [...this.chainInfoInUIConfig.disabledChains];
+    const hideIdentifiers = toChainIdentifierSet(chainIds);
 
     for (let chainId of chainIds) {
       chainId = ChainIdHelper.parse(chainId).identifier;
@@ -161,11 +260,37 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
 
       if (!isVisible) {
         if (this.enabledChainInfosInUI.length === 1) {
-          // Can't turn off all chains.
           return;
         }
 
         disableChainIds.push(chainId);
+      }
+    }
+
+    const selectedIdentifier = ChainIdHelper.parse(
+      this.current.chainId
+    ).identifier;
+    const hidingSelected =
+      !isVisible && hideIdentifiers.has(selectedIdentifier);
+
+    if (hidingSelected) {
+      const otherChainId = pickFallbackWhenHidingChains(
+        this.chainInfosInUI.map((c) => c.chainId),
+        chainIds
+      );
+
+      if (!otherChainId) {
+        return;
+      }
+
+      try {
+        yield* this.selectChainAndPersist(otherChainId);
+      } catch (error) {
+        console.warn(
+          "[ChainStore] Failed to switch before disabling chains:",
+          error
+        );
+        return;
       }
     }
 
@@ -177,37 +302,104 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     );
 
     this.chainInfoInUIConfig.disabledChains = disableChainIds;
-
-    if (
-      chainIds.includes(ChainIdHelper.parse(this.current.chainId).identifier)
-    ) {
-      const other = this.chainInfosInUI.find(
-        (chainInfo) =>
-          !chainIds.includes(ChainIdHelper.parse(chainInfo.chainId).identifier)
-      );
-
-      if (other) {
-        this.selectChain(other.chainId);
-        this.saveLastViewChainId();
-      }
-    }
   }
 
   get selectedChainId(): string {
     return this._selectedChainId;
   }
 
-  @action
-  selectChain(chainId: string) {
-    if (this._isInitializing) {
-      this.deferChainIdSelect = chainId;
+  @flow
+  *selectChainAndPersist(chainId: string) {
+    yield* selectChainAndPersistWiring(
+      {
+        sendSelectSelectedChain: (id) => {
+          const msg = new SelectSelectedChainMsg(id);
+          return this.requester.sendMessage(BACKGROUND_PORT, msg) as Promise<{
+            chainId: string;
+            revision: number;
+          }>;
+        },
+        syncProjection: () => this.projectionController.syncNow(),
+        saveLastViewChainId: () => flowResult(this.saveLastViewChainId()),
+      },
+      chainId
+    );
+  }
+
+  dispose(): void {
+    this.projectionController.dispose();
+  }
+
+  protected async pullProjectionBundle(): Promise<{
+    selection: { chainId: string; revision: number };
+    chainInfos: ChainInfoWithCoreTypes[];
+  }> {
+    const msg = new GetNetworkProjectionMsg();
+    return this.requester.sendMessage(BACKGROUND_PORT, msg);
+  }
+
+  protected applyProjectionBundle(bundle: {
+    selection: { chainId: string; revision: number };
+    chainInfos: ChainInfoWithCoreTypes[];
+  }): ProjectionApplyResult {
+    if (this.projectionController.disposed) {
+      return "rejected";
     }
-    this._selectedChainId = chainId;
+
+    const result = runInAction(() =>
+      applyNetworkProjectionBundle(
+        {
+          getLocalSnapshot: () => ({
+            chainId: this._selectedChainId,
+            revision: this._acceptedRevision,
+          }),
+          setLocalSnapshot: (snapshot) => {
+            this._selectedChainId = snapshot.chainId;
+            this._acceptedRevision = snapshot.revision;
+          },
+          setChainInfos: (chainInfos) => {
+            this.setChainInfos(chainInfos as ChainInfoWithCoreTypes[]);
+          },
+          onProtocolViolation: (local, incoming) => {
+            console.error(
+              "[ChainStore] equal revision with different chainId from background",
+              {
+                local: local.chainId,
+                incoming: incoming.chainId,
+                revision: incoming.revision,
+              }
+            );
+          },
+        },
+        {
+          selection: bundle.selection,
+          chainInfos: bundle.chainInfos,
+        }
+      )
+    );
+
+    if (result === "protocol-violation" || result === "stale") {
+      return "rejected";
+    }
+
+    this.projectionHydrationGate.onPullSucceeded();
+    if (shouldRefreshQueriesOnAcceptedApply(this.endpointsQueryRefreshLatch)) {
+      ObservableQuery.refreshAllObserved();
+    }
+    return "accepted";
+  }
+
+  private hasChainSafe(chainId: string): boolean {
+    try {
+      return this.hasChain(chainId);
+    } catch {
+      return false;
+    }
   }
 
   @computed
   get current(): ChainInfoInner<ChainInfoWithCoreTypes> {
-    if (this.hasChain(this._selectedChainId)) {
+    if (this.hasChainSafe(this._selectedChainId)) {
       return this.getChain(this._selectedChainId);
     }
 
@@ -220,26 +412,16 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   }
 
   @flow
-  protected *init() {
-    this._isInitializing = true;
-    yield this.getChainInfosFromBackground();
-
-    this.deferInitialQueryController.ready();
-
-    const lastViewChainId = yield* toGenerator(
-      this.kvStore.get<string>("last_view_chain_id")
-    );
-
-    if (!this.deferChainIdSelect) {
-      if (lastViewChainId) {
-        this.selectChain(lastViewChainId);
-      }
-    }
-    this._isInitializing = false;
-
-    if (this.deferChainIdSelect) {
-      this.selectChain(this.deferChainIdSelect);
-      this.deferChainIdSelect = "";
+  protected *finishProjectionBootstrap() {
+    try {
+      yield* toGenerator(
+        Promise.resolve(flowResult(this.saveLastViewChainId()))
+      );
+    } catch (error) {
+      console.warn(
+        "[ChainStore] Failed to persist last-view chain id after projection hydrate:",
+        error
+      );
     }
 
     const chainInfoUI = yield* toGenerator(
@@ -263,33 +445,52 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
   }
 
   @flow
-  public *getChainInfosFromBackground() {
-    const msg = new GetChainInfosMsg();
-    const result = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-    this.setChainInfos(result.chainInfos);
+  protected *init() {
+    this._isInitializing = true;
+
+    // Do not release queries or clear isInitializing until the first successful
+    // authoritative pull (see projectionHydrationGate.onPullSucceeded).
+    yield* toGenerator(this.projectionController.syncNow());
   }
 
   @flow
   *removeChainInfo(chainId: string) {
-    const msg = new RemoveSuggestedChainInfoMsg(chainId);
-    const chainInfos = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
+    if (
+      this.hasChainSafe(chainId) &&
+      ChainIdHelper.parse(this._selectedChainId).identifier ===
+        ChainIdHelper.parse(chainId).identifier
+    ) {
+      const other = this.chainInfosInUI.find(
+        (chainInfo) =>
+          ChainIdHelper.parse(chainInfo.chainId).identifier !==
+          ChainIdHelper.parse(chainId).identifier
+      );
+      const fallback =
+        other?.chainId ||
+        getDefaultFallbackChainId(this.chainInfos) ||
+        this.chainInfos.find(
+          (c) =>
+            ChainIdHelper.parse(c.chainId).identifier !==
+            ChainIdHelper.parse(chainId).identifier
+        )?.chainId;
 
-    this.setChainInfos(chainInfos);
+      if (!fallback) {
+        throw new Error("Can't remove the only available network");
+      }
+
+      yield* this.selectChainAndPersist(fallback);
+    }
+
+    const msg = new RemoveSuggestedChainInfoMsg(chainId);
+    yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    return yield* toGenerator(this.projectionController.syncNow());
   }
 
   @flow
   *tryUpdateChain(chainId: string) {
     const msg = new TryUpdateChainMsg(chainId);
-    const result = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-    if (result.updated) {
-      yield this.getChainInfosFromBackground();
-    }
+    yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    return yield* toGenerator(this.projectionController.syncNow());
   }
 
   @flow
@@ -299,24 +500,29 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     rest: string | undefined
   ) {
     const msg = new SetChainEndpointsMsg(chainId, rpc, rest);
-    const newChainInfos = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-
-    this.setChainInfos(newChainInfos);
-
-    ObservableQuery.refreshAllObserved();
+    // Arm before BG: invalidation fan-out may apply before this flow reaches syncNow.
+    armEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+    try {
+      yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    } catch (error) {
+      disarmEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+      throw error;
+    }
+    const outcome = yield* toGenerator(this.projectionController.syncNow());
+    noteEndpointsMutationSyncOutcome(this.endpointsQueryRefreshLatch, outcome);
   }
 
   @flow
   *resetChainEndpoints(chainId: string) {
     const msg = new ResetChainEndpointsMsg(chainId);
-    const newChainInfos = yield* toGenerator(
-      this.requester.sendMessage(BACKGROUND_PORT, msg)
-    );
-
-    this.setChainInfos(newChainInfos);
-
-    ObservableQuery.refreshAllObserved();
+    armEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+    try {
+      yield* toGenerator(this.requester.sendMessage(BACKGROUND_PORT, msg));
+    } catch (error) {
+      disarmEndpointsQueryRefresh(this.endpointsQueryRefreshLatch);
+      throw error;
+    }
+    const outcome = yield* toGenerator(this.projectionController.syncNow());
+    noteEndpointsMutationSyncOutcome(this.endpointsQueryRefreshLatch, outcome);
   }
 }
