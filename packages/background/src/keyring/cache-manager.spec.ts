@@ -893,6 +893,226 @@ describe("AddressCacheManager security", () => {
     await expect(kvStore.get("addr_cache:cosmoshub-4")).resolves.toBeNull();
   });
 
+  it("does not delete cache blobs on transient scrypt inactivity timeout", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-transient-scrypt-removal");
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [
+        { chainId: "cardano-preview", features: ["cardano"] },
+        { chainId: "cosmoshub-4", features: [] },
+      ],
+    });
+    const readableBlob = JSON.stringify({
+      version: "1.0",
+      crypto: {
+        cipher: "aes-128-ctr",
+        cipherparams: { iv: "a".repeat(32) },
+        kdf: "scrypt",
+        kdfparams: { salt: "b".repeat(64) },
+        ciphertext: "00",
+        mac: "c".repeat(64),
+      },
+      meta: { cacheType: "address_cache" },
+    });
+    await kvStore.set("cardano_addr_cache:cardano-preview", readableBlob);
+    await kvStore.set("addr_cache:cosmoshub-4", readableBlob);
+
+    // Message has no "timeout" word — classification must use error name.
+    const timeout = new Error("Scrypt operation made no progress for 30000ms");
+    timeout.name = "ScryptInactivityTimeoutError";
+    const decryptSpy = jest
+      .spyOn(Crypto, "decryptBlob")
+      .mockRejectedValue(timeout);
+
+    await manager.removeWalletFromAllCaches("deleted");
+
+    // Two chains × withRetry (2 attempts) after continue-on-exhausted-transient.
+    expect(decryptSpy.mock.calls.length).toBe(4);
+    await expect(
+      kvStore.get("cardano_addr_cache:cardano-preview")
+    ).resolves.toBe(readableBlob);
+    await expect(kvStore.get("addr_cache:cosmoshub-4")).resolves.toBe(
+      readableBlob
+    );
+  });
+
+  it("continues cleanup on later chains after exhausted transient timeout", async () => {
+    const kvStore = new MemoryKVStore(
+      "cache-manager-transient-continue-other-chains"
+    );
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [
+        { chainId: "cardano-preview", features: ["cardano"] },
+        { chainId: "cosmoshub-4", features: [] },
+      ],
+    });
+    mockReversibleCacheBlobCrypto();
+    await manager.saveCardanoCache("cardano-preview", {
+      retained: { address: "cardano-retained", pubKey: "pub" },
+      deleted: { address: "cardano-deleted", pubKey: "del" },
+    });
+    await manager.saveGenericCache("cosmoshub-4", {
+      retained: { address: "generic-retained", name: "Retained" },
+      deleted: { address: "generic-deleted", name: "Deleted" },
+    });
+    const cardanoBefore = await kvStore.get(
+      "cardano_addr_cache:cardano-preview"
+    );
+
+    let cardanoAttempts = 0;
+    jest.spyOn(Crypto, "decryptBlob").mockImplementation(async (_c, data) => {
+      const plaintext = Buffer.from(
+        (data as any).crypto.ciphertext,
+        "hex"
+      ).toString("utf8");
+      if (plaintext.includes("cardano-retained")) {
+        cardanoAttempts += 1;
+        const err = new Error("Scrypt operation made no progress for 30000ms");
+        err.name = "ScryptInactivityTimeoutError";
+        throw err;
+      }
+      return Buffer.from((data as any).crypto.ciphertext, "hex");
+    });
+
+    await manager.removeWalletFromAllCaches("deleted");
+
+    expect(cardanoAttempts).toBe(2);
+    await expect(
+      kvStore.get("cardano_addr_cache:cardano-preview")
+    ).resolves.toEqual(cardanoBefore);
+    mockReversibleCacheBlobCrypto();
+    await expect(manager.loadGenericCache("cosmoshub-4")).resolves.toEqual({
+      retained: { address: "generic-retained", name: "Retained" },
+    });
+  });
+
+  it("continues cleanup on later chains when the save path times out", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-transient-save-continue");
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [
+        { chainId: "cardano-preview", features: ["cardano"] },
+        { chainId: "cosmoshub-4", features: [] },
+      ],
+    });
+    mockReversibleCacheBlobCrypto();
+    await manager.saveCardanoCache("cardano-preview", {
+      retained: { address: "cardano-retained", pubKey: "pub" },
+      deleted: { address: "cardano-deleted", pubKey: "del" },
+    });
+    await manager.saveGenericCache("cosmoshub-4", {
+      retained: { address: "generic-retained", name: "Retained" },
+      deleted: { address: "generic-deleted", name: "Deleted" },
+    });
+    const cardanoBefore = await kvStore.get(
+      "cardano_addr_cache:cardano-preview"
+    );
+    const genericBefore = await kvStore.get("addr_cache:cosmoshub-4");
+
+    // Decryption keeps working: the wedged KDF only hits the save half, which
+    // is reachable with a readable blob (e.g. a legacy per-blob salt is
+    // memoised on load while saving derives under the shared salt).
+    const encryptSpy = jest
+      .spyOn(Crypto, "encryptBlob")
+      .mockImplementation(async () => {
+        const err = new Error("Scrypt operation made no progress for 30000ms");
+        err.name = "ScryptInactivityTimeoutError";
+        throw err;
+      });
+    // The setup saves above share this spy; only cleanup calls are counted.
+    encryptSpy.mockClear();
+
+    await manager.removeWalletFromAllCaches("deleted");
+
+    // Two chains × withRetry (2 attempts): the second chain must be reached.
+    expect(encryptSpy.mock.calls.length).toBe(4);
+    await expect(
+      kvStore.get("cardano_addr_cache:cardano-preview")
+    ).resolves.toEqual(cardanoBefore);
+    await expect(kvStore.get("addr_cache:cosmoshub-4")).resolves.toEqual(
+      genericBefore
+    );
+    // A transient failure is not proof that encryption is broken.
+    await expect(
+      kvStore.get("cache_encryption_failed:cardano:cardano-preview")
+    ).resolves.toBeNull();
+    await expect(
+      kvStore.get("cache_encryption_failed:generic:cosmoshub-4")
+    ).resolves.toBeNull();
+  });
+
+  it("retries a timed-out save once and leaves no encryption-failure marker", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-transient-save-retry");
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [{ chainId: "cosmoshub-4", features: [] }],
+    });
+
+    let attempts = 0;
+    jest.spyOn(Crypto, "encryptBlob").mockImplementation(async () => {
+      attempts += 1;
+      const err = new Error("Scrypt operation made no progress for 30000ms");
+      err.name = "ScryptInactivityTimeoutError";
+      throw err;
+    });
+
+    await expect(
+      manager.saveGenericCache("cosmoshub-4", {
+        wallet1: { address: "generic-address", name: "Wallet" },
+      })
+    ).rejects.toThrow("Transient crypto failure encrypting generic cache");
+
+    expect(attempts).toBe(2);
+    await expect(
+      kvStore.get("cache_encryption_failed:generic:cosmoshub-4")
+    ).resolves.toBeUndefined();
+  });
+
+  it("retries wallet-cache removal once after a transient scrypt timeout", async () => {
+    const kvStore = new MemoryKVStore(
+      "cache-manager-transient-scrypt-removal-retry"
+    );
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [{ chainId: "cosmoshub-4", features: [] }],
+    });
+    mockReversibleCacheBlobCrypto();
+    await manager.saveGenericCache("cosmoshub-4", {
+      retained: { address: "retained-address", name: "Retained" },
+      deleted: { address: "deleted-address", name: "Deleted" },
+    });
+
+    let attempts = 0;
+    jest.spyOn(Crypto, "decryptBlob").mockImplementation(async (_c, data) => {
+      attempts += 1;
+      if (attempts === 1) {
+        const err = new Error("Scrypt operation made no progress for 30000ms");
+        err.name = "ScryptInactivityTimeoutError";
+        throw err;
+      }
+      return Buffer.from((data as any).crypto.ciphertext, "hex");
+    });
+
+    await manager.removeWalletFromAllCaches("deleted");
+
+    expect(attempts).toBe(2);
+    mockReversibleCacheBlobCrypto();
+    await expect(manager.loadGenericCache("cosmoshub-4")).resolves.toEqual({
+      retained: { address: "retained-address", name: "Retained" },
+    });
+  });
+
   it("keeps tombstones after session-invalidated cleanup aborts", async () => {
     const kvStore = new MemoryKVStore(
       "cache-manager-aborted-removal-tombstone"

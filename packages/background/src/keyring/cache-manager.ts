@@ -39,6 +39,17 @@ class CacheDecryptionError extends Error {
   }
 }
 
+/** Scrypt/provider failure that does not prove the stored blob is corrupt. */
+class CacheTransientCryptoError extends Error {
+  readonly cryptoCause?: unknown;
+
+  constructor(message: string, cryptoCause?: unknown) {
+    super(message);
+    this.name = "CacheTransientCryptoError";
+    this.cryptoCause = cryptoCause;
+  }
+}
+
 class CacheSessionUnavailableError extends Error {
   constructor(message = "Address-cache password/session is unavailable") {
     super(message);
@@ -363,21 +374,101 @@ export class AddressCacheManager {
     }
   }
 
-  /** Heuristic transient error classifier. */
+  /**
+   * Typed transient classifier. Permanent cache corruption is never transient.
+   * Scrypt inactivity timeouts are identified by error name because their
+   * message ("made no progress for Nms") does not contain "timeout".
+   */
   private isTransientError(e: unknown): boolean {
     // Retrying a saturated chain lock only repeats the full wait window and
     // cannot make the operation ahead of us complete any sooner.
     if (e instanceof LockWaitTimeoutError) {
       return false;
     }
+    if (e instanceof CacheDecryptionError) {
+      return false;
+    }
+    if (e instanceof CacheSessionUnavailableError) {
+      return false;
+    }
+    if (this.isTransientCryptoFailure(e)) {
+      return true;
+    }
 
-    const msg = this.formatError(e);
-    return /timeout|temporar(y|ily)|network|busy/i.test(msg);
+    // Match the raw message only. formatError may prepend Error.name (e.g.
+    // "ScryptInactivityTimeoutError"), which would falsely satisfy /timeout/i
+    // and hide a missing typed name-check.
+    return /timeout|temporar(y|ily)|network|busy/i.test(this.rawMessage(e));
+  }
+
+  private isScryptInactivityTimeoutError(e: unknown): boolean {
+    return e instanceof Error && e.name === "ScryptInactivityTimeoutError";
+  }
+
+  /** A crypto failure that says nothing about the stored blob's integrity. */
+  private isTransientCryptoFailure(e: unknown): boolean {
+    return (
+      e instanceof CacheTransientCryptoError ||
+      this.isScryptInactivityTimeoutError(e)
+    );
+  }
+
+  /**
+   * Re-throwable transient error that keeps the typed class across a wrapper.
+   * Callers add their own context message; the original error stays reachable
+   * through cryptoCause so a wedged KDF is never mistaken for corruption.
+   */
+  private toTransientCryptoError(
+    e: unknown,
+    message?: string
+  ): CacheTransientCryptoError {
+    if (e instanceof CacheTransientCryptoError && message === undefined) {
+      return e;
+    }
+    return new CacheTransientCryptoError(
+      message ?? this.formatError(e),
+      e instanceof CacheTransientCryptoError ? e.cryptoCause ?? e : e
+    );
+  }
+
+  /**
+   * Message without the Error.name prefix that formatError adds. Wrapping a
+   * transient failure with formatError would embed
+   * "ScryptInactivityTimeoutError" into the new message, so the /timeout/i
+   * fallback in isTransientError would match by accident and hide a regression
+   * in the typed classification.
+   */
+  private rawMessage(e: unknown): string {
+    return e instanceof Error ? e.message : this.formatError(e);
+  }
+
+  /**
+   * Preserve transient crypto failures as typed errors so callers can retry
+   * instead of treating them as blob corruption. Permanent failures become
+   * CacheDecryptionError only when the caller requested a hard failure.
+   */
+  private classifyDecryptFailure(
+    e: unknown,
+    throwOnDecryptFailure: boolean | undefined
+  ): void {
+    if (e instanceof CacheSessionUnavailableError) {
+      throw e;
+    }
+    if (this.isTransientCryptoFailure(e)) {
+      throw this.toTransientCryptoError(e);
+    }
+    if (throwOnDecryptFailure) {
+      throw new CacheDecryptionError(this.formatError(e));
+    }
   }
 
   /** Format unknown error to string for logs. */
   private formatError(e: unknown): string {
-    if (e instanceof Error) return e.message;
+    if (e instanceof Error) {
+      return e.name && e.name !== "Error"
+        ? `${e.name}: ${e.message}`
+        : e.message;
+    }
     try {
       return JSON.stringify(e);
     } catch {
@@ -508,6 +599,9 @@ export class AddressCacheManager {
       if (e instanceof CacheSessionUnavailableError) {
         throw e;
       }
+      if (this.isTransientCryptoFailure(e)) {
+        throw this.toTransientCryptoError(e);
+      }
       throw new Error(`Failed to decrypt cache data: ${this.formatError(e)}`);
     }
   }
@@ -594,12 +688,7 @@ export class AddressCacheManager {
         }
         return result;
       } catch (e: unknown) {
-        if (e instanceof CacheSessionUnavailableError) {
-          throw e;
-        }
-        if (options.throwOnDecryptFailure) {
-          throw new CacheDecryptionError(this.formatError(e));
-        }
+        this.classifyDecryptFailure(e, options.throwOnDecryptFailure);
         return {};
       }
     }
@@ -689,8 +778,22 @@ export class AddressCacheManager {
       );
       await this.kvStore.set(failureKey, null as any);
     } catch (e: unknown) {
-      if (e instanceof CachePasswordChangedError) {
+      if (e instanceof CacheSessionUnavailableError) {
         throw e;
+      }
+      if (this.isTransientCryptoFailure(e)) {
+        // A wedged or aborted KDF proves nothing about this blob or about the
+        // encryption path, so it must not be recorded as a permanent
+        // encryption failure, and the typed class must survive the wrapper so
+        // withRetry and the per-chain cleanup handler still see it as
+        // transient. The raw message is used deliberately: embedding
+        // Error.name here would let the /timeout/i fallback classify it.
+        throw this.toTransientCryptoError(
+          e,
+          `[AddressCacheManager] Transient crypto failure encrypting Cardano cache for ${chainId}: ${this.rawMessage(
+            e
+          )}`
+        );
       }
       const errorMessage = this.formatError(e);
       await this.kvStore.set(failureKey, errorMessage as any);
@@ -783,12 +886,7 @@ export class AddressCacheManager {
         }
         return result;
       } catch (e: unknown) {
-        if (e instanceof CacheSessionUnavailableError) {
-          throw e;
-        }
-        if (options.throwOnDecryptFailure) {
-          throw new CacheDecryptionError(this.formatError(e));
-        }
+        this.classifyDecryptFailure(e, options.throwOnDecryptFailure);
         return {};
       }
     }
@@ -900,8 +998,19 @@ export class AddressCacheManager {
       );
       await this.kvStore.set(failureKey, null as any);
     } catch (e: unknown) {
-      if (e instanceof CachePasswordChangedError) {
+      if (e instanceof CacheSessionUnavailableError) {
         throw e;
+      }
+      if (this.isTransientCryptoFailure(e)) {
+        // See _saveCardanoCacheUnsafe: transient KDF failures keep their type,
+        // leave the blob and the failure marker untouched, and carry only the
+        // raw message so classification stays typed rather than textual.
+        throw this.toTransientCryptoError(
+          e,
+          `[AddressCacheManager] Transient crypto failure encrypting generic cache for ${chainId}: ${this.rawMessage(
+            e
+          )}`
+        );
       }
       const errorMessage = this.formatError(e);
       await this.kvStore.set(failureKey, errorMessage as any);
@@ -1058,29 +1167,71 @@ export class AddressCacheManager {
           ? `cardano:${info.chainId}`
           : `generic:${info.chainId}`;
 
-        await this.withRetry(() =>
-          this.withLock(lockKey, async () => {
-            this.assertCacheSessionCurrent(cleanupPassword, cleanupGeneration);
-            if (isCardano) {
-              let cache: Record<string, { address: string; pubKey: string }>;
+        try {
+          await this.withRetry(() =>
+            this.withLock(lockKey, async () => {
+              this.assertCacheSessionCurrent(
+                cleanupPassword,
+                cleanupGeneration
+              );
+              if (isCardano) {
+                let cache: Record<string, { address: string; pubKey: string }>;
+                try {
+                  cache = await this._loadCardanoCacheUnsafe(info.chainId, {
+                    priority: "background",
+                    throwOnDecryptFailure: true,
+                  });
+                } catch (e: unknown) {
+                  if (!(e instanceof CacheDecryptionError)) {
+                    // Transient crypto failures must propagate to withRetry.
+                    // Only proven corruption may delete the whole network blob.
+                    throw e;
+                  }
+                  this.assertCacheSessionCurrent(
+                    cleanupPassword,
+                    cleanupGeneration
+                  );
+                  // The wallet cannot be removed selectively from an unreadable
+                  // encrypted blob with the current password, so delete the
+                  // whole cache for privacy.
+                  await this.kvStore.set(
+                    this.getCardanoCacheKey(info.chainId),
+                    null as any
+                  );
+                  return;
+                }
+                if (cache[walletId] !== undefined) {
+                  this.assertCacheSessionCurrent(
+                    cleanupPassword,
+                    cleanupGeneration
+                  );
+                  delete cache[walletId];
+                  await this._saveCardanoCacheUnsafe(info.chainId, cache);
+                }
+                return;
+              }
+
+              let cache: Record<
+                string,
+                { address: string; name?: string; pubKey?: string }
+              >;
               try {
-                cache = await this._loadCardanoCacheUnsafe(info.chainId, {
+                cache = await this._loadGenericCacheUnsafe(info.chainId, {
                   priority: "background",
                   throwOnDecryptFailure: true,
                 });
               } catch (e: unknown) {
                 if (!(e instanceof CacheDecryptionError)) {
+                  // Transient crypto failures must propagate to withRetry.
+                  // Only proven corruption may delete the whole network blob.
                   throw e;
                 }
                 this.assertCacheSessionCurrent(
                   cleanupPassword,
                   cleanupGeneration
                 );
-                // The wallet cannot be removed selectively from an unreadable
-                // encrypted blob with the current password, so delete the
-                // whole cache for privacy.
                 await this.kvStore.set(
-                  this.getCardanoCacheKey(info.chainId),
+                  this.getGenericCacheKey(info.chainId),
                   null as any
                 );
                 return;
@@ -1091,44 +1242,26 @@ export class AddressCacheManager {
                   cleanupGeneration
                 );
                 delete cache[walletId];
-                await this._saveCardanoCacheUnsafe(info.chainId, cache);
+                await this._saveGenericCacheUnsafe(info.chainId, cache);
               }
-              return;
-            }
-
-            let cache: Record<
-              string,
-              { address: string; name?: string; pubKey?: string }
-            >;
-            try {
-              cache = await this._loadGenericCacheUnsafe(info.chainId, {
-                priority: "background",
-                throwOnDecryptFailure: true,
-              });
-            } catch (e: unknown) {
-              if (!(e instanceof CacheDecryptionError)) {
-                throw e;
-              }
-              this.assertCacheSessionCurrent(
-                cleanupPassword,
-                cleanupGeneration
-              );
-              await this.kvStore.set(
-                this.getGenericCacheKey(info.chainId),
-                null as any
-              );
-              return;
-            }
-            if (cache[walletId] !== undefined) {
-              this.assertCacheSessionCurrent(
-                cleanupPassword,
-                cleanupGeneration
-              );
-              delete cache[walletId];
-              await this._saveGenericCacheUnsafe(info.chainId, cache);
-            }
-          })
-        );
+            })
+          );
+        } catch (e: unknown) {
+          if (e instanceof CacheSessionUnavailableError) {
+            return;
+          }
+          if (this.isTransientCryptoFailure(e)) {
+            // Exhausted retry for this chain: keep the blob (not corruption)
+            // and continue so one wedged KDF cannot skip remaining networks.
+            // In-memory tombstone still filters the deleted wallet on later saves.
+            console.error(
+              `[AddressCacheManager] Transient cache cleanup failure for ${info.chainId}; keeping blob`,
+              e instanceof Error ? e.name : e
+            );
+            continue;
+          }
+          throw e;
+        }
       }
     } catch (e: unknown) {
       if (e instanceof CacheSessionUnavailableError) {
