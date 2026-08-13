@@ -1254,6 +1254,122 @@ describe("AddressCacheManager security", () => {
     ]);
   });
 
+  it("throws instead of reporting an inconsistency once the session is locked", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-consistency-locked");
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [],
+    });
+    const blob = await Crypto.encryptBlob(
+      mockCrypto,
+      "scrypt",
+      JSON.stringify({ current: { address: "aabb" } }),
+      "test-password",
+      { cacheType: "address_cache" },
+      {
+        priority: "background",
+        macContext: {
+          storageKey: "addr_cache:cosmoshub-4",
+          chainId: "cosmoshub-4",
+        },
+      }
+    );
+    await kvStore.set("addr_cache:cosmoshub-4", JSON.stringify(blob));
+
+    // Sign-out: the password is gone, so the blob reads as an empty cache and
+    // every wallet would look "missing". Reporting that as an inconsistency
+    // makes the caller wipe the address cache of every network.
+    manager.setPassword("");
+
+    await expect(
+      manager.checkConsistency(
+        "cosmoshub-4",
+        ["current"],
+        "current",
+        "aabb",
+        false
+      )
+    ).rejects.toThrow(/session is unavailable/i);
+  });
+
+  it("rechecks the session after waiting for a cache lock before clearing", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-clear-session-guard");
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [{ chainId: "cosmoshub-4", features: [] } as any],
+    });
+    const storageKey = "addr_cache:cosmoshub-4";
+    const sentinel = { current: { address: "aabb" } };
+    await kvStore.set(storageKey, sentinel as any);
+
+    let releaseLock!: () => void;
+    const heldLock = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+    (manager as any).operationLocks.set("generic:cosmoshub-4", heldLock);
+
+    let sessionIsCurrent = true;
+    const clear = manager.clearAllCaches({
+      shouldContinue: () => sessionIsCurrent,
+    });
+
+    // The clear is now queued behind a cache operation. A sign-out followed
+    // by a new unlock invalidates its destructive commit before the lock is
+    // released.
+    sessionIsCurrent = false;
+    releaseLock();
+    await clear;
+
+    await expect(kvStore.get(storageKey)).resolves.toEqual(sentinel);
+  });
+
+  it("propagates a transient KDF failure instead of calling the cache inconsistent", async () => {
+    const kvStore = new MemoryKVStore("cache-manager-consistency-transient");
+    const manager = new AddressCacheManager({
+      kvStore,
+      crypto: mockCrypto,
+      password: "test-password",
+      embedChainInfos: [],
+    });
+    const blob = await Crypto.encryptBlob(
+      mockCrypto,
+      "scrypt",
+      JSON.stringify({ current: { address: "aabb" } }),
+      "test-password",
+      { cacheType: "address_cache" },
+      {
+        priority: "background",
+        macContext: {
+          storageKey: "addr_cache:cosmoshub-4",
+          chainId: "cosmoshub-4",
+        },
+      }
+    );
+    await kvStore.set("addr_cache:cosmoshub-4", JSON.stringify(blob));
+
+    const wedged = new Error("Scrypt operation made no progress for 30000ms");
+    wedged.name = "ScryptInactivityTimeoutError";
+    const scryptSpy = jest
+      .spyOn(mockCrypto, "scrypt")
+      .mockRejectedValue(wedged);
+
+    await expect(
+      manager.checkConsistency(
+        "cosmoshub-4",
+        ["current"],
+        "current",
+        "aabb",
+        false
+      )
+    ).rejects.toThrow(/no progress/i);
+    // withRetry owns the retry: the failure has to leave the check to reach it.
+    expect(scryptSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("marks address-cache blob crypto as background work", async () => {
     const kvStore = new MemoryKVStore("cache-manager-background-priority");
     const manager = new AddressCacheManager({

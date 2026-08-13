@@ -23,16 +23,20 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
 
   function makeService(overrides?: {
     consistency?: { isConsistent: boolean; issues: string[] };
+    consistencyError?: unknown;
+    hasPassword?: boolean;
     cache?: Record<string, unknown>;
     chainId?: string;
     features?: string[];
   }) {
     const chainId = overrides?.chainId ?? "evmos_9001-2";
-    const checkConsistency = jest
-      .fn()
-      .mockResolvedValue(
-        overrides?.consistency ?? { isConsistent: true, issues: [] }
-      );
+    const checkConsistency = overrides?.consistencyError
+      ? jest.fn().mockRejectedValue(overrides.consistencyError)
+      : jest
+          .fn()
+          .mockResolvedValue(
+            overrides?.consistency ?? { isConsistent: true, issues: [] }
+          );
     const saveGenericChainCache = jest.fn().mockResolvedValue(undefined);
     const clearAllAddressCaches = jest.fn().mockResolvedValue(undefined);
     const loadGenericChainCache = jest.fn().mockResolvedValue(
@@ -48,6 +52,8 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
       }
     );
     const dispatchEvent = jest.fn();
+    const hasPassword = jest.fn(() => overrides?.hasPassword ?? true);
+    const getCurrentUnlockSessionId = jest.fn(() => "session-1");
 
     const service = Object.create(KeyRingService.prototype) as KeyRingService;
     Object.assign(service, {
@@ -59,7 +65,7 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
       },
       keyRing: {
         addressCacheManager: {
-          hasPassword: () => true,
+          hasPassword,
           checkConsistency,
         },
         getMultiKeyStoreInfo: () => [
@@ -71,6 +77,7 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
             },
           },
         ],
+        getCurrentUnlockSessionId,
         loadGenericChainCache,
         saveGenericChainCache,
         clearAllAddressCaches,
@@ -85,6 +92,8 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
       saveGenericChainCache,
       clearAllAddressCaches,
       dispatchEvent,
+      hasPassword,
+      getCurrentUnlockSessionId,
     };
   }
 
@@ -255,5 +264,93 @@ describe("KeyRingService.ensureAndRepairAddressCaches generic path", () => {
         seq: expect.any(Number),
       })
     );
+  });
+
+  it("keeps every cache when the consistency check cannot be performed", async () => {
+    const { service, clearAllAddressCaches, dispatchEvent } = makeService({
+      consistencyError: new Error(
+        "Address-cache password/session is unavailable for the consistency check"
+      ),
+    });
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await (service as any).ensureAndRepairAddressCaches(
+        "evmos_9001-2",
+        [
+          {
+            name: "Wallet 1",
+            algo: "ethsecp256k1",
+            address: evmAddressBytes,
+            pubKey: Buffer.from("aa", "hex"),
+          },
+        ],
+        { isCardano: false, isEvm: true }
+      );
+
+      expect(clearAllAddressCaches).not.toHaveBeenCalled();
+      expect(dispatchEvent).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("does not act on an inconsistency verdict that outlived its session", async () => {
+    const { service, clearAllAddressCaches, dispatchEvent, hasPassword } =
+      makeService({
+        consistency: { isConsistent: false, issues: ["address mismatch"] },
+      });
+    // Unlocked when the repair starts, signed out by the time the verdict is in.
+    hasPassword.mockReturnValueOnce(true).mockReturnValue(false);
+
+    await (service as any).ensureAndRepairAddressCaches(
+      "evmos_9001-2",
+      [
+        {
+          name: "Wallet 1",
+          algo: "ethsecp256k1",
+          address: evmAddressBytes,
+          pubKey: Buffer.from("aa", "hex"),
+        },
+      ],
+      { isCardano: false, isEvm: true }
+    );
+
+    expect(clearAllAddressCaches).not.toHaveBeenCalled();
+    expect(dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not let an old verdict clear a newly unlocked session", async () => {
+    const {
+      service,
+      checkConsistency,
+      clearAllAddressCaches,
+      dispatchEvent,
+      getCurrentUnlockSessionId,
+    } = makeService({
+      consistency: { isConsistent: false, issues: ["address mismatch"] },
+    });
+    checkConsistency.mockImplementation(async () => {
+      // Sign-out and sign-in have both completed. A password-presence check is
+      // true again, but this is a different unlock session.
+      getCurrentUnlockSessionId.mockReturnValue("session-2");
+      return { isConsistent: false, issues: ["address mismatch"] };
+    });
+
+    await (service as any).ensureAndRepairAddressCaches(
+      "evmos_9001-2",
+      [
+        {
+          name: "Wallet 1",
+          algo: "ethsecp256k1",
+          address: evmAddressBytes,
+          pubKey: Buffer.from("aa", "hex"),
+        },
+      ],
+      { isCardano: false, isEvm: true }
+    );
+
+    expect(clearAllAddressCaches).not.toHaveBeenCalled();
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 });

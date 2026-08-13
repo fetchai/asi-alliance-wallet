@@ -36,6 +36,10 @@ import { publicKeyConvert } from "secp256k1";
 import { KeystoneKeyringData } from "../keystone/cosmos-keyring";
 import { InteractionService } from "../interaction";
 import { AddressCacheManager } from "./cache-manager";
+import type {
+  CacheClearOptions,
+  ConsistencyCheckResult,
+} from "./cache-manager";
 import { isValidCardanoAddress } from "@keplr-wallet/cardano";
 
 export enum KeyRingStatus {
@@ -341,9 +345,15 @@ export class KeyRing {
     await this.cacheManager.migrateToEncrypted();
   }
 
-  public async clearAllAddressCaches(): Promise<void> {
+  public async clearAllAddressCaches(
+    options?: CacheClearOptions
+  ): Promise<void> {
+    if (options?.shouldContinue && !options.shouldContinue()) {
+      return;
+    }
+
     this.clearCardanoMemoryCache();
-    await this.cacheManager.clearAllCaches();
+    await this.cacheManager.clearAllCaches(options);
   }
 
   public static getTypeOfKeyStore(
@@ -3500,6 +3510,19 @@ export class KeyRing {
       });
       const activeWalletId = KeyRing.getKeyStoreId(keyStore);
       const cacheUpdate = (async () => {
+        // Detached work outlives the switch itself. A sign-out (or a password
+        // change) while it runs must stop it: with no password the cache reads
+        // as empty, which used to be reported as an inconsistency and cost the
+        // user the address cache of every network.
+        if (
+          !this.isUnlockSessionCurrent(
+            session.password,
+            session.unlockSessionId
+          )
+        ) {
+          return;
+        }
+
         if (!isCardano) {
           let cachedActiveAddress = "";
           let hasFullCache = false;
@@ -3550,38 +3573,13 @@ export class KeyRing {
           }
 
           if (activeWalletAddress && hasFullCache) {
-            const consistencyResult = await this.cacheManager.checkConsistency(
-              currentChainId,
+            await this.reconcileCacheConsistencyAfterSwitch(session, {
+              chainId: currentChainId,
               walletIds,
               activeWalletId,
               activeWalletAddress,
-              isCardano
-            );
-
-            if (!consistencyResult.isConsistent) {
-              console.warn(
-                `[KeyRing] Cache inconsistency after wallet switch for ${currentChainId}:`,
-                consistencyResult.issues
-              );
-              await this.clearAllAddressCaches();
-
-              try {
-                const seq = Date.now();
-                this.interactionService.dispatchEvent(
-                  WEBPAGE_PORT,
-                  "clear-cache",
-                  {
-                    seq,
-                  }
-                );
-              } catch (e: unknown) {
-                console.error(
-                  `[KeyRing] Failed to dispatch clear-cache event:`,
-                  e
-                );
-                // Continue execution - event dispatch failure is not critical
-              }
-            }
+              isCardano,
+            });
           }
         } else {
           let cachedActiveAddress = "";
@@ -3631,34 +3629,13 @@ export class KeyRing {
           }
 
           if (activeWalletAddress && hasFullCache) {
-            const consistencyResult = await this.cacheManager.checkConsistency(
-              currentChainId,
+            await this.reconcileCacheConsistencyAfterSwitch(session, {
+              chainId: currentChainId,
               walletIds,
               activeWalletId,
               activeWalletAddress,
-              isCardano
-            );
-
-            if (!consistencyResult.isConsistent) {
-              await this.clearAllAddressCaches();
-
-              try {
-                const seq = Date.now();
-                this.interactionService.dispatchEvent(
-                  WEBPAGE_PORT,
-                  "clear-cache",
-                  {
-                    seq,
-                  }
-                );
-              } catch (e: unknown) {
-                console.error(
-                  `[KeyRing] Failed to dispatch clear-cache event:`,
-                  e
-                );
-                // Continue execution - event dispatch failure is not critical
-              }
-            }
+              isCardano,
+            });
           }
         }
       })();
@@ -3695,6 +3672,84 @@ export class KeyRing {
     return {
       multiKeyStoreInfo: this.getMultiKeyStoreInfo(),
     };
+  }
+
+  /**
+   * Post-switch cache verdict. Clearing every network's address cache is the
+   * most expensive repair this keyring has — the next session pays one full
+   * key derivation per wallet per network — so it is allowed only for an
+   * inconsistency that was actually observed by the session that is still
+   * live.
+   *
+   * Two guards, both needed:
+   * - a thrown check means "could not judge" (locked session, wedged KDF,
+   *   unreadable blob) and never means "inconsistent";
+   * - a verdict produced by a session that has since been torn down is stale.
+   *   This detached work commonly finishes after the user signed out, and its
+   *   result would otherwise land on the *next* session, wiping the cache the
+   *   user just signed back in to use.
+   */
+  private async reconcileCacheConsistencyAfterSwitch(
+    session: UnlockSessionContext,
+    target: {
+      chainId: string;
+      walletIds: string[];
+      activeWalletId: string;
+      activeWalletAddress: string;
+      isCardano: boolean;
+    }
+  ): Promise<void> {
+    const isSessionCurrent = () =>
+      this.isUnlockSessionCurrent(session.password, session.unlockSessionId);
+
+    if (!isSessionCurrent()) {
+      return;
+    }
+
+    let consistencyResult: ConsistencyCheckResult;
+    try {
+      consistencyResult = await this.cacheManager.checkConsistency(
+        target.chainId,
+        target.walletIds,
+        target.activeWalletId,
+        target.activeWalletAddress,
+        target.isCardano
+      );
+    } catch (e: unknown) {
+      console.warn(
+        `[KeyRing] Skipped cache consistency check for ${target.chainId}; cache left intact:`,
+        e
+      );
+      return;
+    }
+
+    if (consistencyResult.isConsistent) {
+      return;
+    }
+
+    if (!isSessionCurrent()) {
+      return;
+    }
+
+    console.warn(
+      `[KeyRing] Cache inconsistency after wallet switch for ${target.chainId}:`,
+      consistencyResult.issues
+    );
+    await this.clearAllAddressCaches({ shouldContinue: isSessionCurrent });
+
+    if (!isSessionCurrent()) {
+      return;
+    }
+
+    try {
+      const seq = Date.now();
+      this.interactionService.dispatchEvent(WEBPAGE_PORT, "clear-cache", {
+        seq,
+      });
+    } catch (e: unknown) {
+      console.error(`[KeyRing] Failed to dispatch clear-cache event:`, e);
+      // Continue execution - event dispatch failure is not critical
+    }
   }
 
   public getMultiKeyStoreInfo(): MultiKeyStoreInfoWithSelected {

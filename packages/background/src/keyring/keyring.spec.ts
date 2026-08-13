@@ -981,6 +981,170 @@ describe("changeKeyStoreFromMultiKeyStore generic cache repair", () => {
     expect(keys[0].name).toBe("Wallet 1");
     expect(decryptSpy).not.toHaveBeenCalled();
   });
+
+  /**
+   * Setup shared by the three verdict tests below: a warm, complete generic
+   * cache, so the detached post-switch work reaches the consistency check
+   * instead of rebuilding.
+   */
+  const setUpWarmSwitch = (storeName: string) => {
+    const chainId = "evmos_9001-2";
+    const w1 = createKeyStore({ __id__: "w1", name: "Wallet 1" });
+    const w2 = createKeyStore({ __id__: "w2", name: "Wallet 2" });
+    const dispatchEvent = jest.fn();
+    const keyRing = createTrackedKeyRing(
+      evmEmbedChain(chainId),
+      new MemoryKVStore(storeName),
+      {} as any,
+      {} as any,
+      { dispatchEvent } as any,
+      {} as any,
+      mockChainsService(chainId)
+    );
+
+    (keyRing as any).loaded = true;
+    (keyRing as any).multiKeyStore = [w1, w2];
+    selectKeyStore(keyRing, w1);
+    (keyRing as any).password = "pw";
+    (keyRing as any).unlockSessionId = storeName;
+    (keyRing as any)._mnemonicMasterSeed = new Uint8Array([1, 2, 3]);
+    (keyRing as any).sessionKeyStoreMaterial.set("w2", {
+      type: "mnemonic",
+      mnemonicMasterSeed: new Uint8Array([2]),
+    });
+
+    jest.spyOn(keyRing, "save").mockResolvedValue(undefined as any);
+    jest.spyOn(keyRing, "loadGenericChainCache").mockResolvedValue({
+      w1: { address: "cc".repeat(20), pubKey: "11" },
+      w2: { address: "aa".repeat(20), pubKey: "22" },
+    });
+    const clearAllSpy = jest
+      .spyOn(keyRing, "clearAllAddressCaches")
+      .mockResolvedValue(undefined);
+
+    return { keyRing, chainId, clearAllSpy, dispatchEvent };
+  };
+
+  it("keeps every network's cache when the consistency check cannot be performed", async () => {
+    const { keyRing, clearAllSpy } = setUpWarmSwitch(
+      "keyring-switch-unreadable-consistency"
+    );
+    const checkConsistencySpy = jest
+      .spyOn(keyRing.addressCacheManager, "checkConsistency")
+      .mockRejectedValue(
+        new Error("Address-cache password/session is unavailable")
+      );
+    const warnSpy = jest
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      await keyRing.changeKeyStoreFromMultiKeyStore(1);
+      await flushAsyncRepair();
+
+      expect(checkConsistencySpy).toHaveBeenCalledTimes(1);
+      expect(clearAllSpy).not.toHaveBeenCalled();
+      // Handled where it happens, not surfaced as failed detached work.
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Skipped cache consistency check"),
+        expect.anything()
+      );
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("does not act on an inconsistency verdict that outlived its unlock session", async () => {
+    const { keyRing, clearAllSpy } = setUpWarmSwitch(
+      "keyring-switch-stale-verdict"
+    );
+    jest
+      .spyOn(keyRing.addressCacheManager, "checkConsistency")
+      .mockImplementation(async () => {
+        // The user signs out while the detached check is still running.
+        keyRing.lock();
+        return { isConsistent: false, issues: ["Missing wallet IDs in cache"] };
+      });
+
+    await keyRing.changeKeyStoreFromMultiKeyStore(1);
+    await flushAsyncRepair();
+
+    expect(clearAllSpy).not.toHaveBeenCalled();
+  });
+
+  it("still clears caches for an inconsistency observed by the live session", async () => {
+    const { keyRing, clearAllSpy } = setUpWarmSwitch(
+      "keyring-switch-live-inconsistency"
+    );
+    jest
+      .spyOn(keyRing.addressCacheManager, "checkConsistency")
+      .mockResolvedValue({
+        isConsistent: false,
+        issues: ["Active wallet address mismatch"],
+      });
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await keyRing.changeKeyStoreFromMultiKeyStore(1);
+      await flushAsyncRepair();
+
+      expect(clearAllSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("aborts a queued clear after sign-out and a new unlock", async () => {
+    const { keyRing, clearAllSpy, dispatchEvent } = setUpWarmSwitch(
+      "keyring-switch-clear-session-race"
+    );
+    jest
+      .spyOn(keyRing.addressCacheManager, "checkConsistency")
+      .mockResolvedValue({
+        isConsistent: false,
+        issues: ["Active wallet address mismatch"],
+      });
+
+    let signalClearStarted!: () => void;
+    const clearStarted = new Promise<void>((resolve) => {
+      signalClearStarted = resolve;
+    });
+    let releaseClear!: () => void;
+    const clearGate = new Promise<void>((resolve) => {
+      releaseClear = resolve;
+    });
+    let deletedByOldSession = false;
+    clearAllSpy.mockImplementation(async (options) => {
+      signalClearStarted();
+      await clearGate;
+      if (!options?.shouldContinue || options.shouldContinue()) {
+        deletedByOldSession = true;
+      }
+    });
+    const warnSpy = jest
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+
+    try {
+      await keyRing.changeKeyStoreFromMultiKeyStore(1);
+      await clearStarted;
+
+      keyRing.lock();
+      (keyRing as any).activateUnlockSession("pw");
+      releaseClear();
+      await flushAsyncRepair();
+
+      expect(deletedByOldSession).toBe(false);
+      expect(
+        dispatchEvent.mock.calls.some(([, event]) => event === "clear-cache")
+      ).toBe(false);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 describe("reloadActiveKeyStoreForSwitch session material cache", () => {

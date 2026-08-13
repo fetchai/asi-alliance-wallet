@@ -4,6 +4,7 @@ import {
   MultiKeyStoreInfoWithSelected,
 } from "./keyring";
 import { Key, KeyStoreMetaKnown, ScryptPriority } from "./types";
+import type { ConsistencyCheckResult } from "./cache-manager";
 import { CardanoService } from "../cardano/service";
 import {
   CardanoRuntimeSupervisor,
@@ -225,8 +226,16 @@ export class KeyRingService {
     if (this.keyRing.status !== KeyRingStatus.UNLOCKED) {
       return;
     }
+    const unlockSessionId = this.keyRing.getCurrentUnlockSessionId();
+    if (!this.isAddressCacheRepairSessionCurrent(unlockSessionId)) {
+      return;
+    }
+
     const currentChainId = await this.chainsService.getSelectedChain();
-    if (currentChainId !== chainId) {
+    if (
+      currentChainId !== chainId ||
+      !this.isAddressCacheRepairSessionCurrent(unlockSessionId)
+    ) {
       return;
     }
 
@@ -240,10 +249,26 @@ export class KeyRingService {
       : await this.keyRing.getKeys(chainId, isEvm, {
           scryptPriority: "background",
         });
-    await this.ensureAndRepairAddressCaches(chainId, keys, {
-      isCardano,
-      isEvm,
-    });
+    if (!this.isAddressCacheRepairSessionCurrent(unlockSessionId)) {
+      return;
+    }
+    await this.ensureAndRepairAddressCaches(
+      chainId,
+      keys,
+      {
+        isCardano,
+        isEvm,
+      },
+      unlockSessionId
+    );
+  }
+
+  private isAddressCacheRepairSessionCurrent(unlockSessionId: string): boolean {
+    return (
+      unlockSessionId.length > 0 &&
+      this.keyRing.addressCacheManager.hasPassword() &&
+      this.keyRing.getCurrentUnlockSessionId() === unlockSessionId
+    );
   }
 
   async restore(): Promise<{
@@ -1630,13 +1655,17 @@ Salt: ${salt}`;
   private async ensureAndRepairAddressCaches(
     chainId: string,
     keys: (Key & { name: string })[],
-    flags: { isCardano: boolean; isEvm: boolean }
+    flags: { isCardano: boolean; isEvm: boolean },
+    expectedUnlockSessionId = this.keyRing.getCurrentUnlockSessionId()
   ): Promise<void> {
-    // This prevents returning empty cache and recalculating addresses on extension startup
-    if (!this.keyRing.addressCacheManager.hasPassword()) {
+    const isSessionCurrent = () =>
+      this.isAddressCacheRepairSessionCurrent(expectedUnlockSessionId);
+
+    // This prevents returning an empty cache during startup and rejects work
+    // captured by an older unlock session.
+    if (!isSessionCurrent()) {
       console.warn(
-        `[ensureAndRepairAddressCaches] Password not set in cache manager for ${chainId}, skipping cache operations. ` +
-          `This can happen during extension startup before unlock completes.`
+        `[ensureAndRepairAddressCaches] Address-cache session is unavailable or changed for ${chainId}; skipping cache operations.`
       );
       return;
     }
@@ -1688,7 +1717,9 @@ Salt: ${salt}`;
               : "";
           next[id] = { address: addr, pubKey: pub };
         });
-        await this.keyRing.saveCardanoChainCache(chainId, next);
+        if (isSessionCurrent()) {
+          await this.keyRing.saveCardanoChainCache(chainId, next);
+        }
         return;
       }
     }
@@ -1718,7 +1749,9 @@ Salt: ${salt}`;
             pubKey: pubKeyHex,
           };
         });
-        await this.keyRing.saveGenericChainCache(chainId, next);
+        if (isSessionCurrent()) {
+          await this.keyRing.saveGenericChainCache(chainId, next);
+        }
         return;
       }
     }
@@ -1731,22 +1764,49 @@ Salt: ${salt}`;
           : Buffer.from(activeKey.address).toString("hex")
         : "";
 
-    const consistencyResult =
-      await this.keyRing.addressCacheManager.checkConsistency(
-        chainId,
-        walletIds,
-        activeWalletId,
-        activeAddressForCheck,
-        flags.isCardano
+    let consistencyResult: ConsistencyCheckResult;
+    try {
+      if (!isSessionCurrent()) {
+        return;
+      }
+      consistencyResult =
+        await this.keyRing.addressCacheManager.checkConsistency(
+          chainId,
+          walletIds,
+          activeWalletId,
+          activeAddressForCheck,
+          flags.isCardano
+        );
+    } catch (e: unknown) {
+      // "Could not check" is not "inconsistent". Clearing every network's
+      // address cache here would cost one key derivation per wallet per
+      // network on the next unlock; see KeyRing.reconcileCacheConsistencyAfterSwitch.
+      console.warn(
+        `[KeyRingService] Skipped cache consistency check for ${chainId}; cache left intact:`,
+        e
       );
+      return;
+    }
 
     if (!consistencyResult.isConsistent) {
+      if (!isSessionCurrent()) {
+        // The session that produced this verdict is gone (lock/sign-out), or
+        // a newer unlock session is already active with another password.
+        return;
+      }
+
       console.warn(
         `Cache inconsistency detected for ${chainId}:`,
         consistencyResult.issues
       );
 
-      await this.keyRing.clearAllAddressCaches();
+      await this.keyRing.clearAllAddressCaches({
+        shouldContinue: isSessionCurrent,
+      });
+
+      if (!isSessionCurrent()) {
+        return;
+      }
 
       if (flags.isCardano) {
         const next: Record<string, { address: string; pubKey: string }> = {};
@@ -1782,6 +1842,10 @@ Salt: ${salt}`;
           };
         });
         await this.keyRing.saveGenericChainCache(chainId, next);
+      }
+
+      if (!isSessionCurrent()) {
+        return;
       }
 
       try {

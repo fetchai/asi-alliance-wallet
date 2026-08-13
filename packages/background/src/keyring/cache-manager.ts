@@ -18,6 +18,14 @@ export interface ConsistencyCheckResult {
   issues: string[];
 }
 
+export interface CacheClearOptions {
+  /**
+   * Rechecked after each per-chain lock is acquired. Detached callers use
+   * this to keep an old unlock session from deleting a newer session's blobs.
+   */
+  shouldContinue?: () => boolean;
+}
+
 export interface CacheManagerConfig {
   kvStore: KVStore;
   crypto: CommonCrypto;
@@ -685,7 +693,7 @@ export class AddressCacheManager {
       if (!this.password) {
         if (options.throwOnDecryptFailure) {
           throw new CacheSessionUnavailableError(
-            "Password not set while removing wallet from encrypted cache"
+            "Password not set while reading an encrypted cache blob"
           );
         }
         return {};
@@ -877,7 +885,7 @@ export class AddressCacheManager {
       if (!this.password) {
         if (options.throwOnDecryptFailure) {
           throw new CacheSessionUnavailableError(
-            "Password not set while removing wallet from encrypted cache"
+            "Password not set while reading an encrypted cache blob"
           );
         }
         return {};
@@ -1066,7 +1074,16 @@ export class AddressCacheManager {
   }
 
   /**
-   * Comprehensive consistency check for cache
+   * Comprehensive consistency check for cache.
+   *
+   * Only a cache that was actually read can be judged. Failing to read it —
+   * a locked or re-keyed session, a wedged KDF, an unreadable blob — is
+   * reported by throwing, never as `{ isConsistent: false }`. Every caller
+   * answers a negative verdict by clearing the address cache of *all* chains,
+   * so swallowing the failure here turned a transient condition into a full
+   * cold rebuild on every network: exactly the "switching is slow after
+   * signing out and back in" report. Transient failures now reach the
+   * `withRetry` this method is wrapped in instead of being flattened.
    */
   async checkConsistency(
     chainId: string,
@@ -1075,65 +1092,67 @@ export class AddressCacheManager {
     activeWalletAddress: string,
     isCardano: boolean
   ): Promise<ConsistencyCheckResult> {
+    if (!this.password) {
+      // A lock (sign-out) clears the password. Reading the blob would return
+      // an empty cache and every wallet would look "missing".
+      throw new CacheSessionUnavailableError(
+        "Address-cache password/session is unavailable for the consistency check"
+      );
+    }
+
     return this.withRetry(async () => {
       const issues: string[] = [];
 
-      try {
-        const cache = isCardano
-          ? await this._loadCardanoCacheUnsafe(chainId, {
-              priority: "background",
-            })
-          : await this._loadGenericCacheUnsafe(chainId, {
-              priority: "background",
-            });
+      const cache = isCardano
+        ? await this._loadCardanoCacheUnsafe(chainId, {
+            priority: "background",
+            throwOnDecryptFailure: true,
+          })
+        : await this._loadGenericCacheUnsafe(chainId, {
+            priority: "background",
+            throwOnDecryptFailure: true,
+          });
 
-        const cacheIds = Object.keys(cache);
+      const setCacheIds = new Set(Object.keys(cache));
 
-        const setCacheIds = new Set(cacheIds);
+      if (!walletIds.every((id) => setCacheIds.has(id))) {
+        issues.push("Missing wallet IDs in cache");
+      }
 
-        if (!walletIds.every((id) => setCacheIds.has(id))) {
-          issues.push("Missing wallet IDs in cache");
-        }
+      // Extra IDs are harmless tombstones left by wallet deletion and are
+      // pruned the next time this chain cache is rebuilt. Cache names are
+      // presentation-only; callers must use current keystore metadata.
 
-        // Extra IDs are harmless tombstones left by wallet deletion and are
-        // pruned the next time this chain cache is rebuilt. Cache names are
-        // presentation-only; callers must use current keystore metadata.
+      if (activeWalletId && cache[activeWalletId]) {
+        const cachedAddr = cache[activeWalletId].address || "";
 
-        if (activeWalletId && cache[activeWalletId]) {
-          const cachedAddr = cache[activeWalletId].address || "";
-
-          if (cachedAddr !== activeWalletAddress) {
-            issues.push(
-              `Active wallet address mismatch: cached "${cachedAddr.slice(
-                0,
-                10
-              )}...", expected "${activeWalletAddress.slice(0, 10)}..."`
-            );
-          }
-        } else if (activeWalletId) {
+        if (cachedAddr !== activeWalletAddress) {
           issues.push(
-            `Missing cache entry for active wallet ${activeWalletId}`
+            `Active wallet address mismatch: cached "${cachedAddr.slice(
+              0,
+              10
+            )}...", expected "${activeWalletAddress.slice(0, 10)}..."`
           );
         }
-
-        return {
-          isConsistent: issues.length === 0,
-          issues,
-        };
-      } catch (e: unknown) {
-        issues.push(`Failed to check consistency: ${this.formatError(e)}`);
-        return {
-          isConsistent: false,
-          issues,
-        };
+      } else if (activeWalletId) {
+        issues.push(`Missing cache entry for active wallet ${activeWalletId}`);
       }
+
+      return {
+        isConsistent: issues.length === 0,
+        issues,
+      };
     });
   }
 
   /**
    * Clear all caches across all chains
    */
-  async clearAllCaches(): Promise<void> {
+  async clearAllCaches(options?: CacheClearOptions): Promise<void> {
+    if (options?.shouldContinue && !options.shouldContinue()) {
+      return;
+    }
+
     try {
       await Promise.all(
         this.embedChainInfos.map(async (info) => {
@@ -1144,6 +1163,14 @@ export class AddressCacheManager {
 
           return this.withRetry(() =>
             this.withLock(lockKey, async () => {
+              // The lock may have been held by cache crypto for up to 30s.
+              // Check at the destructive commit point, not only before this
+              // clear was queued, because the user may have signed out and
+              // unlocked a new session while we were waiting.
+              if (options?.shouldContinue && !options.shouldContinue()) {
+                return;
+              }
+
               const key = isCardano
                 ? this.getCardanoCacheKey(info.chainId)
                 : this.getGenericCacheKey(info.chainId);
