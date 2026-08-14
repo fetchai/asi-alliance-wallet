@@ -15,7 +15,7 @@ import {
   registerExportedKeyRingDatas,
 } from "utils/import-from-extension";
 import { AsyncKVStore } from "../../../common";
-import { BarcodeScanningResult } from "expo-camera/src/Camera.types";
+import { BarcodeScanningResult } from "expo-camera";
 
 export * from "./intro";
 export * from "./set-password";
