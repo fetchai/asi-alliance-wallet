@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
-import { ViewStyle } from "react-native";
+import { Alert, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { CardModal } from "../card";
 import { Button } from "components/button";
@@ -15,7 +15,7 @@ export const PasswordInputModal: FunctionComponent<{
   close: () => void;
   title: string;
   /**
-   * If any error thrown in the `onEnterPassword`, the password considered as invalid password.
+   * Password field only shows "Invalid password". Other failures use Alert.
    * @param password
    */
   onEnterPassword: (password: string) => Promise<void>;
@@ -42,9 +42,19 @@ export const PasswordInputModal: FunctionComponent<{
       setIsInvalidPassword(false);
       setPassword("");
       close();
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
-      setIsInvalidPassword(true);
+      const message =
+        typeof e?.message === "string" && e?.message?.length > 0
+          ? e.message
+          : "Invalid password";
+
+      if (message === "Invalid password") {
+        setIsInvalidPassword(true);
+      } else {
+        setIsInvalidPassword(false);
+        Alert.alert("Error", "Something went wrong. Please try again.");
+      }
       setPassword("");
     } finally {
       setIsLoading(false);
