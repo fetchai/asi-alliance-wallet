@@ -17,20 +17,36 @@ export class KeychainStore {
   @observable
   protected _isAutoLockOn: boolean = false;
 
-  // Used for reading — iOS shows biometric prompt with this title
-  protected static readOptions: Keychain.Options = {
-    authenticationPrompt: {
-      title: "Biometric Authentication",
-    },
-    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
-  };
+  // Fresh options each call: react-native-keychain mutates authenticationPrompt
+  // (adds cancel). Reusing a frozen/static object throws on Android/Hermes.
+  protected static getReadOptions(): Keychain.GetOptions {
+    return {
+      authenticationPrompt: {
+        title: "Biometric Authentication",
+        cancel: "Cancel",
+      },
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+    };
+  }
 
-  // Used for writing only — no auth prompt so iOS won't challenge during SecItemAdd
-  protected static writeOptions: Keychain.Options = {
-    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
-  };
+  // iOS: no auth prompt on write so SecItemAdd does not challenge.
+  // Android (keychain v10+): BIOMETRY_CURRENT_SET encrypt needs a prompt.
+  protected static getWriteOptions(): Keychain.SetOptions {
+    if (Platform.OS === "android") {
+      return {
+        authenticationPrompt: {
+          title: "Biometric Authentication",
+          cancel: "Cancel",
+        },
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+      };
+    }
+    return {
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+    };
+  }
 
   constructor(
     protected readonly kvStore: KVStore,
@@ -64,7 +80,7 @@ export class KeychainStore {
     }
 
     const credentials = yield* toGenerator(
-      Keychain.getGenericPassword(KeychainStore.readOptions)
+      Keychain.getGenericPassword(KeychainStore.getReadOptions())
     );
     if (credentials) {
       yield this.keyRingStore.unlock(credentials.password);
@@ -76,33 +92,45 @@ export class KeychainStore {
   @flow
   *turnOnBiometry(password: string) {
     const valid = yield* toGenerator(this.keyRingStore.checkPassword(password));
-    if (valid) {
-      // iOS only: delete before write so setGenericPassword always hits SecItemAdd
-      // (new item, no auth needed) instead of SecItemUpdate (existing item,
-      // requires auth → errSecAuthFailed). Android overwrites silently, so this
-      // is a no-op there but safe on both platforms.
-      yield* toGenerator(Keychain.resetGenericPassword());
-      const result = yield* toGenerator(
+    if (!valid) {
+      throw new Error("Invalid password");
+    }
+
+    // Delete before write so setGenericPassword always hits SecItemAdd /
+    // a fresh Android Keystore entry instead of updating an existing one
+    // (which can require auth and fail after disable → re-enable).
+    yield* toGenerator(Keychain.resetGenericPassword());
+
+    let result: false | Keychain.Result;
+    try {
+      result = yield* toGenerator(
         Keychain.setGenericPassword(
           "keplr",
           password,
-          KeychainStore.writeOptions
+          KeychainStore.getWriteOptions()
         )
       );
-      if (result) {
-        this._isBiometryOn = true;
-        yield this.save();
-      }
-    } else {
-      throw new Error("Invalid password");
+    } catch (e: any) {
+      throw new Error(
+        e?.message
+          ? `Failed to enable biometrics: ${e.message}`
+          : "Failed to enable biometrics"
+      );
     }
+
+    if (!result) {
+      throw new Error("Failed to enable biometrics");
+    }
+
+    this._isBiometryOn = true;
+    yield this.save();
   }
 
   @flow
   *turnOffBiometry() {
     if (this.isBiometryOn) {
       const credentials = yield* toGenerator(
-        Keychain.getGenericPassword(KeychainStore.readOptions)
+        Keychain.getGenericPassword(KeychainStore.getReadOptions())
       );
       if (credentials) {
         if (

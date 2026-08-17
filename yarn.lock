@@ -43136,7 +43136,7 @@ __metadata:
     react-native-gesture-handler: ~2.22.0
     react-native-gifted-charts: ^1.3.28
     react-native-keyboard-aware-scroll-view: ^0.9.5
-    react-native-keychain: ^8.1.1
+    react-native-keychain: 10.0.0
     react-native-linear-gradient: ^2.8.3
     react-native-linear-gradient-text: ^1.2.8
     react-native-localize: ^3.0.2
@@ -48488,10 +48488,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-keychain@npm:^8.1.1":
-  version: 8.1.1
-  resolution: "react-native-keychain@npm:8.1.1"
-  checksum: fce8319ef8f793516982f96b86080d0a85281d35e91585f1490c41751df4703dcb52b0f22523d2e5f1b87ca7e037daf7d412c7098712cdd3913e6baf239cb673
+"react-native-keychain@npm:10.0.0":
+  version: 10.0.0
+  resolution: "react-native-keychain@npm:10.0.0"
+  checksum: 1055cc192df58cb110bd49df1264a401007a354ad28b93adefd740aeac0f746cdab86d7428887694a1b0949ef8d0dc85db8984e77db684d7b967180167b64d42
   languageName: node
   linkType: hard
 
