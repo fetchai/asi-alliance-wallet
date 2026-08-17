@@ -2,37 +2,42 @@
 
 buildscript {
     ext {
-        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '34.0.0'
-        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '23')
-        compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '34')
-        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
-        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.23'
+        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '36.0.0'
+        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
+        compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '36')
+        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '36')
+        // RN 0.77 / Expo 52: must match react-native gradle catalog (libs.versions.toml)
+        kotlinVersion = findProperty('android.kotlinVersion') ?: '2.0.21'
 
-        ndkVersion = "26.1.10909125"
+        ndkVersion = "27.2.12479018"
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath('com.android.tools.build:gradle')
+        classpath('com.android.tools.build:gradle:8.9.1')
         classpath('com.facebook.react:react-native-gradle-plugin')
-        classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        // Required when Kotlin >= 2.0 and expo-modules-core enables Compose
+        classpath("org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:$kotlinVersion")
     }
 }
+
+apply plugin: "com.facebook.react.rootproject"
 
 allprojects {
     repositories {
         maven {
             // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-            url("$rootDir/../node_modules/react-native/android")
+            url(new File(['node', '--print', "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), '../android'))
         }
         maven {
             // Android JSC is installed from npm
-            url("$rootDir/../node_modules/jsc-android/dist")
+            url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
         }
-         maven {
-            url ("$rootDir/../node_modules/expo-camera/android/maven")
+        maven {
+            url(new File(['node', '--print', "require.resolve('expo-camera/package.json')"].execute(null, rootDir).text.trim(), '../android/maven'))
         }
         mavenCentral {
             // We don't want to fetch react-native from Maven Central as there are
@@ -43,5 +48,24 @@ allprojects {
         }
         google()
         maven { url 'https://www.jitpack.io' }
+    }
+
+    // Force ML Kit barcode 17.3.0: arm64/x86_64 libbarhopper_v3.so is 16 KB aligned
+    // (expo-camera pins 17.2.0 / expo-barcode-scanner pins 17.1.0 — both ship 4 KB arm64).
+    configurations.all {
+        resolutionStrategy {
+            force 'com.google.mlkit:barcode-scanning:17.3.0'
+        }
+    }
+}
+
+// NDK 27.2: enable 16 KB ELF page-size support for modules that compile native code with CMake.
+// Does not rebuild Maven/npm prebuilt .so files (e.g. Hermes); those need a later step if still 4 KB.
+subprojects { subproject ->
+    subproject.pluginManager.withPlugin("com.android.library") {
+        subproject.android.defaultConfig.externalNativeBuild.cmake.arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+    }
+    subproject.pluginManager.withPlugin("com.android.application") {
+        subproject.android.defaultConfig.externalNativeBuild.cmake.arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
     }
 }

@@ -52,15 +52,11 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const title = route.params.title ? route.params.title : "Create your wallet";
 
   const [showPassword, setShowPassword] = useState(false);
-  const [password, setPassword] = useState("");
   const [mode] = useState(registerConfig.mode);
   const [isCreating, setIsCreating] = useState(false);
   const isSubmittingRef = useRef(false);
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | undefined>();
-
-  const isNetworkSelectionRequired =
-    currentName !== defaultAccountName && selectedNetworks.length === 0;
 
   const smartNavigation = useSmartNavigation();
 
@@ -69,12 +65,6 @@ export const CreateAccountScreen: FunctionComponent = () => {
   const defaultAccountName = getNextDefaultAccountName(
     keyRingStore.multiKeyStoreInfo
   );
-
-  useEffect(() => {
-    setValue("mnemonic", mnemonic, {
-      shouldValidate: true,
-    });
-  }, [mnemonic]);
 
   const {
     control,
@@ -87,6 +77,15 @@ export const CreateAccountScreen: FunctionComponent = () => {
   } = useForm<FormData>();
 
   const currentName = watch("name", defaultAccountName);
+  const password = watch("password", "");
+  const isNetworkSelectionRequired =
+    currentName !== defaultAccountName && selectedNetworks.length === 0;
+
+  useEffect(() => {
+    setValue("mnemonic", mnemonic, {
+      shouldValidate: true,
+    });
+  }, [mnemonic, setValue]);
 
   const submit = handleSubmit(async () => {
     if (isSubmittingRef.current) return;
@@ -295,8 +294,6 @@ export const CreateAccountScreen: FunctionComponent = () => {
               },
             }}
             render={({ field: { onChange, onBlur, value, ref } }) => {
-              setPassword(value);
-
               return (
                 <InputCardView
                   label="Password"

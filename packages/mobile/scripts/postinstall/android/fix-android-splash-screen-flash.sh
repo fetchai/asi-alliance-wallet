@@ -1,12 +1,28 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-# We need to set the full background image for the splash screen.
-# But, the expo's splash screen module doesn't handle the bakcground as image but the color.
-# And, just setting the splashscreen.xml has the background image makes the white flash right before actual app load.
-# To fix this problem, this script just replaces some codes on the expo's splash screen module to handle the background as image.
+# Expo 51 used custom SplashScreenView / NativeResourcesBasedSplashScreenViewProvider
+# copies to show a full-bleed background image and avoid a white flash.
+# Expo 52's expo-splash-screen no longer ships those types (AndroidX SplashScreen path).
+# Copying the old Kotlin files breaks compilation — remove them if present.
+#
+# App-level Theme.App.SplashScreen + res/drawable/splashscreen* handle splash visuals.
+#
+# Must be POSIX-safe: package.json runs postinstall with `sh`, which sources this file.
 
-DIR="$( cd "$( dirname "$0" )" && pwd -P )"
+DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 
-cp ${DIR}/android/splashscreen_background.png ${DIR}/../../node_modules/expo-splash-screen/android/src/main/res/drawable/splashscreen_background.png
-cp ${DIR}/android/SplashScreenView.kt ${DIR}/../../node_modules/expo-splash-screen/android/src/main/java/expo/modules/splashscreen/SplashScreenView.kt
-cp ${DIR}/android/NativeResourcesBasedSplashScreenViewProvider.kt ${DIR}/../../node_modules/expo-splash-screen/android/src/main/java/expo/modules/splashscreen/NativeResourcesBasedSplashScreenViewProvider.kt
+# Sourced from exec.sh → $0 is postinstall/exec.sh → ../../node_modules
+# Run directly from android/ → ../../../node_modules
+if [ -d "$DIR/../../node_modules/expo-splash-screen/android/src/main/java/expo/modules/splashscreen" ]; then
+  SPLASH_JAVA="$DIR/../../node_modules/expo-splash-screen/android/src/main/java/expo/modules/splashscreen"
+elif [ -d "$DIR/../../../node_modules/expo-splash-screen/android/src/main/java/expo/modules/splashscreen" ]; then
+  SPLASH_JAVA="$DIR/../../../node_modules/expo-splash-screen/android/src/main/java/expo/modules/splashscreen"
+else
+  echo "Android Warning: expo-splash-screen android sources not found; skipped splash cleanup."
+  exit 0
+fi
+
+rm -f "$SPLASH_JAVA/SplashScreenView.kt"
+rm -f "$SPLASH_JAVA/NativeResourcesBasedSplashScreenViewProvider.kt"
+
+echo "expo-splash-screen: ensured Expo 52 stock sources (no Expo 51 Kotlin overlays)."

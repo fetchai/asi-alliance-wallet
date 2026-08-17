@@ -5,6 +5,15 @@
 import "./shim";
 import "react-native-gesture-handler";
 import { AppRegistry, LogBox } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
+
+// Expo 52: must run before other JS so splash is not dismissed on CONTENT_APPEARED.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+try {
+  SplashScreen.setOptions({ duration: 0, fade: false });
+} catch {
+  // Expo Go / old native splash module
+}
 
 import "./init";
 import * as Sentry from "@sentry/react-native";

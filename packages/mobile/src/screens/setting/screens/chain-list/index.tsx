@@ -54,14 +54,10 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
   return (
     <PageWithScrollView
       backgroundMode="secondary"
-      contentContainerStyle={
-        [
-          style.flatten(["flex-grow-1"]),
-          {
-            height: filterChainInfos.length === 0 ? "100%" : undefined,
-          },
-        ] as ViewStyle
-      }
+      contentContainerStyle={StyleSheet.flatten([
+        style.flatten(["flex-grow-1"]),
+        filterChainInfos.length === 0 ? { height: "100%" as const } : null,
+      ])}
       hasFloatingHeader={true}
       style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
     >

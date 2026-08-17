@@ -12,6 +12,7 @@ import { InputCardView } from "../card-view/input-card";
 import { observer } from "mobx-react-lite";
 import { SkeletonRow } from "./skeleton-row";
 import { YourWalletsTab } from "./your-wallets-tab";
+import { BlurBackground } from "components/new/blur-background/blur-background";
 import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RNMessageRequesterInternal } from "../../../router";
@@ -156,57 +157,66 @@ export const AddressBookCardModel: FunctionComponent<{
               containerStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
             />
             {!addressBookConfig.isLoaded ? (
-              <View style={style.flatten(["margin-top-24"]) as ViewStyle}>
+              <View style={style.flatten(["margin-top-10"]) as ViewStyle}>
                 {[0, 1, 2].map((i) => (
                   <SkeletonRow key={i} wide />
                 ))}
               </View>
             ) : filterAddressBook.length > 0 ? (
-              <View style={style.flatten(["margin-top-24"]) as ViewStyle}>
+              <View style={style.flatten(["margin-top-10"]) as ViewStyle}>
                 {filterAddressBook.map((data: IndexedItem<AddressBookData>) => {
                   return (
-                    <RectButton
+                    <BlurBackground
                       key={data.index.toString()}
-                      onPress={() => {
-                        addressBookConfig.selectAddressAt(data.index);
-                        setSearch("");
-                        close();
-                      }}
-                      activeOpacity={0.5}
-                      style={
+                      borderRadius={12}
+                      blurIntensity={0}
+                      containerStyle={
                         [
                           style.flatten([
-                            "padding-12",
-                            "border-radius-12",
                             "margin-bottom-4",
                             "background-color-gray-5",
                           ]),
                         ] as ViewStyle
                       }
-                      underlayColor={"#e0e0e0"}
                     >
-                      <Text
+                      <RectButton
+                        onPress={() => {
+                          addressBookConfig.selectAddressAt(data.index);
+                          setSearch("");
+                          close();
+                        }}
+                        activeOpacity={0.5}
                         style={
                           style.flatten([
-                            "body3",
-                            "color-dark",
-                            "padding-bottom-10",
+                            "padding-12",
+                            "border-radius-12",
                           ]) as ViewStyle
                         }
+                        underlayColor={"#e0e0e0"}
                       >
-                        {data.item.name}
-                      </Text>
-                      <Text
-                        style={
-                          style.flatten([
-                            "text-caption2",
-                            "color-gray-300",
-                          ]) as ViewStyle
-                        }
-                      >
-                        {data.item.address}
-                      </Text>
-                    </RectButton>
+                        <Text
+                          style={
+                            style.flatten([
+                              "body3",
+                              "color-dark",
+                              "padding-bottom-10",
+                            ]) as ViewStyle
+                          }
+                        >
+                          {data.item.name}
+                        </Text>
+                        <Text
+                          style={
+                            style.flatten([
+                              "text-caption2",
+                              "color-gray-300",
+                            ]) as ViewStyle
+                          }
+                        >
+                          {data.item.address}
+                        </Text>
+                      </RectButton>
+                    </BlurBackground>
                   );
                 })}
               </View>

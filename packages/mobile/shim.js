@@ -1,15 +1,50 @@
 import "setimmediate";
+import { BackHandler } from "react-native";
+
+// RN 0.77 removed BackHandler.removeEventListener. Track subscriptions from
+// addEventListener so older libs (react-native-modal 13) and app code still work.
+if (typeof BackHandler.removeEventListener !== "function") {
+  const subscriptionsByEvent = new Map();
+  const originalAddEventListener =
+    BackHandler.addEventListener.bind(BackHandler);
+
+  BackHandler.addEventListener = (eventName, handler) => {
+    const subscription = originalAddEventListener(eventName, handler);
+    let handlers = subscriptionsByEvent.get(eventName);
+    if (!handlers) {
+      handlers = new Map();
+      subscriptionsByEvent.set(eventName, handlers);
+    }
+    handlers.set(handler, subscription);
+    return subscription;
+  };
+
+  BackHandler.removeEventListener = (eventName, handler) => {
+    const handlers = subscriptionsByEvent.get(eventName);
+    if (!handlers) {
+      return;
+    }
+    const subscription = handlers.get(handler);
+    if (subscription) {
+      subscription.remove();
+      handlers.delete(handler);
+    }
+  };
+}
 
 if (typeof Buffer === "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   global.Buffer = require("buffer").Buffer;
 }
 
 if (!global.atob || !global.btoa) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const base64 = require("./shim-base64.js");
   global.atob = base64.atob;
   global.btoa = base64.btoa;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const TextEncodingPolyfill = require("text-encoding");
 Object.assign(global, {
   TextEncoder: TextEncodingPolyfill.TextEncoder,

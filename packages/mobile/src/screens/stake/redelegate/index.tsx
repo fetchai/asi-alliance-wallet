@@ -12,7 +12,7 @@ import { useStyle } from "styles/index";
 import { Staking } from "@keplr-wallet/stores";
 import { useRedelegateTxConfig } from "@keplr-wallet/hooks";
 import { PageWithScrollView } from "components/page";
-import { Text, View, ViewStyle } from "react-native";
+import { Platform, Text, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { DropDownCardView } from "components/new/card-view/drop-down-card";
@@ -68,6 +68,10 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
 
   const style = useStyle();
   const safeAreaInsets = useSafeAreaInsets();
+  const isAndroid = Platform.OS === "android";
+  const footerPaddingBottom = isAndroid
+    ? (safeAreaInsets.bottom > 0 ? safeAreaInsets.bottom : 48) + 20
+    : Math.max(safeAreaInsets.bottom, 16);
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -230,6 +234,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
       contentContainerStyle={{
         paddingBottom: Math.max(safeAreaInsets.bottom, 16) + 80,
       }}
+      pinFixed={Platform.OS === "android"}
       fixed={
         <View
           pointerEvents="box-none"
@@ -237,7 +242,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             flex: 1,
             justifyContent: "flex-end",
             paddingHorizontal: 16,
-            paddingBottom: Math.max(safeAreaInsets.bottom, 16),
+            paddingBottom: footerPaddingBottom,
             paddingTop: 16,
           }}
         >
