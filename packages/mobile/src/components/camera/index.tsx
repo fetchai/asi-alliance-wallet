@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, useEffect } from "react";
 import { CameraView, CameraViewProps } from "expo-camera";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useStyle } from "styles/index";
@@ -9,6 +9,7 @@ import { LoadingSpinner } from "components/spinner";
 import { IconButton } from "components/new/button/icon";
 import { XmarkIcon } from "components/new/icon/xmark";
 import { ScannerFrame } from "./scanner-frame";
+import { restoreAndroidStatusBarAfterCamera } from "utils/android-status-bar";
 
 interface CameraProp extends CameraViewProps {
   containerBottom?: React.ReactElement;
@@ -25,6 +26,16 @@ export const FullScreenCameraView: FunctionComponent<CameraProp> = (props) => {
 
   const { children, containerBottom, isLoading, scannerBottomText, ...rest } =
     props;
+
+  // CameraView can leave a black notch/status-bar strip on Android after leave.
+  useEffect(() => {
+    if (!isFocused) {
+      restoreAndroidStatusBarAfterCamera();
+    }
+    return () => {
+      restoreAndroidStatusBarAfterCamera();
+    };
+  }, [isFocused]);
 
   return (
     <React.Fragment>
