@@ -1,11 +1,11 @@
 import React, { FunctionComponent } from "react";
 import { useStore } from "stores/index";
-import { Text, ViewStyle, View } from "react-native";
+import { Text, ViewStyle, View, StyleSheet } from "react-native";
 import { useStyle } from "styles/index";
-import { useIntl } from "react-intl";
 import { ProgressBar } from "components/progress-bar";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { formatBalance } from "utils/format/format";
+import moment from "moment";
 
 export const UnbondingCard: FunctionComponent<{
   containerStyle?: ViewStyle;
@@ -24,17 +24,15 @@ export const UnbondingCard: FunctionComponent<{
 
   const style = useStyle();
 
-  const intl = useIntl();
-
   return unbonding ? (
     <BlurBackground
       borderRadius={12}
       backgroundBlur={false}
       containerStyle={
-        [
+        StyleSheet.flatten([
           style.flatten(["padding-18", "background-color-gray-5"]),
-          containerStyle,
-        ] as ViewStyle
+          containerStyle ?? {},
+        ]) as ViewStyle
       }
     >
       <Text style={style.flatten(["subtitle2", "color-dark"]) as ViewStyle}>
@@ -42,36 +40,9 @@ export const UnbondingCard: FunctionComponent<{
       </Text>
       <View style={style.flatten(["padding-bottom-8"]) as ViewStyle}>
         {unbonding.entries.map((entry, i) => {
-          const remainingText = (() => {
-            const current = new Date().getTime();
-
-            const relativeEndTime =
-              (new Date(entry.completionTime).getTime() - current) / 1000;
-            const relativeEndTimeDays = Math.floor(
-              relativeEndTime / (3600 * 24)
-            );
-            const relativeEndTimeHours = Math.ceil(relativeEndTime / 3600);
-
-            if (relativeEndTimeDays) {
-              return (
-                intl
-                  .formatRelativeTime(relativeEndTimeDays, "days", {
-                    numeric: "always",
-                  })
-                  .replace("in ", "") + " left"
-              );
-            } else if (relativeEndTimeHours) {
-              return (
-                intl
-                  .formatRelativeTime(relativeEndTimeHours, "hours", {
-                    numeric: "always",
-                  })
-                  .replace("in ", "") + " left"
-              );
-            }
-
-            return "";
-          })();
+          const remainingText = moment(entry.completionTime).isAfter()
+            ? `${moment(entry.completionTime).fromNow(true)} left`
+            : "";
           const progress = (() => {
             const currentTime = new Date().getTime();
             const endTime = new Date(entry.completionTime).getTime();

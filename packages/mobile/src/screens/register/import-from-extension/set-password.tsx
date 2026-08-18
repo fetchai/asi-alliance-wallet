@@ -1,5 +1,5 @@
-import React, { FunctionComponent, useState } from "react";
-import { RouteProp, useRoute } from "@react-navigation/native";
+import React, { FunctionComponent, useCallback, useState } from "react";
+import { RouteProp, useFocusEffect, useRoute } from "@react-navigation/native";
 import { PageWithScrollView } from "components/page";
 import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
@@ -25,6 +25,7 @@ import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import { PasswordValidateView } from "components/new/password-validate/password-validate";
 import { XmarkIcon } from "components/new/icon/xmark";
 import { CheckIcon } from "components/new/icon/check";
+import { restoreAndroidStatusBarAfterCamera } from "utils/android-status-bar";
 
 interface FormData {
   password: string;
@@ -55,6 +56,15 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
   const smartNavigation = useSmartNavigation();
 
   const style = useStyle();
+
+  // Camera may re-apply black status-bar chrome after navigate; restore on focus.
+  useFocusEffect(
+    useCallback(() => {
+      restoreAndroidStatusBarAfterCamera();
+      const t = setTimeout(() => restoreAndroidStatusBarAfterCamera(), 50);
+      return () => clearTimeout(t);
+    }, [])
+  );
 
   const [isCreating, setIsCreating] = useState(false);
 

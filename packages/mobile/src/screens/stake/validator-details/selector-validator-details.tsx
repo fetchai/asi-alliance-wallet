@@ -4,7 +4,7 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { ValidatorDetailsCard } from "./validator-details-card";
 import { useStyle } from "styles/index";
 import { observer } from "mobx-react-lite";
-import { View, ViewStyle } from "react-native";
+import { Platform, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { useStore } from "stores/index";
@@ -34,6 +34,11 @@ export const SelectorValidatorDetailsScreen: FunctionComponent = observer(
     const style = useStyle();
     const safeAreaInsets = useSafeAreaInsets();
 
+    const footerPaddingBottom =
+      Platform.OS === "android"
+        ? (safeAreaInsets.bottom > 0 ? safeAreaInsets.bottom : 48) + 20
+        : Math.max(safeAreaInsets.bottom, 16);
+
     return (
       <PageWithScrollView
         backgroundMode="secondary"
@@ -47,6 +52,7 @@ export const SelectorValidatorDetailsScreen: FunctionComponent = observer(
             "overflow-scroll",
           ]) as ViewStyle
         }
+        pinFixed={Platform.OS === "android"}
         fixed={
           <View
             pointerEvents="box-none"
@@ -54,7 +60,7 @@ export const SelectorValidatorDetailsScreen: FunctionComponent = observer(
               flex: 1,
               justifyContent: "flex-end",
               paddingHorizontal: 16,
-              paddingBottom: Math.max(safeAreaInsets.bottom, 16),
+              paddingBottom: footerPaddingBottom,
               paddingTop: 16,
             }}
           >

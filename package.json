@@ -123,8 +123,8 @@
     "node-gyp": "^11.2.0",
     "pre-commit": "^1.2.2",
     "prettier": "^2.8.4",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-is": "18.2.0",
     "semver": "^7.6.0",
     "starknet": "^8.9.1",
@@ -134,7 +134,7 @@
     "zx": "^4.2.0"
   },
   "resolutions": {
-    "react": "18.2.0",
+    "react": "18.3.1",
     "@types/react": "^18.2.19",
     "@types/react-dom": "^18.2.7",
     "@iov/crypto": "2.1.0",

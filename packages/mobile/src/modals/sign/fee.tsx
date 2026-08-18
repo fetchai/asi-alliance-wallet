@@ -59,15 +59,28 @@ export const FeeInSign: FunctionComponent<{
               Transaction fee:
             </Text>
             <View
-              style={style.flatten(["flex-row", "items-center"]) as ViewStyle}
+              style={
+                [
+                  style.flatten([
+                    "flex-row",
+                    "items-center",
+                    "flex-1",
+                    "justify-end",
+                  ]),
+                ] as ViewStyle
+              }
             >
               <Text
+                numberOfLines={1}
                 style={
-                  style.flatten([
-                    "body3",
-                    "color-dark",
-                    "margin-right-6",
-                  ]) as ViewStyle
+                  [
+                    style.flatten([
+                      "body3",
+                      "color-dark",
+                      "margin-x-6",
+                      "flex-shrink-1",
+                    ]),
+                  ] as ViewStyle
                 }
               >
                 {feeConfig

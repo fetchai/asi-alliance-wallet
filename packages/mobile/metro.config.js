@@ -1,9 +1,11 @@
 /* eslint-disable */
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+const { getDefaultConfig } = require("expo/metro-config");
+const { mergeConfig } = require("@react-native/metro-config");
 const exclusionList = require("metro-config/src/defaults/exclusionList");
 const getWorkspaces = require("get-yarn-workspaces");
 const path = require("path");
 
+// Expo 52: required so Metro can resolve `.expo/.virtual-metro-entry`
 const defaultConfig = getDefaultConfig(__dirname);
 
 const workspaces = getWorkspaces(__dirname);
@@ -19,7 +21,9 @@ const watchFolders = [
 
 const config = {
   projectRoot: path.resolve(__dirname, "."),
-  watchFolders,
+  watchFolders: [
+    ...new Set([...(defaultConfig.watchFolders || []), ...watchFolders]),
+  ],
   watcher: {
     // Explicitly define watcher to override any unstable/default options from Sentry/Metro.
     // This resolves the 'unstable_autoSaveCache' warning by using stable alternatives.
@@ -28,8 +32,6 @@ const config = {
       interval: 5000, // Similar to debounceMs – checks watcher health every 5s.
       timeout: 10000, // Adjust as needed.
     },
-    // If you need auto-save cache behavior, use this stable workaround (not unstable).
-    // unstable_autoSaveCache: undefined, // Uncomment to explicitly disable if still warned.
   },
   resolver: {
     // For react-native-svg-transformer
@@ -38,6 +40,7 @@ const config = {
     // To prevent multiple React instances, block the one in this package and use root's.
     blockList: exclusionList([/packages\/mobile\/node_modules\/react\/.*/]),
     extraNodeModules: {
+      ...(defaultConfig.resolver.extraNodeModules || {}),
       crypto: path.resolve(
         __dirname,
         "./node_modules/expo-standard-web-crypto"

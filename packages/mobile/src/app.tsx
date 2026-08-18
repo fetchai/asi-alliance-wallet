@@ -1,4 +1,9 @@
-import React, { FunctionComponent } from "react";
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { StoreProvider } from "./stores";
 import { StyleProvider } from "./styles";
 import { IntlProvider } from "react-intl";
@@ -7,11 +12,14 @@ import { Platform, StatusBar } from "react-native";
 import { InteractionModalsProvider } from "providers/interaction-modals-provider";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LoadingScreenProvider } from "providers/loading-screen";
-import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "utils/toast-config";
 import { AppNavigation } from "navigation/navigation";
+import {
+  LaunchCoverController,
+  LaunchCoverView,
+} from "components/page/launch-cover";
 
 if (Platform.OS === "android") {
   // https://github.com/web-ridge/react-native-paper-dates/releases/tag/v0.2.15
@@ -54,14 +62,6 @@ if (Platform.OS === "android") {
   // Disable the timezone until finding the solution.
 }
 
-// Prevent native splash screen from autohiding.
-// UnlockScreen will hide the splash screen
-SplashScreen.preventAutoHideAsync()
-  .then((result) =>
-    console.log(`SplashScreen.preventAutoHideAsync() succeeded: ${result}`)
-  )
-  .catch(console.warn);
-
 const ThemeStatusBar: FunctionComponent = () => {
   return (
     <StatusBar
@@ -72,7 +72,9 @@ const ThemeStatusBar: FunctionComponent = () => {
   );
 };
 
-const AppBody: FunctionComponent = () => {
+const AppBody: FunctionComponent<{
+  onDismissLaunchCover?: () => void;
+}> = ({ onDismissLaunchCover }) => {
   return (
     <React.Fragment>
       <StyleProvider>
@@ -103,6 +105,9 @@ const AppBody: FunctionComponent = () => {
                   <AppNavigation />
                 </InteractionModalsProvider>
               </LoadingScreenProvider>
+              {onDismissLaunchCover ? (
+                <LaunchCoverController onDismiss={onDismissLaunchCover} />
+              ) : null}
             </SafeAreaProvider>
           </IntlProvider>
         </StoreProvider>
@@ -113,9 +118,31 @@ const AppBody: FunctionComponent = () => {
 };
 
 export const App: FunctionComponent = () => {
+  const isAndroid = Platform.OS === "android";
+  const [showApp, setShowApp] = useState(!isAndroid);
+  const [coverVisible, setCoverVisible] = useState(isAndroid);
+  const dismissLaunchCover = useCallback(() => setCoverVisible(false), []);
+
+  useEffect(() => {
+    if (!isAndroid) {
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setShowApp(true));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isAndroid]);
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppBody />
+    <GestureHandlerRootView
+      style={isAndroid ? { flex: 1, backgroundColor: "#FFFFFF" } : { flex: 1 }}
+    >
+      {showApp ? (
+        <AppBody
+          onDismissLaunchCover={isAndroid ? dismissLaunchCover : undefined}
+        />
+      ) : null}
+      {coverVisible ? <LaunchCoverView /> : null}
     </GestureHandlerRootView>
   );
 };

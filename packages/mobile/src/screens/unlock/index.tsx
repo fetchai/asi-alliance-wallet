@@ -7,8 +7,10 @@ import React, {
 } from "react";
 import {
   Alert,
+  AppState,
   Image,
   Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -35,13 +37,16 @@ import { IconButton } from "components/new/button/icon";
 import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  isLaunchCoverVisible,
+  onLaunchCoverHidden,
+} from "components/page/launch-cover";
 
 let splashScreenHided = false;
 async function hideSplashScreen() {
   if (!splashScreenHided) {
-    if (await SplashScreen.hideAsync()) {
-      splashScreenHided = true;
-    }
+    await SplashScreen.hideAsync();
+    splashScreenHided = true;
   }
 }
 
@@ -155,9 +160,31 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     navigateToHomeOnce.current = true;
   }, [accountStore, chainStore, navigation]);
 
+  const [isAppActive, setIsAppActive] = useState(
+    AppState.currentState === "active"
+  );
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      setIsAppActive(next === "active");
+    });
+    return () => sub.remove();
+  }, []);
+
+  const [launchCoverGone, setLaunchCoverGone] = useState(
+    () => !isLaunchCoverVisible()
+  );
+  useEffect(() => {
+    if (Platform.OS !== "android" || launchCoverGone) {
+      return;
+    }
+    return onLaunchCoverHidden(() => setLaunchCoverGone(true));
+  }, [launchCoverGone]);
+
   const autoBiometryStatus = useAutoBiomtric(
     keychainStore,
-    keyRingStore.status === KeyRingStatus.LOCKED,
+    keyRingStore.status === KeyRingStatus.LOCKED &&
+      isAppActive &&
+      launchCoverGone,
     (isLoading) => {
       setIsBiometricLoading(isLoading);
     },
@@ -184,7 +211,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   }, [autoBiometryStatus, navigation]);
 
   useEffect(() => {
-    if (keyRingStore.status === KeyRingStatus.LOCKED) hideSplashScreen();
+    if (Platform.OS === "ios" && keyRingStore.status === KeyRingStatus.LOCKED) {
+      hideSplashScreen();
+    }
   }, [keyRingStore.status]);
 
   const [password, setPassword] = useState("");
@@ -234,8 +263,26 @@ export const UnlockScreen: FunctionComponent = observer(() => {
           text2:
             "Your password or biometric data has changed. Sign in with your password to re-enable it.",
         });
-      } else if (msg.includes("code: 13") || msg.includes("user cancel")) {
-        // User dismissed the prompt no toast needed
+      } else if (
+        msg.includes("code: 13") ||
+        String(e?.code) === "-2" ||
+        msg.toLowerCase().includes("user cancel") ||
+        msg.toLowerCase().includes("cancelled by user")
+      ) {
+        // User dismissed the prompt — no toast needed
+        // code: 13 = Android BiometricPrompt.ERROR_NEGATIVE_BUTTON (Cancel button pressed)
+        // e.code "-2" = iOS LAErrorUserCancel
+      } else if (
+        Platform.OS === "ios" &&
+        (msg.toLowerCase().includes("lockout") ||
+          String(e?.code) === "-8" ||
+          msg.toLowerCase().includes("too many"))
+      ) {
+        Toast.show({
+          type: "error",
+          text1: `Too many failed ${biometryLabel} attempts`,
+          text2: "Sign in with your password and try again later.",
+        });
       } else {
         Toast.show({
           type: "error",
@@ -329,7 +376,31 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   if (
     [KeyRingStatus.EMPTY, KeyRingStatus.NOTLOADED].includes(keyRingStore.status)
   ) {
-    return null;
+    if (Platform.OS === "ios") {
+      return null;
+    }
+    return (
+      <View
+        style={
+          {
+            flex: 1,
+            backgroundColor: "#FFFFFF",
+            justifyContent: "center",
+            alignItems: "center",
+          } as ViewStyle
+        }
+      >
+        <Image
+          source={require("assets/logo/logo-black.png")}
+          style={{
+            width: 219,
+            height: 49,
+          }}
+          resizeMode="contain"
+          fadeDuration={0}
+        />
+      </View>
+    );
   }
 
   return (
@@ -340,14 +411,12 @@ export const UnlockScreen: FunctionComponent = observer(() => {
         hasFloatingHeader={true}
       />
       <View
-        style={
-          [
-            style.flatten(["flex", "flex-1", "justify-between"]),
-            {
-              paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
-            },
-          ] as ViewStyle
-        }
+        style={StyleSheet.flatten([
+          style.flatten(["flex", "flex-1", "justify-between"]),
+          {
+            paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
+          },
+        ])}
       >
         <KeyboardAwareScrollView
           contentContainerStyle={style.flatten(["flex-grow-1"]) as ViewStyle}
@@ -448,10 +517,17 @@ export const UnlockScreen: FunctionComponent = observer(() => {
             <TouchableOpacity onPress={tryBiometric} activeOpacity={1}>
               <View
                 style={
-                  style.flatten([
-                    "flex",
-                    "margin-bottom-40",
-                    "margin-top-10",
+                  StyleSheet.flatten([
+                    style.flatten(["flex", "margin-top-10"]),
+                    {
+                      marginBottom:
+                        Platform.OS === "android"
+                          ? 40 +
+                            (safeAreaInsets.bottom > 0
+                              ? safeAreaInsets.bottom
+                              : 48)
+                          : 40,
+                    },
                   ]) as ViewStyle
                 }
               >

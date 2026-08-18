@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  This file was created by '@expo/configure-splash-screen' and some of it's content shouldn't be modified by hand
--->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
   <item android:drawable="@drawable/splashscreen_background" />
+  <!-- 219dp x 49dp matches LaunchCover / logo-black. drawable/ png is 219px (mdpi);
+       without explicit dp it stays tiny on xxhdpi and jumps when JS cover appears. -->
+  <item
+    android:width="219dp"
+    android:height="49dp"
+    android:gravity="center">
+    <bitmap
+      android:gravity="fill"
+      android:src="@drawable/splashscreen_logo" />
+  </item>
 </layer-list>

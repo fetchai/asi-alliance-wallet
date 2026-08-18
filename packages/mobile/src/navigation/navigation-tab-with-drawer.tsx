@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UpDownArrowIcon } from "components/new/icon/up-down-arrow";
 import { ClockIcon } from "components/new/icon/clock-icon";
 import { MoreIcon } from "components/new/icon/more-icon";
-import { AppState, BackHandler, View, ViewStyle } from "react-native";
+import { AppState, BackHandler, Platform, View, ViewStyle } from "react-native";
 import { IconButton } from "components/new/button/icon";
 import { BorderlessButton } from "react-native-gesture-handler";
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
@@ -58,6 +58,11 @@ export const MainTabNavigation: FunctionComponent = () => {
   const focusedScreen = useFocusedScreen();
   const isDrawerOpen = useDrawerStatus() === "open";
   const insets = useSafeAreaInsets();
+  const isAndroid = Platform.OS === "android";
+  // Android targetSdk 36 only. iOS keeps paddingVertical 16 + height 100 + inset.
+  const androidBottomInset = insets.bottom > 0 ? insets.bottom : 48;
+  const tabBarPaddingBottom = androidBottomInset + 8;
+  const tabBarHeight = 84 + tabBarPaddingBottom;
 
   /// Auto lock app if app in bg
   useEffect(() => {
@@ -71,7 +76,9 @@ export const MainTabNavigation: FunctionComponent = () => {
         keychainStore.isAutoLockOn &&
         !(
           focusedScreen.name?.startsWith("Register") ||
-          focusedScreen.name?.startsWith("Setting.SecurityAndPrivacy")
+          (Platform.OS === "ios" &&
+            nextAppState === "inactive" &&
+            focusedScreen.name?.startsWith("Setting.SecurityAndPrivacy"))
         )
       ) {
         try {
@@ -342,12 +349,21 @@ export const MainTabNavigation: FunctionComponent = () => {
             backgroundColor: "#ffffff",
             shadowColor: style.get("color-transparent").color,
             elevation: 0,
-            paddingVertical: 16,
             paddingHorizontal: 20,
-            height: 100 + insets.bottom,
             borderTopWidth: 1,
             borderTopColor: "#DCDCE3",
+            ...(isAndroid
+              ? {
+                  paddingTop: 16,
+                  paddingBottom: tabBarPaddingBottom,
+                  height: tabBarHeight,
+                }
+              : {
+                  paddingVertical: 16,
+                  height: 100 + insets.bottom,
+                }),
           },
+          ...(isAndroid ? { safeAreaInsets: { bottom: 0 } } : {}),
           showLabel: false,
         })}
         tabBar={(props) => (

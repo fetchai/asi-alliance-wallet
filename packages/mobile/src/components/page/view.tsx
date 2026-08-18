@@ -1,11 +1,6 @@
 import React, { FunctionComponent } from "react";
-import {
-  SafeAreaView,
-  StyleSheet,
-  View,
-  ViewProps,
-  ViewStyle,
-} from "react-native";
+import { Platform, StyleSheet, View, ViewProps, ViewStyle } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { BackgroundMode, ScreenBackground } from "./background";
 import { useStyle } from "styles/index";
 import { useSetFocusedScreen } from "components/page/utils";
@@ -39,7 +34,12 @@ export const PageWithView: FunctionComponent<
         hasFloatingHeader={hasFloatingHeader}
       />
       {!disableSafeArea ? (
-        <SafeAreaView style={style.get("flex-1")}>
+        <SafeAreaView
+          style={style.get("flex-1")}
+          {...(Platform.OS === "android"
+            ? { edges: ["left", "right", "bottom"] as const }
+            : {})}
+        >
           <View
             style={StyleSheet.flatten([
               style.flatten([

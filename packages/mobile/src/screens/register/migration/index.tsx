@@ -114,7 +114,6 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
-              multiline={true}
               onSubmitEditing={() => {
                 submit();
               }}
@@ -155,8 +154,6 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
               onSubmitEditing={() => {
                 submit();
               }}
-              multiline={true}
-              numberOfLines={2}
               ref={ref}
             />
           );

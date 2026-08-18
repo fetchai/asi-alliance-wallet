@@ -6,7 +6,7 @@ import { useStyle } from "styles/index";
 import { DelegatedCard } from "./delegated-card";
 import { observer } from "mobx-react-lite";
 import { useStore } from "stores/index";
-import { View, ViewStyle } from "react-native";
+import { Platform, View, ViewStyle } from "react-native";
 import { Dec } from "@keplr-wallet/unit";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
@@ -58,6 +58,10 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
 
   const style = useStyle();
   const safeAreaInsets = useSafeAreaInsets();
+  const isAndroid = Platform.OS === "android";
+  const footerPaddingBottom = isAndroid
+    ? (safeAreaInsets.bottom > 0 ? safeAreaInsets.bottom : 48) + 20
+    : Math.max(safeAreaInsets.bottom, 16);
 
   const isTxnInProgress = () => {
     return (
@@ -187,9 +191,9 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
   return (
     <PageWithScrollView
       backgroundMode="secondary"
-      contentContainerStyle={{
-        paddingBottom: Math.max(safeAreaInsets.bottom, 16) + 80,
-      }}
+      contentContainerStyle={
+        isAndroid ? { paddingBottom: footerPaddingBottom + 80 } : undefined
+      }
       style={
         style.flatten([
           "padding-x-page",
@@ -197,19 +201,22 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           "overflow-scroll",
         ]) as ViewStyle
       }
+      pinFixed={isAndroid}
       fixed={
-        <View
-          pointerEvents="box-none"
-          style={{
-            flex: 1,
-            justifyContent: "flex-end",
-            paddingHorizontal: 16,
-            paddingBottom: Math.max(safeAreaInsets.bottom, 16),
-            paddingTop: 16,
-          }}
-        >
-          {actionButtons}
-        </View>
+        isAndroid ? (
+          <View
+            pointerEvents="box-none"
+            style={{
+              flex: 1,
+              justifyContent: "flex-end",
+              paddingHorizontal: 16,
+              paddingBottom: footerPaddingBottom,
+              paddingTop: 16,
+            }}
+          >
+            {actionButtons}
+          </View>
+        ) : undefined
       }
     >
       <ValidatorDetailsCard validatorAddress={validatorAddress} />
@@ -223,6 +230,15 @@ export const ValidatorDetailsScreen: FunctionComponent = observer(() => {
           validatorAddress={validatorAddress}
           containerStyle={style.flatten(["margin-y-16"]) as ViewStyle}
         />
+      ) : null}
+      {!isAndroid ? (
+        <View
+          style={
+            style.flatten(["margin-top-16", "margin-bottom-16"]) as ViewStyle
+          }
+        >
+          {actionButtons}
+        </View>
       ) : null}
     </PageWithScrollView>
   );
