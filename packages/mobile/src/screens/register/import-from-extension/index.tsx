@@ -16,6 +16,7 @@ import {
 } from "utils/import-from-extension";
 import { AsyncKVStore } from "../../../common";
 import { BarcodeScanningResult } from "expo-camera";
+import { restoreAndroidStatusBarAfterCamera } from "utils/android-status-bar";
 
 export * from "./intro";
 export * from "./set-password";
@@ -86,6 +87,9 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
       analyticsStore.logEvent("register_done_click", {
         pageName: "Register",
       });
+
+      // Undo CameraView's Android status-bar chrome before leaving this screen.
+      restoreAndroidStatusBarAfterCamera();
 
       if (keyRingStore.multiKeyStoreInfo.length > 0) {
         // If already has accounts,

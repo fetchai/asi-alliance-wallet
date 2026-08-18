@@ -59,6 +59,9 @@ export const CardModal: FunctionComponent<{
       animationInTiming={500}
       animationOutTiming={500}
       backdropColor={style.get("color-dark").color}
+      // Android edge-to-edge: without this the sheet stays under the keyboard.
+      // KeyboardSpacerView is iOS-only; KeyboardAware needs enableOnAndroid.
+      avoidKeyboard={isAndroid}
       {...(isAndroid
         ? {
             statusBarTranslucent: true,
@@ -137,6 +140,9 @@ export const CardModal: FunctionComponent<{
             </View>
           ) : null}
           <KeyboardAwareScrollView
+            enableOnAndroid
+            keyboardShouldPersistTaps="handled"
+            extraScrollHeight={isAndroid ? 24 : 0}
             style={StyleSheet.flatten([
               style.flatten(["padding-x-20", "margin-top-24"]) as ViewStyle,
               childrenContainerStyle,
