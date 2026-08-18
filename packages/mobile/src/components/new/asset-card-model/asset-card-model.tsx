@@ -6,6 +6,7 @@ import { SearchIcon } from "components/new/icon/search-icon";
 import { IAmountConfig } from "@keplr-wallet/hooks";
 import { useStore } from "stores/index";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { formatFiatBalance } from "utils/format/format";
 import { TokenCardView } from "../card-view/token-card-view";
 import { EmptyView } from "../empty";
 import { InputCardView } from "../card-view/input-card";
@@ -53,7 +54,7 @@ export const AssetCardModel: FunctionComponent<{
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
   const balancesMap = new Map(
     queries.cosmos.querySpendableBalances
@@ -93,7 +94,6 @@ export const AssetCardModel: FunctionComponent<{
     >
       <InputCardView
         placeholder="Search"
-        placeholderTextColor={"white"}
         value={search}
         onChangeText={(text: string) => {
           setSearch(text);
@@ -128,7 +128,7 @@ export const AssetCardModel: FunctionComponent<{
                   [
                     currency.coinMinimalDenom ===
                       amountConfig.sendCurrency.coinMinimalDenom &&
-                      "background-color-indigo",
+                      "background-color-green-250",
                   ]
                 ) as ViewStyle
               }

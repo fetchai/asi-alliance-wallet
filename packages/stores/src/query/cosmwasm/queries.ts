@@ -7,10 +7,6 @@ import { ObservableQueryNativeFetCosmosBridge } from "./native-fet-bridge";
 import { ObservableQueryBridgeHistory } from "./bridge-history";
 import { ObservableQueryBridgeReverseSwapHash } from "./bridge-reverse-swap-hash";
 import { QuerySharedContext } from "../../common";
-import { ObservableQueryNeutronStakingRewards } from "./neutron/staking-rewards";
-import { ObservableQueryNeutronStakingRewardsConfig } from "./neutron/staking-rewards-config";
-import { ObservableQueryNeutronGovernance } from "./neutron/governance-proposals";
-import { ObservableQueryNeutronProposalVote } from "./neutron/governance-vote";
 
 export interface CosmwasmQueries {
   cosmwasm: CosmwasmQueriesImpl;
@@ -46,10 +42,6 @@ export class CosmwasmQueriesImpl {
   public readonly queryNativeFetBridge: DeepReadonly<ObservableQueryNativeFetCosmosBridge>;
   public readonly queryBridgeHistory: DeepReadonly<ObservableQueryBridgeHistory>;
   public readonly queryBridgeReverseSwapHash: DeepReadonly<ObservableQueryBridgeReverseSwapHash>;
-  public readonly queryNeutronStakingRewards: DeepReadonly<ObservableQueryNeutronStakingRewards>;
-  public readonly queryNeutronStakingRewardsConfig: DeepReadonly<ObservableQueryNeutronStakingRewardsConfig>;
-  public readonly queryNeutronGovernance: DeepReadonly<ObservableQueryNeutronGovernance>;
-  public readonly queryNeutronVote: DeepReadonly<ObservableQueryNeutronProposalVote>;
 
   constructor(
     base: QueriesSetBase,
@@ -62,31 +54,6 @@ export class CosmwasmQueriesImpl {
     );
 
     this.querycw20ContractInfo = new ObservableQueryCw20ContractInfo(
-      sharedContext,
-      chainId,
-      chainGetter
-    );
-
-    this.queryNeutronStakingRewards = new ObservableQueryNeutronStakingRewards(
-      sharedContext,
-      chainId,
-      chainGetter
-    );
-
-    this.queryNeutronStakingRewardsConfig =
-      new ObservableQueryNeutronStakingRewardsConfig(
-        sharedContext,
-        chainId,
-        chainGetter
-      );
-
-    this.queryNeutronGovernance = new ObservableQueryNeutronGovernance(
-      sharedContext,
-      chainId,
-      chainGetter
-    );
-
-    this.queryNeutronVote = new ObservableQueryNeutronProposalVote(
       sharedContext,
       chainId,
       chainGetter

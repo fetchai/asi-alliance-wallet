@@ -187,6 +187,14 @@ export const AssetView = observer(() => {
       )
     : false;
 
+  const numericValue = Number(totalNumber);
+  const formattedValue =
+    numericValue !== 0 && numericValue < 0.000001
+      ? "< 0.000001"
+      : numericValue.toLocaleString("en-US", {
+          maximumFractionDigits: numericValue < 0.001 ? 6 : 3,
+        });
+
   return (
     <HeaderLayout showTopMenu={true} onBackButton={() => navigate(-1)}>
       <div className={style["asset-info"]}>
@@ -240,7 +248,7 @@ export const AssetView = observer(() => {
         <div>
           <div className={style["balance-field"]}>
             <div className={style["balance"]}>
-              {Number(totalNumber).toLocaleString("en-US")}{" "}
+              {formattedValue}{" "}
               <div className={style["denom"]}>{totalDenom}</div>
             </div>
             <div className={style["inUsd"]}>

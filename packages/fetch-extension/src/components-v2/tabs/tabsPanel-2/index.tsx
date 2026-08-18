@@ -11,6 +11,7 @@ interface Tab {
 export interface TabsProps {
   tabs: Tab[];
   activeTabId?: string;
+  onTabClick?: (tabId: string) => void;
   showTabsOnBottom?: boolean;
   setActiveTab?: any;
   onTabChange?: any;
@@ -23,6 +24,7 @@ export const TabsPanel: React.FC<TabsProps> = ({
   tabs,
   activeTabId,
   showTabsOnBottom,
+  onTabClick,
   setActiveTab,
   onTabChange,
   styleProps,
@@ -85,7 +87,12 @@ export const TabsPanel: React.FC<TabsProps> = ({
               }}
               key={tab.id}
               type="button"
-              onClick={() => handleTabClick(tab.id)}
+              onClick={() => {
+                handleTabClick(tab.id);
+                if (onTabClick) {
+                  onTabClick(tab.id);
+                }
+              }}
               disabled={tab.disabled || false}
             >
               {tab.id}

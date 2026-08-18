@@ -17,7 +17,7 @@ export interface TextareaProps {
   formGroupClassName?: string;
   formFeedbackClassName?: string;
   label?: string;
-  error?: string;
+  error?: React.ReactNode;
 }
 
 // eslint-disable-next-line react/display-name

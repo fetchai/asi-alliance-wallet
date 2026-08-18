@@ -23,6 +23,7 @@ import { TXNTYPE } from "../../../config";
 import { useIntl } from "react-intl";
 import { useLanguage } from "../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { formatBalance } from "@utils/format";
 
 type Sort = "APR" | "Voting Power" | "Name";
 
@@ -150,11 +151,7 @@ export const Redelegate = observer(() => {
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
 
-  const availableBalance = `${stakedAmount
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${FiatCurrency}`;
+  const availableBalance = `${formatBalance(stakedAmount)}${FiatCurrency}`;
 
   const notification = useNotification();
 

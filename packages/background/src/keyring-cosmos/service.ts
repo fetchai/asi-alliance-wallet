@@ -1960,7 +1960,7 @@ export class KeyRingCosmosService {
 
     return await this.interactionService.waitApproveV2(
       env,
-      "/sign",
+      "/icns/adr36-signatures",
       "request-sign-icns-adr36",
       interactionInfo,
       async () => {

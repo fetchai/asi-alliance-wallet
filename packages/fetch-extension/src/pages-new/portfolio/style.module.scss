@@ -25,9 +25,12 @@
 }
 .doughnut-graph {
   display: block;
-  flex: 2;
   height: 120px;
   width: 240px;
+  position: absolute;
+  right: -52px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .legend {

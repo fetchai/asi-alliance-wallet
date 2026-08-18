@@ -7,7 +7,11 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { PageWithScrollView } from "components/page";
 import { useStore } from "stores/index";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { formatAddress, formatToTruncated } from "utils/format/format";
+import {
+  formatAddress,
+  formatFiatBalance,
+  formatToTruncated,
+} from "utils/format/format";
 import { LeftRightCrossIcon } from "components/new/icon/left-right-cross";
 import { IconButton } from "components/new/button/icon";
 import { getActivityIcon, getDetails } from "utils/stable-sort";
@@ -61,7 +65,7 @@ export const ActivityDetails = observer(() => {
 
   const convertTofiatCurrency = (currency: CoinPretty) => {
     const value = priceStore.calculatePrice(currency, fiatCurrency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
 
   const toAddress = (details: {
@@ -86,14 +90,14 @@ export const ActivityDetails = observer(() => {
   };
 
   return (
-    <PageWithScrollView backgroundMode={"image"}>
+    <PageWithScrollView backgroundMode={"secondary"}>
       <View style={style.flatten(["items-center"]) as ViewStyle}>
         <View
           style={
             style.flatten([
               "padding-16",
               "border-radius-64",
-              "background-color-white",
+              "background-color-gray-100",
             ]) as ViewStyle
           }
         >
@@ -102,7 +106,7 @@ export const ActivityDetails = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-white",
+              "color-dark",
               "h3",
               "font-normal",
               "margin-top-10",
@@ -146,7 +150,7 @@ export const ActivityDetails = observer(() => {
             ) as ViewStyle
           }
         />
-        <Text style={style.flatten(["color-gray-200", "body2"]) as ViewStyle}>
+        <Text style={style.flatten(["color-gray-300", "body2"]) as ViewStyle}>
           {moment(details.timestamp).format("MMMM DD, hh:mm A")}
         </Text>
       </View>
@@ -154,9 +158,13 @@ export const ActivityDetails = observer(() => {
         {details.verb === "Smart Contract Interaction" ? (
           <BlurBackground
             borderRadius={12}
-            blurIntensity={15}
+            backgroundBlur={false}
             containerStyle={
-              style.flatten(["margin-12", "padding-16"]) as ViewStyle
+              style.flatten([
+                "margin-12",
+                "padding-16",
+                "background-color-gray-5",
+              ]) as ViewStyle
             }
           >
             <TimelineView
@@ -164,14 +172,16 @@ export const ActivityDetails = observer(() => {
                 {
                   icon: (
                     <IconButton
-                      icon={<LeftRightCrossIcon size={20} />}
-                      backgroundBlur={true}
+                      icon={<LeftRightCrossIcon size={20} color="#151a1a" />}
+                      backgroundBlur={false}
                       iconStyle={
                         style.flatten([
                           "width-32",
                           "height-32",
                           "items-center",
                           "justify-center",
+                          "background-color-gray-100",
+                          "border-radius-64",
                         ]) as ViewStyle
                       }
                     />
@@ -186,31 +196,37 @@ export const ActivityDetails = observer(() => {
         ) : (
           <BlurBackground
             borderRadius={12}
-            blurIntensity={15}
+            backgroundBlur={false}
             containerStyle={
-              style.flatten(["margin-12", "padding-16"]) as ViewStyle
+              style.flatten([
+                "margin-12",
+                "padding-16",
+                "background-color-gray-5",
+              ]) as ViewStyle
             }
           >
             <TimelineView
               trailingTitleStyle={
                 style.flatten([
                   details.verb == "Received"
-                    ? "color-green-400"
-                    : "color-white",
+                    ? "color-vibrant-green-500"
+                    : "color-dark",
                 ]) as ViewStyle
               }
               data={[
                 {
                   icon: (
                     <IconButton
-                      icon={getActivityIcon("")}
-                      backgroundBlur={true}
+                      icon={getActivityIcon("", "#151a1a")}
+                      backgroundBlur={false}
                       iconStyle={
                         style.flatten([
                           "width-32",
                           "height-32",
                           "items-center",
                           "justify-center",
+                          "background-color-gray-100",
+                          "border-radius-64",
                         ]) as ViewStyle
                       }
                     />
@@ -221,20 +237,22 @@ export const ActivityDetails = observer(() => {
                   leadingSubtitle: formatAddress(
                     details.signerAddress
                       ? details.signerAddress
-                      : details.deligatorAddress
+                      : details?.delegatorAddress
                   ),
                 },
                 {
                   icon: (
                     <IconButton
-                      icon={getActivityIcon(details.verb)}
-                      backgroundBlur={true}
+                      icon={getActivityIcon(details.verb, "#151a1a")}
+                      backgroundBlur={false}
                       iconStyle={
                         style.flatten([
                           "width-32",
                           "height-32",
                           "items-center",
                           "justify-center",
+                          "background-color-gray-100",
+                          "border-radius-64",
                         ]) as ViewStyle
                       }
                     />

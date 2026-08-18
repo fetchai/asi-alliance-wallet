@@ -7,7 +7,6 @@ import { AppCurrency } from "@keplr-wallet/types";
 import { DetailRow } from "./detail-row";
 import { useStore } from "../../../stores";
 import { useNotification } from "@components/notification";
-import { useIntl } from "react-intl";
 import {
   CHAIN_ID_DORADO,
   CHAIN_ID_FETCHHUB,
@@ -26,7 +25,6 @@ export const DetailRows = ({ details }: { details: any }) => {
   const { feeNumber, feeAlphabetic } = details;
   const navigate = useNavigate();
   const notification = useNotification();
-  const intl = useIntl();
   const { chainStore, analyticsStore } = useStore();
   const chainId = chainStore.current.chainId;
 
@@ -80,9 +78,7 @@ export const DetailRows = ({ details }: { details: any }) => {
       placement: "top-center",
       type: "success",
       duration: 2,
-      content: intl.formatMessage({
-        id: "Transaction hash copied",
-      }),
+      content: "Transaction hash copied",
       canDelete: true,
       transition: {
         duration: 0.25,
@@ -98,6 +94,16 @@ export const DetailRows = ({ details }: { details: any }) => {
         onClick={() => copyAddress(details.hash)}
       />
       <DetailRow label="Chain ID" value={details.chainId} />
+      {details.verb === "Governance Proposal" && (
+        <React.Fragment>
+          {details.proposalType && (
+            <DetailRow label="Proposal Type" value={details.proposalType} />
+          )}
+          {details.proposalTitle && (
+            <DetailRow label="Proposal Title" value={details.proposalTitle} />
+          )}
+        </React.Fragment>
+      )}
       {details.verb !== "Sent" &&
         details.verb !== "Unstaked" &&
         details.verb !== "Smart Contract Interaction" && (
@@ -117,9 +123,16 @@ export const DetailRows = ({ details }: { details: any }) => {
       <DetailRow
         label="Memo"
         value={details.memo.length > 0 ? details.memo : "-"}
+        showTooltip={details.memo.length > 0}
       />
       <DetailRow
-        label={`Total ${details.verb === "Sent" ? "estimated" : "amount"}`}
+        label={`Total ${
+          details.verb === "Sent"
+            ? "estimated"
+            : details.verb === "Governance Proposal"
+            ? "deposit"
+            : "amount"
+        }`}
         value={`${details.amountNumber} ${details.amountAlphabetic}`}
       />
       <div
@@ -167,23 +180,25 @@ export const DetailRows = ({ details }: { details: any }) => {
             </ButtonV2>{" "}
             {[CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
               chainId
-            ) && (
-              <ButtonV2
-                styleProps={{
-                  height: "48px",
-                  marginTop: 0,
-                }}
-                text=""
-                onClick={handleClick}
-              >
-                View on explorer
-              </ButtonV2>
-            )}
+            ) &&
+              ["Success", "Failed"].includes(details.status) && (
+                <ButtonV2
+                  styleProps={{
+                    height: "48px",
+                    marginTop: 0,
+                  }}
+                  text=""
+                  onClick={handleClick}
+                >
+                  View on explorer
+                </ButtonV2>
+              )}
           </div>
         ) : (
           [CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
             chainId
-          ) && (
+          ) &&
+          ["Success", "Failed"].includes(details.status) && (
             <ButtonV2
               styleProps={{
                 height: "48px",

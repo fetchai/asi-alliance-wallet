@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useStore } from "../../../../stores";
 import style from "../style.module.scss";
 import { TXNTYPE } from "../../../../config";
+import { formatBalance } from "@utils/format";
 
 export const StakeDetails = observer(
   ({ validatorAddress }: { validatorAddress: string }) => {
@@ -114,7 +115,7 @@ export const StakeDetails = observer(
             <div className={style["stake-data-row"]}>
               <div className={style["stake-data-title"]}>Staked amount</div>
               <div className={style["stake-data-value"]}>
-                {amount.maxDecimals(6).trim(true).shrink(true).toString()}
+                {formatBalance(amount, 6, false)}
               </div>
             </div>
 
@@ -129,15 +130,11 @@ export const StakeDetails = observer(
                       0.000001 ? (
                       <span style={{ color: "var(--font-dark)" }}>
                         {parseFloat(rewards[0]?.hideDenom(true).toString()) > 0
-                          ? `< 0.000001 ${rewards[0]?.denom}`
+                          ? formatBalance(rewards[0], 6, false)
                           : `0 ${amount?.denom || ""}`}
                       </span>
                     ) : (
-                      rewards[0]
-                        ?.maxDecimals(6)
-                        .trim(true)
-                        .shrink(true)
-                        .toString()
+                      formatBalance(rewards[0], 6, false)
                     )}
                   </div>
                 ) : (

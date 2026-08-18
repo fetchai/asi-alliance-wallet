@@ -8,23 +8,27 @@ import { ObservableCosmwasmContractChainQuery } from "./contract-query";
 import { QuerySharedContext } from "../../common";
 import { AppCurrency } from "@keplr-wallet/types";
 
-export class ObservableQueryCw20BalanceImpl
-  extends ObservableCosmwasmContractChainQuery<Cw20ContractBalance>
-  implements IObservableQueryBalanceImpl
-{
+export class ObservableQueryCw20Balance extends ObservableCosmwasmContractChainQuery<Cw20ContractBalance> {
   constructor(
     sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter,
     protected readonly denomHelper: DenomHelper,
     protected readonly bech32Address: string
   ) {
     if (denomHelper.type !== "cw20") {
       throw new Error(`Denom helper must be cw20: ${denomHelper.denom}`);
     }
-    super(sharedContext, chainId, chainGetter, denomHelper.contractAddress, {
-      balance: { address: bech32Address },
-    });
+    super(
+      sharedContext,
+      chainId,
+      chainGetter,
+      denomHelper.contractAddress,
+      {
+        balance: { address: bech32Address },
+      },
+      `cw20-balance-${denomHelper.contractAddress}-${bech32Address}`
+    );
   }
 
   protected override canFetch(): boolean {
@@ -72,7 +76,7 @@ export class ObservableQueryCw20BalanceRegistry implements BalanceRegistry {
   ): IObservableQueryBalanceImpl | undefined {
     const denomHelper = new DenomHelper(minimalDenom);
     if (denomHelper.type === "cw20") {
-      return new ObservableQueryCw20BalanceImpl(
+      return new ObservableQueryCw20Balance(
         this.sharedContext,
         chainId,
         chainGetter,

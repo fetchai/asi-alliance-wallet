@@ -31,10 +31,17 @@ export const TokenSymbol: FunctionComponent<{
             <VectorCharacter
               char={image}
               height={Math.floor(size * 0.35)}
-              color="white"
+              color={style.flatten(["color-dark"]).color}
             />
           }
-          iconStyle={style.flatten(["padding-10", "items-center"]) as ViewStyle}
+          iconStyle={
+            style.flatten([
+              "padding-10",
+              "items-center",
+              "background-color-gray-100",
+              "border-radius-64",
+            ]) as ViewStyle
+          }
           containerStyle={{ width: size, height: size }}
         />
       )}

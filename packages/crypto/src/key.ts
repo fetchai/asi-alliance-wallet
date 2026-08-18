@@ -433,5 +433,7 @@ export class PubKeyBitcoinCompatible {
  * @param pubKey The public key to convert.
  * @returns The X-only public key.
  */
-export const toXOnly = (pubKey: NodeBuffer) =>
+export const toXOnly = (
+  pubKey: InstanceType<typeof NodeBuffer>
+): InstanceType<typeof NodeBuffer> =>
   pubKey.length === 32 ? pubKey : pubKey.slice(1, 33);

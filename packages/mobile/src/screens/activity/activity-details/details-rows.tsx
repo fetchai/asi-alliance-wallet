@@ -232,8 +232,7 @@ export const DetailRows = ({ details }: { details: any }) => {
               borderRadius={64}
               containerStyle={
                 style.flatten([
-                  "border-width-1",
-                  "border-color-white@40%",
+                  "background-color-dark",
                   "margin-4",
                   "padding-6",
                   "justify-center",
@@ -250,13 +249,12 @@ export const DetailRows = ({ details }: { details: any }) => {
         )}
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
           <BlurButton
-            text="View on explorer"
+            text="View on Explorer"
             backgroundBlur={false}
             borderRadius={64}
             containerStyle={
               style.flatten([
-                "border-width-1",
-                "border-color-white@40%",
+                "background-color-dark",
                 "margin-4",
                 "padding-6",
                 "justify-center",
@@ -267,7 +265,7 @@ export const DetailRows = ({ details }: { details: any }) => {
               if (!networkIsConnected) {
                 Toast.show({
                   type: "error",
-                  text1: "No internet connection",
+                  text1: "No Internet Connection",
                 });
                 return;
               }

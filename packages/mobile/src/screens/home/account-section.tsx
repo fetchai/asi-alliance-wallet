@@ -19,11 +19,7 @@ import {
 import { ChangeWalletCardModel } from "components/new/wallet-card/change-wallet";
 import { useLoadingScreen } from "providers/loading-screen";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
-import {
-  numberLocalFormat,
-  separateNumericAndDenom,
-  titleCase,
-} from "utils/format/format";
+import { separateNumericAndDenom, titleCase } from "utils/format/format";
 import { BlurButton } from "components/new/button/blur-button";
 import { ThreeDotIcon } from "components/new/icon/three-dot";
 import { useSmartNavigation } from "navigation/smart-navigation";
@@ -154,7 +150,7 @@ export const AccountSection: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "claim in process",
+        text1: "Claim In Progress",
       });
       await tx.send({ amount: [], gas: gas.toString() }, "", undefined, {
         onBroadcasted: (txHash) => {
@@ -177,7 +173,7 @@ export const AccountSection: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction rejected",
+          text1: "Transaction Rejected",
         });
         return;
       } else {
@@ -271,11 +267,12 @@ export const AccountSection: FunctionComponent<{
           containerStyle={
             style.flatten([
               "border-width-1",
-              "border-color-white@20%",
+              "border-color-gray-100",
             ]) as ViewStyle
           }
+          textStyle={style.flatten(["color-black"]) as ViewStyle}
           text={titleCase(chainStore.current.chainName)}
-          icon={<ChevronDownIcon size={12} />}
+          icon={<ChevronDownIcon size={12} color="black" />}
           onPress={() => {
             navigation.dispatch(DrawerActions.toggleDrawer());
             analyticsStore.logEvent("chain_change_click", {
@@ -289,7 +286,7 @@ export const AccountSection: FunctionComponent<{
         <View style={style.flatten(["flex-row"])}>
           <IconButton
             borderRadius={32}
-            icon={<QRCodeIcon size={15} />}
+            icon={<QRCodeIcon size={15} color="black" />}
             backgroundBlur={false}
             onPress={async () => {
               const permission = await Camera.getCameraPermissionsAsync();
@@ -312,7 +309,7 @@ export const AccountSection: FunctionComponent<{
             iconStyle={
               style.flatten([
                 "border-width-1",
-                "border-color-white@20%",
+                "border-color-gray-100",
                 "padding-x-12",
                 "padding-y-6",
                 "justify-center",
@@ -322,13 +319,13 @@ export const AccountSection: FunctionComponent<{
           />
           <IconButton
             borderRadius={32}
-            icon={<NotificationIcon size={15} />}
+            icon={<NotificationIcon size={15} color="black" />}
             backgroundBlur={false}
             onPress={() => smartNavigation.navigateSmart("Inbox", {})}
             iconStyle={
               style.flatten([
                 "border-width-1",
-                "border-color-white@20%",
+                "border-color-gray-100",
                 "padding-x-12",
                 "padding-y-6",
                 "justify-center",
@@ -340,7 +337,7 @@ export const AccountSection: FunctionComponent<{
       </View>
       <BlurBackground
         borderRadius={14}
-        blurIntensity={16}
+        backgroundBlur={false}
         containerStyle={
           [
             style.flatten([
@@ -352,21 +349,26 @@ export const AccountSection: FunctionComponent<{
               "padding-x-16",
               "padding-y-12",
               "border-width-1",
-              "border-color-indigo-20",
+              "border-color-gray-100",
+              "background-color-gray-5",
             ]),
             containerStyle,
           ] as ViewStyle
         }
       >
         <View style={style.flatten(["flex-3"]) as ViewStyle}>
-          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+          <Text style={style.flatten(["body3", "color-black"]) as ViewStyle}>
             {account.name}
           </Text>
-          <AddressCopyable address={account.bech32Address} maxCharacters={16} />
+          <AddressCopyable
+            address={account.bech32Address}
+            maxCharacters={16}
+            textStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+          />
         </View>
         <IconButton
           backgroundBlur={false}
-          icon={<ThreeDotIcon size={15} />}
+          icon={<ThreeDotIcon size={15} color="black" />}
           iconStyle={
             style.flatten([
               "width-32",
@@ -374,10 +376,11 @@ export const AccountSection: FunctionComponent<{
               "border-radius-64",
               "items-center",
               "justify-center",
+              "background-color-gray-100@65%",
             ]) as ViewStyle
           }
           containerStyle={style.flatten(["flex-1", "items-end"]) as ViewStyle}
-          onPress={() => setIsOpenModal(true)}
+          onPress={() => setChangeWalletModal(true)}
         />
       </BlurBackground>
       <ClaimCard
@@ -437,7 +440,7 @@ export const AccountSection: FunctionComponent<{
             <Text
               style={
                 style.flatten([
-                  "color-white@60%",
+                  "color-gray-300",
                   "body3",
                   "margin-left-4",
                 ]) as ViewStyle
@@ -453,13 +456,14 @@ export const AccountSection: FunctionComponent<{
             style.flatten([
               "padding-x-12",
               "border-width-1",
-              "border-color-white@20%",
+              "border-color-gray-100",
               "margin-top-24",
               "border-radius-32",
+              "background-color-dark",
             ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3"]) as ViewStyle}
-          text={"View portfolio"}
+          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
+          text={"View Portfolio"}
           onPress={() => {
             navigation.navigate("Portfolio");
             analyticsStore.logEvent("view_portfolio_click", {
@@ -475,29 +479,11 @@ export const AccountSection: FunctionComponent<{
         close={() => setIsOpenModal(false)}
         onSelectWallet={(option: ManageWalletOption) => {
           switch (option) {
-            case ManageWalletOption.addNewWallet:
-              analyticsStore.logEvent("add_new_wallet_click", {
-                pageName: "Home",
-              });
-              navigation.navigate("Register", {
-                screen: "Register.Intro",
-              });
-              break;
-
-            case ManageWalletOption.changeWallet:
-              analyticsStore.logEvent("change_wallet_click", {
-                pageName: "Home",
-              });
-              setChangeWalletModal(true);
-              setIsOpenModal(false);
-              break;
-
             case ManageWalletOption.renameWallet:
               analyticsStore.logEvent("rename_wallet_click", {
                 pageName: "Home",
               });
               smartNavigation.navigateSmart("RenameWallet", {});
-              setIsOpenModal(false);
               break;
 
             case ManageWalletOption.deleteWallet:
@@ -505,7 +491,6 @@ export const AccountSection: FunctionComponent<{
                 pageName: "Home",
               });
               smartNavigation.navigateSmart("DeleteWallet", {});
-              setIsOpenModal(false);
               break;
           }
         }}
@@ -526,6 +511,17 @@ export const AccountSection: FunctionComponent<{
             });
           }
         }}
+        onEditAccount={() => {
+          setIsOpenModal(true);
+        }}
+        onAddNewWallet={() => {
+          analyticsStore.logEvent("add_new_wallet_click", {
+            pageName: "Home",
+          });
+          navigation.navigate("Register", {
+            screen: "Register.Intro",
+          });
+        }}
       />
       <CameraPermissionModal
         title={
@@ -542,7 +538,7 @@ export const AccountSection: FunctionComponent<{
         }
         buttonText={
           modelStatus == ModelStatus.First
-            ? "Allow Fetch to use camera"
+            ? "Allow ASI Wallet to use camera"
             : "Enable camera permission in settings"
         }
         isOpen={openCameraModel}
@@ -573,16 +569,14 @@ export const AccountSection: FunctionComponent<{
         }}
         txnHash={txnObj.txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to activity screen"
-        onHomeClick={() => navigation.navigate("ActivityTab", {})}
+        buttonText="Go to Home"
+        onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={onSubmit}
       />
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={`${numberLocalFormat(
-          stakableReward.trim(true).shrink(true).toString().split(" ")[0]
-        )} ${stakableReward.trim(true).shrink(true).toString().split(" ")[1]}`}
+        earnedAmount={stakableReward}
         onPress={onSubmit}
         buttonLoading={loadingClaimButton}
       />

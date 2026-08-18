@@ -172,7 +172,7 @@ export const SignModal: FunctionComponent<{
               {scrollViewHorizontal ? (
                 <ScrollView
                   showsHorizontalScrollIndicator={false}
-                  indicatorStyle={"white"}
+                  indicatorStyle={"black"}
                   nestedScrollEnabled={true}
                   scrollEnabled={true}
                   showsVerticalScrollIndicator={false}
@@ -203,8 +203,7 @@ export const SignModal: FunctionComponent<{
                 style={
                   style.flatten([
                     "height-1",
-                    "background-color-gray-50",
-                    "dark:background-color-platinum-400",
+                    "background-color-gray-100",
                     "margin-x-16",
                   ]) as ViewStyle
                 }
@@ -235,8 +234,7 @@ export const SignModal: FunctionComponent<{
                 style={
                   style.flatten([
                     "height-1",
-                    "background-color-gray-50",
-                    "dark:background-color-platinum-400",
+                    "background-color-gray-100",
                     "margin-x-16",
                   ]) as ViewStyle
                 }
@@ -291,15 +289,16 @@ export const SignModal: FunctionComponent<{
             </Text>
             <BlurBackground
               borderRadius={12}
-              blurIntensity={16}
+              backgroundBlur={false}
               containerStyle={
                 [
                   style.flatten(["border-radius-8", "overflow-hidden"]),
+                  { backgroundColor: "#f6f6f6" },
                 ] as ViewStyle
               }
             >
               <ScrollView
-                indicatorStyle={"white"}
+                indicatorStyle={"black"}
                 nestedScrollEnabled={true}
                 scrollEnabled={true}
                 showsVerticalScrollIndicator={false}
@@ -332,10 +331,16 @@ export const SignModal: FunctionComponent<{
       )}
 
       <Button
-        text="Approve transaction"
-        textStyle={style.flatten(["body2"]) as ViewStyle}
+        text="Approve Transaction"
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         containerStyle={
-          style.flatten(["border-radius-64", "margin-top-20"]) as ViewStyle
+          [
+            style.flatten([
+              "border-radius-64",
+              "margin-top-20",
+              "background-color-dark",
+            ]),
+          ] as ViewStyle
         }
         disabled={
           signDocWapper == null ||

@@ -36,6 +36,10 @@ export const TransactionDetails: React.FC<{
     signedTxn,
   } = location.state || {};
 
+  const isGovVoteMsg =
+    JSON.parse(signedTxn || "{}")?.body?.messages?.[0]?.["@type"] ===
+    "/cosmos.gov.v1beta1.MsgVote";
+
   const renderCopyButton = (onCopy: () => void) => (
     <ButtonV2
       text=""
@@ -197,11 +201,18 @@ export const TransactionDetails: React.FC<{
               text=""
               onClick={() => {
                 if (broadcastType === "single") {
-                  navigate("/activity-details", {
-                    state: {
-                      nodeId: txHash.toLocaleUpperCase(),
-                    },
-                  });
+                  navigate(
+                    isGovVoteMsg
+                      ? "/activity?tab=Proposals"
+                      : "/activity-details",
+                    isGovVoteMsg
+                      ? undefined
+                      : {
+                          state: {
+                            nodeId: txHash.toLocaleUpperCase(),
+                          },
+                        }
+                  );
                 } else {
                   const url = `${explorerBaseURL(
                     chainId

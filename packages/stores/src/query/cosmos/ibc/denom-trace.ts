@@ -38,22 +38,10 @@ export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<De
       return [];
     }
 
-    const rawPaths = this.response.data.denom_trace.path.split("/");
-
-    if (rawPaths.length % 2 !== 0) {
-      console.log("Failed to parse paths", rawPaths);
-      return [];
-    }
-
-    const rawPathChunks: string[][] = [];
-    for (let i = 0; i < rawPaths.length; i += 2) {
-      rawPathChunks.push(rawPaths.slice(i, i + 2));
-    }
-
-    return rawPathChunks.map((chunk) => {
+    return this.response.data.denom.trace.map((hop) => {
       return {
-        portId: chunk[0],
-        channelId: chunk[1],
+        portId: hop.port_id,
+        channelId: hop.channel_id,
       };
     });
   }
@@ -63,7 +51,7 @@ export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<De
       return undefined;
     }
 
-    return this.response.data.denom_trace.base_denom;
+    return this.response.data.denom.base;
   }
 
   @computed

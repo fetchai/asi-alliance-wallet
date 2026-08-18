@@ -29,13 +29,19 @@ export const CameraPermissionModal: FunctionComponent<{
           subtitle={
             "We need your permission to access the camera to scan the QR code in the next step."
           }
-          subtitleStyle={style.flatten(["subtitle3"]) as ViewStyle}
+          subtitleStyle={
+            style.flatten(["subtitle3", "color-gray-400"]) as ViewStyle
+          }
         />
         <Button
           containerStyle={
-            style.flatten(["border-radius-32", "margin-top-18"]) as ViewStyle
+            style.flatten([
+              "border-radius-32",
+              "margin-top-18",
+              "background-color-dark",
+            ]) as ViewStyle
           }
-          textStyle={style.flatten(["body3"]) as ViewStyle}
+          textStyle={style.flatten(["body3", "color-white"]) as ViewStyle}
           size="large"
           text={buttonText}
           onPress={onPress}

@@ -47,6 +47,11 @@ const options = [
     value: "/ibc.applications.transfer.v1.MsgTransfer",
     label: "IBC Transfers",
   },
+  {
+    icon: require("@assets/svg/wireframe/proposal.svg"),
+    value: "/cosmos.gov.v1beta1.MsgSubmitProposal",
+    label: "Governance Proposal",
+  },
 ];
 
 const processFilters = (filters: string[]) => {

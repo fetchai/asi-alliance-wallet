@@ -25,7 +25,7 @@ import { useIntl } from "react-intl";
 import { useLanguage } from "../../../languages";
 import { useStore } from "../../../stores";
 import { GasContainer } from "../gas-form";
-import { GasInput } from "../gas-input";
+import { ManualFeeInput } from "../gas-form/manual";
 import { FeeCurrencySelector } from "./fee-currency-selector";
 import feeButtonStyles from "./fee-buttons.module.scss";
 
@@ -200,6 +200,7 @@ export const FeeButtonsInner: FunctionComponent<
     pageName,
   }) => {
     const [isFeeDropdownOpen, setIsFeeDropdownOpen] = useState(false);
+    const [manualFeeError, setManualFeeError] = useState(false);
 
     useEffect(() => {
       if (feeConfig.feeCurrency && !feeConfig.fee) {
@@ -234,14 +235,26 @@ export const FeeButtonsInner: FunctionComponent<
 
     const fiatCurrency = language.fiatCurrency;
 
-    const lowFee = feeConfig.getFeeTypePretty("low");
-    const lowFeePrice = priceStore.calculatePrice(lowFee, fiatCurrency);
+    const lowFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("low")
+      : undefined;
+    const lowFeePrice = lowFee
+      ? priceStore.calculatePrice(lowFee, fiatCurrency)
+      : undefined;
 
-    const averageFee = feeConfig.getFeeTypePretty("average");
-    const averageFeePrice = priceStore.calculatePrice(averageFee, fiatCurrency);
+    const averageFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("average")
+      : undefined;
+    const averageFeePrice = averageFee
+      ? priceStore.calculatePrice(averageFee, fiatCurrency)
+      : undefined;
 
-    const highFee = feeConfig.getFeeTypePretty("high");
-    const highFeePrice = priceStore.calculatePrice(highFee, fiatCurrency);
+    const highFee = !feeConfig.isManual
+      ? feeConfig.getFeeTypePretty("high")
+      : undefined;
+    const highFeePrice = highFee
+      ? priceStore.calculatePrice(highFee, fiatCurrency)
+      : undefined;
 
     const error = feeConfig.error;
     const errorText: string | undefined = (() => {
@@ -262,6 +275,32 @@ export const FeeButtonsInner: FunctionComponent<
       }
     })();
 
+    useEffect(() => {
+      if (!feeButtonState.isGasInputOpen) {
+        setManualFeeError(false);
+      }
+    }, [feeButtonState.isGasInputOpen]);
+
+    const displayFee =
+      feeButtonState.isGasInputOpen || feeConfig.isManual
+        ? feeConfig.fee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : feeConfig.feeType === "low"
+        ? lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : feeConfig.feeType === "average"
+        ? averageFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        : highFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm);
+
+    const feeDisplayText =
+      displayFee && displayFee !== "0"
+        ? displayFee
+        : feeConfig.fee?.hideIBCMetadata(true).trim(true).toString() ||
+          gasConfig.gasRaw ||
+          "-";
+
+    const onValidationChange = (value: boolean) => {
+      setManualFeeError(value);
+    };
+
     return (
       <FormGroup>
         <div className={feeButtonStyles["transactionFeeContainer"]}>
@@ -271,19 +310,7 @@ export const FeeButtonsInner: FunctionComponent<
 
           <div className={feeButtonStyles["transactionFeeValueContainer"]}>
             <div className={feeButtonStyles["transactionFeeValue"]}>
-              {feeButtonState.isGasInputOpen
-                ? gasConfig.gasRaw
-                : feeConfig.feeType === "low"
-                ? lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
-                : feeConfig.feeType === "average"
-                ? averageFee
-                    .hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)
-                : highFee
-                    .hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm)}
+              {feeDisplayText}
             </div>
 
             <button
@@ -315,87 +342,90 @@ export const FeeButtonsInner: FunctionComponent<
           }}
         >
           <div>
-            <Card
-              onClick={(e: MouseEvent) => {
-                feeConfig.setFeeType("low");
-                e.preventDefault();
-                analyticsStore.logEvent("fee_type_select", {
-                  pageName: pageName,
-                  feeType: "low",
-                });
-              }}
-              style={{
-                padding: "18px 16px",
-                height: "54px",
-              }}
-              heading={
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  {feeSelectLabels.low}
-                  <span
-                    style={{
-                      opacity: "0.6",
-                      fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
-                      fontSize: "12px",
-                      marginLeft: "5px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      width: "100px",
-                      display: "inline-block",
-                    }}
-                  >
-                    {lowFeePrice && lowFeePrice.trim(true).toString()}
-                  </span>
-                </div>
-              }
-              isActive={feeConfig.feeType === "low"}
-              rightContent={
-                <div
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 400,
-                    opacity: "0.6",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2px",
-                  }}
-                >
+            {/* if low fee price is same as average fee price don't show low fee option */}
+            {lowFeePrice?.toString() !== averageFeePrice?.toString() && (
+              <Card
+                onClick={(e: MouseEvent) => {
+                  feeConfig.setFeeType("low");
+                  e.preventDefault();
+                  analyticsStore.logEvent("fee_type_select", {
+                    pageName: pageName,
+                    feeType: "low",
+                  });
+                }}
+                style={{
+                  padding: "18px 16px",
+                  height: "54px",
+                }}
+                heading={
                   <div
                     style={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: "50px",
+                      display: "flex",
+                      alignItems: "center",
                     }}
                   >
-                    {
-                      lowFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[0]
-                    }
+                    {feeSelectLabels.low}
+                    <span
+                      style={{
+                        opacity: "0.6",
+                        fontWeight: 400,
+                        color: "var(--grey-white, #FFF)",
+                        fontSize: "12px",
+                        marginLeft: "5px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        width: "100px",
+                        display: "inline-block",
+                      }}
+                    >
+                      {lowFeePrice && lowFeePrice.trim(true).toString()}
+                    </span>
                   </div>
-                  <div>
-                    {
-                      lowFee
-                        .hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[1]
-                    }
+                }
+                isActive={feeConfig.feeType === "low"}
+                rightContent={
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 400,
+                      opacity: "0.6",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "2px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: "50px",
+                      }}
+                    >
+                      {
+                        lowFee
+                          ?.hideIBCMetadata(true)
+                          .trim(true)
+                          .toMetricPrefix(isEvm)
+                          .toString()
+                          .split(" ")[0]
+                      }
+                    </div>
+                    <div>
+                      {
+                        lowFee
+                          ?.hideIBCMetadata(true)
+                          .trim(true)
+                          .toMetricPrefix(isEvm)
+                          .toString()
+                          .split(" ")[1]
+                      }
+                    </div>
                   </div>
-                </div>
-              }
-            />
+                }
+              />
+            )}
             <Card
               isActive={feeConfig.feeType === "average"}
               heading={
@@ -457,7 +487,7 @@ export const FeeButtonsInner: FunctionComponent<
                   >
                     {
                       averageFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -467,7 +497,7 @@ export const FeeButtonsInner: FunctionComponent<
                   <div>
                     {
                       averageFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -538,7 +568,7 @@ export const FeeButtonsInner: FunctionComponent<
                   >
                     {
                       highFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -548,7 +578,7 @@ export const FeeButtonsInner: FunctionComponent<
                   <div>
                     {
                       highFee
-                        .hideIBCMetadata(true)
+                        ?.hideIBCMetadata(true)
                         .trim(true)
                         .toMetricPrefix(isEvm)
                         .toString()
@@ -606,15 +636,19 @@ export const FeeButtonsInner: FunctionComponent<
                 <React.Fragment>
                   <GasContainer
                     label={gasLabel}
+                    feeConfig={feeConfig}
                     gasConfig={gasConfig}
                     gasSimulator={gasSimulator}
+                    onValidationChange={onValidationChange}
                   />
                 </React.Fragment>
               ) : (
                 <GasContainer
                   label={gasLabel}
+                  feeConfig={feeConfig}
                   gasConfig={gasConfig}
                   gasSimulator={gasSimulator}
+                  onValidationChange={onValidationChange}
                 />
               )
             ) : feeConfig.feeCurrencies.length > 1 &&
@@ -624,13 +658,18 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{ backgroundColor: "transparent" }}
                   heading={<FeeCurrencySelector feeConfig={feeConfig} />}
                 >
-                  <GasInput label={gasLabel} gasConfig={gasConfig} />
+                  <ManualFeeInput
+                    feeConfig={feeConfig}
+                    gasConfig={gasConfig}
+                    onValidationChange={onValidationChange}
+                  />
                 </Card>
               </React.Fragment>
             ) : (
-              <Card
-                style={{ backgroundColor: "transparent" }}
-                heading={<GasInput label={gasLabel} gasConfig={gasConfig} />}
+              <ManualFeeInput
+                feeConfig={feeConfig}
+                gasConfig={gasConfig}
+                onValidationChange={onValidationChange}
               />
             )
           ) : null}
@@ -652,7 +691,11 @@ export const FeeButtonsInner: FunctionComponent<
               setIsFeeDropdownOpen(false);
             }}
             btnBgEnabled={true}
-            disabled={errorText != null}
+            disabled={
+              errorText != null ||
+              !!gasConfig.error ||
+              (feeButtonState.isGasInputOpen && manualFeeError)
+            }
           />
         </Dropdown>
       </FormGroup>

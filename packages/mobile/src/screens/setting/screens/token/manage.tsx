@@ -37,7 +37,7 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -70,8 +70,7 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
               style={style.flatten([
                 "h3",
                 "font-medium",
-                "color-gray-100",
-                "dark:color-platinum-300",
+                "color-dark",
                 "text-center",
               ])}
             >
@@ -82,10 +81,21 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
             style={style.flatten(["margin-top-68", "flex-1"]) as ViewStyle}
           />
           <Button
-            text="Add token"
+            text="Add Token"
             size="large"
-            containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
-            textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
+            containerStyle={
+              style.flatten([
+                "border-radius-32",
+                "background-color-dark",
+              ]) as ViewStyle
+            }
+            textStyle={
+              style.flatten([
+                "body2",
+                "font-normal",
+                "color-white",
+              ]) as ViewStyle
+            }
             onPress={() => {
               smartNavigation.navigateSmart("Setting.AddToken", {});
               analyticsStore.logEvent("add_token_icon_click", {
@@ -124,7 +134,7 @@ export const ManageTokenItem: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      blurIntensity={14}
+      backgroundBlur={false}
       containerStyle={
         [
           style.flatten([
@@ -133,6 +143,7 @@ export const ManageTokenItem: FunctionComponent<{
             "margin-y-6",
             "flex-row",
             "items-center",
+            "background-color-gray-5",
           ]),
           containerStyle,
         ] as ViewStyle
@@ -140,7 +151,7 @@ export const ManageTokenItem: FunctionComponent<{
     >
       <Text
         style={
-          style.flatten(["subtitle3", "color-white", "uppercase"]) as ViewStyle
+          style.flatten(["subtitle3", "color-dark", "uppercase"]) as ViewStyle
         }
       >
         {balance.currency.coinDenom}

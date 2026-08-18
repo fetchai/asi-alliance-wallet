@@ -159,3 +159,23 @@
   font-size: 12px;
   overflow-x: auto;
 }
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.signAnywayLink {
+  color: #3b82f6;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.errorMessage {
+  color: #fb6340;
+  font-size: 14px;
+}

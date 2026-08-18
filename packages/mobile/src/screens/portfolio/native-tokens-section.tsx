@@ -104,7 +104,12 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
             <BlurButton
               text={"Staked"}
               backgroundBlur={false}
-              leftIcon={<StakeIcon size={12} />}
+              leftIcon={
+                <StakeIcon
+                  size={12}
+                  color={style.flatten(["color-dark"]).color}
+                />
+              }
               borderRadius={8}
               containerStyle={
                 style.flatten([
@@ -113,13 +118,13 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
                   "padding-y-6",
                   "margin-right-8",
                   "justify-center",
-                  "border-color-white@20%",
+                  "border-color-gray-100",
                 ]) as ViewStyle
               }
               textStyle={
                 style.flatten([
                   "text-caption2",
-                  "color-white",
+                  "color-dark",
                   "margin-0",
                 ]) as ViewStyle
               }
@@ -127,7 +132,9 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
             <BlurButton
               text={"Vesting"}
               backgroundBlur={false}
-              leftIcon={<LockIcon />}
+              leftIcon={
+                <LockIcon color={style.flatten(["color-dark"]).color} />
+              }
               borderRadius={8}
               containerStyle={
                 style.flatten([
@@ -135,13 +142,13 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
                   "padding-x-12",
                   "padding-y-6",
                   "justify-center",
-                  "border-color-white@20%",
+                  "border-color-gray-100",
                 ]) as ViewStyle
               }
               textStyle={
                 style.flatten([
                   "text-caption2",
-                  "color-white",
+                  "color-dark",
                   "margin-0",
                 ]) as ViewStyle
               }

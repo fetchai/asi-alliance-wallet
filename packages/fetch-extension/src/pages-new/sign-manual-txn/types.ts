@@ -180,6 +180,9 @@ export interface TransactionSectionProps {
   onMultisigAccountChange?: (e: any) => void;
   txnPayload: string;
   payloadError: string;
+  setPayloadError: React.Dispatch<React.SetStateAction<string>>;
+  overrideSigner: boolean;
+  setOverrideSigner: React.Dispatch<React.SetStateAction<boolean>>;
   accountInfo: {
     accountNumber: string;
     sequence: string;

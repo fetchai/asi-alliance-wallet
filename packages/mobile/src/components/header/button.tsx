@@ -84,3 +84,31 @@ export const HeaderLeftBackBlurButton: FunctionComponent<
     </React.Fragment>
   );
 };
+
+export const HeaderLeftBackLightButton: FunctionComponent<
+  HeaderBackButtonProps
+> = (props) => {
+  const style = useStyle();
+  return (
+    <React.Fragment>
+      {props.canGoBack ? (
+        <IconButton
+          icon={<HeaderBackButtonIcon color="#151a1a" size={20} />}
+          backgroundBlur={false}
+          onPress={props.onPress}
+          iconStyle={
+            style.flatten([
+              "width-54",
+              "border-width-1",
+              "border-color-gray-100",
+              "padding-x-12",
+              "padding-y-6",
+              "justify-center",
+              "items-center",
+            ]) as ViewStyle
+          }
+        />
+      ) : null}
+    </React.Fragment>
+  );
+};

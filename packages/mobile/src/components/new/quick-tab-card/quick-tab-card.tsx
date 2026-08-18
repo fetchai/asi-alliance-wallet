@@ -35,15 +35,20 @@ export const QuickTabOptionModel: FunctionComponent<{
     <CardModal isOpen={isOpen} disableGesture={true} close={() => close()}>
       <BlurBackground
         borderRadius={12}
-        blurIntensity={15}
-        containerStyle={style.flatten(["margin-bottom-4"]) as ViewStyle}
+        blurIntensity={0}
+        containerStyle={
+          [
+            style.flatten(["margin-bottom-4"]),
+            { backgroundColor: "#f6f6f6" },
+          ] as ViewStyle
+        }
       >
         <RectButton
           onPress={() => {
             if (activityStore.getPendingTxnTypes[txnTypeKey.send]) {
               Toast.show({
                 type: "error",
-                text1: `${txType[txnTypeKey.send]} in progress`,
+                text1: `${txType[txnTypeKey.send]} In Progress`,
               });
               close();
               return;
@@ -65,20 +70,18 @@ export const QuickTabOptionModel: FunctionComponent<{
             ]) as ViewStyle
           }
           activeOpacity={0.5}
-          underlayColor={style.flatten(["color-gray-50"]).color}
+          underlayColor={"#e0e0e0"}
         >
           <IconButton
             backgroundBlur={false}
-            icon={<ArrowUpIcon />}
+            icon={<ArrowUpIcon color={style.flatten(["color-dark"]).color} />}
             iconStyle={style.flatten(["padding-0"]) as ViewStyle}
           />
           <Text
             style={
-              style.flatten([
-                "body2",
-                "color-white",
-                "margin-left-18",
-              ]) as ViewStyle
+              [
+                style.flatten(["body2", "margin-left-18", "color-dark"]),
+              ] as ViewStyle
             }
           >
             Send
@@ -87,8 +90,13 @@ export const QuickTabOptionModel: FunctionComponent<{
       </BlurBackground>
       <BlurBackground
         borderRadius={12}
-        blurIntensity={15}
-        containerStyle={style.flatten(["margin-bottom-4"]) as ViewStyle}
+        blurIntensity={0}
+        containerStyle={
+          [
+            style.flatten(["margin-bottom-4"]),
+            { backgroundColor: "#f6f6f6" },
+          ] as ViewStyle
+        }
       >
         <RectButton
           onPress={() => {
@@ -108,20 +116,18 @@ export const QuickTabOptionModel: FunctionComponent<{
             ]) as ViewStyle
           }
           activeOpacity={0.5}
-          underlayColor={style.flatten(["color-gray-50"]).color}
+          underlayColor={"#e0e0e0"}
         >
           <IconButton
             backgroundBlur={false}
-            icon={<ArrowDownIcon />}
+            icon={<ArrowDownIcon color={style.flatten(["color-dark"]).color} />}
             iconStyle={style.flatten(["padding-0"]) as ViewStyle}
           />
           <Text
             style={
-              style.flatten([
-                "body2",
-                "color-white",
-                "margin-left-18",
-              ]) as ViewStyle
+              [
+                style.flatten(["body2", "margin-left-18", "color-dark"]),
+              ] as ViewStyle
             }
           >
             Receive
@@ -130,8 +136,13 @@ export const QuickTabOptionModel: FunctionComponent<{
       </BlurBackground>
       <BlurBackground
         borderRadius={12}
-        blurIntensity={15}
-        containerStyle={style.flatten(["margin-bottom-4"]) as ViewStyle}
+        blurIntensity={0}
+        containerStyle={
+          [
+            style.flatten(["margin-bottom-4"]),
+            { backgroundColor: "#f6f6f6" },
+          ] as ViewStyle
+        }
       >
         <RectButton
           onPress={() => {
@@ -150,24 +161,22 @@ export const QuickTabOptionModel: FunctionComponent<{
             ]) as ViewStyle
           }
           activeOpacity={1}
-          underlayColor={"rgba(255,255,255,0)"}
-          rippleColor={"rgba(255,255,255,0)"}
+          underlayColor={"#e0e0e0"}
         >
           <View
             style={style.flatten(["flex-row", "items-center"]) as ViewStyle}
           >
             <IconButton
               backgroundBlur={false}
-              icon={<NewBridgeIcon color={"#64646D"} />}
+              icon={<NewBridgeIcon color={"#a1a3a3"} />}
               iconStyle={style.flatten(["padding-0"]) as ViewStyle}
             />
             <Text
               style={
-                style.flatten([
-                  "body2",
-                  "color-gray-400",
-                  "margin-left-18",
-                ]) as ViewStyle
+                [
+                  style.flatten(["body2", "margin-left-18"]),
+                  { color: "#a1a3a3" },
+                ] as ViewStyle
               }
             >
               Bridge
@@ -178,11 +187,13 @@ export const QuickTabOptionModel: FunctionComponent<{
             size="small"
             rippleColor={"rgba(255,255,255,0)"}
             containerStyle={
-              style.flatten([
-                "background-color-indigo",
-                "border-radius-4",
-                "height-24",
-              ]) as ViewStyle
+              [
+                style.flatten([
+                  "border-radius-4",
+                  "height-24",
+                  "background-color-dark",
+                ]),
+              ] as ViewStyle
             }
             textStyle={style.flatten([
               "text-caption2",

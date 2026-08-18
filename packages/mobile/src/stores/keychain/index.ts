@@ -2,10 +2,14 @@ import { flow, makeObservable, observable } from "mobx";
 import * as Keychain from "react-native-keychain";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { KeyRingStore } from "@keplr-wallet/stores";
+import { Platform } from "react-native";
 
 export class KeychainStore {
   @observable
   protected _isBiometrySupported: boolean = false;
+
+  @observable
+  protected _biometryType: Keychain.BIOMETRY_TYPE | null = null;
 
   @observable
   protected _isBiometryOn: boolean = false;
@@ -13,10 +17,17 @@ export class KeychainStore {
   @observable
   protected _isAutoLockOn: boolean = false;
 
-  protected static defaultOptions: Keychain.Options = {
+  // Used for reading — iOS shows biometric prompt with this title
+  protected static readOptions: Keychain.Options = {
     authenticationPrompt: {
       title: "Biometric Authentication",
     },
+    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+  };
+
+  // Used for writing only — no auth prompt so iOS won't challenge during SecItemAdd
+  protected static writeOptions: Keychain.Options = {
     accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
   };
@@ -34,6 +45,10 @@ export class KeychainStore {
     return this._isBiometrySupported;
   }
 
+  get biometryType(): Keychain.BIOMETRY_TYPE | null {
+    return this._biometryType;
+  }
+
   get isBiometryOn(): boolean {
     return this._isBiometryOn;
   }
@@ -49,7 +64,7 @@ export class KeychainStore {
     }
 
     const credentials = yield* toGenerator(
-      Keychain.getGenericPassword(KeychainStore.defaultOptions)
+      Keychain.getGenericPassword(KeychainStore.readOptions)
     );
     if (credentials) {
       yield this.keyRingStore.unlock(credentials.password);
@@ -62,11 +77,16 @@ export class KeychainStore {
   *turnOnBiometry(password: string) {
     const valid = yield* toGenerator(this.keyRingStore.checkPassword(password));
     if (valid) {
+      // iOS only: delete before write so setGenericPassword always hits SecItemAdd
+      // (new item, no auth needed) instead of SecItemUpdate (existing item,
+      // requires auth → errSecAuthFailed). Android overwrites silently, so this
+      // is a no-op there but safe on both platforms.
+      yield* toGenerator(Keychain.resetGenericPassword());
       const result = yield* toGenerator(
         Keychain.setGenericPassword(
           "keplr",
           password,
-          KeychainStore.defaultOptions
+          KeychainStore.writeOptions
         )
       );
       if (result) {
@@ -82,7 +102,7 @@ export class KeychainStore {
   *turnOffBiometry() {
     if (this.isBiometryOn) {
       const credentials = yield* toGenerator(
-        Keychain.getGenericPassword(KeychainStore.defaultOptions)
+        Keychain.getGenericPassword(KeychainStore.readOptions)
       );
       if (credentials) {
         if (
@@ -90,9 +110,7 @@ export class KeychainStore {
             this.keyRingStore.checkPassword(credentials.password)
           )
         ) {
-          const result = yield* toGenerator(
-            Keychain.resetGenericPassword(KeychainStore.defaultOptions)
-          );
+          const result = yield* toGenerator(Keychain.resetGenericPassword());
           if (result) {
             this._isBiometryOn = false;
             yield this.save();
@@ -112,9 +130,7 @@ export class KeychainStore {
   *turnOffBiometryWithPassword(password: string) {
     if (this.isBiometryOn) {
       if (yield* toGenerator(this.keyRingStore.checkPassword(password))) {
-        const result = yield* toGenerator(
-          Keychain.resetGenericPassword(KeychainStore.defaultOptions)
-        );
+        const result = yield* toGenerator(Keychain.resetGenericPassword());
         if (result) {
           this._isBiometryOn = false;
           yield this.save();
@@ -128,9 +144,7 @@ export class KeychainStore {
   @flow
   *reset() {
     if (this.isBiometryOn) {
-      const result = yield* toGenerator(
-        Keychain.resetGenericPassword(KeychainStore.defaultOptions)
-      );
+      const result = yield* toGenerator(Keychain.resetGenericPassword());
       if (result) {
         this._isBiometryOn = false;
         yield this.save();
@@ -143,17 +157,38 @@ export class KeychainStore {
     // No need to await.
     this.restore();
     this.restoreAutoLock();
+    // iOS only: restore last known type so the label stays correct when
+    // Face ID is temporarily unavailable (not enrolled / no app permission).
+    if (Platform.OS === "ios") {
+      this.restoreBiometryType();
+    }
 
-    const type = yield* toGenerator(
-      Keychain.getSupportedBiometryType(KeychainStore.defaultOptions)
-    );
+    const type = yield* toGenerator(Keychain.getSupportedBiometryType());
     this._isBiometrySupported = type != null;
+    if (type != null) {
+      this._biometryType = type;
+      if (Platform.OS === "ios") {
+        yield this.kvStore.set("lastBiometryType", type);
+      }
+    }
+    // iOS: if type is null, _biometryType keeps the value from restoreBiometryType()
+    // Android: _biometryType is set to null when type is null (unchanged behaviour)
   }
 
   @flow
   protected *restore() {
     const saved = yield* toGenerator(this.kvStore.get("isBiometryOn"));
     this._isBiometryOn = saved === true;
+  }
+
+  @flow
+  protected *restoreBiometryType() {
+    const saved = yield* toGenerator(
+      this.kvStore.get<string>("lastBiometryType")
+    );
+    if (saved) {
+      this._biometryType = saved as Keychain.BIOMETRY_TYPE;
+    }
   }
 
   @flow

@@ -193,7 +193,6 @@ export const LineGraph: React.FC<LineGraphProps> = ({
                     display: true,
                     callback: function (value: any, index: any, values: any) {
                       if (index === 0 || index === values.length - 1) {
-                        // max decimals in these tick values
                         const maxDecimals = Math.max(
                           ...values?.map((v: number) => {
                             const parts = v?.toString().split(".");
@@ -207,6 +206,19 @@ export const LineGraph: React.FC<LineGraphProps> = ({
                           formattedValue = value.toString();
                         } else {
                           formattedValue = value.toFixed(maxDecimals);
+                        }
+
+                        if (index === values.length - 1) {
+                          const lowerValue = values[0];
+                          const lowerFormatted = Number.isInteger(lowerValue)
+                            ? lowerValue.toString()
+                            : lowerValue.toFixed(maxDecimals);
+                          if (
+                            formattedValue === lowerFormatted ||
+                            formattedValue === "0"
+                          ) {
+                            return "";
+                          }
                         }
 
                         const currencySymbol = FiatCurrencies.find(

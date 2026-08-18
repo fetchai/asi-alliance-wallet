@@ -15,7 +15,7 @@ export const PageWithView: FunctionComponent<
     disableSafeArea?: boolean;
     backgroundMode: BackgroundMode;
     backgroundBlur?: boolean;
-    isTransparentHeader?: boolean;
+    hasFloatingHeader?: boolean;
   }
 > = (props) => {
   const style = useStyle();
@@ -27,7 +27,7 @@ export const PageWithView: FunctionComponent<
     disableSafeArea,
     backgroundMode,
     backgroundBlur = false,
-    isTransparentHeader,
+    hasFloatingHeader,
     ...restProps
   } = props;
 
@@ -36,7 +36,7 @@ export const PageWithView: FunctionComponent<
       <ScreenBackground
         backgroundMode={backgroundMode}
         backgroundBlur={backgroundBlur}
-        isTransparentHeader={isTransparentHeader}
+        hasFloatingHeader={hasFloatingHeader}
       />
       {!disableSafeArea ? (
         <SafeAreaView style={style.get("flex-1")}>

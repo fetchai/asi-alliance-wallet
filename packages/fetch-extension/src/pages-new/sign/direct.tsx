@@ -9,6 +9,7 @@ import {
   renderMsgInstantiateContract,
   renderMsgRevoke,
   renderMsgSend,
+  renderMsgSubmitProposal,
   renderMsgTransfer,
   renderMsgUndelegate,
   renderMsgVote,
@@ -24,7 +25,10 @@ import {
   MsgDelegate,
   MsgUndelegate,
 } from "@keplr-wallet/proto-types/cosmos/staking/v1beta1/tx";
-import { MsgVote } from "@keplr-wallet/proto-types/cosmos/gov/v1beta1/tx";
+import {
+  MsgVote,
+  MsgSubmitProposal,
+} from "@keplr-wallet/proto-types/cosmos/gov/v1beta1/tx";
 import { MsgWithdrawDelegatorReward } from "@keplr-wallet/proto-types/cosmos/distribution/v1beta1/tx";
 import {
   MsgExecuteContract,
@@ -93,6 +97,18 @@ export function renderDirectMessage(
               intl,
               undelegateMsg.amount,
               undelegateMsg.validatorAddress
+            );
+          }
+          break;
+        }
+        case "/cosmos.gov.v1beta1.MsgSubmitProposal": {
+          const value = msg.unpacked as MsgSubmitProposal;
+          if (value.content && value.proposer) {
+            return renderMsgSubmitProposal(
+              intl,
+              value.proposer,
+              value.content,
+              value.initialDeposit
             );
           }
           break;

@@ -10,3 +10,4 @@ export * from "./context";
 export * from "./noble";
 export * from "./babylon";
 export * from "./ethereum";
+export * from "./cosmos-tx-tracer";

@@ -6,7 +6,7 @@ import { useStyle } from "styles/index";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { Controller, useForm } from "react-hook-form";
 import { PageWithScrollView } from "components/page";
-import { Text, View, ViewStyle } from "react-native";
+import { Platform, Text, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
 import Web3Auth, { LOGIN_PROVIDER } from "@web3auth/react-native-sdk";
 import * as SecureStore from "expo-secure-store";
@@ -90,6 +90,11 @@ const useWeb3AuthSignIn = (
       await web3auth.login({
         loginProvider: type,
       });
+
+      // iOS: first login sometimes needs a re-init to pick up the session.
+      if (!web3auth.connected && Platform.OS === "ios") {
+        await web3auth.init();
+      }
 
       if (web3auth.connected) {
         const privateKey = await getPrivateKey(privateKeyProvider);
@@ -266,7 +271,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -274,7 +279,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "h1",
-            "color-white",
+            "color-black",
             "margin-y-10",
             "font-medium",
           ]) as ViewStyle
@@ -282,7 +287,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
       >
         {title}
       </Text>
-      <Text style={style.flatten(["h6", "color-gray-200"]) as ViewStyle}>
+      <Text style={style.flatten(["body2", "color-gray-400"]) as ViewStyle}>
         To keep your account safe, avoid any personal information or words
       </Text>
       <Controller
@@ -299,6 +304,8 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
           return (
             <InputCardView
               label="Account name"
+              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               containerStyle={style.flatten(["margin-top-18"]) as ViewStyle}
               returnKeyType={mode === "add" ? "done" : "next"}
               onSubmitEditing={() => {
@@ -358,6 +365,8 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
               return (
                 <InputCardView
                   label="Create wallet password"
+                  labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+                  inputStyle={style.flatten(["color-black"]) as ViewStyle}
                   containerStyle={style.flatten(["margin-top-8"]) as ViewStyle}
                   keyboardType={"default"}
                   secureTextEntry={!showPassword}
@@ -372,7 +381,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
                   rightIcon={
                     !showPassword ? (
                       <IconButton
-                        icon={<EyeIcon />}
+                        icon={<EyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -380,7 +389,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
                       />
                     ) : (
                       <IconButton
-                        icon={<HideEyeIcon />}
+                        icon={<HideEyeIcon color="black" />}
                         backgroundBlur={false}
                         onPress={() => {
                           setShowPassword(!showPassword);
@@ -502,13 +511,11 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
         containerStyle={
           style.flatten([
             "margin-y-18",
-            "background-color-white",
+            "background-color-dark",
             "border-radius-32",
           ]) as ViewStyle
         }
-        textStyle={{
-          color: "#0B1742",
-        }}
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         text="Continue"
         size="large"
         loading={isCreating}

@@ -1,6 +1,6 @@
 import { Cw20ContractTokenInfo } from "./types";
-import { ObservableChainQueryMap } from "../chain-query";
 import { ChainGetter } from "../../chain";
+import { ObservableQueryMap } from "../../common";
 import { computed } from "mobx";
 import { ObservableCosmwasmContractChainQuery } from "./contract-query";
 import { QuerySharedContext } from "../../common";
@@ -10,11 +10,16 @@ export class ObservableQueryCw20ContactInfoInner extends ObservableCosmwasmContr
     sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
-    contractAddress: string
+    protected readonly contractAddress: string
   ) {
-    super(sharedContext, chainId, chainGetter, contractAddress, {
-      token_info: {},
-    });
+    super(
+      sharedContext,
+      chainId,
+      chainGetter,
+      contractAddress,
+      { token_info: {} },
+      `cw20-contract-info-${contractAddress}-${chainId}`
+    );
   }
 
   @computed
@@ -27,13 +32,13 @@ export class ObservableQueryCw20ContactInfoInner extends ObservableCosmwasmContr
   }
 }
 
-export class ObservableQueryCw20ContractInfo extends ObservableChainQueryMap<Cw20ContractTokenInfo> {
+export class ObservableQueryCw20ContractInfo extends ObservableQueryMap<Cw20ContractTokenInfo> {
   constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
+    protected readonly sharedContext: QuerySharedContext,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(sharedContext, chainId, chainGetter, (contractAddress: string) => {
+    super((contractAddress: string) => {
       return new ObservableQueryCw20ContactInfoInner(
         this.sharedContext,
         this.chainId,

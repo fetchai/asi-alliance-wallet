@@ -1,7 +1,7 @@
-import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
 import { ChainGetter } from "../../chain";
 import { computed } from "mobx";
-import { ObservableChainQueryMap } from "../chain-query";
+import { ObservableQueryMap } from "../../common";
+import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
 import { DomainsOwnedBy } from "./types";
 import { QuerySharedContext } from "../../common";
 
@@ -10,12 +10,19 @@ export class ObservableQueryAllDomainsOwnedByInner extends ObservableCosmwasmCon
     kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
-    protected override readonly contractAddress: string,
+    protected readonly contractAddress: string,
     protected readonly owner: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, {
-      get_all_domains_owned_by: { owner: owner },
-    });
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      contractAddress,
+      {
+        get_all_domains_owned_by: { owner: owner },
+      },
+      `all-domains-${contractAddress}-${chainId}-${owner}`
+    );
   }
 
   @computed
@@ -28,13 +35,13 @@ export class ObservableQueryAllDomainsOwnedByInner extends ObservableCosmwasmCon
   }
 }
 
-export class ObservableQueryAllDomainsOwnedBy extends ObservableChainQueryMap<DomainsOwnedBy> {
+export class ObservableQueryAllDomainsOwnedBy extends ObservableQueryMap<DomainsOwnedBy> {
   constructor(
     protected readonly kvStore: QuerySharedContext,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (key: string) => {
+    super((key: string) => {
       const split = key.split("/");
       return new ObservableQueryAllDomainsOwnedByInner(
         this.kvStore,

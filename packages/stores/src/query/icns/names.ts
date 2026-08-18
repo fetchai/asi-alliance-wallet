@@ -1,7 +1,7 @@
 import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
 import { ChainGetter } from "../../chain";
+import { ObservableQueryMap } from "../../common";
 import { computed } from "mobx";
-import { ObservableChainQueryMap } from "../chain-query";
 import { ICNSNames } from "./types";
 import { QuerySharedContext } from "../../common";
 
@@ -10,12 +10,19 @@ export class ObservableQueryICNSNamesInner extends ObservableCosmwasmContractCha
     sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
-    contractAddress: string,
+    protected readonly contractAddress: string,
     protected readonly address: string
   ) {
-    super(sharedContext, chainId, chainGetter, contractAddress, {
-      icns_names: { address: address },
-    });
+    super(
+      sharedContext,
+      chainId,
+      chainGetter,
+      contractAddress,
+      {
+        icns_names: { address: address },
+      },
+      `icns-names-${contractAddress}-${address}-${chainId}`
+    );
   }
 
   protected override canFetch(): boolean {
@@ -41,20 +48,21 @@ export class ObservableQueryICNSNamesInner extends ObservableCosmwasmContractCha
   }
 }
 
-export class ObservableQueryICNSNames extends ObservableChainQueryMap<ICNSNames> {
+export class ObservableQueryICNSNames extends ObservableQueryMap<ICNSNames> {
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter
   ) {
-    super(sharedContext, chainId, chainGetter, (key: string) => {
-      const split = key.split("/");
+    super((key: string) => {
+      const [contractAddress, address] = key.split("/");
+
       return new ObservableQueryICNSNamesInner(
-        this.sharedContext,
-        this.chainId,
-        this.chainGetter,
-        split[0],
-        split[1]
+        kvStore,
+        chainId,
+        chainGetter,
+        contractAddress,
+        address
       );
     });
   }

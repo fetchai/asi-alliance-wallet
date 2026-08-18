@@ -37,6 +37,7 @@ import { Pubkey, pubkeyToAddress } from "@cosmjs/amino";
 import classNames from "classnames";
 import { useAccountQuery } from "./use-account-query";
 import { MultisigPublicKeySection } from "./multisig-pubkey-section";
+import { BROADCAST_SUPPORTED_MSG_TYPES } from "./constants";
 
 const MULTISIG_STEPS_ORDER: MultiSigSteps[] = [
   MultiSigSteps.Transaction,
@@ -55,6 +56,8 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
     const [payloadError, setPayloadError] = useState("");
     const [multiSignatures, setMultiSignatures] = useState<string[]>([""]);
     const [multisigAccount, setMultiSigAccount] = useState<string>("");
+    const [ovverrideSigner, setOverrideSigner] = useState(false);
+    const [disableBroadcast, setDisableBroadcast] = useState(false);
     const [allSignaturesCollected, setAllSignaturesCollected] = useState(false);
     const [multiSigTransactionAssembled, setMultiSigTransactionAssembled] =
       useState(false);
@@ -109,7 +112,11 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
       setAllSignaturesCollected(collectedCount >= threshold);
     }, [multiSignatures, threshold]);
 
-    const createSignedTxn = (sequence: any, parsedTxnPayload: any) => {
+    const createSignedTxn = (
+      sequence: any,
+      parsedTxnPayload: any,
+      signature?: any
+    ) => {
       const protoJsonPubKey = multiSigPubKeys
         ? JSON.parse(multiSigPubKeys)
         : convertToProtoJsonPubKey(accountData?.account?.pub_key);
@@ -132,6 +139,7 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             pubKey: protoJsonPubKey,
             isMultisig: true,
             signerIndex,
+            signature,
           })
         )
       );
@@ -139,12 +147,18 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
 
     const onSignSuccess = (signDocParams: any, result: any, fileNames: any) => {
       const parsedTxnPayload = JSON.parse(txnPayload);
+      const signature = createSignature(result, signDocParams.sequence);
+
       navigate("/more/sign-manual-txn", {
         replace: true,
         state: {
           signed: true,
-          txSignature: createSignature(result, signDocParams.sequence),
-          signedTxn: createSignedTxn(signDocParams?.sequence, parsedTxnPayload),
+          txSignature: signature,
+          signedTxn: createSignedTxn(
+            signDocParams?.sequence,
+            parsedTxnPayload,
+            result.signature?.signature
+          ),
           signatureFileName: fileNames.signature,
           txnFileName: fileNames.transaction,
         },
@@ -241,7 +255,8 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
               txSignature: tx.signature,
               signedTxn: createSignedTxn(
                 signDocParams?.sequence,
-                JSON.parse(txnPayload)
+                JSON.parse(txnPayload),
+                tx.signature
               ),
               txnFileName: fileNames.transaction,
               txHash: tx.txHash,
@@ -291,10 +306,17 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
     const onTxnSignDocChange = (value: string) => {
       setTxnPayload(value);
       setPayloadError("");
-      const formatted = formatJson(value);
+      setDisableBroadcast(false);
+      setOverrideSigner(false);
       try {
+        const formatted = formatJson(value);
         const signDoc = JSON.parse(formatted);
         validateProtoJsonSignDoc(signDoc, multisigAccount);
+        const messages = signDoc?.body?.messages ?? [];
+        const isSupportedMessage = messages.some((msg: any) =>
+          BROADCAST_SUPPORTED_MSG_TYPES.includes(msg?.["@type"])
+        );
+        setDisableBroadcast(!isSupportedMessage);
       } catch (err) {
         setPayloadError(err.message);
       }
@@ -382,6 +404,9 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             multisigAccount={multisigAccount}
             multiSigAccountError={multiSigAccountError}
             payloadError={payloadError}
+            setPayloadError={setPayloadError}
+            overrideSigner={ovverrideSigner}
+            setOverrideSigner={setOverrideSigner}
             showNotification={showNotification}
             txnPayload={txnPayload}
             onMultisigAccountChange={(value) => setMultiSigAccount(value)}
@@ -401,11 +426,13 @@ export const MultiSignForm: React.FC<SignerFormProps> = observer(
             setPubKeyError={setPubKeyError}
             showNotification={showNotification}
           />
-          <Checkbox
-            isChecked={broadcastTxn}
-            setIsChecked={setBroadcastTxn}
-            label="Assemble Signatures and Broadcast Transaction"
-          />
+          {!disableBroadcast && (
+            <Checkbox
+              isChecked={broadcastTxn}
+              setIsChecked={setBroadcastTxn}
+              label="Assemble Signatures and Broadcast Transaction"
+            />
+          )}
         </div>
       );
     };

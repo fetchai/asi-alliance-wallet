@@ -124,13 +124,13 @@ export const FullScreenCameraView: FunctionComponent<CameraProp> = (props) => {
               >
                 <LoadingSpinner
                   size={42}
-                  color={style.flatten(["color-indigo-900"]).color}
+                  color={style.flatten(["color-dark"]).color}
                 />
                 <Text
                   style={
                     style.flatten([
                       "subtitle1",
-                      "color-indigo-900",
+                      "color-dark",
                       "margin-top-34",
                     ]) as ViewStyle
                   }

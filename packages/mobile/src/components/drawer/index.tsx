@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useState } from "react";
 import { observer } from "mobx-react-lite";
 import {
   DrawerContentScrollView,
@@ -37,26 +37,18 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
 
     const style = useStyle();
     const [search, setSearch] = useState("");
-    const [filterChainInfos, setFilterChainInfos] = useState(
-      chainStore.chainInfosInUI
-    );
 
-    useEffect(() => {
-      const searchTrim = search.trim();
-      const newChainInfos = chainStore.chainInfosInUI.filter((chainInfo) => {
-        return chainInfo.chainName
-          .toLowerCase()
-          .includes(searchTrim.toLowerCase());
-      });
-      setFilterChainInfos(newChainInfos);
-    }, [chainStore.chainInfosInUI, search]);
+    const filterChainInfos = chainStore.chainInfosInUI.filter((chainInfo) => {
+      return chainInfo.chainName
+        .toLowerCase()
+        .includes(search?.trim().toLowerCase());
+    });
 
     return (
       <DrawerContentScrollView
         style={
           style.flatten([
-            "background-color-indigo-900",
-            "dark:background-color-platinum-600",
+            "background-color-white",
             "padding-x-page",
           ]) as ViewStyle
         }
@@ -81,7 +73,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
             }
           >
             <Text
-              style={style.flatten(["subtitle2", "color-white"]) as ViewStyle}
+              style={style.flatten(["subtitle2", "color-dark"]) as ViewStyle}
             >
               Change Network
             </Text>
@@ -96,7 +88,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
               }
             >
               <IconButton
-                icon={<XmarkIcon color={"white"} />}
+                icon={<XmarkIcon color={"black"} />}
                 backgroundBlur={false}
                 blurIntensity={20}
                 borderRadius={50}
@@ -108,7 +100,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                   style.flatten([
                     "padding-8",
                     "border-width-1",
-                    "border-color-gray-400",
+                    "border-color-gray-100",
                   ]) as ViewStyle
                 }
               />
@@ -116,25 +108,24 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
           </View>
           <InputCardView
             placeholder="Search"
-            placeholderTextColor={"white"}
             value={search}
             onChangeText={(text: string) => {
               setSearch(text);
             }}
-            rightIcon={<SearchIcon size={12} />}
+            rightIcon={<SearchIcon size={12} color="black" />}
             containerStyle={style.flatten(["margin-top-24"]) as ViewStyle}
           />
           <Button
             containerStyle={
               style.flatten([
                 "border-radius-32",
-                "border-color-white@40%",
+                "border-color-gray-100",
                 "margin-y-24",
               ]) as ViewStyle
             }
             mode="outline"
-            textStyle={style.flatten(["color-white", "body3"]) as ViewStyle}
-            text="Manage networks"
+            textStyle={style.flatten(["color-dark", "body3"]) as ViewStyle}
+            text="Manage Networks"
             onPress={() => {
               navigation.dispatch(
                 StackActions.push("ChainList", {
@@ -156,8 +147,13 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                 <BlurBackground
                   key={chainInfo.chainId}
                   borderRadius={12}
-                  blurIntensity={15}
-                  containerStyle={style.flatten(["margin-y-2"]) as ViewStyle}
+                  backgroundBlur={false}
+                  containerStyle={
+                    [
+                      style.flatten(["margin-y-2", "background-color-gray-5"]),
+                      selected ? { backgroundColor: "#e0fedd" } : null,
+                    ] as ViewStyle
+                  }
                 >
                   <RectButton
                     onPress={() => {
@@ -167,44 +163,37 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                       navigation.dispatch(DrawerActions.closeDrawer());
                     }}
                     style={
-                      style.flatten(
-                        [
-                          "flex-row",
-                          "height-62",
-                          "items-center",
-                          "padding-x-12",
-                          "justify-between",
-                        ],
-                        [
-                          selected && "background-color-indigo",
-                          "border-radius-12",
-                        ]
-                      ) as ViewStyle
+                      style.flatten([
+                        "flex-row",
+                        "height-62",
+                        "items-center",
+                        "padding-x-12",
+                        "justify-between",
+                        "border-radius-12",
+                      ]) as ViewStyle
                     }
                     activeOpacity={0.5}
-                    underlayColor={
-                      style.flatten([
-                        "color-gray-50",
-                        "dark:color-platinum-500",
-                      ]).color
-                    }
+                    underlayColor={"#e0fedd"}
                   >
                     <View
                       style={
                         style.flatten(["flex-row", "items-center"]) as ViewStyle
                       }
                     >
-                      <BlurBackground
-                        backgroundBlur={true}
-                        containerStyle={
-                          style.flatten([
-                            "width-32",
-                            "height-32",
-                            "border-radius-64",
-                            "items-center",
-                            "justify-center",
-                            "margin-right-12",
-                          ]) as ViewStyle
+                      <View
+                        style={
+                          {
+                            ...style.flatten([
+                              "width-32",
+                              "height-32",
+                              "border-radius-64",
+                              "items-center",
+                              "justify-center",
+                              "margin-right-12",
+                              "background-color-gray-100",
+                            ]),
+                            overflow: "hidden",
+                          } as ViewStyle
                         }
                       >
                         {chainInfo.raw.chainSymbolImageUrl ? (
@@ -214,30 +203,33 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                               height: 22,
                             }}
                             resizeMode={FastImage.resizeMode.contain}
-                            source={{
-                              uri: chainInfo.raw.chainSymbolImageUrl,
-                            }}
+                            source={
+                              typeof chainInfo.raw.chainSymbolImageUrl ===
+                              "number"
+                                ? chainInfo.raw.chainSymbolImageUrl
+                                : { uri: chainInfo.raw.chainSymbolImageUrl }
+                            }
                           />
                         ) : (
                           <VectorCharacter
                             char={chainInfo.chainName[0]}
-                            color="white"
+                            color="#151a1a"
                             height={12}
                           />
                         )}
-                      </BlurBackground>
+                      </View>
                       <Text
                         style={
                           style.flatten([
                             "subtitle3",
-                            "color-white",
+                            "color-dark",
                           ]) as ViewStyle
                         }
                       >
                         {titleCase(chainInfo.chainName)}
                       </Text>
                     </View>
-                    <View>{selected ? <CheckIcon /> : null}</View>
+                    <View>{selected ? <CheckIcon color="black" /> : null}</View>
                   </RectButton>
                 </BlurBackground>
               );

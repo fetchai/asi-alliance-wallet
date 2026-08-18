@@ -23,6 +23,7 @@ import style from "./style.module.scss";
 import { useLanguage } from "../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { Staking } from "@keplr-wallet/stores";
+import { formatBalance } from "@utils/format";
 
 export const Unstake = observer(() => {
   const location = useLocation();
@@ -77,11 +78,7 @@ export const Unstake = observer(() => {
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
   const queries = queriesStore.get(chainStore.current.chainId);
-  const availableBalance = `${stakedAmount
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${FiatCurrency}`;
+  const availableBalance = `${formatBalance(stakedAmount)}${FiatCurrency}`;
   const validator =
     queries.cosmos.queryValidators
       .getQueryStatus(Staking.BondStatus.Bonded)

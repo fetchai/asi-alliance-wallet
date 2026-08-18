@@ -1,15 +1,40 @@
 import React, { FunctionComponent, useState } from "react";
 import { observer } from "mobx-react-lite";
-import { StyleSheet, Switch, Text, View, ViewStyle } from "react-native";
-import { IGasConfig } from "@keplr-wallet/hooks";
+import {
+  Platform,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  ViewStyle,
+} from "react-native";
+import { IFeeConfig, IGasConfig, IGasSimulator } from "@keplr-wallet/hooks";
 import { InputCardView } from "components/new/card-view/input-card";
 import { useStyle } from "styles/index";
+import { ManualFeeInput } from "./manual-fee-input";
 
 export const GasInput: FunctionComponent<{
+  feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
-}> = observer(({ gasConfig }) => {
+  gasSimulator?: IGasSimulator;
+  onValidationChange?: (hasError: boolean) => void;
+}> = observer(({ feeConfig, gasConfig, gasSimulator, onValidationChange }) => {
   const style = useStyle();
-  const [isEnabled, setIsEnabled] = useState(true);
+  const [localEnabled, setLocalEnabled] = useState(true);
+
+  // When gasSimulator is provided, its enabled flag drives the toggle.
+  // Otherwise fall back to local state so GasInput still works standalone.
+  const autoEnabled = gasSimulator ? gasSimulator.enabled : localEnabled;
+  const setAutoEnabled = (value: boolean) => {
+    if (gasSimulator) {
+      gasSimulator.setEnabled(value);
+    } else {
+      setLocalEnabled(value);
+    }
+    if (value) {
+      onValidationChange?.(false);
+    }
+  };
 
   return (
     <React.Fragment>
@@ -27,7 +52,7 @@ export const GasInput: FunctionComponent<{
           style={StyleSheet.flatten([
             style.flatten([
               "body3",
-              "color-white",
+              "color-dark",
               "margin-right-16",
             ]) as ViewStyle,
           ])}
@@ -36,74 +61,81 @@ export const GasInput: FunctionComponent<{
         </Text>
         <Switch
           trackColor={{
-            false: "#767577",
-            true: "#5F38FB",
+            false: "#DCDCE3",
+            true: Platform.OS === "ios" ? "#ffffff00" : "#DCDCE3",
           }}
-          thumbColor={isEnabled ? "#FFFFFF" : "#D0BCFF66"}
-          style={[
-            {
-              borderRadius: 16,
-            },
-            style.flatten(
-              ["border-color-pink-light@40%"],
-              [!isEnabled && "border-width-1"]
-            ),
-          ]}
-          onValueChange={() => setIsEnabled((previousState) => !previousState)}
-          value={isEnabled}
-          // style={style.flatten([])}
+          thumbColor={autoEnabled ? "#73A271" : "#9A9AA2"}
+          onValueChange={() => setAutoEnabled(!autoEnabled)}
+          value={autoEnabled}
         />
       </View>
-      {!isEnabled ? (
-        <View
-          style={
-            style.flatten([
-              "flex-row",
-              "justify-between",
-              "margin-bottom-16",
-            ]) as ViewStyle
-          }
-        >
+
+      {autoEnabled ? (
+        <React.Fragment>
+          <View
+            style={
+              style.flatten([
+                "flex-row",
+                "justify-between",
+                "margin-bottom-16",
+              ]) as ViewStyle
+            }
+          >
+            <InputCardView
+              label="Gas Adjustment"
+              placeholder="-"
+              value={
+                gasSimulator?.gasEstimated != null
+                  ? gasSimulator.gasAdjustmentRaw
+                  : "-"
+              }
+              onChangeText={(value: string) => {
+                gasSimulator?.setGasAdjustment(value);
+              }}
+              labelStyle={
+                style.flatten(["margin-y-0", "margin-bottom-12"]) as ViewStyle
+              }
+              containerStyle={
+                style.flatten(["flex-2", "margin-right-16"]) as ViewStyle
+              }
+              editable={false}
+              keyboardType="decimal-pad"
+            />
+            <InputCardView
+              label="Estimated"
+              placeholder="-"
+              value={
+                gasSimulator?.gasEstimated != null
+                  ? String(gasSimulator.gasEstimated)
+                  : "-"
+              }
+              labelStyle={
+                style.flatten(["margin-y-0", "margin-bottom-12"]) as ViewStyle
+              }
+              containerStyle={style.flatten(["flex-2"]) as ViewStyle}
+              editable={false}
+              keyboardType="numeric"
+            />
+          </View>
           <InputCardView
-            label="Gas adjustment"
+            label="Gas Limit"
             placeholder="-"
+            value={String(gasConfig.gas)}
             labelStyle={
               style.flatten(["margin-y-0", "margin-bottom-12"]) as ViewStyle
-            }
-            containerStyle={
-              style.flatten(["flex-2", "margin-right-16"]) as ViewStyle
             }
             editable={false}
             keyboardType="numeric"
           />
-          <InputCardView
-            label="Estimated "
-            placeholder="-"
-            labelStyle={
-              style.flatten(["margin-y-0", "margin-bottom-12"]) as ViewStyle
-            }
-            containerStyle={style.flatten(["flex-2"]) as ViewStyle}
-            editable={false}
-            keyboardType="numeric"
-          />
-        </View>
-      ) : null}
-      <InputCardView
-        label="Gas amount"
-        placeholder="-"
-        value={gasConfig.gasRaw}
-        onChangeText={(value: string) => {
-          if (value.match(/^\d*$/)) {
-            gasConfig.setGas(value);
-          }
-        }}
-        labelStyle={
-          style.flatten(["margin-y-0", "margin-bottom-12"]) as ViewStyle
-        }
-        maxLength={8}
-        keyboardType="numeric"
-        editable={isEnabled}
-      />
+        </React.Fragment>
+      ) : (
+        <ManualFeeInput
+          feeConfig={feeConfig}
+          gasConfig={gasConfig}
+          gasSimulator={gasSimulator}
+          onValidationChange={onValidationChange}
+        />
+      )}
     </React.Fragment>
   );
 });

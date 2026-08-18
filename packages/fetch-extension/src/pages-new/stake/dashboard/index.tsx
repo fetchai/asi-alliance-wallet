@@ -1,6 +1,10 @@
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
-import { isVestingExpired, separateNumericAndDenom } from "@utils/format";
+import {
+  formatBalance,
+  isVestingExpired,
+  separateNumericAndDenom,
+} from "@utils/format";
 
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
@@ -69,13 +73,11 @@ export const Dashboard = observer(() => {
   const rewardsBal = stakableReward.toString();
   const unbondingBal = unbonding.toString();
 
-  const { numericPart: stakableBalNumber, denomPart: stakableDenom } =
+  const { numericPart: stakableBalNumber } =
     separateNumericAndDenom(stakableBal);
-  const { numericPart: stakedBalNumber, denomPart: stakedDenom } =
-    separateNumericAndDenom(stakedBal);
-  const { numericPart: rewardsBalNumber, denomPart: rewardDenom } =
-    separateNumericAndDenom(rewardsBal);
-  const { numericPart: unbondingBalNumber, denomPart: unbondingDenom } =
+  const { numericPart: stakedBalNumber } = separateNumericAndDenom(stakedBal);
+  const { numericPart: rewardsBalNumber } = separateNumericAndDenom(rewardsBal);
+  const { numericPart: unbondingBalNumber } =
     separateNumericAndDenom(unbondingBal);
 
   const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
@@ -140,6 +142,10 @@ export const Dashboard = observer(() => {
     isVesting && !isVestingExpired(vestingEndTimeStamp)
       ? parseFloat(vestingBalance().toString())
       : 0;
+  const stakableBalance = formatBalance(stakable, 2, false);
+  const stakedBalance = formatBalance(stakedSum, 2, false);
+  const rewardsBalance = formatBalance(stakableReward, 2, false);
+  const unbondingBalance = formatBalance(unbonding, 2, false);
 
   const total = stakableBalInUI + stakedBalInUI + rewardsBalInUI;
 
@@ -238,8 +244,7 @@ export const Dashboard = observer(() => {
                 <div className={style["label"]}>Available</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {Number(stakableBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
-                    {` ${stakableDenom} `}
+                    {stakableBalance}{" "}
                     <span className={style["label"]}>
                       ({stakablePercentage.toFixed(2)}%)
                     </span>
@@ -279,8 +284,7 @@ export const Dashboard = observer(() => {
                 <div className={style["label"]}>Staked</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {Number(stakedBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
-                    {` ${stakedDenom} `}
+                    {stakedBalance}{" "}
                     <span className={style["label"]}>
                       ({stakedPercentage.toFixed(2)}
                       %)
@@ -321,8 +325,7 @@ export const Dashboard = observer(() => {
                 <div className={style["label"]}>Staking rewards</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {Number(rewardsBalInUI.toFixed(2)).toLocaleString("en-US")}{" "}
-                    {` ${rewardDenom} `}
+                    {rewardsBalance}{" "}
                     <span className={style["label"]}>
                       ({rewardsPercentage.toFixed(2)}%)
                     </span>
@@ -396,10 +399,7 @@ export const Dashboard = observer(() => {
                   <div className={style["label"]}>Unbonding</div>
                   {isLoaded ? (
                     <div className={style["value"]}>
-                      {Number(unbondingBalInUI.toFixed(2)).toLocaleString(
-                        "en-US"
-                      )}{" "}
-                      {` ${unbondingDenom} `}
+                      {unbondingBalance}{" "}
                       <span className={style["label"]}>
                         ({unbondingPercentage.toFixed(2)}%)
                       </span>

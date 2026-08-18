@@ -301,16 +301,18 @@ export class MessagingService {
    * @private
    */
   private async getPrivateKey(_env: Env, chainId: string): Promise<Uint8Array> {
-    const message = Buffer.from(
-      JSON.stringify({
-        account_number: 0,
-        chain_id: chainId,
-        fee: [],
-        memo: "Create Messaging Signing Secret encryption key. Only approve requests by Keplr.",
-        msgs: [],
-        sequence: 0,
-      })
-    ) as Uint8Array;
+    const message = new Uint8Array(
+      Buffer.from(
+        JSON.stringify({
+          account_number: 0,
+          chain_id: chainId,
+          fee: [],
+          memo: "Create Messaging Signing Secret encryption key. Only approve requests by Keplr.",
+          msgs: [],
+          sequence: 0,
+        })
+      )
+    );
 
     const signature = await this.keyRingService.sign(
       chainId,
@@ -319,18 +321,6 @@ export class MessagingService {
       "sha256"
     );
 
-    const signatureBytes = chainId.includes("eip155")
-      ? new Uint8Array(
-          Buffer.concat([
-            signature.r,
-            signature.s,
-            (signature.v
-              ? Buffer.from("1c", "hex")
-              : Buffer.from("1b", "hex")) as Uint8Array,
-          ])
-        )
-      : new Uint8Array([...signature.r, ...signature.s]);
-
-    return Hash.sha256(Buffer.from(signatureBytes) as Uint8Array);
+    return Hash.sha256(new Uint8Array([...signature.r, ...signature.s]));
   }
 }

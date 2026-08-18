@@ -72,9 +72,12 @@ export const StakeValidatorCardView: FunctionComponent<{
     >
       <BlurBackground
         borderRadius={12}
-        blurIntensity={16}
+        backgroundBlur={false}
         containerStyle={
-          [style.flatten(["padding-18"]), containerStyle] as ViewStyle
+          [
+            style.flatten(["padding-18", "background-color-gray-5"]),
+            containerStyle,
+          ] as ViewStyle
         }
       >
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -91,25 +94,31 @@ export const StakeValidatorCardView: FunctionComponent<{
               />
             ) : (
               <BlurBackground
-                backgroundBlur={true}
-                blurIntensity={16}
+                backgroundBlur={false}
                 containerStyle={
-                  style.flatten([
-                    "width-32",
-                    "height-32",
-                    "border-radius-64",
-                    "items-center",
-                    "justify-center",
-                    "margin-right-12",
-                  ]) as ViewStyle
+                  {
+                    ...style.flatten([
+                      "width-32",
+                      "height-32",
+                      "border-radius-64",
+                      "items-center",
+                      "justify-center",
+                      "margin-right-12",
+                    ]),
+                    backgroundColor: "#dddfdf",
+                  } as ViewStyle
                 }
               >
-                <VectorCharacter char={heading[0]} color="white" height={12} />
+                <VectorCharacter
+                  char={heading[0]}
+                  color="#151a1a"
+                  height={12}
+                />
               </BlurBackground>
             )}
             <View>
               <Text
-                style={style.flatten(["subtitle2", "color-white"]) as ViewStyle}
+                style={style.flatten(["subtitle2", "color-dark"]) as ViewStyle}
               >
                 {heading}
               </Text>
@@ -118,7 +127,7 @@ export const StakeValidatorCardView: FunctionComponent<{
                 style={
                   style.flatten([
                     "text-caption2",
-                    "color-white@80%",
+                    "color-gray-300",
                     "margin-y-2",
                   ]) as ViewStyle
                 }
@@ -135,7 +144,7 @@ export const StakeValidatorCardView: FunctionComponent<{
           style={
             style.flatten([
               "height-1",
-              "background-color-white@20%",
+              "background-color-gray-100",
               "margin-y-16",
             ]) as ViewStyle
           }
@@ -155,13 +164,13 @@ export const StakeValidatorCardView: FunctionComponent<{
               >
                 <Text
                   style={
-                    style.flatten(["body3", "color-white@60%"]) as ViewStyle
+                    style.flatten(["body3", "color-gray-300"]) as ViewStyle
                   }
                 >
                   {item.title}
                 </Text>
                 <Text
-                  style={style.flatten(["color-white", "body3"]) as ViewStyle}
+                  style={style.flatten(["color-dark", "body3"]) as ViewStyle}
                 >
                   {item.value}
                 </Text>
@@ -177,7 +186,7 @@ export const StakeValidatorCardView: FunctionComponent<{
           <Text
             style={
               style.flatten([
-                "color-indigo-250",
+                "color-dark",
                 "text-caption2",
                 "font-bold",
               ]) as ViewStyle

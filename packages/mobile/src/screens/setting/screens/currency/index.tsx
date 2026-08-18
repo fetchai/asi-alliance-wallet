@@ -4,7 +4,7 @@ import { PageWithScrollView } from "components/page";
 import { useStyle } from "styles/index";
 
 import { useStore } from "stores/index";
-import { Text, View, ViewStyle } from "react-native";
+import { StyleSheet, Text, View, ViewStyle } from "react-native";
 import { RectButton } from "components/rect-button";
 import { CheckIcon } from "components/new/icon/check";
 
@@ -29,23 +29,31 @@ export const CurrencyScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
-      style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
+      backgroundMode="secondary"
+      hasFloatingHeader={true}
+      contentContainerStyle={
+        style.flatten(["padding-top-0", "margin-top-16"]) as ViewStyle
+      }
+      style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
       {currencyItems.map((item) => {
+        const isSelected = item.key === priceStore.defaultVsCurrency;
         return (
           <RectButton
             key={item.key}
-            style={
-              style.flatten(
-                ["padding-18", "flex-row", "justify-between", "items-center"],
-                [
-                  item.key === priceStore.defaultVsCurrency &&
-                    "background-color-indigo",
-                  "border-radius-12",
-                ]
-              ) as ViewStyle
-            }
+            style={StyleSheet.flatten([
+              style.flatten([
+                "padding-18",
+                "flex-row",
+                "justify-between",
+                "items-center",
+                "border-radius-12",
+                "margin-y-2",
+              ]) as ViewStyle,
+              { backgroundColor: isSelected ? "#e0fedd" : "#f6f6f6" },
+            ])}
+            rippleColor={"#e0fedd"}
+            underlayColor="#e0fedd"
             onPress={() => {
               priceStore.setDefaultVsCurrency(item.key);
               analyticsStore.logEvent("currency_change_click", {
@@ -68,7 +76,7 @@ export const CurrencyScreen: FunctionComponent = observer(() => {
                 style={
                   style.flatten([
                     "body3",
-                    "color-white",
+                    "color-dark",
                     "margin-right-8",
                   ]) as ViewStyle
                 }
@@ -79,7 +87,7 @@ export const CurrencyScreen: FunctionComponent = observer(() => {
                 style={
                   style.flatten([
                     "body3",
-                    "color-white@60%",
+                    "color-gray-300",
                     "margin-right-8",
                   ]) as ViewStyle
                 }
@@ -87,7 +95,7 @@ export const CurrencyScreen: FunctionComponent = observer(() => {
                 {`${item.name} (${item.symbol})`}
               </Text>
             </View>
-            {item.key === priceStore.defaultVsCurrency ? <CheckIcon /> : null}
+            {isSelected ? <CheckIcon color="#151a1a" /> : null}
           </RectButton>
         );
       })}

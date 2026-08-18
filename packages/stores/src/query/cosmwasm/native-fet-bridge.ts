@@ -13,7 +13,14 @@ export class ObservableQueryBridgeStatus extends ObservableCosmwasmContractChain
     chainId: string,
     contractAddress: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, { full_state: {} });
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      contractAddress,
+      { full_state: {} },
+      `bridge-status-${contractAddress}-${chainId}`
+    );
   }
 
   @computed
@@ -69,7 +76,7 @@ export class ObservableQueryNativeFetCosmosBridge {
     );
 
     const height = BigNumber.from(
-      this._queryRPCStatus.latestBlockHeight.toString()
+      this._queryRPCStatus.latestBlockHeight?.toString()
     );
 
     const isPaused = height.gte(pausedSince);
