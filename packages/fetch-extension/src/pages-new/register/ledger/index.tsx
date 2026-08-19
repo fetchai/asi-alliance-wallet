@@ -203,21 +203,20 @@ export const ImportLedgerPage: FunctionComponent<{
                     ? LedgerWebHIDIniter
                     : LedgerWebUSBIniter,
                   undefined,
-                  // requestedLedgerApp should be set if ledger init needed.
-                  ledgerInitStore.requestedLedgerApp!,
-                  ledgerInitStore.cosmosLikeApp || "Cosmos"
+                  LedgerApp.Cosmos,
+                  "Cosmos"
                 );
                 const pubkey = await ledger.getPublicKey(
-                  ledgerInitStore.requestedLedgerApp || LedgerApp.Cosmos,
+                  LedgerApp.Cosmos,
                   bip44Option.bip44HDPath
                 );
                 await ledger.close();
                 // Unfortunately, closing ledger blocks the writing to Ledger on background process.
                 // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
                 if (!ledgerInitStore.isWebHID) {
-                  delay(1000);
+                  await delay(1000);
                 } else {
-                  delay(500);
+                  await delay(500);
                 }
                 await createLedger(data.name, data.password, pubkey);
               } catch (e) {

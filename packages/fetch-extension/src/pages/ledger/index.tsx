@@ -57,21 +57,23 @@ export const LedgerSetupView: FunctionComponent<{
   };
 
   useEffect(() => {
+    if (!ledgerInitStore.requestedLedgerApp) {
+      return;
+    }
+
     if (ledgerInitStore.isSignCompleted) {
       setTimeout(window.close, 3000);
     }
 
     if (ledgerInitStore.isGetPubKeySucceeded) {
-      // Don't need to delay to close because this event probably occurs only in the register page in tab.
-      // So, don't need to consider the window refocusing.
       window.close();
     }
 
     if (ledgerInitStore.isInitAborted) {
-      // If ledger init is aborted due to the timeout on the background, just close the window.
       window.close();
     }
   }, [
+    ledgerInitStore.requestedLedgerApp,
     ledgerInitStore.isGetPubKeySucceeded,
     ledgerInitStore.isSignCompleted,
     ledgerInitStore.isInitAborted,
@@ -94,18 +96,18 @@ export const LedgerSetupView: FunctionComponent<{
         throw new Error("There is no device selected");
       }
 
+      const ledgerApp = ledgerInitStore.requestedLedgerApp ?? LedgerApp.Cosmos;
+      const cosmosLikeApp = ledgerInitStore.cosmosLikeApp || "Cosmos";
+
       const transportIniter = ledgerInitStore.isWebHID
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
       try {
-        if (ledgerInitStore.requestedLedgerApp === LedgerApp.Cosmos) {
-          await CosmosApp.openApp(
-            transport,
-            ledgerInitStore.cosmosLikeApp || "Cosmos"
-          );
-        } else if (ledgerInitStore.requestedLedgerApp === LedgerApp.Ethereum) {
+        if (ledgerApp === LedgerApp.Ethereum) {
           await CosmosApp.openApp(transport, "Ethereum");
+        } else {
+          await CosmosApp.openApp(transport, cosmosLikeApp);
         }
       } catch (e) {
         // Ignore error
@@ -136,14 +138,10 @@ export const LedgerSetupView: FunctionComponent<{
       const ledger = await Ledger.init(
         ledgerInitStore.isWebHID ? LedgerWebHIDIniter : LedgerWebUSBIniter,
         undefined,
-        // requestedLedgerApp should be set if ledger init needed.
-        ledgerInitStore.requestedLedgerApp!,
-        ledgerInitStore.cosmosLikeApp || "Cosmos"
+        ledgerApp,
+        cosmosLikeApp
       );
-      pubkey = await ledger.getPublicKey(
-        ledgerInitStore.requestedLedgerApp || LedgerApp.Cosmos,
-        bip44HDPath
-      );
+      pubkey = await ledger.getPublicKey(ledgerApp, bip44HDPath);
       await ledger.close();
       // Unfortunately, closing ledger blocks the writing to Ledger on background process.
       // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
@@ -164,7 +162,9 @@ export const LedgerSetupView: FunctionComponent<{
 
     if (initErrorOn === undefined) {
       onInitSucceed(pubkey);
-      await ledgerInitStore.resume();
+      if (ledgerInitStore.requestedLedgerApp) {
+        await ledgerInitStore.resume();
+      }
     }
   };
 
