@@ -12,6 +12,7 @@ import { GetCosmosKeysForEachVaultSettledMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { NoResults } from "@components-v2/no-results";
+import { getKeyInfoSocial, isPrivateKeyType } from "@utils/index";
 
 interface YourWalletProps {
   selectWalletFromList: (recipient: string) => void;
@@ -32,20 +33,12 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
         return require("@assets/svg/wireframe/ledger-indicator.svg");
       }
 
-      if (keyStore.type === "privateKey") {
-        if (
-          keyStore.meta &&
-          keyStore.meta?.["email"] &&
-          keyStore.meta?.["socialType"] === "apple"
-        ) {
+      if (isPrivateKeyType(keyStore.type)) {
+        const { email, socialType } = getKeyInfoSocial(keyStore);
+        if (email && socialType === "apple") {
           return require("@assets/svg/wireframe/apple-logo.svg");
         }
-
-        if (
-          keyStore.meta &&
-          keyStore.meta?.["email"] &&
-          keyStore.meta?.["socialType"] === "google"
-        ) {
+        if (email && socialType === "google") {
           return require("@assets/svg/wireframe/google-logo.svg");
         }
       }

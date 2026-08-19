@@ -7,11 +7,30 @@ export const getFilteredAddressValues = (values: any[], searchTerm: string) => {
 };
 
 export const getFilteredWallets = (values: any[], searchTerm: string) => {
-  const filteredValues = values.filter((value) =>
-    value?.meta?.name?.toLowerCase().includes(searchTerm)
-  );
+  const term = searchTerm.toLowerCase().trim();
+  if (!term) {
+    return values;
+  }
 
-  return filteredValues;
+  return values.filter((value) => {
+    if (value?.name?.toLowerCase().includes(term)) {
+      return true;
+    }
+
+    const keyRingMeta = value?.insensitive?.keyRingMeta ?? {};
+    if (!keyRingMeta.nameByChain) {
+      return false;
+    }
+
+    try {
+      const nameByChain = JSON.parse(keyRingMeta.nameByChain);
+      return Object.values(nameByChain).some(
+        (name) => typeof name === "string" && name.toLowerCase().includes(term)
+      );
+    } catch {
+      return false;
+    }
+  });
 };
 
 export const getFilteredChainValues = (values: any[], searchTerm: string) => {

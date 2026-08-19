@@ -16,6 +16,7 @@ import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { KeyInfo } from "@keplr-wallet/background";
+import { isPrivateKeyType } from "@utils/index";
 
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
@@ -117,8 +118,8 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
             <PageButton
               key={i.toString()}
               title={`${
-                keyStore.insensitive?.["name"]
-                  ? keyStore.insensitive["name"]
+                keyStore.name
+                  ? keyStore.name
                   : intl.formatMessage({
                       id: "setting.keyring.unnamed-account",
                     })
@@ -156,7 +157,11 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
               }
               style={keyStore.isSelected ? { cursor: "default" } : undefined}
               icons={[
-                <KeyRingToolsIcon key="tools" index={i} keyStore={keyStore} />,
+                <KeyRingToolsIcon
+                  key="tools"
+                  index={keyStore.id}
+                  keyStore={keyStore}
+                />,
               ]}
             />
           );
@@ -167,7 +172,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
 });
 
 const KeyRingToolsIcon: FunctionComponent<{
-  index: number;
+  index: string;
   keyStore: KeyInfo;
 }> = ({ index, keyStore }) => {
   const { analyticsStore } = useStore();
@@ -198,7 +203,7 @@ const KeyRingToolsIcon: FunctionComponent<{
             navigate("");
           }}
         >
-          {keyStore.type === "mnemonic" || keyStore.type === "privateKey" ? (
+          {keyStore.type === "mnemonic" || isPrivateKeyType(keyStore.type) ? (
             <div
               style={{ cursor: "pointer" }}
               onClick={(e) => {
@@ -210,7 +215,9 @@ const KeyRingToolsIcon: FunctionComponent<{
                     : "view_private_key_click"
                 );
 
-                navigate(`/more/export/${index}?type=${keyStore.type}`);
+                navigate(`/more/export/${index}`, {
+                  state: { type: keyStore.type },
+                });
               }}
             >
               <FormattedMessage

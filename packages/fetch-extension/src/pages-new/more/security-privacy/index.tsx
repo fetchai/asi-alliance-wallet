@@ -1,24 +1,18 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent } from "react";
 import style from "../style.module.scss";
 import { useNavigate } from "react-router";
 import { useIntl } from "react-intl";
+import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { Card } from "@components-v2/card";
 
-export const SecurityPrivacyPage: FunctionComponent = () => {
+export const SecurityPrivacyPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
   const { analyticsStore, keyRingStore } = useStore();
-  const [accountIndex, setAccountIndex] = useState<number>(0);
 
   const intl = useIntl();
-
-  useEffect(() => {
-    const firstAccountIndex = keyRingStore.keyInfos.findIndex(
-      (value) => value.isSelected
-    );
-    setAccountIndex(firstAccountIndex);
-  }, [keyRingStore.keyInfos]);
+  const selectedKeyId = keyRingStore.selectedKeyInfo?.id;
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -50,7 +44,10 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
               : "Private key"
           }`}
           onClick={() => {
-            navigate(`/more/export/${accountIndex}`, {
+            if (!selectedKeyId) {
+              return;
+            }
+            navigate(`/more/export/${selectedKeyId}`, {
               state: { type: keyRingStore.selectedKeyInfo?.type },
             });
             analyticsStore.logEvent("view_mnemonic_seed_click", {
@@ -140,4 +137,4 @@ export const SecurityPrivacyPage: FunctionComponent = () => {
       </div>
     </HeaderLayout>
   );
-};
+});

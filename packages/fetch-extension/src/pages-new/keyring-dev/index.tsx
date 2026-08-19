@@ -13,6 +13,7 @@ import { useNavigate } from "react-router";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
 import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+import { getKeyInfoSocial, isPrivateKeyType } from "@utils/index";
 
 interface SetKeyRingProps {
   navigateTo?: any;
@@ -50,20 +51,12 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
         return require("@assets/svg/wireframe/ledger-indicator.svg");
       }
 
-      if (keyStore.type === "privateKey") {
-        if (
-          keyStore.insensitive &&
-          keyStore.insensitive?.["email"] &&
-          keyStore.insensitive?.["socialType"] === "apple"
-        ) {
+      if (isPrivateKeyType(keyStore.type)) {
+        const { email, socialType } = getKeyInfoSocial(keyStore);
+        if (email && socialType === "apple") {
           return require("@assets/svg/wireframe/apple-logo.svg");
         }
-
-        if (
-          keyStore.insensitive &&
-          keyStore.insensitive?.["email"] &&
-          keyStore.insensitive?.["socialType"] === "google"
-        ) {
+        if (email && socialType === "google") {
           return require("@assets/svg/wireframe/google-logo.svg");
         }
       }

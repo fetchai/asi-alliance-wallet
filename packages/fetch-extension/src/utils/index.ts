@@ -64,6 +64,31 @@ export function getEventMessage(
   return eventMessage;
 }
 
+export const isPrivateKeyType = (type?: string) =>
+  type === "private-key" || type === "privateKey";
+
+export const getKeyRingMeta = (keyInfo?: {
+  insensitive?: Record<string, unknown>;
+}): Record<string, any> => {
+  return (keyInfo?.insensitive?.["keyRingMeta"] as Record<string, any>) ?? {};
+};
+
+export const getKeyInfoSocial = (keyInfo?: {
+  insensitive?: Record<string, unknown>;
+}) => {
+  const meta = getKeyRingMeta(keyInfo);
+  return {
+    socialType:
+      meta["socialType"] ||
+      meta["web3Auth"]?.["type"] ||
+      keyInfo?.insensitive?.["socialType"],
+    email:
+      meta["email"] ||
+      meta["web3Auth"]?.["email"] ||
+      keyInfo?.insensitive?.["email"],
+  };
+};
+
 export const validateWalletName = (
   value: string,
   multiKeyStoreInfo: KeyInfo[],
@@ -73,10 +98,9 @@ export const validateWalletName = (
     ...new Set(
       multiKeyStoreInfo?.flatMap((item) => {
         const defaultName = item?.["name"];
-        const chainNames = item?.insensitive?.["nameByChain"]
-          ? Object.values(
-              JSON.parse(item?.insensitive?.["nameByChain"] as string)
-            )
+        const keyRingMeta = getKeyRingMeta(item);
+        const chainNames = keyRingMeta?.["nameByChain"]
+          ? Object.values(JSON.parse(keyRingMeta["nameByChain"] as string))
           : [];
         return [defaultName, ...chainNames].filter(Boolean);
       }) ?? []
