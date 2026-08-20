@@ -14,6 +14,7 @@ import style from "./style.module.scss";
 import { Tab } from "./tab";
 import { NotificationSetup } from "@notificationTypes";
 import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
+import { isPureEvmChain } from "@utils/filters";
 
 interface WalletConfig {
   notiphyWhitelist: string[] | undefined;
@@ -162,11 +163,7 @@ const ActivityTab = () => {
   const current = chainStore.current;
   const [activityTooltip, setActivityTooltip] = useState("");
   const [activityDisabled, setActivityDisabled] = useState(false);
-  const isEvm =
-    (current.features?.includes("eth-key-sign") &&
-      current.features?.includes("eth-address-gen") &&
-      current.evm) ??
-    false;
+  const isEvm = isPureEvmChain(current);
   useEffect(() => {
     if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       setActivityTooltip("Coming soon for ledger");

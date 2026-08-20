@@ -7,6 +7,7 @@ import { Button } from "reactstrap";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
 import { extractNumberFromBalance } from "@utils/axl-bridge-utils";
+import { isPureEvmChain } from "@utils/filters";
 
 export const AXLView: FunctionComponent = () => {
   const navigate = useNavigate();
@@ -21,12 +22,7 @@ export const AXLView: FunctionComponent = () => {
     queryBalance?.balance.trim(true).maxDecimals(18).toString()
   );
   const current = chainStore.current;
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(current);
   return (
     <div className={style["containerInner"]}>
       <div className={style["vertical"]}>

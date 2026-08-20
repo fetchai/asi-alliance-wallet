@@ -12,7 +12,11 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
 import style from "./chain-list.module.scss";
-import { getFilteredChainValues } from "@utils/filters";
+import {
+  getFilteredChainValues,
+  isCosmosTabChain,
+  isEvmTabChain,
+} from "@utils/filters";
 import { NotificationOption } from "@components-v2/notification-option";
 import { NoResults } from "@components-v2/no-results";
 import { useLoadingIndicator } from "@components/loading-indicator";
@@ -42,15 +46,13 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const mainChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
         !chainInfo.beta &&
-        !chainInfo.evm &&
+        isCosmosTabChain(chainInfo) &&
         chainStore.isEnabledChain(chainInfo.chainId)
     );
 
     const evmChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
-        chainInfo.features?.includes("eth-key-sign") &&
-        chainInfo.evm &&
-        chainStore.isEnabledChain(chainInfo.chainId)
+        isEvmTabChain(chainInfo) && chainStore.isEnabledChain(chainInfo.chainId)
     );
 
     const betaChainList = chainStore.chainInfosInListUI.filter(

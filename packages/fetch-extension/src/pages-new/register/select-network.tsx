@@ -5,6 +5,7 @@ import { Label } from "reactstrap";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import classNames from "classnames";
+import { isCosmosTabChain, isEvmTabChain } from "@utils/filters";
 
 interface SelectNetworkProps {
   className?: string;
@@ -26,15 +27,14 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     const mainChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
         !chainInfo.beta &&
-        !chainInfo.evm &&
+        isCosmosTabChain(chainInfo) &&
         (chainStore.isEnabledChain(chainInfo.chainId) ||
           (!keyRingStore?.selectedKeyInfo && !chainInfo.hideInUI))
     );
 
     const evmChainList = chainStore.chainInfos.filter(
       (chainInfo) =>
-        chainInfo.features?.includes("eth-key-sign") &&
-        chainInfo.evm &&
+        isEvmTabChain(chainInfo) &&
         (chainStore.isEnabledChain(chainInfo.chainId) ||
           (!keyRingStore?.selectedKeyInfo && !chainInfo.hideInUI))
     );

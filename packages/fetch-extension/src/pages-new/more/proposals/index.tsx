@@ -7,7 +7,7 @@ import { Dropdown } from "@components-v2/dropdown";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { SearchBar } from "@components-v2/search-bar";
 import { HeaderLayout } from "@layouts-v2/header-layout";
-import { getFilteredProposals } from "@utils/filters";
+import { getFilteredProposals, isPureEvmChain } from "@utils/filters";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
 import { ErrorActivity } from "../../activity/error-activity";
@@ -123,13 +123,7 @@ export const Proposals = observer(() => {
     setProposals(newProposal);
   };
 
-  const isProposalsSupported = !(
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false
-  );
+  const isProposalsSupported = !isPureEvmChain(current);
 
   return (
     <HeaderLayout

@@ -5,6 +5,7 @@ import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
 import { useLanguage } from "../../../languages";
 import { useNavigate } from "react-router";
+import { isPureEvmChain } from "@utils/filters";
 import { formatBalance } from "@utils/format";
 import { getTokenIcon } from "@utils/get-token-icon";
 import { observer } from "mobx-react-lite";
@@ -35,12 +36,7 @@ export const NativeTokens = observer(() => {
   useEffect(() => {
     setNativeToken(balanceQuery.balances[0]);
   }, []);
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(current);
   const accountInfo = accountStore.getAccount(current.chainId);
 
   const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(

@@ -13,6 +13,7 @@ import {
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { moonpaySupportedTokensByChainId } from "./token/moonpay/utils";
+import { isPureEvmChain } from "@utils/filters";
 import {
   useMoonpayCurrency,
   checkAddressIsBuySellWhitelisted,
@@ -72,12 +73,7 @@ export const MorePage: FunctionComponent = () => {
   }, []);
 
   const current = chainStore.current;
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(current);
 
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address

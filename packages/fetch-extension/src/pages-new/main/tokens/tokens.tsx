@@ -73,12 +73,6 @@ export const Tokens = observer(() => {
     <React.Fragment>
       {tokens.map((token) => {
         const error = token.error;
-        console.log(
-          "Rendering token:",
-          token.currency.coinDenom,
-          "Error:",
-          error
-        );
         const validSelector = Buffer.from(
           Hash.sha256(
             Buffer.from(token.balance.currency.coinMinimalDenom) as Uint8Array

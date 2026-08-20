@@ -17,6 +17,7 @@ import { useNotification } from "@components/notification";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
 import { removeComma } from "@utils/format";
+import { isPureEvmChain } from "@utils/filters";
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -56,12 +57,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
     const current = chainStore.current;
-    const isEvm =
-      Boolean(
-        current.features?.includes("eth-key-sign") &&
-          current.features?.includes("eth-address-gen") &&
-          current.evm
-      ) ?? false;
+    const isEvm = isPureEvmChain(current);
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
       return value && value.shrink(true).maxDecimals(6).toString();

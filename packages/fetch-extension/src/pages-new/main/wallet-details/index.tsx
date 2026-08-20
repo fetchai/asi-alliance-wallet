@@ -3,6 +3,7 @@ import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
 import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
+import { isPureEvmChain } from "@utils/filters";
 import {
   formatAddress,
   separateNumericAndDenom,
@@ -82,10 +83,6 @@ export const WalletDetailsView = observer(
             })();
             const ethereumAddress = (() => {
               if (!("cosmos" in modularChainInfo)) {
-                return undefined;
-              }
-
-              if (modularChainInfo.chainId.startsWith("injective")) {
                 return undefined;
               }
 
@@ -169,7 +166,7 @@ export const WalletDetailsView = observer(
       chainStore.current.features?.includes("eth-key-sign") &&
       chainStore.current.features?.includes("eth-address-gen");
 
-    const isEvm = (isEthAddressSupported && chainStore.current.evm) ?? false;
+    const isEvm = isPureEvmChain(chainStore.current);
 
     const intl = useIntl();
     const notification = useNotification();

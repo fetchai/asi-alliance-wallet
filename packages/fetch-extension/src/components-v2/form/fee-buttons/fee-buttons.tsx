@@ -26,6 +26,7 @@ import { ManualFeeInput } from "../gas-form/manual";
 import { useStore } from "../../../stores";
 import { Card } from "@components-v2/card";
 import { FeeCurrencySelector } from "./fee-currency-selector";
+import { isPureEvmChain } from "@utils/filters";
 
 export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
@@ -229,12 +230,7 @@ export const FeeButtonsInner: FunctionComponent<
 
     const intl = useIntl();
     const current = chainStore.current;
-    const isEvm =
-      Boolean(
-        current.features?.includes("eth-key-sign") &&
-          current.features?.includes("eth-address-gen") &&
-          current.evm
-      ) ?? false;
+    const isEvm = isPureEvmChain(current);
 
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);

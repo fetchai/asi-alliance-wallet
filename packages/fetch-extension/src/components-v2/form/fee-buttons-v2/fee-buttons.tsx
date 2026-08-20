@@ -28,6 +28,7 @@ import { GasContainer } from "../gas-form";
 import { ManualFeeInput } from "../gas-form/manual";
 import { FeeCurrencySelector } from "./fee-currency-selector";
 import feeButtonStyles from "./fee-buttons.module.scss";
+import { isPureEvmChain } from "@utils/filters";
 
 export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
@@ -212,12 +213,7 @@ export const FeeButtonsInner: FunctionComponent<
 
     const intl = useIntl();
     const current = chainStore.current;
-    const isEvm =
-      Boolean(
-        current.features?.includes("eth-key-sign") &&
-          current.features?.includes("eth-address-gen") &&
-          current.evm
-      ) ?? false;
+    const isEvm = isPureEvmChain(current);
 
     const language = useLanguage();
 

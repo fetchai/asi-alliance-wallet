@@ -22,6 +22,7 @@ import { isAddress } from "@ethersproject/address";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { TXNTYPE } from "../../../../config";
 import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
+import { isPureEvmChain } from "@utils/filters";
 
 interface FormData {
   contractAddress: string;
@@ -83,12 +84,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
 
   const queries = queriesStore.get(chainStore.current.chainId);
   const current = chainStore.current;
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(current);
   const query = isEvm
     ? queries.evm.queryErc20Metadata
     : isSecret20

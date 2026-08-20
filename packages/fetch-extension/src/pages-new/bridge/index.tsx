@@ -7,6 +7,7 @@ import { EthereumBridge } from "./ethereum-bridge";
 import { FetchhubBridge } from "./fetchhub-bridge";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { Dec, IntPretty } from "@keplr-wallet/unit";
+import { isPureEvmChain } from "@utils/filters";
 
 export const BridgePage: FunctionComponent = observer(() => {
   const { chainStore, queriesStore } = useStore();
@@ -38,12 +39,7 @@ export const BridgePage: FunctionComponent = observer(() => {
     : true;
 
   const current = chainStore.current;
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(current);
   return (
     <HeaderLayout
       showTopMenu={true}

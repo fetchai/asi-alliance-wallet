@@ -9,6 +9,7 @@ import { ActivityRow } from "./activity-row";
 import styles from "./style.module.scss";
 import { NoActivity } from "../no-activity";
 import { UnsupportedNetwork } from "../unsupported-network";
+import { isPureEvmChain } from "@utils/filters";
 
 const options = [
   {
@@ -67,13 +68,7 @@ export const NativeTab = observer(() => {
     useStore();
   const current = chainStore.current;
   const accountInfo = accountStore.getAccount(current.chainId);
-  const isActivitySupported = !(
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false
-  );
+  const isActivitySupported = !isPureEvmChain(current);
   const [isOpen, setIsOpen] = useState(false);
   const [_date, setDate] = useState("");
   const [activities, setActivities] = useState<unknown[]>([]);

@@ -6,6 +6,7 @@ import { NoActivity } from "../no-activity";
 import { UnsupportedNetwork } from "../unsupported-network";
 import { govOptions } from "../utils";
 import { ActivityRow } from "./activity-row";
+import { isPureEvmChain } from "@utils/filters";
 
 export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
   observer(({}) => {
@@ -81,13 +82,7 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
       setIsOpen(false);
     };
 
-    const isSupportedNetwork = !(
-      Boolean(
-        current.features?.includes("eth-key-sign") &&
-          current.features?.includes("eth-address-gen") &&
-          current.evm
-      ) ?? false
-    );
+    const isSupportedNetwork = !isPureEvmChain(current);
 
     return (
       <React.Fragment>

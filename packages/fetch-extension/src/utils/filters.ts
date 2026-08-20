@@ -41,6 +41,20 @@ export const getFilteredChainValues = (values: any[], searchTerm: string) => {
   return filteredValues;
 };
 
+export const isCosmosTabChain = (chainInfo: { chainId: string }) => {
+  return !chainInfo.chainId.startsWith("eip155:");
+};
+
+export const isEvmTabChain = (chainInfo: {
+  chainId: string;
+  evm?: unknown;
+}) => {
+  return chainInfo.chainId.startsWith("eip155:") && chainInfo.evm != null;
+};
+
+/** Standalone EVM networks only — not ethermint cosmos chains with embedded evm (e.g. injective-1). */
+export const isPureEvmChain = isEvmTabChain;
+
 export const getFilteredProposals = (values: any[], searchTerm: string) => {
   const filteredValues = values.filter((proposal: any) => {
     if (

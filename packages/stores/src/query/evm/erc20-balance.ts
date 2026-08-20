@@ -72,6 +72,18 @@ export class ObservableQueryErc20BalanceInner extends ObservableQueryBalanceInne
     return false;
   }
 
+  override get isFetching(): boolean {
+    return this.queryErc20Balance.isFetching;
+  }
+
+  override get error() {
+    return this.queryErc20Balance.error;
+  }
+
+  override get response() {
+    return this.queryErc20Balance.response;
+  }
+
   @override
   override *fetch() {
     yield this.queryErc20Balance.fetch();

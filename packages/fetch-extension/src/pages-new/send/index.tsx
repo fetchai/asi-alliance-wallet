@@ -19,6 +19,7 @@ import {
   // PopupSize,
 } from "@keplr-wallet/popup";
 import { DenomHelper, ExtensionKVStore } from "@keplr-wallet/common";
+import { isPureEvmChain } from "@utils/filters";
 
 import { SendPhase1 } from "./send-phase-1";
 import { SendPhase2 } from "./send-phase-2";
@@ -74,12 +75,7 @@ export const SendPage: FunctionComponent = observer(() => {
     }
   );
 
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(current);
   const spendableBalances = isEvm
     ? queries.queryBalances
         .getQueryBech32Address(accountInfo.bech32Address)

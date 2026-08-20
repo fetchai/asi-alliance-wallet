@@ -9,6 +9,7 @@ import { ActivityRow } from "./activity-row";
 import styles from "./style.module.scss";
 import { NoActivity } from "../../../activity/no-activity";
 import { UnsupportedNetwork } from "../../../activity/unsupported-network";
+import { isPureEvmChain } from "@utils/filters";
 
 const options = [
   {
@@ -180,13 +181,7 @@ export const NativeTab = observer(({ filterTop }: { filterTop?: string }) => {
     return renderedNodes;
   };
 
-  const isActivitySupported = !(
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false
-  );
+  const isActivitySupported = !isPureEvmChain(current);
 
   return (
     <React.Fragment>

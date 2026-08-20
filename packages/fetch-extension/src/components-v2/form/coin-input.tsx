@@ -21,6 +21,7 @@ import {
   parseExponential,
   validateDecimalPlaces,
 } from "@utils/format";
+import { isPureEvmChain } from "@utils/filters";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
 import { FormGroup, Label } from "reactstrap";
@@ -304,12 +305,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
   const { queriesStore, priceStore, accountStore, chainStore, analyticsStore } =
     useStore();
   const current = chainStore.current;
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(current);
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
   const queryBalances = queriesStore

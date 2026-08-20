@@ -17,6 +17,7 @@ import style from "./style.module.scss";
 import { useForm } from "react-hook-form";
 import { useNotification } from "@components/notification";
 import { useConfirm } from "@components/confirm";
+import { isPureEvmChain } from "@utils/filters";
 import { AlertExperimentalFeature } from "@components/alert-experimental-feature";
 import { FormattedMessage, useIntl } from "react-intl";
 import {
@@ -65,12 +66,7 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
   const selectedChainInfo = chainStore.getChain(selectedChainId);
-  const isEvm =
-    Boolean(
-      selectedChainInfo.features?.includes("eth-key-sign") &&
-        selectedChainInfo.features?.includes("eth-address-gen") &&
-        selectedChainInfo.evm
-    ) ?? false;
+  const isEvm = isPureEvmChain(selectedChainInfo);
 
   return (
     <HeaderLayout

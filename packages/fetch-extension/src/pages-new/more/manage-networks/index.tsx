@@ -10,7 +10,11 @@ import { useStore } from "../../../stores";
 import style from "./style.module.scss";
 import { ToggleSwitchButton } from "@components-v2/buttons/toggle-switch-button";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { getFilteredChainValues } from "@utils/filters";
+import {
+  getFilteredChainValues,
+  isCosmosTabChain,
+  isEvmTabChain,
+} from "@utils/filters";
 import { NoResults } from "@components-v2/no-results";
 
 export const ManageNetworks: FunctionComponent = observer(() => {
@@ -23,12 +27,12 @@ export const ManageNetworks: FunctionComponent = observer(() => {
   const [evmSearchTerm, setEvmSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
-  const mainChainList = chainStore.chainInfos.filter(
-    (chainInfo) => !chainInfo.evm
+  const mainChainList = chainStore.chainInfos.filter((chainInfo) =>
+    isCosmosTabChain(chainInfo)
   );
 
-  const evmChainList = chainStore.chainInfos.filter(
-    (chainInfo) => chainInfo.features?.includes("eth-key-sign") && chainInfo.evm
+  const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
+    isEvmTabChain(chainInfo)
   );
 
   const isChainEnabled = (chainId: string) => {
