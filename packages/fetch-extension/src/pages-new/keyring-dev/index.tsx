@@ -1,19 +1,22 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
 
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
-// import { MultiKeyStoreInfoWithSelectedElem } from "@keplr-wallet/background";
+import { GetCosmosKeysForEachVaultSettledMsg } from "@keplr-wallet/background";
 import { Card } from "@components-v2/card";
-import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
+import { isPureEvmChain } from "@utils/filters";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
 import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 import { getKeyInfoSocial, isPrivateKeyType } from "@utils/index";
+import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { Skeleton } from "@components-v2/skeleton-loader";
 
 interface SetKeyRingProps {
   navigateTo?: any;
@@ -35,7 +38,6 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
     const navigate = useNavigate();
     const {
       chainStore,
-      accountStore,
       keyRingStore,
       analyticsStore,
       chatStore,
@@ -43,8 +45,47 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
     } = useStore();
 
     const chainId = chainStore.current.chainId;
-    const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const loadingIndicator = useLoadingIndicator();
+    const [addressByVaultId, setAddressByVaultId] = useState<
+      Record<string, string>
+    >({});
+
+    const isEvm = isPureEvmChain(chainStore.current);
+
+    useEffect(() => {
+      const fetchAddresses = async () => {
+        if (keyRingStore.keyInfos.length === 0) {
+          setAddressByVaultId({});
+          return;
+        }
+
+        const requester = new InExtensionMessageRequester();
+        const msg = new GetCosmosKeysForEachVaultSettledMsg(
+          chainId,
+          keyRingStore.keyInfos.map((item) => item.id)
+        );
+
+        const settledResponse = await requester.sendMessage(
+          BACKGROUND_PORT,
+          msg
+        );
+
+        const next: Record<string, string> = {};
+        for (const item of settledResponse) {
+          if (item.status === "fulfilled" && item.value) {
+            const address = isEvm
+              ? item.value.ethereumHexAddress?.trim()
+              : item.value.bech32Address?.trim();
+            if (address) {
+              next[item.value.vaultId] = address;
+            }
+          }
+        }
+        setAddressByVaultId(next);
+      };
+
+      fetchAddresses();
+    }, [chainId, keyRingStore.keyInfos.length, isEvm]);
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
@@ -66,51 +107,6 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
     return (
       <div>
         {keyRingStore.keyInfos.map((keyStore, i) => {
-          const bip44HDPath: any = keyStore.insensitive["bip44HDPath"]
-            ? keyStore.insensitive["bip44HDPath"]
-            : {
-                account: 0,
-                change: 0,
-                addressIndex: 0,
-              };
-          let paragraph = keyStore.insensitive?.["email"]
-            ? keyStore.insensitive["email"]
-            : undefined;
-          if (keyStore.type === "keystone") {
-            paragraph = "Keystone";
-          } else if (keyStore.type === "ledger") {
-            const coinType = (() => {
-              if (
-                keyStore.insensitive &&
-                keyStore.insensitive["__ledger__cosmos_app_like__"] &&
-                keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
-              ) {
-                return (
-                  AppCoinType[
-                    keyStore.insensitive["__ledger__cosmos_app_like__"] as App
-                  ] || 118
-                );
-              }
-
-              return 118;
-            })();
-
-            paragraph = `Ledger - m/44'/${coinType}'/${bip44HDPath.account}'${
-              bip44HDPath.change !== 0 || bip44HDPath.addressIndex !== 0
-                ? `/${bip44HDPath.change}/${bip44HDPath.addressIndex}`
-                : ""
-            }`;
-
-            if (
-              keyStore.insensitive &&
-              keyStore.insensitive["__ledger__cosmos_app_like__"] &&
-              keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
-            ) {
-              paragraph += ` (${keyStore.insensitive["__ledger__cosmos_app_like__"]})`;
-            }
-          }
-          console.log(paragraph);
-
           const keyRingMeta = keyStore.insensitive["keyRingMeta"] as any;
 
           const nameByChain = keyRingMeta?.nameByChain
@@ -173,12 +169,14 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 </div>
               }
               subheading={
-                keyStore.isSelected
-                  ? formatAddress(accountInfo.bech32Address)
-                  : ""
+                addressByVaultId[keyStore.id] ? (
+                  formatAddress(addressByVaultId[keyStore.id])
+                ) : (
+                  <Skeleton height="14px" width="100px" />
+                )
               }
               style={{
-                padding: keyStore.isSelected ? "18px 18px" : "18px 16px",
+                padding: "18px 18px",
               }}
               isActive={keyStore.isSelected}
               onClick={

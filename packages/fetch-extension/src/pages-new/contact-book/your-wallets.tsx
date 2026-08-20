@@ -1,7 +1,7 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { Card } from "@components-v2/card";
 import { SearchBar } from "@components-v2/search-bar";
-import { getFilteredWallets } from "@utils/filters";
+import { getFilteredWallets, isPureEvmChain } from "@utils/filters";
 import { formatAddress } from "@utils/format";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
@@ -22,11 +22,50 @@ interface YourWalletProps {
 export const YourWallets: FunctionComponent<YourWalletProps> = observer(
   ({ selectWalletFromList, onBackButton }) => {
     const [searchTerm, setSearchTerm] = useState("");
-    const [addresses, setAddresses] = useState<string[]>([]);
+    const [addressByVaultId, setAddressByVaultId] = useState<
+      Record<string, string>
+    >({});
     const intl = useIntl();
     const { chainStore, keyRingStore } = useStore();
 
     const chainId = chainStore.current.chainId;
+
+    const isEvm = isPureEvmChain(chainStore.current);
+
+    useEffect(() => {
+      const fetchAddresses = async () => {
+        if (keyRingStore.keyInfos.length === 0) {
+          setAddressByVaultId({});
+          return;
+        }
+
+        const requester = new InExtensionMessageRequester();
+        const msg = new GetCosmosKeysForEachVaultSettledMsg(
+          chainId,
+          keyRingStore.keyInfos.map((item) => item.id)
+        );
+
+        const settledResponse = await requester.sendMessage(
+          BACKGROUND_PORT,
+          msg
+        );
+
+        const next: Record<string, string> = {};
+        for (const item of settledResponse) {
+          if (item.status === "fulfilled" && item.value) {
+            const address = isEvm
+              ? item.value.ethereumHexAddress?.trim()
+              : item.value.bech32Address?.trim();
+            if (address) {
+              next[item.value.vaultId] = address;
+            }
+          }
+        }
+        setAddressByVaultId(next);
+      };
+
+      fetchAddresses();
+    }, [chainId, keyRingStore.keyInfos.length, isEvm]);
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
@@ -44,48 +83,6 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
       }
       return;
     };
-
-    const accountsAddress = async () => {
-      const requester = new InExtensionMessageRequester();
-      const msg = new GetCosmosKeysForEachVaultSettledMsg(
-        chainId,
-        keyRingStore?.keyInfos.map((item) => item.id)
-      );
-      const settledResponse: any = await requester.sendMessage(
-        BACKGROUND_PORT,
-        msg
-      );
-      const accounts = settledResponse.map((item: any) => item.value);
-      const selectedAccountIndex = keyRingStore.keyInfos.findIndex(
-        (value) => value.isSelected
-      );
-
-      const current = chainStore.current;
-      const isEvm =
-        Boolean(
-          current.features?.includes("eth-key-sign") &&
-            current.features?.includes("eth-address-gen") &&
-            current.evm
-        ) ?? false;
-      const addresses = accounts
-        .filter(
-          (account: any) =>
-            account.vaultId !== keyRingStore.keyInfos[selectedAccountIndex].id
-        )
-        .map((account: any) => {
-          if (isEvm) {
-            return account.ethereumHexAddress.trim();
-          }
-
-          return account.bech32Address.trim();
-        });
-
-      setAddresses(addresses);
-    };
-
-    useEffect(() => {
-      accountsAddress();
-    }, []);
 
     const keyRingList = keyRingStore.keyInfos.filter(
       (keyStore) => !keyStore.isSelected
@@ -132,8 +129,8 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                   </React.Fragment>
                 }
                 subheading={
-                  addresses[i] ? (
-                    formatAddress(addresses[i])
+                  addressByVaultId[keyStore.id] ? (
+                    formatAddress(addressByVaultId[keyStore.id])
                   ) : (
                     <Skeleton height="14px" width="100px" />
                   )
@@ -141,11 +138,11 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                 style={{
                   padding: "18px 16px",
                 }}
-                disabled={addresses?.length === 0}
+                disabled={!addressByVaultId[keyStore.id]}
                 onClick={async (e: any) => {
-                  if (addresses?.[i]) {
+                  const address = addressByVaultId[keyStore.id];
+                  if (address) {
                     e.preventDefault();
-                    const address = addresses[i];
                     selectWalletFromList(address);
                     onBackButton?.();
                   }
