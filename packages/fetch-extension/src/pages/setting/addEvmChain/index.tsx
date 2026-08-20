@@ -61,6 +61,12 @@ export const AddEvmChain: FunctionComponent = () => {
   };
   const [newChainInfo, setNewChainInfo] = useState(initialState);
 
+  const toEip155ChainId = (evmChainId: number) => `eip155:${evmChainId}`;
+
+  const hasExistingEvmChain = (evmChainId: number) => {
+    return chainStore.hasChain(toEip155ChainId(evmChainId));
+  };
+
   const getChainInfo = async (rpcUrl: string) => {
     loadingIndicator.setIsLoading("chain-details", true);
     try {
@@ -83,9 +89,10 @@ export const AddEvmChain: FunctionComponent = () => {
         return;
       }
 
-      const chainId = parseInt(response.data.result, 16);
+      const evmChainId = parseInt(response.data.result, 16);
+      const caip2ChainId = toEip155ChainId(evmChainId);
 
-      if (chainStore.hasChain(chainId.toString())) {
+      if (hasExistingEvmChain(evmChainId)) {
         setInfo(
           "Network already exists. You can go to network settings if you want to update the RPC"
         );
@@ -93,10 +100,20 @@ export const AddEvmChain: FunctionComponent = () => {
         return;
       }
 
-      setNewChainInfo({
+      const baseChainInfo = {
         ...newChainInfo,
-        chainId: chainId.toString(),
-      });
+        chainId: caip2ChainId,
+        rpc: rpcUrl,
+        rest: rpcUrl,
+        updateFromRepoDisabled: true,
+        evm: {
+          chainId: evmChainId,
+          rpc: rpcUrl,
+          websocket: "",
+        },
+      };
+
+      setNewChainInfo(baseChainInfo);
 
       const chains = await axios.get("https://chainid.network/chains.json");
       if (chains.status !== 200) {
@@ -107,42 +124,38 @@ export const AddEvmChain: FunctionComponent = () => {
       }
 
       const chainData = chains.data.find(
-        (element: any) => chainId === element.chainId
+        (element: any) => evmChainId === element.chainId
       );
 
       if (chainData) {
         setInfo("We've fetched information based on the provided RPC.");
         const symbol = chainData.nativeCurrency.symbol;
+        const coinMinimalDenom = symbol.toLowerCase();
         setNewChainInfo({
-          ...newChainInfo,
-          evm: {
-            chainId,
-            rpc: rpcUrl,
-            websocket: "",
-          },
+          ...baseChainInfo,
           currencies: [
             {
               coinDenom: symbol,
-              coinMinimalDenom: symbol,
+              coinMinimalDenom,
               coinDecimals: chainData.nativeCurrency
                 ? chainData.nativeCurrency.decimals
-                : 0,
+                : 18,
             },
           ],
           stakeCurrency: {
             coinDenom: symbol,
-            coinMinimalDenom: symbol,
+            coinMinimalDenom,
             coinDecimals: chainData.nativeCurrency
               ? chainData.nativeCurrency.decimals
-              : 0,
+              : 18,
           },
           feeCurrencies: [
             {
               coinDenom: symbol,
-              coinMinimalDenom: symbol,
+              coinMinimalDenom,
               coinDecimals: chainData.nativeCurrency
                 ? chainData.nativeCurrency.decimals
-                : 0,
+                : 18,
               gasPriceStep: {
                 low: 10000000000,
                 average: 10000000000,
@@ -150,11 +163,8 @@ export const AddEvmChain: FunctionComponent = () => {
               },
             },
           ],
-          rpc: rpcUrl,
-          rest: rpcUrl,
-          chainId: `eip155:${chainId.toString()}`,
           chainName: chainData.name,
-        });
+        } as ChainInfo);
       } else {
         setInfo(
           "We've fetched chain id based on the provided RPC. You will need to enter other details manaually"
@@ -244,21 +254,74 @@ export const AddEvmChain: FunctionComponent = () => {
     }
   };
 
-  const isValid = !hasErrors && newChainInfo.rpc && newChainInfo.chainId;
+  const buildChainInfoToAdd = (): ChainInfo & {
+    updateFromRepoDisabled: boolean;
+  } => {
+    const evmChainId =
+      newChainInfo.evm?.chainId ??
+      parseInt(newChainInfo.chainId.replace(/^eip155:/, ""), 10);
+    const rpc = newChainInfo.rpc.trim();
+    const symbol = newChainInfo.currencies[0].coinDenom;
+    const coinMinimalDenom =
+      newChainInfo.currencies[0].coinMinimalDenom || symbol.toLowerCase();
+    const coinDecimals = newChainInfo.currencies[0].coinDecimals || 18;
+
+    return {
+      ...newChainInfo,
+      chainId: toEip155ChainId(evmChainId),
+      rpc,
+      rest: rpc,
+      updateFromRepoDisabled: true,
+      evm: {
+        chainId: evmChainId,
+        rpc,
+        websocket: newChainInfo.evm?.websocket ?? "",
+      },
+      currencies: [
+        {
+          coinDenom: symbol,
+          coinMinimalDenom,
+          coinDecimals,
+        },
+      ],
+      stakeCurrency: {
+        coinDenom: symbol,
+        coinMinimalDenom,
+        coinDecimals,
+      },
+      feeCurrencies: [
+        {
+          ...newChainInfo.feeCurrencies[0],
+          coinDenom: symbol,
+          coinMinimalDenom,
+          coinDecimals,
+        },
+      ],
+    };
+  };
+
+  const isValid =
+    !hasErrors &&
+    newChainInfo.rpc &&
+    newChainInfo.chainId &&
+    newChainInfo.chainName &&
+    newChainInfo.currencies[0].coinDenom &&
+    newChainInfo.currencies[0].coinDecimals > 0;
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    const chainInfoToAdd = buildChainInfoToAdd();
     try {
       loadingIndicator.setIsLoading("chain-suggest-switch", true);
-      await chainStore.addCustomChainInfo(newChainInfo);
+      await chainStore.addCustomChainInfo(chainInfoToAdd);
       dispatchGlobalEventExceptSelf("keplr_suggested_chain_added");
-      await chainStore.selectChain(newChainInfo.chainId);
+      await chainStore.selectChain(chainInfoToAdd.chainId);
       await chainStore.saveLastViewChainId();
       notification.push({
         type: "success",
         placement: "top-center",
         duration: 5,
-        content: `Succesfully added chain ${newChainInfo.chainName}`,
+        content: `Succesfully added chain ${chainInfoToAdd.chainName}`,
         canDelete: true,
         transition: { duration: 0.25 },
       });

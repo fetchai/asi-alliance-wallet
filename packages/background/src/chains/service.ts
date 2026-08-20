@@ -604,6 +604,10 @@ export class ChainsService {
       return false;
     }
 
+    if ((chainInfo as ChainInfoWithCoreTypes).updateFromRepoDisabled) {
+      return false;
+    }
+
     let chainIdUpdated = false;
     const statusResponse = await simpleFetch<
       | {
@@ -707,6 +711,9 @@ export class ChainsService {
     chainInfo: ChainInfo,
     origin: string
   ): Promise<void> {
+    const updateFromRepoDisabled = (chainInfo as ChainInfoWithSuggestedOptions)
+      .updateFromRepoDisabled;
+
     chainInfo = await validateBasicChainInfoType(chainInfo);
 
     const onApprove = async (
@@ -721,7 +728,8 @@ export class ChainsService {
       const validChainInfo = {
         ...(await validateBasicChainInfoType(receivedChainInfo)),
         beta: chainInfo.beta,
-        updateFromRepoDisabled: receivedChainInfo.updateFromRepoDisabled,
+        updateFromRepoDisabled:
+          updateFromRepoDisabled ?? receivedChainInfo.updateFromRepoDisabled,
       };
 
       if (validChainInfo.updateFromRepoDisabled) {
@@ -742,15 +750,26 @@ export class ChainsService {
       env.isInternalMsg ||
       this.suggestChainPrivilegedOrigins.includes(origin)
     ) {
-      try {
-        const isEvmOnlyChain =
-          chainInfo.evm !== undefined &&
-          chainInfo.chainId.split(":")[0] === "eip155";
-        chainInfo = await this.fetchFromRepo(chainInfo.chainId, isEvmOnlyChain);
-      } catch (e) {
-        console.log(e);
+      let chainInfoToApprove: ChainInfoWithSuggestedOptions = {
+        ...chainInfo,
+        updateFromRepoDisabled,
+      };
+
+      if (!updateFromRepoDisabled) {
+        try {
+          const isEvmOnlyChain =
+            chainInfo.evm !== undefined &&
+            chainInfo.chainId.split(":")[0] === "eip155";
+          chainInfoToApprove = {
+            ...(await this.fetchFromRepo(chainInfo.chainId, isEvmOnlyChain)),
+            updateFromRepoDisabled,
+          };
+        } catch (e) {
+          console.log(e);
+        }
       }
-      await onApprove(chainInfo, {
+
+      await onApprove(chainInfoToApprove, {
         isInternalMsg: env.isInternalMsg,
       });
     } else {

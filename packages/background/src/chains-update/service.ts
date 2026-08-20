@@ -246,9 +246,12 @@ export class ChainsUpdateService {
       }
     }
 
-    const updated2 = await this.chainsService.tryUpdateChainInfoFromRpcOrRest(
-      chainIdentifier
-    );
+    const updated2 = await this.chainsService
+      .tryUpdateChainInfoFromRpcOrRest(chainIdentifier)
+      .catch((e) => {
+        console.log(e);
+        return false;
+      });
 
     return updated1 || updated2;
   }

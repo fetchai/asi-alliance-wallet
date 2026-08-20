@@ -225,7 +225,7 @@ const EmbedChainInfos: (
   {
     rpc: "https://bsc-dataseed.binance.org",
     rest: "https://bsc-dataseed.binance.org/",
-    chainId: "56",
+    chainId: "eip155:56",
     chainName: "Binance Smart Chain",
     hideInUI: true,
     stakeCurrency: {
@@ -286,7 +286,7 @@ const EmbedChainInfos: (
   {
     rpc: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     rest: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
-    chainId: "5",
+    chainId: "eip155:5",
     chainName: "Goerli-eth (Testnet)",
     stakeCurrency: {
       coinDenom: "ETH",
@@ -2530,7 +2530,13 @@ const EmbedChainInfos: (
       },
     ],
     features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
+    evm: {
+      chainId: 1776,
+      rpc: "https://sentry.evm-rpc.injective.network",
+      websocket: "wss://sentry.evm-ws.injective.network",
+    },
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/Injective-logo 2.svg"),
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://kava-rpc.publicnode.com:443",
@@ -3103,7 +3109,7 @@ const EmbedChainInfos: (
     rpc: "https://rpc-dorado.fetch.ai",
     rest: "https://rest-dorado.fetch.ai",
     chainId: "dorado-1",
-    chainName: "Dorado",
+    chainName: "Dorado Testnet",
     hideInUI: false,
     stakeCurrency: {
       coinDenom: "TESTFET",
@@ -3146,12 +3152,13 @@ const EmbedChainInfos: (
     walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-gemini.fetch.ai",
     rest: "https://rest-gemini.fetch.ai",
     chainId: "gemini-1",
-    chainName: "Gemini",
+    chainName: "Gemini Testnet",
     hideInUI: false,
     stakeCurrency: {
       coinDenom: "TESTFET",
@@ -3193,6 +3200,7 @@ const EmbedChainInfos: (
     features: ["cosmwasm"],
     walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
+    updateFromRepoDisabled: true,
   },
   // {
   //   rpc: "https://rpc-eridanus-1.fetch.ai",
