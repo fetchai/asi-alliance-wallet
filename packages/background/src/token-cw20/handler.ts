@@ -132,7 +132,12 @@ const handleGetSecret20ViewingKey: (
       env,
       [msg.chainId],
       msg.origin,
-      "secret20-viewing-key"
+      "secret20-viewing-key",
+      {
+        interactionData: {
+          contractAddress: msg.contractAddress,
+        },
+      }
     );
 
     const key = await keyRingCosmosService.getKeySelected(msg.chainId);

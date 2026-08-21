@@ -14,6 +14,7 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
+import { isPureEvmChain } from "@utils/filters";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -50,12 +51,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
           const accounts = settledResponse.map((item: any) => item.value);
 
           const current = chainStore.current;
-          const isEvm =
-            Boolean(
-              current.features?.includes("eth-key-sign") &&
-                current.features?.includes("eth-address-gen") &&
-                current.evm
-            ) ?? false;
+          const isEvm = isPureEvmChain(current);
           const addresses = accounts.map((account) => {
             if (isEvm) {
               return account.ethereumHexAddress;

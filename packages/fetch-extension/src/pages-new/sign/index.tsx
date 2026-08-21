@@ -145,7 +145,10 @@ export const SignPageV2: FunctionComponent = observer(() => {
       const data = signInteractionStore.waitingData;
       chainStore.selectChain(data.data.chainId);
       if (data.data.signDocWrapper.isADR36SignDoc) {
-        setIsADR36WithString(data.data.signDocWrapper.isADR36SignDoc);
+        setIsADR36WithString(
+          data.data.mode === "amino" &&
+            !!data.data.signOptions.isADR36WithString
+        );
       }
       setOrigin(data.data.origin);
       if (
@@ -172,6 +175,14 @@ export const SignPageV2: FunctionComponent = observer(() => {
         data.data.signDocWrapper.fees[0]
       ) {
         feeConfig.setManualFee(data.data.signDocWrapper.fees[0]);
+      } else if (
+        !data.data.signDocWrapper.isADR36SignDoc &&
+        !data.data.signOptions.preferNoSetFee &&
+        !data.data.signDocWrapper.fees[0]
+      ) {
+        // Wallet-owned fee (e.g. claim rewards): fill average for UI + signed doc.
+        // Skip ADR-36 and preferNoSetFee — empty amount is intentional there.
+        feeConfig.setFeeType("average");
       }
       amountConfig.setDisableBalanceCheck(
         !!data.data.signOptions.disableBalanceCheck

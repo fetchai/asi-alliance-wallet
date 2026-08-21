@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
 import { AddressBookEntry } from "@fetchai/wallet-types";
 import { KVStore } from "@keplr-wallet/common";
 import { ChainsService } from "../chains";
@@ -25,7 +24,7 @@ export class AddressBookService {
       await this.chainService.getSelectedChain()
     );
     const addressBook = await this.kvStore.get(`${chainInfo?.chainName}`);
-    return addressBook as AddressBookEntry[];
+    return (addressBook as AddressBookEntry[] | undefined) ?? [];
   }
 
   public async addEntry(entry: AddressBookEntry) {

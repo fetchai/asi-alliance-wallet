@@ -5,6 +5,7 @@ import { ChainsService } from "../chains";
 import { KVStore } from "@keplr-wallet/common";
 import { autorun, makeObservable, observable, runInAction } from "mobx";
 import { GenesisHash } from "@keplr-wallet/types";
+import { PermissionOptions } from "../permission/types";
 
 export class PermissionInteractiveService {
   @observable
@@ -100,7 +101,8 @@ export class PermissionInteractiveService {
     env: Env,
     chainIds: string[],
     origin: string,
-    msgType?: string
+    msgType?: string,
+    options?: Omit<PermissionOptions, "permissionTypeForMessage">
   ): Promise<void> {
     await this.ensureKeyRingNotEmpty(env);
 
@@ -112,6 +114,7 @@ export class PermissionInteractiveService {
       origin,
       {
         permissionTypeForMessage: msgType,
+        ...options,
       }
     );
   }

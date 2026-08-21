@@ -15,7 +15,7 @@ import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 import { useNavigate } from "react-router";
 
 export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
-  const { chainStore, permissionStore, tokensStore } = useStore();
+  const { chainStore, permissionStore } = useStore();
   const navigate = useNavigate();
 
   const waitingPermission = permissionStore.waitingPermissionData;
@@ -24,7 +24,7 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
     onUnmount: async () => {
       if (waitingPermission) {
         await permissionStore.rejectPermissionWithProceedNext(
-          waitingPermission.id ?? [],
+          [waitingPermission.id],
           () => {
             // Handle cleanup if needed
           }
@@ -33,14 +33,9 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
     },
   });
 
-  const isLoading = (() => {
-    const obsolete = permissionStore.waitingPermissionMergedData?.ids.find(
-      (id) => {
-        return permissionStore.isObsoleteInteractionApproved(id);
-      }
-    );
-    return !!obsolete;
-  })();
+  const isLoading = waitingPermission
+    ? permissionStore.isObsoleteInteractionApproved(waitingPermission.id)
+    : false;
 
   useEffect(() => {
     if (waitingPermission) {
@@ -62,6 +57,11 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
     }
   }, [waitingPermission]);
 
+  const contractAddress =
+    (waitingPermission?.data.options?.interactionData?.[
+      "contractAddress"
+    ] as string) ?? "Loading...";
+
   return (
     <EmptyLayout
       className={style["emptyLayout"]}
@@ -81,10 +81,7 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
             id="access.viewing-key.paragraph"
             values={{
               host,
-              contractAddress:
-                waitingPermission && tokensStore?.waitingSuggestedToken?.data
-                  ? tokensStore.waitingSuggestedToken.data.contractAddress
-                  : "loading...",
+              contractAddress,
               // eslint-disable-next-line react/display-name
               b: (...chunks: any) => <b>{chunks}</b>,
             }}

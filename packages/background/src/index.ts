@@ -32,6 +32,7 @@ import * as TokenScan from "./token-scan/internal";
 import * as SidePanel from "./side-panel/internal";
 import * as Settings from "./settings/internal";
 import * as ManageViewAssetToken from "./manage-view-asset-token/internal";
+import * as AddressBook from "./address-book/internal";
 // import * as BackgroundTxExecutor from "./tx-executor/internal";
 
 export * from "./chains";
@@ -61,6 +62,7 @@ export * from "./side-panel";
 export * from "./settings";
 export * from "./manage-view-asset-token";
 export * from "./tx-ethereum";
+export * from "./address-book";
 // export * from "./tx-executor";
 
 import { KVStore } from "@keplr-wallet/common";
@@ -320,6 +322,12 @@ export function init(
       chainsService
     );
 
+  const addressBookService = new AddressBook.AddressBookService(
+    storeCreator("address-book"),
+    chainsService,
+    permissionService
+  );
+
   Interaction.init(router, interactionService);
   Permission.init(router, permissionService);
   Chains.init(
@@ -375,6 +383,7 @@ export function init(
   Settings.init(router, settingsService);
   Ledger.init(router, ledgerService);
   ManageViewAssetToken.init(router, manageViewAssetTokenService);
+  AddressBook.init(router, addressBookService);
 
   return {
     initFn: async () => {
