@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useMemo } from "react";
+import React, { FunctionComponent } from "react";
 import { observer } from "mobx-react-lite";
 import { SignDocHelper } from "@keplr-wallet/hooks";
 import { EthSignType } from "@keplr-wallet/types";
@@ -9,46 +9,26 @@ export const DataTab: FunctionComponent<{
   ethSignType?: EthSignType;
   ethData?: unknown;
 }> = observer(({ signDocHelper, ethSignType, ethData }) => {
-  const content = useMemo(() => {
-    try {
-      if (signDocHelper) {
-        const wrapper = signDocHelper.signDocWrapper;
-        if (
-          wrapper &&
-          wrapper.mode === "amino" &&
-          wrapper.aminoSignDoc.msgs.length === 1 &&
-          wrapper.aminoSignDoc.msgs[0].type === "sign/MsgSignData"
-        ) {
-          const base64Data = wrapper.aminoSignDoc.msgs[0].value.data;
+  let content = "No signing data available";
 
-          const decoded = new TextDecoder().decode(
-            Buffer.from(base64Data, "base64")
-          );
-
-          return JSON.stringify(JSON.parse(decoded), undefined, 2);
-        }
-
-        // Default Cosmos (direct / amino fallback)
-        return JSON.stringify(signDocHelper.signDocJson, undefined, 2);
-      }
-
+  try {
+    if (signDocHelper) {
+      // Full amino/direct SignDoc (including ADR-36 MsgSignData with base64 data).
+      content = JSON.stringify(signDocHelper.signDocJson, undefined, 2);
+    } else if (ethSignType) {
       try {
-        if (ethSignType) {
-          if (ethSignType === EthSignType.TRANSACTION) {
-            return JSON.stringify(JSON.parse(ethData as string), undefined, 2);
-          } else {
-            return JSON.stringify(ethData, undefined, 2);
-          }
+        if (ethSignType === EthSignType.TRANSACTION) {
+          content = JSON.stringify(JSON.parse(ethData as string), undefined, 2);
+        } else {
+          content = JSON.stringify(ethData, undefined, 2);
         }
       } catch {
-        return JSON.stringify(ethData, undefined, 2);
+        content = JSON.stringify(ethData, undefined, 2);
       }
-
-      return "No signing data available";
-    } catch (e) {
-      return "Failed to parse signing data";
     }
-  }, [signDocHelper, ethSignType, ethData]);
+  } catch {
+    content = "Failed to parse signing data";
+  }
 
   return <pre className={style["message"]}>{content}</pre>;
 });

@@ -159,10 +159,25 @@ export const SignPageV2: FunctionComponent = observer(() => {
         // If the sign doc is for ADR-36, there is no chain id in the sign doc, so no need to validate.
         throw new Error("Chain id unmatched");
       }
-      signDocHelper.setSignDocWrapper(data.data.signDocWrapper);
-      gasConfig.setGas(data.data.signDocWrapper.gas);
-      let memo = data.data.signDocWrapper.memo;
-      if (data.data.signDocWrapper.mode === "amino") {
+      // [{ amount: 0|"0", denom }] → [] so the signed doc shows empty fee.
+      // Do not fill average for that case only truly unset [] gets wallet fee.
+      const fees = data.data.signDocWrapper.fees;
+      const hasExplicitZeroFee =
+        fees.length > 0 && fees.every((coin) => String(coin.amount) === "0");
+      const isEmptyFee = fees.length === 0;
+
+      let signDocWrapper = data.data.signDocWrapper;
+      if (hasExplicitZeroFee && !signDocWrapper.isADR36SignDoc) {
+        signDocWrapper = signDocWrapper.getTopUpOverridedWrapper({
+          amount: [],
+          gas: signDocWrapper.gas.toString(),
+        });
+      }
+
+      signDocHelper.setSignDocWrapper(signDocWrapper);
+      gasConfig.setGas(signDocWrapper.gas);
+      let memo = signDocWrapper.memo;
+      if (signDocWrapper.mode === "amino") {
         // For amino-json sign doc, the memo is escaped by default behavior of golang's json marshaller.
         // For normal users, show the escaped characters with unescaped form.
         // Make sure that the actual sign doc's memo should be escaped.
@@ -172,17 +187,22 @@ export const SignPageV2: FunctionComponent = observer(() => {
       memoConfig.setMemo(memo);
       if (
         data.data.signOptions.preferNoSetFee &&
-        data.data.signDocWrapper.fees[0]
+        !hasExplicitZeroFee &&
+        !isEmptyFee &&
+        fees[0]
       ) {
-        feeConfig.setManualFee(data.data.signDocWrapper.fees[0]);
+        feeConfig.setManualFee(fees[0]);
       } else if (
-        !data.data.signDocWrapper.isADR36SignDoc &&
+        !signDocWrapper.isADR36SignDoc &&
         !data.data.signOptions.preferNoSetFee &&
-        !data.data.signDocWrapper.fees[0]
+        isEmptyFee
       ) {
         // Wallet-owned fee (e.g. claim rewards): fill average for UI + signed doc.
         // Skip ADR-36 and preferNoSetFee — empty amount is intentional there.
         feeConfig.setFeeType("average");
+      } else if (hasExplicitZeroFee) {
+        // Keep amount [] — clear any prior feeType so helper doesn't re-inject a fee.
+        feeConfig.setFeeType(undefined);
       }
       amountConfig.setDisableBalanceCheck(
         !!data.data.signOptions.disableBalanceCheck
@@ -191,8 +211,8 @@ export const SignPageV2: FunctionComponent = observer(() => {
         !!data.data.signOptions.disableBalanceCheck
       );
       if (
-        data.data.signDocWrapper.granter &&
-        data.data.signDocWrapper.granter !== data.data.signer
+        signDocWrapper.granter &&
+        signDocWrapper.granter !== data.data.signer
       ) {
         feeConfig.setDisableBalanceCheck(true);
       }

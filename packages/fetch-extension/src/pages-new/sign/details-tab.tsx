@@ -21,6 +21,7 @@ import { renderDirectMessage } from "./direct";
 import { AnyWithUnpacked } from "@keplr-wallet/cosmos";
 import { CoinPretty } from "@keplr-wallet/unit";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
+import { isPureEvmChain } from "@utils/filters";
 
 export const DetailsTab: FunctionComponent<{
   signDocHelper: SignDocHelper;
@@ -57,12 +58,7 @@ export const DetailsTab: FunctionComponent<{
         : signDocHelper.signDocWrapper.protoSignDoc.txMsgs
       : [];
     const current = chainStore.current;
-    const isEvm =
-      Boolean(
-        current.features?.includes("eth-key-sign") &&
-          current.features?.includes("eth-address-gen") &&
-          current.evm
-      ) ?? false;
+    const isEvm = isPureEvmChain(current);
 
     const renderedMsgs = (() => {
       if (mode === "amino") {
