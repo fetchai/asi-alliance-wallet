@@ -10346,17 +10346,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/units@npm:^5.7.0":
-  version: 5.8.0
-  resolution: "@ethersproject/units@npm:5.8.0"
-  dependencies:
-    "@ethersproject/bignumber": ^5.8.0
-    "@ethersproject/constants": ^5.8.0
-    "@ethersproject/logger": ^5.8.0
-  checksum: cc7180c85f695449c20572602971145346fc5c169ee32f23d79ac31cc8c9c66a2049e3ac852b940ddccbe39ab1db3b81e3e093b604d9ab7ab27639ecb933b270
-  languageName: node
-  linkType: hard
-
 "@ethersproject/wallet@npm:5.7.0, @ethersproject/wallet@npm:^5.7.0":
   version: 5.7.0
   resolution: "@ethersproject/wallet@npm:5.7.0"
@@ -12832,6 +12821,7 @@ __metadata:
     "@ethersproject/hash": ^5.7.0
     "@ethersproject/transactions": ^5.7.0
     "@ethersproject/wallet": ^5.7.0
+    "@fetchai/wallet-types": ^0.2.0
     "@keplr-wallet/chain-validator": 0.13.11
     "@keplr-wallet/common": 0.13.11
     "@keplr-wallet/cosmos": 0.13.11
@@ -13231,14 +13221,15 @@ __metadata:
     "@keplr-wallet/common": 0.13.11
     "@keplr-wallet/cosmos": 0.13.11
     "@keplr-wallet/crypto": 0.13.11
+    "@keplr-wallet/popup": 0.13.11
     "@keplr-wallet/proto-types": 0.13.11
     "@keplr-wallet/simple-fetch": 0.13.11
     "@keplr-wallet/stores": 0.13.11
     "@keplr-wallet/stores-core": 0.13.11
     "@keplr-wallet/stores-etc": 0.13.11
-    "@keplr-wallet/stores-eth": 0.13.11
     "@keplr-wallet/types": 0.13.11
     "@keplr-wallet/unit": 0.13.11
+    axios: ^0.27.2
     buffer: ^6.0.3
     long: ^4.0.0
     react-router: ^6.8.1
@@ -13514,32 +13505,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@keplr-wallet/stores-eth@0.13.11, @keplr-wallet/stores-eth@workspace:packages/stores-eth":
-  version: 0.0.0-use.local
-  resolution: "@keplr-wallet/stores-eth@workspace:packages/stores-eth"
-  dependencies:
-    "@ethersproject/abi": ^5.7.0
-    "@ethersproject/address": ^5.7.0
-    "@ethersproject/bytes": ^5.7.0
-    "@ethersproject/strings": ^5.7.0
-    "@ethersproject/transactions": ^5.7.0
-    "@ethersproject/units": ^5.7.0
-    "@keplr-wallet/common": 0.13.11
-    "@keplr-wallet/simple-fetch": 0.13.11
-    "@keplr-wallet/stores": 0.13.11
-    "@keplr-wallet/stores-etc": 0.13.11
-    "@keplr-wallet/types": 0.13.11
-    "@keplr-wallet/unit": 0.13.11
-    "@types/lodash.debounce": ^4
-    big-integer: ^1.6.48
-    lodash.debounce: ^4.0.8
-    utility-types: ^3.10.0
-  peerDependencies:
-    mobx: ^6
-    mobx-utils: ^6
-  languageName: unknown
-  linkType: soft
-
 "@keplr-wallet/stores-ibc@0.13.11, @keplr-wallet/stores-ibc@workspace:packages/stores-ibc":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/stores-ibc@workspace:packages/stores-ibc"
@@ -13547,7 +13512,6 @@ __metadata:
     "@keplr-wallet/common": 0.13.11
     "@keplr-wallet/cosmos": 0.13.11
     "@keplr-wallet/stores": 0.13.11
-    "@keplr-wallet/stores-eth": 0.13.11
     "@keplr-wallet/types": 0.13.11
     "@types/lodash.debounce": ^4
     lodash.debounce: ^4.0.8
@@ -13772,13 +13736,13 @@ __metadata:
   linkType: hard
 
 "@keystonehq/bc-ur-registry-cosmos@npm:^0.1.1":
-  version: 0.1.1
-  resolution: "@keystonehq/bc-ur-registry-cosmos@npm:0.1.1"
+  version: 0.1.6
+  resolution: "@keystonehq/bc-ur-registry-cosmos@npm:0.1.6"
   dependencies:
     "@keystonehq/bc-ur-registry": 0.5.4
     bs58check: ^2.1.2
     uuid: ^8.3.2
-  checksum: 2a6f1d970c1d2bae8bd5ec990547367486c28eae1467b20696e0f07216bf59ab99ea361aa5cc9045ef83fe26dc42318da6ba2031d705d2e969f3b72625c48c36
+  checksum: a9f84e53a5c64793d2fde305067fc18635c23543c9843fb7516cb7d9ed28c4a3944b70fa698e9ef5928bd71f5a1b98cbe4b6dd23574cbbff8bef6e2946a1d17a
   languageName: node
   linkType: hard
 
@@ -13914,18 +13878,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@keystonehq/bc-ur-registry@npm:^0.5.0, @keystonehq/bc-ur-registry@npm:^0.5.0-alpha.5, @keystonehq/bc-ur-registry@npm:^0.5.1":
-  version: 0.5.1
-  resolution: "@keystonehq/bc-ur-registry@npm:0.5.1"
-  dependencies:
-    "@ngraveio/bc-ur": ^1.1.5
-    base58check: ^2.0.0
-    tslib: ^2.3.0
-  checksum: 1ee8f8e39f51b106724a275aa50116614352bafa124ff11a749337375abdf2a554fedfcbcad5d6e2c5da12ec10ec7cdc2b043cba44769690ef36ba28bf9017ca
-  languageName: node
-  linkType: hard
-
-"@keystonehq/bc-ur-registry@npm:^0.5.4":
+"@keystonehq/bc-ur-registry@npm:^0.5.0, @keystonehq/bc-ur-registry@npm:^0.5.0-alpha.5, @keystonehq/bc-ur-registry@npm:^0.5.1, @keystonehq/bc-ur-registry@npm:^0.5.4":
   version: 0.5.5
   resolution: "@keystonehq/bc-ur-registry@npm:0.5.5"
   dependencies:
@@ -14027,8 +13980,8 @@ __metadata:
   linkType: hard
 
 "@keystonehq/sdk@npm:^0.15.2":
-  version: 0.15.2
-  resolution: "@keystonehq/sdk@npm:0.15.2"
+  version: 0.15.7
+  resolution: "@keystonehq/sdk@npm:0.15.7"
   dependencies:
     "@ngraveio/bc-ur": ^1.0.0
     qrcode.react: ^1.0.1
@@ -14038,7 +13991,7 @@ __metadata:
   peerDependencies:
     react: "*"
     react-dom: "*"
-  checksum: f9a21ed06c248ff99901f17dd00c39005a2cf6938f8f57a3635c8fc70014d72162dd4661c35d911dcbb4e15b814d8b4071af7aeef8b7c30fabdeb0570a476162
+  checksum: 8814686550d71c1285cae5eb4c8b838746d3079f662e3e83dc4ac92c0f6f0ed99f49bd2d396f580bd568f5ac741f432cf4ac028bdb30b511dc669333700555b3
   languageName: node
   linkType: hard
 
@@ -14110,6 +14063,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ledgerhq/devices@npm:8.16.0":
+  version: 8.16.0
+  resolution: "@ledgerhq/devices@npm:8.16.0"
+  dependencies:
+    semver: 7.7.3
+  checksum: 8175b0c6bd918273140fd6b8ff9760091a57abe7cf8886cfdfd14f43059384db27753c886aaae6d870d5db3776600dd7c3fb71f07509240abf3d59495e520640
+  languageName: node
+  linkType: hard
+
 "@ledgerhq/devices@npm:^6.20.0":
   version: 6.20.0
   resolution: "@ledgerhq/devices@npm:6.20.0"
@@ -14167,6 +14129,13 @@ __metadata:
   version: 6.29.0
   resolution: "@ledgerhq/errors@npm:6.29.0"
   checksum: 423231fd475712eefa1a26e2b48534d6e96d360fe9600050955d5463935cd9ddabe826de395b3bfcbe38e0d03e283f1651fd815961d6230580a2248378a162f5
+  languageName: node
+  linkType: hard
+
+"@ledgerhq/errors@npm:^6.37.0":
+  version: 6.37.0
+  resolution: "@ledgerhq/errors@npm:6.37.0"
+  checksum: 2188813285d1cea9a033d9df89b634eb3445b1cbef91d84964f0cfe4c87c88f0e3a51ae5f01c4c863a6ddeb12f4269e3fa55d671a45f62a0e705a2b3ebabf5b2
   languageName: node
   linkType: hard
 
@@ -14257,14 +14226,14 @@ __metadata:
   linkType: hard
 
 "@ledgerhq/hw-transport-webhid@npm:^6.20.0":
-  version: 6.20.0
-  resolution: "@ledgerhq/hw-transport-webhid@npm:6.20.0"
+  version: 6.36.0
+  resolution: "@ledgerhq/hw-transport-webhid@npm:6.36.0"
   dependencies:
-    "@ledgerhq/devices": ^6.20.0
-    "@ledgerhq/errors": ^6.10.0
-    "@ledgerhq/hw-transport": ^6.20.0
-    "@ledgerhq/logs": ^6.10.0
-  checksum: 3d98e9a4a7144ad891873562d2d93b7f30b0c081121bb4b2531b42679903c3b5b748bffec965f12551b1b35df05f287d9fdff4c58b94e4d1cb94cff69c86e8ae
+    "@ledgerhq/devices": 8.16.0
+    "@ledgerhq/errors": ^6.37.0
+    "@ledgerhq/hw-transport": 6.35.5
+    "@ledgerhq/logs": ^6.17.0
+  checksum: 6d932ee34aaa2b5801a22584e226ed67bb1f05e31790eb238c42f420bdc68705487fe071672167fdbe23cf871fc905bdbd1623609b4b2548e7a0827e8582f6b2
   languageName: node
   linkType: hard
 
@@ -14281,14 +14250,14 @@ __metadata:
   linkType: hard
 
 "@ledgerhq/hw-transport-webusb@npm:^6.20.0":
-  version: 6.20.0
-  resolution: "@ledgerhq/hw-transport-webusb@npm:6.20.0"
+  version: 6.35.0
+  resolution: "@ledgerhq/hw-transport-webusb@npm:6.35.0"
   dependencies:
-    "@ledgerhq/devices": ^6.20.0
-    "@ledgerhq/errors": ^6.10.0
-    "@ledgerhq/hw-transport": ^6.20.0
-    "@ledgerhq/logs": ^6.10.0
-  checksum: 428544f11aee3e57c0160924e5b1b5d925e27f4090226d1f3a571a8520bf6e85fa8d3eabcec94f3665a05cf14ca08924b8f2273018b5cf2823c3b43fc3c99909
+    "@ledgerhq/devices": 8.16.0
+    "@ledgerhq/errors": ^6.37.0
+    "@ledgerhq/hw-transport": 6.35.5
+    "@ledgerhq/logs": ^6.17.0
+  checksum: 887a1ea22c17f3b3a34e526043a9e65ba0dae9d68dd04e36d5d640b63d22d2db5f5d03f278d0d81d2cdde4980c5ce9846335f415959c967e7e2a92d1d2c89b78
   languageName: node
   linkType: hard
 
@@ -14313,6 +14282,18 @@ __metadata:
     "@ledgerhq/logs": ^6.14.0
     events: ^3.3.0
   checksum: 471a6b659bca8d0204daf85627188b513a74d4fd24bf02ba987fb29c48e577ea19c5232d9ddbad6e05511d2c5a01e9bb3ae8ad0327502d85acd2b90a0e70c0d9
+  languageName: node
+  linkType: hard
+
+"@ledgerhq/hw-transport@npm:6.35.5":
+  version: 6.35.5
+  resolution: "@ledgerhq/hw-transport@npm:6.35.5"
+  dependencies:
+    "@ledgerhq/devices": 8.16.0
+    "@ledgerhq/errors": ^6.37.0
+    "@ledgerhq/logs": ^6.17.0
+    events: ^3.3.0
+  checksum: 4587da0d56e465a3373fa97a985fab4615bc7c27b591ba1831ed83e0dfc3f240309100483dd9666e40c3437e3fbf0302edc53bf2ece246d705220a0f1e42edf1
   languageName: node
   linkType: hard
 
@@ -14366,6 +14347,13 @@ __metadata:
   version: 6.14.0
   resolution: "@ledgerhq/logs@npm:6.14.0"
   checksum: 3ba0d28e93e8b1ab355ad95711fd00f2245b3f07204c5de6a0e7570887e9ec847bfaf51a3213e9952ba8a2a4db81084d7864067b9517a1afa0f3a4d869193471
+  languageName: node
+  linkType: hard
+
+"@ledgerhq/logs@npm:^6.17.0":
+  version: 6.17.0
+  resolution: "@ledgerhq/logs@npm:6.17.0"
+  checksum: 2bdf70dd526a718a23e56436223da83178ad830f246cdfa4a06abc750d97e5f11d76f844e3255ca2afe43dfb6804b1d852b4fd8b7a95a5d276586fada57d42a2
   languageName: node
   linkType: hard
 

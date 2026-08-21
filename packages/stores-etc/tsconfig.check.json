@@ -50,8 +50,6 @@
       "@keplr-wallet/stores-core/build/*": ["../stores-core/src/*"],
       "@keplr-wallet/stores-etc": ["src"],
       "@keplr-wallet/stores-etc/build/*": ["src/*"],
-      "@keplr-wallet/stores-eth": ["../stores-eth/src"],
-      "@keplr-wallet/stores-eth/build/*": ["../stores-eth/src/*"],
       "@keplr-wallet/stores-ibc": ["../stores-ibc/src"],
       "@keplr-wallet/stores-ibc/build/*": ["../stores-ibc/src/*"],
       "@keplr-wallet/types": ["../types/src"],

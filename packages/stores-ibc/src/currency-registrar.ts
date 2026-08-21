@@ -12,8 +12,39 @@ import {
 } from "@keplr-wallet/stores";
 import { DenomHelper, KVStore } from "@keplr-wallet/common";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
-import { EthereumQueries } from "@keplr-wallet/stores-eth";
 import debounce from "lodash.debounce";
+
+/**
+ * Optional ethereum query surface previously provided by @keplr-wallet/stores-eth.
+ * Fetch products use EvmQueries from @keplr-wallet/stores instead and do not
+ * register this shape; branches that read `queries.ethereum` are no-ops today.
+ */
+type OptionalEthereumQueries = {
+  ethereum?: {
+    queryEthereumERC20ContractInfo: {
+      getQueryContract: (contractAddress: string) => {
+        isFetching: boolean;
+        tokenInfo?: {
+          decimals: number;
+          symbol: string;
+        };
+      };
+    };
+    queryEthereumCoingeckoTokenInfo: {
+      getQueryContract: (contractAddress: string) =>
+        | {
+            isFetching: boolean;
+            symbol?: string | null;
+            decimals?: number | null;
+            coingeckoId?: string;
+            logoURI?: string;
+            error?: { status?: number };
+          }
+        | undefined
+        | null;
+    };
+  };
+};
 
 type CacheIBCDenomData = {
   denomTrace: {
@@ -117,7 +148,7 @@ export class IBCCurrencyRegistrarInner {
       CosmosQueries &
         Partial<CosmwasmQueries> &
         Partial<SecretQueries> &
-        Partial<EthereumQueries>
+        OptionalEthereumQueries
     >,
     protected readonly coinDenomGenerator: (
       denomTrace: {
@@ -1255,7 +1286,7 @@ export class IBCCurrencyRegistrar<C extends ChainInfo = ChainInfo> {
       CosmosQueries &
         Partial<CosmwasmQueries> &
         Partial<SecretQueries> &
-        Partial<EthereumQueries>
+        OptionalEthereumQueries
     >,
     protected readonly cosmwasmQueriesStore:
       | {

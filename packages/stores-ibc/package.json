@@ -24,7 +24,6 @@
     "@keplr-wallet/common": "0.13.11",
     "@keplr-wallet/cosmos": "0.13.11",
     "@keplr-wallet/stores": "0.13.11",
-    "@keplr-wallet/stores-eth": "0.13.11",
     "@keplr-wallet/types": "0.13.11",
     "lodash.debounce": "^4.0.8"
   },
