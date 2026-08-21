@@ -796,28 +796,6 @@ export class UnlockKeyRingMsg extends Message<{
   }
 }
 
-export class RestoreWalletMsg extends Message<WalletStatus> {
-  public static type() {
-    return "restore-wallet";
-  }
-
-  constructor() {
-    super();
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return "keyring";
-  }
-
-  type(): string {
-    return RestoreWalletMsg.type();
-  }
-}
-
 export class CurrentAccountMsg extends Message<Account> {
   public static type() {
     return "current-account-msg";

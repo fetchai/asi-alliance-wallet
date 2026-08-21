@@ -369,7 +369,7 @@ export interface WalletApi {
   status(): Promise<WalletStatus>;
 
   /**
-   * Allows the user to restore the wallet from the UI in case the wallet keyring is not loaded
+   * @deprecated Keyring is loaded at background init. Same as {@link status}.
    */
   restoreWallet(): Promise<WalletStatus>;
 

@@ -21,7 +21,6 @@ import {
   AddEntryMsg,
   UpdateEntryMsg,
   DeleteEntryMsg,
-  RestoreWalletMsg,
   GetChainInfosWithCoreTypesMsg,
   LockKeyRingMsg,
   GetKeyRingStatusOnlyMsg,
@@ -94,10 +93,8 @@ export class FetchWalletApi implements WalletApi {
   }
 
   async restoreWallet(): Promise<WalletStatus> {
-    return await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new RestoreWalletMsg()
-    );
+    // Keyring loads at background init; no separate restore step remains.
+    return this.status();
   }
 
   async enable(chainIds: string | string[]): Promise<void> {

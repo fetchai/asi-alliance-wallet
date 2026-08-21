@@ -1414,8 +1414,8 @@ export class Keplr implements IKeplr, KeplrCoreTypes {
               );
 
               // extension에서 `web_accessible_resources`에 추가된 파일은 이렇게 접근이 가능함
-              const fontUrl = chrome.runtime.getURL(
-                "/assets/Inter-SemiBold.ttf"
+              const fontUrl = browser.runtime.getURL(
+                "assets/Inter-SemiBold.ttf"
               );
               const fontFaceAndKeyFrames = `
                 @font-face {
@@ -1506,8 +1506,8 @@ export class Keplr implements IKeplr, KeplrCoreTypes {
               // megaphoneWrapper.style.background = "#FC8441";
               //
               // const megaphone = document.createElement("img");
-              // const megaphoneUrl = chrome.runtime.getURL(
-              //   "/assets/megaphone.svg"
+              // const megaphoneUrl = browser.runtime.getURL(
+              //   "assets/megaphone.svg"
               // );
               // megaphone.src = megaphoneUrl;
               // megaphone.style.width = "1.25rem";
@@ -1533,7 +1533,7 @@ export class Keplr implements IKeplr, KeplrCoreTypes {
               keplrLogoWrap.style.marginRight = "1rem";
               const keplrLogo = document.createElement("img");
               const keplrLogoUrl =
-                chrome.runtime.getURL(`/assets/icon-128.png`);
+                browser.runtime.getURL(`assets/icon-128.png`);
               keplrLogo.src = keplrLogoUrl;
               keplrLogo.style.boxSizing = "border-box";
               keplrLogo.style.width = "3rem";
@@ -1541,7 +1541,7 @@ export class Keplr implements IKeplr, KeplrCoreTypes {
               keplrLogoWrap.appendChild(keplrLogo);
 
               const logoClickCursor = document.createElement("img");
-              const logoClickCursorUrl = chrome.runtime.getURL(
+              const logoClickCursorUrl = browser.runtime.getURL(
                 "assets/icon-click-cursor.png"
               );
               logoClickCursor.src = logoClickCursorUrl;
