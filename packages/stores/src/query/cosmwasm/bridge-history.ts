@@ -1,27 +1,24 @@
-import { KVStore } from "@keplr-wallet/common";
-import Axios from "axios";
 import { computed, makeObservable } from "mobx";
-import { ChainGetter, HasMapStore, ObservableJsonRPCQuery } from "../../common";
+import {
+  HasMapStore,
+  ObservableJsonRPCQuery,
+  QuerySharedContext,
+} from "../../common";
+import { ChainGetter } from "../../chain";
 import { BridgeHistory } from "../../common/types";
 import { ObservableQueryNativeFetCosmosBridge } from "./native-fet-bridge";
 import { Tx } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 Tx;
 export class ObservableBridgeHistoryInner extends ObservableJsonRPCQuery<any> {
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainGetter: ChainGetter,
     protected readonly nativeBridge: ObservableQueryNativeFetCosmosBridge,
     protected readonly bech32Address: string
   ) {
     const fetchhubUrl = chainGetter.getChain("fetchhub-4").rpc;
 
-    const instance = Axios.create({
-      ...{
-        baseURL: fetchhubUrl,
-      },
-    });
-
-    super(kvStore, instance, "", "tx_search", [
+    super(kvStore, fetchhubUrl, "", "tx_search", [
       `wasm._contract_address='${nativeBridge.nativeBridgeAddress}' AND wasm.action='swap' AND message.sender='${bech32Address}'`,
       false,
       "1",
@@ -60,7 +57,7 @@ export class ObservableBridgeHistoryInner extends ObservableJsonRPCQuery<any> {
 
 export class ObservableQueryBridgeHistory extends HasMapStore<ObservableBridgeHistoryInner> {
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainGetter: ChainGetter,
     nativeBridge: ObservableQueryNativeFetCosmosBridge
   ) {

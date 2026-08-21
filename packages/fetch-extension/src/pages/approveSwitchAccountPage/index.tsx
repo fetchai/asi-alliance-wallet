@@ -8,11 +8,13 @@ import { useInteractionInfo } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
 import classNames from "classnames";
 import { useStore } from "../../stores";
+import { GetCosmosKeysForEachVaultSettledMsg } from "@keplr-wallet/background";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
+import { isPureEvmChain } from "@utils/filters";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -26,7 +28,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
     } = useStore();
 
     const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
-    const [addressIndex, setAddressIndex] = useState<number>();
+    const [addressIndex, setAddressIndex] = useState<string>();
     const navigate = useNavigate();
 
     const interactionInfo = useInteractionInfo(() => {
@@ -38,13 +40,21 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
         if (accountSwitchStore.waitingSuggestedAccount) {
           // TODO: update event properties then change chainId below
           const requester = new InExtensionMessageRequester();
-          const msg = new ListAccountsMsg();
-          const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
+          const msg = new GetCosmosKeysForEachVaultSettledMsg(
+            chainStore.current.chainId,
+            keyRingStore?.keyInfos.map((item) => item.id)
+          );
+          const settledResponse = await requester.sendMessage(
+            BACKGROUND_PORT,
+            msg
+          );
+          const accounts = settledResponse.map((item: any) => item.value);
 
-          const isEvm = chainStore.current.features?.includes("evm") ?? false;
+          const current = chainStore.current;
+          const isEvm = isPureEvmChain(current);
           const addresses = accounts.map((account) => {
             if (isEvm) {
-              return account.EVMAddress;
+              return account.ethereumHexAddress;
             }
 
             return account.bech32Address;
@@ -57,7 +67,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
             );
           });
 
-          setAddressIndex(index);
+          setAddressIndex(accounts[index]?.vaultId);
           analyticsStore.logEvent("Account switch suggested", {
             chainId: accountSwitchStore.waitingSuggestedAccount.data.address,
           });
@@ -225,7 +235,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                   />
                 </div>
 
-                {addressIndex === -1 && (
+                {addressIndex === "" && (
                   <p>
                     Provided addresses not found in keyring. Nothing to Approve,
                     reject to close this window
@@ -267,7 +277,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                 }}
                 disabled={
                   !accountSwitchStore.waitingSuggestedAccount ||
-                  addressIndex === -1
+                  addressIndex === ""
                 }
                 dataLoading={accountSwitchStore.isLoading}
                 onClick={async (e: any) => {
@@ -277,8 +287,8 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     accountSwitchStore.waitingSuggestedAccount?.data.address;
                   if (address !== undefined && addressIndex !== undefined) {
                     try {
-                      accountSwitchStore.approve(address);
-                      keyRingStore.changeKeyRing(addressIndex);
+                      await accountSwitchStore.approve(address);
+                      await keyRingStore.selectKeyRing(addressIndex);
                       analyticsStore.logEvent("change_wallet_click");
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();
@@ -299,7 +309,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     interactionInfo.interaction &&
                     !interactionInfo.interactionInternal
                   ) {
-                    window.close();
+                    handleExternalInteractionWithNoProceedNext();
                   } else {
                     navigate("/");
                   }

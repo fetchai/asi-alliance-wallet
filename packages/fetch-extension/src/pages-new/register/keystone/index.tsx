@@ -5,7 +5,7 @@ import { Button, Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import style from "../style.module.scss";
 import { Input, PasswordInput } from "@components/form";
-import { useBIP44Option } from "../advanced-bip44";
+// import { useBIP44Option } from "../advanced-bip44";
 import { BackButton } from "../index";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
@@ -50,7 +50,7 @@ export const ImportKeystonePage: FunctionComponent<{
 }> = observer(({ registerConfig }) => {
   const intl = useIntl();
 
-  const bip44Option = useBIP44Option();
+  // const bip44Option = useBIP44Option();
 
   const {
     register,
@@ -76,13 +76,13 @@ export const ImportKeystonePage: FunctionComponent<{
       </div>
       <Form
         className={style["formContainer"]}
-        onSubmit={handleSubmit(async (data: FormData) => {
+        onSubmit={handleSubmit(async (_data: FormData) => {
           try {
-            await registerConfig.createKeystone(
-              data.name,
-              data.password,
-              bip44Option.bip44HDPath
-            );
+            // await registerConfig.createKeystone(
+            //   data.name,
+            //   data.password,
+            //   bip44Option.bip44HDPath
+            // );
             analyticsStore.setUserProperties({
               registerType: "keystone",
               accountType: "keystone",

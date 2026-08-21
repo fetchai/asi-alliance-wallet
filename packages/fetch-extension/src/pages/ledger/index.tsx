@@ -1,11 +1,13 @@
 import React, {
   ChangeEvent,
   FunctionComponent,
+  PropsWithChildren,
   useEffect,
   useState,
 } from "react";
 
 import {
+  BIP44HDPath,
   Ledger,
   LedgerApp,
   LedgerWebHIDIniter,
@@ -25,13 +27,14 @@ import { useNavigate } from "react-router";
 import { BackButton } from "../../pages-new/register";
 import classnames from "classnames";
 import { useUSBDevices } from "@utils/ledger";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { ErrCodeAppNotInitialised } from "@keplr-wallet/background/build/ledger/types";
 
 export const LedgerSetupView: FunctionComponent<{
+  bip44HDPath: BIP44HDPath;
   onBackPress?: () => void;
-  onInitSucceed: () => void;
-}> = observer(({ onBackPress, onInitSucceed }) => {
+  onInitSucceed: (ppubkey: Uint8Array) => void;
+}> = observer(({ bip44HDPath, onBackPress, onInitSucceed }) => {
   const { ledgerInitStore } = useStore();
 
   const intl = useIntl();
@@ -44,7 +47,7 @@ export const LedgerSetupView: FunctionComponent<{
   const toggleWebHIDFlag = async (e: ChangeEvent) => {
     e.preventDefault();
 
-    if (!ledgerInitStore.isWebHID && !(await Ledger.isWebHIDSupported())) {
+    if (!ledgerInitStore.isWebHID && !window.navigator.hid) {
       setShowWebHIDWarning(true);
       return;
     }
@@ -54,21 +57,23 @@ export const LedgerSetupView: FunctionComponent<{
   };
 
   useEffect(() => {
+    if (!ledgerInitStore.requestedLedgerApp) {
+      return;
+    }
+
     if (ledgerInitStore.isSignCompleted) {
       setTimeout(window.close, 3000);
     }
 
     if (ledgerInitStore.isGetPubKeySucceeded) {
-      // Don't need to delay to close because this event probably occurs only in the register page in tab.
-      // So, don't need to consider the window refocusing.
       window.close();
     }
 
     if (ledgerInitStore.isInitAborted) {
-      // If ledger init is aborted due to the timeout on the background, just close the window.
       window.close();
     }
   }, [
+    ledgerInitStore.requestedLedgerApp,
     ledgerInitStore.isGetPubKeySucceeded,
     ledgerInitStore.isSignCompleted,
     ledgerInitStore.isInitAborted,
@@ -85,24 +90,24 @@ export const LedgerSetupView: FunctionComponent<{
     setTryInitializing(true);
 
     let initErrorOn: WalletError | undefined;
-
+    let pubkey: any;
     try {
       if (!(await testUSBDevices(ledgerInitStore.isWebHID))) {
         throw new Error("There is no device selected");
       }
+
+      const ledgerApp = ledgerInitStore.requestedLedgerApp ?? LedgerApp.Cosmos;
+      const cosmosLikeApp = ledgerInitStore.cosmosLikeApp || "Cosmos";
 
       const transportIniter = ledgerInitStore.isWebHID
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
       try {
-        if (ledgerInitStore.requestedLedgerApp === LedgerApp.Cosmos) {
-          await CosmosApp.openApp(
-            transport,
-            ledgerInitStore.cosmosLikeApp || "Cosmos"
-          );
-        } else if (ledgerInitStore.requestedLedgerApp === LedgerApp.Ethereum) {
+        if (ledgerApp === LedgerApp.Ethereum) {
           await CosmosApp.openApp(transport, "Ethereum");
+        } else {
+          await CosmosApp.openApp(transport, cosmosLikeApp);
         }
       } catch (e) {
         // Ignore error
@@ -133,10 +138,10 @@ export const LedgerSetupView: FunctionComponent<{
       const ledger = await Ledger.init(
         ledgerInitStore.isWebHID ? LedgerWebHIDIniter : LedgerWebUSBIniter,
         undefined,
-        // requestedLedgerApp should be set if ledger init needed.
-        ledgerInitStore.requestedLedgerApp!,
-        ledgerInitStore.cosmosLikeApp || "Cosmos"
+        ledgerApp,
+        cosmosLikeApp
       );
+      pubkey = await ledger.getPublicKey(ledgerApp, bip44HDPath);
       await ledger.close();
       // Unfortunately, closing ledger blocks the writing to Ledger on background process.
       // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
@@ -156,8 +161,10 @@ export const LedgerSetupView: FunctionComponent<{
     setTryInitializing(false);
 
     if (initErrorOn === undefined) {
-      onInitSucceed();
-      await ledgerInitStore.resume();
+      onInitSucceed(pubkey);
+      if (ledgerInitStore.requestedLedgerApp) {
+        await ledgerInitStore.resume();
+      }
     }
   };
 
@@ -326,13 +333,15 @@ export const LedgerSetupView: FunctionComponent<{
   );
 });
 
-const Instruction: FunctionComponent<{
-  icon: React.ReactElement;
-  title: string;
-  paragraph: string;
-  pass: boolean;
-  selected: boolean;
-}> = ({ icon, title, paragraph, children, pass, selected }) => {
+const Instruction: FunctionComponent<
+  PropsWithChildren<{
+    icon: React.ReactElement;
+    title: string;
+    paragraph: string;
+    pass: boolean;
+    selected: boolean;
+  }>
+> = ({ icon, title, paragraph, children, pass, selected }) => {
   return (
     <div
       className={classnames(style["instruction"], {

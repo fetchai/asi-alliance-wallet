@@ -1,18 +1,21 @@
-import { KVStore } from "@keplr-wallet/common";
-import Axios from "axios";
 import { computed, makeObservable } from "mobx";
-import { ChainGetter, ObservableJsonRPCQuery } from "../../common";
+import { ObservableJsonRPCQuery, QuerySharedContext } from "../../common";
+import { ChainGetter } from "../../chain";
 import { BigNumber } from "@ethersproject/bignumber";
 
 export class ObservableQueryLatestBlock extends ObservableJsonRPCQuery<string> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
-    const instance = Axios.create({
-      ...{
-        baseURL: chainGetter.getChain(chainId).rpc,
-      },
-    });
-
-    super(kvStore, instance, "", "eth_blockNumber", []);
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
+    super(
+      kvStore,
+      chainGetter.getChain(chainId).rpc,
+      "",
+      "eth_blockNumber",
+      []
+    );
 
     makeObservable(this);
   }

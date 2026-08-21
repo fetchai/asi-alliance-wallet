@@ -1,4 +1,9 @@
-import React, { ChangeEvent, FunctionComponent, useState } from "react";
+import React, {
+  ChangeEvent,
+  FunctionComponent,
+  PropsWithChildren,
+  useState,
+} from "react";
 import "../../styles/global.scss";
 
 import style from "./style.module.scss";
@@ -9,7 +14,6 @@ import {
   NotificationStoreProvider,
   useNotification,
 } from "@components/notification";
-import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 import {
   Ledger,
   LedgerApp,
@@ -33,6 +37,7 @@ import { ErrorBoundary } from "../../error-boundary";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { DropdownContextProvider } from "@components-v2/dropdown/dropdown-context";
 import { ChatStoreProvider } from "@components/chat/store";
+import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
 
 export const LedgerGrantPage: FunctionComponent = observer(() => {
   const intl = useIntl();
@@ -58,7 +63,6 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
         ? LedgerWebHIDIniter
         : LedgerWebUSBIniter;
       const transport = await transportIniter();
-
       try {
         await CosmosApp.openApp(transport, cosmosLikeApp);
       } catch (e) {
@@ -77,7 +81,6 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
         } finally {
           await ledger?.close();
         }
-
         setStatus("success");
       }
     } catch (e) {
@@ -92,7 +95,7 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
   const toggleWebHIDFlag = async (e: ChangeEvent) => {
     e.preventDefault();
 
-    if (!ledgerInitStore.isWebHID && !(await Ledger.isWebHIDSupported())) {
+    if (!ledgerInitStore.isWebHID && !window.navigator.hid) {
       setShowWebHIDWarning(true);
       return;
     }
@@ -273,13 +276,15 @@ export const LedgerGrantPage: FunctionComponent = observer(() => {
   );
 });
 
-const Instruction: FunctionComponent<{
-  icon: React.ReactElement;
-  title: string;
-  paragraph: string;
-  isLoading: boolean;
-  onClick: () => void;
-}> = ({ icon, title, paragraph, isLoading = false, children, onClick }) => {
+const Instruction: FunctionComponent<
+  PropsWithChildren<{
+    icon: React.ReactElement;
+    title: string;
+    paragraph: string;
+    isLoading: boolean;
+    onClick: () => void;
+  }>
+> = ({ icon, title, paragraph, isLoading = false, children, onClick }) => {
   return (
     <div
       className={classnames(style["instruction"])}

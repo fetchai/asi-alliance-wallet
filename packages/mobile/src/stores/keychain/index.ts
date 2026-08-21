@@ -48,6 +48,12 @@ export class KeychainStore {
     };
   }
 
+  // Used for writing only — no auth prompt so iOS won't challenge during SecItemAdd
+  protected static writeOptions: Keychain.Options = {
+    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+  };
+
   constructor(
     protected readonly kvStore: KVStore,
     protected readonly keyRingStore: KeyRingStore

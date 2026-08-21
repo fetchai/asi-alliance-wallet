@@ -66,7 +66,7 @@ export const ValidatorCardV2 = observer(
     const votingPower =
       validator &&
       new CoinPretty(
-        chainStore.current.stakeCurrency,
+        chainStore.current?.stakeCurrency || chainStore.current.currencies[0],
         new Dec(validator?.tokens)
       )
         .maxDecimals(0)

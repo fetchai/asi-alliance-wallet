@@ -36,7 +36,28 @@ export type ClientStateResponse = {
   };
 };
 
+export type ClientStateV2Response = {
+  client_state: {
+    "@type": string;
+    data: string;
+    latest_height: {
+      revision_number: string;
+      revision_height: string;
+    };
+  };
+};
+
 export type DenomTraceResponse = {
+  denom: {
+    base: string;
+    trace: {
+      port_id: string;
+      channel_id: string;
+    }[];
+  };
+};
+
+export type DenomTraceV2Response = {
   denom: {
     base: string;
     trace: {

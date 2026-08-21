@@ -17,7 +17,7 @@ export const Receive: FunctionComponent = () => {
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   const qrCodeRef = useCallback(
-    (node) => {
+    (node: any) => {
       if (node !== null && accountInfo.bech32Address) {
         QrCode.toCanvas(node, accountInfo.bech32Address);
       }

@@ -1,10 +1,10 @@
 import { ChainsService } from "../chains";
-import { PermissionService } from "../permission";
 import { TendermintTxTracer } from "@keplr-wallet/cosmos";
 import { Notification } from "./types";
-
-import { Buffer } from "buffer/";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
+import { Buffer } from "buffer/";
+import { retry } from "@keplr-wallet/common";
+import { GetTransactionReceiptResponse, RpcProvider } from "starknet";
 
 interface CosmosSdkError {
   codespace: string;
@@ -20,28 +20,35 @@ interface ABCIMessageLog {
 }
 
 export class BackgroundTxService {
-  protected chainsService!: ChainsService;
-  public permissionService!: PermissionService;
+  constructor(
+    protected readonly chainsService: ChainsService,
+    protected readonly notification: Notification
+  ) {}
 
-  constructor(protected readonly notification: Notification) {}
-
-  init(chainsService: ChainsService, permissionService: PermissionService) {
-    this.chainsService = chainsService;
-    this.permissionService = permissionService;
+  async init(): Promise<void> {
+    // noop
   }
 
   async sendTx(
     chainId: string,
     tx: unknown,
-    mode: "async" | "sync" | "block"
+    mode: "async" | "sync" | "block",
+    options: {
+      silent?: boolean;
+      skipTracingTxResult?: boolean;
+      waitFulfillment?: boolean;
+      onFulfill?: (tx: any) => void;
+    }
   ): Promise<Uint8Array> {
-    const chainInfo = await this.chainsService.getChainInfo(chainId);
+    const chainInfo = this.chainsService.getChainInfoOrThrow(chainId);
 
-    this.notification.create({
-      iconRelativeUrl: "assets/logo-256.png",
-      title: "Tx is pending...",
-      message: "Wait a second",
-    });
+    if (!options.silent) {
+      this.notification.create({
+        iconRelativeUrl: "assets/logo-256.png",
+        title: "Tx is pending...",
+        message: "Wait a second",
+      });
+    }
 
     const isProtoTx = Buffer.isBuffer(tx) || tx instanceof Uint8Array;
 
@@ -87,18 +94,111 @@ export class BackgroundTxService {
 
       const txHash = Buffer.from(txResponse.txhash, "hex");
 
-      const txTracer = new TendermintTxTracer(chainInfo.rpc, "/websocket");
-      txTracer.traceTx(txHash).then((tx) => {
-        txTracer.close();
-        BackgroundTxService.processTxResultNotification(this.notification, tx);
-      });
+      if (options.skipTracingTxResult) {
+        return txHash;
+      }
+
+      const waitFulfillment = () => {
+        return retry(
+          () => {
+            return new Promise<void>((resolve, reject) => {
+              const txTracer = new TendermintTxTracer(
+                chainInfo.rpc,
+                "/websocket"
+              );
+              txTracer.addEventListener("close", () => {
+                // reject if ws closed before fulfilled
+                // 하지만 로직상 fulfill 되기 전에 ws가 닫히는게 되기 때문에
+                // delay를 좀 준다.
+                // trace 이후 로직은 동기적인 로직밖에 없기 때문에 문제될 게 없다.
+                // 문제될게 없다.
+                setTimeout(() => {
+                  reject();
+                }, 500);
+              });
+              txTracer.addEventListener("error", () => {
+                reject();
+              });
+              txTracer.traceTx(txHash).then((tx) => {
+                txTracer.close();
+
+                if (options.onFulfill) {
+                  if (!tx.hash) {
+                    tx.hash = txHash;
+                  }
+                  options.onFulfill(tx);
+                }
+
+                if (!options.silent) {
+                  BackgroundTxService.processTxResultNotification(
+                    this.notification,
+                    tx
+                  );
+                }
+
+                resolve();
+              });
+            });
+          },
+          {
+            maxRetries: 10,
+            waitMsAfterError: 10 * 1000, // 10sec
+            maxWaitMsAfterError: 5 * 60 * 1000, // 5min
+          }
+        );
+      };
+      if (options.waitFulfillment) {
+        await waitFulfillment();
+      } else {
+        // 이 기능은 tx commit일때 notification을 띄울 뿐이다.
+        // 실제 로직 처리와는 관계가 없어야하기 때문에 여기서 await을 하면 안된다!!
+        waitFulfillment();
+      }
 
       return txHash;
     } catch (e) {
       console.log(e);
-      BackgroundTxService.processTxErrorNotification(this.notification, e);
+      if (!options.silent) {
+        BackgroundTxService.processTxErrorNotification(this.notification, e);
+      }
       throw e;
     }
+  }
+
+  async traceTx(chainId: string, txHash: string): Promise<any> {
+    const chainInfo = this.chainsService.getChainInfoOrThrow(chainId);
+    const txHashBuffer = Buffer.from(txHash, "hex");
+
+    return await retry(
+      () => {
+        return new Promise<any>((resolve, reject) => {
+          const txTracer = new TendermintTxTracer(chainInfo.rpc, "/websocket");
+          txTracer.addEventListener("close", () => {
+            // reject if ws closed before fulfilled
+            // 하지만 로직상 fulfill 되기 전에 ws가 닫히는게 되기 때문에
+            // delay를 좀 준다.
+            // trace 이후 로직은 동기적인 로직밖에 없기 때문에 문제될 게 없다.
+            // 문제될게 없다.
+            setTimeout(() => {
+              reject();
+            }, 500);
+          });
+          txTracer.addEventListener("error", () => {
+            reject();
+          });
+          txTracer.traceTx(txHashBuffer).then((tx) => {
+            txTracer.close();
+
+            resolve(tx);
+          });
+        });
+      },
+      {
+        maxRetries: 10,
+        waitMsAfterError: 10 * 1000, // 10sec
+        maxWaitMsAfterError: 5 * 60 * 1000, // 5min
+      }
+    );
   }
 
   private static processTxResultNotification(
@@ -183,5 +283,97 @@ export class BackgroundTxService {
       title: "Tx failed",
       message,
     });
+  }
+
+  async waitStarknetTransaction(
+    chainId: string,
+    txHash: string
+  ): Promise<GetTransactionReceiptResponse> {
+    const modularChainInfo = this.chainsService.getModularChainInfo(chainId);
+    if (!modularChainInfo) {
+      throw new Error("Invalid chain id");
+    }
+    if (!("starknet" in modularChainInfo)) {
+      throw new Error("Chain is not for starknet");
+    }
+    const starknet = modularChainInfo.starknet;
+    const provider = new RpcProvider({
+      nodeUrl: starknet.rpc,
+      specVersion: "0.9.0",
+    });
+
+    this.notification.create({
+      iconRelativeUrl: "assets/logo-256.png",
+      title: "Tx is pending...",
+      message: "Wait a second",
+    });
+
+    try {
+      const res = await provider.waitForTransaction(txHash, {
+        retryInterval: 1000,
+      });
+
+      this.notification.create({
+        iconRelativeUrl: "assets/logo-256.png",
+        title: "Tx succeeds",
+        message: "Congratulations!",
+      });
+      return res;
+    } catch (e) {
+      this.notification.create({
+        iconRelativeUrl: "assets/logo-256.png",
+        title: "Tx failed",
+        message: "",
+      });
+
+      throw e;
+    }
+  }
+
+  async pushBitcoinTransaction(
+    chainId: string,
+    txHex: string
+  ): Promise<string> {
+    const modularChainInfo = this.chainsService.getModularChainInfo(chainId);
+    if (!modularChainInfo) {
+      throw new Error("Invalid chain id");
+    }
+
+    if (!("bitcoin" in modularChainInfo)) {
+      throw new Error("Chain is not for bitcoin");
+    }
+
+    const indexerUrl = modularChainInfo.bitcoin.rest;
+
+    try {
+      const res = await simpleFetch<string>(`${indexerUrl}/tx`, {
+        method: "POST",
+        body: txHex,
+        headers: {
+          "Content-Type": "text/plain",
+        },
+      });
+
+      if (res.status !== 200) {
+        const message = res.data;
+        throw new Error(message);
+      }
+
+      this.notification.create({
+        iconRelativeUrl: "assets/logo-256.png",
+        title: "Tx succeeds",
+        message: "Congratulations!",
+      });
+
+      return res.data;
+    } catch (e) {
+      this.notification.create({
+        iconRelativeUrl: "assets/logo-256.png",
+        title: "Tx failed",
+        message: "",
+      });
+
+      throw e;
+    }
   }
 }

@@ -8,7 +8,7 @@ import { Hash } from "@keplr-wallet/crypto";
 import { UncontrolledTooltip } from "reactstrap";
 import {
   WrongViewingKeyError,
-  ObservableQueryBalanceInner,
+  IObservableQueryBalanceImpl,
 } from "@keplr-wallet/stores";
 import { useNotification } from "@components/notification";
 import { useLoadingIndicator } from "@components/loading-indicator";
@@ -20,7 +20,7 @@ import { formatTokenName } from "@utils/format";
 import { TXNTYPE } from "../../config";
 
 const TokenView: FunctionComponent<{
-  balance: ObservableQueryBalanceInner;
+  balance: IObservableQueryBalanceImpl;
   onClick: () => void;
 }> = observer(({ onClick, balance }) => {
   const { chainStore, accountStore, tokensStore } = useStore();
@@ -38,7 +38,9 @@ const TokenView: FunctionComponent<{
   const isZeroBal = balance.balance.toDec().equals(new Dec(0));
 
   const backgroundColor = useMemo(() => {
-    const hash = Hash.sha256(Buffer.from(minimalDenom));
+    const hash = Hash.sha256(
+      Buffer.from(minimalDenom) as Uint8Array
+    ) as Uint8Array;
     if (hash.length > 0) {
       return backgroundColors[hash[0] % backgroundColors.length];
     } else {
@@ -51,7 +53,9 @@ const TokenView: FunctionComponent<{
   // It needs to create the id deterministically according to the currency.
   // But, it is hard to ensure that the id is valid selector because the currency can be suggested from the webpages.
   // So, just hash the minimal denom and encode it to the hex and remove the numbers.
-  const validSelector = Buffer.from(Hash.sha256(Buffer.from(minimalDenom)))
+  const validSelector = Buffer.from(
+    Hash.sha256(Buffer.from(minimalDenom) as Uint8Array)
+  )
     .toString("hex")
     .replace(/\d+/g, "")
     .slice(0, 20);
@@ -181,11 +185,7 @@ const TokenView: FunctionComponent<{
                 return;
               }
 
-              const tokenOf = tokensStore.getTokensOf(
-                chainStore.current.chainId
-              );
-
-              await tokenOf.addToken({
+              await tokensStore.addToken(chainStore.current.chainId, {
                 ...balance.currency,
                 viewingKey,
               });

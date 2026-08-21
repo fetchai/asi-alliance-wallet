@@ -1,13 +1,13 @@
 import { CoinPrimitive } from "../../../common";
 
 export type Balances = {
-  balances: CoinPrimitive[];
+  balances?: CoinPrimitive[];
   // TODO: Handle pagination?
   // pagination: {};
 };
 
 export type SpendableBalances = {
-  balances: CoinPrimitive[];
+  balances?: CoinPrimitive[];
   // TODO: Handle pagination?
   // pagination: {};
 };

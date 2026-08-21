@@ -9,8 +9,10 @@ import {
 } from "../config.ui.var";
 import { formatAddress } from "./format";
 import { GroupEvent } from "./group-events";
-import { MultiKeyStoreInfoWithSelected } from "@keplr-wallet/background";
+import { KeyInfo } from "@keplr-wallet/background";
 import { RegisterMode } from "@keplr-wallet/hooks";
+import { InteractionWaitingData } from "@keplr-wallet/background";
+import { isRunningInSidePanel } from "./side-panel";
 
 // translate the contact address into the address book name if it exists
 export function getUserName(
@@ -62,17 +64,43 @@ export function getEventMessage(
   return eventMessage;
 }
 
+export const isPrivateKeyType = (type?: string) =>
+  type === "private-key" || type === "privateKey";
+
+export const getKeyRingMeta = (keyInfo?: {
+  insensitive?: Record<string, unknown>;
+}): Record<string, any> => {
+  return (keyInfo?.insensitive?.["keyRingMeta"] as Record<string, any>) ?? {};
+};
+
+export const getKeyInfoSocial = (keyInfo?: {
+  insensitive?: Record<string, unknown>;
+}) => {
+  const meta = getKeyRingMeta(keyInfo);
+  return {
+    socialType:
+      meta["socialType"] ||
+      meta["web3Auth"]?.["type"] ||
+      keyInfo?.insensitive?.["socialType"],
+    email:
+      meta["email"] ||
+      meta["web3Auth"]?.["email"] ||
+      keyInfo?.insensitive?.["email"],
+  };
+};
+
 export const validateWalletName = (
   value: string,
-  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  multiKeyStoreInfo: KeyInfo[],
   registerConfigMode?: RegisterMode
 ) => {
   const alreadyImportedWalletNames = [
     ...new Set(
       multiKeyStoreInfo?.flatMap((item) => {
-        const defaultName = item?.meta?.["name"];
-        const chainNames = item?.meta?.["nameByChain"]
-          ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+        const defaultName = item?.["name"];
+        const keyRingMeta = getKeyRingMeta(item);
+        const chainNames = keyRingMeta?.["nameByChain"]
+          ? Object.values(JSON.parse(keyRingMeta["nameByChain"] as string))
           : [];
         return [defaultName, ...chainNames].filter(Boolean);
       }) ?? []
@@ -101,14 +129,14 @@ export const validateWalletName = (
 };
 
 export const getNextDefaultAccountName = (
-  items: MultiKeyStoreInfoWithSelected,
+  items: KeyInfo[],
   prefix = "account"
 ) => {
   if (items.length === 0) {
     return `${prefix}-1`;
   }
 
-  const lastName = items[items.length - 1]?.meta?.["name"] || "";
+  const lastName = items[items.length - 1]?.["name"] || "";
   const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
   const lastNum = match ? Number(match[1]) : 0;
 
@@ -117,7 +145,7 @@ export const getNextDefaultAccountName = (
 
 export const validateAccountName = (
   value: string,
-  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  multiKeyStoreInfo: KeyInfo[],
   mode: RegisterMode
 ): string | undefined => {
   const trimmedValue = value.trimStart();
@@ -208,5 +236,41 @@ export function toWssUrl(input: string): string {
 export const explorerBaseURL = (chainId: string) => {
   if ([CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(chainId)) {
     return `${EXPLORER_URL}/${chainId}`;
+  }
+};
+
+export const setInteractionDataHref = (
+  interactionData: InteractionWaitingData
+) => {
+  if (interactionData.uri === "/unlock") {
+    // /unlock의 경우는 따로 route에서 unlock이 필요한 경우
+    // 강제로 unlock page를 보여주도록 처리한다.
+    return;
+  }
+
+  const wasInteraction = window.location.href.includes("interaction=true");
+
+  const queryString = `interaction=true&interactionInternal=${interactionData.isInternal}`;
+
+  let uri = interactionData.uri;
+
+  if (uri.startsWith("/")) {
+    uri = uri.slice(1);
+  }
+
+  let url = browser.runtime.getURL(
+    `/${isRunningInSidePanel() ? "sidePanel" : "popup"}.html#/` + uri
+  );
+
+  if (url.includes("?")) {
+    url += "&" + queryString;
+  } else {
+    url += "?" + queryString;
+  }
+
+  if (wasInteraction) {
+    window.location.replace(url);
+  } else {
+    window.location.href = url;
   }
 };

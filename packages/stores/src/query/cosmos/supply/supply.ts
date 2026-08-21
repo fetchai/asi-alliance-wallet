@@ -1,15 +1,15 @@
 import { SupplyTotal } from "./types";
-import { KVStore } from "@keplr-wallet/common";
 import {
-  ChainGetter,
+  QuerySharedContext,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
 import { BankExtension, setupBankExtension } from "@cosmjs/stargate";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableChainQuerySupplyTotal extends ObservableQueryTendermint<SupplyTotal> {
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     denom: string
@@ -31,7 +31,7 @@ export class ObservableChainQuerySupplyTotal extends ObservableQueryTendermint<S
 
 export class ObservableQuerySupplyTotal extends ObservableQueryMap<SupplyTotal> {
   constructor(
-    protected readonly kvStore: KVStore,
+    protected readonly kvStore: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {
@@ -56,6 +56,6 @@ export class ObservableQuerySupplyTotal extends ObservableQueryMap<SupplyTotal> 
 
   getQueryStakeDenom() {
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return this.get(chainInfo.stakeCurrency.coinMinimalDenom);
+    return this.get(chainInfo?.stakeCurrency?.coinMinimalDenom || "");
   }
 }

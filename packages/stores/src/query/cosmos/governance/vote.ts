@@ -1,12 +1,9 @@
-import { KVStore } from "@keplr-wallet/common";
-import {
-  ChainGetter,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
+import { ObservableQueryMap, ObservableQueryTendermint } from "../../../common";
 import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
 import { QueryVoteResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
 import { VoteOption } from "cosmjs-types/cosmos/gov/v1beta1/gov";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<QueryVoteResponse> {
   protected proposalId: string;
@@ -15,7 +12,7 @@ export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<
   protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     proposalsId: string,
@@ -63,15 +60,19 @@ export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<
     /* If bech32 address is empty, it will always fail, so don't need to fetch it.
     also avoid fetching the endpoint for evm networks */
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return (
-      this.bech32Address.length > 0 && !chainInfo?.features?.includes("evm")
-    );
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return this.bech32Address.length > 0 && !isEvm;
   }
 }
 
 export class ObservableQueryProposalVote extends ObservableQueryMap<QueryVoteResponse> {
   constructor(
-    protected readonly kvStore: KVStore,
+    protected readonly kvStore: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {

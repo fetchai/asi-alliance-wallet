@@ -12,6 +12,7 @@ import classNames from "classnames";
 import { GithubIcon } from "@components/icon";
 import { useStore } from "../../stores";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
   const {
@@ -264,7 +265,7 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
                   interactionInfo.interaction &&
                   !interactionInfo.interactionInternal
                 ) {
-                  window.close();
+                  handleExternalInteractionWithNoProceedNext();
                 } else {
                   navigate("/");
                 }

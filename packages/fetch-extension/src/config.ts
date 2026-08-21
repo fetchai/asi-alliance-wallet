@@ -1,6 +1,6 @@
-import { ChainInfoWithRepoUpdateOptions } from "@keplr-wallet/background";
+import { ChainInfoWithSuggestedOptions } from "@fetchai/wallet-types";
 import { Bech32Address } from "@keplr-wallet/cosmos";
-import { ChainInfo } from "@keplr-wallet/types";
+import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
 
 const LOCAL_TEST_NETWORK_CONFIG: ChainInfo = {
   rpc: "http://localhost:26657",
@@ -18,7 +18,7 @@ const LOCAL_TEST_NETWORK_CONFIG: ChainInfo = {
     coinType: 118,
   },
   bech32Config: Bech32Address.defaultBech32Config("fetch"),
-  type: "testnet",
+  isTestnet: true,
   currencies: [
     {
       coinDenom: "stake",
@@ -62,7 +62,7 @@ const REMOTE_TEST_NETWORK_CONFIG: ChainInfo = {
     coinType: 118,
   },
   bech32Config: Bech32Address.defaultBech32Config("fetch"),
-  type: "testnet",
+  isTestnet: true,
   currencies: [
     {
       coinDenom: "stake",
@@ -90,19 +90,23 @@ const REMOTE_TEST_NETWORK_CONFIG: ChainInfo = {
   chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
 };
 
-const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
+const EmbedChainInfos: (
+  | ChainInfo
+  | ModularChainInfo
+  | ChainInfoWithSuggestedOptions
+)[] = [
   {
     rpc: "https://rpc-fetchhub.fetch-ai.com",
     rest: "https://rest-fetchhub.fetch-ai.com",
     chainId: "fetchhub-4",
-    chainName: "fetch",
+    chainName: "Fetchhub",
     stakeCurrency: {
       coinDenom: "FET",
       coinMinimalDenom: "afet",
       coinDecimals: 18,
       coinGeckoId: "fetch-ai",
       coinImageUrl:
-        "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
+        "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/fetchhub/fet.png",
     },
     bip44: {
       coinType: 118,
@@ -115,7 +119,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
         coinDecimals: 18,
         coinGeckoId: "fetch-ai",
         coinImageUrl:
-          "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
+          "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/fetchhub/fet.png",
       },
       {
         coinDenom: "MOBX",
@@ -151,15 +155,17 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["cosmwasm"],
     walletUrlForStaking: "https://browse-fetchhub.fetch.ai/validators",
     govUrl: "https://www.mintscan.io/fetchai/proposals/",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/fetchhub/fet.png",
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://evm-1.keplr.app",
     rest: "https://evm-1.keplr.app",
     // rpc: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     // rest: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
-    chainId: "1",
+    chainId: "eip155:1",
     chainName: "Ethereum",
-    explorerUrl: "https://etherscan.io",
     stakeCurrency: {
       coinDenom: "ETH",
       coinMinimalDenom: "eth",
@@ -168,6 +174,11 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     },
     bip44: {
       coinType: 60,
+    },
+    evm: {
+      chainId: 1,
+      rpc: "https://evm-1.keplr.app",
+      websocket: "wss://evm-1.keplr.app/websocket",
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
@@ -206,16 +217,16 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
         },
       },
     ],
-    features: ["evm"],
+    features: ["eth-key-sign", "eth-address-gen"],
+    updateFromRepoDisabled: true,
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
   },
   {
     rpc: "https://bsc-dataseed.binance.org",
     rest: "https://bsc-dataseed.binance.org/",
-    chainId: "56",
+    chainId: "eip155:56",
     chainName: "Binance Smart Chain",
-    explorerUrl: "https://bscscan.com",
     hideInUI: true,
     stakeCurrency: {
       coinDenom: "BNB",
@@ -227,6 +238,10 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     },
     bip44: {
       coinType: 60,
+    },
+    evm: {
+      chainId: 56,
+      rpc: "https://bsc-dataseed.binance.org",
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
@@ -264,14 +279,14 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     ],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/binancesmartchain/images/bnb.png",
-    features: ["evm"],
+    features: ["eth-key-sign", "eth-address-gen"],
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
   },
   {
     rpc: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     rest: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
-    chainId: "5",
+    chainId: "eip155:5",
     chainName: "Goerli-eth (Testnet)",
     stakeCurrency: {
       coinDenom: "ETH",
@@ -279,10 +294,14 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       coinDecimals: 18,
       coinGeckoId: "ethereum",
     },
-    type: "testnet",
+    isTestnet: true,
     hideInUI: true,
     bip44: {
       coinType: 60,
+    },
+    evm: {
+      chainId: 5,
+      rpc: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
@@ -316,8 +335,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
         },
       },
     ],
-    features: ["evm"],
-    explorerUrl: "https://goerli.etherscan.io",
+    features: ["eth-key-sign", "eth-address-gen"],
   },
   {
     rpc: "https://cosmos-rpc.publicnode.com:443",
@@ -367,10 +385,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/cosmos/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
@@ -435,10 +449,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     ],
     // chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/osmosis.svg"),
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/osmosis/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
@@ -462,7 +472,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
         ? "https://wallet.keplr.app/chains/osmosis"
         : "http://localhost:8080/chains/osmosis",
     bip44: { coinType: 118 },
-    type: "testnet",
+    isTestnet: true,
     bech32Config: Bech32Address.defaultBech32Config("osmo"),
     currencies: [
       {
@@ -498,6 +508,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       "wasmd_0.24+",
       "osmosis-txfees",
     ],
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-secret.keplr.app",
@@ -1911,10 +1922,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["cosmwasm", "ibc-transfer", "ibc-go", "wasmd_0.24+"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/juno/images/juno.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/juno/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
@@ -1966,10 +1973,6 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
       "https://raw.githubusercontent.com/cosmos/chain-registry/master/stargaze/images/stars.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/stargaze/txs/{txHash}",
-    },
     updateFromRepoDisabled: true,
   },
   {
@@ -2427,61 +2430,61 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["ibc-transfer", "ibc-go"],
     updateFromRepoDisabled: true,
   },
-  {
-    rpc: "https://rpc-evmos.keplr.app",
-    rest: "https://lcd-evmos.keplr.app",
-    chainId: "evmos_9001-2",
-    chainName: "Evmos",
-    hideInUI: true,
-    stakeCurrency: {
-      coinDenom: "EVMOS",
-      coinMinimalDenom: "aevmos",
-      coinDecimals: 18,
-      coinGeckoId: "evmos",
-      coinImageUrl:
-        "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-    },
-    walletUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/evmos"
-        : "http://localhost:8080/chains/evmos",
-    walletUrlForStaking:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/evmos"
-        : "http://localhost:8080/chains/evmos",
-    bip44: {
-      coinType: 60,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("evmos"),
-    currencies: [
-      {
-        coinDenom: "EVMOS",
-        coinMinimalDenom: "aevmos",
-        coinDecimals: 18,
-        coinGeckoId: "evmos",
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "EVMOS",
-        coinMinimalDenom: "aevmos",
-        coinDecimals: 18,
-        coinGeckoId: "evmos",
-        coinImageUrl:
-          "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-        gasPriceStep: {
-          low: 25000000000,
-          average: 25000000000,
-          high: 40000000000,
-        },
-      },
-    ],
-    chainSymbolImageUrl:
-      "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
-    features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
-  },
+  // {
+  //   rpc: "https://rpc-evmos.keplr.app",
+  //   rest: "https://lcd-evmos.keplr.app",
+  //   chainId: "evmos_9001-2",
+  //   chainName: "Evmos",
+  //   hideInUI: true,
+  //   stakeCurrency: {
+  //     coinDenom: "EVMOS",
+  //     coinMinimalDenom: "aevmos",
+  //     coinDecimals: 18,
+  //     coinGeckoId: "evmos",
+  //     coinImageUrl:
+  //       "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //   },
+  //   walletUrl:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/evmos"
+  //       : "http://localhost:8080/chains/evmos",
+  //   walletUrlForStaking:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/evmos"
+  //       : "http://localhost:8080/chains/evmos",
+  //   bip44: {
+  //     coinType: 60,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("evmos"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "EVMOS",
+  //       coinMinimalDenom: "aevmos",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "evmos",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "EVMOS",
+  //       coinMinimalDenom: "aevmos",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "evmos",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //       gasPriceStep: {
+  //         low: 25000000000,
+  //         average: 25000000000,
+  //         high: 40000000000,
+  //       },
+  //     },
+  //   ],
+  //   chainSymbolImageUrl:
+  //     "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //   features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
+  // },
   {
     rpc: "https://rpc-injective.keplr.app",
     rest: "https://lcd-injective.keplr.app",
@@ -2527,7 +2530,13 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       },
     ],
     features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
+    evm: {
+      chainId: 1776,
+      rpc: "https://sentry.evm-rpc.injective.network",
+      websocket: "wss://sentry.evm-ws.injective.network",
+    },
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/Injective-logo 2.svg"),
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://kava-rpc.publicnode.com:443",
@@ -3076,7 +3085,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       bech32PrefixConsPub: "axelarvalconspub",
     },
     bip44: { coinType: 118 },
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "AXL",
@@ -3100,7 +3109,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     rpc: "https://rpc-dorado.fetch.ai",
     rest: "https://rest-dorado.fetch.ai",
     chainId: "dorado-1",
-    chainName: "Dorado",
+    chainName: "Dorado Testnet",
     hideInUI: false,
     stakeCurrency: {
       coinDenom: "TESTFET",
@@ -3112,7 +3121,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       coinType: 118,
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "TESTFET",
@@ -3143,12 +3152,13 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-gemini.fetch.ai",
     rest: "https://rest-gemini.fetch.ai",
     chainId: "gemini-1",
-    chainName: "Gemini",
+    chainName: "Gemini Testnet",
     hideInUI: false,
     stakeCurrency: {
       coinDenom: "TESTFET",
@@ -3160,7 +3170,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
       coinType: 118,
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "TESTFET",
@@ -3190,6 +3200,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
     features: ["cosmwasm"],
     walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
+    updateFromRepoDisabled: true,
   },
   // {
   //   rpc: "https://rpc-eridanus-1.fetch.ai",
@@ -3203,7 +3214,7 @@ const EmbedChainInfos: ChainInfoWithRepoUpdateOptions[] = [
   //     coinDecimals: 18,
   //     coinGeckoId: "fetch-ai",
   //   },
-  //   type: "testnet",
+  //   isTestnet: true,
   //   bip44: {
   //     coinType: 118,
   //   },

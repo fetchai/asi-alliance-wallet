@@ -135,7 +135,7 @@ export const SettingPage: FunctionComponent = observer(() => {
             )}
           />
         )}
-        {keyRingStore.keyRingType !== "ledger" &&
+        {keyRingStore.selectedKeyInfo?.type !== "ledger" &&
           config.notiphyWhitelist &&
           (config.notiphyWhitelist.length === 0 ||
             config.notiphyWhitelist.indexOf(accountInfo.bech32Address) !==

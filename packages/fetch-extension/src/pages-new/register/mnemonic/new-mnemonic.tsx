@@ -35,11 +35,9 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
 import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { RefreshAccountList } from "@keplr-wallet/background";
 import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -209,7 +207,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       const intl = useIntl();
       const notification = useNotification();
       const { keyRingStore } = useStore();
-      const accountList = keyRingStore.multiKeyStoreInfo;
+      const accountList = keyRingStore.keyInfos;
       const defaultAccountName = getNextDefaultAccountName(accountList);
       const [passwordCheckbox, setPasswordCheckbox] = useState(false);
       const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
@@ -392,7 +390,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                     validate: (value: string) =>
                       validateAccountName(
                         value,
-                        keyRingStore?.multiKeyStoreInfo,
+                        keyRingStore?.keyInfos,
                         registerConfig.mode
                       ),
                   })}
@@ -717,12 +715,12 @@ export const VerifyMnemonicModePage: FunctionComponent<{
               );
               // if we already have accounts, switch to the newly created account
               if (registerConfig.mode !== "create") {
-                await keyRingStore.changeKeyRing(
-                  keyRingStore.multiKeyStoreInfo.length - 1
+                await keyRingStore.selectKeyRing(
+                  keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
                 );
-                await new InExtensionMessageRequester().sendMessage(
-                  BACKGROUND_PORT,
-                  new RefreshAccountList()
+                dispatchGlobalEventExceptSelf(
+                  "keplr_new_key_created",
+                  keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
                 );
               }
               analyticsStore.setUserProperties({

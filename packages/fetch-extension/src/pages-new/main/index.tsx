@@ -24,6 +24,7 @@ export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
   const [isSelectWalletOpen, setIsSelectWalletOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState<boolean>(false);
+  const [selectedWalletId, setSelectedWalletId] = useState<string>("");
   const [tokenState, setTokenState] = useState({});
   const intl = useIntl();
   const language = useLanguage();
@@ -42,9 +43,9 @@ export const MainPage: FunctionComponent = observer(() => {
   useEffect(() => {
     analyticsStore.logEvent("home_tab_click");
     analyticsStore.setUserProperties({
-      totalAccounts: keyRingStore.multiKeyStoreInfo.length,
+      totalAccounts: keyRingStore.keyInfos.length,
     });
-  }, [analyticsStore, keyRingStore.multiKeyStoreInfo.length]);
+  }, [analyticsStore, keyRingStore.keyInfos.length]);
 
   const confirm = useConfirm();
 
@@ -76,7 +77,7 @@ export const MainPage: FunctionComponent = observer(() => {
 
   /// Fetching wallet config info
   useEffect(() => {
-    if (keyRingStore.keyRingType === "ledger") {
+    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       return;
     }
     getJWT(chainStore.current.chainId, AUTH_SERVER).then((res) => {
@@ -91,7 +92,7 @@ export const MainPage: FunctionComponent = observer(() => {
     chainStore,
     chainStore.current.chainId,
     accountInfo.bech32Address,
-    keyRingStore.keyRingType,
+    keyRingStore.selectedKeyInfo?.type,
   ]);
 
   // hides the loader after current chain is switched
@@ -147,6 +148,7 @@ export const MainPage: FunctionComponent = observer(() => {
       >
         <SetKeyRingPage
           onItemSelect={() => setIsSelectWalletOpen(false)}
+          setSelectedWalletId={setSelectedWalletId}
           setIsSelectWalletOpen={setIsSelectWalletOpen}
           setIsOptionsOpen={setIsOptionsOpen}
         />
@@ -177,7 +179,7 @@ export const MainPage: FunctionComponent = observer(() => {
         title={"Manage Wallet"}
         closeClicked={() => setIsOptionsOpen(false)}
       >
-        <WalletOptions />
+        <WalletOptions selectedWalletId={selectedWalletId} />
       </Dropdown>
     </HeaderLayout>
   );

@@ -118,7 +118,6 @@ export const AssetView = observer(() => {
     accountInfo.bech32Address
   ).vestingAccount;
   const latestBlockTime = queries.cosmos.queryRPCStatus.latestBlockTime;
-
   const vestingEndTimeStamp = Number(
     vestingInfo.base_vesting_account?.end_time
   );
@@ -182,7 +181,7 @@ export const AssetView = observer(() => {
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        current.chainId === "1" || current.chainId === "injective-1"
+        current.chainId === "eip155:1" || current.chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )

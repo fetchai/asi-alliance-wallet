@@ -1,7 +1,6 @@
 import { GovParamsDeposit, GovParamsTally, GovParamsVoting } from "./types";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
-import { ObservableQueryTendermint } from "../../../common";
+import { ChainGetter } from "../../../chain";
+import { ObservableQueryTendermint, QuerySharedContext } from "../../../common";
 import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
 import {
   TallyParams,
@@ -10,7 +9,11 @@ import {
 } from "cosmjs-types/cosmos/gov/v1beta1/gov";
 
 export class ObservableQueryGovParamTally extends ObservableQueryTendermint<GovParamsTally> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
@@ -27,7 +30,11 @@ export class ObservableQueryGovParamTally extends ObservableQueryTendermint<GovP
 }
 
 export class ObservableQueryGovParamVoting extends ObservableQueryTendermint<GovParamsVoting> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
@@ -50,7 +57,11 @@ export class ObservableQueryGovParamVoting extends ObservableQueryTendermint<Gov
 }
 
 export class ObservableQueryGovParamDeposit extends ObservableQueryTendermint<GovParamsDeposit> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,

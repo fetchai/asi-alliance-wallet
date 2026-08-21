@@ -1,17 +1,19 @@
-import { KVStore } from "@keplr-wallet/common";
 import {
   camelToSnake,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
-import { ChainGetter } from "../../../common";
 import { ChannelResponse } from "./types";
 import { setupIbcExtension, IbcExtension } from "@cosmjs/stargate";
 import { QueryChannelResponse } from "cosmjs-types/ibc/core/channel/v1/query";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableChainQueryIBCChannel extends ObservableQueryTendermint<ChannelResponse> {
+  protected disposer?: () => void;
+
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly portId: string,
@@ -19,7 +21,7 @@ export class ObservableChainQueryIBCChannel extends ObservableQueryTendermint<Ch
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as IbcExtension;
@@ -31,19 +33,27 @@ export class ObservableChainQueryIBCChannel extends ObservableQueryTendermint<Ch
       `/ibc/core/channel/v1/channels/${channelId}/ports/${portId}`
     );
   }
+
+  protected override onStop() {
+    if (this.disposer) {
+      this.disposer();
+      this.disposer = undefined;
+    }
+    super.onStop();
+  }
 }
 
 export class ObservableQueryIBCChannel extends ObservableQueryMap<ChannelResponse> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((key: string) => {
       const params = JSON.parse(key);
 
       return new ObservableChainQueryIBCChannel(
-        kvStore,
+        sharedContext,
         chainId,
         chainGetter,
         params.portId,

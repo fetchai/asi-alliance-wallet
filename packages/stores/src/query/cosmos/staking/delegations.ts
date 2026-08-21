@@ -1,16 +1,16 @@
-import { KVStore } from "@keplr-wallet/common";
 import {
   camelToSnake,
-  ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Int, Dec } from "@keplr-wallet/unit";
 import { computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 import { QueryDelegatorDelegationsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
 import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
 import { Delegation, Delegations } from "./types";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<Delegations> {
   protected bech32Address: string;
@@ -19,14 +19,14 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
   protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as StakingExtension;
@@ -48,28 +48,40 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
     /* If bech32 address is empty, it will always fail, so don't need to fetch it.
     also avoid fetching the endpoint for evm networks*/
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return (
-      this.bech32Address.length > 0 && !chainInfo?.features?.includes("evm")
-    );
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return this.bech32Address.length > 0 && !isEvm;
   }
 
   @computed
   get total(): CoinPretty {
-    const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+
+    if (!chainInfo?.stakeCurrency) {
+      return new CoinPretty(chainInfo?.currencies[0], new Int(0)).ready(false);
+    }
+
     if (
       !this.response ||
       !this.response.data ||
       !this.response.data.delegation_responses
     ) {
-      return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
+      return new CoinPretty(chainInfo.stakeCurrency, new Int(0)).ready(false);
     }
 
     let totalBalance = new Int(0);
     for (const delegation of this.response.data.delegation_responses) {
-      totalBalance = totalBalance.add(new Int(delegation.balance.amount));
+      const amount = new Int(delegation.balance.amount);
+      if (amount.gt(new Int(0))) {
+        totalBalance = totalBalance.add(amount);
+      }
     }
 
-    return new CoinPretty(stakeCurrency, totalBalance);
+    return new CoinPretty(chainInfo.stakeCurrency, totalBalance);
   }
 
   @computed
@@ -87,16 +99,23 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
 
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
+    if (!stakeCurrency) {
+      return [];
+    }
+
     const result = [];
 
     for (const delegation of this.response.data.delegation_responses) {
-      result.push({
-        validatorAddress: delegation.delegation.validator_address,
-        balance: new CoinPretty(
-          stakeCurrency,
-          new Int(delegation.balance.amount)
-        ),
-      });
+      const balance = new CoinPretty(
+        stakeCurrency,
+        new Int(delegation.balance.amount)
+      );
+      if (balance.toDec().gt(new Dec(0))) {
+        result.push({
+          validatorAddress: delegation.delegation.validator_address,
+          balance,
+        });
+      }
     }
 
     return result;
@@ -112,16 +131,21 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
       return [];
     }
 
-    return this.response.data.delegation_responses;
+    return this.response.data.delegation_responses.filter((del) => {
+      return new Int(del.balance.amount).gt(new Int(0));
+    });
   }
 
   readonly getDelegationTo = computedFn(
     (validatorAddress: string): CoinPretty => {
       const delegations = this.delegations;
 
-      const stakeCurrency = this.chainGetter.getChain(
-        this.chainId
-      ).stakeCurrency;
+      const chainInfo = this.chainGetter.getChain(this.chainId);
+      const stakeCurrency = chainInfo.stakeCurrency;
+
+      if (!stakeCurrency) {
+        return new CoinPretty(chainInfo.currencies[0], new Int(0)).ready(false);
+      }
 
       if (!this.response || !this.response.data) {
         return new CoinPretty(stakeCurrency, new Int(0)).ready(false);
@@ -143,15 +167,15 @@ export class ObservableQueryDelegationsInner extends ObservableQueryTendermint<D
 
 export class ObservableQueryDelegations extends ObservableQueryMap<Delegations> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((bech32Address: string) => {
       return new ObservableQueryDelegationsInner(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         bech32Address
       );
     });

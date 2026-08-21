@@ -78,9 +78,16 @@
   transform: translateY(0px) !important;
 }
 
-.sign-in:hover {
+.sign-in:hover,
+.sign-in:focus,
+.sign-in:active,
+.sign-in:disabled,
+.sign-in.disabled,
+.sign-in[data-loading="true"] {
   opacity: 0.9;
-  background-color: $bg-dark;
+  color: white !important;
+  background-color: $bg-dark !important;
+  border-color: $bg-dark !important;
 }
 
 .racing-button {

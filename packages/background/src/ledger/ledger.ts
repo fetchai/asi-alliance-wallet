@@ -1,10 +1,12 @@
 import { TransportIniter } from "./options";
 import TransportWebHID from "@ledgerhq/hw-transport-webhid";
 import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { publicKeyConvert, signatureImport } from "secp256k1";
 import Eth from "@ledgerhq/hw-app-eth";
 import { EthSignType } from "@keplr-wallet/types";
-import { BIP44HDPath, EIP712MessageValidator } from "../keyring";
+import { BIP44HDPath } from "../keyring";
+import { EIP712MessageValidator } from "../keyring/eip712";
 import { serialize } from "@ethersproject/transactions";
 import { Buffer } from "buffer/";
 import { domainHash, messageHash } from "../keyring/utils";
@@ -19,7 +21,7 @@ import {
   ErrFailedSign,
   ErrModuleLedgerSign,
 } from "./types";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 
 export enum LedgerApp {
   Cosmos = "cosmos",

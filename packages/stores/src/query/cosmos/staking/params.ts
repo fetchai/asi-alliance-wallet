@@ -1,14 +1,20 @@
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQueryTendermint } from "../../../common";
+import { ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
 import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
 import { QueryParamsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
+import { QuerySharedContext } from "../../../common";
+import { ENDPOINT_BY_CHAIN_ID } from "./endpoint-by-chain-id";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryStakingParams extends ObservableQueryTendermint<QueryParamsResponse> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as StakingExtension;
@@ -16,7 +22,8 @@ export class ObservableQueryStakingParams extends ObservableQueryTendermint<Quer
         return result;
       },
       setupStakingExtension,
-      "/cosmos/staking/v1beta1/params"
+      ENDPOINT_BY_CHAIN_ID[chainId]?.["params"] ??
+        "/cosmos/staking/v1beta1/params"
     );
     makeObservable(this);
   }

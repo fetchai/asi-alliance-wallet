@@ -1,9 +1,4 @@
-import { KVStore } from "@keplr-wallet/common";
-import {
-  ChainGetter,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
+import { ObservableQueryMap, ObservableQueryTendermint } from "../../../common";
 import { CoinPretty } from "@keplr-wallet/unit";
 import { computed } from "mobx";
 import {
@@ -11,6 +6,8 @@ import {
   QuerySpendableBalancesResponse,
 } from "cosmjs-types/cosmos/bank/v1beta1/query";
 import { Coin, QueryClient } from "@cosmjs/stargate";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export interface BankSpendableExtension {
   bank: {
@@ -48,14 +45,14 @@ export class ObservableChainQuerySpendableBalances extends ObservableQueryTender
   protected readonly address: string = "";
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     address: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as BankSpendableExtension;
@@ -73,7 +70,13 @@ export class ObservableChainQuerySpendableBalances extends ObservableQueryTender
   protected override canFetch(): boolean {
     // avoid fetching the endpoint for evm networks
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return !chainInfo?.features?.includes("evm") && this.address.length > 0;
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return !isEvm && this.address.length > 0;
   }
 
   @computed
@@ -86,7 +89,8 @@ export class ObservableChainQuerySpendableBalances extends ObservableQueryTender
 
     const chainInfo = this.chainGetter.getChain(this.chainId);
 
-    for (const bal of this.response.data.balances) {
+    const balances = this.response.data.balances ?? [];
+    for (const bal of balances) {
       const currency = chainInfo.findCurrency(bal.denom);
       if (currency) {
         res.push(new CoinPretty(currency, bal.amount));
@@ -99,15 +103,15 @@ export class ObservableChainQuerySpendableBalances extends ObservableQueryTender
 
 export class ObservableQuerySpendableBalances extends ObservableQueryMap<QuerySpendableBalancesResponse> {
   constructor(
-    protected readonly kvStore: KVStore,
+    protected readonly sharedContext: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {
     super((denom: string) => {
       return new ObservableChainQuerySpendableBalances(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         denom
       );
     });

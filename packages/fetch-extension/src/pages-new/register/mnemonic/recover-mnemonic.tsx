@@ -24,11 +24,12 @@ import { NewMnemonicStep } from "./hook";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
 import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { RefreshAccountList } from "@keplr-wallet/background";
 import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+// import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+// import { BACKGROUND_PORT } from "@keplr-wallet/router";
+// import { RefreshAccountList } from "@keplr-wallet/background";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -222,7 +223,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const bip44Option = useBIP44Option();
   const { analyticsStore, keyRingStore } = useStore();
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const accountList = keyRingStore.multiKeyStoreInfo;
+  const accountList = keyRingStore.keyInfos;
   const defaultAccountName = getNextDefaultAccountName(accountList);
 
   const {
@@ -480,6 +481,11 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         {},
                         selectedNetworks
                       );
+                      dispatchGlobalEventExceptSelf(
+                        "keplr_new_key_created",
+                        keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1]
+                          .id
+                      );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
                         accountType: "privateKey",
@@ -502,13 +508,17 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         accountType: "mnemonic",
                       });
                     }
-                    await keyRingStore.changeKeyRing(
-                      keyRingStore.multiKeyStoreInfo.length - 1
+                    await keyRingStore.selectKeyRing(
+                      keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
                     );
-                    await new InExtensionMessageRequester().sendMessage(
-                      BACKGROUND_PORT,
-                      new RefreshAccountList()
+                    dispatchGlobalEventExceptSelf(
+                      "keplr_new_key_created",
+                      keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
                     );
+                    // await new InExtensionMessageRequester().sendMessage(
+                    //   BACKGROUND_PORT,
+                    //   new RefreshAccountList()
+                    // );
                   } catch (e) {
                     alert(e.message ? e.message : e.toString());
                     registerConfig.clear();
@@ -686,7 +696,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                       validate: (value: string) =>
                         validateAccountName(
                           value,
-                          keyRingStore?.multiKeyStoreInfo,
+                          keyRingStore?.keyInfos,
                           registerConfig.mode
                         ),
                     })}

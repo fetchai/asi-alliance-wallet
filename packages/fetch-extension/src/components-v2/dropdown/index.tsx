@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import style from "./style.module.scss";
 import { useDropdown } from "./dropdown-context";
+import { PropsWithChildren } from "react";
 
 export interface DropdownProps {
   isOpen?: boolean;
@@ -12,7 +13,7 @@ export interface DropdownProps {
   showTopNav?: boolean;
 }
 
-export const Dropdown: React.FC<DropdownProps> = ({
+export const Dropdown: React.FC<PropsWithChildren<DropdownProps>> = ({
   children,
   title,
   setIsOpen,

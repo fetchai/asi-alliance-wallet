@@ -6,14 +6,14 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import {
-  InitNonDefaultLedgerAppMsg,
-  LedgerApp,
-} from "@keplr-wallet/background";
+import { TryLedgerInitMsg, LedgerApp } from "@keplr-wallet/background";
 import { useNavigate } from "react-router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
-  const { chainStore, accountStore } = useStore();
+  const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
+    useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   // [prev, current]
@@ -35,9 +35,8 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
   const isOpen = (() => {
     if (
       accountInfo.rejectionReason &&
-      accountInfo.rejectionReason.message.includes(
-        "No ethereum public key. Initialize ethereum app on Ledger by selecting the chain in the extension"
-      )
+      accountInfo.rejectionReason instanceof WalletError &&
+      accountInfo.rejectionReason.code === 901
     ) {
       return true;
     }
@@ -95,10 +94,32 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
               setIsLoading(true);
 
               try {
-                await new InExtensionMessageRequester().sendMessage(
-                  BACKGROUND_PORT,
-                  new InitNonDefaultLedgerAppMsg(LedgerApp.Ethereum)
-                );
+                const pubkey =
+                  await new InExtensionMessageRequester().sendMessage(
+                    BACKGROUND_PORT,
+                    new TryLedgerInitMsg(
+                      LedgerApp.Ethereum,
+                      ledgerInitStore.cosmosLikeApp || "Cosmos"
+                    )
+                  );
+                if (
+                  keyRingStore?.selectedKeyInfo &&
+                  (
+                    keyRingStore.selectedKeyInfo?.insensitive?.[
+                      LedgerApp.Ethereum
+                    ] as any
+                  )?.pubKey !== pubkey
+                ) {
+                  await keyRingStore.appendLedgerKeyApp(
+                    keyRingStore.selectedKeyInfo.id,
+                    pubkey,
+                    LedgerApp.Ethereum
+                  );
+                  dispatchGlobalEventExceptSelf(
+                    "keplr_ledger_app_connected",
+                    keyRingStore.selectedKeyInfo.id
+                  );
+                }
                 accountInfo.disconnect();
                 await accountInfo.init();
               } catch (e) {

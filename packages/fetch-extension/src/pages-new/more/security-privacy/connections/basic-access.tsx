@@ -15,10 +15,12 @@ export const SettingConnectionsPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
   const intl = useIntl();
 
-  const { chainStore, permissionStore, analyticsStore } = useStore();
-  const selectedChainId = chainStore.current.chainId;
+  const { generalPermissionStore, analyticsStore } = useStore();
+  // const selectedChainId = chainStore.current.chainId;
 
-  const basicAccessInfo = permissionStore.getBasicAccessInfo(selectedChainId);
+  const basicAccessInfo = Object.entries(
+    generalPermissionStore.permissionData
+  ).map(([origin]) => origin);
 
   // const [dropdownOpen, setOpen] = useState(false);
   // const toggle = () => setOpen(!dropdownOpen);
@@ -49,8 +51,8 @@ export const SettingConnectionsPage: FunctionComponent = observer(() => {
       }}
     >
       <div className={style["container"]}>
-        {basicAccessInfo?.origins && basicAccessInfo?.origins?.length > 0 ? (
-          basicAccessInfo.origins.map((origin) => {
+        {basicAccessInfo && basicAccessInfo?.length > 0 ? (
+          basicAccessInfo.map((origin) => {
             return (
               <Card
                 heading={formatString(origin)}
@@ -75,7 +77,7 @@ export const SettingConnectionsPage: FunctionComponent = observer(() => {
                       }),
                     })
                   ) {
-                    await basicAccessInfo.removeOrigin(origin);
+                    await generalPermissionStore.clearOrigin(origin);
                   }
                 }}
                 rightContent={xIcon}

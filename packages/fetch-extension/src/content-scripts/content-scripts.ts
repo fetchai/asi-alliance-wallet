@@ -15,6 +15,8 @@ import { initEvents } from "./events";
 
 import manifest from "../manifest.v2.json";
 
+(window as any).__fetch_wallet_content_script = true;
+
 const messageRequester = new InExtensionMessageRequester();
 const coreKeplr = new Keplr(manifest.version, "core", messageRequester);
 

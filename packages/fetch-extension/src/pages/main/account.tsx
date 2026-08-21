@@ -1,7 +1,7 @@
 import { Address } from "@components/address";
 import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { observer } from "mobx-react-lite";
 import React, {
@@ -48,7 +48,12 @@ export const AccountView: FunctionComponent = observer(() => {
     }
   })();
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
 
   const intl = useIntl();
 

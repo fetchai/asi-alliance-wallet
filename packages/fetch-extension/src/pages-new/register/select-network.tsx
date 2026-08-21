@@ -5,6 +5,7 @@ import { Label } from "reactstrap";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import classNames from "classnames";
+import { isCosmosTabChain, isEvmTabChain } from "@utils/filters";
 
 interface SelectNetworkProps {
   className?: string;
@@ -22,21 +23,28 @@ export const SelectNetwork: React.FC<SelectNetworkProps> = observer(
     onMultiSelectChange,
     onSelectAll,
   }) => {
-    const { chainStore } = useStore();
-    const mainChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    const { chainStore, keyRingStore } = useStore();
+    const mainChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        !chainInfo.beta &&
+        isCosmosTabChain(chainInfo) &&
+        (chainStore.isEnabledChain(chainInfo.chainId) ||
+          (!keyRingStore?.selectedKeyInfo && !chainInfo.hideInUI))
     );
 
-    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
-      chainInfo.features?.includes("evm")
+    const evmChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        isEvmTabChain(chainInfo) &&
+        (chainStore.isEnabledChain(chainInfo.chainId) ||
+          (!keyRingStore?.selectedKeyInfo && !chainInfo.hideInUI))
     );
 
     const cosmosMainList = mainChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const evmMainList = evmChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;

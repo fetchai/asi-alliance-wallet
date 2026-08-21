@@ -1,24 +1,18 @@
-import { KVStore } from "@keplr-wallet/common";
-import Axios from "axios";
 import { computed, makeObservable } from "mobx";
-import { ChainGetter, ObservableJsonRPCQuery } from "../../common";
+import { ObservableJsonRPCQuery, QuerySharedContext } from "../../common";
+import { ChainGetter } from "../../chain";
 import { EtherscanGasFeeResponse } from "./types";
 import { BigNumber } from "@ethersproject/bignumber";
 
 export class ObservableQueryEvmGasPrice extends ObservableJsonRPCQuery<EtherscanGasFeeResponse> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
-    super(
-      kvStore,
-      Axios.create({
-        ...{
-          baseURL: chainGetter.getChain(chainId).rpc,
-        },
-      }),
-      "",
-      "eth_gasPrice",
-      [],
-      { fetchingInterval: 15000 }
-    );
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
+    super(kvStore, chainGetter.getChain(chainId).rpc, "", "eth_gasPrice", [], {
+      fetchingInterval: 15000,
+    });
 
     makeObservable(this);
   }

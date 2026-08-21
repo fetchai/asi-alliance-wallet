@@ -5,11 +5,11 @@ import { Alert, Button } from "reactstrap";
 import { useNavigate } from "react-router";
 import { FormattedMessage } from "react-intl";
 
-import { MultiKeyStoreInfoWithSelectedElem } from "@keplr-wallet/background";
+import { KeyInfo } from "@keplr-wallet/background";
 
 export const WarningView: FunctionComponent<{
   index: number;
-  keyStore: MultiKeyStoreInfoWithSelectedElem;
+  keyStore: KeyInfo;
 }> = ({ index, keyStore }) => {
   const navigate = useNavigate();
 

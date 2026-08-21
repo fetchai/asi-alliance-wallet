@@ -40,7 +40,7 @@ import {
 import { BondStatus } from "../query/cosmos/staking/types";
 import { CosmosQueries, IQueriesStore, QueriesSetBase } from "../query";
 import { DeepPartial, DeepReadonly, Mutable } from "utility-types";
-import { ChainGetter } from "../common";
+import { ChainGetter } from "../chain";
 import deepmerge from "deepmerge";
 import { Buffer } from "buffer/";
 import { MakeTxResponse, ProtoMsgsOrWithAminoMsgs } from "./types";
@@ -57,7 +57,7 @@ import {
 import { ExtensionOptionsWeb3Tx } from "@keplr-wallet/proto-types/ethermint/types/v1/web3";
 import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
-import { ActivityStore } from "src/activity";
+import { ActivityStore } from "../activity";
 import { CosmosTxTracer } from "./cosmos-tx-tracer";
 import {
   createProtobufRpcClient,
@@ -272,8 +272,11 @@ export class CosmosAccountImpl {
     recipient: string
   ) {
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
+    const chainInfo = this.chainGetter.getChain(this.chainId);
     const isEvm =
-      this.chainGetter.getChain(this.chainId).features?.includes("evm") ??
+      (chainInfo.features?.includes("eth-key-sign") &&
+        chainInfo.features?.includes("eth-address-gen") &&
+        chainInfo.evm) ??
       false;
     if (denomHelper.type === "native" && !isEvm) {
       const actualAmount = (() => {
@@ -284,7 +287,8 @@ export class CosmosAccountImpl {
 
       Bech32Address.validate(
         recipient,
-        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+        this.chainGetter.getChain(this.chainId)?.bech32Config
+          ?.bech32PrefixAccAddr
       );
 
       const msg = {
@@ -871,7 +875,8 @@ export class CosmosAccountImpl {
     const keplr = (await this.base.getKeplr())!;
     const multisigAddressDerived = pubkeyToAddress(
       multisigPubKey,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+      this.chainGetter.getChain(this.chainId)?.bech32Config
+        ?.bech32PrefixAccAddr || ""
     );
 
     if (multisigAddress !== multisigAddressDerived) {
@@ -1507,7 +1512,7 @@ export class CosmosAccountImpl {
   makeRevokeMsg(grantee: string, messageType: string) {
     Bech32Address.validate(
       grantee,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixAccAddr
     );
 
     const msg = {
@@ -1544,13 +1549,15 @@ export class CosmosAccountImpl {
   makeDelegateTx(amount: string, validatorAddress: string) {
     Bech32Address.validate(
       validatorAddress,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
     );
 
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
+    dec = dec.mulTruncate(
+      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
+    );
 
     const msg = {
       type: this.msgOpts.delegate.type,
@@ -1558,7 +1565,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency.coinMinimalDenom,
+          denom: currency?.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1574,7 +1581,7 @@ export class CosmosAccountImpl {
             value: MsgDelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount,
+              amount: msg.value.amount as any,
             }).finish(),
           },
         ],
@@ -1631,7 +1638,9 @@ export class CosmosAccountImpl {
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
+    dec = dec.mulTruncate(
+      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
+    );
 
     const msg = {
       type: this.msgOpts.delegate.type,
@@ -1639,7 +1648,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency.coinMinimalDenom,
+          denom: currency?.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1655,7 +1664,7 @@ export class CosmosAccountImpl {
             value: MsgDelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount,
+              amount: msg.value.amount as any,
             }).finish(),
           },
         ],
@@ -1686,13 +1695,15 @@ export class CosmosAccountImpl {
   makeUndelegateTx(amount: string, validatorAddress: string) {
     Bech32Address.validate(
       validatorAddress,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
     );
 
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
+    dec = dec.mulTruncate(
+      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
+    );
 
     const msg = {
       type: this.msgOpts.undelegate.type,
@@ -1700,7 +1711,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency.coinMinimalDenom,
+          denom: currency?.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1716,7 +1727,7 @@ export class CosmosAccountImpl {
             value: MsgUndelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount,
+              amount: msg.value.amount as any,
             }).finish(),
           },
         ],
@@ -1777,7 +1788,9 @@ export class CosmosAccountImpl {
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
+    dec = dec.mulTruncate(
+      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
+    );
 
     const msg = {
       type: this.msgOpts.undelegate.type,
@@ -1785,7 +1798,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency.coinMinimalDenom,
+          denom: currency?.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1801,7 +1814,7 @@ export class CosmosAccountImpl {
             value: MsgUndelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount,
+              amount: msg.value.amount as any,
             }).finish(),
           },
         ],
@@ -1839,17 +1852,19 @@ export class CosmosAccountImpl {
   ) {
     Bech32Address.validate(
       srcValidatorAddress,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
     );
     Bech32Address.validate(
       dstValidatorAddress,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
     );
 
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
+    dec = dec.mulTruncate(
+      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
+    );
 
     const msg = {
       type: this.msgOpts.redelegate.type,
@@ -1858,7 +1873,7 @@ export class CosmosAccountImpl {
         validator_src_address: srcValidatorAddress,
         validator_dst_address: dstValidatorAddress,
         amount: {
-          denom: currency.coinMinimalDenom,
+          denom: currency?.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1875,7 +1890,7 @@ export class CosmosAccountImpl {
               delegatorAddress: msg.value.delegator_address,
               validatorSrcAddress: msg.value.validator_src_address,
               validatorDstAddress: msg.value.validator_dst_address,
-              amount: msg.value.amount,
+              amount: msg.value.amount as any,
             }).finish(),
           },
         ],
@@ -1936,7 +1951,9 @@ export class CosmosAccountImpl {
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
+    dec = dec.mulTruncate(
+      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
+    );
 
     const msg = {
       type: this.msgOpts.redelegate.type,
@@ -1945,7 +1962,7 @@ export class CosmosAccountImpl {
         validator_src_address: srcValidatorAddress,
         validator_dst_address: dstValidatorAddress,
         amount: {
-          denom: currency.coinMinimalDenom,
+          denom: currency?.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1962,7 +1979,7 @@ export class CosmosAccountImpl {
               delegatorAddress: msg.value.delegator_address,
               validatorSrcAddress: msg.value.validator_src_address,
               validatorDstAddress: msg.value.validator_dst_address,
-              amount: msg.value.amount,
+              amount: msg.value.amount as any,
             }).finish(),
           },
         ],
@@ -1994,7 +2011,8 @@ export class CosmosAccountImpl {
     for (const validatorAddress of validatorAddresses) {
       Bech32Address.validate(
         validatorAddress,
-        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
+        this.chainGetter.getChain(this.chainId)?.bech32Config
+          ?.bech32PrefixValAddr
       );
     }
 

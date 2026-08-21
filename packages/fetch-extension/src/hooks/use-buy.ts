@@ -56,19 +56,19 @@ export const useBuy = () => {
               showWalletAddressForm: "true",
               walletAddress: encodeURIComponent(
                 JSON.stringify({
-                  [currentChainInfo.stakeCurrency.coinDenom.toLowerCase()]:
-                    currentChainAccount?.bech32Address,
+                  [currentChainInfo.stakeCurrency?.coinDenom?.toLowerCase() ??
+                  ""]: currentChainAccount?.bech32Address,
                 })
               ),
               currencyCode:
-                currentChainInfo.stakeCurrency.coinDenom.toLowerCase(),
+                currentChainInfo.stakeCurrency?.coinDenom.toLowerCase(),
             };
           case "transak":
             return {
               apiKey: KeplrExtTransakAPIKey ?? serviceInfo.apiKey,
               hideMenu: "true",
               walletAddress: currentChainAccount.bech32Address ?? "",
-              cryptoCurrencyCode: currentChainInfo.stakeCurrency.coinDenom,
+              cryptoCurrencyCode: currentChainInfo.stakeCurrency?.coinDenom,
             };
           case "kado":
             return {

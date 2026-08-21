@@ -48,7 +48,7 @@ export class LedgerSetWebHIDFlagMsg extends Message<void> {
   }
 }
 
-export class TryLedgerInitMsg extends Message<void> {
+export class TryLedgerInitMsg extends Message<Uint8Array> {
   public static type() {
     return "try-ledger-init";
   }
