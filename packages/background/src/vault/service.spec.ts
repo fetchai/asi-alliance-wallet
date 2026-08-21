@@ -2,19 +2,23 @@ import { VaultService } from "./service";
 import { KVStore, MemoryKVStore } from "@keplr-wallet/common";
 
 describe("Test vault service", () => {
-  // Add polyfill for `getRandomValues`
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  global.crypto = {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    getRandomValues: (arr: Uint8Array) => {
-      for (let i = 0, l = arr.length; i < l; i++) {
-        arr[i] = Math.floor(Math.random() * 256);
-      }
-      return arr;
-    },
-  };
+  // Node 18+ provides globalThis.crypto; Jest may make `global.crypto` read-only,
+  // so patch getRandomValues in place when needed instead of reassigning crypto.
+  const cryptoObj = globalThis.crypto ?? ({} as Crypto);
+  if (typeof cryptoObj.getRandomValues !== "function") {
+    Object.defineProperty(globalThis, "crypto", {
+      configurable: true,
+      value: {
+        ...cryptoObj,
+        getRandomValues: (arr: Uint8Array) => {
+          for (let i = 0, l = arr.length; i < l; i++) {
+            arr[i] = Math.floor(Math.random() * 256);
+          }
+          return arr;
+        },
+      },
+    });
+  }
 
   let kvStore: KVStore;
   let service: VaultService;

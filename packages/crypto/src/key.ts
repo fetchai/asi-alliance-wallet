@@ -280,10 +280,7 @@ export class PubKeySecp256k1 {
       throw new Error(`Invalid length of signature: ${signature.length}`);
     }
 
-    const r = signature.slice(0, 32);
-    // const s = signature.slice(32);
-
-    return secp256k1.verify(r, digest, this.pubKey);
+    return secp256k1.verify(signature, digest, this.pubKey);
   }
 }
 
