@@ -44598,9 +44598,9 @@ __metadata:
     js-yaml: ^4.1.0
     lottie-ios: 3.4.0
     lottie-react-native: ^5.1.6
-    mobx: ^6.1.7
-    mobx-react-lite: ^3.2.0
-    mobx-utils: ^6.0.3
+    mobx: ^6.10.0
+    mobx-react-lite: ^3.4.3
+    mobx-utils: ^6.0.8
     moment: ^2.10.2
     os-browserify: ^0.3.0
     path-browserify: ^1.0.1
@@ -44652,22 +44652,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"mobx-react-lite@npm:^3.2.0":
-  version: 3.2.0
-  resolution: "mobx-react-lite@npm:3.2.0"
-  peerDependencies:
-    mobx: ^6.1.0
-    react: ^16.8.0 || ^17
-  peerDependenciesMeta:
-    react-dom:
-      optional: true
-    react-native:
-      optional: true
-  checksum: 595b5fcb9e9999d9b1d68200f27b0da073eddf1965df75a9cdd447e5c710b9486f684110c1b5f75830c485879203375d5fc4c1194cf219d8cdbfd0fa1d3694e0
-  languageName: node
-  linkType: hard
-
-"mobx-react-lite@npm:^3.4.3":
+"mobx-react-lite@npm:3.4.3":
   version: 3.4.3
   resolution: "mobx-react-lite@npm:3.4.3"
   peerDependencies:
@@ -44682,16 +44667,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx-utils@npm:^6.0.3":
-  version: 6.0.3
-  resolution: "mobx-utils@npm:6.0.3"
-  peerDependencies:
-    mobx: ^6.0.0
-  checksum: c759212c71711a1c94ef9fec758734a5959e1a227d470caad95dad200a36792464cc785d4ddff93d09851da5074d06bc56447bba5ee2446eff20dbe464b51588
-  languageName: node
-  linkType: hard
-
-"mobx-utils@npm:^6.0.8":
+"mobx-utils@npm:6.1.1":
   version: 6.1.1
   resolution: "mobx-utils@npm:6.1.1"
   peerDependencies:
@@ -44700,14 +44676,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx@npm:^6.1.7":
-  version: 6.1.7
-  resolution: "mobx@npm:6.1.7"
-  checksum: c6cd7fedf4ce4fa058c3173ba1f24b5c2a52d8a0792ae23a5d0618ee9c9ef95f9262aef622de51b2f836184a2b212ace95f8f5c27aafd137492bd2b44880c91f
-  languageName: node
-  linkType: hard
-
-"mobx@npm:^6.10.0":
+"mobx@npm:6.15.0":
   version: 6.15.0
   resolution: "mobx@npm:6.15.0"
   checksum: bdda12556b8dec650f30d0ae4dcd84459a2415dce2376174476730bb85e063d6171045717a2b8ddda6e584d524fad5b305e2ee65e8264a57c0cbcbb6bf2a83eb
