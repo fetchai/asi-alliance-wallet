@@ -14,6 +14,8 @@ import { RegisterMode } from "@keplr-wallet/hooks";
 import { InteractionWaitingData } from "@keplr-wallet/background";
 import { isRunningInSidePanel } from "./side-panel";
 
+export { getRejectionMessage, isKeyRingRejection } from "./rejection";
+
 // translate the contact address into the address book name if it exists
 export function getUserName(
   walletAddress: string,

@@ -6,6 +6,7 @@ import {
 } from "@keplr-wallet/router";
 
 import { Env } from "@keplr-wallet/router";
+import { toSerializableSettledResponses } from "@keplr-wallet/types";
 import { KeyRingBitcoinService } from "./service";
 import { PermissionInteractiveService } from "../permission-interactive";
 import {
@@ -182,8 +183,10 @@ const handleGetBitcoinKeysSettledMsg: (
   return async (env, msg) => {
     await permissionInteractionService.ensureEnabledForBitcoin(env, msg.origin);
 
-    return await Promise.allSettled(
-      msg.chainIds.map((chainId) => service.getBitcoinKeySelected(chainId))
+    return toSerializableSettledResponses(
+      await Promise.allSettled(
+        msg.chainIds.map((chainId) => service.getBitcoinKeySelected(chainId))
+      )
     );
   };
 };
@@ -192,15 +195,17 @@ const handleGetBitcoinKeysForEachVaultSettledMsg: (
   service: KeyRingBitcoinService
 ) => InternalHandler<GetBitcoinKeysForEachVaultSettledMsg> = (service) => {
   return async (_, msg) => {
-    return await Promise.allSettled(
-      msg.vaultIds.map((vaultId) =>
-        (async () => {
-          const key = await service.getBitcoinKey(vaultId, msg.chainId);
-          return {
-            vaultId,
-            ...key,
-          };
-        })()
+    return toSerializableSettledResponses(
+      await Promise.allSettled(
+        msg.vaultIds.map((vaultId) =>
+          (async () => {
+            const key = await service.getBitcoinKey(vaultId, msg.chainId);
+            return {
+              vaultId,
+              ...key,
+            };
+          })()
+        )
       )
     );
   };

@@ -5,6 +5,7 @@ import {
   KeplrError,
   Message,
 } from "@keplr-wallet/router";
+import { toSerializableSettledResponses } from "@keplr-wallet/types";
 import {
   GetStarknetKeyMsg,
   GetStarknetKeysSettledMsg,
@@ -121,8 +122,10 @@ const handleGetStarknetKeysSettledMsg: (
       msg.origin
     );
 
-    return await Promise.allSettled(
-      msg.chainIds.map((chainId) => service.getStarknetKeySelected(chainId))
+    return toSerializableSettledResponses(
+      await Promise.allSettled(
+        msg.chainIds.map((chainId) => service.getStarknetKeySelected(chainId))
+      )
     );
   };
 };
@@ -245,15 +248,17 @@ const handleGetStarknetKeysForEachVaultSettledMsg: (
   service: KeyRingStarknetService
 ) => InternalHandler<GetStarknetKeysForEachVaultSettledMsg> = (service) => {
   return async (_, msg) => {
-    return await Promise.allSettled(
-      msg.vaultIds.map((vaultId) =>
-        (async () => {
-          const key = await service.getStarknetKey(vaultId, msg.chainId);
-          return {
-            vaultId,
-            ...key,
-          };
-        })()
+    return toSerializableSettledResponses(
+      await Promise.allSettled(
+        msg.vaultIds.map((vaultId) =>
+          (async () => {
+            const key = await service.getStarknetKey(vaultId, msg.chainId);
+            return {
+              vaultId,
+              ...key,
+            };
+          })()
+        )
       )
     );
   };

@@ -5,6 +5,7 @@ import {
   KeplrError,
   Message,
 } from "@keplr-wallet/router";
+import { toSerializableSettledResponses } from "@keplr-wallet/types";
 import {
   GetCosmosKeyMsg,
   GetCosmosKeysSettledMsg,
@@ -169,8 +170,10 @@ const handleGetCosmosKeysSettledMsg: (
       msg.origin
     );
 
-    return await Promise.allSettled(
-      msg.chainIds.map((chainId) => service.getKeySelected(chainId))
+    return toSerializableSettledResponses(
+      await Promise.allSettled(
+        msg.chainIds.map((chainId) => service.getKeySelected(chainId))
+      )
     );
   };
 };
@@ -350,15 +353,17 @@ const handleGetCosmosKeysForEachVaultSettledMsg: (
   service: KeyRingCosmosService
 ) => InternalHandler<GetCosmosKeysForEachVaultSettledMsg> = (service) => {
   return async (_, msg) => {
-    return await Promise.allSettled(
-      msg.vaultIds.map((vaultId) =>
-        (async () => {
-          const key = await service.getKey(vaultId, msg.chainId);
-          return {
-            vaultId,
-            ...key,
-          };
-        })()
+    return toSerializableSettledResponses(
+      await Promise.allSettled(
+        msg.vaultIds.map((vaultId) =>
+          (async () => {
+            const key = await service.getKey(vaultId, msg.chainId);
+            return {
+              vaultId,
+              ...key,
+            };
+          })()
+        )
       )
     );
   };
@@ -382,15 +387,17 @@ const handleGetCosmosKeysForEachVaultWithSearchSettledMsg: (
 
     const vaultIds = msg.vaultIds.filter((vaultId) => searchedMap.has(vaultId));
 
-    return await Promise.allSettled(
-      vaultIds.map((vaultId) =>
-        (async () => {
-          const key = await service.getKey(vaultId, msg.chainId);
-          return {
-            vaultId,
-            ...key,
-          };
-        })()
+    return toSerializableSettledResponses(
+      await Promise.allSettled(
+        vaultIds.map((vaultId) =>
+          (async () => {
+            const key = await service.getKey(vaultId, msg.chainId);
+            return {
+              vaultId,
+              ...key,
+            };
+          })()
+        )
       )
     );
   };

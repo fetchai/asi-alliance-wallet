@@ -1,7 +1,6 @@
 import { Address } from "@components/address";
 import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
-import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { observer } from "mobx-react-lite";
 import React, {
@@ -18,6 +17,7 @@ import { getPrimaryDomain } from "../../name-service/fns-apis";
 import { useStore } from "../../stores";
 import styleAccount from "./account.module.scss";
 import { TooltipForDomainNames } from "../fetch-name-service/domain-details";
+import { getRejectionMessage, isKeyRingRejection } from "../../utils/rejection";
 
 export const AccountView: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -141,19 +141,14 @@ export const AccountView: FunctionComponent = observer(() => {
       {accountInfo.walletStatus === WalletStatus.Rejected && (
         <ToolTip
           tooltip={(() => {
-            if (
-              accountInfo.rejectionReason &&
-              accountInfo.rejectionReason instanceof WalletError &&
-              accountInfo.rejectionReason.module === "keyring" &&
-              accountInfo.rejectionReason.code === 152
-            ) {
-              // Return unsupported device message
+            if (isKeyRingRejection(accountInfo.rejectionReason, 152)) {
               return "Ledger is not supported for this chain";
             }
 
             let result = "Failed to load account by unknown reason";
-            if (accountInfo.rejectionReason) {
-              result += `: ${accountInfo.rejectionReason.toString()}`;
+            const message = getRejectionMessage(accountInfo.rejectionReason);
+            if (message) {
+              result += `: ${message}`;
             }
 
             return result;

@@ -8,8 +8,8 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { TryLedgerInitMsg, LedgerApp } from "@keplr-wallet/background";
 import { useNavigate } from "react-router";
-import { KeplrError as WalletError } from "@keplr-wallet/router";
 import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+import { isKeyRingRejection } from "@utils/rejection";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
   const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
@@ -32,17 +32,7 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const isOpen = (() => {
-    if (
-      accountInfo.rejectionReason &&
-      accountInfo.rejectionReason instanceof WalletError &&
-      accountInfo.rejectionReason.code === 901
-    ) {
-      return true;
-    }
-
-    return false;
-  })();
+  const isOpen = isKeyRingRejection(accountInfo.rejectionReason, 901);
 
   return (
     <Modal

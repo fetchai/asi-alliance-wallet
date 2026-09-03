@@ -7,6 +7,7 @@ import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { LedgerApp, TryLedgerInitMsg } from "@keplr-wallet/background";
 import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+import { isKeyRingRejection } from "../../utils/rejection";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
   const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
@@ -29,18 +30,7 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const isOpen = (() => {
-    if (
-      accountInfo.rejectionReason &&
-      accountInfo.rejectionReason.message.includes(
-        "No ethereum public key. Initialize ethereum app on Ledger by selecting the chain in the extension"
-      )
-    ) {
-      return true;
-    }
-
-    return false;
-  })();
+  const isOpen = isKeyRingRejection(accountInfo.rejectionReason, 901);
 
   return (
     <Modal isOpen={isOpen} centered>
