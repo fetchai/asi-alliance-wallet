@@ -88,7 +88,7 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
                   await keyRingStore.appendLedgerKeyApp(
                     keyRingStore.selectedKeyInfo.id,
                     pubkey,
-                    LedgerApp.Ethereum
+                    "Ethereum"
                   );
                   dispatchGlobalEventExceptSelf(
                     "keplr_ledger_app_connected",
