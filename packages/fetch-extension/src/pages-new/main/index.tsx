@@ -69,7 +69,10 @@ export const MainPage: FunctionComponent = observer(() => {
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
-  const currentCoinGeckoId = chainStore.current.feeCurrencies?.[0]?.coinGeckoId;
+  const currentCoinGeckoId =
+    chainStore.current.feeCurrencies?.[0]?.coinGeckoId ??
+    chainStore.current.stakeCurrency?.coinGeckoId ??
+    chainStore.current.currencies?.[0]?.coinGeckoId;
 
   const priceInVsCurrency = currentCoinGeckoId
     ? priceStore.getPrice(currentCoinGeckoId, fiatCurrency)
@@ -117,8 +120,16 @@ export const MainPage: FunctionComponent = observer(() => {
       />
       <LineGraphView
         setTokenState={setTokenState}
-        tokenName={chainStore.current.feeCurrencies[0].coinGeckoId}
-        tokenDenom={chainStore.current.feeCurrencies[0].coinDenom}
+        tokenName={
+          chainStore.current.feeCurrencies?.[0]?.coinGeckoId ??
+          chainStore.current.stakeCurrency?.coinGeckoId ??
+          chainStore.current.currencies?.[0]?.coinGeckoId
+        }
+        tokenDenom={
+          chainStore.current.feeCurrencies?.[0]?.coinDenom ??
+          chainStore.current.stakeCurrency?.coinDenom ??
+          chainStore.current.currencies?.[0]?.coinDenom
+        }
         tokenState={tokenState}
         priceInVsCurrency={priceInVsCurrency}
         vsCurrencySymbol={
