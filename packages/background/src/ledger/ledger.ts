@@ -122,7 +122,9 @@ export class Ledger {
       throw new WalletError(
         ErrModuleLedgerSign,
         ErrCodeAppNotInitialised,
-        `Open the ${cosmosLikeApp} app on Ledger and try again.`
+        `Open the ${
+          app === LedgerApp.Ethereum ? "Ethereum" : cosmosLikeApp
+        } app on Ledger and try again.`
       );
     }
   }
