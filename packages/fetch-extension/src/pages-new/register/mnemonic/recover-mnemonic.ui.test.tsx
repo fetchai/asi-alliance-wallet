@@ -10,6 +10,9 @@ const PRIVATE_KEY = PRIVATE_KEY_BYTES.map((byte) =>
 const PREFIXED_PRIVATE_KEY = `0x${PRIVATE_KEY}`;
 const MNEMONIC_12 = `${"abandon ".repeat(11)}about`;
 const MNEMONIC_24 = `${"abandon ".repeat(23)}art`;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const bip39 = require("bip39");
+const MNEMONIC_15 = bip39.entropyToMnemonic("00".repeat(20));
 
 const mockCreatePrivateKey = jest.fn().mockResolvedValue(undefined);
 const mockCreateMnemonic = jest.fn().mockResolvedValue(undefined);
@@ -95,6 +98,7 @@ jest.mock("@components-v2/card", () => ({
 jest.mock("@components-v2/tabs/tabsPanel-2", () => ({
   TabsPanel: (props: {
     tabs: { id: string }[];
+    activeTabId: string;
     setActiveTab: (id: string) => void;
     onTabClick: (id: string) => void;
   }) => (
@@ -103,6 +107,7 @@ jest.mock("@components-v2/tabs/tabsPanel-2", () => ({
         <button
           key={tab.id}
           type="button"
+          aria-pressed={props.activeTabId === tab.id}
           onClick={() => {
             props.onTabClick(tab.id);
             props.setActiveTab(tab.id);
@@ -271,15 +276,10 @@ describe("RecoverMnemonicPage mode regression", () => {
     expect(seedInputs(container)[0].value).toBe(PREFIXED_PRIVATE_KEY);
   });
 
-  it("keeps every private-key paste in one field and reports private-key errors", async () => {
+  it("keeps unrecognized pastes in the selected mode and reports its errors", async () => {
     await clickButton(container, "Private key");
-    await pasteInput(seedInputs(container)[0], PRIVATE_KEY);
-    expect(seedInputs(container)).toHaveLength(1);
-    expect(seedInputs(container)[0].value).toBe(PRIVATE_KEY);
-
-    await pasteInput(seedInputs(container)[0], MNEMONIC_12);
-    expect(seedInputs(container)).toHaveLength(1);
-    expect(seedInputs(container)[0].value).toBe(MNEMONIC_12);
+    await pasteInput(seedInputs(container)[0], "not a private key");
+    expect(seedInputs(container)[0].value).toBe("not a private key");
     await submitForm(container);
     expect(container.textContent).toContain(
       "register.import.textarea.private-key.error.invalid"
@@ -291,6 +291,104 @@ describe("RecoverMnemonicPage mode regression", () => {
     await pasteInput(seedInputs(container)[0], "arbitrary text with spaces");
     expect(seedInputs(container)).toHaveLength(1);
     expect(seedInputs(container)[0].value).toBe("arbitrary text with spaces");
+  });
+
+  it("switches tabs to match pasted recovery values", async () => {
+    expect(findButton(container, "12 words").getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+
+    await pasteInput(seedInputs(container)[0], PREFIXED_PRIVATE_KEY);
+    expect(
+      findButton(container, "Private key").getAttribute("aria-pressed")
+    ).toBe("true");
+    expect(seedInputs(container)).toHaveLength(1);
+    expect(seedInputs(container)[0].value).toBe(PREFIXED_PRIVATE_KEY);
+
+    await pasteInput(seedInputs(container)[0], MNEMONIC_24);
+    expect(findButton(container, "24 words").getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+    expect(seedInputs(container)).toHaveLength(24);
+    expect(
+      seedInputs(container)
+        .map((input) => input.value)
+        .join(" ")
+    ).toBe(MNEMONIC_24);
+
+    await pasteInput(seedInputs(container)[7], MNEMONIC_12);
+    expect(findButton(container, "12 words").getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+    expect(seedInputs(container)).toHaveLength(12);
+    expect(
+      seedInputs(container)
+        .map((input) => input.value)
+        .join(" ")
+    ).toBe(MNEMONIC_12);
+  });
+
+  it("preserves and submits a standard 15-word BIP39 phrase", async () => {
+    await pasteInput(seedInputs(container)[0], MNEMONIC_15);
+
+    expect(findButton(container, "24 words").getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+    expect(seedInputs(container)).toHaveLength(24);
+    expect(
+      seedInputs(container)
+        .slice(0, 15)
+        .map((input) => input.value)
+        .join(" ")
+    ).toBe(MNEMONIC_15);
+    expect(
+      seedInputs(container)
+        .slice(15)
+        .every((input) => input.value === "")
+    ).toBe(true);
+
+    await submitForm(container);
+    expect(mockCreateMnemonic).toHaveBeenCalledTimes(1);
+    expect(mockCreateMnemonic.mock.calls[0][1]).toBe(MNEMONIC_15);
+  });
+
+  it("does not silently truncate pasted words beyond the selected mode", async () => {
+    await pasteInput(seedInputs(container)[0], `${MNEMONIC_12} extra`);
+
+    expect(findButton(container, "24 words").getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+    expect(seedInputs(container)).toHaveLength(24);
+    await submitForm(container);
+    expect(container.textContent).toContain(
+      "register.import.textarea.mnemonic.error.invalid"
+    );
+    expect(mockCreateMnemonic).not.toHaveBeenCalled();
+
+    await pasteInput(seedInputs(container)[0], `${MNEMONIC_24} extra`);
+    expect(seedInputs(container)).toHaveLength(24);
+    expect(seedInputs(container)[23].value).toBe("art extra");
+    await submitForm(container);
+    expect(container.textContent).toContain(
+      "register.import.textarea.mnemonic.error.invalid"
+    );
+    expect(mockCreateMnemonic).not.toHaveBeenCalled();
+  });
+
+  it("routes a malformed 0x-prefixed value to private-key validation", async () => {
+    await pasteInput(seedInputs(container)[0], "0x1234");
+
+    expect(
+      findButton(container, "Private key").getAttribute("aria-pressed")
+    ).toBe("true");
+    expect(seedInputs(container)).toHaveLength(1);
+    await submitForm(container);
+    expect(container.textContent).toContain(
+      "register.import.textarea.private-key.error.invalid"
+    );
+    expect(container.textContent).not.toContain(
+      "register.create.textarea.mnemonic.error.too-short"
+    );
   });
 
   it("clears incompatible values and errors while switching fixed-size modes", async () => {
@@ -334,7 +432,6 @@ describe("RecoverMnemonicPage mode regression", () => {
   });
 
   it("routes submit according to the selected tab", async () => {
-    await clickButton(container, "Private key");
     await pasteInput(seedInputs(container)[0], PREFIXED_PRIVATE_KEY);
     await submitForm(container);
 
@@ -344,7 +441,6 @@ describe("RecoverMnemonicPage mode regression", () => {
     );
     expect(mockCreateMnemonic).not.toHaveBeenCalled();
 
-    await clickButton(container, "12 words");
     await pasteInput(seedInputs(container)[0], MNEMONIC_12);
     await submitForm(container);
 

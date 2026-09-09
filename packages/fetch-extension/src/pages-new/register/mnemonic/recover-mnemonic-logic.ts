@@ -8,6 +8,8 @@ export enum RecoverySeedType {
 
 export const PRIVATE_KEY_INPUT_MAX_LENGTH = 66;
 
+const BIP39_MNEMONIC_WORD_COUNTS = [12, 15, 18, 21, 24];
+
 export type RecoverySeedValidationError =
   | "__required__"
   | "__invalid__"
@@ -15,6 +17,11 @@ export type RecoverySeedValidationError =
 
 export function validatePrivateKey(value: string): boolean {
   return /^(?:0x)?[0-9a-fA-F]{64}$/.test(value.trim());
+}
+
+export function looksLikePrivateKey(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.startsWith("0x") || /^[0-9a-fA-F]{64}$/.test(trimmed);
 }
 
 export function privateKeyToBytes(value: string): Uint8Array {
@@ -69,7 +76,78 @@ export function applyRecoveryPaste(
     nextSeedWords[i] = pastedWords[i - index];
   }
 
+  const overflowStart = Math.max(fieldCount - index, 0);
+  const pastedOverflow = pastedWords.slice(overflowStart).join(" ");
+  if (pastedOverflow) {
+    // Keep overflow visible and invalid instead of silently importing a
+    // different wallet from a valid 12/24-word prefix.
+    const lastFieldIndex = fieldCount - 1;
+    nextSeedWords[lastFieldIndex] = [
+      nextSeedWords[lastFieldIndex],
+      pastedOverflow,
+    ]
+      .filter((word) => word.length > 0)
+      .join(" ");
+  }
+
   return nextSeedWords;
+}
+
+export interface ResolvedRecoveryPaste {
+  seedType: RecoverySeedType;
+  seedWords: string[];
+}
+
+export function resolveRecoveryPaste(
+  seedType: RecoverySeedType,
+  seedWords: string[],
+  index: number,
+  value: string,
+  validateMnemonic: (mnemonic: string) => boolean
+): ResolvedRecoveryPaste {
+  const trimmedValue = value.trim();
+
+  if (looksLikePrivateKey(trimmedValue)) {
+    return {
+      seedType: RecoverySeedType.PRIVATE_KEY,
+      seedWords: [trimmedValue],
+    };
+  }
+
+  const pastedWords = trimmedValue
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+  if (
+    BIP39_MNEMONIC_WORD_COUNTS.includes(pastedWords.length) &&
+    validateMnemonic(pastedWords.join(" "))
+  ) {
+    // The UI has compact 12-word and maximum-size 24-word layouts. Standard
+    // 15/18/21-word phrases fit in the latter with empty trailing fields.
+    const resolvedSeedType =
+      pastedWords.length === 12
+        ? RecoverySeedType.WORDS12
+        : RecoverySeedType.WORDS24;
+    return {
+      seedType: resolvedSeedType,
+      seedWords: applyRecoveryPaste(
+        resolvedSeedType,
+        createEmptyRecoveryFields(resolvedSeedType),
+        0,
+        trimmedValue
+      ),
+    };
+  }
+
+  const resolvedSeedType =
+    seedType === RecoverySeedType.WORDS12 &&
+    index + pastedWords.length > getRecoveryFieldCount(RecoverySeedType.WORDS12)
+      ? RecoverySeedType.WORDS24
+      : seedType;
+
+  return {
+    seedType: resolvedSeedType,
+    seedWords: applyRecoveryPaste(resolvedSeedType, seedWords, index, value),
+  };
 }
 
 export function validateRecoverySeed(

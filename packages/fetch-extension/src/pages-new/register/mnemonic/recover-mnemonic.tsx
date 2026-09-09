@@ -35,10 +35,10 @@ import { RefreshAccountList } from "@keplr-wallet/background";
 import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
 import {
-  applyRecoveryPaste,
   createEmptyRecoveryFields,
   PRIVATE_KEY_INPUT_MAX_LENGTH,
   RecoverySeedType,
+  resolveRecoveryPaste,
   submitRecoverySeed,
   validateRecoverySeed,
 } from "./recover-mnemonic-logic";
@@ -244,7 +244,25 @@ export const RecoverMnemonicPage: FunctionComponent<{
   );
 
   const handlePaste = (index: number, value: string) => {
-    setSeedWords(applyRecoveryPaste(seedType, seedWords, index, value));
+    const resolvedPaste = resolveRecoveryPaste(
+      seedType,
+      seedWords,
+      index,
+      value,
+      bip39.validateMnemonic
+    );
+
+    if (resolvedPaste.seedType !== seedType) {
+      setShownMnemonicIndex(-1);
+      setActiveTab(
+        resolvedPaste.seedType === RecoverySeedType.WORDS12
+          ? NewMnemonicStep.WORDS12
+          : resolvedPaste.seedType === RecoverySeedType.WORDS24
+          ? NewMnemonicStep.WORDS24
+          : NewMnemonicStep.PRIVATEKEY
+      );
+    }
+    setSeedWords(resolvedPaste.seedWords);
     setSeedWordsError(undefined);
   };
 
