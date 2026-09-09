@@ -92,6 +92,7 @@ export const ConfirmProvider: FunctionComponent = ({ children }) => {
       <Modal
         isOpen={isDialogOpen}
         centered
+        fade={false}
         className={style["modalDialog"]}
         backdropClassName={style["modalBackdrop"]}
         onClosed={clearCurrentConfirm}

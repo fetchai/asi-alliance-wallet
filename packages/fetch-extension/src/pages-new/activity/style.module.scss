@@ -82,3 +82,14 @@
   backdrop-filter: blur(10px);
   margin-bottom: 24px;
 }
+.titleCardano {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 400;
+  font-size: 32px;
+  color: $font-dark;
+}
+
+.cardanoContent {
+  margin-top: 24px;
+}

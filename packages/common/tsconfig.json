@@ -5,9 +5,14 @@
     "outDir": "build",
     "declaration": true,
     "rootDir": "src",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "composite": false
   },
   "include": [
     "src/**/*"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
   ]
 }

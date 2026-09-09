@@ -2,6 +2,10 @@ import React from "react";
 import { Button } from "reactstrap";
 import style from "./style.module.scss";
 
+const MESSAGE_ICONS: Record<string, string> = {
+  error: require("../../public/assets/svg/error.svg"),
+};
+
 interface Props {
   type?: "error";
   onClose(): void;
@@ -12,10 +16,10 @@ export function Message({ type, onClose, children }: Props) {
   return (
     <div className={style["modal"]}>
       <div className={style["modalContent"]}>
-        {type && (
+        {type && MESSAGE_ICONS[type] && (
           <img
             className={style["messageIcon"]}
-            src={require(`../../public/assets/svg/${type}.svg`)}
+            src={MESSAGE_ICONS[type]}
             height="64"
           />
         )}

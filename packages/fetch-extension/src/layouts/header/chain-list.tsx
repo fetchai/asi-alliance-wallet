@@ -1,4 +1,5 @@
 import classnames from "classnames";
+import { flowResult } from "mobx";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent } from "react";
 import { useIntl } from "react-intl";
@@ -34,17 +35,25 @@ const ChainElement: FunctionComponent<{
             toChainName: chainInfo.chainName,
           };
         }
-        chainStore.selectChain(chainInfo.chainId);
-        chainStore.saveLastViewChainId();
-        chatStore.userDetailsStore.resetUser();
-        proposalStore.resetProposals();
-        chatStore.messagesStore.resetChatList();
-        chatStore.messagesStore.setIsChatSubscriptionActive(false);
-        messageAndGroupListenerUnsubscribe();
-        navigate("/");
-        if (Object.values(properties).length > 0) {
-          analyticsStore.logEvent("chain_changed_click", properties);
-        }
+        void (async () => {
+          try {
+            await flowResult(
+              chainStore.selectChainAndPersist(chainInfo.chainId)
+            );
+          } catch (error) {
+            console.warn("[ChainList] selectChainAndPersist failed:", error);
+            return;
+          }
+          chatStore.userDetailsStore.resetUser();
+          proposalStore.resetProposals();
+          chatStore.messagesStore.resetChatList();
+          chatStore.messagesStore.setIsChatSubscriptionActive(false);
+          messageAndGroupListenerUnsubscribe();
+          navigate("/");
+          if (Object.values(properties).length > 0) {
+            analyticsStore.logEvent("chain_changed_click", properties);
+          }
+        })();
       }}
     >
       {chainInfo.chainName}
@@ -117,11 +126,18 @@ export const ChainList: FunctionComponent = observer(() => {
   const navigate = useNavigate();
 
   const mainChainList = chainStore.chainInfosInUI.filter(
-    (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    (chainInfo) =>
+      !chainInfo.beta &&
+      !chainInfo.features?.includes("evm") &&
+      !chainInfo.features?.includes("cardano")
   );
 
   const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
     chainInfo.features?.includes("evm")
+  );
+
+  const cardanoChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
+    chainInfo.features?.includes("cardano")
   );
 
   return (
@@ -145,6 +161,10 @@ export const ChainList: FunctionComponent = observer(() => {
           <div>+ Add custom EVM network</div>
         </div>
       </a>
+      {cardanoChainList.length > 0 ? <Divider> Cardano </Divider> : null}
+      {cardanoChainList.map((chainInfo) => (
+        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />
+      ))}
       <Divider> Cosmos </Divider>
       {mainChainList.map((chainInfo) => (
         <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />

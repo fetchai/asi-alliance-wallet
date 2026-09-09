@@ -2,6 +2,7 @@
   "name": "@keplr-wallet/common",
   "version": "0.12.12",
   "main": "build/index.js",
+  "types": "build/index.d.ts",
   "author": "chainapsis",
   "license": "Apache-2.0",
   "publishConfig": {

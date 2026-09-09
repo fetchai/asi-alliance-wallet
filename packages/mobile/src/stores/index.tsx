@@ -1,6 +1,7 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 
 import { createRootStore, RootStore } from "./root";
+import { startMobileNetworkSurfacesSync } from "utils/network-surfaces-sync";
 
 const storeContext = React.createContext<RootStore | null>(null);
 
@@ -27,7 +28,12 @@ export const StoreProvider: FunctionComponent = ({ children }) => {
       // Check the comment of `_isAndroidActivityKilled` field on `WalletConnectStore`
       stores.walletConnectStore.onAndroidActivityKilled();
     };
-  }, []);
+  }, [stores]);
+
+  // Subscribe sync, catch-up async — unsubscribe available immediately on remount.
+  useEffect(() => {
+    return startMobileNetworkSurfacesSync(stores.chainStore);
+  }, [stores]);
 
   return (
     <storeContext.Provider value={stores}>{children}</storeContext.Provider>

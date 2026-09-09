@@ -9,3 +9,4 @@ export * from "./chat";
 export * from "./proposal";
 export * from "./activity";
 export * from "./token-graph";
+export { CardanoQueries } from "./query/cardano";

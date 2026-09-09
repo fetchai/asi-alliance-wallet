@@ -39,15 +39,26 @@ export class ErrorBoundary extends Component<
   }
 }
 
+// Reset is intentionally limited to these four prefixes to avoid wiping
+// user-critical data (selected chain, UI config, prices, etc.). If update
+// conflicts persist after an extension upgrade, consider adding more
+// prefixes (weigh loss of user settings).
+const CACHE_KEY_PREFIXES = [
+  "store_queries/",
+  "store_activity_config/",
+  "store_token_graph_config/",
+  "store_account_config/",
+];
+
 const ErrorBoundaryView: FunctionComponent = observer(() => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const resetStoreQueries = async () => {
+  const resetCacheData = async () => {
     const storageList = await browser.storage.local.get();
-    const storeQueriesKeys = Object.keys(storageList).filter((key) =>
-      key.startsWith("store_queries/")
+    const keysToRemove = Object.keys(storageList).filter((key) =>
+      CACHE_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
     );
-    await browser.storage.local.remove(storeQueriesKeys);
+    await browser.storage.local.remove(keysToRemove);
   };
 
   return (
@@ -71,10 +82,9 @@ const ErrorBoundaryView: FunctionComponent = observer(() => {
           setIsLoading(true);
 
           try {
-            await resetStoreQueries();
-
+            await resetCacheData();
             window.location.reload();
-          } finally {
+          } catch (e) {
             setIsLoading(false);
           }
         }}

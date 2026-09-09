@@ -13,6 +13,7 @@ export interface ToolTipProps {
   trigger: "hover" | "click" | "static"; // If trigger is staic, visibilitiy is handled by show props.
   show?: boolean;
   childrenStyle?: CSSProperties;
+  childrenClassName?: string;
   tooltipStyle?: CSSProperties;
 }
 
@@ -82,8 +83,15 @@ export class ToolTip extends React.Component<ToolTipProps> {
   }
 
   override render() {
-    const { theme, tooltip, trigger, children, childrenStyle, tooltipStyle } =
-      this.props;
+    const {
+      theme,
+      tooltip,
+      trigger,
+      children,
+      childrenStyle,
+      childrenClassName,
+      tooltipStyle,
+    } = this.props;
 
     const show =
       this.props.trigger === "static" ? this.props.show : this.state.show;
@@ -124,7 +132,11 @@ export class ToolTip extends React.Component<ToolTipProps> {
           <div data-arrow="" />
           {tooltip}
         </div>
-        <div style={childrenStyle} ref={this.componentRef}>
+        <div
+          className={classNames(childrenClassName)}
+          style={childrenStyle}
+          ref={this.componentRef}
+        >
           {children}
         </div>
       </div>

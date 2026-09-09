@@ -7,6 +7,7 @@ import { Button } from "components/button";
 import { Controller, useForm } from "react-hook-form";
 import { useStore } from "stores/index";
 import axios from "axios";
+import { flowResult } from "mobx";
 import {
   NavigationProp,
   ParamListBase,
@@ -94,7 +95,7 @@ export const SettingEndpointsPage: FunctionComponent = () => {
       chainStore.setChainEndpoints(selectedChainId, data.rpc, data.lcd);
 
       // To avoid confusion when the user returns to the main page, select the chain if the rpc/lcd endpoints have changed.
-      chainStore.selectChain(selectedChainId);
+      await flowResult(chainStore.selectChainAndPersist(selectedChainId));
 
       navigation.navigate("Home", {});
     } catch (e) {

@@ -21,6 +21,18 @@ import { useNotification } from "@components/notification";
 import { isAddress } from "@ethersproject/address";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { TXNTYPE } from "../../../../config";
+import { RequestedChainProvider } from "../../../../utils";
+import { KeyRingStatus } from "@keplr-wallet/background";
+import {
+  assertTokenAddApproveStillValid,
+  formatTokenAddPrepareError,
+  isContractAlreadyAdded,
+  planTokenAddReject,
+  planTokenAddSubmit,
+  resolveTokenAddBinding,
+  shouldInitTokenAddAccount,
+  tokenAddSubmitRequiresReadyAccount,
+} from "./prepare-token-add-request";
 
 interface FormData {
   contractAddress: string;
@@ -39,10 +51,25 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     accountStore,
     tokensStore,
     analyticsStore,
+    keyRingStore,
   } = useStore();
-  const tokensOf = tokensStore.getTokensOf(chainStore.current.chainId);
 
-  const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+  const waitingSuggested = tokensStore.waitingSuggestedToken;
+  // Query binding and write path share one gate (not ?interaction=).
+  const binding = resolveTokenAddBinding(
+    chainStore.current.chainId,
+    chainStore,
+    waitingSuggested
+  );
+
+  const effectiveChainId =
+    binding.mode === "manual" || binding.mode === "suggested"
+      ? binding.effectiveChainId
+      : chainStore.current.chainId;
+
+  const tokensOf = tokensStore.getTokensOf(effectiveChainId);
+  const accountInfo = accountStore.getAccount(effectiveChainId);
+  const chainInfo = chainStore.getChain(effectiveChainId);
 
   const interactionInfo = useInteractionInfo(() => {
     // When creating the secret20 viewing key, this page will be moved to "/sign" page to generate the signature.
@@ -61,29 +88,35 @@ export const AddTokenPage: FunctionComponent = observer(() => {
 
   const contractAddress = form.watch("contractAddress");
 
+  const suggestedContractAddress =
+    binding.mode === "suggested" ? binding.contractAddress : undefined;
+
   useEffect(() => {
-    if (tokensStore.waitingSuggestedToken) {
-      chainStore.selectChain(tokensStore.waitingSuggestedToken.data.chainId);
-      if (
-        contractAddress !==
-        tokensStore.waitingSuggestedToken.data.contractAddress
-      ) {
-        form.setValue(
-          "contractAddress",
-          tokensStore.waitingSuggestedToken.data.contractAddress
-        );
-      }
+    if (suggestedContractAddress == null) {
+      return;
     }
-  }, [chainStore, contractAddress, form, tokensStore.waitingSuggestedToken]);
+    if (contractAddress !== suggestedContractAddress) {
+      form.setValue("contractAddress", suggestedContractAddress);
+    }
+  }, [suggestedContractAddress, contractAddress, form]);
+
+  // Request chain ≠ current is not covered by root autorun (autoInit: false).
+  useEffect(() => {
+    if (keyRingStore.status !== KeyRingStatus.UNLOCKED) {
+      return;
+    }
+    if (shouldInitTokenAddAccount(accountInfo.walletStatus)) {
+      accountInfo.init();
+    }
+  }, [accountInfo, effectiveChainId, keyRingStore.status]);
 
   const isSecret20 =
-    (chainStore.current.features ?? []).find(
-      (feature) => feature === "secretwasm"
-    ) != null;
+    (chainInfo.features ?? []).find((feature) => feature === "secretwasm") !=
+    null;
 
-  const queries = queriesStore.get(chainStore.current.chainId);
+  const queries = queriesStore.get(effectiveChainId);
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = chainInfo.features?.includes("evm") ?? false;
   const query = isEvm
     ? queries.evm.queryErc20Metadata
     : isSecret20
@@ -91,7 +124,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     : queries.cosmwasm.querycw20ContractInfo;
   const queryContractInfo = query.getQueryContract(contractAddress);
 
-  const tokenInfo = queryContractInfo.tokenInfo;
+  const tokenInfo = queryContractInfo?.tokenInfo;
   const [isOpenSecret20ViewingKey, setIsOpenSecret20ViewingKey] =
     useState(false);
 
@@ -119,13 +152,9 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     });
   };
 
-  const currencyAlreadyAdded = chainStore.current.currencies.find(
-    (currency) => {
-      return (
-        "contractAddress" in currency &&
-        currency.contractAddress.toLowerCase() === contractAddress.toLowerCase()
-      );
-    }
+  const currencyAlreadyAdded = isContractAlreadyAdded(
+    chainInfo.currencies,
+    contractAddress
   )
     ? "Currency already added"
     : undefined;
@@ -135,15 +164,101 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     (form.formState.errors.contractAddress
       ? form.formState.errors.contractAddress.message
       : tokenInfo == null
-      ? (queryContractInfo.error?.data as any)?.error ||
-        queryContractInfo.error?.message
+      ? (queryContractInfo?.error?.data as any)?.error ||
+        queryContractInfo?.error?.message
       : undefined)
       ? "Invalid address"
       : undefined;
 
   const isError = currencyAlreadyAdded || queryError;
 
-  return (
+  const closeOrNavigateHome = () => {
+    if (interactionInfo.interaction && !interactionInfo.interactionInternal) {
+      window.close();
+    } else {
+      if (location.hash === "#agent") navigate(-1);
+      navigate("/");
+    }
+  };
+
+  const approveSuggestedOrAdd = async (
+    currency: CW20Currency | Erc20Currency | Secret20Currency,
+    options?: { trackSave?: boolean }
+  ) => {
+    if (binding.mode !== "manual" && binding.mode !== "suggested") {
+      throw new Error("Suggested token chain could not be resolved");
+    }
+    const action = planTokenAddSubmit(binding);
+    if (action.type === "approveSuggested") {
+      const waitingNow = tokensStore.waitingSuggestedToken;
+      assertTokenAddApproveStillValid(
+        waitingNow,
+        action.interactionId,
+        action.chainId
+      );
+      await tokensStore.approveSuggestedToken(currency, {
+        interactionId: action.interactionId,
+        chainId: action.chainId,
+      });
+      return;
+    }
+
+    await tokensOf.addToken(currency);
+    if (options?.trackSave) {
+      analyticsStore.logEvent("save_click", {
+        pageName: "Add a Token",
+      });
+    }
+  };
+
+  if (binding.mode === "suggested_unresolved") {
+    return (
+      <HeaderLayout
+        smallTitle={true}
+        showTopMenu={true}
+        showChainName={false}
+        canChangeChainInfo={false}
+        alternativeTitle={intl.formatMessage({
+          id: "setting.token.add",
+        })}
+        showBottomMenu={false}
+      >
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "16px",
+            padding: "24px",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ color: "#e74c3c", maxWidth: "320px" }}>
+            {formatTokenAddPrepareError(binding.error)}
+          </div>
+          <ButtonV2
+            variant="dark"
+            text="Reject"
+            styleProps={{ height: "48px", width: "200px" }}
+            onClick={async () => {
+              const reject = planTokenAddReject(binding);
+              if (reject) {
+                await tokensStore.rejectSuggestedToken({
+                  interactionId: reject.interactionId,
+                });
+              }
+              closeOrNavigateHome();
+            }}
+          />
+        </div>
+      </HeaderLayout>
+    );
+  }
+
+  const formContent = (
     <HeaderLayout
       smallTitle={true}
       showTopMenu={true}
@@ -181,17 +296,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                 coinDecimals: tokenInfo.decimals,
               };
 
-              if (
-                interactionInfo.interaction &&
-                tokensStore.waitingSuggestedToken
-              ) {
-                await tokensStore.approveSuggestedToken(currency);
-              } else {
-                await tokensOf.addToken(currency);
-                analyticsStore.logEvent("save_click", {
-                  pageName: "Add a Token",
-                });
-              }
+              await approveSuggestedOrAdd(currency, { trackSave: true });
             } else {
               let viewingKey = data.viewingKey;
               if (!viewingKey && !isOpenSecret20ViewingKey) {
@@ -209,23 +314,14 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                     },
                   });
 
-                  if (
-                    interactionInfo.interaction &&
-                    tokensStore.waitingSuggestedToken
-                  ) {
-                    await tokensStore.rejectAllSuggestedTokens();
+                  const reject = planTokenAddReject(binding);
+                  if (reject) {
+                    await tokensStore.rejectSuggestedToken({
+                      interactionId: reject.interactionId,
+                    });
                   }
 
-                  if (
-                    interactionInfo.interaction &&
-                    !interactionInfo.interactionInternal
-                  ) {
-                    window.close();
-                  } else {
-                    if (location.hash === "#agent") navigate(-1);
-                    navigate("/");
-                  }
-
+                  closeOrNavigateHome();
                   return;
                 }
               }
@@ -251,26 +347,11 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                   coinDecimals: tokenInfo.decimals,
                 };
 
-                if (
-                  interactionInfo.interaction &&
-                  tokensStore.waitingSuggestedToken
-                ) {
-                  await tokensStore.approveSuggestedToken(currency);
-                } else {
-                  await tokensOf.addToken(currency);
-                }
+                await approveSuggestedOrAdd(currency);
               }
             }
 
-            if (
-              interactionInfo.interaction &&
-              !interactionInfo.interactionInternal
-            ) {
-              window.close();
-            } else {
-              if (location.hash === "#agent") navigate(-1);
-              navigate("/");
-            }
+            closeOrNavigateHome();
           }
         })}
       >
@@ -284,7 +365,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
           formGroupClassName={style["formGroup"]}
           type="text"
           autoComplete="off"
-          readOnly={tokensStore.waitingSuggestedToken != null}
+          readOnly={waitingSuggested != null}
           {...form.register("contractAddress", {
             required: "Contract address is required",
             validate: (value: string): string | undefined => {
@@ -295,7 +376,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
 
                 Bech32Address.validate(
                   value,
-                  chainStore.current.bech32Config.bech32PrefixAccAddr
+                  chainInfo.bech32Config.bech32PrefixAccAddr
                 );
               } catch {
                 return "Invalid address";
@@ -304,7 +385,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
           })}
           error={isError}
           text={
-            queryContractInfo.isFetching && contractAddress.length ? (
+            queryContractInfo?.isFetching && contractAddress.length ? (
               <i className="fas fa-spinner fa-spin" />
             ) : undefined
           }
@@ -395,7 +476,11 @@ export const AddTokenPage: FunctionComponent = observer(() => {
           disabled={
             isError !== undefined ||
             tokenInfo == null ||
-            !accountInfo.isReadyToSendTx
+            (tokenAddSubmitRequiresReadyAccount({
+              isSecret20,
+              isImportingViewingKey: isOpenSecret20ViewingKey,
+            }) &&
+              !accountInfo.isReadyToSendTx)
           }
           dataLoading={
             accountInfo.txTypeInProgress === TXNTYPE.createSecret20ViewingKey
@@ -409,4 +494,14 @@ export const AddTokenPage: FunctionComponent = observer(() => {
       </Form>
     </HeaderLayout>
   );
+
+  if (binding.mode === "suggested") {
+    return (
+      <RequestedChainProvider value={binding.requested}>
+        {formContent}
+      </RequestedChainProvider>
+    );
+  }
+
+  return formContent;
 });

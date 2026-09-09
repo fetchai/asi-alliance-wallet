@@ -6,6 +6,9 @@ const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const BundleAnalyzerPlugin =
   require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
+const { NormalModuleReplacementPlugin } = require("webpack");
+
 const fs = require("fs");
 
 const isBuildManifestV2 = process.env.BUILD_MANIFEST_V2 === "true";
@@ -31,6 +34,28 @@ const envDefaults = {
   PROD_AUTH_CLIENT_ID: process.env["PROD_AUTH_CLIENT_ID"] || "",
   DEV_MOONPAY_API_KEY: process.env["DEV_MOONPAY_API_KEY"] || "",
   PROD_MOONPAY_API_KEY: process.env["PROD_MOONPAY_API_KEY"] || "",
+  // Cardano Blockfrost API Keys
+  BLOCKFROST_API_KEY: process.env["BLOCKFROST_API_KEY"] || "",
+  BLOCKFROST_PROJECT_ID_MAINNET:
+    process.env["BLOCKFROST_PROJECT_ID_MAINNET"] || "",
+  BLOCKFROST_PROJECT_ID_PREVIEW:
+    process.env["BLOCKFROST_PROJECT_ID_PREVIEW"] || "",
+  BLOCKFROST_PROJECT_ID_PREPROD:
+    process.env["BLOCKFROST_PROJECT_ID_PREPROD"] || "",
+  BLOCKFROST_PROJECT_ID_SANCHONET:
+    process.env["BLOCKFROST_PROJECT_ID_SANCHONET"] || "",
+  BLOCKFROST_URL_MAINNET:
+    process.env["BLOCKFROST_URL_MAINNET"] ||
+    "https://cardano-mainnet.blockfrost.io/api/v0",
+  BLOCKFROST_URL_PREVIEW:
+    process.env["BLOCKFROST_URL_PREVIEW"] ||
+    "https://cardano-preview.blockfrost.io/api/v0",
+  BLOCKFROST_URL_PREPROD:
+    process.env["BLOCKFROST_URL_PREPROD"] ||
+    "https://cardano-preprod.blockfrost.io/api/v0",
+  BLOCKFROST_URL_SANCHONET:
+    process.env["BLOCKFROST_URL_SANCHONET"] ||
+    "https://cardano-sanchonet.blockfrost.io/api/v0",
 };
 const commonResolve = () => ({
   extensions: [".ts", ".tsx", ".js", ".jsx", ".css", ".scss", ".svg"],
@@ -47,6 +72,7 @@ const commonResolve = () => ({
     "@hooks": path.resolve(__dirname, "src/hooks"),
     "@assets": path.resolve(__dirname, "src/public/assets"),
     "@utils": path.resolve(__dirname, "src/utils"),
+    crypto: require.resolve("crypto-browserify"),
   },
 });
 const altResolve = () => {
@@ -191,6 +217,35 @@ const extensionConfig = () => {
     resolve: {
       ...commonResolve(),
       ...altResolve(),
+      alias: {
+        ...commonResolve().alias,
+        ...altResolve().alias,
+        "@keplr-wallet/background/build/messaging": path.resolve(
+          __dirname,
+          "../background/src/messaging"
+        ),
+        "@keplr-wallet/background/build/messaging/types": path.resolve(
+          __dirname,
+          "../background/src/messaging/types.ts"
+        ),
+        "@keplr-wallet/background/build/messaging/constants": path.resolve(
+          __dirname,
+          "../background/src/messaging/constants.ts"
+        ),
+        "@keplr-wallet/background/src/ledger/types": path.resolve(
+          __dirname,
+          "../background/src/ledger/types.ts"
+        ),
+        "@keplr-wallet/background/build/ledger/types": path.resolve(
+          __dirname,
+          "../background/src/ledger/types.ts"
+        ),
+        "@keplr-wallet/background/src/auto-lock-account": path.resolve(
+          __dirname,
+          "../background/src/auto-lock-account/index.ts"
+        ),
+        crypto: require.resolve("crypto-browserify"),
+      },
       fallback: {
         os: require.resolve("os-browserify/browser"),
         buffer: require.resolve("buffer/"),
@@ -213,6 +268,10 @@ const extensionConfig = () => {
         tsRule,
         fileRule,
         {
+          test: /\.wasm$/,
+          type: "webassembly/async",
+        },
+        {
           test: /\.m?js/,
           resolve: {
             fullySpecified: false,
@@ -225,7 +284,25 @@ const extensionConfig = () => {
         },
       ],
     },
+    experiments: {
+      syncWebAssembly: true,
+      topLevelAwait: true,
+      asyncWebAssembly: true,
+    },
     plugins: [
+      new NodePolyfillPlugin(),
+      new NormalModuleReplacementPlugin(
+        /@dcspark\/cardano-multiplatform-lib-nodejs/,
+        "@dcspark/cardano-multiplatform-lib-browser"
+      ),
+      new NormalModuleReplacementPlugin(
+        /@emurgo\/cardano-serialization-lib-nodejs/,
+        "@emurgo/cardano-serialization-lib-browser"
+      ),
+      new NormalModuleReplacementPlugin(
+        /@emurgo\/cardano-message-signing-nodejs/,
+        "@emurgo/cardano-message-signing-asmjs"
+      ),
       new webpack.ProvidePlugin({
         process: "process/browser",
         Buffer: ["buffer", "Buffer"],
@@ -234,6 +311,43 @@ const extensionConfig = () => {
       new ForkTsCheckerWebpackPlugin(),
       new CopyWebpackPlugin({
         patterns: [
+          ...(() => {
+            if (isBuildManifestV2) {
+              return [
+                {
+                  from: "src/public/assets/icon/icon-16.png",
+                  to: "assets/icon-16.png",
+                },
+                {
+                  from: "src/public/assets/icon/icon-48.png",
+                  to: "assets/icon-48.png",
+                },
+                {
+                  from: "src/public/assets/icon/icon-128.png",
+                  to: "assets/icon-128.png",
+                },
+              ];
+            }
+            return [
+              {
+                from: "src/public/assets/icon/icon-16.png",
+                to: "assets/icon/icon-16.png",
+              },
+              {
+                from: "src/public/assets/icon/icon-48.png",
+                to: "assets/icon/icon-48.png",
+              },
+              {
+                from: "src/public/assets/icon/icon-128.png",
+                to: "assets/icon/icon-128.png",
+              },
+            ];
+          })(),
+          { from: "src/public/assets/logo-256.svg", to: "assets/logo-256.svg" },
+          {
+            from: "src/public/assets/png/ASI-Logo-Icon-black.png",
+            to: "assets/png/ASI-Logo-Icon-black.png",
+          },
           ...(() => {
             if (isBuildManifestV2) {
               return [

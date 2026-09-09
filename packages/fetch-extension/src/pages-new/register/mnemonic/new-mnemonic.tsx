@@ -34,7 +34,13 @@ import keyIcon from "@assets/svg/wireframe/key-icon.png";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
-import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
+import {
+  ensureCompatibleChainForUpcomingWallet,
+  getNextDefaultAccountName,
+  requestKeyringSurfacesSyncBroadcast,
+  supportsCardanoFromMnemonicWordCount,
+  validateAccountName,
+} from "@utils/index";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { RefreshAccountList } from "@keplr-wallet/background";
@@ -309,6 +315,12 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                 }}
               />
 
+              {activeTab !== NewMnemonicStep.WORDS24 && (
+                <div className={style["cardanoHint"]}>
+                  <FormattedMessage id="register.cardano.hint.24words" />
+                </div>
+              )}
+
               <div className={style["newMnemonicContainer"]}>
                 <div className={style["newMnemonic"]}>
                   {newMnemonicConfig.mnemonic}
@@ -566,7 +578,8 @@ export const VerifyMnemonicModePage: FunctionComponent<{
       setRandomizedWords(words);
     }, [newMnemonicConfig.mnemonic]);
 
-    const { analyticsStore, keyRingStore } = useStore();
+    const { analyticsStore, keyRingStore, chainStore, accountStore } =
+      useStore();
 
     const handleClickFirstButton = (word: string, index: number) => {
       if (!clickedButtons.includes(index)) {
@@ -713,17 +726,29 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 newMnemonicConfig.password,
                 bip44Option.bip44HDPath,
                 {},
-                selectedNetworks
+                selectedNetworks,
+                chainStore.chainInfos,
+                accountStore
               );
-              // if we already have accounts, switch to the newly created account
+              // Add flow only: align chain before changeKeyRing so first keystore-changed uses Cosmos.
               if (registerConfig.mode !== "create") {
-                await keyRingStore.changeKeyRing(
-                  keyRingStore.multiKeyStoreInfo.length - 1
+                const mnemonicWords = newMnemonicConfig.mnemonic
+                  .trim()
+                  .split(/\s+/);
+                const supportsCardano = supportsCardanoFromMnemonicWordCount(
+                  mnemonicWords.length
                 );
+                await ensureCompatibleChainForUpcomingWallet(chainStore, {
+                  supportsCardano,
+                });
+                const newWalletIndex =
+                  keyRingStore.multiKeyStoreInfo.length - 1;
+                await keyRingStore.changeKeyRing(newWalletIndex);
                 await new InExtensionMessageRequester().sendMessage(
                   BACKGROUND_PORT,
                   new RefreshAccountList()
                 );
+                await requestKeyringSurfacesSyncBroadcast();
               }
               analyticsStore.setUserProperties({
                 registerType: "seed",

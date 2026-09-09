@@ -6,6 +6,12 @@ import { NotificationItem } from "@components/notification-messages/notification
 import { markDeliveryAsRejected } from "@utils/fetch-notification";
 import { useStore } from "../../stores";
 import { NotificationSetup, NotyphiNotification } from "@notificationTypes";
+
+// When adding new notification images to content/config, add the key and require() here.
+const NOTIFICATION_IMAGES: Record<string, string> = {
+  "no-notification-icon.svg": require("@assets/svg/no-notification-icon.svg"),
+  "turn-off-notification-icon.svg": require("@assets/svg/turn-off-notification-icon.svg"),
+};
 interface NotificationPayload {
   modalType: NotificationModalType;
   notificationList?: NotyphiNotification[];
@@ -180,12 +186,13 @@ export const NotificationModal: FunctionComponent = () => {
         <React.Fragment>
           <div className={style["notifyContainer"]}>
             <div className={style["greyCircle"]}>
-              {notificationPayload.image && (
-                <img
-                  draggable={false}
-                  src={require("@assets/svg/" + notificationPayload.image)}
-                />
-              )}
+              {notificationPayload.image &&
+                NOTIFICATION_IMAGES[notificationPayload.image] && (
+                  <img
+                    draggable={false}
+                    src={NOTIFICATION_IMAGES[notificationPayload.image]}
+                  />
+                )}
             </div>
             <p
               className={style["notifyHeading"]}

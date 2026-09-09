@@ -8,6 +8,7 @@ import { useSearchParams } from "react-router-dom";
 import { useStore } from "../../stores";
 import { GovProposalsTab } from "./gov-proposals";
 import { NativeTab } from "./native";
+import { CardanoTransactionsTab } from "./cardano/transactions";
 import style from "./style.module.scss";
 
 export const ActivityPage: FunctionComponent = observer(() => {
@@ -15,23 +16,55 @@ export const ActivityPage: FunctionComponent = observer(() => {
   const [searchParams] = useSearchParams();
   const intl = useIntl();
   const [latestBlock, _setLatestBlock] = useState<string>();
-  const tabs = [
-    {
-      id: "Transactions",
-      component: <NativeTab />,
-    },
-    {
-      id: "Proposals",
-      component: <GovProposalsTab latestBlock={latestBlock} />,
-    },
-  ];
+  const { analyticsStore, chainStore } = useStore();
+  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+  const tabs = isCardano
+    ? [
+        {
+          id: "Transactions",
+          component: <CardanoTransactionsTab />,
+        },
+      ]
+    : [
+        {
+          id: "Transactions",
+          component: <NativeTab />,
+        },
+        {
+          id: "Proposals",
+          component: <GovProposalsTab latestBlock={latestBlock} />,
+        },
+      ];
   const [activeTabId, setActiveTabId] = useState(tabs[0].id);
-  const { analyticsStore } = useStore();
 
   useEffect(() => {
-    // url /activity?tab=Proposals will open gov .proposals tab
+    // When switching chains, ensure active tab is valid for the current tab set.
+    // For Cardano, we only expose Transactions.
+    if (isCardano) {
+      if (activeTabId !== "Transactions") setActiveTabId("Transactions");
+      return;
+    }
+    const hasActive = tabs.some((t) => t.id === activeTabId);
+    if (!hasActive) setActiveTabId(tabs[0].id);
+  }, [isCardano, tabs, activeTabId]);
+
+  useEffect(() => {
+    const tabIds = {
+      Proposals: "Proposals",
+      Transactions: "Transactions",
+    };
+    // url /activity?tab=Proposals will open gov proposals tab (Cosmos-only)
     // url /activity?tab=Transactions will open transactions tab
+    if (isCardano) {
+      return;
+    }
     const tab = searchParams.get("tab");
+    if (tab === "Proposals" || tab === "Transactions") {
+      setActiveTabId(tabIds[tab]);
+    }
+  }, [searchParams, isCardano]);
+
+  useEffect(() => {
     const tabIds = {
       Proposals: "Proposals",
       Transactions: "Transactions",
@@ -40,14 +73,8 @@ export const ActivityPage: FunctionComponent = observer(() => {
       activeTabId === tabIds.Transactions
         ? "activity_transaction_tab_click"
         : "activity_gov_proposal_tab_click";
-    analyticsStore.logEvent(eventName, {
-      pageName: "Activity",
-    });
-
-    if (tab === "Proposals") {
-      setActiveTabId(tabIds[tab]);
-    }
-  }, [searchParams]);
+    analyticsStore.logEvent(eventName, { pageName: "Activity" });
+  }, [activeTabId, analyticsStore]);
 
   return (
     <HeaderLayout
@@ -62,10 +89,15 @@ export const ActivityPage: FunctionComponent = observer(() => {
       }}
     >
       <div className={style["container"]}>
-        <div className={style["title"]}>
+        <div className={isCardano ? style["titleCardano"] : style["title"]}>
           <FormattedMessage id="main.menu.activity" />
         </div>
-        {
+
+        {isCardano ? (
+          <div className={style["cardanoContent"]}>
+            <CardanoTransactionsTab />
+          </div>
+        ) : (
           <div className={style["tabContainer"]}>
             <TabsPanel
               activeTabId={activeTabId}
@@ -75,7 +107,7 @@ export const ActivityPage: FunctionComponent = observer(() => {
               }}
             />
           </div>
-        }
+        )}
       </div>
     </HeaderLayout>
   );

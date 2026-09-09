@@ -9,7 +9,7 @@ export const Checkbox: React.FC<{
   setIsChecked: React.Dispatch<React.SetStateAction<boolean>>;
 }> = ({ label, isChecked, className, setIsChecked }) => {
   return (
-    <div
+    <label
       className={classNames(
         style["select-item"],
         isChecked ? style["selected"] : "",
@@ -17,18 +17,14 @@ export const Checkbox: React.FC<{
       )}
     >
       <span className={style["select-item-label"]}>{label}</span>
-      <label className={style["select-checkbox-wrapper"]}>
+      <span className={style["select-checkbox-wrapper"]}>
         <input
           type="checkbox"
-          onClick={() => {
-            setIsChecked(!isChecked);
-          }}
           checked={isChecked}
-          readOnly
-          tabIndex={-1}
+          onChange={(event) => setIsChecked(event.currentTarget.checked)}
         />
         <span className={style["select-checkbox"]} />
-      </label>
-    </div>
+      </span>
+    </label>
   );
 };

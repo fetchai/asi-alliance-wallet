@@ -11,6 +11,7 @@ export interface AddressProps {
   iconClass?: string;
   placement?: PopperOptions["placement"];
   childrenStyle?: React.CSSProperties;
+  childrenClassName?: string;
 }
 
 export interface Bech32AddressProps {
@@ -59,6 +60,7 @@ export const Address: FunctionComponent<
               : tooltipAddress}
           </div>
         }
+        childrenClassName={props.childrenClassName}
         childrenStyle={{
           opacity: 0.6,
           color: "var(--font-secondary)",
@@ -86,6 +88,8 @@ export const Address: FunctionComponent<
           {tooltipAddress}
         </div>
       }
+      childrenClassName={props.childrenClassName}
+      childrenStyle={props.childrenStyle}
     >
       {children}
     </ToolTip>

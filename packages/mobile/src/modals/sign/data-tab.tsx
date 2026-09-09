@@ -29,7 +29,7 @@ export const DataTab: FunctionComponent<{
       Buffer.from(
         signDocHelper.signDocWrapper.aminoSignDoc.msgs[0].value.data,
         "base64"
-      )``
+      )
     );
     return JSON.stringify(JSON.parse(jsonStr), undefined, 2);
   }, [signDocHelper.signDocWrapper?.aminoSignDoc.msgs, ethSignType]);

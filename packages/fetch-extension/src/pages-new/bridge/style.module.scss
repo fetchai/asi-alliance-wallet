@@ -195,3 +195,33 @@
   border-bottom: 1px solid $border-grey;
   margin: 32px 0px;
 }
+
+.unsupportedBridge {
+  padding: 24px 16px;
+  text-align: center;
+  color: $font-dark;
+}
+
+.unsupportedBridgeTitle {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.unsupportedBridgeHint {
+  font-size: 14px;
+  color: $font-secondary;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.unsupportedBridgeSend {
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: $font-dark;
+  font-size: 14px;
+  padding: 10px 20px;
+}

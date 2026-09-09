@@ -21,14 +21,21 @@ export const ManageNetworks: FunctionComponent = observer(() => {
 
   const [cosmosSearchTerm, setCosmosSearchTerm] = useState("");
   const [evmSearchTerm, setEvmSearchTerm] = useState("");
+  const [cardanoSearchTerm, setCardanoSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
   const mainChainList = chainStore.chainInfos.filter(
-    (chainInfo) => !chainInfo.features?.includes("evm")
+    (chainInfo) =>
+      !chainInfo.features?.includes("evm") &&
+      !chainInfo.features?.includes("cardano")
   );
 
   const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
     chainInfo.features?.includes("evm")
+  );
+
+  const cardanoChainList = chainStore.chainInfos.filter((chainInfo) =>
+    chainInfo.features?.includes("cardano")
   );
 
   const disabledChainList = chainStore.disabledChainInfosInUI;
@@ -61,7 +68,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                 text="Add Custom Cosmos Network"
               />
             }
-            emptyContent={<NoResults styles={{ height: "250px" }} />}
+            emptyContent={<NoResults styles={{ height: "200px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
                 key={index}
@@ -119,7 +126,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
                 text={"Add Custom EVM Network"}
               />
             }
-            emptyContent={<NoResults styles={{ height: "290px" }} />}
+            emptyContent={<NoResults styles={{ height: "200px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
                 key={index}
@@ -152,6 +159,49 @@ export const ManageNetworks: FunctionComponent = observer(() => {
     },
   ];
 
+  if (true) {
+    tabs.push({
+      id: "Cardano",
+      component: (
+        <div>
+          <SearchBar
+            searchTerm={cardanoSearchTerm}
+            onSearchTermChange={setCardanoSearchTerm}
+            valuesArray={cardanoChainList}
+            filterFunction={getFilteredChainValues}
+            emptyContent={<NoResults styles={{ height: "200px" }} />}
+            renderResult={(chainInfo, index) => (
+              <Card
+                key={index}
+                leftImage={
+                  chainInfo.raw.chainSymbolImageUrl !== undefined
+                    ? chainInfo.raw.chainSymbolImageUrl
+                    : chainInfo.chainName
+                    ? chainInfo.chainName[0].toUpperCase()
+                    : ""
+                }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
+                heading={chainInfo.chainName}
+                rightContent={
+                  <ToggleSwitchButton
+                    checked={!disabledChainList.includes(chainInfo)}
+                    onChange={() => {
+                      chainStore.toggleChainInfoInUI(chainInfo.chainId);
+                    }}
+                  />
+                }
+              />
+            )}
+          />
+        </div>
+      ),
+    });
+  }
+
   return (
     <HeaderLayout
       smallTitle={true}
@@ -163,6 +213,8 @@ export const ManageNetworks: FunctionComponent = observer(() => {
         id:
           selectedTab === "EVM"
             ? "chain.manage-networks.evm"
+            : selectedTab === "Cardano"
+            ? "chain.manage-networks.cardano"
             : "chain.manage-networks.cosmos",
       })}
       onBackButton={() => {
@@ -172,7 +224,7 @@ export const ManageNetworks: FunctionComponent = observer(() => {
       <div className={style["chainListContainer"]}>
         <TabsPanel
           onTabChange={(tabId: string) => {
-            setSelectedTab;
+            setSelectedTab(tabId);
             analyticsStore.logEvent(`${tabId.toLowerCase()}_tab_click`, {
               pageName: "Home",
             });

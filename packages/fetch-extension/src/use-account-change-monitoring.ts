@@ -1,17 +1,34 @@
+/**
+ * Account / keyring refresh listens on KEYRING_SURFACES_SYNC, network-surfaces
+ * sync, and legacy RefreshAccountList.
+ */
 import { useEffect, useState } from "react";
-import { RefreshAccountList } from "@keplr-wallet/background";
+import {
+  KEYRING_SURFACES_SYNC_MESSAGE_TYPE,
+  RefreshAccountList,
+} from "@keplr-wallet/background";
 import { useStore } from "./stores";
+import { syncKeyringSurfacesFromBackground } from "./utils/keyring-surfaces-sync";
+import { attachExtensionNetworkProjectionListeners } from "./utils/network-surfaces-sync";
+
+function isExtensionUiContext(): boolean {
+  try {
+    return Boolean(
+      typeof browser !== "undefined" && (browser as any).runtime?.id
+    );
+  } catch {
+    return false;
+  }
+}
 
 export const useAccountChangeMonitoring = () => {
-  const { keyRingStore } = useStore();
+  const { keyRingStore, chainStore } = useStore();
   const [isPopupOrSidepanel, setIsPopupOrSidepanel] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       try {
         const currentTab = await browser.tabs.getCurrent();
-        // if currentTab exists, running in a normal tab
-        // else it is a popup or sidepanel
         if (!currentTab) {
           setIsPopupOrSidepanel(true);
         }
@@ -23,17 +40,42 @@ export const useAccountChangeMonitoring = () => {
     init();
   }, []);
 
-  // update keyring store in extension to refresh multikeystore list
-  // when wallet is imported or created
+  useEffect(() => {
+    if (!isExtensionUiContext()) {
+      return;
+    }
+
+    return attachExtensionNetworkProjectionListeners({
+      chainStore,
+      onOtherMessage: (message) => {
+        const m = message as { type?: string };
+        if (m?.type === KEYRING_SURFACES_SYNC_MESSAGE_TYPE) {
+          void syncKeyringSurfacesFromBackground(chainStore, keyRingStore)
+            .then((outcome) => {
+              if (outcome === "retry-scheduled") {
+                console.warn(
+                  "[surfaces] keyring sync scheduled projection retry"
+                );
+              }
+            })
+            .catch((error) => {
+              console.warn("[surfaces] keyring sync failed:", error);
+            });
+        }
+      },
+    });
+  }, [chainStore, keyRingStore]);
 
   useEffect(() => {
-    if (!isPopupOrSidepanel) return; // don't set listener in normal tabs
+    if (!isPopupOrSidepanel) {
+      return;
+    }
 
     const messageHandler = (message: any) => {
       const RefreshAccountListMsg = new RefreshAccountList().type();
       if (RefreshAccountListMsg === message.type) {
         keyRingStore.refreshMultiKeyStoreInfo();
-        window.location.hash = "/"; // navigate to home on account change
+        window.location.hash = "/";
         return true;
       }
     };
@@ -42,7 +84,7 @@ export const useAccountChangeMonitoring = () => {
     return () => {
       browser.runtime.onMessage.removeListener(messageHandler);
     };
-  }, [isPopupOrSidepanel]);
+  }, [isPopupOrSidepanel, keyRingStore]);
 
   return null;
 };
