@@ -284,8 +284,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const handlePaste = (index: number, value: string) => {
     const words = value
       .trim()
-      .split(" ")
-      .map((word) => word.trim());
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0);
 
     if (words.length === 1) {
       // If the length of pasted words is 1 and the word is guessed as a private key,
@@ -409,6 +410,20 @@ export const RecoverMnemonicPage: FunctionComponent<{
     }
   };
 
+  const resetRecoverForm = () => {
+    setShownMnemonicIndex(-1);
+    _setSeedType(SeedType.WORDS12);
+    setSeedWords(new Array<string>(12).fill(""));
+    setSeedWordsError(undefined);
+    setActiveTab(NewMnemonicStep.WORDS12);
+    setSelectedNetworks([]);
+    setPasswordCheckbox(false);
+    setPasswordStrengthScore(0);
+    setValue("name", defaultAccountName);
+    setValue("password", "");
+    setValue("confirmPassword", "");
+  };
+
   useEffect(() => {
     if (confirmPassword) {
       trigger("confirmPassword");
@@ -433,7 +448,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
           <div className={styleRecoverMnemonic["backButtonContainer"]}>
             <BackButton
               onClick={() => {
-                // registerConfig.clear();
+                resetRecoverForm();
                 setSelectedCard("main");
               }}
             />
