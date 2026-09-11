@@ -33,7 +33,7 @@ export const Receive: FunctionComponent = () => {
           placement: "top-center",
           type: "success",
           duration: 2,
-          content: "Copied Address",
+          content: "Address Copied",
           canDelete: true,
           transition: {
             duration: 0.25,
