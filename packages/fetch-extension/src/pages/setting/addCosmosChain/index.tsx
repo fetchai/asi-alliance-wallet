@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
 } from "react";
 import { useNavigate } from "react-router";
 import { Form } from "reactstrap";
@@ -35,6 +36,7 @@ export const AddCosmosChain: FunctionComponent = () => {
   const [hasErrors, setHasErrors] = useState(false);
   const [autoFetchNetworkDetails, setAutoFetchNetworkDetails] = useState(true);
   const [newChainInfo, setNewChainInfo] = useState(INITIAL_CHAIN_CONFIG);
+  const chainNameFetchIdRef = useRef(0);
   const { supported: wsSupported, loading: wsLoading } = useWebSocketSupport(
     newChainInfo.rpc
   );
@@ -64,6 +66,7 @@ export const AddCosmosChain: FunctionComponent = () => {
   const fetchCosmosChainInfo = useCallback(
     async (chainName: string, autoFetch = true) => {
       if (!chainName || !autoFetch) return;
+      const fetchId = ++chainNameFetchIdRef.current;
       const baseName = chainName
         .replace(/[-\s]/g, "") // remove all hyphens and spaces
         ?.toLowerCase();
@@ -74,6 +77,10 @@ export const AddCosmosChain: FunctionComponent = () => {
         // fetch from chain-registry
         const registryUrl = `https://raw.githubusercontent.com/cosmos/chain-registry/master/${baseName}/chain.json`;
         const { data: registryData } = await axios.get(registryUrl);
+
+        if (fetchId !== chainNameFetchIdRef.current) {
+          return;
+        }
 
         if (!registryData) {
           setInfo(
@@ -136,6 +143,10 @@ export const AddCosmosChain: FunctionComponent = () => {
           }
         }
 
+        if (fetchId !== chainNameFetchIdRef.current) {
+          return;
+        }
+
         setNewChainInfo((prev) => ({
           ...prev,
           chainId,
@@ -162,13 +173,18 @@ export const AddCosmosChain: FunctionComponent = () => {
           setInfo("We've fetched information based on provided network name.");
         }
       } catch (err) {
+        if (fetchId !== chainNameFetchIdRef.current) {
+          return;
+        }
         setNewChainInfo({
           ...INITIAL_CHAIN_CONFIG,
           chainName: chainName,
         });
         setInfo("Could not fetch chain details. Please fill manually.");
       } finally {
-        loadingIndicator.setIsLoading("chain-details", false);
+        if (fetchId === chainNameFetchIdRef.current) {
+          loadingIndicator.setIsLoading("chain-details", false);
+        }
       }
     },
     [loadingIndicator]
@@ -283,6 +299,14 @@ export const AddCosmosChain: FunctionComponent = () => {
     if (name === "chainId") {
       setNewChainInfo({ ...newChainInfo, chainId: value });
     } else if (name === "chainName") {
+      if (value.trim() === "") {
+        chainNameFetchIdRef.current += 1;
+        debouncedFetchChainInfo.cancel();
+        loadingIndicator.setIsLoading("chain-details", false);
+        setNewChainInfo(INITIAL_CHAIN_CONFIG);
+        setInfo("");
+        return;
+      }
       setNewChainInfo({ ...newChainInfo, chainName: value });
       debouncedFetchChainInfo(value, !isChainNameExist && !isChainIdExist);
     } else if (name === "rpc" || name === "rest") {
