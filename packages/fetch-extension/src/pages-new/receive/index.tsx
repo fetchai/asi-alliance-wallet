@@ -28,7 +28,11 @@ export const Receive: FunctionComponent = () => {
   const copyAddress = useCallback(
     async (address: string) => {
       if (accountInfo.walletStatus === WalletStatus.Loaded) {
+        window.getSelection()?.removeAllRanges();
         await navigator.clipboard.writeText(address);
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
         notification.push({
           placement: "top-center",
           type: "success",
@@ -73,13 +77,27 @@ export const Receive: FunctionComponent = () => {
         <Card
           style={{
             marginBottom: "24px",
+            userSelect: "none",
           }}
           headingStyle={{
             width: "100%",
+            userSelect: "none",
           }}
           heading={accountInfo.bech32Address}
-          rightContent={require("@assets/svg/wireframe/copy.svg")}
-          rightContentOnClick={() => copyAddress(accountInfo.bech32Address)}
+          rightContent={
+            <img
+              className={StyleQrCode["copyIcon"]}
+              src={require("@assets/svg/wireframe/copy.svg")}
+              alt="Copy address"
+              draggable={false}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                copyAddress(accountInfo.bech32Address);
+              }}
+            />
+          }
         />
         <div className={StyleQrCode["depositWarning"]}>
           <img src={require("@assets/svg/info-mark.svg")} alt="" />
