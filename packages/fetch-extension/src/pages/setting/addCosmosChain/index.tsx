@@ -316,22 +316,27 @@ export const AddCosmosChain: FunctionComponent = () => {
         checkEndpointValidity(newChainInfo.rest, "rest"),
       ]);
 
-      const errors = [];
-      if (!rpcResult.valid) errors.push(`RPC: ${rpcResult.reason}`);
-      if (!restResult.valid) errors.push(`REST: ${restResult.reason}`);
+      if (!rpcResult.valid || !restResult.valid) {
+        let content: string;
+        if (!rpcResult.valid && !restResult.valid) {
+          content =
+            rpcResult.reason === restResult.reason
+              ? rpcResult.reason || "Endpoint unreachable or request failed"
+              : `RPC: ${rpcResult.reason}; REST: ${restResult.reason}`;
+        } else if (!rpcResult.valid) {
+          content = `RPC: ${rpcResult.reason}`;
+        } else {
+          content = `REST: ${restResult.reason}`;
+        }
 
-      errors.forEach((err) =>
         notification.push({
           type: "danger",
           placement: "top-center",
           duration: 5,
-          content: err,
+          content,
           canDelete: true,
           transition: { duration: 0.25 },
-        })
-      );
-
-      if (errors.length > 0) {
+        });
         setHasErrors(true);
         setInfo(
           "Invalid REST or RPC endpoint. Please provide a valid endpoint."
