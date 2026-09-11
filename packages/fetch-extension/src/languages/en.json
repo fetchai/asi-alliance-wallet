@@ -299,7 +299,7 @@
 
   "lock.input.password": "Password",
   "lock.input.password.error.required": "Empty password",
-  "lock.input.password.error.invalid": "Invalid password",
+  "lock.input.password.error.invalid": "Your password is incorrect",
   "lock.alert.capslock": "CapsLock is on",
   "lock.button.unlock": "Unlock",
 

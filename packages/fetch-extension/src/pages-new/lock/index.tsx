@@ -133,11 +133,9 @@ export const LockPage: FunctionComponent = observer(() => {
     } catch (e) {
       console.log(e);
       setError("password", {
-        message: keyRingStore.needMigration
-          ? intl.formatMessage({
-              id: "lock.input.password.error.invalid",
-            })
-          : e?.message,
+        message: intl.formatMessage({
+          id: "lock.input.password.error.invalid",
+        }),
       });
     } finally {
       setIsLoading(false);
