@@ -1,10 +1,11 @@
-import { ObservableQuery, QueryOptions, QueryResponse } from "./index";
-import { KVStore } from "@keplr-wallet/common";
-import { AxiosInstance } from "axios";
+import { ObservableQuery, QueryOptions } from "./query";
+import { QuerySharedContext } from "./context";
 import { action, makeObservable, observable } from "mobx";
 import { Hash } from "@keplr-wallet/crypto";
 import { Buffer } from "buffer/";
 import { HasMapStore } from "../map";
+import { simpleFetch } from "@keplr-wallet/simple-fetch";
+import { JsonRpcResponse } from "@keplr-wallet/types";
 
 /**
  * Experimental implementation for json rpc.
@@ -14,53 +15,50 @@ export class ObservableJsonRPCQuery<
   E = unknown
 > extends ObservableQuery<T, E> {
   @observable.ref
-  protected _params: readonly any[];
+  protected _params?: readonly unknown[] | Record<string, unknown>;
 
   constructor(
-    kvStore: KVStore,
-    instance: AxiosInstance,
+    sharedContext: QuerySharedContext,
+    baseURL: string,
     url: string,
     protected readonly method: string,
-    params: readonly any[],
+    params?: readonly unknown[] | Record<string, unknown>,
     options: Partial<QueryOptions> = {}
   ) {
-    super(kvStore, instance, url, options);
+    super(sharedContext, baseURL, url, options);
 
     this._params = params;
 
     makeObservable(this);
   }
 
-  get params(): readonly any[] {
+  get params(): readonly unknown[] | Record<string, unknown> | undefined {
     return this._params;
   }
 
   @action
-  protected setParams(params: readonly any[]) {
+  protected setParams(params?: readonly unknown[] | Record<string, unknown>) {
     this._params = params;
     this.fetch();
   }
 
   protected override async fetchResponse(
     abortController: AbortController
-  ): Promise<{ response: QueryResponse<T>; headers: any }> {
-    const result = await this.instance.post<{
-      jsonrpc: "2.0";
-      result?: T;
-      id: string;
-      error?: {
-        code?: number;
-        message?: string;
-      };
-    }>(
+  ): Promise<{ headers: any; data: T }> {
+    const result = await simpleFetch<JsonRpcResponse<T>>(
+      this.baseURL,
       this.url,
       {
-        jsonrpc: "2.0",
-        id: "1",
-        method: this.method,
-        params: this.params,
-      },
-      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "1",
+          method: this.method,
+          params: this.params,
+        }),
         signal: abortController.signal,
       }
     );
@@ -75,12 +73,7 @@ export class ObservableJsonRPCQuery<
 
     return {
       headers: result.headers,
-      response: {
-        data: result.data.result,
-        status: result.status,
-        staled: false,
-        timestamp: Date.now(),
-      },
+      data: result.data.result,
     };
   }
 

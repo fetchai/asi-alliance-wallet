@@ -1,5 +1,6 @@
 import React, {
   FunctionComponent,
+  PropsWithChildren,
   useCallback,
   useContext,
   useRef,
@@ -65,13 +66,12 @@ const background = {
   },
 };
 
-export interface Props {
+export interface Props extends PropsWithChildren {
   isOpen: boolean;
 }
 
 export const Menu: FunctionComponent<Props> = ({ isOpen, children }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-
   const menu = useMenu();
 
   const menuOnClick = useCallback(() => {
@@ -80,24 +80,26 @@ export const Menu: FunctionComponent<Props> = ({ isOpen, children }) => {
 
   return (
     <React.Fragment>
-      <AnimatePresence>
+      <AnimatePresence {...({} as any)}>
         {isOpen ? (
           <motion.div
+            key="menu-backdrop"
             className={style["background"]}
-            animate={isOpen ? "open" : "closed"}
             variants={background}
+            initial="closed"
+            animate="open"
             exit="closed"
-            initial={{ opacity: 0 }}
             onClick={menuOnClick}
           />
         ) : null}
       </AnimatePresence>
+
       <motion.nav
         className={style["menuNav"]}
         ref={containerRef}
-        animate={isOpen ? "open" : "closed"}
         variants={sidebar}
-        initial={{ x: "-100%" }}
+        initial="closed"
+        animate={isOpen ? "open" : "closed"}
       >
         {children}
       </motion.nav>

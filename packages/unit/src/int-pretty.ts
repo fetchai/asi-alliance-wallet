@@ -1,4 +1,3 @@
-import { Int } from "./int";
 import { Dec } from "./decimal";
 import { DecUtils } from "./dec-utils";
 import { CoinUtils } from "./coin-utils";
@@ -14,6 +13,8 @@ export type IntPrettyOptions = {
   // If this is true, toString() will return the string with prefix like < 0.001 if a value cannot be expressed with a max decimals.
   inequalitySymbol: boolean;
   inequalitySymbolSeparator: string;
+  sign: boolean;
+  roundTo: number | undefined;
 };
 
 export class IntPretty {
@@ -28,6 +29,8 @@ export class IntPretty {
     locale: true,
     inequalitySymbol: false,
     inequalitySymbolSeparator: " ",
+    sign: false,
+    roundTo: undefined,
   };
 
   constructor(num: Dec | { toDec(): Dec } | bigInteger.BigNumber) {
@@ -42,18 +45,28 @@ export class IntPretty {
       return;
     }
 
-    let dec = num;
-    let decPrecision = 0;
-    for (let i = 0; i < 18; i++) {
-      if (
-        !dec.truncate().equals(new Int(0)) &&
-        dec.equals(new Dec(dec.truncate()))
-      ) {
-        break;
-      }
-      dec = dec.mul(new Dec(10));
-      decPrecision++;
+    // Get string representation and find decimal position
+    const decStr = num.toString();
+    const decimalIndex = decStr.indexOf(".");
+
+    // If no decimal point no precision needed
+    if (decimalIndex === -1) {
+      this.dec = num;
+      this._options.maxDecimals = 0;
+      return;
     }
+
+    // Count significant digits by walking backwards until non-zero digit
+    const decimalPart = decStr.slice(decimalIndex + 1);
+    let trailingZeros = 0;
+    for (
+      let i = decimalPart.length - 1;
+      i >= 0 && decimalPart[i] === "0";
+      i--
+    ) {
+      trailingZeros++;
+    }
+    const decPrecision = decimalPart.length - trailingZeros;
 
     this.dec = num;
     this._options.maxDecimals = decPrecision;
@@ -122,6 +135,18 @@ export class IntPretty {
   locale(locale: boolean): IntPretty {
     const pretty = this.clone();
     pretty._options.locale = locale;
+    return pretty;
+  }
+
+  sign(sign: boolean): IntPretty {
+    const pretty = this.clone();
+    pretty._options.sign = sign;
+    return pretty;
+  }
+
+  roundTo(roundTo: number | undefined): IntPretty {
+    const pretty = this.clone();
+    pretty._options.roundTo = roundTo;
     return pretty;
   }
 
@@ -219,7 +244,14 @@ export class IntPretty {
   }
 
   toStringWithSymbols(prefix: string, suffix: string): string {
-    const dec = this.toDec();
+    let dec = this.toDec();
+    if (
+      this._options.roundTo != null &&
+      this._options.roundTo >= 1 &&
+      this._options.roundTo <= 19
+    ) {
+      dec = dec.roundTo(this._options.roundTo);
+    }
 
     if (
       this._options.inequalitySymbol &&
@@ -228,12 +260,18 @@ export class IntPretty {
     ) {
       const isNeg = dec.isNegative();
 
-      return `${isNeg ? ">" : "<"}${this._options.inequalitySymbolSeparator}${
-        isNeg ? "-" : ""
-      }${prefix}${DecUtils.getTenExponentN(-this._options.maxDecimals).toString(
-        this._options.maxDecimals,
-        this._options.locale
-      )}${suffix}`;
+      let sign = "";
+      if (isNeg) {
+        sign = "-";
+      } else if (this._options.sign && !dec.isZero()) {
+        sign = "+";
+      }
+
+      return `${isNeg ? ">" : "<"}${
+        this._options.inequalitySymbolSeparator
+      }${sign}${prefix}${DecUtils.getTenExponentN(
+        -this._options.maxDecimals
+      ).toString(this._options.maxDecimals, this._options.locale)}${suffix}`;
     }
 
     let result: string;
@@ -254,18 +292,23 @@ export class IntPretty {
     const isNeg = result.charAt(0) === "-";
     if (isNeg) {
       result = result.slice(1);
+    } else if (this._options.sign && !dec.isZero()) {
+      result = `+${result}`;
     }
 
     return `${isNeg ? "-" : ""}${prefix}${result}${suffix}`;
   }
 
   clone(): IntPretty {
-    const pretty = new IntPretty(this.dec);
-    pretty.dec = this.dec;
-    pretty.floatingDecimalPointRight = this.floatingDecimalPointRight;
-    pretty._options = {
-      ...this._options,
-    };
-    return pretty;
+    // Clone is often in hot-paths for int-pretty, and the function constructor has overhead.
+    // Thus we do a direct clone.
+    return Object.setPrototypeOf(
+      {
+        dec: this.dec,
+        floatingDecimalPointRight: this.floatingDecimalPointRight,
+        _options: { ...this._options },
+      },
+      IntPretty.prototype
+    );
   }
 }

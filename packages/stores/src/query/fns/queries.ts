@@ -1,6 +1,6 @@
 import { QueriesSetBase } from "../queries";
-import { ChainGetter } from "../../common";
-import { KVStore } from "@keplr-wallet/common";
+import { QuerySharedContext } from "../../common";
+import { ChainGetter } from "../../chain";
 import { DeepReadonly } from "utility-types";
 import { ObservableQueryAllDomainsOwnedBy } from "./all-domains-by-owner";
 import { ObservableQueryDomainData } from "./domain-data";
@@ -16,13 +16,13 @@ export interface FNSQueries {
 export const FNSQueries = {
   use(): (
     queriesSetBase: QueriesSetBase,
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter
   ) => FNSQueries {
     return (
       queriesSetBase: QueriesSetBase,
-      kvStore: KVStore,
+      kvStore: QuerySharedContext,
       chainId: string,
       chainGetter: ChainGetter
     ) => {
@@ -44,7 +44,7 @@ export class FNSQueriesImpl {
 
   constructor(
     _base: QueriesSetBase,
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter
   ) {

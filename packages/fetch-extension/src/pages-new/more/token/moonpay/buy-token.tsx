@@ -4,6 +4,7 @@ import { Dropdown } from "@components-v2/dropdown";
 import { Input } from "@components-v2/form";
 import { Dec } from "@keplr-wallet/unit";
 import { validateDecimalPlaces } from "@utils/format";
+import { isPureEvmChain } from "@utils/filters";
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -24,7 +25,8 @@ export const BuyToken: FunctionComponent<{
   const { chainStore, accountStore } = useStore();
   const chainId = chainStore.current.chainId;
   const currentChain = chainStore.current.chainName;
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const current = chainStore.current;
+  const isEvm = isPureEvmChain(current);
   const defaultAddress =
     accountStore.getAccount(chainId)[
       isEvm ? "ethereumHexAddress" : "bech32Address"

@@ -12,7 +12,7 @@ export const DepositModal: FunctionComponent<{
   setIsDepositOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }> = ({ chainName, address, isDepositOpen, setIsDepositOpen }) => {
   const qrCodeRef = useCallback(
-    (node) => {
+    (node: any) => {
       if (node !== null && address) {
         QrCode.toCanvas(node, address);
       }

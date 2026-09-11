@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
 } from "react";
 import { useNavigate } from "react-router";
 import { Form } from "reactstrap";
@@ -19,6 +20,7 @@ import { debounce } from "lodash";
 import { INITIAL_CHAIN_CONFIG } from "./constants";
 import { useNotification } from "@components/notification";
 import { useWebSocketSupport } from "../../../use-rpc-websocket-support";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 type EndpointCheckResult = {
   valid: boolean;
@@ -34,6 +36,7 @@ export const AddCosmosChain: FunctionComponent = () => {
   const [hasErrors, setHasErrors] = useState(false);
   const [autoFetchNetworkDetails, setAutoFetchNetworkDetails] = useState(true);
   const [newChainInfo, setNewChainInfo] = useState(INITIAL_CHAIN_CONFIG);
+  const chainNameFetchIdRef = useRef(0);
   const { supported: wsSupported, loading: wsLoading } = useWebSocketSupport(
     newChainInfo.rpc
   );
@@ -63,6 +66,7 @@ export const AddCosmosChain: FunctionComponent = () => {
   const fetchCosmosChainInfo = useCallback(
     async (chainName: string, autoFetch = true) => {
       if (!chainName || !autoFetch) return;
+      const fetchId = ++chainNameFetchIdRef.current;
       const baseName = chainName
         .replace(/[-\s]/g, "") // remove all hyphens and spaces
         ?.toLowerCase();
@@ -73,6 +77,10 @@ export const AddCosmosChain: FunctionComponent = () => {
         // fetch from chain-registry
         const registryUrl = `https://raw.githubusercontent.com/cosmos/chain-registry/master/${baseName}/chain.json`;
         const { data: registryData } = await axios.get(registryUrl);
+
+        if (fetchId !== chainNameFetchIdRef.current) {
+          return;
+        }
 
         if (!registryData) {
           setInfo(
@@ -135,6 +143,10 @@ export const AddCosmosChain: FunctionComponent = () => {
           }
         }
 
+        if (fetchId !== chainNameFetchIdRef.current) {
+          return;
+        }
+
         setNewChainInfo((prev) => ({
           ...prev,
           chainId,
@@ -161,13 +173,18 @@ export const AddCosmosChain: FunctionComponent = () => {
           setInfo("We've fetched information based on provided network name.");
         }
       } catch (err) {
+        if (fetchId !== chainNameFetchIdRef.current) {
+          return;
+        }
         setNewChainInfo({
           ...INITIAL_CHAIN_CONFIG,
           chainName: chainName,
         });
         setInfo("Could not fetch chain details. Please fill manually.");
       } finally {
-        loadingIndicator.setIsLoading("chain-details", false);
+        if (fetchId === chainNameFetchIdRef.current) {
+          loadingIndicator.setIsLoading("chain-details", false);
+        }
       }
     },
     [loadingIndicator]
@@ -282,6 +299,14 @@ export const AddCosmosChain: FunctionComponent = () => {
     if (name === "chainId") {
       setNewChainInfo({ ...newChainInfo, chainId: value });
     } else if (name === "chainName") {
+      if (value.trim() === "") {
+        chainNameFetchIdRef.current += 1;
+        debouncedFetchChainInfo.cancel();
+        loadingIndicator.setIsLoading("chain-details", false);
+        setNewChainInfo(INITIAL_CHAIN_CONFIG);
+        setInfo("");
+        return;
+      }
       setNewChainInfo({ ...newChainInfo, chainName: value });
       debouncedFetchChainInfo(value, !isChainNameExist && !isChainIdExist);
     } else if (name === "rpc" || name === "rest") {
@@ -308,45 +333,68 @@ export const AddCosmosChain: FunctionComponent = () => {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     try {
-      loadingIndicator.setIsLoading("chain-details-adding", true);
+      loadingIndicator.setIsLoading("chain-suggest-switch", true);
       // checking if the provided endpoint is a valid rest/rpc url
       const [rpcResult, restResult] = await Promise.all([
         checkEndpointValidity(newChainInfo.rpc, "rpc"),
         checkEndpointValidity(newChainInfo.rest, "rest"),
       ]);
 
-      const errors = [];
-      if (!rpcResult.valid) errors.push(`RPC: ${rpcResult.reason}`);
-      if (!restResult.valid) errors.push(`REST: ${restResult.reason}`);
+      if (!rpcResult.valid || !restResult.valid) {
+        let content: string;
+        if (!rpcResult.valid && !restResult.valid) {
+          content =
+            rpcResult.reason === restResult.reason
+              ? rpcResult.reason || "Endpoint unreachable or request failed"
+              : `RPC: ${rpcResult.reason}; REST: ${restResult.reason}`;
+        } else if (!rpcResult.valid) {
+          content = `RPC: ${rpcResult.reason}`;
+        } else {
+          content = `REST: ${restResult.reason}`;
+        }
 
-      errors.forEach((err) =>
         notification.push({
           type: "danger",
           placement: "top-center",
           duration: 5,
-          content: err,
+          content,
           canDelete: true,
           transition: { duration: 0.25 },
-        })
-      );
-
-      if (errors.length > 0) {
+        });
         setHasErrors(true);
         setInfo(
           "Invalid REST or RPC endpoint. Please provide a valid endpoint."
         );
-        loadingIndicator.setIsLoading("chain-details-adding", false);
+        loadingIndicator.setIsLoading("chain-suggest-switch", false);
         return;
       }
-      chainStore.addCustomChainInfo(newChainInfo);
-      chainStore.selectChain(newChainInfo.chainId);
-      loadingIndicator.setIsLoading("chain-details-adding", false);
+      await chainStore.addCustomChainInfo(newChainInfo);
+      dispatchGlobalEventExceptSelf("keplr_suggested_chain_added");
+      await chainStore.selectChain(newChainInfo.chainId);
+      await chainStore.saveLastViewChainId();
+      notification.push({
+        type: "success",
+        placement: "top-center",
+        duration: 5,
+        content: `Succesfully added chain ${newChainInfo.chainName}`,
+        canDelete: true,
+        transition: { duration: 0.25 },
+      });
+      navigate("/", { replace: true });
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new Cosmos chain",
       });
     } catch (error) {
       console.error(error);
-      loadingIndicator.setIsLoading("chain-details-adding", false);
+      loadingIndicator.setIsLoading("chain-suggest-switch", false);
+      notification.push({
+        type: "danger",
+        placement: "top-center",
+        duration: 5,
+        content: error.message || "Unable to add custom chain",
+        canDelete: true,
+        transition: { duration: 0.25 },
+      });
       setInfo("Error adding chain.");
       setHasErrors(true);
     }
@@ -597,7 +645,7 @@ export const AddCosmosChain: FunctionComponent = () => {
           }}
           disabled={!isValid}
           text={
-            loadingIndicator.isLoading("chain-details-adding") ||
+            loadingIndicator.isLoading("chain-suggest-switch") ||
             loadingIndicator.isLoading("chain-details")
               ? "Loading..."
               : "Add Chain"

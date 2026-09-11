@@ -66,6 +66,10 @@ export interface IBCCurrency extends Currency {
   readonly paths: {
     portId: string;
     channelId: string;
+
+    counterpartyChannelId?: string;
+    counterpartyPortId?: string;
+    clientChainId?: string;
   }[];
   /**
    * The chain id that the currency is from.
@@ -80,6 +84,14 @@ export interface IBCCurrency extends Currency {
 }
 
 /**
+ * The currency that is supported on the EVM.
+ */
+export interface ERC20Currency extends Currency {
+  readonly type: "erc20";
+  readonly contractAddress: string;
+}
+
+/**
  * Any type of currency that Kepler applications can support.
  */
 export type AppCurrency =
@@ -87,7 +99,8 @@ export type AppCurrency =
   | CW20Currency
   | Erc20Currency
   | Secret20Currency
-  | IBCCurrency;
+  | IBCCurrency
+  | ERC20Currency;
 
 export interface FiatCurrency {
   readonly currency: string;

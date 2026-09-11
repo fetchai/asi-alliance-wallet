@@ -1,6 +1,5 @@
 {
   "manifest_version": 2,
-
   "name": "ASI Alliance Wallet",
   "description": "The official ASI Alliance Wallet for interacting with the ASI ledger",
   "version": "0.26.0",
@@ -19,7 +18,18 @@
     "persistent": true
   },
   "optional_permissions": ["downloads"],
-  "permissions": ["storage", "notifications", "identity", "idle", "alarms"],
+  "permissions": [
+    "storage",
+    "notifications",
+    "identity",
+    "idle",
+    "alarms",
+    "unlimitedStorage",
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "webNavigation"
+  ],
   "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; object-src 'self'",
   "content_scripts": [
     {

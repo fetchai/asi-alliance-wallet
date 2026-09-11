@@ -1,6 +1,6 @@
 import {
   EnvProducer,
-  WalletError,
+  KeplrError as WalletError,
   MessageSender,
   Result,
   Router,

@@ -1,7 +1,7 @@
 import React from "react";
 import { ProposalDurationRow } from "./proposal-duration-row";
 import style from "./style.module.scss";
-import { ProposalType } from "src/@types/proposal-type";
+import { ProposalType } from "../../../../@types/proposal-type";
 
 export const GovtProposalRow = ({ proposal }: { proposal: ProposalType }) => {
   const { content, voting_start_time, voting_end_time, status, proposal_id } =

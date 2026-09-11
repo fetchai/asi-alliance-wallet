@@ -1,10 +1,14 @@
 import { MintingInflation } from "./types";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQueryTendermint } from "../../../common";
+import { QuerySharedContext, ObservableQueryTendermint } from "../../../common";
 import { MintExtension, setupMintExtension } from "@cosmjs/stargate";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryMintingInfation extends ObservableQueryTendermint<MintingInflation> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,

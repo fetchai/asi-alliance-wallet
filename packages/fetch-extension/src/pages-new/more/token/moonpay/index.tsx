@@ -57,7 +57,7 @@ export const BuySellTokenPage = observer(() => {
   useEffect(() => {
     const isAddressWhitelisted = accountInfo?.bech32Address
       ? checkAddressIsBuySellWhitelisted(
-          chainId === "1" || chainId === "injective-1"
+          chainId === "eip155:1" || chainId === "injective-1"
             ? accountInfo.ethereumHexAddress || ""
             : accountInfo.bech32Address
         )

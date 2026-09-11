@@ -158,17 +158,21 @@ export const IBCChannelRegistrar: FunctionComponent<{
           setError(error);
 
           if (channel && clientState && error === "") {
-            await ibcChannelStore.get(chainStore.current.chainId).addChannel({
-              portId: "transfer",
-              channelId,
-              counterpartyChainId: selectedChainId,
-            });
+            await ibcChannelStore
+              .get(chainStore.current.chainId)
+              .addChannel(chainStore.current.chainId, {
+                portId: "transfer",
+                channelId,
+                counterpartyChainId: selectedChainId,
+              });
 
-            await ibcChannelStore.get(selectedChainId).addChannel({
-              portId: channel.data.channel.counterparty.port_id,
-              channelId: channel.data.channel.counterparty.channel_id,
-              counterpartyChainId: chainStore.current.chainId,
-            });
+            await ibcChannelStore
+              .get(selectedChainId)
+              .addChannel(chainStore.current.chainId, {
+                portId: channel.data.channel.counterparty.port_id,
+                channelId: channel.data.channel.counterparty.channel_id,
+                counterpartyChainId: chainStore.current.chainId,
+              });
 
             closeModal();
           }

@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, PropsWithChildren } from "react";
 
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
@@ -21,6 +21,7 @@ import { renderDirectMessage } from "./direct";
 import { AnyWithUnpacked } from "@keplr-wallet/cosmos";
 import { CoinPretty } from "@keplr-wallet/unit";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
+import { isPureEvmChain } from "@utils/filters";
 
 export const DetailsTab: FunctionComponent<{
   signDocHelper: SignDocHelper;
@@ -45,15 +46,9 @@ export const DetailsTab: FunctionComponent<{
     preferNoSetMemo,
     isNeedLedgerEthBlindSigning,
   }) => {
-    const { chainStore, priceStore, accountStore, signInteractionStore } =
-      useStore();
+    const { chainStore, priceStore, accountStore } = useStore();
     const intl = useIntl();
     const language = useLanguage();
-    // Check if the fee is set manually from external interaction.
-    const manualFeeExternal = Boolean(
-      !signInteractionStore.waitingData?.isInternal &&
-        signInteractionStore.waitingData?.data?.signDocWrapper?.fees?.[0]
-    );
     const mode = signDocHelper.signDocWrapper
       ? signDocHelper.signDocWrapper.mode
       : "none";
@@ -62,7 +57,8 @@ export const DetailsTab: FunctionComponent<{
         ? signDocHelper.signDocWrapper.aminoSignDoc.msgs
         : signDocHelper.signDocWrapper.protoSignDoc.txMsgs
       : [];
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const current = chainStore.current;
+    const isEvm = isPureEvmChain(current);
 
     const renderedMsgs = (() => {
       if (mode === "amino") {
@@ -149,7 +145,7 @@ export const DetailsTab: FunctionComponent<{
             </div>
           </div>
         )}
-        {(!preferNoSetFee && !manualFeeExternal) || !feeConfig.isManual ? (
+        {!preferNoSetFee || !feeConfig.isManual ? (
           <FeeButtons
             feeConfig={feeConfig}
             gasConfig={gasConfig}
@@ -179,7 +175,10 @@ export const DetailsTab: FunctionComponent<{
                   const feeOrZero =
                     feeConfig.fee ??
                     (() => {
-                      if (chainStore.current.feeCurrencies.length === 0) {
+                      if (
+                        chainStore.current.feeCurrencies.length === 0 &&
+                        chainStore.current?.stakeCurrency
+                      ) {
                         return new CoinPretty(
                           chainStore.current.stakeCurrency,
                           "0"
@@ -261,9 +260,11 @@ export const DetailsTab: FunctionComponent<{
   }
 );
 
-export const MsgRender: FunctionComponent<{
-  title: string;
-}> = ({ title, children }) => {
+export const MsgRender: FunctionComponent<
+  PropsWithChildren<{
+    title: string;
+  }>
+> = ({ title, children }) => {
   return (
     <div className={styleDetailsTab["msg"]}>
       <div className={styleDetailsTab["contentContainer"]}>

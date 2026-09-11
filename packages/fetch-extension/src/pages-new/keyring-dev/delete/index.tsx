@@ -28,7 +28,7 @@ export const DeleteWallet: FunctionComponent = () => {
   const navigate = useNavigate();
   const intl = useIntl();
 
-  const { index = "-1 " } = useParams<{ index: string }>();
+  const { index = "" } = useParams<{ index: string }>();
 
   const [loading, setLoading] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
@@ -46,14 +46,14 @@ export const DeleteWallet: FunctionComponent = () => {
   });
 
   useEffect(() => {
-    if (parseInt(index).toString() !== index) {
-      throw new Error("Invalid index");
+    if (!index || !keyRingStore.keyInfos.find((item) => item.id === index)) {
+      throw new Error("Invalid account id");
     }
-  }, [index]);
+  }, [index, keyRingStore]);
 
   const keyStore = useMemo(() => {
-    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
-  }, [keyRingStore.multiKeyStoreInfo, index]);
+    return keyRingStore.keyInfos.find((keyInfo) => keyInfo.id === index);
+  }, [keyRingStore.keyInfos, index]);
 
   const onBackUpMnemonicButtonClick = useCallback(
     (e: MouseEvent) => {
@@ -109,7 +109,7 @@ export const DeleteWallet: FunctionComponent = () => {
           />
 
           <div>
-            {keyStore.type === "mnemonic" && (
+            {keyStore?.type === "mnemonic" && (
               <Alert className={style["alert"]}>
                 <div>
                   <div className={style["textContainer"]}>
@@ -125,7 +125,7 @@ export const DeleteWallet: FunctionComponent = () => {
                 </div>
               </Alert>
             )}
-            {keyStore.type === "mnemonic" && (
+            {keyStore?.type === "mnemonic" && (
               <ButtonV2
                 styleProps={{
                   height: "56px",
@@ -210,10 +210,7 @@ export const DeleteWallet: FunctionComponent = () => {
                 setLoading(true);
                 try {
                   // Make sure that password is valid and keyring is cleared.
-                  await keyRingStore.deleteKeyRing(
-                    parseInt(index),
-                    data.password
-                  );
+                  await keyRingStore.deleteKeyRing(index, data.password);
                   analyticsStore.logEvent("delete_account_click", {
                     action: "Remove",
                   });

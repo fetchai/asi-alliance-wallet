@@ -1,12 +1,12 @@
-import { ObservableQuery, QueryResponse } from "../common";
+import { ObservableQuery, QuerySharedContext } from "../common";
 import { CoinGeckoSimplePrice } from "./types";
-import Axios from "axios";
-import { KVStore, toGenerator } from "@keplr-wallet/common";
+import { KVStore } from "@keplr-wallet/common";
 import { Dec, CoinPretty, Int, PricePretty } from "@keplr-wallet/unit";
 import { FiatCurrency } from "@keplr-wallet/types";
 import { DeepReadonly } from "utility-types";
 import deepmerge from "deepmerge";
-import { action, flow, makeObservable, observable } from "mobx";
+import { action, autorun, makeObservable, observable } from "mobx";
+import { makeURL } from "@keplr-wallet/simple-fetch";
 
 class Throttler {
   protected fns: (() => void)[] = [];
@@ -152,7 +152,7 @@ class SortedSetStorage {
 }
 
 export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
-  protected isInitialized: boolean;
+  protected _isInitialized: boolean;
 
   private _coinIds: SortedSetStorage;
   private _vsCurrencies: SortedSetStorage;
@@ -165,10 +165,11 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
   };
 
   protected _throttler: Throttler;
+
   protected _optionUri: string;
 
   constructor(
-    kvStore: KVStore,
+    protected readonly kvStore: KVStore,
     supportedVsCurrencies: {
       [vsCurrency: string]: FiatCurrency;
     },
@@ -181,14 +182,16 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
       readonly throttleDuration?: number;
     } = {}
   ) {
-    const instance = Axios.create({
-      baseURL: options.baseURL || "https://api.coingecko.com/api/v3",
-    });
-
-    super(kvStore, instance, options.uri || "/simple/price");
+    super(
+      new QuerySharedContext(kvStore, {
+        responseDebounceMs: 0,
+      }),
+      options.baseURL || "https://api.coingecko.com/api/v3",
+      options.uri || "/simple/price"
+    );
     this._optionUri = options.uri || "/simple/price";
 
-    this.isInitialized = false;
+    this._isInitialized = false;
 
     const throttleDuration = options.throttleDuration ?? 250;
 
@@ -210,19 +213,22 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
 
     makeObservable(this);
 
-    this.restoreDefaultVsCurrency();
+    this.init();
   }
 
-  protected override onStart() {
+  protected override onStart(): Promise<void> {
     super.onStart();
 
-    return this.init();
+    return this.waitUntilInitialized();
   }
 
   async init() {
-    if (this.isInitialized) {
+    if (this._isInitialized) {
       return;
     }
+
+    // Prefetch staled response
+    await this.loadStabledResponse();
 
     await Promise.all([this._coinIds.restore(), this._vsCurrencies.restore()]);
 
@@ -232,7 +238,29 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
 
     this.updateURL([], [], true);
 
-    this.isInitialized = true;
+    this._isInitialized = true;
+  }
+
+  protected async waitUntilInitialized(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      const disposal = autorun(() => {
+        if (this.isInitialized) {
+          resolve();
+
+          if (disposal) {
+            disposal();
+          }
+        }
+      });
+    });
+  }
+
+  get isInitialized(): boolean {
+    return this._isInitialized;
   }
 
   get defaultVsCurrency(): string {
@@ -242,21 +270,6 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
   @action
   setDefaultVsCurrency(defaultVsCurrency: string) {
     this._defaultVsCurrency = defaultVsCurrency;
-    this.saveDefaultVsCurrency();
-  }
-
-  @flow
-  *restoreDefaultVsCurrency() {
-    const saved = yield* toGenerator(
-      this.kvStore.get<string>("__default_vs_currency")
-    );
-    if (saved) {
-      this._defaultVsCurrency = saved;
-    }
-  }
-
-  async saveDefaultVsCurrency() {
-    await this.kvStore.set("__default_vs_currency", this.defaultVsCurrency);
   }
 
   get supportedVsCurrencies(): DeepReadonly<{
@@ -277,22 +290,14 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
 
   protected override async fetchResponse(
     abortController: AbortController
-  ): Promise<{ response: QueryResponse<CoinGeckoSimplePrice>; headers: any }> {
-    const { response, headers } = await super.fetchResponse(abortController);
+  ): Promise<{ headers: any; data: CoinGeckoSimplePrice }> {
+    const { data, headers } = await super.fetchResponse(abortController);
     // Because this store only queries the price of the tokens that have been requested from start,
     // it will remove the prior prices that have not been requested to just return the fetching result.
     // So, to prevent this problem, merge the prior response and current response with retaining the prior response's price.
     return {
       headers,
-      response: {
-        ...response,
-        ...{
-          data: deepmerge(
-            this.response ? this.response.data : {},
-            response.data
-          ),
-        },
-      },
+      data: deepmerge(this.response ? this.response.data : {}, data),
     };
   }
 
@@ -302,14 +307,14 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
     forceSetUrl: boolean = false
   ) {
     const coinIdsUpdated = this._coinIds.add(...coinIds);
-    const vsCurrenciesUpdated = this._vsCurrencies.add(...vsCurrencies);
+    const vsCurrenciesUpdated = this._vsCurrencies.add(...vsCurrencies, "usd");
 
     if (coinIdsUpdated || vsCurrenciesUpdated || forceSetUrl) {
       const url = `${this._optionUri}?ids=${this._coinIds.values.join(
         ","
       )}&vs_currencies=${this._vsCurrencies.values.join(",")}`;
 
-      if (!this.isInitialized) {
+      if (!this._isInitialized) {
         this.setUrl(url);
       } else {
         this._throttler.call(() => this.setUrl(url));
@@ -320,11 +325,7 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
   protected override getCacheKey(): string {
     // Because the uri of the coingecko would be changed according to the coin ids and vsCurrencies.
     // Therefore, just using the uri as the cache key is not useful.
-    return `${this.instance.name}-${
-      this.instance.defaults.baseURL
-    }${this.instance.getUri({
-      url: this._optionUri,
-    })}`;
+    return makeURL(this.baseURL, this._optionUri);
   }
 
   getPrice(coinId: string, vsCurrency?: string): number | undefined {
@@ -371,6 +372,123 @@ export class CoinGeckoPriceStore extends ObservableQuery<CoinGeckoSimplePrice> {
     }
 
     const price = this.getPrice(coin.currency.coinGeckoId, vsCurrrency);
+    if (price === undefined) {
+      return new PricePretty(fiatCurrency, new Int(0)).ready(false);
+    }
+
+    const dec = coin.toDec();
+    const priceDec = new Dec(price.toString());
+
+    return new PricePretty(fiatCurrency, dec.mul(priceDec));
+  }
+
+  async waitPrice(
+    coinId: string,
+    vsCurrency?: string
+  ): Promise<number | undefined> {
+    if (!vsCurrency) {
+      vsCurrency = this.defaultVsCurrency;
+    }
+
+    if (!this.supportedVsCurrencies[vsCurrency]) {
+      return Promise.resolve(undefined);
+    }
+
+    if (this.response?.data[coinId] && this.response.data[coinId][vsCurrency]) {
+      return Promise.resolve(this.response.data[coinId][vsCurrency]);
+    }
+
+    this.updateURL([coinId], [vsCurrency]);
+
+    await this.waitResponse();
+
+    const coinPrices = this.response?.data[coinId];
+    if (!coinPrices) {
+      return undefined;
+    }
+    return coinPrices[vsCurrency];
+  }
+
+  async waitFreshPrice(
+    coinId: string,
+    vsCurrency?: string
+  ): Promise<number | undefined> {
+    if (!vsCurrency) {
+      vsCurrency = this.defaultVsCurrency;
+    }
+
+    if (!this.supportedVsCurrencies[vsCurrency]) {
+      return Promise.resolve(undefined);
+    }
+
+    this.updateURL([coinId], [vsCurrency]);
+
+    await this.waitFreshResponse();
+
+    const coinPrices = this.response?.data[coinId];
+    if (!coinPrices) {
+      return undefined;
+    }
+    return coinPrices[vsCurrency];
+  }
+
+  async waitCalculatePrice(
+    coin: CoinPretty,
+    vsCurrrency?: string
+  ): Promise<PricePretty | undefined> {
+    if (!coin.currency.coinGeckoId) {
+      return undefined;
+    }
+
+    if (!vsCurrrency) {
+      vsCurrrency = this.defaultVsCurrency;
+    }
+
+    const fiatCurrency = this.supportedVsCurrencies[vsCurrrency];
+    if (!fiatCurrency) {
+      return undefined;
+    }
+
+    if (coin.toDec().isZero()) {
+      return new PricePretty(fiatCurrency, 0);
+    }
+
+    const price = await this.waitPrice(coin.currency.coinGeckoId, vsCurrrency);
+    if (price === undefined) {
+      return new PricePretty(fiatCurrency, new Int(0)).ready(false);
+    }
+
+    const dec = coin.toDec();
+    const priceDec = new Dec(price.toString());
+
+    return new PricePretty(fiatCurrency, dec.mul(priceDec));
+  }
+
+  async waitFreshCalculatePrice(
+    coin: CoinPretty,
+    vsCurrrency?: string
+  ): Promise<PricePretty | undefined> {
+    if (!coin.currency.coinGeckoId) {
+      return undefined;
+    }
+
+    if (!vsCurrrency) {
+      vsCurrrency = this.defaultVsCurrency;
+    }
+
+    const fiatCurrency = this.supportedVsCurrencies[vsCurrrency];
+    if (!fiatCurrency) {
+      return undefined;
+    }
+
+    if (coin.toDec().isZero()) {
+      return new PricePretty(fiatCurrency, 0);
+    }
+
+    const price = await this.waitFreshPrice(
+      coin.currency.coinGeckoId,
+      vsCurrrency
+    );
     if (price === undefined) {
       return new PricePretty(fiatCurrency, new Int(0)).ready(false);
     }

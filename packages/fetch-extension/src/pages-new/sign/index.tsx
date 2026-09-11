@@ -12,7 +12,6 @@ import { useNavigate } from "react-router";
 import { observer } from "mobx-react-lite";
 import {
   useFeeConfig,
-  useInteractionInfo,
   useMemoConfig,
   useSignDocAmountConfig,
   useSignDocHelper,
@@ -21,28 +20,32 @@ import {
 import { ADR36SignDocDetailsTab } from "./adr-36";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { unescapeHTML } from "@keplr-wallet/common";
-import { EthSignType } from "@keplr-wallet/types";
 import { Dropdown } from "@components-v2/dropdown";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import {
   GetSidePanelEnabledMsg,
   GetSidePanelIsSupportedMsg,
-  LedgerApp,
 } from "@keplr-wallet/background";
 import { LedgerBox, LedgerGuideBoxProps } from "./ledger-guide-box";
-import { useUSBDevices } from "@utils/ledger";
+// import { useUSBDevices } from "@utils/ledger";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { BACKGROUND_PORT, WalletError } from "@keplr-wallet/router";
 import {
-  ErrFailedInit,
+  BACKGROUND_PORT,
+  KeplrError as WalletError,
+} from "@keplr-wallet/router";
+import { ErrFailedInit } from "@keplr-wallet/background/src/ledger/types";
+import {
   ErrFailedUnknown,
-} from "@keplr-wallet/background/src/ledger/types";
-import { ErrModuleLedgerSign } from "@keplr-wallet/background/build/ledger/types";
+  ErrModuleLedgerSign,
+} from "@keplr-wallet/background/build/ledger/types";
+import { useInteractionInfo } from "@hooks/interaction";
+import { useUnmount } from "@hooks/use-unmount";
+import { handleCosmosPreSign } from "./utils/handle-cosmos-sign";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 export const SignPageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
-
   const {
     chainStore,
     keyRingStore,
@@ -51,6 +54,40 @@ export const SignPageV2: FunctionComponent = observer(() => {
     queriesStore,
     ledgerInitStore,
   } = useStore();
+  const current = chainStore.current;
+  // If the preferNoSetFee or preferNoSetMemo in sign options is true,
+  // don't show the fee buttons/memo input by default
+  // But, the sign options would be removed right after the users click the approve/reject button.
+  // Thus, without this state, the fee buttons/memo input would be shown after clicking the approve buttion.
+  const [isProcessing, setIsProcessing] = useState(false);
+  const needSetIsProcessing =
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
+      true ||
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo === true;
+
+  const preferNoSetFee =
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
+      true || isProcessing;
+  const preferNoSetMemo =
+    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo ===
+      true || isProcessing;
+
+  const interactionInfo = useInteractionInfo({
+    onWindowClose: () => {
+      if (needSetIsProcessing) {
+        setIsProcessing(true);
+      }
+      signInteractionStore.rejectAll();
+    },
+    onUnmount: async () => {
+      if (signInteractionStore?.waitingData) {
+        signInteractionStore.rejectWithProceedNext(
+          signInteractionStore.waitingData?.id,
+          () => {}
+        );
+      }
+    },
+  });
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
   const [signer, setSigner] = useState("");
@@ -58,15 +95,13 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const [isADR36WithString, setIsADR36WithString] = useState<
     boolean | undefined
   >();
-  const [ethSignType, setEthSignType] = useState<EthSignType | undefined>();
   const [approveButtonClicked, setApproveButtonClicked] = useState(false);
-  const { testUSBDevices } = useUSBDevices();
+  // const { testUSBDevices } = useUSBDevices();
   const [ledgerInfo, setLedgerInfo] = useState<
     LedgerGuideBoxProps | undefined
   >();
   const [sidePanelEnabled, setSidePanelEnabled] = useState(false);
 
-  const current = chainStore.current;
   // There are services that sometimes use invalid tx to sign arbitrary data on the sign page.
   // In this case, there is no obligation to deal with it, but 0 gas is favorably allowed.
   const gasConfig = useZeroAllowedGasConfig(chainStore, current.chainId, 0);
@@ -89,17 +124,33 @@ export const SignPageV2: FunctionComponent = observer(() => {
   const signDocHelper = useSignDocHelper(feeConfig, memoConfig);
   amountConfig.setSignDocHelper(signDocHelper);
 
+  const [unmountPromise] = useState(() => {
+    let resolver: () => void;
+    const promise = new Promise<void>((resolve) => {
+      resolver = resolve;
+    });
+
+    return {
+      promise,
+      resolver: resolver!,
+    };
+  });
+
+  useUnmount(() => {
+    unmountPromise.resolver();
+  });
+
   useEffect(() => {
     if (signInteractionStore.waitingData) {
       const data = signInteractionStore.waitingData;
       chainStore.selectChain(data.data.chainId);
       if (data.data.signDocWrapper.isADR36SignDoc) {
-        setIsADR36WithString(data.data.isADR36WithString);
+        setIsADR36WithString(
+          data.data.mode === "amino" &&
+            !!data.data.signOptions.isADR36WithString
+        );
       }
-      if (data.data.ethSignType) {
-        setEthSignType(data.data.ethSignType);
-      }
-      setOrigin(data.data.msgOrigin);
+      setOrigin(data.data.origin);
       if (
         !data.data.signDocWrapper.isADR36SignDoc &&
         data.data.chainId !== data.data.signDocWrapper.chainId
@@ -108,10 +159,25 @@ export const SignPageV2: FunctionComponent = observer(() => {
         // If the sign doc is for ADR-36, there is no chain id in the sign doc, so no need to validate.
         throw new Error("Chain id unmatched");
       }
-      signDocHelper.setSignDocWrapper(data.data.signDocWrapper);
-      gasConfig.setGas(data.data.signDocWrapper.gas);
-      let memo = data.data.signDocWrapper.memo;
-      if (data.data.signDocWrapper.mode === "amino") {
+      // [{ amount: 0|"0", denom }] → [] so the signed doc shows empty fee.
+      // Do not fill average for that case only truly unset [] gets wallet fee.
+      const fees = data.data.signDocWrapper.fees;
+      const hasExplicitZeroFee =
+        fees.length > 0 && fees.every((coin) => String(coin.amount) === "0");
+      const isEmptyFee = fees.length === 0;
+
+      let signDocWrapper = data.data.signDocWrapper;
+      if (hasExplicitZeroFee && !signDocWrapper.isADR36SignDoc) {
+        signDocWrapper = signDocWrapper.getTopUpOverridedWrapper({
+          amount: [],
+          gas: signDocWrapper.gas.toString(),
+        });
+      }
+
+      signDocHelper.setSignDocWrapper(signDocWrapper);
+      gasConfig.setGas(signDocWrapper.gas);
+      let memo = signDocWrapper.memo;
+      if (signDocWrapper.mode === "amino") {
         // For amino-json sign doc, the memo is escaped by default behavior of golang's json marshaller.
         // For normal users, show the escaped characters with unescaped form.
         // Make sure that the actual sign doc's memo should be escaped.
@@ -120,10 +186,23 @@ export const SignPageV2: FunctionComponent = observer(() => {
       }
       memoConfig.setMemo(memo);
       if (
-        (!data.isInternal || data.data.signOptions.preferNoSetFee) &&
-        data.data.signDocWrapper.fees[0]
+        data.data.signOptions.preferNoSetFee &&
+        !hasExplicitZeroFee &&
+        !isEmptyFee &&
+        fees[0]
       ) {
-        feeConfig.setManualFee(data.data.signDocWrapper.fees[0]);
+        feeConfig.setManualFee(fees[0]);
+      } else if (
+        !signDocWrapper.isADR36SignDoc &&
+        !data.data.signOptions.preferNoSetFee &&
+        isEmptyFee
+      ) {
+        // Wallet-owned fee (e.g. claim rewards): fill average for UI + signed doc.
+        // Skip ADR-36 and preferNoSetFee — empty amount is intentional there.
+        feeConfig.setFeeType("average");
+      } else if (hasExplicitZeroFee) {
+        // Keep amount [] — clear any prior feeType so helper doesn't re-inject a fee.
+        feeConfig.setFeeType(undefined);
       }
       amountConfig.setDisableBalanceCheck(
         !!data.data.signOptions.disableBalanceCheck
@@ -132,8 +211,8 @@ export const SignPageV2: FunctionComponent = observer(() => {
         !!data.data.signOptions.disableBalanceCheck
       );
       if (
-        data.data.signDocWrapper.granter &&
-        data.data.signDocWrapper.granter !== data.data.signer
+        signDocWrapper.granter &&
+        signDocWrapper.granter !== data.data.signer
       ) {
         feeConfig.setDisableBalanceCheck(true);
       }
@@ -148,36 +227,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
     signDocHelper,
     signInteractionStore.waitingData,
   ]);
-
-  // If the preferNoSetFee or preferNoSetMemo in sign options is true,
-  // don't show the fee buttons/memo input by default
-  // But, the sign options would be removed right after the users click the approve/reject button.
-  // Thus, without this state, the fee buttons/memo input would be shown after clicking the approve buttion.
-  const [isProcessing, setIsProcessing] = useState(false);
-  const needSetIsProcessing =
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
-      true ||
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo === true;
-
-  const preferNoSetFee =
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetFee ===
-      true || isProcessing;
-  const preferNoSetMemo =
-    signInteractionStore.waitingData?.data.signOptions.preferNoSetMemo ===
-      true || isProcessing;
-
-  const interactionInfo = useInteractionInfo(
-    () => {
-      if (needSetIsProcessing) {
-        setIsProcessing(true);
-      }
-
-      signInteractionStore.rejectAll();
-    },
-    {
-      enableScroll: true,
-    }
-  );
 
   const currentChainId = chainStore.current.chainId;
   const currentChainIdentifier = useMemo(
@@ -194,13 +243,17 @@ export const SignPageV2: FunctionComponent = observer(() => {
   // and the chain is selected properly.
   // The chain store loads the saved chain infos including the suggested chain asynchronously on init.
   // So, it can be different the current chain and the expected selected chain for a moment.
-  const isLoaded = (() => {
-    if (!signDocHelper.signDocWrapper) {
-      return false;
-    }
+  const isLoaded =
+    (() => {
+      if (!signDocHelper.signDocWrapper) {
+        return false;
+      }
 
-    return currentChainIdentifier === selectedChainIdentifier;
-  })();
+      return currentChainIdentifier === selectedChainIdentifier;
+    })() ||
+    signInteractionStore.isObsoleteInteractionApproved(
+      signInteractionStore?.waitingData?.id
+    );
 
   // If this is undefined, show the chain name on the header.
   // If not, show the alternative title.
@@ -234,7 +287,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
         <ADR36SignDocDetailsTab
           signDocWrapper={signDocHelper.signDocWrapper}
           isADR36WithString={isADR36WithString}
-          ethSignType={ethSignType}
           origin={origin}
         />
       ) : (
@@ -249,7 +301,6 @@ export const SignPageV2: FunctionComponent = observer(() => {
           preferNoSetFee={preferNoSetFee}
           preferNoSetMemo={preferNoSetMemo}
           isNeedLedgerEthBlindSigning={
-            ethSignType === EthSignType.EIP712 &&
             accountStore.getAccount(current.chainId).isNanoLedger
           }
         />
@@ -257,9 +308,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
     },
     {
       id: "Data",
-      component: (
-        <DataTab signDocHelper={signDocHelper} ethSignType={ethSignType} />
-      ),
+      component: <DataTab signDocHelper={signDocHelper} />,
     },
   ];
 
@@ -289,6 +338,87 @@ export const SignPageV2: FunctionComponent = observer(() => {
         : "265px"
       : "320px";
   }
+
+  const approve = async () => {
+    const interactionData = signInteractionStore.waitingData;
+    if (signDocHelper.signDocWrapper && interactionData) {
+      let presignOptions;
+      try {
+        setApproveButtonClicked(true);
+        if (interactionData.data.keyType === "ledger") {
+          presignOptions = {
+            useWebHID: ledgerInitStore.isWebHID,
+            signEthPlainJSON: chainStore
+              .getChain(
+                signInteractionStore.waitingData?.data.chainId ??
+                  current.chainId
+              )
+              .hasFeature("evm-ledger-sign-plain-json"),
+          };
+        }
+
+        const signDocWrapper = signDocHelper.signDocWrapper;
+
+        const signature = await handleCosmosPreSign(
+          interactionData,
+          signDocWrapper,
+          presignOptions
+        );
+
+        if (interactionData.data.keyType === "ledger") {
+          setLedgerInfo({
+            isWarning: false,
+            title: "Sign on Ledger",
+            ledgerError: new WalletError(
+              ErrModuleLedgerSign,
+              ErrFailedUnknown,
+              "To proceed, please review and approve the transaction on your Ledger device."
+            ),
+          });
+        }
+        if (needSetIsProcessing) {
+          setIsProcessing(true);
+        }
+
+        await signInteractionStore.approveWithProceedNext(
+          interactionData.id,
+          signDocWrapper,
+          signature,
+          async (proceedNext) => {
+            if (!proceedNext) {
+              if (
+                interactionInfo.interaction &&
+                !interactionInfo.interactionInternal
+              ) {
+                handleExternalInteractionWithNoProceedNext();
+              }
+            }
+            if (
+              interactionInfo.interaction &&
+              interactionInfo.interactionInternal
+            ) {
+              await unmountPromise.promise;
+            }
+          },
+          {
+            preDelay: 200,
+          }
+        );
+      } catch (e) {
+        console.log(e);
+
+        setApproveButtonClicked(false);
+
+        if (e instanceof WalletError && e.module === ErrModuleLedgerSign) {
+          setLedgerInfo({
+            isWarning: true,
+            title: "Error",
+            ledgerError: e,
+          });
+        }
+      }
+    }
+  };
 
   return (
     <div>
@@ -329,7 +459,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                 </div>
               ) : null}
               <div className={style["buttons"]}>
-                {keyRingStore.keyRingType === "ledger" &&
+                {keyRingStore.selectedKeyInfo?.type === "ledger" &&
                 approveButtonClicked ? (
                   <ButtonV2
                     variant="dark"
@@ -358,9 +488,7 @@ export const SignPageV2: FunctionComponent = observer(() => {
                       height: "56px",
                     }}
                     disabled={
-                      approveIsDisabled ||
-                      signInteractionStore.isLoading ||
-                      accountInfo.broadcastInProgress
+                      approveIsDisabled || accountInfo.broadcastInProgress
                     }
                     btnBgEnabled={true}
                     text={
@@ -371,82 +499,14 @@ export const SignPageV2: FunctionComponent = observer(() => {
                             ? "Transaction in progress"
                             : "Previous transaction in progress"}
                         </span>
-                      ) : signInteractionStore.isLoading ? (
-                        <i className="fas fa-spinner fa-spin ml-2" />
                       ) : (
                         "Approve transaction"
                       )
                     }
-                    data-loading={signInteractionStore.isLoading}
+                    dataLoading={accountInfo.broadcastInProgress}
                     onClick={async (e: any) => {
-                      try {
-                        e.preventDefault();
-                        setApproveButtonClicked(true);
-
-                        if (
-                          keyRingStore.keyRingType === "ledger" &&
-                          !ledgerInitStore.isInitNeeded
-                        ) {
-                          if (
-                            !(await testUSBDevices(ledgerInitStore.isWebHID))
-                          ) {
-                            throw new WalletError(
-                              ErrModuleLedgerSign,
-                              ErrFailedInit,
-                              "Connect and unlock your Ledger device."
-                            );
-                          } else {
-                            await ledgerInitStore.tryLedgerInit(
-                              ethSignType
-                                ? LedgerApp.Ethereum
-                                : LedgerApp.Cosmos,
-                              ethSignType ? "Ethereum" : "Cosmos"
-                            );
-                          }
-                        }
-
-                        if (keyRingStore.keyRingType === "ledger") {
-                          setLedgerInfo({
-                            isWarning: false,
-                            title: "Sign on Ledger",
-                            ledgerError: new WalletError(
-                              ErrModuleLedgerSign,
-                              ErrFailedUnknown,
-                              "To proceed, please review and approve the transaction on your Ledger device."
-                            ),
-                          });
-                        }
-
-                        if (needSetIsProcessing) {
-                          setIsProcessing(true);
-                        }
-
-                        if (signDocHelper.signDocWrapper) {
-                          await signInteractionStore.approveAndWaitEnd(
-                            signDocHelper.signDocWrapper
-                          );
-                        }
-
-                        if (
-                          interactionInfo.interaction &&
-                          !interactionInfo.interactionInternal
-                        ) {
-                          window.close();
-                        }
-                      } catch (e) {
-                        setApproveButtonClicked(false);
-
-                        if (
-                          e instanceof WalletError &&
-                          e.module === ErrModuleLedgerSign
-                        ) {
-                          setLedgerInfo({
-                            isWarning: true,
-                            title: "Error",
-                            ledgerError: e,
-                          });
-                        }
-                      }
+                      e.preventDefault();
+                      await approve();
                     }}
                   />
                 )}

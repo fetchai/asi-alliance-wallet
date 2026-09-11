@@ -1,26 +1,23 @@
-import { KVStore } from "@keplr-wallet/common";
-import {
-  ChainGetter,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
+import { ObservableQueryMap, ObservableQueryTendermint } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { DenomTraceResponse } from "./types";
 import { computed } from "mobx";
 import { camelToSnake } from "../../../common";
 import { IbcExtension, setupIbcExtension } from "@cosmjs/stargate";
+import { QuerySharedContext } from "../../../common";
 
 export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<DenomTraceResponse> {
   protected disposer?: () => void;
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly hash: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as IbcExtension;
@@ -80,15 +77,15 @@ export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<De
 
 export class ObservableQueryDenomTrace extends ObservableQueryMap<DenomTraceResponse> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((hash: string) => {
       return new ObservableChainQueryDenomTrace(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         hash
       );
     });

@@ -13,7 +13,7 @@ interface State {
 
 export class ErrorBoundary extends Component<
   {
-    // noop
+    children?: React.ReactNode;
   },
   State
 > {

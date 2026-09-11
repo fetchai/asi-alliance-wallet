@@ -1,7 +1,7 @@
-import React from "react";
+import React, { PropsWithChildren } from "react";
 import styles from "./style.module.scss";
 
-export interface CardProps {
+export interface CardProps extends PropsWithChildren {
   leftImage?: any;
   leftImageStyle?: React.CSSProperties;
   heading: any;

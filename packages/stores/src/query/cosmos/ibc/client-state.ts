@@ -1,21 +1,21 @@
-import { KVStore } from "@keplr-wallet/common";
 import {
   camelToSnake,
-  ChainGetter,
   decodeIBCClientState,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { ClientStateResponse } from "./types";
 import { computed } from "mobx";
 import { IbcExtension, setupIbcExtension } from "@cosmjs/stargate";
 import { QueryChannelClientStateResponse } from "cosmjs-types/ibc/core/channel/v1/query";
+import { QuerySharedContext } from "../../../common";
 
 export class ObservableChainQueryClientState extends ObservableQueryTendermint<ClientStateResponse> {
   protected disposer?: () => void;
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly portId: string,
@@ -23,7 +23,7 @@ export class ObservableChainQueryClientState extends ObservableQueryTendermint<C
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as IbcExtension;
@@ -45,6 +45,14 @@ export class ObservableChainQueryClientState extends ObservableQueryTendermint<C
     );
   }
 
+  protected override onStop() {
+    if (this.disposer) {
+      this.disposer();
+      this.disposer = undefined;
+    }
+    super.onStop();
+  }
+
   /**
    * clientChainId returns the chain id of the client state if the client state's type is known (currently, only tendermint is supported).
    */
@@ -62,17 +70,17 @@ export class ObservableChainQueryClientState extends ObservableQueryTendermint<C
 
 export class ObservableQueryIBCClientState extends ObservableQueryMap<ClientStateResponse> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((key: string) => {
       const params = JSON.parse(key);
 
       return new ObservableChainQueryClientState(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         params.portId,
         params.channelId
       );

@@ -1,6 +1,7 @@
 import { Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { computed, makeObservable } from "mobx";
-import { ChainGetter, ObservableQueryTendermint } from "../../../common";
+import { ObservableQueryTendermint } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { ObservableQueryDistributionParams } from "../distribution";
 import { ObservableQueryStakingPool } from "../staking";
 import { ObservableQueryIrisMintingInfation } from "./iris-minting";
@@ -182,7 +183,7 @@ export class ObservableQueryInflation {
           ) {
             const supplyTotalRes =
               this._querySupplyTotal.getQueryDenomByQueryString(
-                chainInfo.stakeCurrency.coinMinimalDenom
+                chainInfo?.stakeCurrency?.coinMinimalDenom || ""
               ).response;
 
             if (!supplyTotalRes) {

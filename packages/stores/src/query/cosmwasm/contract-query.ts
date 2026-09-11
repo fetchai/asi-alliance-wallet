@@ -1,14 +1,15 @@
-import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../chain";
+import { QuerySharedContext } from "../../common";
 import { QueryClient } from "@cosmjs/stargate";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { setupWasmExtension } from "@cosmjs/cosmwasm-stargate";
-import { ChainGetter, ObservableQueryTendermint } from "../../common";
+import { ObservableQueryTendermint } from "../../common";
 
 export class ObservableCosmwasmContractChainQuery<
   T
 > extends ObservableQueryTendermint<T> {
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     contractAddress: string,
@@ -27,6 +28,6 @@ export class ObservableCosmwasmContractChainQuery<
       return result as T;
     };
 
-    super(kvStore, rpc, wasmQueryFn, setupWasmExtension, cacheKey);
+    super(sharedContext, rpc, wasmQueryFn, setupWasmExtension, cacheKey);
   }
 }

@@ -1,19 +1,18 @@
 import { BondStatus, Validator } from "./types";
-import { KVStore } from "@keplr-wallet/common";
 import {
   base64ToBytes,
-  ChainGetter,
   ObservableQueryMap,
   ObservableQueryTendermint,
 } from "../../../common";
 import { computed, makeObservable, observable, runInAction } from "mobx";
-import { ObservableQuery, QueryResponse, camelToSnake } from "../../../common";
-import Axios from "axios";
+import { ObservableQuery, camelToSnake } from "../../../common";
 import PQueue from "p-queue";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import { computedFn } from "mobx-utils";
 import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
 import { QueryValidatorsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import { decodePubkey } from "@cosmjs/proto-signing";
 
@@ -49,14 +48,10 @@ export class ObservableQueryValidatorThumbnail extends ObservableQuery<KeybaseRe
 
   protected readonly validator: Validator;
 
-  constructor(kvStore: KVStore, validator: Validator) {
-    const instance = Axios.create({
-      baseURL: "https://keybase.io/",
-    });
-
+  constructor(sharedContext: QuerySharedContext, validator: Validator) {
     super(
-      kvStore,
-      instance,
+      sharedContext,
+      "https://keybase.io/",
       `_/api/1.0/user/lookup.json?fields=pictures&key_suffix=${validator.description.identity}`
     );
     makeObservable(this);
@@ -70,7 +65,7 @@ export class ObservableQueryValidatorThumbnail extends ObservableQuery<KeybaseRe
 
   protected override async fetchResponse(
     abortController: AbortController
-  ): Promise<{ response: QueryResponse<KeybaseResult>; headers: any }> {
+  ): Promise<{ data: KeybaseResult; headers: any }> {
     return await ObservableQueryValidatorThumbnail.fetchingThumbnailQueue.add(
       () => {
         return super.fetchResponse(abortController);
@@ -98,14 +93,14 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
     new Map();
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly status: BondStatus
+    status: BondStatus
   ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
+      sharedContext,
       chainInfo.rpc,
       async (queryClient) => {
         const client = queryClient as unknown as StakingExtension;
@@ -192,16 +187,29 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
 
   readonly getValidatorThumbnail = computedFn(
     (operatorAddress: string): string => {
+      const query = this.getQueryValidatorThumbnail(operatorAddress);
+      if (!query) {
+        return "";
+      }
+
+      return query.thumbnail;
+    }
+  );
+
+  readonly getQueryValidatorThumbnail = computedFn(
+    (
+      operatorAddress: string
+    ): ObservableQueryValidatorThumbnail | undefined => {
       const validators = this.validators;
       const validator = validators.find(
         (val) => val.operator_address === operatorAddress
       );
       if (!validator) {
-        return "";
+        return;
       }
 
       if (!validator.description.identity) {
-        return "";
+        return;
       }
 
       const identity = validator.description.identity;
@@ -210,13 +218,13 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
         runInAction(() => {
           this.thumbnailMap.set(
             identity,
-            new ObservableQueryValidatorThumbnail(this.kvStore, validator)
+            new ObservableQueryValidatorThumbnail(this.sharedContext, validator)
           );
         });
       }
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return this.thumbnailMap.get(identity)!.thumbnail;
+      return this.thumbnailMap.get(identity)!;
     }
   );
 
@@ -236,6 +244,10 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
       const chainInfo = this.chainGetter.getChain(this.chainId);
       const stakeCurrency = chainInfo.stakeCurrency;
 
+      if (!stakeCurrency) {
+        return;
+      }
+
       const power = new Dec(validator.tokens).truncate();
 
       return new CoinPretty(stakeCurrency, power);
@@ -245,15 +257,15 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
 
 export class ObservableQueryValidators extends ObservableQueryMap<QueryValidatorsResponse> {
   constructor(
-    protected readonly kvStore: KVStore,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
     super((status: string) => {
       return new ObservableQueryValidatorsInner(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         status as BondStatus
       );
     });

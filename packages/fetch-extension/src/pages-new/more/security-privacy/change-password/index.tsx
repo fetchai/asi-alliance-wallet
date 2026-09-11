@@ -78,7 +78,7 @@ export const ChangePassword = observer(() => {
         return;
       }
       setIsLoading("change-password", true);
-      await keyRingStore.updatePassword(currentPassword, newPassword);
+      await keyRingStore.changeUserPassword(currentPassword, newPassword);
       notification.push({
         type: "success",
         placement: "top-center",

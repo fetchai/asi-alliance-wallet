@@ -68,6 +68,7 @@ export const Tokens = observer(() => {
     const inUsd = value && value.shrink(true).maxDecimals(6).toString();
     return inUsd;
   };
+
   return (
     <React.Fragment>
       {tokens.map((token) => {
@@ -200,8 +201,7 @@ export const Tokens = observer(() => {
                       });
                       return;
                     }
-                    const tokenOf = tokensStore.getTokensOf(current.chainId);
-                    await tokenOf.addToken({
+                    await tokensStore.addToken(current.chainId, {
                       ...token.balance.currency,
                       viewingKey,
                     });

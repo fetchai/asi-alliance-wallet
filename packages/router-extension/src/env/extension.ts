@@ -59,10 +59,41 @@ const openPopupQueue = new PromiseQueue();
 // just open the popup one by one.
 async function openPopupWindow(
   url: string,
-  channel: string = "default"
+  channel: string = "default",
+  options: { ignoreURIReplacement?: boolean } = {}
 ): Promise<number> {
-  return await openPopupQueue.enqueue(() => openPopupWindowInner(url, channel));
+  const MAX_RETRY = 4;
+  return await openPopupQueue.enqueue(async () => {
+    let windowId = await openPopupWindowInner(url, channel, options);
+    let i = 0;
+    while (i < MAX_RETRY) {
+      if (typeof browser === "undefined" || !browser.windows) {
+        break;
+      }
+
+      if (i !== 0) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      try {
+        const window = await browser.windows.get(windowId);
+        if (window) {
+          break;
+        }
+      } catch (e) {
+        console.log("Failed to get window", e);
+        // Ignore
+      }
+
+      windowId = await openPopupWindowInner(url, channel, options);
+      i++;
+    }
+
+    return windowId;
+  });
 }
+
+const MAX_RETRIES_TO_OPEN_WINDOW_AND_GET_TAB_ID = 2;
 
 export class ExtensionEnv {
   static readonly produceEnv = (
@@ -91,41 +122,59 @@ export class ExtensionEnv {
         url += "?" + queryString;
       }
 
-      const windowId = await openPopupWindow(url, options?.channel);
-      const window = await browser.windows.get(windowId, {
-        populate: true,
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const tabId = window.tabs![0].id!;
-
-      if (tabId && options?.unstableOnClose) {
-        const listener = (_tabId: number) => {
-          if (tabId === _tabId) {
-            if (options?.unstableOnClose) {
-              options.unstableOnClose();
-            }
-            browser.tabs.onRemoved.removeListener(listener);
-          }
-        };
-        browser.tabs.onRemoved.addListener(listener);
-      }
-
-      // Wait until that tab is loaded
-      await (async () => {
-        const tab = await browser.tabs.get(tabId);
-        if (tab.status === "complete") {
-          return;
-        }
-
-        return new Promise<void>((resolve) => {
-          browser.tabs.onUpdated.addListener((_tabId, changeInfo) => {
-            if (tabId === _tabId && changeInfo.status === "complete") {
-              resolve();
-            }
+      let retries = 0;
+      const openWindowAndGetTabId: () => Promise<number> = async () => {
+        try {
+          const windowId = await openPopupWindow(url, undefined, {
+            ignoreURIReplacement: options?.ignoreURIReplacement,
           });
-        });
-      })();
+          const window = await browser.windows.get(windowId, {
+            populate: true,
+          });
+
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          const tabId = window.tabs![0].id!;
+
+          if (tabId && options?.unstableOnClose) {
+            const listener = (_tabId: number) => {
+              if (tabId === _tabId) {
+                if (options?.unstableOnClose) {
+                  options.unstableOnClose();
+                }
+                browser.tabs.onRemoved.removeListener(listener);
+              }
+            };
+            browser.tabs.onRemoved.addListener(listener);
+          }
+
+          // Wait until that tab is loaded
+          await (async () => {
+            const tab = await browser.tabs.get(tabId);
+            if (tab.status === "complete") {
+              return;
+            }
+
+            return new Promise<void>((resolve) => {
+              browser.tabs.onUpdated.addListener((_tabId, changeInfo) => {
+                if (tabId === _tabId && changeInfo.status === "complete") {
+                  resolve();
+                }
+              });
+            });
+          })();
+
+          return tabId;
+        } catch (e) {
+          if (retries > MAX_RETRIES_TO_OPEN_WINDOW_AND_GET_TAB_ID) {
+            throw e;
+          } else {
+            // Retry to open window and get tab id to resolve an issue that open closed window.
+            retries++;
+            return await openWindowAndGetTabId();
+          }
+        }
+      };
+      const tabId = await openWindowAndGetTabId();
 
       return await InExtensionMessageRequester.sendMessageToTab(
         tabId,
@@ -139,19 +188,12 @@ export class ExtensionEnv {
       return {
         isInternalMsg,
         requestInteraction: openAndSendMsg,
+        sender,
       };
     } else {
       // If msg is from the extension itself, it can send the msg back to the extension itself.
       // In this case, this expects that there is only one extension popup have been opened.
-      const requestInteraction: FnRequestInteraction = async (
-        url,
-        msg,
-        options
-      ) => {
-        if (options?.forceOpenWindow) {
-          return await openAndSendMsg(url, msg, options);
-        }
-
+      const requestInteraction: FnRequestInteraction = async (url, msg) => {
         if (url.startsWith("/")) {
           url = url.slice(1);
         }
@@ -196,6 +238,7 @@ export class ExtensionEnv {
       return {
         isInternalMsg,
         requestInteraction,
+        sender,
       };
     }
   };

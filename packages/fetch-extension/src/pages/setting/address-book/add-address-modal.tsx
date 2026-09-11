@@ -13,6 +13,7 @@ import { useLocation } from "react-router";
 import { chatSectionParams, defaultParamValues } from "./index";
 import { useNotification } from "@components/notification";
 import { validateAgentAddress } from "@utils/validate-agent";
+import { validateWalletName } from "@utils/index";
 import { useStore } from "../../../stores";
 
 /**
@@ -56,6 +57,21 @@ export const AddAddressModal: FunctionComponent<{
       recipientConfig,
     ]);
 
+    const trimmedName = name.trim();
+    const { isValidFormat, containsLetterOrNumber } = validateWalletName(
+      trimmedName,
+      [],
+      "create"
+    );
+    const nameError =
+      name.length === 0
+        ? undefined
+        : !isValidFormat
+        ? "Only letters, numbers and basic symbols (_-.@()) are allowed."
+        : !containsLetterOrNumber
+        ? "Nickname must contain at least one letter or number."
+        : undefined;
+
     return (
       <HeaderLayout
         showChainName={false}
@@ -87,6 +103,7 @@ export const AddAddressModal: FunctionComponent<{
             label={intl.formatMessage({ id: "setting.address-book.name" })}
             autoComplete="off"
             value={name}
+            error={nameError}
             onChange={(e) => {
               setName(e.target.value.substring(0, 30));
             }}
@@ -107,8 +124,8 @@ export const AddAddressModal: FunctionComponent<{
             type="submit"
             color="primary"
             disabled={
-              !name ||
-              name.trim() === "" ||
+              !trimmedName ||
+              nameError != null ||
               (recipientConfig.error != null &&
                 validateAgentAddress(recipientConfig.rawRecipient)) ||
               memoConfig.error != null
@@ -129,7 +146,7 @@ export const AddAddressModal: FunctionComponent<{
               /// Validating a new address is unique in the address book
               if (index < 0 && addressIndex < 0) {
                 addressBookConfig.addAddressBook({
-                  name: name.trim(),
+                  name: trimmedName,
                   address: recipientConfig.recipient,
                   memo: memoConfig.memo,
                 });
@@ -141,7 +158,7 @@ export const AddAddressModal: FunctionComponent<{
                 /// [addressIndex === -1] replacing old address to unique address
                 /// [index === addressIndex] if the index and address index is same that means we are dealing with unique address
                 addressBookConfig.editAddressBookAt(index, {
-                  name: name.trim(),
+                  name: trimmedName,
                   address: recipientConfig.recipient,
                   memo: memoConfig.memo,
                 });

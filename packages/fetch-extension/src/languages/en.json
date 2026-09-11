@@ -32,7 +32,7 @@
   "main.evmos.dashboard.paragraph": "View ERC-20 and IBC tokens",
   "main.evmos.dashboard.button": "View",
 
-  "main.address.copied": "Address copied!",
+  "main.address.copied": "Address Copied!",
   "main.name.copied": "Name copied!",
 
   "main.suggest.chain.link": "Add Suggest Chains",
@@ -299,7 +299,7 @@
 
   "lock.input.password": "Password",
   "lock.input.password.error.required": "Empty password",
-  "lock.input.password.error.invalid": "Invalid password",
+  "lock.input.password.error.invalid": "Your password is incorrect",
   "lock.alert.capslock": "CapsLock is on",
   "lock.button.unlock": "Unlock",
 

@@ -219,6 +219,12 @@ export const AddressInput: FunctionComponent<AddressInputProps> = observer(
           heading={""}
           middleSectionStyle={{
             flex: "1",
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+          subheadingStyle={{
+            minWidth: 0,
+            width: "100%",
           }}
           subheading={
             <input

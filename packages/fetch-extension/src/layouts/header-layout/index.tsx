@@ -1,4 +1,9 @@
-import React, { CSSProperties, FunctionComponent, useState } from "react";
+import React, {
+  CSSProperties,
+  FunctionComponent,
+  useState,
+  PropsWithChildren,
+} from "react";
 
 import { MenuProvider, MenuContext } from "../menu";
 
@@ -14,7 +19,9 @@ export interface Props extends HeaderProps {
   showBottomMenu?: boolean;
 }
 
-export const HeaderLayout: FunctionComponent<Props> = (props) => {
+export const HeaderLayout: FunctionComponent<PropsWithChildren<Props>> = (
+  props
+) => {
   const { children } = props;
 
   const [isMenuOpen, setMenuOpen] = useState(false);

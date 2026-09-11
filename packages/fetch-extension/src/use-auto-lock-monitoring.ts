@@ -2,7 +2,6 @@ import { useStore } from "./stores";
 import { useLayoutEffect } from "react";
 import {
   GetAutoLockStateMsg,
-  KeyRingStatus,
   StartAutoLockMonitoringMsg,
 } from "@keplr-wallet/background";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
@@ -36,7 +35,7 @@ export const useAutoLockMonitoring = () => {
   }, []);
 
   useLayoutEffect(() => {
-    if (keyRingStore.status === KeyRingStatus.UNLOCKED) {
+    if (keyRingStore.status === "unlocked") {
       const sendAutoLockMonitorMsg = async () => {
         const msg = new StartAutoLockMonitoringMsg();
         const requester = new InExtensionMessageRequester();

@@ -163,7 +163,7 @@ export const AuthPage: FunctionComponent<{
 }> = observer(({ registerConfig, selectedNetworks, setSelectedNetworks }) => {
   const { keyRingStore } = useStore();
   const intl = useIntl();
-  const accountList = keyRingStore.multiKeyStoreInfo;
+  const accountList = keyRingStore.keyInfos;
   const defaultAccountName = getNextDefaultAccountName(accountList);
   const [newAccountName, setNewAccountName] = useState(defaultAccountName);
   const [errorMessage, setErrorMessage] = useState("");
@@ -200,7 +200,7 @@ export const AuthPage: FunctionComponent<{
         onSubmit={handleSubmit(async (data: FormData) => {
           registerConfig.createPrivateKey(
             data.name,
-            privateKey,
+            privateKey as Uint8Array,
             data.password,
             { email: registerConfig.email },
             selectedNetworks
@@ -227,7 +227,7 @@ export const AuthPage: FunctionComponent<{
             const { isValid, isValidFormat, containsLetterOrNumber } =
               validateWalletName(
                 trimmedValue,
-                keyRingStore?.multiKeyStoreInfo,
+                keyRingStore?.keyInfos,
                 registerConfig.mode
               );
             const isEmpty = trimmedValue === "";

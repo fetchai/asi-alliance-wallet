@@ -1,5 +1,11 @@
 import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
-import { IFeeConfig, IGasConfig, IGasSimulator } from "@keplr-wallet/hooks";
+import {
+  IFeeConfig,
+  IGasConfig,
+  IGasSimulator,
+  MAX_GAS_LIMIT,
+  MAX_GAS_LIMIT_DIGITS,
+} from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
 import { Input } from "reactstrap";
 import { Card } from "@components-v2/card";
@@ -151,10 +157,17 @@ export const ManualFeeInput: FunctionComponent<{
     };
 
     const validateGasLimit = (value: string): string => {
-      const gasLimit = parseInt(value);
+      const gasLimit = parseInt(value, 10);
 
       if (!gasLimit || gasLimit <= 0) {
         return "Gas limit must be greater than 0";
+      }
+      if (
+        !Number.isFinite(gasLimit) ||
+        !Number.isSafeInteger(gasLimit) ||
+        gasLimit > MAX_GAS_LIMIT
+      ) {
+        return "Gas limit is too large";
       }
 
       return "";
@@ -167,9 +180,19 @@ export const ManualFeeInput: FunctionComponent<{
     };
 
     const applyFee = (feeAmountStr: string, gasLimitStr: string) => {
-      const gasLimit = parseInt(gasLimitStr) || 0;
+      const gasLimit = parseInt(gasLimitStr, 10) || 0;
+      if (
+        !Number.isFinite(gasLimit) ||
+        !Number.isSafeInteger(gasLimit) ||
+        gasLimit > MAX_GAS_LIMIT
+      ) {
+        return;
+      }
       const feeDisplay = parseFloat(feeAmountStr) || 0;
       const feeMinimal = Math.round(feeDisplay * Math.pow(10, coinDecimals));
+      if (!Number.isFinite(feeMinimal)) {
+        return;
+      }
       gasConfig.setGas(gasLimit);
       if (minimalDenom) {
         feeConfig.setManualFee({
@@ -234,15 +257,27 @@ export const ManualFeeInput: FunctionComponent<{
     };
 
     const handleGasLimitChange = (rawValue: string) => {
-      const value = trimLeadingZeros(rawValue);
+      const value = trimLeadingZeros(rawValue).slice(0, MAX_GAS_LIMIT_DIGITS);
       setGasLimitRaw(value);
       disableSimulator();
-      setGasLimitError(validateGasLimit(value));
+      const gasLimitErrorMsg = validateGasLimit(value);
+      setGasLimitError(gasLimitErrorMsg);
 
-      const gasLimit = parseInt(value) || 0;
+      const gasLimit = parseInt(value, 10) || 0;
+      if (
+        gasLimitErrorMsg ||
+        !Number.isFinite(gasLimit) ||
+        !Number.isSafeInteger(gasLimit)
+      ) {
+        return;
+      }
       if (lastEdited === "price") {
         const gasPrice = parseFloat(gasPriceRaw) || 0;
         const feeMinimal = gasPrice * gasLimit;
+        if (!Number.isFinite(feeMinimal)) {
+          setGasLimitError("Gas limit is too large");
+          return;
+        }
         const feeDisplay = feeMinimal / Math.pow(10, coinDecimals);
         const newFeeAmount = feeDisplay.toFixed(coinDecimals);
         const displayFee = parseFloat(newFeeAmount) === 0 ? "0" : newFeeAmount;
@@ -261,6 +296,10 @@ export const ManualFeeInput: FunctionComponent<{
         const feeDisplay = parseFloat(feeAmountRaw) || 0;
         const feeMinimal = feeDisplay * Math.pow(10, coinDecimals);
         const gasPrice = gasLimit > 0 ? feeMinimal / gasLimit : 0;
+        if (!Number.isFinite(gasPrice)) {
+          setGasLimitError("Gas limit is too large");
+          return;
+        }
         const newGasPrice = gasPrice.toString();
         setGasPriceRaw(newGasPrice);
         setGasPriceError(validateGasPrice(newGasPrice));
@@ -289,6 +328,7 @@ export const ManualFeeInput: FunctionComponent<{
               inputMode={integerOnly ? "numeric" : "decimal"}
               value={value}
               invalid={!!error}
+              maxLength={integerOnly ? MAX_GAS_LIMIT_DIGITS : undefined}
               onChange={(e) => {
                 const raw = integerOnly
                   ? e.target.value.replace(/[^0-9]/g, "")

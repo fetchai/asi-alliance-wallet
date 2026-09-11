@@ -17,6 +17,7 @@ import { useNotification } from "@components/notification";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { getPathname } from "@utils/pathname";
 import { removeComma } from "@utils/format";
+import { isPureEvmChain } from "@utils/filters";
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -55,7 +56,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const { isFromPhase1, isMaxAmount } = location.state || {};
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const current = chainStore.current;
+    const isEvm = isPureEvmChain(current);
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
       return value && value.shrink(true).maxDecimals(6).toString();
@@ -355,7 +357,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                         isEVM: isEvm,
                       };
                       navigateOnTxnEvents(txnNavigationOptions);
-                      if (keyRingStore.keyRingType === "ledger") {
+                      if (keyRingStore.selectedKeyInfo?.type === "ledger") {
                         navigate("/send");
                       }
                     },
@@ -395,7 +397,8 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                   const currentPathName = getPathname();
                   if (
                     currentPathName === "send" ||
-                    currentPathName === "sign"
+                    currentPathName === "sign" ||
+                    currentPathName === "sign-ethereum"
                   ) {
                     navigate("/send", {
                       replace: true,
@@ -425,7 +428,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 const currentPathName = getPathname();
                 if (
                   !isDetachedPage &&
-                  (currentPathName === "send" || currentPathName === "sign")
+                  (currentPathName === "send" ||
+                    currentPathName === "sign" ||
+                    currentPathName === "sign-ethereum")
                 ) {
                   navigate("/send", {
                     replace: true,

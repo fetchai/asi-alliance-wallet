@@ -1,4 +1,10 @@
-import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
+import {
+  Env,
+  Handler,
+  InternalHandler,
+  KeplrError,
+  Message,
+} from "@keplr-wallet/router";
 import {
   GetAutoLockAccountDurationMsg,
   UpdateAutoLockAccountDurationMsg,
@@ -39,7 +45,7 @@ export const getHandler: (service: AutoLockAccountService) => Handler = (
           msg as GetAutoLockStateMsg
         );
       default:
-        throw new Error("Unknown msg type");
+        throw new KeplrError("auto-lock-account", 100, "Unknown msg type");
     }
   };
 };

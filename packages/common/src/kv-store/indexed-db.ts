@@ -1,7 +1,7 @@
 import { KVStore } from "./interface";
 
 export class IndexedDBKVStore implements KVStore {
-  protected cachedDB?: IDBDatabase;
+  protected static dbPromiseMap = new Map<string, Promise<IDBDatabase>>();
 
   constructor(protected readonly _prefix: string) {}
 
@@ -14,7 +14,8 @@ export class IndexedDBKVStore implements KVStore {
       request.onerror = (event) => {
         event.stopPropagation();
 
-        reject(event.target);
+        const error = (event.target as IDBRequest).error;
+        reject(new Error(error?.message ?? "Unknown IndexedDB error on get"));
       };
       request.onsuccess = () => {
         if (!request.result) {
@@ -36,7 +37,10 @@ export class IndexedDBKVStore implements KVStore {
         request.onerror = (event) => {
           event.stopPropagation();
 
-          reject(event.target);
+          const error = (event.target as IDBRequest).error;
+          reject(
+            new Error(error?.message ?? "Unknown IndexedDB error on delete")
+          );
         };
         request.onsuccess = () => {
           resolve();
@@ -54,7 +58,8 @@ export class IndexedDBKVStore implements KVStore {
         request.onerror = (event) => {
           event.stopPropagation();
 
-          reject(event.target);
+          const error = (event.target as IDBRequest).error;
+          reject(new Error(error?.message ?? "Unknown IndexedDB error on put"));
         };
         request.onsuccess = () => {
           resolve();
@@ -63,20 +68,50 @@ export class IndexedDBKVStore implements KVStore {
     }
   }
 
+  async getAllKeys(): Promise<string[]> {
+    const tx = (await this.getDB()).transaction([this.prefix()], "readonly");
+    const store = tx.objectStore(this.prefix());
+
+    return new Promise((resolve, reject) => {
+      const request = store.getAllKeys();
+      request.onerror = (event) => {
+        event.stopPropagation();
+
+        const error = (event.target as IDBRequest).error;
+        reject(
+          new Error(error?.message ?? "Unknown IndexedDB error on getAllKeys")
+        );
+      };
+      request.onsuccess = () => {
+        resolve(request.result as string[]);
+      };
+    });
+  }
+
   prefix(): string {
     return this._prefix;
   }
 
   protected async getDB(): Promise<IDBDatabase> {
-    if (this.cachedDB) {
-      return this.cachedDB;
+    const prefix = this.prefix();
+    if (!IndexedDBKVStore.dbPromiseMap.has(prefix)) {
+      IndexedDBKVStore.dbPromiseMap.set(prefix, this.openDB());
     }
 
+    return IndexedDBKVStore.dbPromiseMap.get(prefix)!;
+  }
+
+  protected openDB(): Promise<IDBDatabase> {
+    const prefix = this.prefix();
     return new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(this.prefix());
+      const request = window.indexedDB.open(prefix);
       request.onerror = (event) => {
         event.stopPropagation();
-        reject(event.target);
+        IndexedDBKVStore.dbPromiseMap.delete(prefix);
+        const error = (event.target as IDBRequest).error;
+        reject(
+          new Error(error?.message ?? "Unknown IndexedDB error on openDB")
+        );
       };
 
       request.onupgradeneeded = (event) => {
@@ -84,12 +119,21 @@ export class IndexedDBKVStore implements KVStore {
         // @ts-ignore
         const db = event.target.result;
 
-        db.createObjectStore(this.prefix(), { keyPath: "key" });
+        db.createObjectStore(prefix, { keyPath: "key" });
       };
 
       request.onsuccess = () => {
-        this.cachedDB = request.result;
-        resolve(request.result);
+        const db = request.result;
+
+        db.onclose = () => {
+          IndexedDBKVStore.dbPromiseMap.delete(prefix);
+        };
+        db.onversionchange = () => {
+          db.close();
+          IndexedDBKVStore.dbPromiseMap.delete(prefix);
+        };
+
+        resolve(db);
       };
     });
   }

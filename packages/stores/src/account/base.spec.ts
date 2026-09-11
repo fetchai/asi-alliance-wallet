@@ -1,8 +1,9 @@
 import { AccountSetBase, WalletStatus } from "./base";
 import { ChainStore } from "../chain";
 import { AppCurrency, ChainInfo } from "@keplr-wallet/types";
-import { MockKeplr } from "@keplr-wallet/provider-mock";
 import { KVStore } from "@keplr-wallet/common";
+import { AccountSharedContext } from "./context";
+import { MockKeplr } from "@keplr-wallet/provider-mock";
 
 class MockKVStore implements KVStore {
   private store: Map<string, any> = new Map();
@@ -58,16 +59,16 @@ describe("Test Account set base", () => {
       {
         suggestChain: false,
         autoInit: true,
-        getKeplr: async () => {
-          return new MockKeplr(
-            async () => {
-              return new Uint8Array(0);
-            },
-            chainInfos,
-            "curious kitchen brief change imitate open close knock cause romance trim offer"
-          );
-        },
       },
+      new AccountSharedContext(async () => {
+        return new MockKeplr(
+          async () => {
+            return new Uint8Array(0);
+          },
+          chainInfos,
+          "curious kitchen brief change imitate open close knock cause romance trim offer"
+        );
+      }),
       accountBaseKVStore
     );
 
@@ -117,16 +118,16 @@ describe("Test Account set base", () => {
       {
         suggestChain: false,
         autoInit: false,
-        getKeplr: async () => {
-          return new MockKeplr(
-            async () => {
-              return new Uint8Array(0);
-            },
-            chainInfos,
-            "curious kitchen brief change imitate open close knock cause romance trim offer"
-          );
-        },
       },
+      new AccountSharedContext(async () => {
+        return new MockKeplr(
+          async () => {
+            return new Uint8Array(0);
+          },
+          chainInfos,
+          "curious kitchen brief change imitate open close knock cause romance trim offer"
+        );
+      }),
       accountBaseKVStore
     );
 

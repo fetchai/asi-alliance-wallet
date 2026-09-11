@@ -6,16 +6,19 @@ import { useLanguage } from "../../../languages";
 import { AppCurrency } from "@keplr-wallet/types";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
+import { isPureEvmChain } from "@utils/filters";
 import { separateNumericAndDenom } from "@utils/format";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { useQuery } from "@tanstack/react-query";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { TXNTYPE } from "../../../config";
 import {
   checkAddressIsBuySellWhitelisted,
   useMoonpayCurrency,
 } from "@utils/moonpay-currency";
 import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
+import { useClaimFrozenTotal } from "./use-claim-frozen-total";
 
 interface Props {
   tokenState: any;
@@ -53,13 +56,17 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     (currency: AppCurrency) => currency.coinMinimalDenom === "uusdc"
   );
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = isPureEvmChain(current);
+
   const stakable = (() => {
     if (isNoble && hasUSDC) {
       return balanceQuery.getBalanceFromCurrency(hasUSDC);
     }
 
-    return balanceStakableQuery.balance;
+    return (
+      balanceStakableQuery?.balance ||
+      new CoinPretty(current.currencies[0], new Int(0))
+    );
   })();
 
   const delegated = queries.cosmos.queryDelegations
@@ -76,6 +83,11 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
 
   const { data } = useMoonpayCurrency();
 
+  const currency = current.feeCurrencies?.[0] ?? current.currencies[0];
+  const isClaimPending = Boolean(
+    activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
+  );
+
   const rewards = useQuery({
     queryKey: ["rewards", accountInfo.bech32Address, current.chainId],
     queryFn: async () => {
@@ -84,14 +96,13 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
           accountInfo.bech32Address
         );
         await rewards.waitFreshResponse();
-        const stakableRewards = rewards.stakableReward;
-        return stakableRewards;
+        return rewards.stakableReward;
       }
       return null;
     },
     refetchInterval: 3600 * 1000,
     refetchOnMount: false,
-    enabled: !current?.features?.includes("evm"),
+    enabled: !current?.features?.includes("eth-key-sign"),
     staleTime: accountOrChainChanged ? 0 : 3600 * 1000,
   });
 
@@ -106,10 +117,17 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     chainStore.chainInfos
   );
 
-  const currency = current.feeCurrencies?.[0];
   const stakableReward = rewards?.data || new CoinPretty(currency, new Int(0));
   const stakedSum = delegated.add(unbonding);
-  const total = stakable.add(stakedSum).add(stakableReward);
+  const liveTotal = stakable.add(stakedSum).add(stakableReward);
+  const { total, isFrozen: isClaimTotalFrozen } = useClaimFrozenTotal({
+    liveTotal,
+    currency,
+    isClaimPending,
+    bech32Address: accountInfo.bech32Address,
+    chainId: current.chainId,
+    isRewardsFetching: rewards.isFetching,
+  });
 
   const totalPrice = priceStore.calculatePrice(total, fiatCurrency);
 
@@ -129,7 +147,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        current.chainId === "1" || current.chainId === "injective-1"
+        current.chainId === "eip155:1" || current.chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )
@@ -142,7 +160,6 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
       : numericValue.toLocaleString("en-US", {
           maximumFractionDigits: numericValue < 0.001 ? 6 : 3,
         });
-
   return (
     <div className={style["balance-card"]}>
       {isEvm ? (
@@ -184,8 +201,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
         <div className={style["balance-field"]}>
           <div className={style["balance"]}>
             {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === 0 ||
-            rewards.isFetching ? (
+            keyRingStore.status === "empty" ||
+            (rewards.isFetching && !isClaimTotalFrozen) ? (
               <Skeleton height="37.5px" width="100px" />
             ) : (
               <React.Fragment>
@@ -196,8 +213,8 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
           </div>
           <div className={style["inUsd"]}>
             {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === 0 ||
-            rewards.isFetching ? (
+            keyRingStore.status === "empty" ||
+            (rewards.isFetching && !isClaimTotalFrozen) ? (
               <Skeleton height="21px" width="100px" />
             ) : totalPrice ? (
               ` ${totalPrice.toString()} ${fiatCurrency.toUpperCase()}`

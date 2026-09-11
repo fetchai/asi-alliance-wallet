@@ -43,7 +43,7 @@ export class SidePanelService {
         // service worker에서는 background가 active/inactive 상태가 반복될 수 있으므로
         // 이런 처리를 안해주면 계속해서 요청을 발생시킬 수 있다.
         if (isServiceWorker()) {
-          const saved = await browser.storage.session.get(
+          const saved = await (browser.storage as any).session.get(
             "side_panel_analytics"
           );
           if (saved["side_panel_analytics"] === enabled) {
@@ -56,7 +56,7 @@ export class SidePanelService {
             enabled,
           });
           if (isServiceWorker()) {
-            await browser.storage.session.set({
+            await (browser.storage as any).session.set({
               ["side_panel_analytics"]: enabled,
             });
           }

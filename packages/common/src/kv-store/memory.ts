@@ -4,8 +4,10 @@ import { KVStoreProvider } from "./interface";
 class MemoryKVStoreProvider implements KVStoreProvider {
   private store: { [key: string]: any } = {};
 
-  get() {
-    return Promise.resolve(this.store);
+  get(key: string) {
+    return Promise.resolve({
+      [key]: this.store[key],
+    });
   }
 
   set(items: { [key: string]: any }) {
@@ -14,7 +16,7 @@ class MemoryKVStoreProvider implements KVStoreProvider {
     // To mitigate the risk, we check the type of value to be stored if env is for testing.
     if (
       typeof process !== "undefined" &&
-      (process.env["NODE_ENV"] === "test" ||
+      ((process.env["NODE_ENV"] as any) === "test" ||
         process.env["NODE_ENV"] === "development")
     ) {
       this.checkNotPrimitiveField(items);

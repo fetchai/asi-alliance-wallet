@@ -1,5 +1,4 @@
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQueryTendermint } from "../../../common";
+import { ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
 import { RatePretty, Dec } from "@keplr-wallet/unit";
 import {
@@ -7,9 +6,15 @@ import {
   setupDistributionExtension,
 } from "@cosmjs/stargate";
 import { QueryParamsResponse } from "cosmjs-types/cosmos/distribution/v1beta1/query";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryDistributionParams extends ObservableQueryTendermint<QueryParamsResponse> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,

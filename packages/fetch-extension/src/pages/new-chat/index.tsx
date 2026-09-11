@@ -182,7 +182,7 @@ export const NewChat: FunctionComponent = observer(() => {
         //check if searchedVal is valid address
         Bech32Address.validate(
           searchedVal,
-          chainStore.current.bech32Config.bech32PrefixAccAddr
+          chainStore.current.bech32Config?.bech32PrefixAccAddr
         );
         const address: NameAddress = {
           name: formatAddress(searchedVal),

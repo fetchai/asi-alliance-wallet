@@ -1,15 +1,17 @@
-import { ActivityStore } from "src/activity";
+import { ActivityStore } from "../activity";
 import {
   ChainedFunctionifyTuple,
-  ChainGetter,
   HasMapStore,
   IObject,
   mergeStores,
 } from "../common";
+import { ChainGetter } from "../chain";
 import { AccountSetBase, AccountSetBaseSuper, AccountSetOpts } from "./base";
 import { DeepReadonly, UnionToIntersection } from "utility-types";
-import { TokenGraphStore } from "src/token-graph";
+import { TokenGraphStore } from "../token-graph";
 import { KVStore } from "@keplr-wallet/common";
+import { AccountSharedContext } from "./context";
+import { Keplr } from "@keplr-wallet/types";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export interface IAccountStore<T extends IObject = {}> {
@@ -37,6 +39,7 @@ export class AccountStore<
     protected readonly activityStore: ActivityStore,
     protected readonly tokenGraphStore: TokenGraphStore,
     protected readonly accountBaseStore: KVStore,
+    protected readonly getKeplr: () => Promise<Keplr | undefined>,
     protected readonly storeOptsCreator: (chainId: string) => AccountSetOpts,
     ...accountSetCreators: ChainedFunctionifyTuple<
       AccountSetBaseSuper,
@@ -47,11 +50,13 @@ export class AccountStore<
     >
   ) {
     super((chainId: string) => {
+      const sharedContext = new AccountSharedContext(getKeplr);
       const accountSetBase = new AccountSetBaseSuper(
         eventListener,
         chainGetter,
         chainId,
         storeOptsCreator(chainId),
+        sharedContext,
         this.accountBaseStore
       );
 

@@ -7,7 +7,7 @@ import {
 
 import delay from "delay";
 
-import { APP_PORT, Env, WalletError } from "@keplr-wallet/router";
+import { APP_PORT, Env, KeplrError as WalletError } from "@keplr-wallet/router";
 import { BIP44HDPath } from "../keyring";
 import { KVStore } from "@keplr-wallet/common";
 import { InteractionService } from "../interaction";
@@ -53,8 +53,8 @@ export class LedgerService {
     env: Env,
     ledgerApp: LedgerApp,
     cosmosLikeApp: string = "Cosmos"
-  ): Promise<void> {
-    await this.getPublicKey(
+  ): Promise<Uint8Array> {
+    return await this.getPublicKey(
       env,
       ledgerApp,
       {
@@ -359,11 +359,11 @@ export class LedgerService {
                   ledgerApp,
                   mode,
                   cosmosLikeApp,
-                },
-                {
-                  forceOpenWindow: false,
-                  channel: "ledger",
                 }
+                // {
+                //   forceOpenWindow: false,
+                //   channel: "ledger",
+                // }
               )) as
                 | {
                     abort?: boolean;

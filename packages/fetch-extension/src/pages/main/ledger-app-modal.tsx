@@ -5,13 +5,13 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import {
-  InitNonDefaultLedgerAppMsg,
-  LedgerApp,
-} from "@keplr-wallet/background";
+import { LedgerApp, TryLedgerInitMsg } from "@keplr-wallet/background";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+import { isKeyRingRejection } from "../../utils/rejection";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
-  const { chainStore, accountStore } = useStore();
+  const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
+    useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   // [prev, current]
@@ -30,18 +30,7 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const isOpen = (() => {
-    if (
-      accountInfo.rejectionReason &&
-      accountInfo.rejectionReason.message.includes(
-        "No ethereum public key. Initialize ethereum app on Ledger by selecting the chain in the extension"
-      )
-    ) {
-      return true;
-    }
-
-    return false;
-  })();
+  const isOpen = isKeyRingRejection(accountInfo.rejectionReason, 901);
 
   return (
     <Modal isOpen={isOpen} centered>
@@ -87,11 +76,25 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
               setIsLoading(true);
 
               try {
-                await new InExtensionMessageRequester().sendMessage(
-                  BACKGROUND_PORT,
-                  new InitNonDefaultLedgerAppMsg(LedgerApp.Ethereum)
-                );
-
+                const pubkey =
+                  await new InExtensionMessageRequester().sendMessage(
+                    BACKGROUND_PORT,
+                    new TryLedgerInitMsg(
+                      LedgerApp.Ethereum,
+                      ledgerInitStore.cosmosLikeApp || "Cosmos"
+                    )
+                  );
+                if (keyRingStore?.selectedKeyInfo) {
+                  await keyRingStore.appendLedgerKeyApp(
+                    keyRingStore.selectedKeyInfo.id,
+                    pubkey,
+                    "Ethereum"
+                  );
+                  dispatchGlobalEventExceptSelf(
+                    "keplr_ledger_app_connected",
+                    keyRingStore.selectedKeyInfo.id
+                  );
+                }
                 accountInfo.disconnect();
 
                 await accountInfo.init();

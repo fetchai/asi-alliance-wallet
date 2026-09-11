@@ -4,17 +4,17 @@ import { MemoryKVStore } from "@keplr-wallet/common";
 import EventEmitter from "events";
 
 class MockKeyRingService {
-  public keyRingStatus: KeyRingStatus = KeyRingStatus.NOTLOADED;
+  public keyRingStatus: KeyRingStatus = "empty";
   public isLocked = true;
 
   unlock() {
     this.isLocked = false;
-    this.keyRingStatus = KeyRingStatus.UNLOCKED;
+    this.keyRingStatus = "unlocked";
   }
 
   lock() {
     this.isLocked = true;
-    this.keyRingStatus = KeyRingStatus.LOCKED;
+    this.keyRingStatus = "locked";
   }
 }
 

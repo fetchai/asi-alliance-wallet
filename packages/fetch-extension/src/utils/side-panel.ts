@@ -18,9 +18,9 @@ export const toggleSidePanel = async (
   new InExtensionMessageRequester()
     .sendMessage(BACKGROUND_PORT, msg)
     .then((res) => {
-      setSidePanelEnabled?.(res.enabled);
+      setSidePanelEnabled?.(res?.enabled);
 
-      if (res.enabled) {
+      if (res?.enabled) {
         if (
           typeof chrome !== "undefined" &&
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -94,4 +94,20 @@ export const toggleSidePanel = async (
         window.close();
       }
     });
+};
+
+export const handleExternalInteractionWithNoProceedNext = () => {
+  if (window?.isStartFromInteractionWithSidePanelEnabled) {
+    window.close();
+  } else {
+    if (isRunningInSidePanel()) {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.close();
+      }
+    } else {
+      window.close();
+    }
+  }
 };
