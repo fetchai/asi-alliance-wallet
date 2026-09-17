@@ -1,5 +1,5 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
-import React, { FunctionComponent, useMemo, useState } from "react";
+import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
 import style from "./style.module.scss";
 
 import { GlassCard } from "@components-v2/glass-card";
@@ -344,7 +344,9 @@ const DelegateReward: FunctionComponent = observer(() => {
   const navigate = useNavigate();
 
   const notification = useNotification();
-  const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
+  const [claimingValidator, setClaimingValidator] = useState<string | null>(
+    null
+  );
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -386,7 +388,7 @@ const DelegateReward: FunctionComponent = observer(() => {
   }, [validators]);
 
   const handleClaim = async (validatorAddress: string) => {
-    setIsWithdrawingRewards(true);
+    setClaimingValidator(validatorAddress);
     try {
       analyticsStore.logEvent("claim_click", {
         pageName: "Stake",
@@ -433,6 +435,7 @@ const DelegateReward: FunctionComponent = observer(() => {
       );
     } catch (err) {
       console.error(err);
+      setClaimingValidator(null);
       analyticsStore.logEvent("claim_txn_broadcasted_fail", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
@@ -442,7 +445,9 @@ const DelegateReward: FunctionComponent = observer(() => {
         navigate(`/validators/${validatorAddress}`);
       }
     } finally {
-      setIsWithdrawingRewards(false);
+      if (!activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]) {
+        setClaimingValidator(null);
+      }
       const txnNavigationOptions = {
         redirect: () => {
           navigate("/stake");
@@ -453,6 +458,16 @@ const DelegateReward: FunctionComponent = observer(() => {
       navigateOnTxnEvents(txnNavigationOptions);
     }
   };
+
+  const withdrawInProgress = Boolean(
+    activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
+  );
+
+  useEffect(() => {
+    if (!withdrawInProgress) {
+      setClaimingValidator(null);
+    }
+  }, [withdrawInProgress]);
 
   return (
     <React.Fragment>
@@ -511,21 +526,14 @@ const DelegateReward: FunctionComponent = observer(() => {
                 fontSize: "14px",
                 backgroundColor: "var(--bg-green-base)",
               }}
-              disabled={
-                activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
-              }
-              text={
-                activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
-                  ? ""
-                  : "Claim"
-              }
+              disabled={claimingValidator != null || withdrawInProgress}
+              text={claimingValidator === val.operator_address ? "" : "Claim"}
               onClick={() => {
-                if (activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards])
-                  return;
+                if (claimingValidator != null || withdrawInProgress) return;
                 handleClaim(val.operator_address);
               }}
             >
-              {activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] && (
+              {claimingValidator === val.operator_address && (
                 <i className="fas fa-spinner fa-spin ml-2 mr-2" />
               )}
             </ButtonV2>
