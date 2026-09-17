@@ -25,6 +25,29 @@ import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useLanguage } from "../../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 
+const singlePendingClaimValidator = (activityStore: {
+  getPendingTxn: Record<string, { id?: string; type?: string }>;
+  getNodes: Record<string, any>;
+}): string | null => {
+  const addresses = Object.values(activityStore.getPendingTxn || {}).flatMap(
+    (txn) => {
+      if (txn?.type !== TXNTYPE.withdrawRewards || !txn.id) {
+        return [];
+      }
+      const msgs =
+        activityStore.getNodes?.[txn.id]?.transaction?.messages?.nodes ?? [];
+      return msgs
+        .map(
+          (msg: { json?: { validatorAddress?: string } }) =>
+            msg?.json?.validatorAddress
+        )
+        .filter(Boolean);
+    }
+  );
+  const unique = [...new Set(addresses)];
+  return unique.length === 1 ? unique[0] : null;
+};
+
 export const MyStakes = observer(
   ({
     rewards,
@@ -462,6 +485,9 @@ const DelegateReward: FunctionComponent = observer(() => {
   const withdrawInProgress = Boolean(
     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
   );
+  const activeClaimValidator =
+    claimingValidator ||
+    (withdrawInProgress ? singlePendingClaimValidator(activityStore) : null);
 
   useEffect(() => {
     if (!withdrawInProgress) {
@@ -526,14 +552,16 @@ const DelegateReward: FunctionComponent = observer(() => {
                 fontSize: "14px",
                 backgroundColor: "var(--bg-green-base)",
               }}
-              disabled={claimingValidator != null || withdrawInProgress}
-              text={claimingValidator === val.operator_address ? "" : "Claim"}
+              disabled={activeClaimValidator != null || withdrawInProgress}
+              text={
+                activeClaimValidator === val.operator_address ? "" : "Claim"
+              }
               onClick={() => {
-                if (claimingValidator != null || withdrawInProgress) return;
+                if (activeClaimValidator != null || withdrawInProgress) return;
                 handleClaim(val.operator_address);
               }}
             >
-              {claimingValidator === val.operator_address && (
+              {activeClaimValidator === val.operator_address && (
                 <i className="fas fa-spinner fa-spin ml-2 mr-2" />
               )}
             </ButtonV2>
