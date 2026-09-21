@@ -299,7 +299,7 @@ const sendConfigs = {
   },
   amountConfig: {
     amount: "1.23",
-    error: undefined,
+    error: undefined as Error | undefined,
     setAmount: jest.fn(),
     setSendCurrency: jest.fn(),
     sendCurrency: {
@@ -784,6 +784,25 @@ describe("SendPhase2 real flow guards", () => {
           call[0] === "/send" && call[1]?.state?.trnsxStatus === "pending"
       )
     ).toBe(true);
+  });
+
+  it("hides amount validation errors behind the non-cardano transaction status modal", () => {
+    const previousAmount = sendConfigs.amountConfig.amount;
+    const previousError = sendConfigs.amountConfig.error;
+    sendConfigs.amountConfig.amount = "";
+    sendConfigs.amountConfig.error = new Error("Amount is empty");
+
+    try {
+      renderComponent({ isCardano: false, trnsxStatus: "pending" });
+
+      expect(
+        container.querySelector("[data-testid='tx-status']")
+      ).not.toBeNull();
+      expect(container.textContent).not.toContain("Amount is empty");
+    } finally {
+      sendConfigs.amountConfig.amount = previousAmount;
+      sendConfigs.amountConfig.error = previousError;
+    }
   });
 
   it("Cardano: no Transaction is not ready with prefilled amount and empty recipient", async () => {

@@ -755,7 +755,9 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
         hasCardanoOutgoingPending,
       });
     const showValidationBanner =
-      bannerValidationError != null && !isBuildingCardanoDraft;
+      trnsxStatus === undefined &&
+      bannerValidationError != null &&
+      !isBuildingCardanoDraft;
     const footerReservePx = getSendPhase2FooterReservePx({
       showBlockfrostBanner: isCardano && showBlockfrostLimitBanner,
       showValidationBanner,
