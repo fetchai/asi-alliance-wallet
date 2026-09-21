@@ -7,6 +7,7 @@ import {
   validateBasicChainInfoType,
 } from "@keplr-wallet/chain-validator";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
+import { isCardanoChainId } from "@keplr-wallet/cardano";
 
 export class ChainUpdaterService {
   public chainsService!: ChainsService;
@@ -140,16 +141,24 @@ export class ChainUpdaterService {
   }
 
   async tryUpdateChainInfo(chainId: string): Promise<boolean> {
-    if (
-      (await this.chainsService.getChainInfo(chainId)).updateFromRepoDisabled
-    ) {
-      return false;
-    }
+    let repoUpdated = false;
+    let chainIdUpdated = false;
+    let featuresUpdated = false;
+    /** Exact registry chainId for this identity after mutations (for authority align). */
+    let exactChainIdForIdentity: string | undefined;
 
     try {
-      const chainIdentifier = ChainIdHelper.parse(chainId).identifier;
+      if (
+        (await this.chainsService.getChainInfo(chainId)).updateFromRepoDisabled
+      ) {
+        return false;
+      }
 
-      let repoUpdated = false;
+      if (isCardanoChainId(chainId)) {
+        return false;
+      }
+
+      const chainIdentifier = ChainIdHelper.parse(chainId).identifier;
 
       try {
         const res = await simpleFetch<ChainInfo>(
@@ -162,7 +171,7 @@ export class ChainUpdaterService {
           chainInfo.chainId
         ).identifier;
         if (chainIdentifier !== fetchedChainIdentifier) {
-          console.log(
+          console.warn(
             `The chainId is not valid.(${chainId} -> ${fetchedChainIdentifier})`
           );
           return false;
@@ -186,15 +195,16 @@ export class ChainUpdaterService {
           );
 
           this.chainsService.clearCachedChainInfos();
+          exactChainIdForIdentity = chainInfo.chainId;
         }
       } catch (e) {
-        // Proceed logic event if fetching from github failed
-        console.log(e);
+        // Proceed logic even if fetching from github failed
+        console.warn(e);
       }
 
       const updatedChainInfo = await this.chainsService.getChainInfo(chainId);
+      exactChainIdForIdentity = updatedChainInfo.chainId;
 
-      let chainIdUpdated = false;
       const chainIdFromRPC = await this.checkChainIdFromRPC(
         updatedChainInfo.rpc
       );
@@ -214,11 +224,12 @@ export class ChainUpdaterService {
           ...local,
           chainId: chainIdFromRPC,
         });
+        exactChainIdForIdentity = chainIdFromRPC;
       }
 
       const toUpdateFeatures = await checkChainFeatures(updatedChainInfo);
 
-      const featuresUpdated = toUpdateFeatures.length !== 0;
+      featuresUpdated = toUpdateFeatures.length !== 0;
 
       if (featuresUpdated) {
         const local = await this.kvStore.get<Partial<ChainInfo>>(
@@ -237,12 +248,39 @@ export class ChainUpdaterService {
         this.chainsService.clearCachedChainInfos();
       }
 
+      if (exactChainIdForIdentity) {
+        await this.chainsService.alignSelectedCanonicalIfCurrent(
+          exactChainIdForIdentity
+        );
+      }
+
       return repoUpdated || chainIdUpdated || featuresUpdated;
     } catch (e) {
-      console.log(`Failed to try to update chain info for ${chainId}`, e);
+      console.warn(`Failed to try to update chain info for ${chainId}`, e);
+      return false;
+    } finally {
+      // Best-effort align after partial writes (e.g. features threw mid-flight).
+      if (exactChainIdForIdentity && (repoUpdated || chainIdUpdated)) {
+        try {
+          await this.chainsService.alignSelectedCanonicalIfCurrent(
+            exactChainIdForIdentity
+          );
+        } catch (error) {
+          console.warn(
+            `[ChainUpdaterService] authority align failed for ${chainId}:`,
+            error
+          );
+        }
+      }
+      try {
+        await this.chainsService.notifyProjectionInvalidation();
+      } catch (error) {
+        console.warn(
+          `[ChainUpdaterService] projection invalidation failed for ${chainId}:`,
+          error
+        );
+      }
     }
-
-    return false;
   }
 
   // This method is called on `ChainsService`.
@@ -265,17 +303,27 @@ export class ChainUpdaterService {
     rpc: string | undefined,
     rest: string | undefined
   ): Promise<ChainInfoWithCoreTypes[]> {
-    await this.kvStore.set(
-      "chain-info-endpoints/" + ChainIdHelper.parse(chainId).identifier,
-      {
-        rpc,
-        rest,
+    try {
+      await this.kvStore.set(
+        "chain-info-endpoints/" + ChainIdHelper.parse(chainId).identifier,
+        {
+          rpc,
+          rest,
+        }
+      );
+
+      this.chainsService.clearCachedChainInfos();
+      return await this.chainsService.getChainInfos();
+    } finally {
+      try {
+        await this.chainsService.notifyProjectionInvalidation();
+      } catch (error) {
+        console.warn(
+          `[ChainUpdaterService] projection invalidation failed after setChainEndpoints for ${chainId}:`,
+          error
+        );
       }
-    );
-
-    this.chainsService.clearCachedChainInfos();
-
-    return await this.chainsService.getChainInfos();
+    }
   }
 
   public async getChainEndpoints(chainId: string): Promise<{
@@ -300,14 +348,24 @@ export class ChainUpdaterService {
   public async resetChainEndpoints(
     chainId: string
   ): Promise<ChainInfoWithCoreTypes[]> {
-    await this.kvStore.set(
-      "chain-info-endpoints/" + ChainIdHelper.parse(chainId).identifier,
-      null
-    );
+    try {
+      await this.kvStore.set(
+        "chain-info-endpoints/" + ChainIdHelper.parse(chainId).identifier,
+        null
+      );
 
-    this.chainsService.clearCachedChainInfos();
-
-    return await this.chainsService.getChainInfos();
+      this.chainsService.clearCachedChainInfos();
+      return await this.chainsService.getChainInfos();
+    } finally {
+      try {
+        await this.chainsService.notifyProjectionInvalidation();
+      } catch (error) {
+        console.warn(
+          `[ChainUpdaterService] projection invalidation failed after resetChainEndpoints for ${chainId}:`,
+          error
+        );
+      }
+    }
   }
 
   protected async checkChainIdFromRPC(rpc: string): Promise<string> {

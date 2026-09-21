@@ -11,6 +11,11 @@ import { Bech32Address } from "@keplr-wallet/cosmos";
 import { Button } from "reactstrap";
 import restartIcon from "@assets/icon/undo.png";
 
+const BRIDGE_STATUS_ICONS: Record<string, string> = {
+  "gov-tick.svg": require("@assets/svg/gov-tick.svg"),
+  "gov-clock.svg": require("@assets/svg/gov-clock.svg"),
+};
+
 export const proposalOptions = {
   ProposalActive: "PROPOSAL_STATUS_VOTING_PERIOD",
   ProposalPassed: "PROPOSAL_STATUS_PASSED",
@@ -152,10 +157,11 @@ const BridgeStatus: FunctionComponent<{ history: BridgeHistory }> = observer(
                 <img
                   draggable={false}
                   className={style["status"]}
-                  src={require("@assets/svg/" +
-                    `${
+                  src={
+                    BRIDGE_STATUS_ICONS[
                       history.transactionHash ? "gov-tick.svg" : "gov-clock.svg"
-                    }`)}
+                    ]
+                  }
                 />
               </Button>
               <img
@@ -194,10 +200,11 @@ const BridgeStatus: FunctionComponent<{ history: BridgeHistory }> = observer(
                 <img
                   draggable={false}
                   className={style["status"]}
-                  src={require("@assets/svg/" +
-                    `${
+                  src={
+                    BRIDGE_STATUS_ICONS[
                       reverseSwapHash.hash ? "gov-tick.svg" : "gov-clock.svg"
-                    }`)}
+                    ]
+                  }
                 />
               </Button>
             </div>

@@ -17,6 +17,10 @@ import { observer } from "mobx-react-lite";
 
 import style from "./style.module.scss";
 import { WarningView } from "./warning-view";
+import {
+  requestKeyringSurfacesSyncBroadcast,
+  syncKeyringSurfacesFromBackground,
+} from "../../../utils";
 
 interface FormData {
   password: string;
@@ -30,7 +34,7 @@ export const ClearPage: FunctionComponent = observer(() => {
 
   const [loading, setLoading] = useState(false);
 
-  const { keyRingStore, analyticsStore } = useStore();
+  const { keyRingStore, analyticsStore, chainStore } = useStore();
   const {
     register,
     handleSubmit,
@@ -77,6 +81,8 @@ export const ClearPage: FunctionComponent = observer(() => {
               analyticsStore.logEvent("delete_account_click", {
                 action: "Remove",
               });
+              await syncKeyringSurfacesFromBackground(chainStore, keyRingStore);
+              await requestKeyringSurfacesSyncBroadcast();
               navigate("/");
             } catch (e) {
               console.log("Fail to decrypt: " + e.message);

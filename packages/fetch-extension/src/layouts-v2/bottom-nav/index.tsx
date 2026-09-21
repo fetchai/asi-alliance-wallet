@@ -62,11 +62,12 @@ const StakeTab = () => {
   const { chainStore } = useStore();
   const current = chainStore.current;
   const isEvm = current.features?.includes("evm") ?? false;
+  const isCardano = current.features?.includes("cardano") ?? false;
 
   const [stakingTooltip, setStakingTooltip] = useState("");
   const [stakingDisabled, setStakingDisabled] = useState(false);
   useEffect(() => {
-    if (isEvm || current.chainId === "noble-1") {
+    if (isEvm || current.chainId === "noble-1" || isCardano) {
       setStakingDisabled(true);
       setStakingTooltip("Feature not available on this network");
     } else {

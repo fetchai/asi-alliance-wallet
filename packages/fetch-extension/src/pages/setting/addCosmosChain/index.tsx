@@ -19,6 +19,7 @@ import { debounce } from "lodash";
 import { INITIAL_CHAIN_CONFIG } from "./constants";
 import { useNotification } from "@components/notification";
 import { useWebSocketSupport } from "../../../use-rpc-websocket-support";
+import { flowResult } from "mobx";
 
 type EndpointCheckResult = {
   valid: boolean;
@@ -338,8 +339,8 @@ export const AddCosmosChain: FunctionComponent = () => {
         loadingIndicator.setIsLoading("chain-details-adding", false);
         return;
       }
-      chainStore.addCustomChainInfo(newChainInfo);
-      chainStore.selectChain(newChainInfo.chainId);
+      await flowResult(chainStore.addCustomChainInfo(newChainInfo));
+      await flowResult(chainStore.selectChainAndPersist(newChainInfo.chainId));
       loadingIndicator.setIsLoading("chain-details-adding", false);
       analyticsStore.logEvent("add_chain_click", {
         pageName: "Add new Cosmos chain",

@@ -11,7 +11,7 @@ export class AutoLockAccountService {
   @observable
   protected lockOnSleep: boolean = false;
 
-  protected autoLockTimer: NodeJS.Timeout | null = null;
+  protected autoLockTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     protected readonly kvStore: KVStore,

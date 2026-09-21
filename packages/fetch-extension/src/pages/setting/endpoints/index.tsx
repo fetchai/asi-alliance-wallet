@@ -3,6 +3,7 @@ import { HeaderLayout } from "../../../layouts";
 
 import { useNavigate } from "react-router";
 import { observer } from "mobx-react-lite";
+import { flowResult } from "mobx";
 import { useStore } from "../../../stores";
 import {
   Button,
@@ -129,7 +130,9 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
                     setValue("lcd", chainInfo.rest);
 
                     // To avoid confusion when the user returns to the main page, select the chain if the rpc/lcd endpoints have changed.
-                    chainStore.selectChain(selectedChainId);
+                    await flowResult(
+                      chainStore.selectChainAndPersist(selectedChainId)
+                    );
                   } catch (e) {
                     console.log(e);
                   } finally {
@@ -227,7 +230,9 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
                 );
 
                 // To avoid confusion when the user returns to the main page, select the chain if the rpc/lcd endpoints have changed.
-                chainStore.selectChain(selectedChainId);
+                await flowResult(
+                  chainStore.selectChainAndPersist(selectedChainId)
+                );
 
                 navigate("/");
               } catch (e) {

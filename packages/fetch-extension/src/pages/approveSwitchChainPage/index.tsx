@@ -7,6 +7,7 @@ import { EmptyLayout } from "@layouts/empty-layout";
 import { FormattedMessage } from "react-intl";
 import { useInteractionInfo } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
+import { flowResult } from "mobx";
 import { ToolTip } from "@components/tooltip";
 import classNames from "classnames";
 import { GithubIcon } from "@components/icon";
@@ -14,13 +15,8 @@ import { useStore } from "../../stores";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 
 export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
-  const {
-    chainSwitchStore,
-    analyticsStore,
-    chainStore,
-    chatStore,
-    proposalStore,
-  } = useStore();
+  const { chainSwitchStore, analyticsStore, chatStore, proposalStore } =
+    useStore();
 
   const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
   const navigate = useNavigate();
@@ -250,9 +246,8 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
                 const chainId =
                   chainSwitchStore.waitingSuggestedChainId?.data.chainId;
                 if (chainId) {
-                  chainSwitchStore.approve(chainId);
-                  chainStore.selectChain(chainId);
-                  chainStore.saveLastViewChainId();
+                  // Background commits Select after approval; do not Select here.
+                  await flowResult(chainSwitchStore.approve(chainId));
                   chatStore.userDetailsStore.resetUser();
                   proposalStore.resetProposals();
                   chatStore.messagesStore.resetChatList();

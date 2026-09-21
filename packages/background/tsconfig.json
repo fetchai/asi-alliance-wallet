@@ -7,5 +7,6 @@
     "rootDir": "src",
     "skipLibCheck": true
   },
-  "excluded": ["**/*.wasm"]
+  "include": ["src/**/*"],
+  "exclude": ["build", "**/*.wasm"]
 }

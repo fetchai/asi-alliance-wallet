@@ -28,6 +28,9 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   const chainId = chainStore.current.chainId;
   const chainName = chainStore.current.chainName;
   const waitingNameData = keyRingStore.waitingNameData?.data;
+  const keyStore = useMemo(() => {
+    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
+  }, [keyRingStore.multiKeyStoreInfo, index]);
 
   const {
     register,
@@ -41,12 +44,6 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
     },
   });
 
-  useEffect(() => {
-    if (waitingNameData?.defaultName) {
-      setValue("name", waitingNameData.defaultName);
-    }
-  }, [waitingNameData, setValue]);
-
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [accountNameValidationError, setAccountNameValidationError] =
@@ -58,10 +55,6 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
       ? JSON.parse(meta["nameByChain"])?.[chainId]
       : undefined;
   };
-
-  const keyStore = useMemo(() => {
-    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
-  }, [keyRingStore.multiKeyStoreInfo, index]);
 
   const isKeyStoreReady = keyRingStore.status === KeyRingStatus.UNLOCKED;
   const accountName = getNameByChain(keyStore?.meta) || keyStore.meta?.["name"];

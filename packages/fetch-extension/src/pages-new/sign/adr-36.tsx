@@ -11,13 +11,17 @@ import { renderEvmTxn } from "./evm";
 import { useIntl } from "react-intl";
 import { UnsignedTransaction } from "@ethersproject/transactions";
 
+import { useRequestedChain } from "../../utils/requested-chain-context";
+
 export const ADR36SignDocDetailsTab: FunctionComponent<{
   signDocWrapper: SignDocWrapper;
   isADR36WithString?: boolean;
   ethSignType?: EthSignType;
   origin?: string;
 }> = observer(({ signDocWrapper, isADR36WithString, ethSignType, origin }) => {
-  const { chainStore, accountStore } = useStore();
+  const { accountStore } = useStore();
+  const requested = useRequestedChain();
+  const requestChain = requested.chainInfo;
   const intl = useIntl();
 
   const renderTitleText = () => {
@@ -54,8 +58,8 @@ export const ADR36SignDocDetailsTab: FunctionComponent<{
         const txnParams: UnsignedTransaction = JSON.parse(str);
         const msgContent = renderEvmTxn(
           txnParams,
-          chainStore.current.feeCurrencies[0],
-          chainStore.current.currencies,
+          requestChain.feeCurrencies[0],
+          requestChain.currencies,
           intl
         );
 
@@ -64,7 +68,7 @@ export const ADR36SignDocDetailsTab: FunctionComponent<{
             <MsgRender title={msgContent.title}>{msgContent.content}</MsgRender>
             <hr />
             {txnParams.data &&
-            accountStore.getAccount(chainStore.current.chainId).isNanoLedger ? (
+            accountStore.getAccount(requestChain.chainId).isNanoLedger ? (
               <div className={styleDetailsTab["ethLedgerBlindSigningWarning"]}>
                 <div className={styleDetailsTab["title"]}>
                   Before you click ‘Approve’
@@ -87,7 +91,16 @@ export const ADR36SignDocDetailsTab: FunctionComponent<{
     } else {
       return msg.value.data as string;
     }
-  }, [signDocWrapper.aminoSignDoc.msgs, isADR36WithString, ethSignType]);
+  }, [
+    accountStore,
+    intl,
+    requestChain.chainId,
+    requestChain.currencies,
+    requestChain.feeCurrencies,
+    signDocWrapper.aminoSignDoc.msgs,
+    isADR36WithString,
+    ethSignType,
+  ]);
 
   // TODO: Add warning view to let users turn on blind signing option on ledger if EIP712
 
@@ -120,7 +133,7 @@ export const ADR36SignDocDetailsTab: FunctionComponent<{
           </Label>
           <div id="chain-name">
             <div style={{ color: "var(--font-dark" }}>
-              {chainStore.current.chainName}
+              {requestChain.chainName}
             </div>
           </div>
         </div>

@@ -16,11 +16,16 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
+import {
+  ensureChainCompatibleBeforeSelectKeyStore,
+  requestKeyringSurfacesSyncBroadcast,
+} from "../../../utils";
 
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
 
-  const { keyRingStore, analyticsStore, chatStore, proposalStore } = useStore();
+  const { keyRingStore, analyticsStore, chatStore, proposalStore, chainStore } =
+    useStore();
   const navigate = useNavigate();
 
   const loadingIndicator = useLoadingIndicator();
@@ -113,7 +118,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
 
           return (
             <PageButton
-              key={i.toString()}
+              key={(keyStore.meta && keyStore.meta["__id__"]) || i.toString()}
               title={`${
                 keyStore.meta?.["name"]
                   ? keyStore.meta["name"]
@@ -135,8 +140,14 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                       e.preventDefault();
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
+                        await ensureChainCompatibleBeforeSelectKeyStore(
+                          chainStore,
+                          keyStore
+                        );
                         await keyRingStore.changeKeyRing(i);
                         analyticsStore.logEvent("select_account_click");
+
+                        await requestKeyringSurfacesSyncBroadcast();
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();
                         proposalStore.resetProposals();
@@ -147,7 +158,7 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                         messageAndGroupListenerUnsubscribe();
                         navigate("/");
                       } catch (e: any) {
-                        console.log(`Failed to change keyring: ${e.message}`);
+                        console.warn(`Failed to change keyring: ${e.message}`);
                         loadingIndicator.setIsLoading("keyring", false);
                       }
                     }

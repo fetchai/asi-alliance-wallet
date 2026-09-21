@@ -18,8 +18,14 @@ export const createQueriesSetBase = (
   chainId: string,
   chainGetter: ChainGetter
 ): QueriesSetBase => {
+  const queryBalances = new ObservableQueryBalances(
+    kvStore,
+    chainId,
+    chainGetter
+  );
+
   return {
-    queryBalances: new ObservableQueryBalances(kvStore, chainId, chainGetter),
+    queryBalances,
   };
 };
 
@@ -75,7 +81,7 @@ export class QueriesStore<Injects extends Array<IObject>> {
           queriesSetBase,
           [this.kvStore, chainId, this.chainGetter],
           ...this.queriesCreators
-        );
+        ) as QueriesSetBase & UnionToIntersection<Injects[number]>;
 
         this.queriesMap.set(chainId, merged);
       });

@@ -730,6 +730,10 @@ export class RootStore {
       }
     );
   }
+
+  dispose(): void {
+    this.chainStore.dispose();
+  }
 }
 
 export function createRootStore() {

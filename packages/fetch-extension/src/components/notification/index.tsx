@@ -118,7 +118,7 @@ export const NotificationProvider: FunctionComponent = observer((props) => {
       <NotificationContainer
         id="notification-top-center"
         properties={notificationStore.topCenterProperties.slice().reverse()}
-        initial={{ y: "-100%", opacity: 0 }}
+        initial={{ y: "-100%", opacity: 1 }}
         variants={topCenterVariants}
       />
       <NotificationContainer

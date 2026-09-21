@@ -12,7 +12,11 @@ import { useNotification } from "@components/notification";
 import { useNavigate, useLocation } from "react-router";
 import queryString from "querystring";
 
-import { useGasSimulator, useSendTxConfig } from "@keplr-wallet/hooks";
+import {
+  useGasSimulator,
+  useSendTxConfig,
+  EmptyAddressError,
+} from "@keplr-wallet/hooks";
 import {
   fitPopupWindow,
   // openPopupWindow,
@@ -75,22 +79,23 @@ export const SendPage: FunctionComponent = observer(() => {
   );
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const spendableBalances = isEvm
-    ? queries.queryBalances
-        .getQueryBech32Address(accountInfo.bech32Address)
-        .balances?.find(
-          (bal) =>
-            sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-            bal.currency.coinMinimalDenom
-        )?.balance
-    : queries.cosmos.querySpendableBalances
-        .getQueryBech32Address(accountInfo.bech32Address)
-        .balances?.find(
-          (bal) =>
-            sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-            bal.currency.coinMinimalDenom
-        );
-
+  const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+  const spendableBalances =
+    isEvm || isCardano
+      ? queries.queryBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances?.find(
+            (bal) =>
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
+              bal.currency.coinMinimalDenom
+          )?.balance
+      : queries.cosmos.querySpendableBalances
+          .getQueryBech32Address(accountInfo.bech32Address)
+          .balances?.find(
+            (bal) =>
+              sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
+              bal.currency.coinMinimalDenom
+          );
   const balance = spendableBalances
     ? spendableBalances
     : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
@@ -122,17 +127,29 @@ export const SendPage: FunctionComponent = observer(() => {
     sendConfigs.feeConfig,
     gasSimulatorKey,
     () => {
+      const isCardano = current.features?.includes("cardano") ?? false;
       if (!sendConfigs.amountConfig.sendCurrency) {
         throw new Error("Send currency not set");
+      }
+
+      if (isCardano) {
+        // Cardano fee is derived from draft build flow, so keep simulator quiet.
+        return {
+          simulate: async () => ({ gasUsed: 0 }),
+        } as any;
       }
 
       // Prefer not to use the gas config or fee config,
       // because gas simulator can change the gas config and fee config from the result of reaction,
       // and it can make repeated reaction.
-      if (
-        sendConfigs.amountConfig.error != null ||
-        sendConfigs.recipientConfig.error != null
-      ) {
+      // Check for errors, but allow EmptyAddressError (user is still typing)
+      // EmptyAddressError is expected when the address field is empty and should not block simulation
+      const hasAmountError = sendConfigs.amountConfig.error != null;
+      const hasRecipientError =
+        sendConfigs.recipientConfig.error != null &&
+        !(sendConfigs.recipientConfig.error instanceof EmptyAddressError);
+
+      if (hasAmountError || hasRecipientError) {
         throw new Error("Not ready to simulate tx");
       }
 
@@ -154,6 +171,12 @@ export const SendPage: FunctionComponent = observer(() => {
   );
 
   useEffect(() => {
+    if (current.features?.includes("cardano")) {
+      gasSimulator.forceDisable(false);
+      gasSimulator.setEnabled(false);
+      return;
+    }
+
     // To simulate secretwasm, we need to include the signature in the tx.
     // With the current structure, this approach is not possible.
     if (
@@ -172,6 +195,7 @@ export const SendPage: FunctionComponent = observer(() => {
       gasSimulator.setEnabled(true);
     }
   }, [
+    current.features,
     accountInfo.secret.msgOpts.send.secret20.gas,
     gasSimulator,
     sendConfigs.amountConfig.sendCurrency,
@@ -223,6 +247,9 @@ export const SendPage: FunctionComponent = observer(() => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.defaultAmount, query.defaultMemo, query.defaultRecipient]);
+
+  // Token discovery is auto-triggered by ObservableQueryCardanoBalanceRegistry
+  // when the ADA balance is first queried for this address (no manual trigger needed).
 
   const sendConfigError =
     sendConfigs.recipientConfig.error ??
@@ -330,9 +357,7 @@ export const SendPage: FunctionComponent = observer(() => {
                   preferNoSetMemo: true,
                 },
                 {
-                  onBroadcastFailed: (e: any) => {
-                    console.log(e);
-                  },
+                  onBroadcastFailed: () => {},
                   onBroadcasted: () => {
                     analyticsStore.logEvent("Send token tx broadcasted", {
                       chainId: chainStore.current.chainId,
@@ -389,6 +414,7 @@ export const SendPage: FunctionComponent = observer(() => {
                 fromPhase1={fromPhase1}
                 configs={configs}
                 setFromPhase1={setFromPhase1}
+                gasSimulator={gasSimulator}
               />
             )}
           </div>

@@ -4,7 +4,7 @@ import { parseDomain } from "./utils";
 class IntervalFetcher<R> {
   protected _hasInited: boolean = false;
   protected _hasStopped: boolean = false;
-  protected timeoutId?: NodeJS.Timeout;
+  protected timeoutId?: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     public readonly opts: {

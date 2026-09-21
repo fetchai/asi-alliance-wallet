@@ -67,8 +67,10 @@ export class ExtensionRouter extends Router {
         return: result,
       };
     } catch (e: any) {
-      console.log(
-        `Failed to process msg ${message.type}: ${e?.message || e?.toString()}`
+      console.error(
+        `[ExtensionRouter] Failed to process message ${message.type}:`,
+        e?.message || e?.toString(),
+        e
       );
       if (e instanceof WalletError) {
         return Promise.resolve({

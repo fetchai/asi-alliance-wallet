@@ -19,6 +19,7 @@ import {
   NotLoadedFeeError,
 } from "@keplr-wallet/hooks";
 import { CoinGeckoPriceStore } from "@keplr-wallet/stores";
+import { CoinPretty } from "@keplr-wallet/unit";
 import { action, autorun, makeObservable, observable } from "mobx";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
@@ -211,7 +212,11 @@ export const FeeButtonsInner: FunctionComponent<
     const { chainStore, analyticsStore } = useStore();
 
     const intl = useIntl();
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    // Prefer feeConfig's bound chain (request-scoped on sign; send binds the
+    // active send chain). Do not use chainStore.current — Persist may be absent.
+    const feeChainInfo = chainStore.getChain(feeConfig.chainId);
+    const isEvm = feeChainInfo.features?.includes("evm") ?? false;
+    const isCardano = feeChainInfo.features?.includes("cardano") ?? false;
 
     const language = useLanguage();
 
@@ -275,21 +280,56 @@ export const FeeButtonsInner: FunctionComponent<
       }
     }, [feeButtonState.isGasInputOpen]);
 
+    const formatFeeAmount = (fee?: CoinPretty): string | undefined => {
+      if (!fee) {
+        return undefined;
+      }
+      const trimmed = fee.hideIBCMetadata(true).trim(true);
+      return isCardano
+        ? trimmed.toString()
+        : trimmed.toMetricPrefix(isEvm).toString();
+    };
+
     const displayFee =
       feeButtonState.isGasInputOpen || feeConfig.isManual
-        ? feeConfig.fee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        ? formatFeeAmount(feeConfig.fee)
         : feeConfig.feeType === "low"
-        ? lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+        ? formatFeeAmount(lowFee)
         : feeConfig.feeType === "average"
-        ? averageFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
-        : highFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm);
+        ? formatFeeAmount(averageFee)
+        : formatFeeAmount(highFee);
 
-    const feeDisplayText =
-      displayFee && displayFee !== "0"
-        ? displayFee
-        : feeConfig.fee?.hideIBCMetadata(true).trim(true).toString() ||
-          gasConfig.gasRaw ||
-          "-";
+    const isZeroFeeDisplay = (value?: string): boolean => {
+      if (!value) return true;
+
+      const amountPart = value.trim().split(/\s+/)[0] ?? "";
+      const numericAmount = Number(amountPart);
+
+      return Number.isFinite(numericAmount) && numericAmount === 0;
+    };
+
+    const splitFeeDisplay = (value?: string): [string, string] => {
+      if (!value) return ["-", ""];
+
+      const [amount = "-", ...denomParts] = value.trim().split(/\s+/);
+      return [amount, denomParts.join(" ")];
+    };
+
+    const feeDisplayText = !isZeroFeeDisplay(displayFee)
+      ? displayFee!
+      : feeConfig.fee?.hideIBCMetadata(true).trim(true).toString() ||
+        gasConfig.gasRaw ||
+        "-";
+
+    const [lowFeeAmount, lowFeeDenom] = splitFeeDisplay(
+      formatFeeAmount(lowFee)
+    );
+    const [averageFeeAmount, averageFeeDenom] = splitFeeDisplay(
+      formatFeeAmount(averageFee)
+    );
+    const [highFeeAmount, highFeeDenom] = splitFeeDisplay(
+      formatFeeAmount(highFee)
+    );
 
     const onValidationChange = (value: boolean) => {
       setManualFeeError(value);
@@ -363,7 +403,7 @@ export const FeeButtonsInner: FunctionComponent<
                       style={{
                         opacity: "0.6",
                         fontWeight: 400,
-                        color: "var(--grey-white, #FFF)",
+                        color: "var(--font-secondary, #F3F3F3)",
                         fontSize: "12px",
                         marginLeft: "5px",
                         whiteSpace: "nowrap",
@@ -397,25 +437,9 @@ export const FeeButtonsInner: FunctionComponent<
                         maxWidth: "50px",
                       }}
                     >
-                      {
-                        lowFee
-                          ?.hideIBCMetadata(true)
-                          .trim(true)
-                          .toMetricPrefix(isEvm)
-                          .toString()
-                          .split(" ")[0]
-                      }
+                      {lowFeeAmount}
                     </div>
-                    <div>
-                      {
-                        lowFee
-                          ?.hideIBCMetadata(true)
-                          .trim(true)
-                          .toMetricPrefix(isEvm)
-                          .toString()
-                          .split(" ")[1]
-                      }
-                    </div>
+                    <div>{lowFeeDenom}</div>
                   </div>
                 }
               />
@@ -434,7 +458,7 @@ export const FeeButtonsInner: FunctionComponent<
                     style={{
                       opacity: "0.6",
                       fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
+                      color: "var(--font-secondary, #F3F3F3)",
                       fontSize: "12px",
                       marginLeft: "5px",
                       whiteSpace: "nowrap",
@@ -479,25 +503,9 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {
-                      averageFee
-                        ?.hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[0]
-                    }
+                    {averageFeeAmount}
                   </div>
-                  <div>
-                    {
-                      averageFee
-                        ?.hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[1]
-                    }
-                  </div>
+                  <div>{averageFeeDenom}</div>
                 </div>
               }
             />
@@ -515,7 +523,7 @@ export const FeeButtonsInner: FunctionComponent<
                     style={{
                       opacity: "0.6",
                       fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
+                      color: "var(--font-secondary, #F3F3F3)",
                       fontSize: "12px",
                       marginLeft: "5px",
                       whiteSpace: "nowrap",
@@ -560,25 +568,9 @@ export const FeeButtonsInner: FunctionComponent<
                       maxWidth: "50px",
                     }}
                   >
-                    {
-                      highFee
-                        ?.hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[0]
-                    }
+                    {highFeeAmount}
                   </div>
-                  <div>
-                    {
-                      highFee
-                        ?.hideIBCMetadata(true)
-                        .trim(true)
-                        .toMetricPrefix(isEvm)
-                        .toString()
-                        .split(" ")[1]
-                    }
-                  </div>
+                  <div>{highFeeDenom}</div>
                 </div>
               }
             />

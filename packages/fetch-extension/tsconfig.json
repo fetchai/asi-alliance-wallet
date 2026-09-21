@@ -7,6 +7,9 @@
     "jsx": "react" /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */,
     "baseUrl": "./",
     "paths": {
+      "@keplr-wallet/background/cardano-chain-policy": [
+        "../background/src/keyring/cardano-chain-policy.ts"
+      ],
       "@new-components/*": ["src/new-components/*"],
       "@new-layouts/*": ["src/new-layouts/*"],
       "@components/*": ["src/components/*"],

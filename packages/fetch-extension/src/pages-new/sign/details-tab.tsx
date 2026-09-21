@@ -21,6 +21,7 @@ import { renderDirectMessage } from "./direct";
 import { AnyWithUnpacked } from "@keplr-wallet/cosmos";
 import { CoinPretty } from "@keplr-wallet/unit";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
+import { useRequestedChain } from "../../utils/requested-chain-context";
 
 export const DetailsTab: FunctionComponent<{
   signDocHelper: SignDocHelper;
@@ -45,8 +46,9 @@ export const DetailsTab: FunctionComponent<{
     preferNoSetMemo,
     isNeedLedgerEthBlindSigning,
   }) => {
-    const { chainStore, priceStore, accountStore, signInteractionStore } =
-      useStore();
+    const { priceStore, accountStore, signInteractionStore } = useStore();
+    const requested = useRequestedChain();
+    const requestChain = requested.chainInfo;
     const intl = useIntl();
     const language = useLanguage();
     // Check if the fee is set manually from external interaction.
@@ -62,15 +64,15 @@ export const DetailsTab: FunctionComponent<{
         ? signDocHelper.signDocWrapper.aminoSignDoc.msgs
         : signDocHelper.signDocWrapper.protoSignDoc.txMsgs
       : [];
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isEvm = requestChain.features?.includes("evm") ?? false;
 
     const renderedMsgs = (() => {
       if (mode === "amino") {
         return (msgs as readonly Msg[]).map((msg, i) => {
           const msgContent = renderAminoMessage(
-            accountStore.getAccount(chainStore.current.chainId),
+            accountStore.getAccount(requestChain.chainId),
             msg,
-            chainStore.current.currencies,
+            requestChain.currencies,
             intl
           );
           return (
@@ -86,7 +88,7 @@ export const DetailsTab: FunctionComponent<{
         return (msgs as AnyWithUnpacked[]).map((msg, i) => {
           const msgContent = renderDirectMessage(
             msg,
-            chainStore.current.currencies,
+            requestChain.currencies,
             intl
           );
           return (
@@ -179,17 +181,11 @@ export const DetailsTab: FunctionComponent<{
                   const feeOrZero =
                     feeConfig.fee ??
                     (() => {
-                      if (chainStore.current.feeCurrencies.length === 0) {
-                        return new CoinPretty(
-                          chainStore.current.stakeCurrency,
-                          "0"
-                        );
+                      if (requestChain.feeCurrencies.length === 0) {
+                        return new CoinPretty(requestChain.stakeCurrency, "0");
                       }
 
-                      return new CoinPretty(
-                        chainStore.current.feeCurrencies[0],
-                        "0"
-                      );
+                      return new CoinPretty(requestChain.feeCurrencies[0], "0");
                     })();
 
                   const fee = feeOrZero

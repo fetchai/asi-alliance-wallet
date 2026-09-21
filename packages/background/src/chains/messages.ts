@@ -198,9 +198,66 @@ export class SwitchNetworkByChainIdMsg extends Message<void> {
   }
 }
 
-export class SetSelectedChainMsg extends Message<void> {
+export class GetSelectedChainIdMsg extends Message<{ chainId: string }> {
   public static type() {
-    return "set-selected-chain";
+    return "get-selected-chain-id";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  // Exposes selected chain id to callers; keep `approveExternal` aligned with product/security review (fingerprinting surface).
+  override approveExternal(): boolean {
+    return true;
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetSelectedChainIdMsg.type();
+  }
+}
+
+/** Internal UI read of durable `{ chainId, revision }`. Not external-approved. */
+export class GetSelectedChainSnapshotMsg extends Message<{
+  chainId: string;
+  revision: number;
+}> {
+  public static type() {
+    return "get-selected-chain-snapshot";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetSelectedChainSnapshotMsg.type();
+  }
+}
+
+/** Internal UI select with `{ chainId, revision }` ack. Not external-approved. */
+export class SelectSelectedChainMsg extends Message<{
+  chainId: string;
+  revision: number;
+}> {
+  public static type() {
+    return "select-selected-chain";
   }
 
   constructor(public readonly chainId: string) {
@@ -213,8 +270,33 @@ export class SetSelectedChainMsg extends Message<void> {
     }
   }
 
-  override approveExternal(): boolean {
-    return true;
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return SelectSelectedChainMsg.type();
+  }
+}
+
+/**
+ * Internal UI pull of selection + registry under the authority FIFO barrier.
+ * Not external-approved. Payload is authoritative for projection apply.
+ */
+export class GetNetworkProjectionMsg extends Message<{
+  selection: { chainId: string; revision: number };
+  chainInfos: ChainInfoWithCoreTypes[];
+}> {
+  public static type() {
+    return "get-network-projection";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
   }
 
   route(): string {
@@ -222,6 +304,94 @@ export class SetSelectedChainMsg extends Message<void> {
   }
 
   type(): string {
-    return SetSelectedChainMsg.type();
+    return GetNetworkProjectionMsg.type();
+  }
+}
+
+/**
+ * After Select ACK on live Cardano sign CTA: bind ticket to interactionId at
+ * current authority revision. Internal only.
+ */
+export class IssueSignSwitchTicketMsg extends Message<{ ok: true }> {
+  public static type() {
+    return "issue-sign-switch-ticket";
+  }
+
+  constructor(
+    public readonly interactionId: string,
+    public readonly chainId: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.interactionId) {
+      throw new Error("interactionId not set");
+    }
+    if (!this.chainId) {
+      throw new Error("chainId not set");
+    }
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return IssueSignSwitchTicketMsg.type();
+  }
+}
+
+/** Query whether the sign switch ticket is still valid for this interaction. */
+export class GetSignSwitchTicketValidMsg extends Message<{ valid: boolean }> {
+  public static type() {
+    return "get-sign-switch-ticket-valid";
+  }
+
+  constructor(
+    public readonly interactionId: string,
+    public readonly expectedChainId: string
+  ) {
+    super();
+  }
+
+  validateBasic(): void {
+    if (!this.interactionId) {
+      throw new Error("interactionId not set");
+    }
+    if (!this.expectedChainId) {
+      throw new Error("expectedChainId not set");
+    }
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return GetSignSwitchTicketValidMsg.type();
+  }
+}
+
+/** Drop ticket (supersede / undo after CTA ACK). */
+export class ClearSignSwitchTicketMsg extends Message<{ ok: true }> {
+  public static type() {
+    return "clear-sign-switch-ticket";
+  }
+
+  constructor(public readonly interactionId?: string) {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop — clear all or matching id
+  }
+
+  route(): string {
+    return ROUTE;
+  }
+
+  type(): string {
+    return ClearSignSwitchTicketMsg.type();
   }
 }

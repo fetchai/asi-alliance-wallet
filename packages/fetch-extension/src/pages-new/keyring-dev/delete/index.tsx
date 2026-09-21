@@ -15,6 +15,10 @@ import { useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useStore } from "../../../stores";
+import {
+  requestKeyringSurfacesSyncBroadcast,
+  syncKeyringSurfacesFromBackground,
+} from "../../../utils";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { DeleteDescription } from "./delete-description";
@@ -33,7 +37,7 @@ export const DeleteWallet: FunctionComponent = () => {
   const [loading, setLoading] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
-  const { keyRingStore, analyticsStore } = useStore();
+  const { keyRingStore, analyticsStore, chainStore } = useStore();
   const {
     register,
     handleSubmit,
@@ -217,6 +221,11 @@ export const DeleteWallet: FunctionComponent = () => {
                   analyticsStore.logEvent("delete_account_click", {
                     action: "Remove",
                   });
+                  await syncKeyringSurfacesFromBackground(
+                    chainStore,
+                    keyRingStore
+                  );
+                  await requestKeyringSurfacesSyncBroadcast();
                   navigate("/");
                 } catch (e) {
                   setIsConfirmationOpen(false);

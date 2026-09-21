@@ -73,16 +73,24 @@ export const WelcomePage: FunctionComponent = () => {
               pageName: "Register",
             });
             if (typeof browser !== "undefined") {
+              const tab = await browser.tabs.getCurrent();
+              if (tab.windowId != null) {
+                const tabs = await browser.tabs.query({
+                  windowId: tab.windowId,
+                });
+                if (tabs.length === 1) {
+                  await browser.tabs.create({ windowId: tab.windowId });
+                }
+              }
+
               if (sidePanelSupported) {
                 await toggleSidePanel(false);
               } else {
-                browser.tabs.getCurrent().then((tab) => {
-                  if (tab.id) {
-                    browser.tabs.remove(tab.id);
-                  } else {
-                    window.close();
-                  }
-                });
+                if (tab.id != null) {
+                  await browser.tabs.remove(tab.id);
+                } else {
+                  window.close();
+                }
               }
             } else {
               window.close();

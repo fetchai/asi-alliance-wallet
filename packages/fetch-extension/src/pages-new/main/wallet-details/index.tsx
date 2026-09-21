@@ -8,11 +8,13 @@ import {
   separateNumericAndDenom,
   splitBech32,
 } from "@utils/format";
+import classnames from "classnames";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { Button } from "reactstrap";
 import { useStore } from "../../../stores";
+import { addressCacheStore } from "../../../utils/address-cache-store";
 import { Balances } from "../balances";
 import style from "../style.module.scss";
 import { WalletConfig } from "@keplr-wallet/stores/build/chat/user-details";
@@ -49,8 +51,8 @@ export const WalletDetailsView = observer(
     const current = chainStore.current;
     const [chatTooltip, setChatTooltip] = useState("");
     const [chatDisabled, setChatDisabled] = useState(false);
-    const outerDivRef = useRef<HTMLDivElement>(null);
-    const outerDivRefEvm = useRef<HTMLDivElement>(null);
+    const bech32TailMeasureRef = useRef<HTMLDivElement>(null);
+    const evmTailMeasureRef = useRef<HTMLDivElement>(null);
 
     const [currentTxnType, setCurrentTxnType] = useState<string>("");
 
@@ -105,29 +107,78 @@ export const WalletDetailsView = observer(
       }
     })();
 
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
-
     const intl = useIntl();
     const notification = useNotification();
+
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const isCardano = chainStore.current.features?.includes("cardano") ?? false;
+    const selectedWalletId =
+      keyRingStore.multiKeyStoreInfo.find((ks) => ks.selected)?.meta?.[
+        "__id__"
+      ] || "";
+    const cachedSelectedAddress =
+      selectedWalletId && chainStore.current.chainId
+        ? addressCacheStore.getCache(chainStore.current.chainId)[
+            selectedWalletId
+          ] || ""
+        : "";
+    const selectedKeyStore = keyRingStore.multiKeyStoreInfo.find(
+      (ks) => ks.selected
+    );
+    const displayAccountName = (() => {
+      const meta = selectedKeyStore?.meta;
+      if (!meta) return "";
+      try {
+        const nameByChain = meta["nameByChain"]
+          ? JSON.parse(meta["nameByChain"])
+          : {};
+        return (
+          nameByChain?.[chainStore.current.chainId] ||
+          meta["name"] ||
+          intl.formatMessage({ id: "setting.keyring.unnamed-account" })
+        );
+      } catch {
+        return (
+          meta["name"] ||
+          intl.formatMessage({ id: "setting.keyring.unnamed-account" })
+        );
+      }
+    })();
+    const displayBech32Address =
+      accountInfo.walletStatus === WalletStatus.Loaded
+        ? accountInfo.bech32Address
+        : cachedSelectedAddress;
+    const displayEvmAddress =
+      isEvm || accountInfo.hasEthereumHexAddress
+        ? accountInfo.walletStatus === WalletStatus.Loaded
+          ? accountInfo.ethereumHexAddress
+          : cachedSelectedAddress || accountInfo.ethereumHexAddress
+        : "";
+    // Cardano may copy the displayed cached address only while Loading;
+    // other statuses and networks keep Loaded-only copy policy.
+    const canCopyAddress =
+      accountInfo.walletStatus === WalletStatus.Loaded ||
+      (isCardano && accountInfo.walletStatus === WalletStatus.Loading);
     const copyAddress = useCallback(
       async (address: string) => {
-        if (accountInfo.walletStatus === WalletStatus.Loaded) {
-          await navigator.clipboard.writeText(address);
-          notification.push({
-            placement: "top-center",
-            type: "success",
-            duration: 2,
-            content: intl.formatMessage({
-              id: "main.address.copied",
-            }),
-            canDelete: true,
-            transition: {
-              duration: 0.25,
-            },
-          });
+        if (!address || !canCopyAddress) {
+          return;
         }
+        await navigator.clipboard.writeText(address);
+        notification.push({
+          placement: "top-center",
+          type: "success",
+          duration: 2,
+          content: intl.formatMessage({
+            id: "main.address.copied",
+          }),
+          canDelete: true,
+          transition: {
+            duration: 0.25,
+          },
+        });
       },
-      [accountInfo.walletStatus, notification, intl]
+      [canCopyAddress, notification, intl]
     );
 
     const accountOrChainChanged =
@@ -246,16 +297,10 @@ export const WalletDetailsView = observer(
         </div>
         <div className={style["wallet-detail-card"]}>
           <div
-            style={
-              accountInfo.walletStatus === WalletStatus.Rejected
-                ? { display: "flex", gap: "10px", alignItems: "center" }
-                : {
-                    display: "flex",
-                    columnGap: "10px",
-                    flexDirection: "column",
-                    width: "85%",
-                  }
-            }
+            className={classnames(style["wallet-detail-main"], {
+              [style["wallet-detail-main--rejected"]]:
+                accountInfo.walletStatus === WalletStatus.Rejected,
+            })}
           >
             <div className={style["wallet-address"]}>
               {(() => {
@@ -273,11 +318,15 @@ export const WalletDetailsView = observer(
                 } else if (accountInfo.walletStatus === WalletStatus.Rejected) {
                   return "Unable to Load Key";
                 } else {
-                  return <Skeleton height="21px" />;
+                  return displayAccountName ? (
+                    displayAccountName
+                  ) : (
+                    <Skeleton height="21px" />
+                  );
                 }
               })()}
             </div>
-            <div style={{ width: "100%" }}>
+            <div className={style["wallet-detail-body"]}>
               <div className={style["walletRejected"]}>
                 {accountInfo.walletStatus === WalletStatus.Rejected && (
                   <ToolTip
@@ -313,42 +362,50 @@ export const WalletDetailsView = observer(
               </div>
               {accountInfo.walletStatus !== WalletStatus.Rejected && !isEvm && (
                 <React.Fragment>
-                  {accountInfo.walletStatus === WalletStatus.Loaded &&
-                  accountInfo.bech32Address ? (
+                  {displayBech32Address ? (
                     <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        cursor: "pointer",
-                        fontWeight: 400,
-                      }}
-                      ref={outerDivRef}
-                      onClick={() => copyAddress(accountInfo.bech32Address)}
+                      className={style["wallet-address-row"]}
+                      onClick={() => copyAddress(displayBech32Address)}
                     >
-                      <Address
-                        maxCharacters={16}
-                        lineBreakBeforePrefix={false}
-                        tooltipAddress={accountInfo.bech32Address}
-                        childrenStyle={{ opacity: 1 }}
+                      <div className={style["wallet-address-content"]}>
+                        <Address
+                          maxCharacters={16}
+                          lineBreakBeforePrefix={false}
+                          tooltipAddress={displayBech32Address}
+                          childrenClassName={
+                            style["wallet-address-tooltip-trigger"]
+                          }
+                          childrenStyle={{ opacity: 1 }}
+                        >
+                          <div className={style["wallet-address-inline"]}>
+                            <span className={style["wallet-address-prefix"]}>
+                              {splitBech32(displayBech32Address).prefix}
+                            </span>
+                            <div className={style["wallet-address-text"]}>
+                              <div
+                                ref={bech32TailMeasureRef}
+                                className={style["wallet-address-tail-measure"]}
+                              >
+                                <ResponsiveAddressView
+                                  containerRef={bech32TailMeasureRef}
+                                  address={
+                                    splitBech32(displayBech32Address).rest
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </Address>
+                      </div>
+                      <div
+                        className={style["wallet-address-copy-slot"]}
+                        aria-hidden="true"
                       >
-                        <span style={{ display: "flex" }}>
-                          {splitBech32(accountInfo.bech32Address).prefix}
-                          <span className={style["wallet-address-text"]}>
-                            <ResponsiveAddressView
-                              containerRef={outerDivRef}
-                              address={
-                                splitBech32(accountInfo.bech32Address).rest
-                              }
-                            />
-                          </span>
-                        </span>
-                      </Address>
-                      <img
-                        style={{ cursor: "pointer" }}
-                        src={require("@assets/svg/wireframe/copyGrey.svg")}
-                        alt=""
-                      />
+                        <img
+                          src={require("@assets/svg/wireframe/copyGrey.svg")}
+                          alt=""
+                        />
+                      </div>
                     </div>
                   ) : (
                     <Skeleton height="21px" />
@@ -358,51 +415,62 @@ export const WalletDetailsView = observer(
               {accountInfo.walletStatus !== WalletStatus.Rejected &&
                 (isEvm || accountInfo.hasEthereumHexAddress) && (
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                      gap: "6px",
-                    }}
-                    ref={outerDivRefEvm}
+                    className={style["wallet-address-row"]}
                     onClick={() => copyAddress(accountInfo.ethereumHexAddress)}
                   >
-                    <Address
-                      isRaw={true}
-                      placement="bottom-end"
-                      tooltipAddress={accountInfo.ethereumHexAddress}
-                      childrenStyle={{ opacity: 1 }}
-                    >
-                      <span style={{ display: "flex" }}>
-                        {accountInfo.walletStatus === WalletStatus.Loaded &&
-                        accountInfo.ethereumHexAddress ? (
-                          accountInfo.ethereumHexAddress.length === 42 ? (
-                            <React.Fragment>
-                              {accountInfo.ethereumHexAddress.slice(0, 2)}
-                              <span className={style["wallet-address-text"]}>
-                                <ResponsiveAddressView
-                                  containerRef={outerDivRefEvm}
-                                  address={accountInfo.ethereumHexAddress.slice(
-                                    2
-                                  )}
-                                />
-                              </span>
-                            </React.Fragment>
+                    <div className={style["wallet-address-content"]}>
+                      <Address
+                        isRaw={true}
+                        placement="bottom-end"
+                        tooltipAddress={displayEvmAddress}
+                        childrenClassName={
+                          style["wallet-address-tooltip-trigger"]
+                        }
+                        childrenStyle={{ opacity: 1 }}
+                      >
+                        <div className={style["wallet-address-inline"]}>
+                          {displayEvmAddress ? (
+                            displayEvmAddress.length === 42 ? (
+                              <React.Fragment>
+                                <span
+                                  className={style["wallet-address-prefix"]}
+                                >
+                                  {displayEvmAddress.slice(0, 2)}
+                                </span>
+                                <div className={style["wallet-address-text"]}>
+                                  <div
+                                    ref={evmTailMeasureRef}
+                                    className={
+                                      style["wallet-address-tail-measure"]
+                                    }
+                                  >
+                                    <ResponsiveAddressView
+                                      containerRef={evmTailMeasureRef}
+                                      address={displayEvmAddress.slice(2)}
+                                    />
+                                  </div>
+                                </div>
+                              </React.Fragment>
+                            ) : (
+                              <React.Fragment>
+                                {displayEvmAddress}
+                              </React.Fragment>
+                            )
                           ) : (
-                            <React.Fragment>
-                              {accountInfo.ethereumHexAddress}
-                            </React.Fragment>
-                          )
-                        ) : (
-                          "..."
-                        )}
-                      </span>
-                    </Address>
-                    <img
-                      style={{ cursor: "pointer" }}
-                      src={require("@assets/svg/wireframe/copy.svg")}
-                      alt=""
-                    />
+                            <Skeleton height="21px" />
+                          )}
+                        </div>
+                      </Address>
+                    </div>
+                    <div
+                      className={style["wallet-address-copy-slot"]}
+                      aria-hidden="true"
+                    >
+                      <img
+                        src={require("@assets/svg/wireframe/copy.svg")}
+                        alt=""
+                      />
+                    </div>
                   </div>
                 )}
             </div>
@@ -420,7 +488,6 @@ export const WalletDetailsView = observer(
             className={style["change-net"]}
           >
             <img
-              style={{ width: "14px", height: "16px" }}
               src={require("@assets/svg/wireframe/chevron-down.svg")}
               alt=""
             />
