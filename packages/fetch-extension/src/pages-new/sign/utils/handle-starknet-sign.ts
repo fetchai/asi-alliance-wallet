@@ -79,7 +79,7 @@ export const connectAndSignDeployAccountTxWithLedger = async (
     throw new KeplrError(
       ErrModuleLedgerSign,
       ErrFailedInit,
-      "Failed to init transport"
+      "Please connect your Ledger account"
     );
   }
 
@@ -188,7 +188,7 @@ export const connectAndSignInvokeTxWithLedger = async (
     throw new KeplrError(
       ErrModuleLedgerSign,
       ErrFailedInit,
-      "Failed to init transport"
+      "Please connect your Ledger account"
     );
   }
 
@@ -250,7 +250,7 @@ export const connectAndSignMessageWithLedger = async (
     throw new KeplrError(
       ErrModuleLedgerSign,
       ErrFailedInit,
-      "Failed to init transport"
+      "Please connect your Ledger account"
     );
   }
 
@@ -340,7 +340,7 @@ async function checkStarknetPubKey(
     throw new KeplrError(
       ErrModuleLedgerSign,
       ErrFailedInit,
-      "Failed to init transport"
+      "Please connect your Ledger account"
     );
   }
 

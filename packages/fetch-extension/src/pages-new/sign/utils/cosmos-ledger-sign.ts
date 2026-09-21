@@ -49,7 +49,7 @@ export const connectAndSignEIP712WithLedger = async (
     throw new KeplrError(
       ErrModuleLedgerSign,
       ErrFailedInit,
-      "Failed to init transport"
+      "Please connect your Ledger account"
     );
   }
 
@@ -210,7 +210,7 @@ export const connectAndSignWithLedger = async (
     throw new KeplrError(
       ErrModuleLedgerSign,
       ErrFailedInit,
-      "Failed to init transport"
+      "Please connect your Ledger account"
     );
   }
   let app = new CosmosApp(propApp, transport);

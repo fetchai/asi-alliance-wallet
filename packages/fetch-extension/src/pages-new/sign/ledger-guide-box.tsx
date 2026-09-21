@@ -41,7 +41,9 @@ export const LedgerBox: FunctionComponent<LedgerGuideBoxProps> = ({
       </div>
       {transportErrorCount < 2 ? (
         <div className={style["ledger-guide-message"]}>
-          {ledgerError.message}
+          {ledgerError.code === ErrFailedInit
+            ? "Please connect your Ledger account"
+            : ledgerError.message}
         </div>
       ) : (
         <React.Fragment>

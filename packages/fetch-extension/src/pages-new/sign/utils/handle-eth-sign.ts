@@ -193,7 +193,7 @@ export const connectAndSignEthWithLedger = async (
     throw new KeplrError(
       ErrModuleLedgerSign,
       ErrFailedInit,
-      "Failed to init transport"
+      "Please connect your Ledger account"
     );
   }
 

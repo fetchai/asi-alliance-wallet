@@ -28,7 +28,10 @@ import {
   KeplrError as WalletError,
 } from "@keplr-wallet/router";
 
-import { ErrFailedUnknown } from "@keplr-wallet/background/src/ledger/types";
+import {
+  ErrFailedInit,
+  ErrFailedUnknown,
+} from "@keplr-wallet/background/src/ledger/types";
 
 import { ErrModuleLedgerSign } from "@keplr-wallet/background/build/ledger/types";
 
@@ -374,6 +377,18 @@ export const SignEthereumPage: FunctionComponent = observer(() => {
                               isWarning: true,
                               title: "Error",
                               ledgerError: e,
+                            });
+                          } else if (
+                            interactionData.data.keyType === "ledger"
+                          ) {
+                            setLedgerInfo({
+                              isWarning: true,
+                              title: "Error",
+                              ledgerError: new WalletError(
+                                ErrModuleLedgerSign,
+                                ErrFailedInit,
+                                "Please connect your Ledger account"
+                              ),
                             });
                           }
                         }

@@ -415,6 +415,16 @@ export const SignPageV2: FunctionComponent = observer(() => {
             title: "Error",
             ledgerError: e,
           });
+        } else if (interactionData.data.keyType === "ledger") {
+          setLedgerInfo({
+            isWarning: true,
+            title: "Error",
+            ledgerError: new WalletError(
+              ErrModuleLedgerSign,
+              ErrFailedInit,
+              "Please connect your Ledger account"
+            ),
+          });
         }
       }
     }
