@@ -7,9 +7,14 @@ require("setimmediate");
 
 // CSP-safe replacement for the inline script that used to do this in popup.html:
 // MV3 blocks inline scripts on extension pages, so the class must be added here.
-// The same HTML is reused for the side panel (see webpack.config.js), which must
-// keep its fluid size, hence the pathname check.
-if (!/sidepanel/i.test(window.location.pathname)) {
+// The class locks the view to the 360x600 popup size, so it must only apply to
+// the actual popup window:
+// - /sidePanel.html is the same HTML reused in the side panel (fluid size)
+// - /popup.html#/register opens in a full browser tab and lays out full-width
+if (
+  !/sidepanel/i.test(window.location.pathname) &&
+  window.location.hash !== "#/register"
+) {
   document.documentElement.classList.add("extension-popup");
 }
 
