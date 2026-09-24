@@ -4,6 +4,15 @@
 import { ErrorBoundary } from "./error-boundary";
 
 require("setimmediate");
+
+// CSP-safe replacement for the inline script that used to do this in popup.html:
+// MV3 blocks inline scripts on extension pages, so the class must be added here.
+// The same HTML is reused for the side panel (see webpack.config.js), which must
+// keep its fluid size, hence the pathname check.
+if (!/sidepanel/i.test(window.location.pathname)) {
+  document.documentElement.classList.add("extension-popup");
+}
+
 // Shim ------------
 import React, { FunctionComponent, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
