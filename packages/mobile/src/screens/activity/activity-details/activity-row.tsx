@@ -101,7 +101,13 @@ export const DetailRow = ({
           </View>
         )}
         <Text
-          style={style.flatten(["color-gray-400", "text-right"]) as ViewStyle}
+          style={
+            style.flatten([
+              "color-gray-400",
+              "text-right",
+              "flex-shrink-1",
+            ]) as ViewStyle
+          }
         >
           {value}
         </Text>
