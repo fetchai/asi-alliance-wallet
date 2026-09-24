@@ -1,0 +1,10 @@
+.dropdownItem {
+  &:active,
+  &:focus {
+    background-color: transparent !important;
+    color: inherit !important;
+  }
+  &:hover {
+    background-color: #f8f9fa; /* default bootstrap hover */
+  }
+}

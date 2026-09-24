@@ -1,24 +1,21 @@
-import { KVStore } from "@keplr-wallet/common";
-import Axios from "axios";
 import { computed, makeObservable } from "mobx";
 import {
-  ChainGetter,
+  QuerySharedContext,
   HasMapStore,
   ObservableJsonRPCQuery,
   erc20MetadataInterface,
 } from "../../common";
+import { ChainGetter } from "../../chain";
 import { Erc20ContractTokenInfo } from "./types";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 
 export class ObservableQueryERC20MetadataName extends ObservableJsonRPCQuery<string> {
-  constructor(kvStore: KVStore, ethereumURL: string, contractAddress: string) {
-    const instance = Axios.create({
-      ...{
-        baseURL: ethereumURL,
-      },
-    });
-
-    super(kvStore, instance, "", "eth_call", [
+  constructor(
+    kvStore: QuerySharedContext,
+    ethereumURL: string,
+    contractAddress: string
+  ) {
+    super(kvStore, ethereumURL, "", "eth_call", [
       {
         to: contractAddress,
         data: erc20MetadataInterface.encodeFunctionData("name"),
@@ -48,14 +45,12 @@ export class ObservableQueryERC20MetadataName extends ObservableJsonRPCQuery<str
 }
 
 export class ObservableQueryERC20MetadataSymbol extends ObservableJsonRPCQuery<string> {
-  constructor(kvStore: KVStore, ethereumURL: string, contractAddress: string) {
-    const instance = Axios.create({
-      ...{
-        baseURL: ethereumURL,
-      },
-    });
-
-    super(kvStore, instance, "", "eth_call", [
+  constructor(
+    kvStore: QuerySharedContext,
+    ethereumURL: string,
+    contractAddress: string
+  ) {
+    super(kvStore, ethereumURL, "", "eth_call", [
       {
         to: contractAddress,
         data: erc20MetadataInterface.encodeFunctionData("symbol"),
@@ -85,14 +80,12 @@ export class ObservableQueryERC20MetadataSymbol extends ObservableJsonRPCQuery<s
 }
 
 export class ObservableQueryERC20MetadataDecimals extends ObservableJsonRPCQuery<string> {
-  constructor(kvStore: KVStore, ethereumURL: string, contractAddress: string) {
-    const instance = Axios.create({
-      ...{
-        baseURL: ethereumURL,
-      },
-    });
-
-    super(kvStore, instance, "", "eth_call", [
+  constructor(
+    kvStore: QuerySharedContext,
+    ethereumURL: string,
+    contractAddress: string
+  ) {
+    super(kvStore, ethereumURL, "", "eth_call", [
       {
         to: contractAddress,
         data: erc20MetadataInterface.encodeFunctionData("decimals"),
@@ -126,7 +119,11 @@ export class ObservableQueryERC20MetadataInner {
   protected readonly _querySymbol: ObservableQueryERC20MetadataSymbol;
   protected readonly _queryDecimals: ObservableQueryERC20MetadataDecimals;
 
-  constructor(kvStore: KVStore, ethereumURL: string, contractAddress: string) {
+  constructor(
+    kvStore: QuerySharedContext,
+    ethereumURL: string,
+    contractAddress: string
+  ) {
     this._queryName = new ObservableQueryERC20MetadataName(
       kvStore,
       ethereumURL,
@@ -200,7 +197,7 @@ export class ObservableQueryERC20MetadataInner {
  */
 export class ObservableQueryERC20Metadata extends HasMapStore<ObservableQueryERC20MetadataInner> {
   constructor(
-    protected readonly kvStore: KVStore,
+    protected readonly kvStore: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {
@@ -220,27 +217,21 @@ export class ObservableQueryERC20Metadata extends HasMapStore<ObservableQueryERC
 
 export class ObservableQueryERC20AllowanceInner extends ObservableJsonRPCQuery<string> {
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainGetter: ChainGetter,
     chainId: string,
     contractAddress: string,
     protected readonly bech32Address: string,
     spender: string
   ) {
-    const instance = Axios.create({
-      ...{
-        baseURL: chainGetter.getChain(chainId).rpc,
-      },
-    });
-
-    super(kvStore, instance, "", "eth_call", [
+    super(kvStore, chainGetter.getChain(chainId).rpc, "", "eth_call", [
       {
         to: contractAddress,
         data: erc20MetadataInterface.encodeFunctionData("allowance", [
           bech32Address
             ? Bech32Address.fromBech32(
                 bech32Address,
-                chainGetter.getChain(chainId).bech32Config.bech32PrefixAccAddr
+                chainGetter.getChain(chainId)?.bech32Config?.bech32PrefixAccAddr
               ).toHex(true)
             : "0x0000000000000000000000000000000000000000",
           spender,
@@ -276,7 +267,7 @@ export class ObservableQueryERC20AllowanceInner extends ObservableJsonRPCQuery<s
 
 export class ObservableQueryERC20Allowance extends HasMapStore<ObservableQueryERC20AllowanceInner> {
   constructor(
-    protected readonly kvStore: KVStore,
+    protected readonly kvStore: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {

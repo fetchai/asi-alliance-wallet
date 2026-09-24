@@ -96,7 +96,7 @@ export const useRedelegateTxConfig = (
 
   const recipientConfig = useRecipientConfig(chainGetter, chainId);
   recipientConfig.setBech32Prefix(
-    chainGetter.getChain(chainId).bech32Config.bech32PrefixValAddr
+    chainGetter.getChain(chainId)?.bech32Config?.bech32PrefixValAddr || ""
   );
 
   return {

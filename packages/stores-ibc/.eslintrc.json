@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "src/*",
+          "@keplr-wallet/stores-ibc",
+          "@keplr-wallet/stores-ibc/*"
+        ]
+      }
+    ]
+  }
+}

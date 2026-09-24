@@ -12,7 +12,11 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
 import style from "./chain-list.module.scss";
-import { getFilteredChainValues } from "@utils/filters";
+import {
+  getFilteredChainValues,
+  isCosmosTabChain,
+  isEvmTabChain,
+} from "@utils/filters";
 import { NotificationOption } from "@components-v2/notification-option";
 import { NoResults } from "@components-v2/no-results";
 import { useLoadingIndicator } from "@components/loading-indicator";
@@ -39,25 +43,28 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
     const navigate = useNavigate();
     const confirm = useConfirm();
     const loadingIndicator = useLoadingIndicator();
-
-    const mainChainList = chainStore.chainInfosInUI.filter(
-      (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+    const mainChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        !chainInfo.beta &&
+        isCosmosTabChain(chainInfo) &&
+        chainStore.isEnabledChain(chainInfo.chainId)
     );
 
-    const evmChainList = chainStore.chainInfosInUI.filter((chainInfo) =>
-      chainInfo.features?.includes("evm")
+    const evmChainList = chainStore.chainInfos.filter(
+      (chainInfo) =>
+        isEvmTabChain(chainInfo) && chainStore.isEnabledChain(chainInfo.chainId)
     );
 
-    const betaChainList = chainStore.chainInfosInUI.filter(
+    const betaChainList = chainStore.chainInfosInListUI.filter(
       (chainInfo) => chainInfo.beta
     );
 
     const cosmosMainList = mainChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const evmMainList = evmChainList.filter(
-      (chainInfo) => chainInfo.raw.type !== "testnet"
+      (chainInfo) => !chainInfo.isTestnet
     );
 
     const cosmosList = chainStore.showTestnet ? mainChainList : cosmosMainList;
@@ -109,14 +116,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 <Card
                   key={index}
                   leftImage={
-                    chainInfo.raw.chainSymbolImageUrl !== undefined
-                      ? chainInfo.raw.chainSymbolImageUrl
+                    chainInfo.embedded.chainSymbolImageUrl !== undefined
+                      ? chainInfo.embedded.chainSymbolImageUrl
                       : chainInfo.chainName
                       ? chainInfo.chainName[0].toUpperCase()
                       : ""
                   }
                   leftImageStyle={{
-                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                       ? "#dddfdf"
                       : "transparent",
                   }}
@@ -174,14 +181,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                   <Card
                     key={chainInfo.chainId}
                     leftImage={
-                      chainInfo.raw.chainSymbolImageUrl !== undefined
-                        ? chainInfo.raw.chainSymbolImageUrl
+                      chainInfo.embedded.chainSymbolImageUrl !== undefined
+                        ? chainInfo.embedded.chainSymbolImageUrl
                         : chainInfo.chainName
                         ? chainInfo.chainName[0].toUpperCase()
                         : ""
                     }
                     leftImageStyle={{
-                      backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                      backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                         ? "#dddfdf"
                         : "transparent",
                     }}
@@ -313,14 +320,14 @@ export const ChainList: FunctionComponent<ChainListProps> = observer(
                 <Card
                   key={index}
                   leftImage={
-                    chainInfo.raw.chainSymbolImageUrl !== undefined
-                      ? chainInfo.raw.chainSymbolImageUrl
+                    chainInfo.embedded.chainSymbolImageUrl !== undefined
+                      ? chainInfo.embedded.chainSymbolImageUrl
                       : chainInfo.chainName
                       ? chainInfo.chainName[0].toUpperCase()
                       : ""
                   }
                   leftImageStyle={{
-                    backgroundColor: !chainInfo.raw.chainSymbolImageUrl
+                    backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
                       ? "#dddfdf"
                       : "transparent",
                   }}

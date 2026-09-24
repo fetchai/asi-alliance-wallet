@@ -25,7 +25,10 @@
   margin-top: -4px;
   color: $font-dark;
   font-weight: 400;
-  width: 258px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 
   &:focus {
     box-shadow: none !important;
@@ -77,6 +80,9 @@
 }
 .righContent {
   display: flex;
+  flex-shrink: 0;
+  margin-left: 8px;
+  gap: 4px;
 }
 .label {
   color: $font-secondary;

@@ -18,6 +18,14 @@ import classNames from "classnames";
 import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
 import { PasswordStrengthMeter } from "../../../components-v2/password-strength/password-strength-meter";
 import { Checkbox } from "@components-v2/checkbox/checkbox";
+import {
+  Ledger,
+  LedgerApp,
+  LedgerWebHIDIniter,
+  LedgerWebUSBIniter,
+} from "@keplr-wallet/background";
+import delay from "delay";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -59,7 +67,7 @@ export const ImportLedgerPage: FunctionComponent<{
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [passwordCheckbox, setPasswordCheckbox] = useState(false);
   const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
-  const accountList = keyRingStore.multiKeyStoreInfo;
+  const accountList = keyRingStore.keyInfos;
   const defaultAccountName = getNextDefaultAccountName(accountList);
 
   const {
@@ -113,38 +121,30 @@ export const ImportLedgerPage: FunctionComponent<{
   async function createLedger(
     name: string,
     password: string,
-    isShowUSBPermission?: boolean
+    pubkey: Uint8Array
   ) {
     try {
-      if (isShowUSBPermission) {
-        await ensureUSBPermission();
-      }
-    } catch (e) {
-      notification.push({
-        type: "warning",
-        placement: "top-center",
-        duration: 5,
-        content: "Please select a device to continue.",
-        canDelete: true,
-        transition: {
-          duration: 0.25,
-        },
-      });
-      return;
-    }
-
-    try {
       await registerConfig.createLedger(
+        pubkey,
         name,
         password,
         bip44Option.bip44HDPath,
         "Cosmos",
-        selectedNetworks
+        selectedNetworks,
+        {}
       );
       analyticsStore.setUserProperties({
         registerType: "ledger",
         accountType: "ledger",
       });
+      dispatchGlobalEventExceptSelf(
+        "keplr_ledger_app_connected",
+        ledgerInitStore.cosmosLikeApp || "Cosmos"
+      );
+      dispatchGlobalEventExceptSelf(
+        "keplr_new_key_created",
+        keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+      );
       setShowLedgerSetup(false);
     } catch (e) {
       setShowLedgerSetup(true);
@@ -158,9 +158,10 @@ export const ImportLedgerPage: FunctionComponent<{
 
   return isShowLedgerSetup ? (
     <LedgerSetupView
+      bip44HDPath={bip44Option.bip44HDPath}
       onBackPress={() => setShowLedgerSetup(false)}
-      onInitSucceed={async () =>
-        createLedger(getValues()["name"], getValues()["password"])
+      onInitSucceed={async (pubkey) =>
+        await createLedger(getValues()["name"], getValues()["password"], pubkey)
       }
     />
   ) : (
@@ -195,7 +196,42 @@ export const ImportLedgerPage: FunctionComponent<{
           <Form
             className={style["formContainer"]}
             onSubmit={handleSubmit(async (data: FormData) => {
-              await createLedger(data.name, data.password, true);
+              try {
+                await ensureUSBPermission();
+                const ledger = await Ledger.init(
+                  ledgerInitStore.isWebHID
+                    ? LedgerWebHIDIniter
+                    : LedgerWebUSBIniter,
+                  undefined,
+                  LedgerApp.Cosmos,
+                  "Cosmos"
+                );
+                const pubkey = await ledger.getPublicKey(
+                  LedgerApp.Cosmos,
+                  bip44Option.bip44HDPath
+                );
+                await ledger.close();
+                // Unfortunately, closing ledger blocks the writing to Ledger on background process.
+                // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
+                if (!ledgerInitStore.isWebHID) {
+                  await delay(1000);
+                } else {
+                  await delay(500);
+                }
+                await createLedger(data.name, data.password, pubkey);
+              } catch (e) {
+                notification.push({
+                  type: "warning",
+                  placement: "top-center",
+                  duration: 5,
+                  content: "Please select a device to continue.",
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+                return;
+              }
             })}
           >
             <Label for="name" className={classNames(style["label"], "mb-2")}>
@@ -212,7 +248,7 @@ export const ImportLedgerPage: FunctionComponent<{
                 validate: (value: string) =>
                   validateAccountName(
                     value,
-                    keyRingStore?.multiKeyStoreInfo,
+                    keyRingStore?.keyInfos,
                     registerConfig.mode
                   ),
               })}

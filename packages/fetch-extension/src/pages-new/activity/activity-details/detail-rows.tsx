@@ -78,7 +78,7 @@ export const DetailRows = ({ details }: { details: any }) => {
       placement: "top-center",
       type: "success",
       duration: 2,
-      content: "Transaction hash copied",
+      content: "Transaction Hash Copied",
       canDelete: true,
       transition: {
         duration: 0.25,

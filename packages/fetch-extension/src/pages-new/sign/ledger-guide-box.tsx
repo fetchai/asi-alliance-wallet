@@ -3,7 +3,7 @@ import "./ledger-guide-box.module.scss";
 import style from "./ledger-guide-box.module.scss";
 import classnames from "classnames";
 import { ErrFailedInit } from "@keplr-wallet/background/src/ledger/types";
-import { WalletError } from "@keplr-wallet/router";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 
 export interface LedgerGuideBoxProps {
   ledgerError: WalletError;
@@ -41,7 +41,9 @@ export const LedgerBox: FunctionComponent<LedgerGuideBoxProps> = ({
       </div>
       {transportErrorCount < 2 ? (
         <div className={style["ledger-guide-message"]}>
-          {ledgerError.message}
+          {ledgerError.code === ErrFailedInit
+            ? "Please connect your Ledger account"
+            : ledgerError.message}
         </div>
       ) : (
         <React.Fragment>

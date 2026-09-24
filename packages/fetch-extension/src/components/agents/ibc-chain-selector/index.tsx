@@ -19,7 +19,7 @@ import { deliverMessages } from "@graphQL/messages-api";
 import { useNotification } from "@components/notification";
 import { useLocation } from "react-router";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
-import { ChainInfoInner } from "@keplr-wallet/stores";
+import { ChainInfoImpl as ChainInfoInner } from "@keplr-wallet/stores";
 import { Int } from "@keplr-wallet/unit";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { ChainInfoWithCoreTypes } from "@keplr-wallet/background";
@@ -137,7 +137,8 @@ export const IBCChainSelector: FunctionComponent<{
 
     setSelectedChannel({
       ...channel,
-      counterPartyBech32Prefix: chainInfo.bech32Config.bech32PrefixAccAddr,
+      counterPartyBech32Prefix:
+        chainInfo?.bech32Config?.bech32PrefixAccAddr || "",
       revisionHeight: ChainIdHelper.parse(
         channel.counterpartyChainId
       ).version.toString(),
@@ -175,30 +176,34 @@ export const IBCChainSelector: FunctionComponent<{
             )}
           </DropdownToggle>
           <DropdownMenu>
-            {ibcChannelInfo.getTransferChannels().map((channel) => {
-              if (!chainStore.hasChain(channel.counterpartyChainId)) {
-                return undefined;
-              }
+            {ibcChannelInfo
+              .getTransferChannels(current.chainId)
+              .map((channel) => {
+                if (!chainStore.hasChain(channel.counterpartyChainId)) {
+                  return undefined;
+                }
 
-              const chainInfo = chainStore.getChain(
-                channel.counterpartyChainId
-              );
-
-              if (chainInfo) {
-                return (
-                  <DropdownItem
-                    key={chainInfo.chainId}
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      await setChannel(channel, chainInfo);
-                    }}
-                  >
-                    {chainInfo.chainName}
-                    <div className={style["channel"]}>{channel.channelId}</div>
-                  </DropdownItem>
+                const chainInfo = chainStore.getChain(
+                  channel.counterpartyChainId
                 );
-              }
-            })}
+
+                if (chainInfo) {
+                  return (
+                    <DropdownItem
+                      key={chainInfo.chainId}
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        await setChannel(channel, chainInfo as any);
+                      }}
+                    >
+                      {chainInfo.chainName}
+                      <div className={style["channel"]}>
+                        {channel.channelId}
+                      </div>
+                    </DropdownItem>
+                  );
+                }
+              })}
             <DropdownItem
               onClick={(e) => {
                 e.preventDefault();

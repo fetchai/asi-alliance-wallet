@@ -6,15 +6,16 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import {
-  InitNonDefaultLedgerAppMsg,
-  LedgerApp,
-} from "@keplr-wallet/background";
-import { useNavigate } from "react-router";
+import { TryLedgerInitMsg, LedgerApp } from "@keplr-wallet/background";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+import { getRejectionMessage, isKeyRingRejection } from "@utils/rejection";
+import { useNotification } from "@components/notification";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
-  const { chainStore, accountStore } = useStore();
+  const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
+    useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+  const notification = useNotification();
 
   // [prev, current]
   const [prevChainId, setPrevChainId] = useState<[string | undefined, string]>(
@@ -31,19 +32,13 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
   }, [chainStore, chainStore.current.chainId]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const isOpen = (() => {
-    if (
-      accountInfo.rejectionReason &&
-      accountInfo.rejectionReason.message.includes(
-        "No ethereum public key. Initialize ethereum app on Ledger by selecting the chain in the extension"
-      )
-    ) {
-      return true;
-    }
+  const isOpen = isKeyRingRejection(accountInfo.rejectionReason, 901);
 
-    return false;
-  })();
+  useEffect(() => {
+    if (!isOpen) {
+      setIsLoading(false);
+    }
+  }, [isOpen]);
 
   return (
     <Modal
@@ -70,7 +65,7 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
               padding: "12px",
               height: "50px",
             }}
-            dataLoading={isLoading}
+            disabled={isLoading}
             onClick={(e: any) => {
               e.preventDefault();
 
@@ -84,28 +79,59 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
           />
           <ButtonV2
             variant="dark"
-            text="Connect"
+            text={isLoading ? "Connecting..." : "Connect"}
             styleProps={{
               padding: "12px",
               height: "50px",
               margin: 0,
+              color: "#FFFFFF",
             }}
+            disabled={isLoading}
             dataLoading={isLoading}
             onClick={async () => {
               setIsLoading(true);
 
               try {
-                await new InExtensionMessageRequester().sendMessage(
-                  BACKGROUND_PORT,
-                  new InitNonDefaultLedgerAppMsg(LedgerApp.Ethereum)
-                );
-                accountInfo.disconnect();
-                await accountInfo.init();
+                const pubkey =
+                  await new InExtensionMessageRequester().sendMessage(
+                    BACKGROUND_PORT,
+                    new TryLedgerInitMsg(
+                      LedgerApp.Ethereum,
+                      ledgerInitStore.cosmosLikeApp || "Cosmos"
+                    )
+                  );
+                if (keyRingStore?.selectedKeyInfo) {
+                  if (!keyRingStore.selectedKeyInfo.insensitive?.["Ethereum"]) {
+                    await keyRingStore.appendLedgerKeyApp(
+                      keyRingStore.selectedKeyInfo.id,
+                      pubkey,
+                      "Ethereum"
+                    );
+                    dispatchGlobalEventExceptSelf(
+                      "keplr_ledger_app_connected",
+                      keyRingStore.selectedKeyInfo.id
+                    );
+                  }
+                  accountInfo.disconnect();
+                  await accountInfo.init();
+                }
               } catch (e) {
-                console.log(e);
+                const message =
+                  getRejectionMessage(e) ||
+                  (e instanceof Error ? e.message : "") ||
+                  "Failed to connect Ledger. Open the Ethereum app and try again.";
+                notification.push({
+                  type: "warning",
+                  placement: "top-center",
+                  duration: 5,
+                  content: message,
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
               } finally {
                 setIsLoading(false);
-                navigate("/", { replace: true });
               }
             }}
           />

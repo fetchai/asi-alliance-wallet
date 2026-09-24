@@ -17,7 +17,7 @@ export const Portfolio = () => {
     {
       id: "Stats",
       disabled:
-        chainStore.current.features?.includes("evm") ||
+        chainStore.current.features?.includes("eth-key-sign") ||
         chainStore.current.chainId === "noble-1",
       component: (
         <Stats

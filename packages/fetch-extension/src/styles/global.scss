@@ -56,9 +56,21 @@ $body-color: #151a1a;
 html {
   width: 100%;
   height: 100%;
+  min-height: 600px;
+  min-width: 360px;
   overflow: auto;
   background-repeat: no-repeat;
   background-size: cover;
+}
+
+html.extension-popup {
+  width: $popup-size-width;
+  height: $popup-size-height;
+  min-width: $popup-size-width;
+  min-height: $popup-size-height;
+  max-width: $popup-size-width;
+  max-height: $popup-size-height;
+  overflow: hidden;
 }
 
 /* width */
@@ -115,9 +127,25 @@ body {
   }
 }
 
+html.extension-popup body {
+  width: $popup-size-width;
+  height: $popup-size-height;
+  min-width: $popup-size-width;
+  min-height: $popup-size-height;
+  max-width: $popup-size-width;
+  max-height: $popup-size-height;
+  overflow: hidden;
+}
+
 #app {
   width: 100%;
   height: 100%;
+}
+
+html.extension-popup #app {
+  width: $popup-size-width;
+  height: $popup-size-height;
+  overflow: hidden;
 }
 
 @keyframes spinAround {

@@ -200,18 +200,29 @@ export const FetchhubBridge: FunctionComponent<{
           recipientConfig={nativeBridgeConfig.recipientConfig}
           value={""}
         />
-        {keyRingStore.keyRingType !== "ledger" && (
+        {keyRingStore.selectedKeyInfo?.type !== "ledger" && (
           <div
             className={style["addressSelector"]}
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              nativeBridgeConfig.recipientConfig.setRawRecipient(
-                accountStore.getAccount("1").ethereumHexAddress
-              );
+              const ethAddress =
+                accountStore.getAccount("eip155:1").ethereumHexAddress;
+              nativeBridgeConfig.recipientConfig.setRawRecipient(ethAddress);
+              await navigator.clipboard.writeText(ethAddress);
+              notification.push({
+                placement: "top-center",
+                type: "success",
+                duration: 2,
+                content: "Address Copied",
+                canDelete: true,
+                transition: {
+                  duration: 0.25,
+                },
+              });
             }}
           >
             Bridge to your Ethereum address:{" "}
-            {accountStore.getAccount("1").ethereumHexAddress}
+            {accountStore.getAccount("eip155:1").ethereumHexAddress}
           </div>
         )}
         <div className={style["hr"]} />

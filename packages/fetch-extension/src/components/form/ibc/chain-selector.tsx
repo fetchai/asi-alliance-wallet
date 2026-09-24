@@ -65,33 +65,37 @@ export const DestinationChainSelector: FunctionComponent<{
             )}
           </DropdownToggle>
           <DropdownMenu>
-            {ibcChannelInfo.getTransferChannels().map((channel) => {
-              if (!chainStore.hasChain(channel.counterpartyChainId)) {
-                return undefined;
-              }
+            {ibcChannelInfo
+              .getTransferChannels(chainStore.current.chainId)
+              .map((channel) => {
+                if (!chainStore.hasChain(channel.counterpartyChainId)) {
+                  return undefined;
+                }
 
-              const chainInfo = chainStore.getChain(
-                channel.counterpartyChainId
-              );
-
-              if (chainInfo) {
-                return (
-                  <DropdownItem
-                    key={chainInfo.chainId}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      ibcChannelConfig.setChannel(channel);
-                      analyticsStore.logEvent("select_chain_click", {
-                        pageName: "IBC Transfer",
-                      });
-                    }}
-                  >
-                    {chainInfo.chainName}
-                    <div className={style["channel"]}>{channel.channelId}</div>
-                  </DropdownItem>
+                const chainInfo = chainStore.getChain(
+                  channel.counterpartyChainId
                 );
-              }
-            })}
+
+                if (chainInfo) {
+                  return (
+                    <DropdownItem
+                      key={chainInfo.chainId}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        ibcChannelConfig.setChannel(channel);
+                        analyticsStore.logEvent("select_chain_click", {
+                          pageName: "IBC Transfer",
+                        });
+                      }}
+                    >
+                      {chainInfo.chainName}
+                      <div className={style["channel"]}>
+                        {channel.channelId}
+                      </div>
+                    </DropdownItem>
+                  );
+                }
+              })}
             <DropdownItem
               onClick={(e) => {
                 e.preventDefault();

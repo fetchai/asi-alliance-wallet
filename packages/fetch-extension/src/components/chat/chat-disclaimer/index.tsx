@@ -22,12 +22,12 @@ export const ChatDisclaimer = observer(() => {
       walletAddress &&
       userState?.enabledChainIds.includes(current.chainId) &&
       !userState.walletConfig.requiredNative &&
-      keyRingStore.keyRingType !== "ledger"
+      keyRingStore.selectedKeyInfo?.type !== "ledger"
     )
       setIsOpendialog(!addresses.includes(walletAddress));
   }, [
     current.chainId,
-    keyRingStore.keyRingType,
+    keyRingStore.selectedKeyInfo?.type,
     userState.enabledChainIds,
     userState.walletConfig.requiredNative,
     walletAddress,

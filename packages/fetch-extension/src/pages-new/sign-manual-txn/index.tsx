@@ -2,8 +2,8 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { useNotification } from "@components/notification";
 import { NotificationElementProps } from "@components/notification/element";
 import {
-  RequestSignAminoMsg,
-  RequestSignDirectMsg,
+  RequestCosmosSignAminoMsg as RequestSignAminoMsg,
+  RequestCosmosSignDirectMsg as RequestSignDirectMsg,
   SignMode,
 } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
@@ -149,7 +149,7 @@ export const SignManualTxn = observer(() => {
       showBottomMenu={false}
       onBackButton={() => navigate(-1)}
     >
-      {chainInfo.features?.includes("evm") ? (
+      {chainInfo.features?.includes("eth-key-sign") ? (
         <UnsupportedNetwork chainID={chainInfo.chainName} />
       ) : (
         <React.Fragment>

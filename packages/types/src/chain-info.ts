@@ -1,22 +1,15 @@
-import { Currency, AppCurrency, FeeCurrency } from "./currency";
+import { Currency, AppCurrency, FeeCurrency, ERC20Currency } from "./currency";
 import { BIP44 } from "./bip44";
-import { AxiosRequestConfig } from "axios";
 import { Bech32Config } from "./bech32";
+import { EVMInfo } from "./ethereum";
 
 export interface ChainInfo {
   readonly rpc: string;
-  /**
-   * @deprecated Do not use
-   */
-  readonly rpcConfig?: AxiosRequestConfig;
   readonly rest: string;
-  /**
-   * @deprecated Do not use
-   */
-  readonly restConfig?: AxiosRequestConfig;
   readonly nodeProvider?: {
     readonly name: string;
-    readonly email: string;
+    readonly email?: string;
+    readonly discord?: string;
     readonly website?: string;
   };
   readonly chainId: string;
@@ -39,15 +32,6 @@ export interface ChainInfo {
    * You can get actual currency information from Currencies.
    */
   readonly feeCurrencies: FeeCurrency[];
-  /**
-   * This is the coin type in slip-044.
-   * This is used for fetching address from ENS if this field is set.
-   *
-   * ** Use the `bip44.coinType` field to set the coin type to generate the address. **
-   *
-   * @deprecated This field is likely to be changed. ENS will continue to be supported, but will change in the future to use other methods than this field. Because of the low usage of the ENS feature, the change is a low priority and it is not yet clear how it will change.
-   */
-  readonly coinType?: number;
 
   /**
    * Indicate the features supported by this chain. Ex) cosmwasm, secretwasm ...
@@ -62,21 +46,64 @@ export interface ChainInfo {
   readonly beta?: boolean;
 
   readonly chainSymbolImageUrl?: string;
-  readonly explorerUrl?: string;
 
-  readonly grpcUrl?: string;
-
-  readonly type?: "mainnet" | "testnet";
   readonly hideInUI?: boolean;
+
+  readonly evm?: EVMInfo;
+
   readonly isTestnet?: boolean;
-  readonly status?: "alpha" | "beta" | "production";
-  readonly txExplorer?: {
-    readonly name: string;
-    readonly txUrl: string;
-  };
 }
 
 export type ChainInfoWithoutEndpoints = Omit<
   ChainInfo,
-  "rest" | "rpc" | "nodeProvider"
->;
+  "rest" | "rpc" | "nodeProvider" | "evm"
+> & {
+  readonly rest: undefined;
+  readonly rpc: undefined;
+  readonly nodeProvider: undefined;
+  readonly evm?: Omit<EVMInfo, "rpc"> & {
+    readonly rpc: undefined;
+  };
+};
+
+export interface StarknetChainInfo {
+  readonly chainId: string;
+  readonly rpc: string;
+  readonly currencies: ERC20Currency[];
+  readonly ethContractAddress: string;
+  readonly strkContractAddress: string;
+}
+
+export interface BitcoinChainInfo {
+  readonly rpc: string;
+  readonly rest: string;
+  readonly chainId: string;
+  readonly bip44: BIP44;
+  readonly currencies: AppCurrency[];
+}
+
+export type ChainInfoModule = "cosmos" | "starknet" | "bitcoin";
+
+export type ModularChainInfo =
+  | {
+      readonly chainId: string;
+      readonly chainName: string;
+      readonly chainSymbolImageUrl?: string;
+      readonly isTestnet?: boolean;
+      readonly cosmos: ChainInfo;
+    }
+  | {
+      readonly chainId: string;
+      readonly chainName: string;
+      readonly chainSymbolImageUrl?: string;
+      readonly isTestnet?: boolean;
+      readonly starknet: StarknetChainInfo;
+    }
+  | {
+      readonly chainId: string;
+      readonly chainName: string;
+      readonly chainSymbolImageUrl?: string;
+      readonly linkedChainKey: string;
+      readonly isTestnet?: boolean;
+      readonly bitcoin: BitcoinChainInfo;
+    };

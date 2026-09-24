@@ -1,5 +1,5 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
-import React, { FunctionComponent, useMemo, useState } from "react";
+import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
 import style from "./style.module.scss";
 
 import { GlassCard } from "@components-v2/glass-card";
@@ -24,6 +24,29 @@ import { TXNTYPE } from "../../../../config";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useLanguage } from "../../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+
+const singlePendingClaimValidator = (activityStore: {
+  getPendingTxn: Record<string, { id?: string; type?: string }>;
+  getNodes: Record<string, any>;
+}): string | null => {
+  const addresses = Object.values(activityStore.getPendingTxn || {}).flatMap(
+    (txn) => {
+      if (txn?.type !== TXNTYPE.withdrawRewards || !txn.id) {
+        return [];
+      }
+      const msgs =
+        activityStore.getNodes?.[txn.id]?.transaction?.messages?.nodes ?? [];
+      return msgs
+        .map(
+          (msg: { json?: { validatorAddress?: string } }) =>
+            msg?.json?.validatorAddress
+        )
+        .filter(Boolean);
+    }
+  );
+  const unique = [...new Set(addresses)];
+  return unique.length === 1 ? unique[0] : null;
+};
 
 export const MyStakes = observer(
   ({
@@ -344,7 +367,9 @@ const DelegateReward: FunctionComponent = observer(() => {
   const navigate = useNavigate();
 
   const notification = useNotification();
-  const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
+  const [claimingValidator, setClaimingValidator] = useState<string | null>(
+    null
+  );
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -386,7 +411,7 @@ const DelegateReward: FunctionComponent = observer(() => {
   }, [validators]);
 
   const handleClaim = async (validatorAddress: string) => {
-    setIsWithdrawingRewards(true);
+    setClaimingValidator(validatorAddress);
     try {
       analyticsStore.logEvent("claim_click", {
         pageName: "Stake",
@@ -433,6 +458,7 @@ const DelegateReward: FunctionComponent = observer(() => {
       );
     } catch (err) {
       console.error(err);
+      setClaimingValidator(null);
       analyticsStore.logEvent("claim_txn_broadcasted_fail", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
@@ -442,7 +468,9 @@ const DelegateReward: FunctionComponent = observer(() => {
         navigate(`/validators/${validatorAddress}`);
       }
     } finally {
-      setIsWithdrawingRewards(false);
+      if (!activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]) {
+        setClaimingValidator(null);
+      }
       const txnNavigationOptions = {
         redirect: () => {
           navigate("/stake");
@@ -453,6 +481,19 @@ const DelegateReward: FunctionComponent = observer(() => {
       navigateOnTxnEvents(txnNavigationOptions);
     }
   };
+
+  const withdrawInProgress = Boolean(
+    activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
+  );
+  const activeClaimValidator =
+    claimingValidator ||
+    (withdrawInProgress ? singlePendingClaimValidator(activityStore) : null);
+
+  useEffect(() => {
+    if (!withdrawInProgress) {
+      setClaimingValidator(null);
+    }
+  }, [withdrawInProgress]);
 
   return (
     <React.Fragment>
@@ -511,21 +552,16 @@ const DelegateReward: FunctionComponent = observer(() => {
                 fontSize: "14px",
                 backgroundColor: "var(--bg-green-base)",
               }}
-              disabled={
-                activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
-              }
+              disabled={activeClaimValidator != null || withdrawInProgress}
               text={
-                activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
-                  ? ""
-                  : "Claim"
+                activeClaimValidator === val.operator_address ? "" : "Claim"
               }
               onClick={() => {
-                if (activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards])
-                  return;
+                if (activeClaimValidator != null || withdrawInProgress) return;
                 handleClaim(val.operator_address);
               }}
             >
-              {activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] && (
+              {activeClaimValidator === val.operator_address && (
                 <i className="fas fa-spinner fa-spin ml-2 mr-2" />
               )}
             </ButtonV2>

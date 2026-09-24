@@ -4,12 +4,20 @@
   color: $font-grey;
   background: white;
   border: 1px solid $bg-grey-dark;
+
+  &[data-loading="true"] {
+    color: $font-grey !important;
+  }
 }
 
 .btnDark {
-  color: white;
+  color: #ffffff;
   background: $bg-dark;
   border: 1px solid transparent;
+
+  &[data-loading="true"] {
+    color: #ffffff !important;
+  }
 }
 
 .btn {
@@ -25,7 +33,6 @@
   line-height: normal;
   cursor: pointer;
   &[data-loading="true"] {
-    color: inherit !important;
     pointer-events: none !important;
   }
   &[data-loading="true"]::after {

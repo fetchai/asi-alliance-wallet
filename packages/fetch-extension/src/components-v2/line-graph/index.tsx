@@ -55,7 +55,9 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
   return (
     <div className={style["graph-container"]}>
       {!loading && !tokenState?.diff && (
-        <div className={style["errorText"]}>Line Graph unavailable</div>
+        <div className={style["errorText"]}>
+          Price history unavailable for this network.
+        </div>
       )}
       {tokenDenom && priceInVsCurrency ? (
         <div className={style["vsCurrencyTokenPrice"]}>

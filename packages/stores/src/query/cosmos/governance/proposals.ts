@@ -4,10 +4,8 @@ import {
   ObservableQueryGovParamTally,
   ObservableQueryGovParamVoting,
 } from "./params";
-import { KVStore } from "@keplr-wallet/common";
 import {
   camelToSnake,
-  ChainGetter,
   decodeProposalContent,
   ObservableQueryTendermint,
 } from "../../../common";
@@ -22,6 +20,8 @@ import {
   QueryProposalResponse,
   QueryProposalsResponse,
 } from "cosmjs-types/cosmos/gov/v1beta1/query";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryProposalsResponse> {
   @observable.ref
@@ -34,7 +34,7 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
   protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly _queryPool: ObservableQueryStakingPool
@@ -68,7 +68,7 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
     if (!this.paramDeposit) {
       runInAction(() => {
         this.paramDeposit = new ObservableQueryGovParamDeposit(
-          this.kvStore,
+          this.sharedContext,
           this.chainId,
           this.chainGetter
         );
@@ -83,7 +83,7 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
     if (!this.paramVoting) {
       runInAction(() => {
         this.paramVoting = new ObservableQueryGovParamVoting(
-          this.kvStore,
+          this.sharedContext,
           this.chainId,
           this.chainGetter
         );
@@ -98,7 +98,7 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
     if (!this.paramTally) {
       runInAction(() => {
         this.paramTally = new ObservableQueryGovParamTally(
-          this.kvStore,
+          this.sharedContext,
           this.chainId,
           this.chainGetter
         );
@@ -142,7 +142,7 @@ export class ObservableQueryGovernance extends ObservableQueryTendermint<QueryPr
       });
       result.push(
         new ObservableQueryProposal(
-          this.kvStore,
+          this.sharedContext,
           this.chainId,
           this.chainGetter,
           decodedRawResponse,

@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "src/*",
+          "@keplr-wallet/simple-fetch",
+          "@keplr-wallet/simple-fetch/*"
+        ]
+      }
+    ]
+  }
+}

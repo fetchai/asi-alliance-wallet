@@ -13,6 +13,7 @@ import {
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { moonpaySupportedTokensByChainId } from "./token/moonpay/utils";
+import { isPureEvmChain } from "@utils/filters";
 import {
   useMoonpayCurrency,
   checkAddressIsBuySellWhitelisted,
@@ -71,18 +72,20 @@ export const MorePage: FunctionComponent = () => {
       });
   }, []);
 
-  // const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const current = chainStore.current;
+  const isEvm = isPureEvmChain(current);
 
   // check if address is whitelisted for Buy/Sell feature
   const isAddressWhitelisted = accountInfo?.bech32Address
     ? checkAddressIsBuySellWhitelisted(
-        chainId === "1" || chainId === "injective-1"
+        chainId === "eip155:1" || chainId === "injective-1"
           ? accountInfo.ethereumHexAddress || ""
           : accountInfo.bech32Address
       )
     : false;
 
-  const isBridgeSupported = chainId === CHAIN_ID_FETCHHUB || chainId === "1";
+  const isBridgeSupported =
+    chainId === CHAIN_ID_FETCHHUB || chainId === "eip155:1";
 
   return (
     <HeaderLayout
@@ -135,7 +138,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!currentChain.features?.includes("evm") && (
+      {!isEvm && (
         <Card
           leftImageStyle={{ background: "transparent", height: "16px" }}
           style={{ marginBottom: "8px" }}
@@ -150,7 +153,7 @@ export const MorePage: FunctionComponent = () => {
           }}
         />
       )}
-      {isBridgeSupported ? (
+      {!currentChain?.isTestnet && isBridgeSupported ? (
         <Card
           leftImageStyle={{ background: "transparent", height: "18px" }}
           style={{
@@ -171,7 +174,7 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {currentChain?.raw?.type !== "testnet" &&
+      {!currentChain?.isTestnet &&
       moonpaySupportedTokens?.length > 0 &&
       !currentChain.beta &&
       isAddressWhitelisted ? (
@@ -190,22 +193,21 @@ export const MorePage: FunctionComponent = () => {
       ) : (
         ""
       )}
-      {!chainStore.current.features?.includes("evm") &&
-        chainId !== "noble-1" && (
-          <Card
-            leftImageStyle={{ background: "transparent" }}
-            style={{ marginBottom: "8px" }}
-            leftImage={require("@assets/svg/wireframe/voting-power.svg")}
-            heading={"Proposals"}
-            onClick={(e: any) => {
-              e.preventDefault();
-              analyticsStore.logEvent("proposal_view_click", {
-                pageName: "More",
-              });
-              navigate("/proposal");
-            }}
-          />
-        )}
+      {!isEvm && chainId !== "noble-1" && (
+        <Card
+          leftImageStyle={{ background: "transparent" }}
+          style={{ marginBottom: "8px" }}
+          leftImage={require("@assets/svg/wireframe/voting-power.svg")}
+          heading={"Proposals"}
+          onClick={(e: any) => {
+            e.preventDefault();
+            analyticsStore.logEvent("proposal_view_click", {
+              pageName: "More",
+            });
+            navigate("/proposal");
+          }}
+        />
+      )}
       <Card
         leftImageStyle={{ background: "transparent" }}
         style={{ marginBottom: "6px" }}
@@ -218,7 +220,7 @@ export const MorePage: FunctionComponent = () => {
           });
         }}
       />
-      {!chainStore.current.features?.includes("evm") && (
+      {!isEvm && (
         <Card
           leftImageStyle={{ background: "transparent" }}
           style={{ marginBottom: "5px" }}

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { fromBech32 } from "@cosmjs/encoding";
 
-export const useMoonpayCurrency = (enabled = true) => {
+export const useMoonpayCurrency = (enabled = false) => {
   return useQuery({
     queryKey: ["currencies"],
     queryFn: async () => {

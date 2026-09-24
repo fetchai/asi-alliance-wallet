@@ -134,6 +134,7 @@ export const Configure: FunctionComponent<{
 }> = observer(
   ({ amountConfig, recipientConfig, memoConfig, setPhase, limit, fee }) => {
     const intl = useIntl();
+    const notification = useNotification();
 
     const { chainStore, queriesStore, accountStore } = useStore();
 
@@ -181,11 +182,22 @@ export const Configure: FunctionComponent<{
           />
           <div
             className={style["addressSelector"]}
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              recipientConfig.setRawRecipient(
-                accountStore.getAccount("fetchhub-4").bech32Address
-              );
+              const fetchAddress =
+                accountStore.getAccount("fetchhub-4").bech32Address;
+              recipientConfig.setRawRecipient(fetchAddress);
+              await navigator.clipboard.writeText(fetchAddress);
+              notification.push({
+                placement: "top-center",
+                type: "success",
+                duration: 2,
+                content: "Address Copied",
+                canDelete: true,
+                transition: {
+                  duration: 0.25,
+                },
+              });
             }}
           >
             Bridge to your Fetchhub address:{" "}

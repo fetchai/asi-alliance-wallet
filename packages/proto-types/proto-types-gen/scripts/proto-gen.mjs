@@ -3,7 +3,6 @@
 import "zx/globals";
 import fs from "fs";
 import FolderHash from "folder-hash";
-import glob from "glob";
 
 async function calculateOutputHash(root) {
   const dirCandidates = fs.readdirSync(root, {
@@ -56,6 +55,11 @@ function setOutputHash(root, hash) {
 
     const outDir = path.join(__dirname, "../src");
     $.verbose = false;
+
+    if (fs.existsSync(outDir)) {
+      fs.rmdirSync(outDir, { recursive: true });
+    }
+
     await $`mkdir -p ${outDir}`;
     $.verbose = true;
 
@@ -68,21 +72,19 @@ function setOutputHash(root, hash) {
     }
 
     const protoTsBinPath = (() => {
-      try {
+      const maxDepth = 6;
+      let currentDir = __dirname;
+      for (let i = 0; i < maxDepth; i++) {
         const binPath = path.join(
-          __dirname,
-          "../../node_modules/.bin/protoc-gen-ts_proto"
+          currentDir,
+          "node_modules/.bin/protoc-gen-ts_proto"
         );
-        fs.readFileSync(binPath);
-        return binPath;
-      } catch {
-        const binPath = path.join(
-          __dirname,
-          "../../../../node_modules/.bin/protoc-gen-ts_proto"
-        );
-        fs.readFileSync(binPath);
-        return binPath;
+        if (fs.existsSync(binPath)) {
+          return binPath;
+        }
+        currentDir = path.join(currentDir, "..");
       }
+      throw new Error("Cannot find protoc-gen-ts_proto");
     })();
 
     const baseDirPath = path.join(__dirname, "..");
@@ -91,6 +93,7 @@ function setOutputHash(root, hash) {
     const thirdPartyProtoPath = path.join(baseDirPath, "third_party/proto");
 
     const inputs = [
+      "agoric/swingset/msgs.proto",
       "cosmos/authz/v1beta1/tx.proto",
       "cosmos/base/v1beta1/coin.proto",
       "cosmos/bank/v1beta1/bank.proto",
@@ -108,8 +111,23 @@ function setOutputHash(root, hash) {
       "cosmos/base/abci/v1beta1/abci.proto",
       "cosmwasm/wasm/v1/tx.proto",
       "ibc/applications/transfer/v1/tx.proto",
+      "ibc/applications/fee/v1/fee.proto",
+      "ibc/applications/fee/v1/tx.proto",
       "secret/compute/v1beta1/msg.proto",
       "ethermint/types/v1/web3.proto",
+      "stride/stakeibc/validator.proto",
+      "stride/stakeibc/tx.proto",
+      "stride/staketia/tx.proto",
+      "stride/stakedym/tx.proto",
+      "circle/cctp/v1/tx.proto",
+      "thorchain/v1/types/msg_send.proto",
+      "noble/swap/v1/tx.proto",
+      "noble/dollar/v1/tx.proto",
+      "initia/mstaking/v1/tx.proto",
+      "babylon/epoching/v1/tx.proto",
+      "babylon/incentive/tx.proto",
+      "babylon/btcstaking/v1/tx.proto",
+      "atomone/photon/v1/tx.proto",
     ];
 
     const thirdPartyInputs = ["tendermint/crypto/keys.proto"];
@@ -137,32 +155,9 @@ function setOutputHash(root, hash) {
     // Remove used tsconfig.json
     await $`rm ${packageRoot}/tsconfig.json`;
 
-    // Move javascript output to proto-types package
-    const buildOutDir = path.join(packageRoot, "proto-types-gen/build");
-
-    // Remove previous output if exist
-    const previous = glob.sync(`${packageRoot}/**/*.+(ts|js|cjs|mjs|map)`);
-    for (const path of previous) {
-      if (
-        !path.includes("/proto-types-gen/") &&
-        !path.includes("/node_modules/")
-      ) {
-        await $`rm -f ${path}`;
-      }
-    }
-
-    const fresh = glob.sync(`${buildOutDir}/**/*.+(ts|js|cjs|mjs|map)`);
-    for (const p of fresh) {
-      const targetPath = path.join(
-        packageRoot,
-        p.replace(buildOutDir + "/", "")
-      );
-      await $`mkdir -p ${path.join(targetPath, "..")} && cp ${p} ${targetPath}`;
-    }
-
     $.verbose = true;
 
-    const outputHash = await calculateOutputHash(packageRoot);
+    const outputHash = await calculateOutputHash(outDir);
     console.log("Output hash is", outputHash);
     if (lastOutputHash && lastOutputHash !== outputHash) {
       throw new Error("Output is different");

@@ -17,7 +17,7 @@ export const Receive: FunctionComponent = () => {
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   const qrCodeRef = useCallback(
-    (node) => {
+    (node: any) => {
       if (node !== null && accountInfo.bech32Address) {
         QrCode.toCanvas(node, accountInfo.bech32Address);
       }
@@ -28,12 +28,16 @@ export const Receive: FunctionComponent = () => {
   const copyAddress = useCallback(
     async (address: string) => {
       if (accountInfo.walletStatus === WalletStatus.Loaded) {
+        window.getSelection()?.removeAllRanges();
         await navigator.clipboard.writeText(address);
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
         notification.push({
           placement: "top-center",
           type: "success",
           duration: 2,
-          content: "Copied Address",
+          content: "Address Copied",
           canDelete: true,
           transition: {
             duration: 0.25,
@@ -73,13 +77,27 @@ export const Receive: FunctionComponent = () => {
         <Card
           style={{
             marginBottom: "24px",
+            userSelect: "none",
           }}
           headingStyle={{
             width: "100%",
+            userSelect: "none",
           }}
           heading={accountInfo.bech32Address}
-          rightContent={require("@assets/svg/wireframe/copy.svg")}
-          rightContentOnClick={() => copyAddress(accountInfo.bech32Address)}
+          rightContent={
+            <img
+              className={StyleQrCode["copyIcon"]}
+              src={require("@assets/svg/wireframe/copy.svg")}
+              alt="Copy address"
+              draggable={false}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                copyAddress(accountInfo.bech32Address);
+              }}
+            />
+          }
         />
         <div className={StyleQrCode["depositWarning"]}>
           <img src={require("@assets/svg/info-mark.svg")} alt="" />

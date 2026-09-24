@@ -1,4 +1,4 @@
-import { AmountConfig, IFeeConfig } from "../tx";
+import { AmountConfig, IFeeConfig, InsufficientAmountError } from "../tx";
 import { ChainGetter } from "@keplr-wallet/stores";
 import { AppCurrency } from "@keplr-wallet/types";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
@@ -27,8 +27,9 @@ export class nativeBridgeAmountConfig extends AmountConfig {
   }
 
   override get error(): Error | undefined {
-    if (super.error) {
-      return super.error;
+    const baseError = super.error;
+    if (baseError && !(baseError instanceof InsufficientAmountError)) {
+      return baseError;
     }
 
     let numAmount = new Dec(this.amount);
@@ -49,30 +50,56 @@ export class nativeBridgeAmountConfig extends AmountConfig {
       queryEvmBridge.error ||
       queryFetchBridge.error
     ) {
-      return new Error("Could not fetch bridge data, try later");
+      // Keep insufficient (or other) rather than masking it behind a fetch error.
+      return baseError ?? new Error("Could not fetch bridge data, try later");
     }
 
+    const chainInfo = this.chainGetter.getChain(this.chainId);
     const isEvm =
-      this.chainGetter.getChain(this.chainId).features?.includes("evm") ??
+      (chainInfo.features?.includes("eth-key-sign") &&
+        chainInfo.features?.includes("eth-address-gen") &&
+        chainInfo.evm) ??
       false;
     const chainBridgeStatus = isEvm ? ethBridgeStatus : nativeBridgeStatus;
     const destChainBridgeStatus = isEvm ? nativeBridgeStatus : ethBridgeStatus;
 
-    let validationAmountText = "";
-    const nextSupply = new Dec(chainBridgeStatus.supply).add(numAmount);
+    const minRequiredMessage = () =>
+      new BridgeAmountError(
+        `A minimum of ${new Dec(chainBridgeStatus.swapMin)
+          .quo(
+            DecUtils.getTenExponentNInPrecisionRange(
+              this.sendCurrency.coinDecimals
+            )
+          )
+          .truncate()
+          .toString()} FET is required to make this transaction`
+      );
 
     if (numAmount.lt(new Dec(chainBridgeStatus.swapMin))) {
-      validationAmountText = `Amount too small. Min: ${new Dec(
-        chainBridgeStatus.swapMin
-      )
-        .quo(
+      return minRequiredMessage();
+    }
+
+    if (baseError instanceof InsufficientAmountError) {
+      const balanceBase = this.queriesStore
+        .get(this.chainId)
+        .queryBalances.getQueryBech32Address(this.sender)
+        .getBalanceFromCurrency(this.sendCurrency)
+        .toDec()
+        .mul(
           DecUtils.getTenExponentNInPrecisionRange(
             this.sendCurrency.coinDecimals
           )
-        )
-        .truncate()
-        .toString()} FET`;
-    } else if (numAmount.gt(new Dec(chainBridgeStatus.swapMax))) {
+        );
+      if (balanceBase.lt(new Dec(chainBridgeStatus.swapMin))) {
+        return minRequiredMessage();
+      }
+      return baseError;
+    }
+
+    let validationAmountText = "";
+    const nextSupply = new Dec(chainBridgeStatus.supply).add(numAmount);
+
+    if (numAmount.gt(new Dec(chainBridgeStatus.swapMax))) {
       validationAmountText = `Amount too large. Max: ${new Dec(
         chainBridgeStatus.swapMax
       )

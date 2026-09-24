@@ -6,6 +6,7 @@ import { NoActivity } from "../no-activity";
 import { UnsupportedNetwork } from "../unsupported-network";
 import { govOptions } from "../utils";
 import { ActivityRow } from "./activity-row";
+import { isPureEvmChain } from "@utils/filters";
 
 export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
   observer(({}) => {
@@ -81,7 +82,7 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
       setIsOpen(false);
     };
 
-    const isSupportedNetwork = !(current.features?.includes("evm") ?? false);
+    const isSupportedNetwork = !isPureEvmChain(current);
 
     return (
       <React.Fragment>

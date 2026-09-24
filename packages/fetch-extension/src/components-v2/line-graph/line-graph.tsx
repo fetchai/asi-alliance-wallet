@@ -1,6 +1,6 @@
 import axios from "axios";
 import moment from "moment";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
 import { chartOptions } from "./chart-options";
 import style from "./style.module.scss";
@@ -24,6 +24,16 @@ interface PriceData {
   price: number;
 }
 
+function getTimeLabel(duration: number): string {
+  if (duration === 1) return "TODAY";
+  if (duration === 7) return "1 WEEK";
+  if (duration === 30) return "1 MONTH";
+  if (duration === 90) return "3 MONTH";
+  if (duration === 365) return "1 YEAR";
+  if (duration === 100000) return "ALL";
+  return "";
+}
+
 export const LineGraph: React.FC<LineGraphProps> = ({
   duration,
   tokenName,
@@ -35,16 +45,18 @@ export const LineGraph: React.FC<LineGraphProps> = ({
   setTokenCurrentPrice,
 }) => {
   const [prices, setPrices] = useState<PriceData[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const cacheKey = useMemo(
     () => `${tokenName}_${duration}_${vsCurrency}`,
     [tokenName, duration, vsCurrency]
   );
 
   const cachedPrices = useMemo(() => {
+    if (!tokenName) {
+      return null;
+    }
     const cachedData = localStorage.getItem(cacheKey);
     return cachedData ? JSON.parse(cachedData) : null;
-  }, [cacheKey]);
+  }, [cacheKey, tokenName]);
 
   const isCachedPricesValid = (updatedAt: any) => {
     const currTime = Date.parse(new Date().toString());
@@ -53,12 +65,59 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     return currTime - prevUpdatedAt < 10 * 60 * 1000;
   };
 
+  const applyTokenState = useCallback(
+    (newPrices: PriceData[]) => {
+      if (newPrices.length === 0) {
+        setTokenState({
+          percentageDiff: 0,
+          diff: 0,
+          time: getTimeLabel(duration),
+          type: "positive",
+        });
+        return;
+      }
+
+      const firstValue = newPrices[0].price || 0;
+      const lastValue = newPrices[newPrices.length - 1].price || 0;
+      const diff = lastValue - firstValue;
+      const denominator = lastValue > 0 ? lastValue : 1;
+      const percentageDiff = (diff / denominator) * 100;
+
+      setTokenState({
+        percentageDiff: Math.abs(percentageDiff),
+        diff: diff * 100,
+        time: getTimeLabel(duration),
+        type: diff >= 0 ? "positive" : "negative",
+      });
+    },
+    [duration, setTokenState]
+  );
+
+  const setDefaultPricing = useCallback(() => {
+    const timestamp = Date.now();
+    const newPrices: PriceData[] = Array.from({ length: 5 }, () => ({
+      timestamp,
+      price: 0,
+    }));
+    setPrices(newPrices);
+    applyTokenState(newPrices);
+  }, [applyTokenState]);
+
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPrices = async () => {
       setLoading(true);
-      setError("");
+      let keepLoadingForRetry = false;
+
+      if (!tokenName) {
+        setDefaultPricing();
+        setLoading(false);
+        return;
+      }
+
       try {
-        let newPrices: any[] = [];
+        let newPrices: PriceData[] = [];
         if (
           cachedPrices &&
           !!cachedPrices.updatedAt &&
@@ -75,54 +134,68 @@ export const LineGraph: React.FC<LineGraphProps> = ({
             price: price[1],
           }));
 
-          const lastUpdatedPrice = {
-            newPrices,
-            updatedAt: new Date(),
-          };
-
-          localStorage.setItem(cacheKey, JSON.stringify(lastUpdatedPrice));
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              newPrices,
+              updatedAt: new Date(),
+            })
+          );
         }
-        if (newPrices.length > 0) {
-          const firstValue = newPrices[0].price || 0;
-          const lastValue = newPrices[newPrices.length - 1].price || 0;
-          const diff = lastValue - firstValue;
-          const percentageDiff = (diff / lastValue) * 100;
-          let time = "";
-          if (duration === 1) time = "TODAY";
-          else if (duration === 7) time = "1 WEEK";
-          else if (duration === 30) time = "1 MONTH";
-          else if (duration === 90) time = "3 MONTH";
-          else if (duration === 365) time = "1 YEAR";
-          else if (duration === 100000) time = "ALL";
 
-          const type = diff >= 0 ? "positive" : "negative";
-
-          setTokenState({
-            percentageDiff: Math.abs(percentageDiff),
-            diff: diff * 100,
-            time,
-            type,
-          });
-        }
-        setPrices(newPrices);
-        setLoading(false);
-      } catch (error) {
-        if (error.response.status === 429) {
-          setTimeout(() => {
-            fetchPrices();
-          }, 10 * 1000);
-          console.log("Too many request error, trying to fetch again");
-          if (cachedPrices) setPrices(cachedPrices.newPrices);
+        if (cancelled) {
           return;
         }
 
-        console.log("Error fetching data:", { error });
-        setError("Unable to fetch data. Please try again.");
+        applyTokenState(newPrices);
+        setPrices(newPrices);
+      } catch (err: any) {
+        if (cancelled) {
+          return;
+        }
+
+        const status = err?.response?.status;
+        if (status === 429) {
+          if (cachedPrices?.newPrices) {
+            setPrices(cachedPrices.newPrices);
+            applyTokenState(cachedPrices.newPrices);
+          } else {
+            keepLoadingForRetry = true;
+            setTimeout(() => {
+              if (!cancelled) {
+                fetchPrices();
+              }
+            }, 10 * 1000);
+          }
+        } else if (cachedPrices?.newPrices?.length) {
+          setPrices(cachedPrices.newPrices);
+          applyTokenState(cachedPrices.newPrices);
+        } else {
+          setDefaultPricing();
+        }
+      } finally {
+        if (!cancelled && !keepLoadingForRetry) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPrices();
-  }, [duration, tokenName, vsCurrency, cacheKey, cachedPrices, setTokenState]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    duration,
+    tokenName,
+    vsCurrency,
+    cacheKey,
+    cachedPrices,
+    setTokenState,
+    setLoading,
+    applyTokenState,
+    setDefaultPricing,
+  ]);
 
   const chartData = {
     labels: prices.map((priceData: any) => {
@@ -170,13 +243,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
     >
       {loading ? (
         <div>
-          {error ? (
-            <div>{error}</div>
-          ) : (
-            <div>
-              <div className={style["loadingText"]}>Updating the chart</div>
-            </div>
-          )}
+          <div className={style["loadingText"]}>Updating the chart</div>
         </div>
       ) : (
         <Line

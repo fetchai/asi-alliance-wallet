@@ -17,6 +17,7 @@ import style from "./style.module.scss";
 import { useForm } from "react-hook-form";
 import { useNotification } from "@components/notification";
 import { useConfirm } from "@components/confirm";
+import { isPureEvmChain } from "@utils/filters";
 import { AlertExperimentalFeature } from "@components/alert-experimental-feature";
 import { FormattedMessage, useIntl } from "react-intl";
 import {
@@ -65,7 +66,7 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
   const selectedChainInfo = chainStore.getChain(selectedChainId);
-  const isEvm = selectedChainInfo.features?.includes("evm");
+  const isEvm = isPureEvmChain(selectedChainInfo);
 
   return (
     <HeaderLayout
@@ -105,7 +106,7 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
             </DropdownMenu>
           </ButtonDropdown>
           <div style={{ flex: 1 }} />
-          {selectedChainId !== "1" && (
+          {selectedChainId !== "eip155:1" && (
             <div
               style={{
                 display: "flex",
@@ -142,7 +143,7 @@ export const SettingEndpointsPage: FunctionComponent = observer(() => {
             </div>
           )}
         </div>
-        {selectedChainId === "1" ? (
+        {selectedChainId === "eip155:1" ? (
           <div style={{ padding: "20px", textAlign: "center" }}>
             <img
               src={require("../../../public/assets/img/icons8-lock.svg")}

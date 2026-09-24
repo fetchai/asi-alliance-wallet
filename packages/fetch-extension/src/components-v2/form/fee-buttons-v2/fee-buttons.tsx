@@ -28,6 +28,7 @@ import { GasContainer } from "../gas-form";
 import { ManualFeeInput } from "../gas-form/manual";
 import { FeeCurrencySelector } from "./fee-currency-selector";
 import feeButtonStyles from "./fee-buttons.module.scss";
+import { isPureEvmChain } from "@utils/filters";
 
 export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
@@ -211,7 +212,8 @@ export const FeeButtonsInner: FunctionComponent<
     const { chainStore, analyticsStore } = useStore();
 
     const intl = useIntl();
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const current = chainStore.current;
+    const isEvm = isPureEvmChain(current);
 
     const language = useLanguage();
 
@@ -363,7 +365,7 @@ export const FeeButtonsInner: FunctionComponent<
                       style={{
                         opacity: "0.6",
                         fontWeight: 400,
-                        color: "var(--grey-white, #FFF)",
+                        color: "var(--font-dark)",
                         fontSize: "12px",
                         marginLeft: "5px",
                         whiteSpace: "nowrap",
@@ -434,7 +436,7 @@ export const FeeButtonsInner: FunctionComponent<
                     style={{
                       opacity: "0.6",
                       fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
+                      color: "var(--font-dark)",
                       fontSize: "12px",
                       marginLeft: "5px",
                       whiteSpace: "nowrap",
@@ -515,7 +517,7 @@ export const FeeButtonsInner: FunctionComponent<
                     style={{
                       opacity: "0.6",
                       fontWeight: 400,
-                      color: "var(--grey-white, #FFF)",
+                      color: "var(--font-dark)",
                       fontSize: "12px",
                       marginLeft: "5px",
                       whiteSpace: "nowrap",

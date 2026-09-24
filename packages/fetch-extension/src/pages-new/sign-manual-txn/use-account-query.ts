@@ -11,7 +11,8 @@ export const useAccountQuery = (
   const { chainStore, queriesStore } = useStore();
 
   const chainId = chainStore.current.chainId;
-  const bech32Prefix = chainStore.current.bech32Config.bech32PrefixAccAddr;
+  const bech32Prefix =
+    chainStore.current.bech32Config?.bech32PrefixAccAddr || "";
 
   const queries = queriesStore.get(chainId);
 

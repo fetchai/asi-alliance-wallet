@@ -5,7 +5,7 @@ import {
   updateProposalNodeOnTxnCompleted,
   TXNTYPE,
 } from "../account";
-import { ChainGetter } from "src/common";
+import { ChainGetter } from "../chain";
 import { CosmosTxTracer } from "../account/cosmos-tx-tracer";
 
 export class ActivityStore {

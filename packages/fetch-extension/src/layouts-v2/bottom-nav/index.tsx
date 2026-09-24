@@ -13,6 +13,7 @@ import { WalletActions } from "../../pages-new/main/wallet-actions";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { Tab } from "./tab";
+import { isPureEvmChain } from "@utils/filters";
 
 const bottomNav = [
   {
@@ -61,7 +62,7 @@ const HomeTab = () => <Tab {...bottomNav[0]} />;
 const StakeTab = () => {
   const { chainStore } = useStore();
   const current = chainStore.current;
-  const isEvm = current.features?.includes("evm") ?? false;
+  const isEvm = isPureEvmChain(current);
 
   const [stakingTooltip, setStakingTooltip] = useState("");
   const [stakingDisabled, setStakingDisabled] = useState(false);
@@ -91,10 +92,10 @@ const StakeTab = () => {
 
 const ActivityTab = () => {
   const { chainStore } = useStore();
-  const current = chainStore.current;
   const [activityTooltip, setActivityTooltip] = useState("");
   const [activityDisabled, setActivityDisabled] = useState(false);
-  const isEvm = current.features?.includes("evm") ?? false;
+  const current = chainStore.current;
+  const isEvm = isPureEvmChain(current);
   useEffect(() => {
     if (isEvm) {
       setActivityTooltip("Feature not available on this network");

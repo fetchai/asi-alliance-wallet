@@ -1,11 +1,11 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "outDir": "build",
     "declaration": true,
     "rootDir": "src",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "typeRoots": ["../../node_modules/@types"]
   },
   "excluded": ["**/*.wasm"]
 }

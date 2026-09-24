@@ -1,6 +1,6 @@
 {
   "name": "cosmjs-test",
-  "version": "0.12.12",
+  "version": "0.13.11",
   "author": "chainapsis",
   "license": "Apache-2.0",
   "private": true,
@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@cosmjs/stargate": "^0.36.1",
-    "@keplr-wallet/provider-mock": "0.12.12",
+    "@keplr-wallet/provider-mock": "0.13.11",
     "secretjs": "^1.6.0"
   }
 }

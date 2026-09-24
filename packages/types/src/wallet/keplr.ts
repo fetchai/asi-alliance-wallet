@@ -11,6 +11,20 @@ import {
 } from "../cosmjs";
 import { SecretUtils } from "../secretjs";
 import Long from "long";
+import { SettledResponses } from "../settled";
+import { DirectAuxSignResponse } from "../cosmjs-alt";
+import { IEthereumProvider } from "./ethereum";
+import { IStarknetProvider } from "./starknet";
+import type {
+  Call,
+  DeployAccountSignerDetails,
+  InvocationsSignerDetails,
+} from "starknet";
+import {
+  IBitcoinProvider,
+  SignPsbtOptions,
+  SupportedPaymentType,
+} from "./bitcoin";
 
 export interface Key {
   // Name of the selected key store.
@@ -19,6 +33,7 @@ export interface Key {
   readonly pubKey: Uint8Array;
   readonly address: Uint8Array;
   readonly bech32Address: string;
+  readonly ethereumHexAddress: string;
   // Indicate whether the selected account is from the nano ledger.
   // Because current cosmos app in the nano ledger doesn't support the direct (proto) format msgs,
   // this can be used to select the amino or direct signer.
@@ -59,6 +74,8 @@ export interface Keplr {
   readonly mode: KeplrMode;
   defaultOptions: KeplrIntereactionOptions;
 
+  ping(): Promise<void>;
+
   experimentalSuggestChain(chainInfo: ChainInfo): Promise<void>;
   enable(chainIds: string | string[]): Promise<void>;
   /**
@@ -71,6 +88,7 @@ export interface Keplr {
   disable(chainIds?: string | string[]): Promise<void>;
 
   getKey(chainId: string): Promise<Key>;
+  getKeysSettled(chainIds: string[]): Promise<SettledResponses<Key>>;
   signAmino(
     chainId: string,
     signer: string,
@@ -95,11 +113,51 @@ export interface Keplr {
     },
     signOptions?: KeplrSignOptions
   ): Promise<DirectSignResponse>;
+  signDirectAux(
+    chainId: string,
+    signer: string,
+    signDoc: {
+      bodyBytes?: Uint8Array | null;
+      publicKey?: {
+        typeUrl: string;
+        value: Uint8Array;
+      } | null;
+      chainId?: string | null;
+      accountNumber?: Long | null;
+      sequence?: Long | null;
+      tip?: {
+        amount: {
+          denom: string;
+          amount: string;
+        }[];
+        tipper: string;
+      } | null;
+    },
+    signOptions?: Exclude<
+      KeplrSignOptions,
+      "preferNoSetFee" | "disableBalanceCheck"
+    >
+  ): Promise<DirectAuxSignResponse>;
   sendTx(
     chainId: string,
     tx: Uint8Array,
     mode: BroadcastMode
   ): Promise<Uint8Array>;
+
+  signDirectWithMessages(
+    chainId: string,
+    signer: string,
+    // base64 encoded protobuf messages.
+    messages: string[],
+    signDirectWithMessagesOptions: {
+      memo?: string;
+      sync?: boolean;
+      timeoutHeight?: number;
+      gasAdjustment?: number;
+    }
+  ): Promise<{
+    txHash: string;
+  }>;
 
   signICNSAdr36(
     chainId: string,
@@ -121,6 +179,16 @@ export interface Keplr {
     signature: StdSignature
   ): Promise<boolean>;
 
+  signFigureMarketsAuth(
+    chainId: string,
+    signer: string,
+    // base64 encoded
+    message: string
+  ): Promise<{
+    signedMessage: string;
+    signature: StdSignature;
+  }>;
+
   signEthereum(
     chainId: string,
     signer: string,
@@ -128,10 +196,17 @@ export interface Keplr {
     type: EthSignType
   ): Promise<Uint8Array>;
 
-  getOfflineSigner(chainId: string): OfflineAminoSigner & OfflineDirectSigner;
-  getOfflineSignerOnlyAmino(chainId: string): OfflineAminoSigner;
+  getOfflineSigner(
+    chainId: string,
+    signOptions?: KeplrSignOptions
+  ): OfflineAminoSigner & OfflineDirectSigner;
+  getOfflineSignerOnlyAmino(
+    chainId: string,
+    signOptions?: KeplrSignOptions
+  ): OfflineAminoSigner;
   getOfflineSignerAuto(
-    chainId: string
+    chainId: string,
+    signOptions?: KeplrSignOptions
   ): Promise<OfflineAminoSigner | OfflineDirectSigner>;
 
   suggestToken(
@@ -190,10 +265,81 @@ export interface Keplr {
   ): Promise<AminoSignResponse>;
 
   getChainInfosWithoutEndpoints(): Promise<ChainInfoWithoutEndpoints[]>;
+  getChainInfoWithoutEndpoints(
+    chainId: string
+  ): Promise<ChainInfoWithoutEndpoints>;
 
   /** Change wallet extension user name **/
   changeKeyRingName(opts: {
     defaultName: string;
     editable?: boolean;
   }): Promise<string>;
+
+  sendEthereumTx(chainId: string, tx: Uint8Array): Promise<string>;
+
+  suggestERC20(chainId: string, contractAddress: string): Promise<void>;
+
+  getStarknetKey(chainId: string): Promise<{
+    name: string;
+    hexAddress: string;
+    pubKey: Uint8Array;
+    address: Uint8Array;
+    isNanoLedger: boolean;
+  }>;
+  getStarknetKeysSettled(chainIds: string[]): Promise<
+    SettledResponses<{
+      name: string;
+      hexAddress: string;
+      pubKey: Uint8Array;
+      address: Uint8Array;
+      isNanoLedger: boolean;
+    }>
+  >;
+  signStarknetDeployAccountTransaction(
+    chainId: string,
+    transaction: DeployAccountSignerDetails
+  ): Promise<{
+    transaction: DeployAccountSignerDetails;
+    signature: string[];
+  }>;
+  signStarknetTx(
+    chainId: string,
+    transactions: Call[],
+    details: InvocationsSignerDetails
+  ): Promise<{
+    transactions: Call[];
+    details: InvocationsSignerDetails;
+    signature: string[];
+  }>;
+  getBitcoinKey(chainId: string): Promise<{
+    name: string;
+    pubKey: Uint8Array;
+    address: string;
+    paymentType: SupportedPaymentType;
+    isNanoLedger: boolean;
+  }>;
+  getBitcoinKeysSettled(chainIds: string[]): Promise<
+    SettledResponses<{
+      name: string;
+      pubKey: Uint8Array;
+      address: string;
+      paymentType: SupportedPaymentType;
+      isNanoLedger: boolean;
+    }>
+  >;
+  signPsbt(
+    chainId: string,
+    psbtHex: string,
+    options?: SignPsbtOptions
+  ): Promise<string>;
+  signPsbts(
+    chainId: string,
+    psbtsHexes: string[],
+    options?: SignPsbtOptions
+  ): Promise<string[]>;
+  readonly ethereum: IEthereumProvider;
+
+  readonly starknet: IStarknetProvider;
+
+  readonly bitcoin: IBitcoinProvider;
 }

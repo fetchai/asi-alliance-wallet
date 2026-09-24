@@ -28,6 +28,7 @@ import {
   ClientUpdateProposal,
   UpgradeProposal as IbcUpgradeProposal,
 } from "@keplr-wallet/proto-types/ibc/core/client/v1/client";
+import { MsgRecoverClient } from "cosmjs-types/ibc/core/client/v1/tx";
 import { ClientState } from "cosmjs-types/ibc/lightclients/tendermint/v1/tendermint";
 import {
   GenericAuthorization,
@@ -44,8 +45,32 @@ import {
 } from "cosmjs-types/cosmos/vesting/v1beta1/vesting";
 /* eslint-disable-next-line import/no-extraneous-dependencies */
 import { decodePubkey } from "@cosmjs/proto-signing";
+import { IChainInfoImpl } from "../../chain";
 
 export class StoreUtils {
+  public static toCoinPretties(
+    chainInfo: IChainInfoImpl,
+    balances: CoinPrimitive[]
+  ): CoinPretty[] {
+    const result: CoinPretty[] = [];
+    for (const bal of balances) {
+      const currency = chainInfo.findCurrency(bal.denom);
+      if (currency) {
+        const amount = new Dec(bal.amount);
+        if (amount.truncate().gt(new Int(0))) {
+          result.push(new CoinPretty(currency, amount));
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * @deprecated
+   * @param currenciesMap
+   * @param bals
+   */
   public static getBalancesFromCurrencies(
     currenciesMap: {
       [denom: string]: Currency;
@@ -121,6 +146,7 @@ const decoderMap: Record<string, any> = {
   "/cosmos.gov.v1.MsgExecLegacyContent": MsgExecLegacyContent,
   "/ibc.core.client.v1.ClientUpdateProposal": ClientUpdateProposal,
   "/ibc.core.client.v1.UpgradeProposal": IbcUpgradeProposal,
+  "/ibc.core.client.v1.MsgRecoverClient": MsgRecoverClient,
   "/cosmwasm.wasm.v1.StoreCodeProposal": StoreCodeProposal,
   "/cosmwasm.wasm.v1.InstantiateContractProposal": InstantiateContractProposal,
   "/cosmwasm.wasm.v1.MigrateContractProposal": MigrateContractProposal,
@@ -151,7 +177,22 @@ export function decodeProposalContent(content?: Any): any {
     };
   }
 
-  return decoder.decode(content?.value);
+  const decoded = decoder.decode(content?.value);
+
+  // MsgRecoverClient is a gov v1 message, not Content - only has title/description on-chain
+  // in the Any. Synthesize display fields from decoded client ids for the UI.
+  if (typeUrl === "/ibc.core.client.v1.MsgRecoverClient") {
+    console.log("decoded", decoded, content);
+    const subjectClientId = decoded.subjectClientId ?? "";
+    const substituteClientId = decoded.substituteClientId ?? "";
+    return {
+      ...decoded,
+      title: `Recover IBC client ${subjectClientId} → ${substituteClientId}`,
+      description: `Replace ${subjectClientId} with ${substituteClientId}.`,
+    };
+  }
+
+  return decoded;
 }
 
 export const base64ToBytes = (base64: string): Uint8Array => {

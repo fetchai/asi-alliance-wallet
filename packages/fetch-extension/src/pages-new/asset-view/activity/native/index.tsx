@@ -9,7 +9,7 @@ import { ActivityRow } from "./activity-row";
 import styles from "./style.module.scss";
 import { NoActivity } from "../../../activity/no-activity";
 import { UnsupportedNetwork } from "../../../activity/unsupported-network";
-import { isFeatureAvailable } from "@utils/index";
+import { isPureEvmChain } from "@utils/filters";
 
 const options = [
   {
@@ -181,6 +181,8 @@ export const NativeTab = observer(({ filterTop }: { filterTop?: string }) => {
     return renderedNodes;
   };
 
+  const isActivitySupported = !isPureEvmChain(current);
+
   return (
     <React.Fragment>
       <FilterDropdown
@@ -206,7 +208,7 @@ export const NativeTab = observer(({ filterTop }: { filterTop?: string }) => {
         />
       </div>
 
-      {isFeatureAvailable(current.chainId) ? (
+      {isActivitySupported ? (
         activities.length > 0 &&
         activities.filter((node: any) =>
           processFilters(filter).includes(

@@ -1,6 +1,6 @@
 import { KVStore, toGenerator } from "@keplr-wallet/common";
 import { action, flow, makeObservable, observable } from "mobx";
-import { ChainGetter } from "src/common";
+import { ChainGetter } from "../chain";
 
 interface GraphDurationData {
   [key: string]: GraphDurationObject;

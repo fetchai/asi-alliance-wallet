@@ -148,7 +148,7 @@ export const TransactionDetails: React.FC<{
                   src={require("@assets/svg/wireframe/copyGrey.svg")}
                   alt=""
                   onClick={() =>
-                    onCopy(txHash.toUpperCase(), "Transaction hash copied")
+                    onCopy(txHash.toUpperCase(), "Transaction Hash Copied")
                   }
                 />
               </div>

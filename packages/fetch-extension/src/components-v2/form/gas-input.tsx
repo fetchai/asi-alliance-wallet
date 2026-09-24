@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useState } from "react";
 import { Input } from "reactstrap";
-import { IGasConfig } from "@keplr-wallet/hooks";
+import { IGasConfig, MAX_GAS_LIMIT_DIGITS } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
 import { Card } from "../card";
 import style from "./gas-input.style.module.scss";
@@ -41,12 +41,13 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
               type="text"
               inputMode="numeric"
               value={rawGasInput}
+              maxLength={MAX_GAS_LIMIT_DIGITS}
               onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9]/g, "");
-                if (value === "" || parseInt(value) < 10 ** 18) {
-                  setRawGasInput(value);
-                  gasConfig.setGas(value);
-                }
+                const value = e.target.value
+                  .replace(/[^0-9]/g, "")
+                  .slice(0, MAX_GAS_LIMIT_DIGITS);
+                setRawGasInput(value);
+                gasConfig.setGas(value);
 
                 e.preventDefault();
               }}

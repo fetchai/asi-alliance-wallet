@@ -36,6 +36,7 @@ import { action, autorun, makeObservable, observable } from "mobx";
 import { GasContainer } from "../gas-form";
 import styleCoinInput from "../coin-input.module.scss";
 import { useStore } from "../../../stores";
+import { isPureEvmChain } from "@utils/filters";
 
 export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
@@ -318,7 +319,8 @@ export const FeeButtonsInner: FunctionComponent<
       }
     }, [feeConfig, feeConfig.feeCurrency, feeConfig.fee]);
     const intl = useIntl();
-    const isEvm = chainStore.current.features?.includes("evm") ?? false;
+    const current = chainStore.current;
+    const isEvm = isPureEvmChain(current);
 
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);

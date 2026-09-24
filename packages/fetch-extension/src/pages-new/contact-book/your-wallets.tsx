@@ -1,17 +1,18 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { Card } from "@components-v2/card";
 import { SearchBar } from "@components-v2/search-bar";
-import { getFilteredWallets } from "@utils/filters";
+import { getFilteredWallets, isPureEvmChain } from "@utils/filters";
 import { formatAddress } from "@utils/format";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { ListAccountsMsg } from "@keplr-wallet/background";
+import { GetCosmosKeysForEachVaultSettledMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { NoResults } from "@components-v2/no-results";
+import { getKeyInfoSocial, isPrivateKeyType } from "@utils/index";
 
 interface YourWalletProps {
   selectWalletFromList: (recipient: string) => void;
@@ -21,65 +22,70 @@ interface YourWalletProps {
 export const YourWallets: FunctionComponent<YourWalletProps> = observer(
   ({ selectWalletFromList, onBackButton }) => {
     const [searchTerm, setSearchTerm] = useState("");
-    const [addresses, setAddresses] = useState<string[]>([]);
+    const [addressByVaultId, setAddressByVaultId] = useState<
+      Record<string, string>
+    >({});
     const intl = useIntl();
     const { chainStore, keyRingStore } = useStore();
 
     const chainId = chainStore.current.chainId;
+
+    const isEvm = isPureEvmChain(chainStore.current);
+
+    useEffect(() => {
+      const fetchAddresses = async () => {
+        if (keyRingStore.keyInfos.length === 0) {
+          setAddressByVaultId({});
+          return;
+        }
+
+        const requester = new InExtensionMessageRequester();
+        const msg = new GetCosmosKeysForEachVaultSettledMsg(
+          chainId,
+          keyRingStore.keyInfos.map((item) => item.id)
+        );
+
+        const settledResponse = await requester.sendMessage(
+          BACKGROUND_PORT,
+          msg
+        );
+
+        const next: Record<string, string> = {};
+        for (const item of settledResponse) {
+          if (item.status === "fulfilled" && item.value) {
+            const address = isEvm
+              ? item.value.ethereumHexAddress?.trim()
+              : item.value.bech32Address?.trim();
+            if (address) {
+              next[item.value.vaultId] = address;
+            }
+          }
+        }
+        setAddressByVaultId(next);
+      };
+
+      fetchAddresses();
+    }, [chainId, keyRingStore.keyInfos.length, isEvm]);
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
         return require("@assets/svg/wireframe/ledger-indicator.svg");
       }
 
-      if (keyStore.type === "privateKey") {
-        if (
-          keyStore.meta &&
-          keyStore.meta?.["email"] &&
-          keyStore.meta?.["socialType"] === "apple"
-        ) {
+      if (isPrivateKeyType(keyStore.type)) {
+        const { email, socialType } = getKeyInfoSocial(keyStore);
+        if (email && socialType === "apple") {
           return require("@assets/svg/wireframe/apple-logo.svg");
         }
-
-        if (
-          keyStore.meta &&
-          keyStore.meta?.["email"] &&
-          keyStore.meta?.["socialType"] === "google"
-        ) {
+        if (email && socialType === "google") {
           return require("@assets/svg/wireframe/google-logo.svg");
         }
       }
       return;
     };
 
-    const accountsAddress = async () => {
-      const requester = new InExtensionMessageRequester();
-      const msg = new ListAccountsMsg();
-      const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
-      const selectedAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
-        (value) => value.selected
-      );
-
-      const isEvm = chainStore.current.features?.includes("evm") ?? false;
-      const addresses = accounts
-        .map((account) => {
-          if (isEvm) {
-            return account.EVMAddress;
-          }
-
-          return account.bech32Address;
-        })
-        .filter((_, index) => index !== selectedAccountIndex);
-
-      setAddresses(addresses);
-    };
-
-    useEffect(() => {
-      accountsAddress();
-    }, []);
-
-    const keyRingList = keyRingStore.multiKeyStoreInfo.filter(
-      (keyStore) => !keyStore.selected
+    const keyRingList = keyRingStore.keyInfos.filter(
+      (keyStore) => !keyStore.isSelected
     );
 
     return (
@@ -92,13 +98,15 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
           emptyContent={<NoResults />}
           disabled={keyRingList?.length === 0}
           renderResult={(keyStore, i) => {
-            const nameByChain = keyStore.meta?.["nameByChain"]
-              ? JSON.parse(keyStore.meta["nameByChain"])
+            const nameByChain = keyStore.insensitive?.keyRingMeta?.[
+              "nameByChain"
+            ]
+              ? JSON.parse(keyStore.insensitive?.keyRingMeta?.["nameByChain"])
               : {};
 
             const accountName =
               nameByChain?.[chainId] ||
-              keyStore.meta?.["name"] ||
+              keyStore.name ||
               intl.formatMessage({
                 id: "setting.keyring.unnamed-account",
               });
@@ -121,8 +129,8 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                   </React.Fragment>
                 }
                 subheading={
-                  addresses[i] ? (
-                    formatAddress(addresses[i])
+                  addressByVaultId[keyStore.id] ? (
+                    formatAddress(addressByVaultId[keyStore.id])
                   ) : (
                     <Skeleton height="14px" width="100px" />
                   )
@@ -130,11 +138,11 @@ export const YourWallets: FunctionComponent<YourWalletProps> = observer(
                 style={{
                   padding: "18px 16px",
                 }}
-                disabled={addresses?.length === 0}
+                disabled={!addressByVaultId[keyStore.id]}
                 onClick={async (e: any) => {
-                  if (addresses?.[i]) {
+                  const address = addressByVaultId[keyStore.id];
+                  if (address) {
                     e.preventDefault();
-                    const address = addresses[i];
                     selectWalletFromList(address);
                     onBackButton?.();
                   }

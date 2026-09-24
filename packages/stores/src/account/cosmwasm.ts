@@ -1,6 +1,7 @@
 import { AccountSetBase, AccountSetBaseSuper, MsgOpt } from "./base";
 import { CosmwasmQueries, IQueriesStore, QueriesSetBase } from "../query";
-import { ChainGetter, CoinPrimitive } from "../common";
+import { CoinPrimitive } from "../common";
+import { ChainGetter } from "../chain";
 import { DenomHelper } from "@keplr-wallet/common";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
 import { AppCurrency, KeplrSignOptions, StdFee } from "@keplr-wallet/types";
@@ -114,7 +115,8 @@ export class CosmwasmAccountImpl {
 
       Bech32Address.validate(
         recipient,
-        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+        this.chainGetter.getChain(this.chainId)?.bech32Config
+          ?.bech32PrefixAccAddr || ""
       );
 
       return this.makeExecuteContractTx(
@@ -232,7 +234,8 @@ export class CosmwasmAccountImpl {
   ) {
     Bech32Address.validate(
       contractAddress,
-      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
+      this.chainGetter.getChain(this.chainId).bech32Config
+        ?.bech32PrefixAccAddr || ""
     );
 
     const msg = {

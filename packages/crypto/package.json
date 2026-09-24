@@ -1,33 +1,37 @@
 {
   "name": "@keplr-wallet/crypto",
-  "version": "0.12.12",
+  "version": "0.13.11",
   "main": "build/index.js",
   "author": "chainapsis",
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chainapsis/keplr-wallet.git"
+  },
   "scripts": {
     "clean": "rm -rf node_modules; rm -rf build",
-    "build": "tsc",
-    "dev": "tsc -w",
-    "test": "jest --passWithNoTests",
-    "lint-test": "eslint \"src/**/*\" && prettier --check \"src/**/*\"",
-    "lint-fix": "eslint --fix \"src/**/*\" && prettier --write \"src/**/*\""
-  },
-  "devDependencies": {
-    "@types/crypto-js": "^4.0.1",
-    "@types/elliptic": "^6.4.12",
-    "@types/sha.js": "^2.4.0"
+    "build": "npx tsc",
+    "dev": "npx tsc -w",
+    "test": "npx jest --passWithNoTests",
+    "lint-test": "npx eslint \"src/**/*\" && npx prettier --check \"src/**/*\"",
+    "lint-fix": "npx eslint --fix \"src/**/*\" && npx prettier --write \"src/**/*\"",
+    "typecheck": "npx tsc -p tsconfig.check.json"
   },
   "dependencies": {
     "@ethersproject/keccak256": "^5.5.0",
+    "@noble/curves": "^1.4.2",
+    "@noble/hashes": "^1.4.0",
     "bip32": "^2.0.6",
     "bip39": "^3.0.3",
     "bs58check": "^2.1.2",
     "buffer": "^6.0.3",
-    "crypto-js": "^4.0.0",
-    "elliptic": "^6.5.3",
-    "sha.js": "^2.4.11"
+    "ecpair": "^2.1.0"
+  },
+  "peerDependencies": {
+    "bitcoinjs-lib": "^6",
+    "starknet": "^8"
   }
 }

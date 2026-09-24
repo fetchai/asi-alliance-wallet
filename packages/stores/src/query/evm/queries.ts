@@ -1,6 +1,6 @@
 import { QueriesSetBase } from "../queries";
-import { ChainGetter } from "../../common";
-import { KVStore } from "@keplr-wallet/common";
+import { QuerySharedContext } from "../../common";
+import { ChainGetter } from "../../chain";
 import { ObservableQueryEvmNativeBalanceRegistry } from "./balance";
 import { DeepReadonly } from "utility-types";
 import {
@@ -22,13 +22,13 @@ export interface EvmQueries {
 export const EvmQueries = {
   use(): (
     queriesSetBase: QueriesSetBase,
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter
   ) => EvmQueries {
     return (
       queriesSetBase: QueriesSetBase,
-      kvStore: KVStore,
+      kvStore: QuerySharedContext,
       chainId: string,
       chainGetter: ChainGetter
     ) => {
@@ -51,7 +51,7 @@ export class EvmQueriesImpl {
 
   constructor(
     base: QueriesSetBase,
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter
   ) {

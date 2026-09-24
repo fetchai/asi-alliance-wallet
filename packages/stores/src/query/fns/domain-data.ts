@@ -1,12 +1,13 @@
 import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter, ObservableQueryMap } from "../../common";
+import { ChainGetter } from "../../chain";
+import { ObservableQueryMap } from "../../common";
 import { computed } from "mobx";
 import { DomainData, DomainDataType } from "./types";
+import { QuerySharedContext } from "../../common";
 
 export class ObservableQueryDomainDataInner extends ObservableCosmwasmContractChainQuery<DomainData> {
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly contractAddress: string,
@@ -32,7 +33,7 @@ export class ObservableQueryDomainDataInner extends ObservableCosmwasmContractCh
 
 export class ObservableQueryDomainData extends ObservableQueryMap<DomainData> {
   constructor(
-    protected readonly kvStore: KVStore,
+    protected readonly kvStore: QuerySharedContext,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter
   ) {
