@@ -156,12 +156,10 @@ export class ChainStore extends BaseChainStore<ChainInfoWithCoreTypes> {
     });
   }
 
+  // On mobile "hideInUI" only means disabled by default; once enabled in Manage Networks it is shown.
   @computed
   get chainInfosInUI() {
     return this.chainInfos.filter((chainInfo) => {
-      if (chainInfo.hideInUI) {
-        return false;
-      }
       const chainIdentifier = ChainIdHelper.parse(chainInfo.chainId).identifier;
       return this.enabledChainIdentifiesMap.get(chainIdentifier);
     });

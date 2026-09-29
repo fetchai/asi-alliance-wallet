@@ -54,7 +54,7 @@ export class RootStore {
   public readonly chainStore: ChainStore;
   public readonly keyRingStore: KeyRingStore;
 
-  protected readonly interactionStore: InteractionStore;
+  public readonly interactionStore: InteractionStore;
   public readonly permissionStore: PermissionStore;
   public readonly generalPermissionStore: PermissionManagerStore;
   public readonly ledgerInitStore: LedgerInitStore;

@@ -149,6 +149,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     accountStore,
     chainStore,
     analyticsStore,
+    interactionStore,
   } = useStore();
 
   const style = useStyle();
@@ -380,6 +381,18 @@ export const UnlockScreen: FunctionComponent = observer(() => {
 
   useEffect(() => {
     if (keyRingStore.status === "unlocked") {
+      // Approve all waiting interaction for the enabling key ring.
+      const interactions = interactionStore.getAllData("unlock");
+      if (interactions.length > 0) {
+        interactionStore.approveWithProceedNextV2(
+          interactions.map((interaction) => interaction.id),
+          {},
+          () => {
+            // noop
+          }
+        );
+      }
+
       if (biometricNeedsReset.current) {
         biometricNeedsReset.current = false;
         const biometryLabel =
@@ -414,7 +427,13 @@ export const UnlockScreen: FunctionComponent = observer(() => {
         navigateToHome();
       }
     }
-  }, [keyRingStore.status, navigateToHome, keychainStore, password]);
+  }, [
+    keyRingStore.status,
+    navigateToHome,
+    keychainStore,
+    password,
+    interactionStore,
+  ]);
 
   if (keyRingStore.status === "empty" || keyRingStore.status === "not-loaded") {
     if (Platform.OS === "ios") {

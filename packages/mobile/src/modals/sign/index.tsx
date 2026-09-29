@@ -27,6 +27,7 @@ import { FeeInSign } from "modals/sign/fee";
 import { TabBarView } from "components/new/tab-bar/tab-bar";
 import { DataTab } from "./data-tab";
 import { LedgerTransectionGuideModel } from "modals/ledger/ledger-transection";
+import { signWithLedger } from "./ledger-sign";
 
 enum TransactionTabEnum {
   Details = "Details",
@@ -349,16 +350,27 @@ export const SignModal: FunctionComponent<{
               signInteractionStore.waitingData
             ) {
               setIsApproving(true);
+              const data = signInteractionStore.waitingData;
+              // The vault keyring expects the signature of Ledger keys from the UI.
+              let signature: Uint8Array | undefined;
+              if (data.data.keyType === "ledger") {
+                setShowLedgerGuide(true);
+                signature = await signWithLedger(
+                  data.data.keyInsensitive,
+                  signDocHelper.signDocWrapper
+                );
+              }
               await signInteractionStore.approveWithProceedNext(
-                signInteractionStore.waitingData.id,
+                data.id,
                 signDocHelper.signDocWrapper,
-                undefined,
+                signature,
                 () => {}
               );
             }
           } catch (error) {
             console.log("Sign:Error", error);
           } finally {
+            setShowLedgerGuide(false);
             setIsApproving(false);
           }
         }}

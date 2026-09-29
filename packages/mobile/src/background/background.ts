@@ -12,6 +12,7 @@ import { Platform } from "react-native";
 import TransportBLE from "@ledgerhq/react-native-hw-transport-ble";
 
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
+import { ChainIdHelper } from "@keplr-wallet/cosmos";
 
 import { CommunityChainInfoRepo, EmbedChainInfos } from "../config";
 import {
@@ -81,10 +82,13 @@ const { initFn } = init(
       const legacy = await kvStore.get<{ disabledChains: string[] }>(
         "chain_info_in_ui_config"
       );
-      if (!legacy) {
-        return [];
+      if (legacy?.disabledChains && legacy.disabledChains.length > 0) {
+        return legacy.disabledChains;
       }
-      return legacy.disabledChains ?? [];
+      // Like the legacy chain store, "hideInUI" chains are disabled when the user never changed them.
+      return EmbedChainInfos.filter(
+        (chainInfo) => "hideInUI" in chainInfo && chainInfo.hideInUI
+      ).map((chainInfo) => ChainIdHelper.parse(chainInfo.chainId).identifier);
     },
   },
   {
