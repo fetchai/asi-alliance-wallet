@@ -26,6 +26,7 @@ export const canShowPrivateData = (keyRingType: string): boolean => {
   return (
     keyRingType === "mnemonic" ||
     keyRingType === "privateKey" ||
+    keyRingType === "private-key" ||
     keyRingType === "ledger"
   );
 };

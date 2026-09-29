@@ -21,11 +21,14 @@ import {
 
 const router = new RNRouterBackground(RNEnv.produceEnv);
 
+const uiMessageRequester = new RNMessageRequesterInternalToUI();
+
 const { initFn } = init(
   router,
   (prefix: string) => new AsyncKVStore(prefix),
-  new RNMessageRequesterInternalToUI(),
-  undefined,
+  uiMessageRequester,
+  // Same UI requester: needed so interaction pings / pushes reach the app.
+  uiMessageRequester,
   EmbedChainInfos,
   [
     "https://app.osmosis.zone",
@@ -117,11 +120,11 @@ const { initFn } = init(
   }
 );
 
-const initFnWithLogs = async (markReady?: () => void) => {
+const initFnWithLogs = async () => {
   const started = Date.now();
   console.log("[background] init start");
   try {
-    await initFn(markReady);
+    await initFn();
     console.log(`[background] init done in ${Date.now() - started}ms`);
   } catch (e) {
     console.error(

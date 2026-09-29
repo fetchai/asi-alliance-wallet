@@ -1,7 +1,7 @@
 import { Buffer } from "buffer/";
 import { AGENT_ADDRESS } from "../../config";
 import { Platform } from "react-native";
-import { MultiKeyStoreInfoWithSelected } from "@keplr-wallet/background";
+import { KeyInfo } from "@keplr-wallet/background";
 import { RegisterMode } from "@keplr-wallet/hooks";
 import { CoinPretty, PricePretty } from "@keplr-wallet/unit";
 
@@ -223,13 +223,13 @@ export const numberLocalFormat = (number: string) => {
 };
 
 export const getNextDefaultAccountName = (
-  items: MultiKeyStoreInfoWithSelected,
+  items: KeyInfo[],
   prefix = "account"
 ): string => {
   if (items.length === 0) {
     return `${prefix}-1`;
   }
-  const lastName = items[items.length - 1]?.meta?.["name"] || "";
+  const lastName = items[items.length - 1]?.name || "";
   const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
   const lastNum = match ? Number(match[1]) : 0;
   return `${prefix}-${lastNum + 1}`;
@@ -237,15 +237,23 @@ export const getNextDefaultAccountName = (
 
 export const validateWalletName = (
   value: string,
-  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  keyInfos: KeyInfo[],
   registerConfigMode?: RegisterMode
 ) => {
   const alreadyImportedWalletNames = [
     ...new Set(
-      multiKeyStoreInfo?.flatMap((item) => {
-        const defaultName = item?.meta?.["name"];
-        const chainNames = item?.meta?.["nameByChain"]
-          ? Object.values(JSON.parse(item?.meta?.["nameByChain"]))
+      keyInfos?.flatMap((item) => {
+        const meta =
+          (item.insensitive?.["keyRingMeta"] as Record<string, any>) ?? {};
+        const defaultName = item.name;
+        const nameByChainRaw =
+          meta["nameByChain"] ?? item.insensitive?.["nameByChain"];
+        const chainNames = nameByChainRaw
+          ? Object.values(
+              typeof nameByChainRaw === "string"
+                ? JSON.parse(nameByChainRaw)
+                : nameByChainRaw
+            )
           : [];
         return [defaultName, ...chainNames].filter(Boolean);
       }) ?? []
@@ -271,14 +279,14 @@ export const validateWalletName = (
 
 export const validateAccountName = (
   value: string,
-  multiKeyStoreInfo: MultiKeyStoreInfoWithSelected,
+  keyInfos: KeyInfo[],
   mode: RegisterMode
 ): string | undefined => {
   const trimmedValue = value.trimStart();
   const isEmpty = trimmedValue === "";
   const { isValid, isValidFormat, containsLetterOrNumber } = validateWalletName(
     trimmedValue,
-    multiKeyStoreInfo,
+    keyInfos,
     mode
   );
 

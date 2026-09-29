@@ -7,6 +7,9 @@ export class RNEnv {
 
     return {
       isInternalMsg,
+      // Required by @keplr-wallet/background 0.13+ (permission / interaction).
+      // Without this, handlers crash on `env.sender.tab` and keyring UI can stall.
+      sender,
       requestInteraction: async (_, msg) => {
         // Url is not used in the mobile envirment.
         // Url is neccessary to open the popup to interact with user in the extension environment.

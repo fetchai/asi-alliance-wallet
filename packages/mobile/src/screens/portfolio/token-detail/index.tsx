@@ -77,8 +77,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
   useEffect(() => {
     if (tokenInfo?.coinGeckoId) {
       const fetchTokenImage = async () => {
-        const tokenImage =
-          chainStore.current?.["_chainInfo"]?.chainSymbolImageUrl;
+        const tokenImage = chainStore.current?.chainSymbolImageUrl;
         setTokenIcon(tokenImage);
       };
       fetchTokenImage();

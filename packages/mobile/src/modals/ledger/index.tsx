@@ -48,7 +48,8 @@ export enum BluetoothMode {
 export const LedgerGranterModal: FunctionComponent<{
   isOpen: boolean;
   close: () => void;
-}> = observer(({ isOpen, close }) => {
+  onSelectDevice?: (deviceId: string) => Promise<void>;
+}> = observer(({ isOpen, close, onSelectDevice }) => {
   const { ledgerInitStore } = useStore();
 
   const style = useStyle();
@@ -411,7 +412,11 @@ export const LedgerGranterModal: FunctionComponent<{
                   setIsPaired={setIsPaired}
                   onCanResume={async () => {
                     resumed.current = true;
-                    await ledgerInitStore.resumeAll(device.id);
+                    if (onSelectDevice) {
+                      await onSelectDevice(device.id);
+                    } else {
+                      await ledgerInitStore.resumeAll(device.id);
+                    }
                   }}
                 />
               );

@@ -218,11 +218,10 @@ export const SendPhase1: FunctionComponent<{
           title="Select Wallet"
           keyRingStore={keyRingStore}
           close={() => setChangeWalletModal(false)}
-          onChangeAccount={async (keyStore) => {
-            const index = keyRingStore.multiKeyStoreInfo.indexOf(keyStore);
-            if (index >= 0) {
+          onChangeAccount={async (keyInfo) => {
+            if (keyInfo.id) {
               loadingScreen.setIsLoading(true);
-              await keyRingStore.changeKeyRing(index);
+              await keyRingStore.selectKeyRing(keyInfo.id);
               loadingScreen.setIsLoading(false);
               analyticsStore.logEvent("select_wallet_click", {
                 pageName: "Send",
