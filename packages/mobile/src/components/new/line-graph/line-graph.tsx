@@ -104,10 +104,9 @@ export const LineGraph: FunctionComponent<{
 
         if (chartDataList.length > 0) {
           const firstValue = chartDataList[0].value || 0;
-          let lastValue = chartDataList[chartDataList.length - 1].value || 0;
+          const lastValue = chartDataList[chartDataList.length - 1].value || 0;
           const diff = lastValue - firstValue;
-          lastValue = lastValue > 0 ? lastValue : 1;
-          const percentageDiff = (diff / lastValue) * 100;
+          const percentageDiff = firstValue > 0 ? (diff / firstValue) * 100 : 0;
           const type = diff >= 0 ? "positive" : "negative";
           const timestamp = new Date().getTime();
 
