@@ -1,6 +1,6 @@
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
-import { ChainInfoWithSuggestedOptions } from "@fetchai/wallet-types";
+import { ChainInfoWithSuggestedOptions } from "@keplr-wallet/background";
 import {
   PROD_AMPLITUDE_API_KEY,
   DEV_AMPLITUDE_API_KEY,
@@ -2732,54 +2732,54 @@ export const EmbedChainInfos: (
     chainSymbolImageUrl: require("./assets/image/icon/dorado.png"),
     updateFromRepoDisabled: true,
   },
-  {
-    rpc: "https://rpc-gemini.fetch.ai",
-    rest: "https://rest-gemini.fetch.ai",
-    chainId: "gemini-1",
-    chainName: "Gemini Testnet",
-    hideInUI: false,
-    stakeCurrency: {
-      coinDenom: "TESTFET",
-      coinMinimalDenom: "atestfet",
-      coinDecimals: 18,
-      coinGeckoId: "fetch-ai",
-    },
-    bip44: {
-      coinType: 118,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("fetch"),
-    isTestnet: true,
-    currencies: [
-      {
-        coinDenom: "TESTFET",
-        coinMinimalDenom: "atestfet",
-        coinDecimals: 18,
-        coinGeckoId: "fetch-ai",
-      },
-      {
-        coinDenom: "MOBX",
-        coinMinimalDenom: "nanomobx",
-        coinDecimals: 9,
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "TESTFET",
-        coinMinimalDenom: "atestfet",
-        coinDecimals: 18,
-        coinGeckoId: "fetch-ai",
-        gasPriceStep: {
-          low: 0,
-          average: 5000000000,
-          high: 6250000000,
-        },
-      },
-    ],
-    features: ["cosmwasm"],
-    walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
-    govUrl: "https://explore-dorado.fetch.ai/proposals/",
-    updateFromRepoDisabled: true,
-  },
+  // {
+  //   rpc: "https://rpc-gemini.fetch.ai",
+  //   rest: "https://rest-gemini.fetch.ai",
+  //   chainId: "gemini-1",
+  //   chainName: "Gemini Testnet",
+  //   hideInUI: false,
+  //   stakeCurrency: {
+  //     coinDenom: "TESTFET",
+  //     coinMinimalDenom: "atestfet",
+  //     coinDecimals: 18,
+  //     coinGeckoId: "fetch-ai",
+  //   },
+  //   bip44: {
+  //     coinType: 118,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("fetch"),
+  //   isTestnet: true,
+  //   currencies: [
+  //     {
+  //       coinDenom: "TESTFET",
+  //       coinMinimalDenom: "atestfet",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //     },
+  //     {
+  //       coinDenom: "MOBX",
+  //       coinMinimalDenom: "nanomobx",
+  //       coinDecimals: 9,
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "TESTFET",
+  //       coinMinimalDenom: "atestfet",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //       gasPriceStep: {
+  //         low: 0,
+  //         average: 5000000000,
+  //         high: 6250000000,
+  //       },
+  //     },
+  //   ],
+  //   features: ["cosmwasm"],
+  //   walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
+  //   govUrl: "https://explore-dorado.fetch.ai/proposals/",
+  //   updateFromRepoDisabled: true,
+  // },
   // {
   //   rpc: "https://rpc-eridanus-1.fetch.ai",
   //   rest: "https://rest-eridanus-1.fetch.ai",
