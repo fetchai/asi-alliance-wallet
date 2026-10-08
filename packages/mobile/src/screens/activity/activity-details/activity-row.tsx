@@ -5,6 +5,7 @@ import { RectButton } from "components/rect-button";
 import { useSimpleTimer } from "hooks/use-simple-timer";
 import LottieView from "lottie-react-native";
 import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 import { CopyIcon } from "components/new/icon/copy-icon";
 
 export const DetailRow = ({
@@ -37,6 +38,10 @@ export const DetailRow = ({
             ? async () => {
                 await Clipboard.setStringAsync(hash);
                 setTimer(2000);
+                Toast.show({
+                  type: "success",
+                  text1: "Transaction Hash Copied",
+                });
               }
             : undefined
         }

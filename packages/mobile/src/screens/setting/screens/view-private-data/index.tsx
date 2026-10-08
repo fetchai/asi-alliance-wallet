@@ -4,6 +4,7 @@ import { useStyle } from "styles/index";
 import { CheckIcon } from "components/icon";
 import { Button } from "components/button";
 import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 import { PageWithScrollView } from "components/page";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { useSimpleTimer } from "hooks/use-simple-timer";
@@ -176,6 +177,13 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                 privateDataType === "ledger" ? words["cosmos"] : words.join(" ")
               );
               setTimer(3000);
+              Toast.show({
+                type: "success",
+                text1:
+                  privateDataType === "mnemonic"
+                    ? "Mnemonic Seed Copied"
+                    : "Private Key Copied",
+              });
             }}
           />
         </View>
