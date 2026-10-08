@@ -36,6 +36,7 @@ import { ChainInfoWithCoreTypes } from "@keplr-wallet/background";
 import { RNEnv, RNRouterUI, RNMessageRequesterInternal } from "../router";
 import { ChainStore } from "./chain";
 import EventEmitter from "eventemitter3";
+import { reaction } from "mobx";
 import { Keplr } from "@keplr-wallet/provider";
 import { KeychainStore } from "./keychain";
 import { WalletConnectStore } from "./wallet-connect";
@@ -647,6 +648,26 @@ export class RootStore {
         },
       },
       "usd"
+    );
+
+    // CoinGeckoPriceStore keeps the selected currency in memory only, so
+    // persist it here and restore it on launch.
+    const uiSettingsStore = new AsyncKVStore("store_ui_settings");
+    uiSettingsStore
+      .get<string>("default_vs_currency")
+      .then((saved) => {
+        if (saved && this.priceStore.supportedVsCurrencies[saved]) {
+          this.priceStore.setDefaultVsCurrency(saved);
+        }
+      })
+      .catch((e) => console.log("Failed to restore currency", e));
+    reaction(
+      () => this.priceStore.defaultVsCurrency,
+      (vsCurrency) => {
+        uiSettingsStore
+          .set("default_vs_currency", vsCurrency)
+          .catch((e) => console.log("Failed to save currency", e));
+      }
     );
 
     this.tokensStore = new TokensStore(
