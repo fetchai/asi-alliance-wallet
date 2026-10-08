@@ -10,12 +10,20 @@ import { EyeIcon } from "components/new/icon/eye";
 import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import { useStore } from "stores/index";
 
+// Wrong-password errors thrown by the keychain store ("Invalid password"),
+// the vault ("User password mac unmatched", "Password unmatched") and the
+// legacy keyring ("Unmatched mac").
+const isWrongPasswordError = (message: string) =>
+  message === "Invalid password" ||
+  message === "Password unmatched" ||
+  /mac unmatched|unmatched mac/i.test(message);
+
 export const PasswordInputModal: FunctionComponent<{
   isOpen: boolean;
   close: () => void;
   title: string;
   /**
-   * Password field only shows "Invalid password". Other failures use Alert.
+   * Wrong-password errors show "Invalid password" on the field. Other failures use Alert.
    * @param password
    */
   onEnterPassword: (password: string) => Promise<void>;
@@ -49,7 +57,7 @@ export const PasswordInputModal: FunctionComponent<{
           ? e.message
           : "Invalid password";
 
-      if (message === "Invalid password") {
+      if (isWrongPasswordError(message)) {
         setIsInvalidPassword(true);
       } else {
         setIsInvalidPassword(false);
