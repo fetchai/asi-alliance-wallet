@@ -25,6 +25,7 @@ import { LoadingSpinner } from "components/spinner";
 import { RectButton } from "components/rect-button";
 import { observer } from "mobx-react-lite";
 import { BlurBackground } from "../blur-background/blur-background";
+import { formatFeeAmount } from "utils/format/format";
 export interface FeeButtonsProps {
   labelStyle?: TextStyle;
   containerStyle?: ViewProps;
@@ -258,7 +259,9 @@ export const FeeButtonsInner: FunctionComponent<FeeButtonsProps> = observer(
                 ] as ViewStyle
               }
             >
-              {amount?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+              {amount
+                ? formatFeeAmount(amount.hideIBCMetadata(true), isEvm)
+                : ""}
             </Text>
           </RectButton>
         </BlurBackground>

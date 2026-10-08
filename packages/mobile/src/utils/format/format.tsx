@@ -3,7 +3,7 @@ import { AGENT_ADDRESS } from "../../config";
 import { Platform } from "react-native";
 import { KeyInfo } from "@keplr-wallet/background";
 import { RegisterMode } from "@keplr-wallet/hooks";
-import { CoinPretty, PricePretty } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, DecUtils, PricePretty } from "@keplr-wallet/unit";
 
 export const separateNumericAndDenom = (value: any) => {
   const data = value ? value.split(" ") : ["", ""];
@@ -156,6 +156,43 @@ export const removeTrailingZeros = (number: string) => {
 };
 
 export const removeComma = (value: string) => value.replace(/,/g, "");
+
+const feeMetricPrefixes: { exponent: number; prefix: string; evm: string }[] = [
+  { exponent: 3, prefix: "milli", evm: "pwei" },
+  { exponent: 6, prefix: "micro", evm: "twei" },
+  { exponent: 9, prefix: "nano", evm: "gwei" },
+  { exponent: 12, prefix: "pico", evm: "mwei" },
+  { exponent: 15, prefix: "femto", evm: "kwei" },
+  { exponent: 18, prefix: "atto", evm: "wei" },
+];
+
+/**
+ * Formats a fee amount. Replaces CoinPretty.toMetricPrefix, which drops the
+ * integer part (52.49… → "494932908094.26 pico") and the leading zeros of the
+ * fraction (0.5 → "5"). Amounts below 0.001 use a metric prefix computed from
+ * the whole value; everything else is shown in the base denom.
+ */
+export const formatFeeAmount = (fee: CoinPretty, isEvm = false): string => {
+  const amount = fee.toDec();
+  if (amount.isZero() || amount.gte(new Dec("0.001"))) {
+    return fee.maxDecimals(6).trim(true).toString();
+  }
+
+  const one = new Dec(1);
+  const metric =
+    feeMetricPrefixes.find(({ exponent }) =>
+      amount.mul(DecUtils.getTenExponentN(exponent)).gte(one)
+    ) ?? feeMetricPrefixes[feeMetricPrefixes.length - 1];
+
+  const numberPart = fee
+    .moveDecimalPointRight(metric.exponent)
+    .maxDecimals(4)
+    .trim(true)
+    .hideDenom(true)
+    .toString();
+  const denom = fee.hideAmount(true).toString();
+  return `${numberPart} ${isEvm ? metric.evm : metric.prefix} ${denom}`;
+};
 
 export const formatBalance = (
   balance: CoinPretty,
