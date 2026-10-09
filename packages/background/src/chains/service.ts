@@ -1154,17 +1154,8 @@ export class ChainsService {
             currency.coinMinimalDenom
           );
 
-          const newCurrency = {
-            ...currency,
-          };
-
-          // If testnet, remove coingecko id
-          if (newChainInfo.isTestnet) {
-            delete newCurrency.coinGeckoId;
-          }
-
           return {
-            ...newCurrency,
+            ...currency,
             coinMinimalDenom,
           };
         }),
@@ -1174,17 +1165,8 @@ export class ChainsService {
             feeCurrency.coinMinimalDenom
           );
 
-          const newFeeCurrency = {
-            ...feeCurrency,
-          };
-
-          // If testnet, remove coingecko id
-          if (newChainInfo.isTestnet) {
-            delete newFeeCurrency.coinGeckoId;
-          }
-
           return {
-            ...newFeeCurrency,
+            ...feeCurrency,
             coinMinimalDenom,
           };
         }),

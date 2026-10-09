@@ -18,8 +18,9 @@ import { PasswordInputModal } from "modals/password-input/modal";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { ConfirmCardModel } from "components/new/confirm-modal";
 import { DeleteWalletIcon } from "components/new/icon/delete-wallet";
+import { observer } from "mobx-react-lite";
 
-export const DeleteWalletScreen: FunctionComponent = () => {
+export const DeleteWalletScreen: FunctionComponent = observer(() => {
   const { keyRingStore, keychainStore, analyticsStore } = useStore();
   const style = useStyle();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -33,16 +34,15 @@ export const DeleteWalletScreen: FunctionComponent = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const showPrivateData = canShowPrivateData(keyRingStore.keyRingType);
+  const selectedKeyInfo = keyRingStore.selectedKeyInfo;
+  const selectedKeyType = selectedKeyInfo?.type ?? "";
+  const showPrivateData = canShowPrivateData(selectedKeyType);
 
   const submitPassword = async () => {
     setIsLoading(true);
-    const index = keyRingStore.multiKeyStoreInfo.findIndex(
-      (keyStore) => keyStore.selected
-    );
     try {
-      if (index >= 0) {
-        await keyRingStore.showKeyRing(index, password);
+      if (selectedKeyInfo) {
+        await keyRingStore.showKeyRing(selectedKeyInfo.id, password);
         setIsInvalidPassword(false);
         setConfirmModal(true);
       }
@@ -160,20 +160,17 @@ export const DeleteWalletScreen: FunctionComponent = () => {
         isOpen={isOpenModal}
         close={() => setIsOpenModal(false)}
         title={`Enter your password to view your ${
-          keyRingStore.keyRingType === "mnemonic"
-            ? "mnemonic seed"
-            : "private key"
+          selectedKeyType === "mnemonic" ? "mnemonic seed" : "private key"
         }`}
         onEnterPassword={async (password) => {
-          const index = keyRingStore.multiKeyStoreInfo.findIndex(
-            (keyStore) => keyStore.selected
-          );
-
-          if (index >= 0) {
-            const privateData = await keyRingStore.showKeyRing(index, password);
+          if (selectedKeyInfo) {
+            const privateData = await keyRingStore.showKeyRing(
+              selectedKeyInfo.id,
+              password
+            );
             smartNavigation.navigateSmart("Setting.ViewPrivateData", {
               privateData,
-              privateDataType: keyRingStore.keyRingType,
+              privateDataType: selectedKeyType,
             });
           }
         }}
@@ -185,13 +182,10 @@ export const DeleteWalletScreen: FunctionComponent = () => {
         subtitle={"Are you sure you want to delete this wallet?"}
         select={async (confirm: boolean) => {
           if (confirm) {
-            const index = keyRingStore.multiKeyStoreInfo.findIndex(
-              (keyStore) => keyStore.selected
-            );
             try {
-              if (index >= 0) {
-                await keyRingStore.deleteKeyRing(index, password);
-                if (keyRingStore.multiKeyStoreInfo.length === 0) {
+              if (selectedKeyInfo) {
+                await keyRingStore.deleteKeyRing(selectedKeyInfo.id, password);
+                if (keyRingStore.keyInfos.length === 0) {
                   await keychainStore.reset();
                   navigation.reset({
                     index: 0,
@@ -223,4 +217,4 @@ export const DeleteWalletScreen: FunctionComponent = () => {
       />
     </PageWithScrollView>
   );
-};
+});

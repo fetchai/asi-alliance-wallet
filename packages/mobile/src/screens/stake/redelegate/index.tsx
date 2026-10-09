@@ -28,7 +28,11 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { txnTypeKey } from "components/new/txn-status.tsx";
-import { formatBalance, formatFiatBalance } from "utils/format/format";
+import {
+  formatBalance,
+  formatFiatBalance,
+  formatFeeAmount,
+} from "utils/format/format";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const RedelegateScreen: FunctionComponent = observer(() => {
@@ -453,7 +457,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             }
           >
             {feePrice
-              ? feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+              ? formatFeeAmount(feePrice.hideIBCMetadata(true), isEvm)
               : ""}
           </Text>
           <IconButton

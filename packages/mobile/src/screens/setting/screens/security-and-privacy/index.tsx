@@ -18,7 +18,9 @@ export const SecurityAndPrivacyScreen: FunctionComponent = observer(() => {
 
   const smartNavigation = useSmartNavigation();
 
-  const showPrivateData = canShowPrivateData(keyRingStore.keyRingType);
+  const showPrivateData = canShowPrivateData(
+    keyRingStore.selectedKeyInfo?.type ?? ""
+  );
 
   const style = useStyle();
 

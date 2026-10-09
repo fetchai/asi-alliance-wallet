@@ -9435,16 +9435,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethereumjs/tx@npm:3.5.1":
-  version: 3.5.1
-  resolution: "@ethereumjs/tx@npm:3.5.1"
-  dependencies:
-    "@ethereumjs/common": ^2.6.3
-    ethereumjs-util: ^7.1.4
-  checksum: ed17780314592eca96f7aed392707b55af713964a9ac8e5a1ba5b1a0d7cd90ced80d3793bc24e2ce7a5b4852cefae31af8731c5cf54cece48ada16c5dcb2713b
-  languageName: node
-  linkType: hard
-
 "@ethereumjs/tx@npm:^3.5.2":
   version: 3.5.2
   resolution: "@ethereumjs/tx@npm:3.5.2"
@@ -12802,15 +12792,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keplr-wallet/analytics@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/analytics@npm:0.12.12"
-  dependencies:
-    sha.js: ^2.4.11
-  checksum: 6a38d03fa276ec2ff59a49bb5b3b526e15ba0dcb73ba1d9dd209f251a2bab178d78808bf1820fd184c41287e48bf9a752c0da8ba91ac835912af9d60f9a09182
-  languageName: node
-  linkType: hard
-
 "@keplr-wallet/background@0.13.11, @keplr-wallet/background@workspace:packages/background":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/background@workspace:packages/background"
@@ -12866,53 +12847,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keplr-wallet/background@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/background@npm:0.12.12"
-  dependencies:
-    "@ethereumjs/common": ^2.6.5
-    "@ethereumjs/tx": ^3.5.2
-    "@ethersproject/hash": ^5.7.0
-    "@ethersproject/transactions": ^5.7.0
-    "@ethersproject/wallet": ^5.7.0
-    "@keplr-wallet/chain-validator": 0.12.12
-    "@keplr-wallet/common": 0.12.12
-    "@keplr-wallet/cosmos": 0.12.12
-    "@keplr-wallet/crypto": 0.12.12
-    "@keplr-wallet/ledger-cosmos": 0.12.12
-    "@keplr-wallet/popup": 0.12.12
-    "@keplr-wallet/proto-types": 0.12.12
-    "@keplr-wallet/router": 0.12.12
-    "@keplr-wallet/simple-fetch": 0.12.12
-    "@keplr-wallet/types": 0.12.12
-    "@keplr-wallet/unit": 0.12.12
-    "@keystonehq/base-eth-keyring": ^0.6.4
-    "@keystonehq/bc-ur-registry": ^0.5.1
-    "@keystonehq/bc-ur-registry-cosmos": ^0.1.1
-    "@keystonehq/bc-ur-registry-eth": ^0.11.4
-    "@keystonehq/cosmos-keyring": ^0.0.3
-    "@ledgerhq/hw-app-eth": ^6.29.3
-    "@ledgerhq/hw-transport": ^6.20.0
-    "@ledgerhq/hw-transport-webhid": ^6.20.0
-    "@ledgerhq/hw-transport-webusb": ^6.20.0
-    "@noble/hashes": 1.0.0
-    aes-js: ^3.1.2
-    big-integer: ^1.6.48
-    bip39: ^3.0.2
-    buffer: ^6.0.3
-    curve25519-js: 0.0.4
-    delay: ^4.4.0
-    joi: ^17.5.0
-    long: ^4.0.0
-    miscreant: 0.3.2
-    mobx: ^6.1.7
-    mobx-utils: ^6.0.3
-    pbkdf2: ^3.1.2
-    utility-types: ^3.10.0
-  checksum: db1e108d4b3c2447b419c684e5667266b6ac7b4a702bce30ca20b70bac787f78ed895d47b311a7718caf02fee9d355416bb20731598ad15d49970bb8ab1dc7f6
-  languageName: node
-  linkType: hard
-
 "@keplr-wallet/chain-validator@0.13.11, @keplr-wallet/chain-validator@workspace:packages/chain-validator":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/chain-validator@workspace:packages/chain-validator"
@@ -12925,19 +12859,6 @@ __metadata:
     utility-types: ^3.10.0
   languageName: unknown
   linkType: soft
-
-"@keplr-wallet/chain-validator@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/chain-validator@npm:0.12.12"
-  dependencies:
-    "@keplr-wallet/cosmos": 0.12.12
-    "@keplr-wallet/simple-fetch": 0.12.12
-    "@keplr-wallet/types": 0.12.12
-    joi: ^17.5.0
-    utility-types: ^3.10.0
-  checksum: 103e5e96a3cea4bd074b596b9f9791db8e318abf44461ec1419e36bb1730bdd6442753e51760ee69e60e3cde0c38f35fc44df584857b099825a8c4e72036e8b3
-  languageName: node
-  linkType: hard
 
 "@keplr-wallet/common@0.13.11, @keplr-wallet/common@workspace:packages/common":
   version: 0.0.0-use.local
@@ -13241,32 +13162,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keplr-wallet/hooks@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/hooks@npm:0.12.12"
-  dependencies:
-    "@ethersproject/address": ^5.6.0
-    "@keplr-wallet/background": 0.12.12
-    "@keplr-wallet/common": 0.12.12
-    "@keplr-wallet/cosmos": 0.12.12
-    "@keplr-wallet/crypto": 0.12.12
-    "@keplr-wallet/proto-types": 0.12.12
-    "@keplr-wallet/simple-fetch": 0.12.12
-    "@keplr-wallet/stores": 0.12.12
-    "@keplr-wallet/stores-etc": 0.12.12
-    "@keplr-wallet/types": 0.12.12
-    "@keplr-wallet/unit": 0.12.12
-    buffer: ^6.0.3
-    long: ^4.0.0
-    utility-types: ^3.10.0
-  peerDependencies:
-    mobx: ^6
-    mobx-utils: ^6
-    react: ^16.8.0 || ^17 || ^18
-  checksum: 462355f8b00476ee0cf7159a5a7c42083d9d274992e24adc1b84128b40c61ebe88dd997195436a7db1406af22ab0fbbcf9efa984a519e32962e96a6dfcee1504
-  languageName: node
-  linkType: hard
-
 "@keplr-wallet/ledger-cosmos@0.13.11, @keplr-wallet/ledger-cosmos@workspace:packages/ledger-cosmos":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/ledger-cosmos@workspace:packages/ledger-cosmos"
@@ -13274,15 +13169,6 @@ __metadata:
     buffer: ^6.0.3
   languageName: unknown
   linkType: soft
-
-"@keplr-wallet/ledger-cosmos@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/ledger-cosmos@npm:0.12.12"
-  dependencies:
-    buffer: ^6.0.3
-  checksum: aa8cebaea7998c2f6762d7d362c16206e162db1de0e04219e3ee2a2bafbd0ccb7b35bbe4e9bd5221d2c8ff68156774ce9397a238358a9fc16dd9f47f65f4c16e
-  languageName: node
-  linkType: hard
 
 "@keplr-wallet/mobx-utils@0.13.11, @keplr-wallet/mobx-utils@workspace:packages/mobx-utils":
   version: 0.0.0-use.local
@@ -13299,13 +13185,6 @@ __metadata:
   resolution: "@keplr-wallet/popup@workspace:packages/popup"
   languageName: unknown
   linkType: soft
-
-"@keplr-wallet/popup@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/popup@npm:0.12.12"
-  checksum: 29c3c97e6d9f23b871402bab4e5df425a171c06effa41d2ce421430fa07ff527a5434ff9aaa2596ff49a5b22c955789689ec39a772e4123ee87ee98cf1f2444a
-  languageName: node
-  linkType: hard
 
 "@keplr-wallet/proto-types@0.13.11, @keplr-wallet/proto-types@workspace:packages/proto-types":
   version: 0.0.0-use.local
@@ -13376,19 +13255,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keplr-wallet/provider@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/provider@npm:0.12.12"
-  dependencies:
-    "@keplr-wallet/router": 0.12.12
-    "@keplr-wallet/types": 0.12.12
-    buffer: ^6.0.3
-    deepmerge: ^4.2.2
-    long: ^4.0.0
-  checksum: 62072c8680931eb79fb6c79e6a3c21e945a70b06738eef6a0b4155bf266fdee49340e313bcdf3a23c39f46edced7abfe50dbe79a60d742f3eaaa44242879b1de
-  languageName: node
-  linkType: hard
-
 "@keplr-wallet/router-extension@0.13.11, @keplr-wallet/router-extension@workspace:packages/router-extension":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/router-extension@workspace:packages/router-extension"
@@ -13412,13 +13278,6 @@ __metadata:
   resolution: "@keplr-wallet/router@workspace:packages/router"
   languageName: unknown
   linkType: soft
-
-"@keplr-wallet/router@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/router@npm:0.12.12"
-  checksum: d27d9e5f3d50f42b36ed10b82fda491ffaeddd058b0f10b4ba9c4cb0d6c1439f6779b33cbec4d07c7258b60b498354f1feee033a76a0a3b6cd8ab9c2e631ae9b
-  languageName: node
-  linkType: hard
 
 "@keplr-wallet/simple-fetch@0.13.11, @keplr-wallet/simple-fetch@workspace:packages/simple-fetch":
   version: 0.0.0-use.local
@@ -13488,23 +13347,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@keplr-wallet/stores-etc@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/stores-etc@npm:0.12.12"
-  dependencies:
-    "@ethersproject/abi": ^5.6.0
-    "@keplr-wallet/common": 0.12.12
-    "@keplr-wallet/simple-fetch": 0.12.12
-    "@keplr-wallet/stores": 0.12.12
-    "@keplr-wallet/types": 0.12.12
-    "@keplr-wallet/unit": 0.12.12
-    mobx: ^6.1.7
-    mobx-utils: ^6.0.3
-    utility-types: ^3.10.0
-  checksum: 6006591137cada2a8cab01affe409f7ab42891d2117ab50a1a031b57ad63e70bb2b2e242ca2e08973188440264fb68c55255e5dd0e4a71818f38c5f323d7ba6a
-  languageName: node
-  linkType: hard
-
 "@keplr-wallet/stores-ibc@0.13.11, @keplr-wallet/stores-ibc@workspace:packages/stores-ibc":
   version: 0.0.0-use.local
   resolution: "@keplr-wallet/stores-ibc@workspace:packages/stores-ibc"
@@ -13556,31 +13398,6 @@ __metadata:
     mobx-utils: ^6
   languageName: unknown
   linkType: soft
-
-"@keplr-wallet/stores@npm:0.12.12":
-  version: 0.12.12
-  resolution: "@keplr-wallet/stores@npm:0.12.12"
-  dependencies:
-    "@keplr-wallet/background": 0.12.12
-    "@keplr-wallet/common": 0.12.12
-    "@keplr-wallet/cosmos": 0.12.12
-    "@keplr-wallet/crypto": 0.12.12
-    "@keplr-wallet/proto-types": 0.12.12
-    "@keplr-wallet/router": 0.12.12
-    "@keplr-wallet/simple-fetch": 0.12.12
-    "@keplr-wallet/types": 0.12.12
-    "@keplr-wallet/unit": 0.12.12
-    buffer: ^6.0.3
-    deepmerge: ^4.2.2
-    eventemitter3: ^4.0.7
-    long: ^4.0.0
-    mobx: ^6.1.7
-    mobx-utils: ^6.0.3
-    p-queue: ^6.6.2
-    utility-types: ^3.10.0
-  checksum: fe3f8a584feccb5f8ce366de4b2d5c462f4ce72a4209b7aa80651087ac2cca4d7583c968efe4f57305576a5695f0a543d2520081426204ac6ef6c65a38068aad
-  languageName: node
-  linkType: hard
 
 "@keplr-wallet/types@0.13.11, @keplr-wallet/types@workspace:packages/types":
   version: 0.0.0-use.local
@@ -13691,19 +13508,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@keystonehq/base-eth-keyring@npm:^0.6.4":
-  version: 0.6.4
-  resolution: "@keystonehq/base-eth-keyring@npm:0.6.4"
-  dependencies:
-    "@ethereumjs/tx": 3.5.1
-    "@keystonehq/bc-ur-registry-eth": ^0.11.4
-    ethereumjs-util: ^7.0.8
-    hdkey: ^2.0.1
-    uuid: ^8.3.2
-  checksum: ed2a2e5b720e2fdb5972475d753e051f79f875844497e54480d8b2213d0b928a15a0450c9d6c8c756b31b58defd6d842b28e008365c99fba5d6b3a2e79626b39
-  languageName: node
-  linkType: hard
-
 "@keystonehq/bc-ur-registry-aptos@npm:^0.3.2":
   version: 0.3.2
   resolution: "@keystonehq/bc-ur-registry-aptos@npm:0.3.2"
@@ -13735,17 +13539,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@keystonehq/bc-ur-registry-cosmos@npm:^0.1.1":
-  version: 0.1.6
-  resolution: "@keystonehq/bc-ur-registry-cosmos@npm:0.1.6"
-  dependencies:
-    "@keystonehq/bc-ur-registry": 0.5.4
-    bs58check: ^2.1.2
-    uuid: ^8.3.2
-  checksum: a9f84e53a5c64793d2fde305067fc18635c23543c9843fb7516cb7d9ed28c4a3944b70fa698e9ef5928bd71f5a1b98cbe4b6dd23574cbbff8bef6e2946a1d17a
-  languageName: node
-  linkType: hard
-
 "@keystonehq/bc-ur-registry-cosmos@npm:^0.2.2":
   version: 0.2.2
   resolution: "@keystonehq/bc-ur-registry-cosmos@npm:0.2.2"
@@ -13754,18 +13547,6 @@ __metadata:
     bs58check: ^2.1.2
     uuid: ^8.3.2
   checksum: d1185b9e3b36d9241640f45a37683d72185334e51c7afaa51ed61f24aa5d7c60df0317c3bcfe6c86c9981f8c873924d489dab3e85e9a527bd57a7a9719084fa7
-  languageName: node
-  linkType: hard
-
-"@keystonehq/bc-ur-registry-eth@npm:^0.11.4":
-  version: 0.11.4
-  resolution: "@keystonehq/bc-ur-registry-eth@npm:0.11.4"
-  dependencies:
-    "@keystonehq/bc-ur-registry": ^0.5.0-alpha.5
-    ethereumjs-util: ^7.0.8
-    hdkey: ^2.0.1
-    uuid: ^8.3.2
-  checksum: ec46d6393f70f111657bfbb4641e5d6f246a7bbdb9bb6fb2cafef13d8138a8d84a7c8f003874c05cb83c2013031d7be6fb2749bcfc8d7833d6a2e6511a8650e4
   languageName: node
   linkType: hard
 
@@ -13878,7 +13659,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@keystonehq/bc-ur-registry@npm:^0.5.0, @keystonehq/bc-ur-registry@npm:^0.5.0-alpha.5, @keystonehq/bc-ur-registry@npm:^0.5.1, @keystonehq/bc-ur-registry@npm:^0.5.4":
+"@keystonehq/bc-ur-registry@npm:^0.5.4":
   version: 0.5.5
   resolution: "@keystonehq/bc-ur-registry@npm:0.5.5"
   dependencies:
@@ -13897,18 +13678,6 @@ __metadata:
     bs58check: ^2.1.2
     tslib: ^2.3.0
   checksum: 8b73edd304fc2c6a7faa3fae320348e9fc58493c2d75276b792ef37560534e18117c114bfb9edddd90639e81710dd660fb1a405d7c5de05e17d44613c691fdb3
-  languageName: node
-  linkType: hard
-
-"@keystonehq/cosmos-keyring@npm:^0.0.3":
-  version: 0.0.3
-  resolution: "@keystonehq/cosmos-keyring@npm:0.0.3"
-  dependencies:
-    "@keystonehq/bc-ur-registry": ^0.5.0
-    "@keystonehq/bc-ur-registry-cosmos": ^0.1.1
-    "@keystonehq/sdk": ^0.15.2
-    uuid: ^8.3.2
-  checksum: 06fcd26a4d994467f36a9a38de15439a8f4cf4501e7475b7330b034a362d3fcd8200a9e6a40e5a6fb475a6c527653156225cc94d9e19ced5a38dcf65ccbe30da
   languageName: node
   linkType: hard
 
@@ -13976,22 +13745,6 @@ __metadata:
     ripple-binary-codec: ^1.4.3
     uuid: ^9.0.0
   checksum: c0669262b4265ced83e74fa5f3876973d3c940bdc09fb605494242e69d3e28c926a3ff8dd2090cb99b7318a141dc08f65e16ae99ff31f2fa70f4a32cf090dece
-  languageName: node
-  linkType: hard
-
-"@keystonehq/sdk@npm:^0.15.2":
-  version: 0.15.7
-  resolution: "@keystonehq/sdk@npm:0.15.7"
-  dependencies:
-    "@ngraveio/bc-ur": ^1.0.0
-    qrcode.react: ^1.0.1
-    react-modal: ^3.12.1
-    react-qr-reader: ^2.2.1
-    rxjs: ^6.6.3
-  peerDependencies:
-    react: "*"
-    react-dom: "*"
-  checksum: 8814686550d71c1285cae5eb4c8b838746d3079f662e3e83dc4ac92c0f6f0ed99f49bd2d396f580bd568f5ac741f432cf4ac028bdb30b511dc669333700555b3
   languageName: node
   linkType: hard
 
@@ -14063,15 +13816,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ledgerhq/devices@npm:8.16.0":
-  version: 8.16.0
-  resolution: "@ledgerhq/devices@npm:8.16.0"
-  dependencies:
-    semver: 7.7.3
-  checksum: 8175b0c6bd918273140fd6b8ff9760091a57abe7cf8886cfdfd14f43059384db27753c886aaae6d870d5db3776600dd7c3fb71f07509240abf3d59495e520640
-  languageName: node
-  linkType: hard
-
 "@ledgerhq/devices@npm:^6.20.0":
   version: 6.20.0
   resolution: "@ledgerhq/devices@npm:6.20.0"
@@ -14129,13 +13873,6 @@ __metadata:
   version: 6.29.0
   resolution: "@ledgerhq/errors@npm:6.29.0"
   checksum: 423231fd475712eefa1a26e2b48534d6e96d360fe9600050955d5463935cd9ddabe826de395b3bfcbe38e0d03e283f1651fd815961d6230580a2248378a162f5
-  languageName: node
-  linkType: hard
-
-"@ledgerhq/errors@npm:^6.37.0":
-  version: 6.37.0
-  resolution: "@ledgerhq/errors@npm:6.37.0"
-  checksum: 2188813285d1cea9a033d9df89b634eb3445b1cbef91d84964f0cfe4c87c88f0e3a51ae5f01c4c863a6ddeb12f4269e3fa55d671a45f62a0e705a2b3ebabf5b2
   languageName: node
   linkType: hard
 
@@ -14225,18 +13962,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ledgerhq/hw-transport-webhid@npm:^6.20.0":
-  version: 6.36.0
-  resolution: "@ledgerhq/hw-transport-webhid@npm:6.36.0"
-  dependencies:
-    "@ledgerhq/devices": 8.16.0
-    "@ledgerhq/errors": ^6.37.0
-    "@ledgerhq/hw-transport": 6.35.5
-    "@ledgerhq/logs": ^6.17.0
-  checksum: 6d932ee34aaa2b5801a22584e226ed67bb1f05e31790eb238c42f420bdc68705487fe071672167fdbe23cf871fc905bdbd1623609b4b2548e7a0827e8582f6b2
-  languageName: node
-  linkType: hard
-
 "@ledgerhq/hw-transport-webhid@npm:^6.29.4":
   version: 6.31.0
   resolution: "@ledgerhq/hw-transport-webhid@npm:6.31.0"
@@ -14246,18 +13971,6 @@ __metadata:
     "@ledgerhq/hw-transport": 6.32.0
     "@ledgerhq/logs": ^6.14.0
   checksum: 81d9695de78a71e05520b5a3067e1aa6c1022e9e09332150693fbab2754e79eb0c7ba23b53a2eba62bb5a95e3ee8fc696a3c3bdd5b3fccaa912f7a2dd2868947
-  languageName: node
-  linkType: hard
-
-"@ledgerhq/hw-transport-webusb@npm:^6.20.0":
-  version: 6.35.0
-  resolution: "@ledgerhq/hw-transport-webusb@npm:6.35.0"
-  dependencies:
-    "@ledgerhq/devices": 8.16.0
-    "@ledgerhq/errors": ^6.37.0
-    "@ledgerhq/hw-transport": 6.35.5
-    "@ledgerhq/logs": ^6.17.0
-  checksum: 887a1ea22c17f3b3a34e526043a9e65ba0dae9d68dd04e36d5d640b63d22d2db5f5d03f278d0d81d2cdde4980c5ce9846335f415959c967e7e2a92d1d2c89b78
   languageName: node
   linkType: hard
 
@@ -14282,18 +13995,6 @@ __metadata:
     "@ledgerhq/logs": ^6.14.0
     events: ^3.3.0
   checksum: 471a6b659bca8d0204daf85627188b513a74d4fd24bf02ba987fb29c48e577ea19c5232d9ddbad6e05511d2c5a01e9bb3ae8ad0327502d85acd2b90a0e70c0d9
-  languageName: node
-  linkType: hard
-
-"@ledgerhq/hw-transport@npm:6.35.5":
-  version: 6.35.5
-  resolution: "@ledgerhq/hw-transport@npm:6.35.5"
-  dependencies:
-    "@ledgerhq/devices": 8.16.0
-    "@ledgerhq/errors": ^6.37.0
-    "@ledgerhq/logs": ^6.17.0
-    events: ^3.3.0
-  checksum: 4587da0d56e465a3373fa97a985fab4615bc7c27b591ba1831ed83e0dfc3f240309100483dd9666e40c3437e3fbf0302edc53bf2ece246d705220a0f1e42edf1
   languageName: node
   linkType: hard
 
@@ -14347,13 +14048,6 @@ __metadata:
   version: 6.14.0
   resolution: "@ledgerhq/logs@npm:6.14.0"
   checksum: 3ba0d28e93e8b1ab355ad95711fd00f2245b3f07204c5de6a0e7570887e9ec847bfaf51a3213e9952ba8a2a4db81084d7864067b9517a1afa0f3a4d869193471
-  languageName: node
-  linkType: hard
-
-"@ledgerhq/logs@npm:^6.17.0":
-  version: 6.17.0
-  resolution: "@ledgerhq/logs@npm:6.17.0"
-  checksum: 2bdf70dd526a718a23e56436223da83178ad830f246cdfa4a06abc750d97e5f11d76f844e3255ca2afe43dfb6804b1d852b4fd8b7a95a5d276586fada57d42a2
   languageName: node
   linkType: hard
 
@@ -44811,20 +44505,22 @@ __metadata:
     "@formatjs/intl-numberformat": ^8.7.0
     "@formatjs/intl-pluralrules": ^5.2.4
     "@formatjs/intl-relativetimeformat": ^11.2.4
-    "@keplr-wallet/analytics": 0.12.12
-    "@keplr-wallet/background": 0.12.12
-    "@keplr-wallet/chain-validator": 0.12.12
-    "@keplr-wallet/common": 0.12.12
-    "@keplr-wallet/cosmos": 0.12.12
-    "@keplr-wallet/crypto": 0.12.12
-    "@keplr-wallet/hooks": 0.12.12
-    "@keplr-wallet/proto-types": 0.12.12
-    "@keplr-wallet/provider": 0.12.12
-    "@keplr-wallet/router": 0.12.12
-    "@keplr-wallet/stores": 0.12.12
-    "@keplr-wallet/stores-etc": 0.12.12
-    "@keplr-wallet/types": 0.12.12
-    "@keplr-wallet/unit": 0.12.12
+    "@keplr-wallet/analytics": 0.13.11
+    "@keplr-wallet/background": 0.13.11
+    "@keplr-wallet/chain-validator": 0.13.11
+    "@keplr-wallet/common": 0.13.11
+    "@keplr-wallet/cosmos": 0.13.11
+    "@keplr-wallet/crypto": 0.13.11
+    "@keplr-wallet/hooks": 0.13.11
+    "@keplr-wallet/proto-types": 0.13.11
+    "@keplr-wallet/provider": 0.13.11
+    "@keplr-wallet/router": 0.13.11
+    "@keplr-wallet/stores": 0.13.11
+    "@keplr-wallet/stores-core": "workspace:^"
+    "@keplr-wallet/stores-etc": 0.13.11
+    "@keplr-wallet/stores-ibc": 0.13.11
+    "@keplr-wallet/types": 0.13.11
+    "@keplr-wallet/unit": 0.13.11
     "@ledgerhq/hw-app-eth": ^6.29.3
     "@ledgerhq/react-native-hw-transport-ble": =6.20.0
     "@react-native-async-storage/async-storage": 1.23.1
@@ -44902,9 +44598,9 @@ __metadata:
     js-yaml: ^4.1.0
     lottie-ios: 3.4.0
     lottie-react-native: ^5.1.6
-    mobx: ^6.1.7
-    mobx-react-lite: ^3.2.0
-    mobx-utils: ^6.0.3
+    mobx: ^6.10.0
+    mobx-react-lite: ^3.4.3
+    mobx-utils: ^6.0.8
     moment: ^2.10.2
     os-browserify: ^0.3.0
     path-browserify: ^1.0.1
@@ -44956,22 +44652,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"mobx-react-lite@npm:^3.2.0":
-  version: 3.2.0
-  resolution: "mobx-react-lite@npm:3.2.0"
-  peerDependencies:
-    mobx: ^6.1.0
-    react: ^16.8.0 || ^17
-  peerDependenciesMeta:
-    react-dom:
-      optional: true
-    react-native:
-      optional: true
-  checksum: 595b5fcb9e9999d9b1d68200f27b0da073eddf1965df75a9cdd447e5c710b9486f684110c1b5f75830c485879203375d5fc4c1194cf219d8cdbfd0fa1d3694e0
-  languageName: node
-  linkType: hard
-
-"mobx-react-lite@npm:^3.4.3":
+"mobx-react-lite@npm:3.4.3":
   version: 3.4.3
   resolution: "mobx-react-lite@npm:3.4.3"
   peerDependencies:
@@ -44986,16 +44667,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx-utils@npm:^6.0.3":
-  version: 6.0.3
-  resolution: "mobx-utils@npm:6.0.3"
-  peerDependencies:
-    mobx: ^6.0.0
-  checksum: c759212c71711a1c94ef9fec758734a5959e1a227d470caad95dad200a36792464cc785d4ddff93d09851da5074d06bc56447bba5ee2446eff20dbe464b51588
-  languageName: node
-  linkType: hard
-
-"mobx-utils@npm:^6.0.8":
+"mobx-utils@npm:6.1.1":
   version: 6.1.1
   resolution: "mobx-utils@npm:6.1.1"
   peerDependencies:
@@ -45004,14 +44676,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx@npm:^6.1.7":
-  version: 6.1.7
-  resolution: "mobx@npm:6.1.7"
-  checksum: c6cd7fedf4ce4fa058c3173ba1f24b5c2a52d8a0792ae23a5d0618ee9c9ef95f9262aef622de51b2f836184a2b212ace95f8f5c27aafd137492bd2b44880c91f
-  languageName: node
-  linkType: hard
-
-"mobx@npm:^6.10.0":
+"mobx@npm:6.15.0":
   version: 6.15.0
   resolution: "mobx@npm:6.15.0"
   checksum: bdda12556b8dec650f30d0ae4dcd84459a2415dce2376174476730bb85e063d6171045717a2b8ddda6e584d524fad5b305e2ee65e8264a57c0cbcbb6bf2a83eb

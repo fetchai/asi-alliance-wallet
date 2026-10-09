@@ -46,7 +46,9 @@ export const SettingScreen: FunctionComponent = observer(() => {
   const smartNavigation = useSmartNavigation();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
-  const showPrivateData = canShowPrivateData(keyRingStore.keyRingType);
+  const showPrivateData = canShowPrivateData(
+    keyRingStore.selectedKeyInfo?.type ?? ""
+  );
 
   const [openConfirmModel, setConfirmModel] = useState(false);
   const showManageTokenButton = (() => {
@@ -104,8 +106,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
           right={
             <Right
               paragraph={tokensStore
-                .getTokensOf(chainStore.current.chainId)
-                .tokens.length.toString()}
+                .getTokens(chainStore.current.chainId)
+                .length.toString()}
             />
           }
           onPress={() => {

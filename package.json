@@ -142,7 +142,10 @@
     "libsodium": "file:./etc/noop",
     "libsodium-wrappers": "file:./etc/noop",
     "node-sass": "file:./etc/noop",
-    "@ethereumjs/common": "2.6.2"
+    "@ethereumjs/common": "2.6.2",
+    "mobx": "6.15.0",
+    "mobx-react-lite": "3.4.3",
+    "mobx-utils": "6.1.1"
   },
   "dependencies": {
     "@axelar-network/axelarjs-sdk": "^0.13.6",
