@@ -61,7 +61,7 @@ android {
         applicationId "com.fetchai.wallet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 35
+        versionCode 36
         versionName "1.2.0"
 
         missingDimensionStrategy 'react-native-camera', 'general'
