@@ -188,7 +188,7 @@ export const YourWalletsTab: FunctionComponent<{
           ]) as ViewStyle
         }
       >
-        You don't have any other wallets added
+        You don&apos;t have any other wallets added
       </Text>
     );
   }

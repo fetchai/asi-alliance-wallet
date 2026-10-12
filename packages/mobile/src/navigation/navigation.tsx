@@ -155,6 +155,7 @@ export const AppNavigation: FunctionComponent = observer(() => {
               <Stack.Screen
                 name="MainTabDrawer"
                 getComponent={() =>
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
                   require("navigation/navigation-tab-with-drawer")
                     .MainTabNavigationWithDrawer
                 }
@@ -162,12 +163,14 @@ export const AppNavigation: FunctionComponent = observer(() => {
               <Stack.Screen
                 name="Register"
                 getComponent={() =>
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
                   require("navigation/register-navigation").RegisterNavigation
                 }
               />
               <Stack.Screen
                 name="Others"
                 getComponent={() =>
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
                   require("navigation/other-navigation").OtherNavigation
                 }
               />
@@ -179,12 +182,16 @@ export const AppNavigation: FunctionComponent = observer(() => {
               <Stack.Screen
                 name="Stake"
                 getComponent={() =>
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
                   require("./stake-navigation").StakeNavigation
                 }
               />
               <Stack.Screen
                 name="Setting"
-                getComponent={() => require("./more-navigation").MoreNavigation}
+                getComponent={() =>
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  require("./more-navigation").MoreNavigation
+                }
               />
             </Stack.Navigator>
           </NavigationContainer>
