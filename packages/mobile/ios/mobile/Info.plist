@@ -38,6 +38,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CodePushDeploymentKey</key>
 	<string>Bp7ApGEQu01igCf6axrsaAgi6Mc0X5oBgGjFI</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -68,6 +70,18 @@
 	<string>App uses camera to scan address, extension, and WalletConnect QR code</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>App uses Face ID to unlock wallet</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Lexend-Black.ttf</string>
+		<string>Lexend-Bold.ttf</string>
+		<string>Lexend-ExtraBold.ttf</string>
+		<string>Lexend-ExtraLight.ttf</string>
+		<string>Lexend-Light.ttf</string>
+		<string>Lexend-Medium.ttf</string>
+		<string>Lexend-Regular.ttf</string>
+		<string>Lexend-SemiBold.ttf</string>
+		<string>Lexend-Thin.ttf</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -84,19 +98,5 @@
 	<false/>
 	<key>XSAppIconAssets</key>
 	<string>Images.xcassets/AppIcon.appiconset</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Lexend-Black.ttf</string>
-		<string>Lexend-Bold.ttf</string>
-		<string>Lexend-ExtraBold.ttf</string>
-		<string>Lexend-ExtraLight.ttf</string>
-		<string>Lexend-Light.ttf</string>
-		<string>Lexend-Medium.ttf</string>
-		<string>Lexend-Regular.ttf</string>
-		<string>Lexend-SemiBold.ttf</string>
-		<string>Lexend-Thin.ttf</string>
-	</array>
 </dict>
 </plist>

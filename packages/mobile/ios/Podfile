@@ -1,7 +1,15 @@
 require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 require File.join(File.dirname(`node --print "require.resolve('@react-native-community/cli-platform-ios/package.json')"`), "native_modules")
-platform :ios, '14.0'
+platform :ios, '15.1'
+
+# Match Android (newArchEnabled=false): AppDelegate boots the legacy RCTBridge, and RN 0.77
+# defaults pods to the New Architecture, which crashes Reanimated on launch.
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+
+# Deterministic UUIDs collide for ReactCodegen's same-named files (one Props.cpp per library),
+# so only one of each gets compiled and linking fails with missing *Props symbols.
+install! 'cocoapods', :deterministic_uuids => false
 
 require 'json'
 podfile_properties = JSON.parse(File.read('./Podfile.properties.json')) rescue {}
@@ -29,6 +37,33 @@ target 'mobile' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Xcode 27 rejects deployment targets below 15.0; some pods (and their resource bundles) still declare older ones.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        if build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.1
+          build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
+        # fmt 11.0.2's consteval format strings fail on Xcode 26.4+ clang; C++17 disables consteval.
+        if target.name == 'fmt'
+          build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
+        # Xcode 26.4+ makes Folly's headers pull in folly/coro unless coroutines are disabled,
+        # which React Native only does for its own pods.
+        cpp_flags = build_config.build_settings['OTHER_CPLUSPLUSFLAGS'] || '$(inherited)'
+        cpp_flags = cpp_flags.join(' ') if cpp_flags.is_a?(Array)
+        unless cpp_flags.include?('FOLLY_CFG_NO_COROUTINES')
+          build_config.build_settings['OTHER_CPLUSPLUSFLAGS'] = "#{cpp_flags} -DFOLLY_CFG_NO_COROUTINES=1"
+        end
+        # react-native-blur 4.3.2 predates RN 0.77: it misses the private Yoga headers Fabric needs,
+        # and depends on the old React-Codegen pod name, so its generated headers aren't on the path.
+        if target.name == 'react-native-blur'
+          search_paths = build_config.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
+          search_paths = search_paths.join(' ') if search_paths.is_a?(Array)
+          build_config.build_settings['HEADER_SEARCH_PATHS'] = "#{search_paths} \"${PODS_ROOT}/Headers/Private/Yoga\" \"${PODS_ROOT}/Headers/Public/ReactCodegen\""
+        end
+      end
+    end
   end
 
   target 'mobileTests' do
