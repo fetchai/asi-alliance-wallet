@@ -80,8 +80,7 @@ export const LineGraph: React.FC<LineGraphProps> = ({
       const firstValue = newPrices[0].price || 0;
       const lastValue = newPrices[newPrices.length - 1].price || 0;
       const diff = lastValue - firstValue;
-      const denominator = lastValue > 0 ? lastValue : 1;
-      const percentageDiff = (diff / denominator) * 100;
+      const percentageDiff = firstValue > 0 ? (diff / firstValue) * 100 : 0;
 
       setTokenState({
         percentageDiff: Math.abs(percentageDiff),
