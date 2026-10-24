@@ -13,6 +13,7 @@ import { BlurBackground } from "components/new/blur-background/blur-background";
 import { ConfirmCardModel } from "components/new/confirm-modal";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
+import { TokenInfo } from "@keplr-wallet/background";
 
 export const SettingManageTokensScreen: FunctionComponent = observer(() => {
   const {
@@ -27,7 +28,7 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
 
   const style = useStyle();
 
-  const tokensOf = tokensStore.getTokensOf(chainStore.current.chainId);
+  const tokens = tokensStore.getTokens(chainStore.current.chainId);
 
   const queryBalances = queriesStore
     .get(chainStore.current.chainId)
@@ -42,15 +43,16 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
       <View style={style.flatten(["height-card-gap"]) as ViewStyle} />
-      {tokensOf.tokens.length > 0 ? (
-        tokensOf.tokens.map((token) => {
-          const balance = queryBalances.getBalanceFromCurrency(token);
+      {tokens.length > 0 ? (
+        tokens.map((token) => {
+          const balance = queryBalances.getBalanceFromCurrency(token.currency);
 
           return (
             <ManageTokenItem
-              key={token.coinMinimalDenom}
+              key={token.currency.coinMinimalDenom}
               chainInfo={chainStore.current}
               balance={balance}
+              token={token}
             />
           );
         })
@@ -114,15 +116,14 @@ export const ManageTokenItem: FunctionComponent<{
   containerStyle?: ViewStyle;
 
   chainInfo: {
-    stakeCurrency: Currency;
+    stakeCurrency?: Currency;
   };
   balance: CoinPretty;
-}> = observer(({ containerStyle, balance }) => {
+  token: TokenInfo;
+}> = observer(({ containerStyle, balance, token }) => {
   const { chainStore, tokensStore, analyticsStore } = useStore();
 
   const style = useStyle();
-
-  const tokensOf = tokensStore.getTokensOf(chainStore.current.chainId);
 
   const smartNavigation = useSmartNavigation();
 
@@ -176,7 +177,10 @@ export const ManageTokenItem: FunctionComponent<{
           onPress={() => {
             setConfirmModal(true);
 
-            if (tokensOf.tokens.length === 0 && smartNavigation.canGoBack()) {
+            if (
+              tokensStore.getTokens(chainStore.current.chainId).length === 0 &&
+              smartNavigation.canGoBack()
+            ) {
               smartNavigation.goBack();
             }
           }}
@@ -191,7 +195,10 @@ export const ManageTokenItem: FunctionComponent<{
                 action: confirm ? "Yes" : "No",
               });
               if (confirm) {
-                await tokensOf.removeToken(balance.currency);
+                await tokensStore.removeToken(
+                  chainStore.current.chainId,
+                  token
+                );
               }
             }}
           />

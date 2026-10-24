@@ -14,6 +14,7 @@ import { PageWithScrollView } from "components/page/scroll-view";
 import CheckBox from "@react-native-community/checkbox";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 import { Button } from "components/button";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { SimpleCardView } from "components/new/card-view/simple-card";
@@ -112,6 +113,7 @@ export const MnemonicScreen: FunctionComponent = observer(() => {
         onPress={async () => {
           await Clipboard.setStringAsync(words.join(" "));
           setTimer(3000);
+          Toast.show({ type: "success", text1: "Mnemonic Seed Copied" });
         }}
         activeOpacity={0.6}
       >

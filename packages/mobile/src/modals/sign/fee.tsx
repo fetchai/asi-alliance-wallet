@@ -9,6 +9,7 @@ import { KeplrSignOptions } from "@keplr-wallet/types";
 import { IconButton } from "components/new/button/icon";
 import { GearIcon } from "components/new/icon/gear-icon";
 import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-modal";
+import { formatFeeAmount } from "utils/format/format";
 
 export const FeeInSign: FunctionComponent<{
   isInternal: boolean;
@@ -83,13 +84,14 @@ export const FeeInSign: FunctionComponent<{
                   ] as ViewStyle
                 }
               >
-                {feeConfig
-                  .getFeeTypePretty(
-                    feeConfig.feeType ? feeConfig.feeType : "average"
-                  )
-                  .hideIBCMetadata(true)
-                  .trim(true)
-                  .toMetricPrefix(isEvm)}
+                {formatFeeAmount(
+                  feeConfig
+                    .getFeeTypePretty(
+                      feeConfig.feeType ? feeConfig.feeType : "average"
+                    )
+                    .hideIBCMetadata(true),
+                  isEvm
+                )}
               </Text>
               <IconButton
                 backgroundBlur={false}
@@ -140,11 +142,26 @@ export const FeeInSign: FunctionComponent<{
           </Text>
           <View
             style={
-              style.flatten(["flex", "flex-row", "items-end"]) as ViewStyle
+              style.flatten([
+                "flex-1",
+                "flex-row",
+                "flex-wrap",
+                "justify-end",
+                "items-end",
+                "margin-left-6",
+              ]) as ViewStyle
             }
           >
-            <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
-              {fee.trim(true).toMetricPrefix(isEvm).toString()}
+            <Text
+              style={
+                style.flatten([
+                  "body3",
+                  "color-dark",
+                  "text-right",
+                ]) as ViewStyle
+              }
+            >
+              {formatFeeAmount(fee, isEvm)}
             </Text>
             {price ? (
               <Text
@@ -153,6 +170,7 @@ export const FeeInSign: FunctionComponent<{
                     "body3",
                     "color-gray-300",
                     "margin-left-1",
+                    "text-right",
                   ]) as ViewStyle
                 }
               >

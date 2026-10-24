@@ -8,6 +8,7 @@ import React, {
 import {
   Alert,
   AppState,
+  BackHandler,
   Image,
   Platform,
   StyleSheet,
@@ -24,7 +25,6 @@ import delay from "delay";
 import { useStore } from "stores/index";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { KeyRingStatus } from "@keplr-wallet/background";
 import { KeychainStore } from "stores/keychain";
 import { IAccountStore } from "@keplr-wallet/stores";
 import { autorun } from "mobx";
@@ -52,15 +52,24 @@ async function hideSplashScreen() {
 
 async function waitAccountLoad(
   accountStore: IAccountStore,
-  chainId: string
+  chainId: string,
+  timeoutMs: number = 8000
 ): Promise<void> {
   if (accountStore.getAccount(chainId).bech32Address) {
     return;
   }
 
   return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      if (disposer) {
+        disposer();
+      }
+      resolve();
+    }, timeoutMs);
+
     const disposer = autorun(() => {
       if (accountStore.getAccount(chainId).bech32Address) {
+        clearTimeout(timer);
         resolve();
         if (disposer) {
           disposer();
@@ -140,6 +149,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     accountStore,
     chainStore,
     analyticsStore,
+    interactionStore,
   } = useStore();
 
   const style = useStyle();
@@ -151,14 +161,22 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   const navigateToHomeOnce = useRef(false);
   const biometricNeedsReset = useRef(false);
   const navigateToHome = useCallback(async () => {
-    if (!navigateToHomeOnce.current) {
-      analyticsStore.logEvent("sign_in_click");
-      // Wait the account of selected chain is loaded.
-      await waitAccountLoad(accountStore, chainStore.current.chainId);
-      navigation.dispatch(StackActions.replace("MainTabDrawer"));
+    if (navigateToHomeOnce.current) {
+      return;
     }
     navigateToHomeOnce.current = true;
-  }, [accountStore, chainStore, navigation]);
+    try {
+      analyticsStore.logEvent("sign_in_click");
+      // Wait briefly for the selected chain account; never block navigation forever
+      // if key/address fetch is slow or failing after unlock.
+      await waitAccountLoad(accountStore, chainStore.current.chainId);
+      navigation.dispatch(StackActions.replace("MainTabDrawer"));
+    } catch (e) {
+      console.log("[Unlock] navigateToHome failed, forcing home", e);
+      navigateToHomeOnce.current = false;
+      navigation.dispatch(StackActions.replace("MainTabDrawer"));
+    }
+  }, [accountStore, analyticsStore, chainStore, navigation]);
 
   const [isAppActive, setIsAppActive] = useState(
     AppState.currentState === "active"
@@ -180,11 +198,15 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     return onLaunchCoverHidden(() => setLaunchCoverGone(true));
   }, [launchCoverGone]);
 
+  const needsKeyStoreMigration =
+    keyRingStore.needMigration || keyRingStore.isMigrating;
+
   const autoBiometryStatus = useAutoBiomtric(
     keychainStore,
-    keyRingStore.status === KeyRingStatus.LOCKED &&
+    keyRingStore.status === "locked" &&
       isAppActive &&
-      launchCoverGone,
+      launchCoverGone &&
+      !needsKeyStoreMigration,
     (isLoading) => {
       setIsBiometricLoading(isLoading);
     },
@@ -211,7 +233,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   }, [autoBiometryStatus, navigation]);
 
   useEffect(() => {
-    if (Platform.OS === "ios" && keyRingStore.status === KeyRingStatus.LOCKED) {
+    if (Platform.OS === "ios" && keyRingStore.status === "locked") {
       hideSplashScreen();
     }
   }, [keyRingStore.status]);
@@ -221,8 +243,20 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const isUnlockBusy = isLoading || keyRingStore.isMigrating;
+
+  useEffect(() => {
+    if (Platform.OS !== "android" || !isUnlockBusy) {
+      return;
+    }
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, [isUnlockBusy]);
 
   const tryBiometric = useCallback(async () => {
+    if (keyRingStore.status === "unlocked" || isBiometricLoading) {
+      return;
+    }
     // iOS only: if Face ID/Touch ID is not enrolled in Settings, show a clear
     // message instead of triggering the system "incorrect passphrase" dialog.
     if (Platform.OS === "ios" && !keychainStore.isBiometrySupported) {
@@ -245,6 +279,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       // So to make sure that the loading state changes, just wait very short time.
       await delay(10);
       await keychainStore.tryUnlockWithBiometry();
+      // Navigation is handled by the unlocked-status effect; clear loading if
+      // we are still on this screen briefly.
+      setIsBiometricLoading(false);
     } catch (e) {
       console.log(e);
       const msg: string = e?.message ?? "";
@@ -293,9 +330,12 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       }
       setIsBiometricLoading(false);
     }
-  }, [keychainStore]);
+  }, [keychainStore, keyRingStore.status, isBiometricLoading]);
 
   const tryUnlock = async () => {
+    if (isUnlockBusy) {
+      return;
+    }
     try {
       setShowPassword(false);
       setIsLoading(true);
@@ -304,6 +344,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       // before the actually decryption is complete.
       // So to make sure that the loading state changes, just wait very short time.
       await delay(10);
+      if (keyRingStore.needMigration) {
+        await keyRingStore.checkLegacyKeyRingPassword(password);
+      }
       await keyRingStore.unlock(password);
     } catch (e) {
       console.log(e);
@@ -315,11 +358,12 @@ export const UnlockScreen: FunctionComponent = observer(() => {
 
   const routeToRegisterOnce = useRef(false);
   useEffect(() => {
-    // If the keyring is empty,
-    // route to the register screen.
+    // Only trust "empty" after keyring has finished its first status fetch.
+    // A premature empty (e.g. vault not loaded yet) would wipe the user into onboarding.
     if (
       !routeToRegisterOnce.current &&
-      keyRingStore.status === KeyRingStatus.EMPTY
+      keyRingStore.isInitialized &&
+      keyRingStore.status === "empty"
     ) {
       (async () => {
         routeToRegisterOnce.current = true;
@@ -333,10 +377,22 @@ export const UnlockScreen: FunctionComponent = observer(() => {
         hideSplashScreen();
       })();
     }
-  }, [keyRingStore.status, navigation]);
+  }, [keyRingStore.isInitialized, keyRingStore.status, navigation]);
 
   useEffect(() => {
-    if (keyRingStore.status === KeyRingStatus.UNLOCKED) {
+    if (keyRingStore.status === "unlocked") {
+      // Approve all waiting interaction for the enabling key ring.
+      const interactions = interactionStore.getAllData("unlock");
+      if (interactions.length > 0) {
+        interactionStore.approveWithProceedNextV2(
+          interactions.map((interaction) => interaction.id),
+          {},
+          () => {
+            // noop
+          }
+        );
+      }
+
       if (biometricNeedsReset.current) {
         biometricNeedsReset.current = false;
         const biometryLabel =
@@ -371,11 +427,15 @@ export const UnlockScreen: FunctionComponent = observer(() => {
         navigateToHome();
       }
     }
-  }, [keyRingStore.status, navigateToHome, keychainStore, password]);
+  }, [
+    keyRingStore.status,
+    navigateToHome,
+    keychainStore,
+    password,
+    interactionStore,
+  ]);
 
-  if (
-    [KeyRingStatus.EMPTY, KeyRingStatus.NOTLOADED].includes(keyRingStore.status)
-  ) {
+  if (keyRingStore.status === "empty" || keyRingStore.status === "not-loaded") {
     if (Platform.OS === "ios") {
       return null;
     }
@@ -438,7 +498,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
             }
           >
             <Text style={style.flatten(["h2", "font-medium", "color-dark"])}>
-              Welcome Back
+              {needsKeyStoreMigration ? "Upgrade required" : "Welcome Back"}
             </Text>
             <Text
               style={
@@ -450,7 +510,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 ]) as ViewStyle
               }
             >
-              {Platform.OS === "ios"
+              {needsKeyStoreMigration
+                ? "A one-time wallet upgrade is needed. Enter your password and keep the app open until it finishes."
+                : Platform.OS === "ios"
                 ? `Enter your password or use ${
                     keychainStore.biometryType === "FaceID"
                       ? "Face ID"
@@ -504,16 +566,16 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 ]) as ViewStyle
               }
               textStyle={style.flatten(["color-white"]) as ViewStyle}
-              text="Sign In"
+              text={needsKeyStoreMigration ? "Upgrade and sign in" : "Sign In"}
               size="large"
-              loading={isLoading}
+              loading={isUnlockBusy}
               rippleColor="black@10%"
               onPress={tryUnlock}
-              disabled={password.length === 0}
+              disabled={password.length === 0 || isUnlockBusy}
             />
           </View>
           <View style={style.get("flex-4")} />
-          {keychainStore.isBiometryOn ? (
+          {keychainStore.isBiometryOn && !needsKeyStoreMigration ? (
             <TouchableOpacity onPress={tryBiometric} activeOpacity={1}>
               <View
                 style={

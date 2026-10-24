@@ -76,7 +76,7 @@ export const SettingAddTokenScreen: FunctionComponent = observer(() => {
         onPress={async () => {
           setIsLoading(true);
           if (queryTokenInfo.tokenInfo) {
-            await tokensStore.getTokensOf(chainStore.current.chainId).addToken({
+            await tokensStore.addToken(chainStore.current.chainId, {
               type: "cw20",
               contractAddress: recipientConfig.recipient,
               coinMinimalDenom: queryTokenInfo.tokenInfo.name,

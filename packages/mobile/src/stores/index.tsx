@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent, useEffect } from "react";
 
 import { createRootStore, RootStore } from "./root";
 
@@ -11,23 +11,28 @@ const storeContext = React.createContext<RootStore | null>(null);
  To prevent this problem, handle the root store statically.
  */
 let rootStore: RootStore | undefined;
+// Bump when RootStore construction changes so Fast Refresh recreates instead
+// of keeping a stale static instance.
+const ROOT_STORE_GEN = 5;
+let rootStoreGen = 0;
+
+function getRootStore(): RootStore {
+  if (!rootStore || rootStoreGen !== ROOT_STORE_GEN) {
+    rootStore = createRootStore();
+    rootStoreGen = ROOT_STORE_GEN;
+  }
+  return rootStore;
+}
 
 export const StoreProvider: FunctionComponent = ({ children }) => {
-  const [stores] = useState(() => {
-    if (rootStore) {
-      return rootStore;
-    }
-
-    rootStore = createRootStore();
-    return rootStore;
-  });
+  const stores = getRootStore();
 
   useEffect(() => {
     return () => {
       // Check the comment of `_isAndroidActivityKilled` field on `WalletConnectStore`
       stores.walletConnectStore.onAndroidActivityKilled();
     };
-  }, []);
+  }, [stores]);
 
   return (
     <storeContext.Provider value={stores}>{children}</storeContext.Provider>

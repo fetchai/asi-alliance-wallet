@@ -1,7 +1,7 @@
 import { flow, makeObservable, observable } from "mobx";
 import * as Keychain from "react-native-keychain";
 import { KVStore, toGenerator } from "@keplr-wallet/common";
-import { KeyRingStore } from "@keplr-wallet/stores";
+import { KeyRingStore } from "@keplr-wallet/stores-core";
 import { Platform } from "react-native";
 
 export class KeychainStore {
@@ -83,6 +83,11 @@ export class KeychainStore {
   *tryUnlockWithBiometry() {
     if (!this.isBiometryOn) {
       throw new Error("Biometry is off");
+    }
+
+    // Already unlocked (e.g. auto-biometric succeeded and user taps again).
+    if (this.keyRingStore.status === "unlocked") {
+      return;
     }
 
     const credentials = yield* toGenerator(

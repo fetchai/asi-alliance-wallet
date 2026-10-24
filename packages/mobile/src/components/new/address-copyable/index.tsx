@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 import { RectButton } from "components/rect-button";
 import LottieView from "lottie-react-native";
 import { useSimpleTimer } from "hooks/use-simple-timer";
@@ -27,6 +28,7 @@ export const AddressCopyable: FunctionComponent<{
       onPress={async () => {
         await Clipboard.setStringAsync(address);
         setTimer(2000);
+        Toast.show({ type: "success", text1: "Address Copied" });
       }}
       rippleColor={style.flatten(["color-white-transparent-100"]).color}
       underlayColor={style.flatten(["color-gray-300"]).color}

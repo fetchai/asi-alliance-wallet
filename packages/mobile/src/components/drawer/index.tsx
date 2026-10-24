@@ -38,11 +38,13 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
     const style = useStyle();
     const [search, setSearch] = useState("");
 
-    const filterChainInfos = chainStore.chainInfosInUI.filter((chainInfo) => {
-      return chainInfo.chainName
-        .toLowerCase()
-        .includes(search?.trim().toLowerCase());
-    });
+    const filterChainInfos = chainStore.cosmosChainInfosInUI.filter(
+      (chainInfo) => {
+        return chainInfo.chainName
+          .toLowerCase()
+          .includes(search?.trim().toLowerCase());
+      }
+    );
 
     return (
       <DrawerContentScrollView
@@ -196,7 +198,7 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                           } as ViewStyle
                         }
                       >
-                        {chainInfo.raw.chainSymbolImageUrl ? (
+                        {chainInfo.chainSymbolImageUrl ? (
                           <FastImage
                             style={{
                               width: 22,
@@ -204,10 +206,9 @@ export const DrawerContent: FunctionComponent<DrawerContentComponentProps> =
                             }}
                             resizeMode={FastImage.resizeMode.contain}
                             source={
-                              typeof chainInfo.raw.chainSymbolImageUrl ===
-                              "number"
-                                ? chainInfo.raw.chainSymbolImageUrl
-                                : { uri: chainInfo.raw.chainSymbolImageUrl }
+                              typeof chainInfo.chainSymbolImageUrl === "number"
+                                ? chainInfo.chainSymbolImageUrl
+                                : { uri: chainInfo.chainSymbolImageUrl }
                             }
                           />
                         ) : (

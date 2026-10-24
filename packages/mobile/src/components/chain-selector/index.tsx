@@ -38,7 +38,7 @@ export const ChainSelectorModal: FunctionComponent<{
             : chainId;
 
           const chainImage = chainStore.hasChain(chainId)
-            ? chainStore.getChain(chainId).raw.chainSymbolImageUrl
+            ? chainStore.getChain(chainId).chainSymbolImageUrl
             : undefined;
 
           return (

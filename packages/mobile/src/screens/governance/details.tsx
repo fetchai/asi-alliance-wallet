@@ -153,6 +153,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
+  const govUrl = (chainStore.current.embedded as { govUrl?: string }).govUrl;
 
   const proposal = queries.cosmos.queryGovernance.getProposal(proposalId);
 
@@ -272,7 +273,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
             </View>
             <GovernanceProposalStatusChip status={proposal.proposalStatus} />
           </View>
-          {chainStore.current.govUrl && (
+          {govUrl && (
             <SimpleCardView
               heading="View full text of the proposal"
               leadingIconComponent={
@@ -308,7 +309,7 @@ export const GovernanceDetailsCardBody: FunctionComponent<{
                 navigation.navigate("Others", {
                   screen: "WebView",
                   params: {
-                    url: `${chainStore.current.govUrl}${proposalId}`,
+                    url: `${govUrl}${proposalId}`,
                   },
                 });
               }}

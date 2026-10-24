@@ -20,6 +20,7 @@ import {
   LaunchCoverController,
   LaunchCoverView,
 } from "components/page/launch-cover";
+import { KeyRingLifecycleEffects } from "providers/keyring-lifecycle-effects";
 
 if (Platform.OS === "android") {
   // https://github.com/web-ridge/react-native-paper-dates/releases/tag/v0.2.15
@@ -100,6 +101,7 @@ const AppBody: FunctionComponent<{
           >
             <ThemeStatusBar />
             <SafeAreaProvider>
+              <KeyRingLifecycleEffects />
               <LoadingScreenProvider>
                 <InteractionModalsProvider>
                   <AppNavigation />

@@ -62,9 +62,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
 
   const style = useStyle();
   const { analyticsStore, keyRingStore } = useStore();
-  const defaultAccountName = getNextDefaultAccountName(
-    keyRingStore.multiKeyStoreInfo
-  );
+  const defaultAccountName = getNextDefaultAccountName(keyRingStore.keyInfos);
 
   const {
     control,
@@ -211,7 +209,7 @@ export const CreateAccountScreen: FunctionComponent = () => {
         rules={{
           required: "Name is required",
           validate: (value: string) =>
-            validateAccountName(value, keyRingStore.multiKeyStoreInfo, mode),
+            validateAccountName(value, keyRingStore.keyInfos, mode),
         }}
         render={({ field: { onChange, onBlur, value, ref } }) => {
           return (

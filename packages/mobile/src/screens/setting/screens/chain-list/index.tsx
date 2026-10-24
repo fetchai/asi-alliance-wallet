@@ -1,9 +1,4 @@
-import React, {
-  FunctionComponent,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { useStore } from "stores/index";
 import { StyleSheet, Switch, Text, View, ViewStyle } from "react-native";
@@ -21,35 +16,25 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
   const { chainStore } = useStore();
   const style = useStyle();
 
-  const isTestnetEnabled = useCallback(() => {
-    const testnetList = chainStore.chainInfosWithUIConfig.filter(
-      (item) => item.chainInfo.isTestnet
-    );
-    const testnetDisabledList = testnetList.filter((item) => !item.disabled);
-    return testnetList.length === testnetDisabledList.length;
-  }, [chainStore.chainInfosWithUIConfig]);
-
-  const [isEnabled, setIsEnabled] = useState(isTestnetEnabled);
   const [search, setSearch] = useState("");
   const [filterChainInfos, setFilterChainInfos] = useState(
     chainStore.chainInfosWithUIConfig
   );
 
   useEffect(() => {
-    setIsEnabled(isTestnetEnabled);
-  }, [isTestnetEnabled]);
-
-  useEffect(() => {
     const searchTrim = search.trim();
     const newChainInfos = chainStore.chainInfosWithUIConfig.filter(
       (chainInfoUI) => {
+        if (!chainStore.showTestnet && chainInfoUI.chainInfo.isTestnet) {
+          return false;
+        }
         return chainInfoUI.chainInfo.chainName
           .toLowerCase()
           .includes(searchTrim.toLowerCase());
       }
     );
     setFilterChainInfos(newChainInfos);
-  }, [chainStore.chainInfosWithUIConfig, search]);
+  }, [chainStore.chainInfosWithUIConfig, chainStore.showTestnet, search]);
 
   return (
     <PageWithScrollView
@@ -87,19 +72,11 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
             false: "#DCDCE3",
             true: "#DCDCE3",
           }}
-          thumbColor={isEnabled ? "#73A271" : "#9A9AA2"}
+          thumbColor={chainStore.showTestnet ? "#73A271" : "#9A9AA2"}
           onValueChange={(isToggleOn) => {
-            chainStore.toggleMultipleChainInfoInUI(
-              filterChainInfos
-                .filter((chainInfoUI) => {
-                  return chainInfoUI.chainInfo.isTestnet;
-                })
-                .map((chainInfoUI) => chainInfoUI.chainInfo.chainId),
-              isToggleOn
-            );
-            setIsEnabled(isToggleOn);
+            chainStore.toggleShowTestnet(isToggleOn);
           }}
-          value={isEnabled}
+          value={chainStore.showTestnet}
         />
       </View>
       <InputCardView
@@ -111,22 +88,6 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
         rightIcon={<SearchIcon size={12} color="black" />}
         containerStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
       />
-      {/* <FlatList
-        renderItem={({ item }) => <SettingChainListScreenElement {...item} />}
-        keyExtractor={(item) => item.key}
-        data={chainStore.chainInfosWithUIConfig.map((chainInfoUI, index) => {
-          return {
-            key: chainInfoUI.chainInfo.chainId,
-            isFirst: index === 0,
-            isLast: index === chainStore.chainInfosWithUIConfig.length - 1,
-            chainId: chainInfoUI.chainInfo.chainId,
-            chainName: chainInfoUI.chainInfo.chainName,
-            chainSymbolImageUrl: chainInfoUI.chainInfo.raw.chainSymbolImageUrl,
-            disabled: chainInfoUI.disabled,
-          };
-        })}
-        scrollEnabled={false}
-      /> */}
       {filterChainInfos.length === 0 ? (
         <EmptyView />
       ) : (
@@ -135,12 +96,10 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
             <SettingChainListScreenElement
               key={chainInfoUI.chainInfo.chainId}
               isFirst={index === 0}
-              isLast={index === chainStore.chainInfosWithUIConfig.length - 1}
+              isLast={index === filterChainInfos.length - 1}
               chainId={chainInfoUI.chainInfo.chainId}
               chainName={chainInfoUI.chainInfo.chainName}
-              chainSymbolImageUrl={
-                chainInfoUI.chainInfo.raw.chainSymbolImageUrl
-              }
+              chainSymbolImageUrl={chainInfoUI.chainInfo.chainSymbolImageUrl}
               disabled={chainInfoUI.disabled}
             />
           );

@@ -618,7 +618,7 @@ export const TokenBalanceSection: FunctionComponent<{
               navigation.navigate("Others", {
                 screen: "Send",
                 params: {
-                  currency: chainStore.current.stakeCurrency.coinMinimalDenom,
+                  currency: chainStore.current.stakeCurrency?.coinMinimalDenom,
                 },
               });
             }}

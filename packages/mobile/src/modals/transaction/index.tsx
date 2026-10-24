@@ -68,37 +68,36 @@ export const TransactionModal: FunctionComponent<{
         "Transaction has been broadcasted to blockchain and pending confirmation",
       img: require("assets/lottie/pending.json"),
     });
-    const chainInfo = chainStore.getChain(chainId);
-    const txTracer: CosmosTxTracer = new CosmosTxTracer(
-      chainInfo.rpc,
-      "/websocket"
-    );
-    txTracer
-      .traceTx(Buffer.from(txnHash, "hex") as Uint8Array)
-      .then((tx) => {
-        if (tx.code == null || tx.code === 0) {
-          setTransactionState({
-            status: TransactionStatus.Success,
-            title: "Transaction Successful",
-            subTitle:
-              "Congratulations!\nYour transaction has been completed and confirmed by the blockchain",
-            img: require("assets/lottie/success.json"),
-          });
-        } else {
-          const log = tx.raw_log || tx.log || "";
-          onFailed?.(log);
-          setTransactionState({
-            status: TransactionStatus.Failed,
-            title: "Transaction Failed",
-            subTitle: "Unfortunately your transaction has failed.",
-            img: require("assets/lottie/failed.json"),
-          });
-        }
-      })
-      .catch((e) => {
-        console.log(`Failed to trace the tx (${txnHash})`, e);
-      });
-
+    let txTracer: CosmosTxTracer | null = null;
+    if (txnHash) {
+      const chainInfo = chainStore.getChain(chainId);
+      txTracer = new CosmosTxTracer(chainInfo.rpc, "/websocket");
+      txTracer
+        .traceTx(Buffer.from(txnHash, "hex") as Uint8Array)
+        .then((tx) => {
+          if (tx.code == null || tx.code === 0) {
+            setTransactionState({
+              status: TransactionStatus.Success,
+              title: "Transaction Successful",
+              subTitle:
+                "Congratulations!\nYour transaction has been completed and confirmed by the blockchain",
+              img: require("assets/lottie/success.json"),
+            });
+          } else {
+            const log = tx.raw_log || tx.log || "";
+            onFailed?.(log);
+            setTransactionState({
+              status: TransactionStatus.Failed,
+              title: "Transaction Failed",
+              subTitle: "Unfortunately your transaction has failed.",
+              img: require("assets/lottie/failed.json"),
+            });
+          }
+        })
+        .catch((e) => {
+          console.log(`Failed to trace the tx (${txnHash})`, e);
+        });
+    }
     return () => {
       if (txTracer) {
         txTracer.close();

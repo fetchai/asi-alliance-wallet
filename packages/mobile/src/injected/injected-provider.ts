@@ -16,20 +16,36 @@ export class RNInjectedKeplr extends InjectedKeplr {
 
   constructor(version: string, mode: KeplrMode) {
     super(
+      // Meta id
+      undefined,
       version,
       mode,
+      // Starknet state/account change handlers. Starknet dApps are not supported on mobile.
+      () => {
+        // noop
+      },
+      () => {
+        // noop
+      },
       {
         addMessageListener: (fn: (e: any) => void) =>
           window.addEventListener("message", fn),
         removeMessageListener: (fn: (e: any) => void) =>
           window.removeEventListener("message", fn),
-        postMessage: (message) => {
+        postMessage: (message: any) => {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           window.ReactNativeWebView.postMessage(JSON.stringify(message));
         },
       },
-      RNInjectedKeplr.parseWebviewMessage
+      RNInjectedKeplr.parseWebviewMessage,
+      // EIP-6963 provider info. The EVM provider is not announced on mobile.
+      undefined,
+      {
+        id: "keplr",
+        name: "Keplr",
+        icon: "",
+      }
     );
   }
 }

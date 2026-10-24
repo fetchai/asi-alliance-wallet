@@ -27,17 +27,21 @@ import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import { PasswordValidateView } from "components/new/password-validate/password-validate";
 import { XmarkIcon } from "components/new/icon/xmark";
 import { CheckIcon } from "components/new/icon/check";
-import { bleManager } from "@ledgerhq/react-native-hw-transport-ble";
+import TransportBLE, {
+  bleManager,
+} from "@ledgerhq/react-native-hw-transport-ble";
 import { State } from "react-native-ble-plx";
 import * as Location from "expo-location";
 import { LocationAccuracy } from "expo-location";
 import DeviceInfo from "react-native-device-info";
 import { LedgerLocationErrorModel } from "modals/ledger/ledger-error";
+import { LedgerGranterModal } from "modals/ledger";
 import { SelectNetwork } from "components/new/select-network";
 import {
   getNextDefaultAccountName,
   validateAccountName,
 } from "utils/format/format";
+import { Ledger, LedgerApp } from "@keplr-wallet/background";
 
 interface FormData {
   name: string;
@@ -86,12 +90,11 @@ export const LedgerScreen: FunctionComponent = () => {
     formState: { errors },
   } = useForm<FormData>();
 
-  const defaultAccountName = getNextDefaultAccountName(
-    keyRingStore.multiKeyStoreInfo
-  );
+  const defaultAccountName = getNextDefaultAccountName(keyRingStore.keyInfos);
   const currentName = watch("name", defaultAccountName);
 
   const [isCreating, setIsCreating] = useState(false);
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -295,8 +298,26 @@ export const LedgerScreen: FunctionComponent = () => {
     }
 
     setIsCreating(true);
+    setShowLedgerModal(true);
+  });
+
+  const onLedgerDeviceSelected = async (deviceId: string) => {
     try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const ledger = await Ledger.init(
+        () => TransportBLE.open(deviceId),
+        undefined,
+        LedgerApp.Cosmos,
+        "Cosmos"
+      );
+      const pubkey = await ledger.getPublicKey(
+        LedgerApp.Cosmos,
+        bip44Option.bip44HDPath
+      );
+      await ledger.close();
+
       await registerConfig.createLedger(
+        pubkey,
         getValues("name"),
         getValues("password"),
         bip44Option.bip44HDPath,
@@ -310,6 +331,7 @@ export const LedgerScreen: FunctionComponent = () => {
       analyticsStore.logEvent("register_done_click", {
         pageName: "Register",
       });
+      setShowLedgerModal(false);
       smartNavigation.reset({
         index: 0,
         routes: [
@@ -325,10 +347,11 @@ export const LedgerScreen: FunctionComponent = () => {
       ledgerInitStore.abortAll();
       // Definitely, the error can be thrown when the ledger connection failed
       console.log("Ledger:Creation", e);
+      setShowLedgerModal(false);
     } finally {
       setIsCreating(false);
     }
-  });
+  };
 
   const checkPasswordValidity = (value: string) => {
     const error = [];
@@ -381,7 +404,7 @@ export const LedgerScreen: FunctionComponent = () => {
         rules={{
           required: "Name is required",
           validate: (value: string) =>
-            validateAccountName(value, keyRingStore.multiKeyStoreInfo, mode),
+            validateAccountName(value, keyRingStore.keyInfos, mode),
         }}
         render={({ field: { onChange, onBlur, value, ref } }) => {
           return (
@@ -645,6 +668,14 @@ export const LedgerScreen: FunctionComponent = () => {
           }}
         />
       }
+      <LedgerGranterModal
+        isOpen={showLedgerModal}
+        close={() => {
+          setShowLedgerModal(false);
+          setIsCreating(false);
+        }}
+        onSelectDevice={onLedgerDeviceSelected}
+      />
     </PageWithScrollView>
   );
 };
