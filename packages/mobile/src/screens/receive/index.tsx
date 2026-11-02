@@ -10,6 +10,7 @@ import {
   ViewStyle,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-toast-message";
 import { PageWithScrollView } from "components/page";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import QRCode from "react-native-qrcode-svg";
@@ -112,6 +113,7 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
         onPress={async () => {
           await Clipboard.setStringAsync(account.bech32Address);
           setTimer(2000);
+          Toast.show({ type: "success", text1: "Address Copied" });
         }}
         activeOpacity={0.6}
       >

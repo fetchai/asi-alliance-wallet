@@ -405,7 +405,7 @@ export const MainTabNavigation: FunctionComponent = () => {
               return navigation.navigate("Others", {
                 screen: "Send",
                 params: {
-                  currency: chainStore.current.stakeCurrency.coinMinimalDenom,
+                  currency: chainStore.current.stakeCurrency?.coinMinimalDenom,
                 },
               });
 

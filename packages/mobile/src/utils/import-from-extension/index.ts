@@ -7,7 +7,7 @@ import WalletConnect from "@walletconnect/client";
 import AES, { Counter } from "aes-js";
 import { Buffer } from "buffer/";
 import { ExportKeyRingData } from "@keplr-wallet/background";
-import { KeyRingStore } from "@keplr-wallet/stores";
+import { KeyRingStore } from "@keplr-wallet/stores-core";
 import { Hash } from "@keplr-wallet/crypto";
 
 export interface QRCodeSharedData {
@@ -248,15 +248,11 @@ export async function registerExportedKeyRingDatas(
   // KeyRing Store would be restored when init.
   // So, there is no need to wait.
   // In fact, at this point, restore is complete.
-  for (const keyStore of keyRingStore.multiKeyStoreInfo) {
-    if (
-      keyStore.meta &&
-      keyStore.meta["exportKeyRingDataDuplicationCheckKey"]
-    ) {
-      duplicationCheck.set(
-        keyStore.meta["exportKeyRingDataDuplicationCheckKey"],
-        true
-      );
+  for (const keyInfo of keyRingStore.keyInfos) {
+    const meta =
+      (keyInfo.insensitive?.["keyRingMeta"] as Record<string, any>) ?? {};
+    if (meta["exportKeyRingDataDuplicationCheckKey"]) {
+      duplicationCheck.set(meta["exportKeyRingDataDuplicationCheckKey"], true);
     }
   }
 

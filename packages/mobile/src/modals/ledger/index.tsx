@@ -17,7 +17,10 @@ import { State } from "react-native-ble-plx";
 import TransportBLE, {
   bleManager,
 } from "@ledgerhq/react-native-hw-transport-ble";
-import { getLastUsedLedgerDeviceId } from "utils/ledger";
+import {
+  getLastUsedLedgerDeviceId,
+  setLastUsedLedgerDeviceId,
+} from "utils/ledger";
 import { useUnmount } from "hooks/use-unmount";
 import LottieView from "lottie-react-native";
 import { Button } from "components/button";
@@ -48,7 +51,8 @@ export enum BluetoothMode {
 export const LedgerGranterModal: FunctionComponent<{
   isOpen: boolean;
   close: () => void;
-}> = observer(({ isOpen, close }) => {
+  onSelectDevice?: (deviceId: string) => Promise<void>;
+}> = observer(({ isOpen, close, onSelectDevice }) => {
   const { ledgerInitStore } = useStore();
 
   const style = useStyle();
@@ -411,7 +415,13 @@ export const LedgerGranterModal: FunctionComponent<{
                   setIsPaired={setIsPaired}
                   onCanResume={async () => {
                     resumed.current = true;
-                    await ledgerInitStore.resumeAll(device.id);
+                    // Signing connects to this device again later.
+                    await setLastUsedLedgerDeviceId(device.id);
+                    if (onSelectDevice) {
+                      await onSelectDevice(device.id);
+                    } else {
+                      await ledgerInitStore.resumeAll(device.id);
+                    }
                   }}
                 />
               );

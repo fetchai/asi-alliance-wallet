@@ -78,7 +78,7 @@ export const ChangePasswordScreen: FunctionComponent = observer(() => {
         setIsLoading(false);
         return;
       }
-      await keyRingStore.updatePassword(currentPassword, newPassword);
+      await keyRingStore.changeUserPassword(currentPassword, newPassword);
 
       if (keychainStore.isBiometryOn) {
         const biometryLabel =
