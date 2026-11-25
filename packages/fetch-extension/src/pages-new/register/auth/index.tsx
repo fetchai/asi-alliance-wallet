@@ -1,20 +1,32 @@
 import { Input, PasswordInput } from "@components-v2/form";
 import { RegisterConfig } from "@keplr-wallet/hooks";
-import { AuthAdapter } from "@web3auth/auth-adapter";
 import {
+  AUTH_CONNECTION,
   CHAIN_NAMESPACES,
-  WALLET_ADAPTERS,
+  MFA_LEVELS,
+  WALLET_CONNECTORS,
   WEB3AUTH_NETWORK,
-} from "@web3auth/base";
-import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
-import { Web3AuthNoModal as Web3Auth } from "@web3auth/no-modal";
+  Web3Auth,
+} from "@web3auth/modal";
+
+// Cosmos/Fetch is not on the Embedded Wallets predefined list — pass it via
+// `chains` so init() does not require a dashboard chain config.
+const fetchChainConfig = {
+  chainNamespace: CHAIN_NAMESPACES.OTHER,
+  chainId: "fetchhub-4",
+  rpcTarget: "https://rpc-fetchhub.fetch-ai.com",
+  displayName: "fetch",
+  blockExplorerUrl: "https://explore.fetch.ai/",
+  ticker: "FET",
+  tickerName: "Fetch Token",
+  logo: "https://fetch.ai/static/media/fetch-logo.1f0c04c4.svg",
+};
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Form, Label } from "reactstrap";
 import { BackButton } from "..";
-import CosmosRpc from "./cosmos-rpc";
 import style from "./style.module.scss";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ButtonV2 } from "@components-v2/buttons/button";
@@ -24,7 +36,6 @@ import { useStore } from "../../../stores";
 import { SelectNetwork } from "../select-network";
 import classNames from "classnames";
 import { getNextDefaultAccountName, validateWalletName } from "@utils/index";
-// get from https://dashboard.web3auth.io
 
 export const AuthIntro: FunctionComponent<{
   registerConfig: RegisterConfig;
@@ -38,46 +49,33 @@ export const AuthIntro: FunctionComponent<{
     if (!AuthApiKey) return;
     const init = async () => {
       try {
-        const chainConfig = {
-          chainNamespace: CHAIN_NAMESPACES.OTHER,
-          chainId: "fetchhub-4",
-          rpcTarget: "https://rpc-fetchhub.fetch-ai.com",
-          displayName: "fetch",
-          blockExplorer: "https://explore.fetch.ai/",
-          ticker: "FET",
-          tickerName: "Fetch Token",
-        };
-        const privateKeyProvider = new CommonPrivateKeyProvider({
-          config: { chainConfig },
-        });
-
-        const web3auth = new Web3Auth({
+        const web3authInstance = new Web3Auth({
           clientId: AuthApiKey,
-          chainConfig,
+          // Must match the network configured for this client ID on the
+          // Web3Auth Dashboard (Sapphire Devnet for local DEV_AUTH_CLIENT_ID).
           web3AuthNetwork: isEnvDevelopment
-            ? WEB3AUTH_NETWORK.TESTNET
-            : WEB3AUTH_NETWORK.CYAN,
-          privateKeyProvider,
+            ? WEB3AUTH_NETWORK.SAPPHIRE_DEVNET
+            : WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+          chains: [fetchChainConfig],
+          defaultChainId: fetchChainConfig.chainId,
+          mfaLevel: MFA_LEVELS.OPTIONAL,
         });
-        setWeb3auth(web3auth);
-        const authAdapter = new AuthAdapter({ privateKeyProvider });
-        web3auth.configureAdapter(authAdapter);
-
-        await web3auth.init();
+        setWeb3auth(web3authInstance);
+        await web3authInstance.init();
       } catch (error) {
         console.error(error);
       }
     };
 
     init();
-  }, []);
+  }, [isEnvDevelopment]);
 
   const login = async () => {
     if (!web3auth) {
-      return;
+      return null;
     }
-    return await web3auth.connectTo(WALLET_ADAPTERS.AUTH, {
-      loginProvider: "google",
+    return await web3auth.connectTo(WALLET_CONNECTORS.AUTH, {
+      authConnection: AUTH_CONNECTION.GOOGLE,
     });
   };
 
@@ -87,12 +85,17 @@ export const AuthIntro: FunctionComponent<{
     }
     await web3auth.logout();
   };
-  const getPrivateKey = async (provider: any) => {
-    if (!provider) {
+
+  const getPrivateKey = async (
+    connection: Awaited<ReturnType<typeof login>>
+  ): Promise<string> => {
+    if (!connection?.ethereumProvider) {
       return "";
     }
-    const rpc = new CosmosRpc(provider);
-    return await rpc.getPrivateKey();
+    const privateKey = await connection.ethereumProvider.request({
+      method: "private_key",
+    });
+    return typeof privateKey === "string" ? privateKey : "";
   };
 
   const getUserInfo = async () => {
@@ -124,8 +127,8 @@ export const AuthIntro: FunctionComponent<{
               return;
             }
             try {
-              const data = await login();
-              const privateKey = await getPrivateKey(data);
+              const connection = await login();
+              const privateKey = await getPrivateKey(connection);
               if (!privateKey) return;
               registerConfig.setPrivateKey(privateKey);
               const email = await getUserInfo();
@@ -329,5 +332,3 @@ export const AuthPage: FunctionComponent<{
     </React.Fragment>
   );
 });
-
-// eslint-disable-next-line import/no-default-export

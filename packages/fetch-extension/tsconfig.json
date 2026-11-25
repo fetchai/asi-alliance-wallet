@@ -2,9 +2,19 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "esModuleInterop": true,
-    "target": "ES2016" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019' or 'ESNEXT'. */,
+    // ES2020+: BigInt + modern APIs used by Web3Auth/viem; Chromium extensions OK.
+    "target": "ES2020",
+    "lib": ["ES2021", "DOM", "DOM.Iterable", "WebWorker.ImportScripts"],
     "module": "ESNEXT" /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */,
+    // Prefer package.json "exports" → .d.ts (not published .ts sources). Without
+    // this, TS 5.0 node resolution walks into viem/ox *.ts and fails our strict
+    // checks on third-party code.
+    "moduleResolution": "bundler",
     "jsx": "react" /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */,
+    // Do not type-check dependency .d.ts files. Web3Auth v11 pulls viem/ox/
+    // Solana/MetaMask packages whose typings target newer TS than our 5.0.4
+    // toolchain; our own src remains fully checked.
+    "skipLibCheck": true,
     "baseUrl": "./",
     "paths": {
       "@new-components/*": ["src/new-components/*"],
@@ -18,7 +28,12 @@
       "@notificationTypes": ["src/@types/notification"],
       "@hooks/*": ["src/hooks/*"],
       "@assets/*": ["src/public/assets/*"],
-      "@utils/*": ["src/utils/*"]
+      "@utils/*": ["src/utils/*"],
+      // Older packages ship types outside package.json "exports"; point bundler
+      // resolution at the declaration files directly.
+      "framer-motion": ["../../node_modules/framer-motion/types/index.d.ts"],
+      "swiper": ["../../node_modules/swiper/swiper.d.ts"],
+      "swiper/react": ["../../node_modules/swiper/react/swiper-react.d.ts"]
     },
     "typeRoots": [
       "./node_modules/@types",
@@ -27,5 +42,5 @@
     ]
   },
   "include": ["src/**/*", "window.d.ts", "src/import-svg.d.ts"],
-  "excluded": ["src/**/*.stories.*","**/*.wasm"]
+  "exclude": ["src/**/*.stories.*", "**/*.wasm"]
 }

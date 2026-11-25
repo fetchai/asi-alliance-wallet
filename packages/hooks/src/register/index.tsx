@@ -112,6 +112,10 @@ export class RegisterConfig {
   @action
   clear() {
     this.setType("");
+    // Wipe sensitive registration state — the private key must not persist
+    // in memory after the user backs out or completes registration.
+    this._privateKey = "";
+    this._email = "";
   }
 
   @action
@@ -308,6 +312,9 @@ export class RegisterConfig {
       this._isFinalized = true;
     } finally {
       this._isLoading = false;
+      // The private key was imported into the encrypted vault (or the
+      // attempt failed) — wipe the in-memory copy either way.
+      this._privateKey = "";
     }
   }
 
