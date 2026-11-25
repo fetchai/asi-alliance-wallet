@@ -38,6 +38,7 @@ import {
   formatBalance,
   formatFiatBalance,
   removeComma,
+  formatFeeAmount,
 } from "utils/format/format";
 
 interface SendConfigs {
@@ -409,7 +410,9 @@ export const SendPhase2: FunctionComponent<{
               ] as ViewStyle
             }
           >
-            {feePrice?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+            {feePrice
+              ? formatFeeAmount(feePrice.hideIBCMetadata(true), isEvm)
+              : ""}
           </Text>
           <IconButton
             backgroundBlur={false}

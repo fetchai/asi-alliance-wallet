@@ -387,8 +387,13 @@ export function init(
 
   return {
     initFn: async () => {
-      await analyticsService.init();
-      await sidePanelService.init();
+      // Mobile uses Amplitude via UI AnalyticsStore; background Keplr analytics
+      // API is unused. Skipping avoids a useless AsyncStorage round-trip on the
+      // critical path.
+      if (analyticsOptions.platform !== "mobile") {
+        await analyticsService.init();
+        await sidePanelService.init();
+      }
       await interactionService.init();
 
       await chainsService.init();

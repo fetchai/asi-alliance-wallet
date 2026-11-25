@@ -67,11 +67,20 @@ export class KeyRingStore {
   ) {
     makeObservable(this);
 
-    this.init();
+    this.init().catch((e) => {
+      console.error("[KeyRingStore] init failed", e);
+    });
   }
 
   async init(): Promise<void> {
-    await this.refreshKeyRingStatus();
+    try {
+      await this.refreshKeyRingStatus();
+    } catch (e) {
+      console.error("[KeyRingStore] refreshKeyRingStatus failed, retrying", e);
+      // One retry after a short delay — first attempt can race background boot.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await this.refreshKeyRingStatus();
+    }
 
     runInAction(() => {
       this._isInitialized = true;

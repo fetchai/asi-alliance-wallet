@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { CardModal } from "modals/card";
-import { InteractionManager, Text, View, ViewStyle } from "react-native";
+import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { TabBarView } from "components/new/tab-bar/tab-bar";
 import { RectButton } from "components/rect-button";
@@ -13,9 +13,6 @@ import { observer } from "mobx-react-lite";
 import { SkeletonRow } from "./skeleton-row";
 import { YourWalletsTab } from "./your-wallets-tab";
 import { BlurBackground } from "components/new/blur-background/blur-background";
-import { ListAccountsMsg } from "@keplr-wallet/background";
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { RNMessageRequesterInternal } from "../../../router";
 
 interface IndexedItem<T> {
   index: number;
@@ -50,38 +47,7 @@ export const AddressBookCardModel: FunctionComponent<{
     const chainId = chainStore.current.chainId;
     const account = accountStore.getAccount(chainId);
 
-    const otherWallets = keyRingStore.multiKeyStoreInfo.filter(
-      (k) => !k.selected
-    );
-
-    const [walletAddresses, setWalletAddresses] = useState<string[]>([]);
-    const [isLoadingWallets, setIsLoadingWallets] = useState(false);
-
-    useEffect(() => {
-      if (!onSelectRecipient || !isOpen) return;
-      setIsLoadingWallets(true);
-      const task = InteractionManager.runAfterInteractions(async () => {
-        try {
-          const requester = new RNMessageRequesterInternal();
-          const accounts = await requester.sendMessage(
-            BACKGROUND_PORT,
-            new ListAccountsMsg()
-          );
-          const selectedIndex = keyRingStore.multiKeyStoreInfo.findIndex(
-            (k) => k.selected
-          );
-          setWalletAddresses(
-            accounts
-              .map((a) => a.bech32Address)
-              .filter((_, i) => i !== selectedIndex)
-          );
-        } catch {
-        } finally {
-          setIsLoadingWallets(false);
-        }
-      });
-      return () => task.cancel();
-    }, [isOpen]);
+    const otherWallets = keyRingStore.keyInfos.filter((k) => !k.isSelected);
 
     const [filterAddressBook, setFilterAddressBook] = useState<
       IndexedItem<AddressBookData>[]
@@ -263,12 +229,7 @@ export const AddressBookCardModel: FunctionComponent<{
         )}
 
         {showTabs && activeTab === "Your Wallets" && onSelectRecipient && (
-          <YourWalletsTab
-            isLoadingWallets={isLoadingWallets}
-            walletAddresses={walletAddresses}
-            onSelectRecipient={onSelectRecipient}
-            close={close}
-          />
+          <YourWalletsTab onSelectRecipient={onSelectRecipient} close={close} />
         )}
       </CardModal>
     );

@@ -133,9 +133,9 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
             }
 
             // Definetly, the last key is newest keyring.
-            if (keyRingStore.multiKeyStoreInfo.length > 0) {
-              await keyRingStore.changeKeyRing(
-                keyRingStore.multiKeyStoreInfo.length - 1
+            if (keyRingStore.keyInfos.length > 0) {
+              await keyRingStore.selectKeyRing(
+                keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
               );
             }
             analyticsStore.logEvent("staart_using_your_wallet_click", {

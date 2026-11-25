@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { observer } from "mobx-react-lite";
 import * as SplashScreen from "expo-splash-screen";
-import { KeyRingStatus } from "@keplr-wallet/background";
 import { useStore } from "stores/index";
 
 let splashHidden = false;
@@ -90,7 +89,7 @@ export const LaunchCoverController: FunctionComponent<{
   const { keyRingStore } = useStore();
 
   useEffect(() => {
-    if (keyRingStore.status === KeyRingStatus.NOTLOADED) {
+    if (keyRingStore.status === "not-loaded") {
       return;
     }
     const task = InteractionManager.runAfterInteractions(() => {

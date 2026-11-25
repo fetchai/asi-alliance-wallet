@@ -26,3 +26,4 @@ cp ${DIR}/restart-fix/JSCRuntime.cpp ${DIR}/../../node_modules/react-native/Reac
 
 . ${DIR}/ios/fix-ios-blur-view.sh
 . ${DIR}/ios/fix-ios-legacy-pods.sh
+. ${DIR}/ios/fix-ios-expo-cli-xcode27.sh

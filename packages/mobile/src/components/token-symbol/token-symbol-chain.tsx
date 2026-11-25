@@ -13,7 +13,7 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
   chainInfo: {
     [x: string]: any;
     chainName: string;
-    stakeCurrency: Currency;
+    stakeCurrency?: Currency;
   };
   size: number;
 
@@ -28,7 +28,7 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
   const style = useStyle();
 
   const currencyImageUrl =
-    chainInfo?.["_chainInfo"]?.chainSymbolImageUrl ?? currency.coinImageUrl;
+    chainInfo?.chainSymbolImageUrl ?? currency.coinImageUrl;
 
   return (
     <View
