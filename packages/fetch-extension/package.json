@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "clean": "rm -rf node_modules; rm -rf dist; rm -rf build",
-    "build": "cross-env NODE_ENV=production BUILD_OUTPUT=build/manifest-v3 webpack && cross-env NODE_ENV=production BUILD_MANIFEST_V2=true BUILD_OUTPUT=build/manifest-v2 webpack && zx ./scripts/post-build.mjs",
+    "build": "cross-env NODE_ENV=production BUILD_OUTPUT=build/manifest-v3 webpack && cross-env NODE_ENV=production BUILD_MANIFEST_V2=true BUILD_OUTPUT=build/manifest-v2 webpack && yarn run -T zx ./scripts/post-build.mjs",
     "build:noop": "tsc -p tsconfig.noop.json",
     "dev": "cross-env NODE_ENV=development BUILD_MANIFEST_V2=false webpack",
     "dev:analyzer": "cross-env NODE_ENV=development ANALYZER=true webpack",
@@ -15,7 +15,7 @@
     "test": "jest --passWithNoTests",
     "lint-test": "eslint \"src/**/*\" webpack.config.js && prettier --check \"src/**/*\" webpack.config.js",
     "lint-fix": "eslint --fix \"src/**/*\" webpack.config.js && prettier --write \"src/**/*\" webpack.config.js",
-    "version": "zx ./scripts/lerna-lifecyle-version.mjs"
+    "version": "yarn run -T zx ./scripts/lerna-lifecyle-version.mjs"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^1.10.3",

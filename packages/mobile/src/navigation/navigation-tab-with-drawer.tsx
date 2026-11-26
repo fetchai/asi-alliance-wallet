@@ -58,11 +58,9 @@ export const MainTabNavigation: FunctionComponent = () => {
   const focusedScreen = useFocusedScreen();
   const isDrawerOpen = useDrawerStatus() === "open";
   const insets = useSafeAreaInsets();
-  const isAndroid = Platform.OS === "android";
-  // Android targetSdk 36 only. iOS keeps paddingVertical 16 + height 100 + inset.
-  const androidBottomInset = insets.bottom > 0 ? insets.bottom : 48;
-  const tabBarPaddingBottom = androidBottomInset + 8;
-  const tabBarHeight = 84 + tabBarPaddingBottom;
+  // Trust safe-area insets. The targetSdk-36 fallback of 48 when bottom was 0
+  // left a tall empty footer that covered scroll content (stake list, etc.).
+  const tabBarHeight = 100 + insets.bottom;
 
   /// Auto lock app if app in bg
   useEffect(() => {
@@ -349,21 +347,12 @@ export const MainTabNavigation: FunctionComponent = () => {
             backgroundColor: "#ffffff",
             shadowColor: style.get("color-transparent").color,
             elevation: 0,
+            paddingVertical: 16,
             paddingHorizontal: 20,
+            height: tabBarHeight,
             borderTopWidth: 1,
             borderTopColor: "#DCDCE3",
-            ...(isAndroid
-              ? {
-                  paddingTop: 16,
-                  paddingBottom: tabBarPaddingBottom,
-                  height: tabBarHeight,
-                }
-              : {
-                  paddingVertical: 16,
-                  height: 100 + insets.bottom,
-                }),
           },
-          ...(isAndroid ? { safeAreaInsets: { bottom: 0 } } : {}),
           showLabel: false,
         })}
         tabBar={(props) => (

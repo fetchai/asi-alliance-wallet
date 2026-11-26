@@ -36,8 +36,7 @@ export async function checkRPCConnectivity(
   try {
     // Get the status to get the chain id.
     resultStatus = await simpleFetch(rpc, "/status");
-  } catch (e) {
-    console.log(e);
+  } catch {
     throw new Error("Failed to get response /status from rpc endpoint");
   }
 
@@ -122,8 +121,7 @@ export async function checkRestConnectivity(
         network: string;
       };
     }>(rest, "/cosmos/base/tendermint/v1beta1/node_info");
-  } catch (e) {
-    console.log(e);
+  } catch {
     throw new Error(
       "Failed to get response /cosmos/base/tendermint/v1beta1/node_info from lcd endpoint"
     );
@@ -174,8 +172,7 @@ export async function checkEvmRpcConnectivity(
         id: 1,
       }),
     });
-  } catch (e) {
-    console.log(e);
+  } catch {
     throw new Error("Failed to get response eth_chainId from EVM RPC endpoint");
   }
 
@@ -213,8 +210,7 @@ export async function checkStarknetRpcConnectivity(
         id: 1,
       }),
     });
-  } catch (e) {
-    console.log(e);
+  } catch {
     throw new Error(
       "Failed to get response starknet_chainId from Starknet RPC endpoint"
     );

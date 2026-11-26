@@ -2,10 +2,22 @@
  * @format
  */
 
+import "@web3auth/react-native-sdk/setup";
 import "./shim";
 import "react-native-gesture-handler";
 import { AppRegistry, LogBox } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from "react-native-reanimated";
+
+// Strict mode warns on SharedValue reads during render; we fixed the known
+// AnimatedNumber path, but keep noise down if other libs still trip it.
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 
 // Expo 52: must run before other JS so splash is not dismissed on CONTENT_APPEARED.
 SplashScreen.preventAutoHideAsync().catch(() => {});

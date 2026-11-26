@@ -8,14 +8,19 @@ import { Controller, useForm } from "react-hook-form";
 import { PageWithScrollView } from "components/page";
 import { Platform, Text, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
-import Web3Auth, { LOGIN_PROVIDER } from "@web3auth/react-native-sdk";
+import Web3Auth, {
+  AUTH_CONNECTION,
+  CHAIN_NAMESPACES,
+  MFA_LEVELS,
+  WEB3AUTH_NETWORK,
+} from "@web3auth/react-native-sdk";
+import type { AUTH_CONNECTION_TYPE } from "@web3auth/react-native-sdk";
 import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
 import Constants, { AppOwnership } from "expo-constants";
 import * as Linking from "expo-linking";
 import { useLoadingScreen } from "providers/loading-screen";
 import { useStore } from "stores/index";
-import { LOGIN_PROVIDER_TYPE } from "@toruslabs/openlogin-utils/dist/types/interfaces";
 import { AuthApiKey } from "../../../config";
 import { InputCardView } from "components/new/card-view/input-card";
 import { IconButton } from "components/new/button/icon";
@@ -23,11 +28,8 @@ import { EyeIcon } from "components/new/icon/eye";
 import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import { PasswordValidateView } from "components/new/password-validate/password-validate";
 import { XmarkIcon } from "components/new/icon/xmark";
-import { CheckIcon } from "components/new/icon/check"; // for using ethers.js
+import { CheckIcon } from "components/new/icon/check";
 import DeviceInfo from "react-native-device-info";
-import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
-import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
-import CosmosRpc from "./cosmos-rpc";
 
 const isEnvDevelopment = process.env["NODE_ENV"] !== "production";
 const scheme = "fetchwallet";
@@ -36,31 +38,29 @@ const resolvedRedirectUrl =
     ? Linking.createURL("web3auth", {})
     : Linking.createURL("web3auth", { scheme });
 
-const chainConfig = {
+// Cosmos/Fetch is not on the Embedded Wallets predefined list — pass via
+// `chains` so init does not require a dashboard chain config.
+const fetchChainConfig = {
   chainNamespace: CHAIN_NAMESPACES.OTHER,
   chainId: "fetchhub-4",
   rpcTarget: "https://rpc-fetchhub.fetch-ai.com",
   displayName: "fetch",
-  blockExplorer: "https://explore.fetch.ai/",
+  blockExplorerUrl: "https://explore.fetch.ai/",
   ticker: "FET",
   tickerName: "Fetch Token",
+  logo: "https://fetch.ai/static/media/fetch-logo.1f0c04c4.svg",
 };
-
-const privateKeyProvider = new CommonPrivateKeyProvider({
-  config: {
-    chainConfig,
-  },
-});
-
-const network = isEnvDevelopment
-  ? WEB3AUTH_NETWORK.TESTNET
-  : WEB3AUTH_NETWORK.CYAN;
 
 const web3auth = new Web3Auth(WebBrowser, SecureStore, {
   clientId: AuthApiKey,
   redirectUrl: resolvedRedirectUrl,
-  network,
-  privateKeyProvider,
+  // Must match the Web3Auth Dashboard network for this client ID.
+  network: isEnvDevelopment
+    ? WEB3AUTH_NETWORK.SAPPHIRE_DEVNET
+    : WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+  // OTHER namespaces (e.g. fetchhub-4) may use non-hex chainIds. RN SDK only
+  // allows hex `defaultChainId`, so omit it and let init pick chains[0].
+  chains: [fetchChainConfig],
 });
 
 interface FormData {
@@ -68,8 +68,47 @@ interface FormData {
   password: string;
 }
 
+const normalizePrivKeyHex = (value: unknown): string => {
+  if (typeof value !== "string" || !value) {
+    return "";
+  }
+  const hex = value.trim().replace(/^0x/i, "");
+  // secp256k1 private keys are 32 bytes → 64 hex chars
+  return /^[0-9a-fA-F]{64}$/.test(hex) ? hex : "";
+};
+
+const getPrivateKeyFromConnection = async (
+  connection: Awaited<ReturnType<typeof web3auth.connectTo>>
+): Promise<string> => {
+  if (!connection?.ethereumProvider) {
+    return "";
+  }
+  try {
+    const privateKey = await connection.ethereumProvider.request({
+      method: "private_key",
+    });
+    return normalizePrivKeyHex(privateKey);
+  } catch (e) {
+    console.warn("[Web3Auth] private_key export failed", e);
+    return "";
+  }
+};
+
+const resolveEmail = (
+  userInfo: ReturnType<typeof web3auth.userInfo> | undefined,
+  authConnection: AUTH_CONNECTION_TYPE
+): string => {
+  if (userInfo?.email) {
+    return userInfo.email;
+  }
+  if (userInfo?.userId) {
+    return `${userInfo.userId}@${authConnection}.web3auth`;
+  }
+  return `${authConnection}-user@web3auth.local`;
+};
+
 const useWeb3AuthSignIn = (
-  type: LOGIN_PROVIDER_TYPE
+  authConnection: AUTH_CONNECTION_TYPE
 ): {
   privateKey: Uint8Array | undefined;
   email: string | undefined;
@@ -79,6 +118,21 @@ const useWeb3AuthSignIn = (
   const loadingScreen = useLoadingScreen();
   const navigation = useNavigation();
 
+  const applySession = async (
+    connection: Awaited<ReturnType<typeof web3auth.connectTo>>
+  ) => {
+    const hexKey =
+      (await getPrivateKeyFromConnection(connection)) ||
+      (await getPrivateKeyFromConnection(web3auth.connection));
+    if (!hexKey) {
+      throw new Error(
+        "Failed to export private key from Web3Auth (enable Key Export on the dashboard if disabled)"
+      );
+    }
+    setEmail(resolveEmail(web3auth.userInfo(), authConnection));
+    setPrivateKey(Buffer.from(hexKey, "hex"));
+  };
+
   const login = async () => {
     try {
       loadingScreen.setIsLoading(true);
@@ -87,8 +141,9 @@ const useWeb3AuthSignIn = (
         return;
       }
 
-      await web3auth.login({
-        loginProvider: type,
+      const connection = await web3auth.connectTo({
+        authConnection,
+        mfaLevel: MFA_LEVELS.OPTIONAL,
       });
 
       // iOS: first login sometimes needs a re-init to pick up the session.
@@ -96,13 +151,13 @@ const useWeb3AuthSignIn = (
         await web3auth.init();
       }
 
-      if (web3auth.connected) {
-        const privateKey = await getPrivateKey(privateKeyProvider);
-        setEmail(web3auth?.userInfo()?.email);
-        setPrivateKey(Buffer.from(privateKey, "hex"));
+      if (!web3auth.connected && !connection) {
+        throw new Error("Web3Auth login did not establish a session");
       }
+
+      await applySession(connection ?? web3auth.connection);
     } catch (e: any) {
-      console.log(e.message);
+      console.log("[Web3Auth] login error", e?.message ?? e);
       navigation.goBack();
     } finally {
       loadingScreen.setIsLoading(false);
@@ -111,33 +166,39 @@ const useWeb3AuthSignIn = (
 
   useEffect(() => {
     const init = async () => {
-      await web3auth.init();
-
-      if (web3auth.connected) {
-        const userInfo = web3auth.userInfo();
-        const typeOfLogin = userInfo?.typeOfLogin;
-
-        if (type == typeOfLogin) {
-          setEmail(userInfo?.email);
-          const privateKey = await getPrivateKey(privateKeyProvider);
-          setPrivateKey(Buffer.from(privateKey, "hex"));
-        } else {
-          await login();
+      try {
+        if (!AuthApiKey) {
+          throw new Error(
+            "Missing AuthApiKey — set DEV_AUTH_CLIENT_ID in packages/mobile/.env"
+          );
         }
-      } else {
+        if (!web3auth.ready) {
+          await web3auth.init();
+        }
+
+        if (web3auth.connected) {
+          const userInfo = web3auth.userInfo();
+          const existingAuthConnection = userInfo?.authConnection;
+
+          if (authConnection === existingAuthConnection) {
+            try {
+              await applySession(web3auth.connection);
+              return;
+            } catch {
+              // Fall through to a fresh login if the cached session has no key.
+            }
+          }
+        }
         await login();
+      } catch (e: any) {
+        console.log("[Web3Auth] init error", e?.message ?? e);
+        navigation.goBack();
       }
     };
     init();
+    // Mount-only: authConnection is fixed for this screen instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const getPrivateKey = async (provider: any) => {
-    if (!provider) {
-      return "";
-    }
-    const rpc = new CosmosRpc(provider);
-    return await rpc.getPrivateKey();
-  };
 
   return {
     privateKey,
@@ -199,12 +260,15 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
   // Below uses the hook conditionally.
   // This is a silly way, but `route.params.type` never changed in the logic.
   const { privateKey, email } = useWeb3AuthSignIn(
-    route.params.type === "apple" ? LOGIN_PROVIDER.APPLE : LOGIN_PROVIDER.GOOGLE
+    route.params.type === "apple"
+      ? AUTH_CONNECTION.APPLE
+      : AUTH_CONNECTION.GOOGLE
   );
 
   const submit = handleSubmit(async () => {
     setShowPassword(false);
-    if (!privateKey || !email) {
+    if (!privateKey) {
+      console.log("[Web3Auth] Continue pressed but private key is missing");
       return;
     }
 
@@ -215,7 +279,17 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
         getValues("name"),
         privateKey,
         getValues("password"),
-        { email, socialType: route.params.type }
+        {
+          email:
+            email ||
+            resolveEmail(
+              undefined,
+              route.params.type === "apple"
+                ? AUTH_CONNECTION.APPLE
+                : AUTH_CONNECTION.GOOGLE
+            ),
+          socialType: route.params.type,
+        }
       );
       analyticsStore.setUserProperties({
         registerType: route.params.type,
@@ -223,7 +297,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
       });
       analyticsStore.logEvent("register_done_click", {
         pageName: title,
-        registerType: "apple",
+        registerType: route.params.type,
       });
       smartNavigation.reset({
         index: 0,
@@ -237,7 +311,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
         ],
       });
     } catch (e) {
-      console.log(e);
+      console.log("[Web3Auth] createPrivateKey failed", e);
     } finally {
       setIsCreating(false);
       await logoutWeb3Auth();
@@ -360,8 +434,6 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
               },
             }}
             render={({ field: { onChange, onBlur, value, ref } }) => {
-              setPassword(value);
-
               return (
                 <InputCardView
                   label="Create wallet password"
@@ -375,7 +447,11 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
                   error={errors.password?.message}
                   errorMassageShow={false}
                   onBlur={onBlur}
-                  onChangeText={(text: string) => onChange(text.trim())}
+                  onChangeText={(text: string) => {
+                    const next = text.trim();
+                    onChange(next);
+                    setPassword(next);
+                  }}
                   value={value}
                   ref={ref}
                   rightIcon={
@@ -522,7 +598,7 @@ export const TorusSignInScreen: FunctionComponent = observer(() => {
         onPress={() => {
           submit();
         }}
-        disabled={!privateKey || !email}
+        disabled={!privateKey}
       />
     </PageWithScrollView>
   );

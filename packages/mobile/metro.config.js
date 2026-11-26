@@ -1,6 +1,7 @@
 /* eslint-disable */
 const { getDefaultConfig } = require("expo/metro-config");
 const { mergeConfig } = require("@react-native/metro-config");
+const { withWeb3Auth } = require("@web3auth/react-native-sdk/metro-config");
 const exclusionList = require("metro-config/src/defaults/exclusionList");
 const getWorkspaces = require("get-yarn-workspaces");
 const fs = require("fs");
@@ -75,15 +76,11 @@ const config = {
     sourceExts: [...defaultConfig.resolver.sourceExts, "svg"],
     // To prevent multiple React instances, block the one in this package and use root's.
     blockList: exclusionList([/packages\/mobile\/node_modules\/react\/.*/]),
+    // crypto / node:crypto are provided by withWeb3Auth (quick-crypto).
     extraNodeModules: {
       ...(defaultConfig.resolver.extraNodeModules || {}),
-      crypto: path.resolve(
-        __dirname,
-        "./node_modules/expo-standard-web-crypto"
-      ),
-      "node:crypto": path.resolve(
-        __dirname,
-        "./node_modules/expo-standard-web-crypto"
+      tslib: path.dirname(
+        require.resolve("tslib/tslib.js", { paths: [__dirname] })
       ),
       buffer: path.resolve(__dirname, "./node_modules/buffer"),
       stream: path.resolve(__dirname, "./node_modules/stream-browserify"),
@@ -98,6 +95,29 @@ const config = {
       const ledgerResolved = resolveLedgerhqSubpath(moduleName);
       if (ledgerResolved) {
         return ledgerResolved;
+      }
+
+      // withWeb3Auth enables package exports; Metro can then pick tslib's ESM
+      // entry, which leaves `__extends` undefined under Hermes/CJS interop.
+      if (moduleName === "tslib") {
+        return {
+          filePath: require.resolve("tslib/tslib.js", { paths: [__dirname] }),
+          type: "sourceFile",
+        };
+      }
+
+      // Expo + quick-crypto peer often imports this; pin to CJS entry.
+      if (moduleName === "react-native-quick-base64") {
+        try {
+          return {
+            filePath: require.resolve("react-native-quick-base64", {
+              paths: [__dirname],
+            }),
+            type: "sourceFile",
+          };
+        } catch {
+          // optional peer
+        }
       }
 
       // starknet's "browser" field points at index.global.js (IIFE). Metro prefers
@@ -119,4 +139,4 @@ const config = {
   },
 };
 
-module.exports = mergeConfig(defaultConfig, config);
+module.exports = withWeb3Auth(mergeConfig(defaultConfig, config));

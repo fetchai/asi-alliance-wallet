@@ -50,6 +50,8 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const safeAreaInsets = useSafeAreaInsets();
+  // Absolute tab bar is `100 + insets.bottom`; keep content clear of it.
+  const tabBarInset = isTab ? 100 + safeAreaInsets.bottom + 24 : 0;
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -197,11 +199,15 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
       ) : (
         <View
           style={
-            style.flatten([
-              "height-half",
-              "justify-center",
-              "items-center",
-            ]) as ViewStyle
+            [
+              style.flatten(["justify-center", "items-center", "flex-grow-1"]),
+              {
+                // Avoid height-half: with an absolute tab bar it extends under
+                // the footer and clips the Start Staking button.
+                paddingBottom: tabBarInset,
+                minHeight: 360,
+              },
+            ] as ViewStyle
           }
         >
           <IconWithText
@@ -254,7 +260,9 @@ export const StakingDashboardScreen: FunctionComponent = observer(() => {
           />
         </View>
       )}
-      <View style={{ height: isTab ? 100 + safeAreaInsets.bottom : 0 }} />
+      {(delegations && delegations.length > 0) || hasUnbonding ? (
+        <View style={{ height: tabBarInset }} />
+      ) : null}
     </PageWithScrollView>
   );
 });

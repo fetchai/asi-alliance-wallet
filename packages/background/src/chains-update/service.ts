@@ -63,14 +63,14 @@ export class ChainsUpdateService {
     }
 
     this.chainsService.addChainSuggestedHandler((chainInfo) => {
-      this.updateChainInfo(chainInfo.chainId).catch((e) => {
-        console.log(e);
+      this.updateChainInfo(chainInfo.chainId).catch(() => {
+        // unreachable / flaky endpoints during chain update
       });
     });
 
     this.chainsService.addChainRemovedHandler((chainInfo) => {
-      this.updateChainInfo(chainInfo.chainId).catch((e) => {
-        console.log(e);
+      this.updateChainInfo(chainInfo.chainId).catch(() => {
+        // unreachable / flaky endpoints during chain update
       });
     });
 
@@ -134,8 +134,8 @@ export class ChainsUpdateService {
         const chainInfos = this.chainsService.getChainInfos();
         for (const chainInfo of chainInfos) {
           // No need to wait
-          this.updateChainInfo(chainInfo.chainId).catch((e) => {
-            console.log(e);
+          this.updateChainInfo(chainInfo.chainId).catch(() => {
+            // unreachable / flaky endpoints during chain update
           });
         }
       }
@@ -159,8 +159,8 @@ export class ChainsUpdateService {
       const chainIdentifiers = this.chainsUIService.allEnabledChainIdentifiers;
       for (const chainIdentifier of chainIdentifiers) {
         // No need to wait
-        this.updateChainInfo(chainIdentifier).catch((e) => {
-          console.log(e);
+        this.updateChainInfo(chainIdentifier).catch(() => {
+          // unreachable / flaky endpoints during chain update
         });
       }
     }
@@ -240,16 +240,14 @@ export class ChainsUpdateService {
         updated1 = await this.chainsService.tryUpdateChainInfoFromRepo(
           chainIdentifier
         );
-      } catch (e) {
-        console.log(e);
+      } catch {
         // Ignore error to proceed to tryUpdateChainInfoFromRpcOrRest if it fails.
       }
     }
 
     const updated2 = await this.chainsService
       .tryUpdateChainInfoFromRpcOrRest(chainIdentifier)
-      .catch((e) => {
-        console.log(e);
+      .catch(() => {
         return false;
       });
 
