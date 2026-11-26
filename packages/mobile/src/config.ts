@@ -2835,10 +2835,15 @@ export const AmplitudeApiKey =
     ? PROD_AMPLITUDE_API_KEY
     : DEV_AMPLITUDE_API_KEY;
 
-export const AuthApiKey =
+// Empty/missing client IDs must stay falsy so social-login UI can hide
+// (same pattern as extension AuthApiKey gating).
+const rawAuthClientId =
   process.env["NODE_ENV"] === "production"
     ? PROD_AUTH_CLIENT_ID
     : DEV_AUTH_CLIENT_ID;
+export const AuthApiKey =
+  typeof rawAuthClientId === "string" ? rawAuthClientId.trim() : "";
+export const isWeb3AuthEnabled = AuthApiKey.length > 0;
 
 export const CommunityChainInfoRepo = {
   organizationName: "chainapsis",

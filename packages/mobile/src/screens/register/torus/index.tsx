@@ -21,7 +21,7 @@ import Constants, { AppOwnership } from "expo-constants";
 import * as Linking from "expo-linking";
 import { useLoadingScreen } from "providers/loading-screen";
 import { useStore } from "stores/index";
-import { AuthApiKey } from "../../../config";
+import { AuthApiKey, isWeb3AuthEnabled } from "../../../config";
 import { InputCardView } from "components/new/card-view/input-card";
 import { IconButton } from "components/new/button/icon";
 import { EyeIcon } from "components/new/icon/eye";
@@ -51,17 +51,30 @@ const fetchChainConfig = {
   logo: "https://fetch.ai/static/media/fetch-logo.1f0c04c4.svg",
 };
 
-const web3auth = new Web3Auth(WebBrowser, SecureStore, {
-  clientId: AuthApiKey,
-  redirectUrl: resolvedRedirectUrl,
-  // Must match the Web3Auth Dashboard network for this client ID.
-  network: isEnvDevelopment
-    ? WEB3AUTH_NETWORK.SAPPHIRE_DEVNET
-    : WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
-  // OTHER namespaces (e.g. fetchhub-4) may use non-hex chainIds. RN SDK only
-  // allows hex `defaultChainId`, so omit it and let init pick chains[0].
-  chains: [fetchChainConfig],
-});
+// Lazy: `new Web3Auth` throws if clientId is empty, and this module is pulled in
+// by register navigation even when social login is unused.
+let web3auth: Web3Auth | null = null;
+const getWeb3Auth = (): Web3Auth => {
+  if (!isWeb3AuthEnabled) {
+    throw new Error(
+      "Missing AuthApiKey — set DEV_AUTH_CLIENT_ID / PROD_AUTH_CLIENT_ID in packages/mobile/.env"
+    );
+  }
+  if (!web3auth) {
+    web3auth = new Web3Auth(WebBrowser, SecureStore, {
+      clientId: AuthApiKey,
+      redirectUrl: resolvedRedirectUrl,
+      // Must match the Web3Auth Dashboard network for this client ID.
+      network: isEnvDevelopment
+        ? WEB3AUTH_NETWORK.SAPPHIRE_DEVNET
+        : WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+      // OTHER namespaces (e.g. fetchhub-4) may use non-hex chainIds. RN SDK only
+      // allows hex `defaultChainId`, so omit it and let init pick chains[0].
+      chains: [fetchChainConfig],
+    });
+  }
+  return web3auth;
+};
 
 interface FormData {
   name: string;
@@ -78,7 +91,7 @@ const normalizePrivKeyHex = (value: unknown): string => {
 };
 
 const getPrivateKeyFromConnection = async (
-  connection: Awaited<ReturnType<typeof web3auth.connectTo>>
+  connection: Awaited<ReturnType<Web3Auth["connectTo"]>>
 ): Promise<string> => {
   if (!connection?.ethereumProvider) {
     return "";
@@ -95,7 +108,7 @@ const getPrivateKeyFromConnection = async (
 };
 
 const resolveEmail = (
-  userInfo: ReturnType<typeof web3auth.userInfo> | undefined,
+  userInfo: ReturnType<Web3Auth["userInfo"]> | undefined,
   authConnection: AUTH_CONNECTION_TYPE
 ): string => {
   if (userInfo?.email) {
@@ -119,43 +132,45 @@ const useWeb3AuthSignIn = (
   const navigation = useNavigation();
 
   const applySession = async (
-    connection: Awaited<ReturnType<typeof web3auth.connectTo>>
+    connection: Awaited<ReturnType<Web3Auth["connectTo"]>>
   ) => {
+    const client = getWeb3Auth();
     const hexKey =
       (await getPrivateKeyFromConnection(connection)) ||
-      (await getPrivateKeyFromConnection(web3auth.connection));
+      (await getPrivateKeyFromConnection(client.connection));
     if (!hexKey) {
       throw new Error(
         "Failed to export private key from Web3Auth (enable Key Export on the dashboard if disabled)"
       );
     }
-    setEmail(resolveEmail(web3auth.userInfo(), authConnection));
+    setEmail(resolveEmail(client.userInfo(), authConnection));
     setPrivateKey(Buffer.from(hexKey, "hex"));
   };
 
   const login = async () => {
     try {
       loadingScreen.setIsLoading(true);
-      if (!web3auth.ready) {
+      const client = getWeb3Auth();
+      if (!client.ready) {
         console.error("Web3auth not initialized");
         return;
       }
 
-      const connection = await web3auth.connectTo({
+      const connection = await client.connectTo({
         authConnection,
         mfaLevel: MFA_LEVELS.OPTIONAL,
       });
 
       // iOS: first login sometimes needs a re-init to pick up the session.
-      if (!web3auth.connected && Platform.OS === "ios") {
-        await web3auth.init();
+      if (!client.connected && Platform.OS === "ios") {
+        await client.init();
       }
 
-      if (!web3auth.connected && !connection) {
+      if (!client.connected && !connection) {
         throw new Error("Web3Auth login did not establish a session");
       }
 
-      await applySession(connection ?? web3auth.connection);
+      await applySession(connection ?? client.connection);
     } catch (e: any) {
       console.log("[Web3Auth] login error", e?.message ?? e);
       navigation.goBack();
@@ -167,22 +182,23 @@ const useWeb3AuthSignIn = (
   useEffect(() => {
     const init = async () => {
       try {
-        if (!AuthApiKey) {
+        if (!isWeb3AuthEnabled) {
           throw new Error(
-            "Missing AuthApiKey — set DEV_AUTH_CLIENT_ID in packages/mobile/.env"
+            "Missing AuthApiKey — set DEV_AUTH_CLIENT_ID / PROD_AUTH_CLIENT_ID in packages/mobile/.env"
           );
         }
-        if (!web3auth.ready) {
-          await web3auth.init();
+        const client = getWeb3Auth();
+        if (!client.ready) {
+          await client.init();
         }
 
-        if (web3auth.connected) {
-          const userInfo = web3auth.userInfo();
+        if (client.connected) {
+          const userInfo = client.userInfo();
           const existingAuthConnection = userInfo?.authConnection;
 
           if (authConnection === existingAuthConnection) {
             try {
-              await applySession(web3auth.connection);
+              await applySession(client.connection);
               return;
             } catch {
               // Fall through to a fresh login if the cached session has no key.
@@ -207,7 +223,7 @@ const useWeb3AuthSignIn = (
 };
 
 const logoutWeb3Auth = async () => {
-  if (!web3auth.ready) {
+  if (!web3auth?.ready) {
     console.log("Web3auth not initialized");
     return;
   }

@@ -92,11 +92,33 @@ export const LaunchCoverController: FunctionComponent<{
     if (keyRingStore.status === "not-loaded") {
       return;
     }
-    const task = InteractionManager.runAfterInteractions(() => {
+    // Prefer after paint, but don't hang forever — release builds (Sentry
+    // replay / Hermes) can leave InteractionManager pending indefinitely.
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) {
+        return;
+      }
+      dismissed = true;
+      void hideNativeSplash();
       onDismiss();
-    });
-    return () => task.cancel();
+    };
+    const task = InteractionManager.runAfterInteractions(dismiss);
+    const fallback = setTimeout(dismiss, 1500);
+    return () => {
+      task.cancel();
+      clearTimeout(fallback);
+    };
   }, [keyRingStore.status, onDismiss]);
+
+  // Hard failsafe if keyring status never leaves not-loaded.
+  useEffect(() => {
+    const fallback = setTimeout(() => {
+      void hideNativeSplash();
+      onDismiss();
+    }, 8000);
+    return () => clearTimeout(fallback);
+  }, [onDismiss]);
 
   return null;
 });
