@@ -33,6 +33,7 @@ import {
   formatBalance,
   formatFiatBalance,
   numberLocalFormat,
+  formatFeeAmount,
 } from "utils/format/format";
 
 interface ItemData {
@@ -458,7 +459,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             }
           >
             {feePrice
-              ? feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)
+              ? formatFeeAmount(feePrice.hideIBCMetadata(true), isEvm)
               : ""}
           </Text>
           <IconButton

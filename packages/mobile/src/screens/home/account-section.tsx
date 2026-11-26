@@ -42,6 +42,8 @@ import { BalanceCard } from "./balance-card";
 import { ClaimCard } from "./claim-card";
 import { observer } from "mobx-react-lite";
 import { fetchProposalNodes } from "screens/activity/utils";
+import { WalletStatus } from "@keplr-wallet/stores";
+import Skeleton from "react-native-reanimated-skeleton";
 
 export const AccountSection: FunctionComponent<{
   containerStyle?: ViewStyle;
@@ -81,6 +83,9 @@ export const AccountSection: FunctionComponent<{
     typeof netInfo.isConnected !== "boolean" || netInfo.isConnected;
 
   const account = accountStore.getAccount(chainStore.current.chainId);
+  const isAccountLoading =
+    account.walletStatus === WalletStatus.NotInit ||
+    account.walletStatus === WalletStatus.Loading;
   const queries = queriesStore.get(chainStore.current.chainId);
 
   const queryStakable = queries.queryBalances.getQueryBech32Address(
@@ -355,16 +360,47 @@ export const AccountSection: FunctionComponent<{
           ] as ViewStyle
         }
       >
-        <View style={style.flatten(["flex-3"]) as ViewStyle}>
-          <Text style={style.flatten(["body3", "color-black"]) as ViewStyle}>
-            {account.name}
-          </Text>
-          <AddressCopyable
-            address={account.bech32Address}
-            maxCharacters={16}
-            textStyle={style.flatten(["color-gray-300"]) as ViewStyle}
-          />
-        </View>
+        {isAccountLoading ? (
+          <Skeleton
+            isLoading={true}
+            containerStyle={
+              {
+                flex: 3,
+                minHeight: 36,
+                justifyContent: "center",
+              } as ViewStyle
+            }
+            layout={[
+              {
+                key: "accountName",
+                width: 120,
+                height: 14,
+                marginBottom: 8,
+              },
+              {
+                key: "accountAddress",
+                width: 180,
+                height: 12,
+              },
+            ]}
+            boneColor={style.get("color-gray-100").color}
+            highlightColor={style.get("color-gray-50").color}
+          >
+            {/* Required by Skeleton; bones render while isLoading. */}
+            <View />
+          </Skeleton>
+        ) : (
+          <View style={style.flatten(["flex-3"]) as ViewStyle}>
+            <Text style={style.flatten(["body3", "color-black"]) as ViewStyle}>
+              {account.name}
+            </Text>
+            <AddressCopyable
+              address={account.bech32Address}
+              maxCharacters={16}
+              textStyle={style.flatten(["color-gray-300"]) as ViewStyle}
+            />
+          </View>
+        )}
         <IconButton
           backgroundBlur={false}
           icon={<ThreeDotIcon size={15} color="black" />}
@@ -504,11 +540,10 @@ export const AccountSection: FunctionComponent<{
         title="Change Wallet"
         keyRingStore={keyRingStore}
         close={() => setChangeWalletModal(false)}
-        onChangeAccount={async (keyStore) => {
-          const index = keyRingStore.multiKeyStoreInfo.indexOf(keyStore);
-          if (index >= 0) {
+        onChangeAccount={async (keyInfo) => {
+          if (keyInfo.id) {
             loadingScreen.setIsLoading(true);
-            await keyRingStore.changeKeyRing(index);
+            await keyRingStore.selectKeyRing(keyInfo.id);
             loadingScreen.setIsLoading(false);
             analyticsStore.logEvent("change_account_name_click", {
               pageName: "Home",

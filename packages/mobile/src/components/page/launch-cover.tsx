@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { observer } from "mobx-react-lite";
 import * as SplashScreen from "expo-splash-screen";
-import { KeyRingStatus } from "@keplr-wallet/background";
 import { useStore } from "stores/index";
 
 let splashHidden = false;
@@ -90,14 +89,36 @@ export const LaunchCoverController: FunctionComponent<{
   const { keyRingStore } = useStore();
 
   useEffect(() => {
-    if (keyRingStore.status === KeyRingStatus.NOTLOADED) {
+    if (keyRingStore.status === "not-loaded") {
       return;
     }
-    const task = InteractionManager.runAfterInteractions(() => {
+    // Prefer after paint, but don't hang forever — release builds (Sentry
+    // replay / Hermes) can leave InteractionManager pending indefinitely.
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) {
+        return;
+      }
+      dismissed = true;
+      void hideNativeSplash();
       onDismiss();
-    });
-    return () => task.cancel();
+    };
+    const task = InteractionManager.runAfterInteractions(dismiss);
+    const fallback = setTimeout(dismiss, 1500);
+    return () => {
+      task.cancel();
+      clearTimeout(fallback);
+    };
   }, [keyRingStore.status, onDismiss]);
+
+  // Hard failsafe if keyring status never leaves not-loaded.
+  useEffect(() => {
+    const fallback = setTimeout(() => {
+      void hideNativeSplash();
+      onDismiss();
+    }, 8000);
+    return () => clearTimeout(fallback);
+  }, [onDismiss]);
 
   return null;
 });

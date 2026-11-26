@@ -91,7 +91,7 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
       // Undo CameraView's Android status-bar chrome before leaving this screen.
       restoreAndroidStatusBarAfterCamera();
 
-      if (keyRingStore.multiKeyStoreInfo.length > 0) {
+      if (keyRingStore.keyInfos.length > 0) {
         // If already has accounts,
         await registerExportedKeyRingDatas(
           keyRingStore,

@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@cosmjs/launchpad": "^0.27.1",
-    "@keplr-wallet/types": "0.12.12",
+    "@keplr-wallet/types": "workspace:^",
     "long": "^4.0.0"
   }
 }

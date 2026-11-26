@@ -3,7 +3,6 @@ import { Text, View, ViewStyle } from "react-native";
 import Animated, {
   withSpring,
   withTiming,
-  useSharedValue,
   useAnimatedStyle,
   Easing,
   ReduceMotion,
@@ -39,8 +38,8 @@ export function RenderNumber({
   textColor = "white",
 }: RenderNumberProps) {
   const heightChange = fontSizeValue;
-  const initialY = useSharedValue(0);
-  const negativeTranslateY = -(initialY.value + numberSymbol * heightChange);
+  // Plain number — do not read SharedValue `.value` during render (Reanimated strict).
+  const targetTranslateY = -(numberSymbol * heightChange);
   const easingValue = listProperties.easingValue || "linear";
   const style = useStyle();
 
@@ -63,30 +62,40 @@ export function RenderNumber({
     return {
       transform: [
         {
-          translateY: withTiming(negativeTranslateY, {
+          translateY: withTiming(targetTranslateY, {
             duration: listProperties.durationValue,
             easing,
           }),
         },
       ],
     };
-  });
+  }, [targetTranslateY, easingValue, listProperties.durationValue]);
 
-  const animatedStylesSpring = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: withSpring(negativeTranslateY, {
-          mass: listProperties.mass,
-          damping: listProperties.damping,
-          stiffness: listProperties.stiffness,
-          restDisplacementThreshold: listProperties.restDisplacementThreshold,
-          overshootClamping: listProperties.overshootClamping,
-          restSpeedThreshold: listProperties.restSpeedThreshold,
-          reduceMotion: ReduceMotion.System,
-        }),
-      },
-    ],
-  }));
+  const animatedStylesSpring = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateY: withSpring(targetTranslateY, {
+            mass: listProperties.mass,
+            damping: listProperties.damping,
+            stiffness: listProperties.stiffness,
+            restDisplacementThreshold: listProperties.restDisplacementThreshold,
+            overshootClamping: listProperties.overshootClamping,
+            restSpeedThreshold: listProperties.restSpeedThreshold,
+            reduceMotion: ReduceMotion.System,
+          }),
+        },
+      ],
+    };
+  }, [
+    targetTranslateY,
+    listProperties.mass,
+    listProperties.damping,
+    listProperties.stiffness,
+    listProperties.restDisplacementThreshold,
+    listProperties.overshootClamping,
+    listProperties.restSpeedThreshold,
+  ]);
 
   return (
     <View

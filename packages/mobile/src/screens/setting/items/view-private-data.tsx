@@ -7,8 +7,9 @@ import { getPrivateDataTitle } from "screens/setting/screens/view-private-data";
 import { useStyle } from "styles/index";
 import { ViewStyle } from "react-native";
 import { KeyIconSmall } from "components/new/icon/key";
+import { observer } from "mobx-react-lite";
 
-export const SettingViewPrivateDataItem: FunctionComponent = () => {
+export const SettingViewPrivateDataItem: FunctionComponent = observer(() => {
   const { keyRingStore, analyticsStore } = useStore();
 
   const style = useStyle();
@@ -16,11 +17,13 @@ export const SettingViewPrivateDataItem: FunctionComponent = () => {
   const smartNavigation = useSmartNavigation();
 
   const [isOpenModal, setIsOpenModal] = useState(false);
+  const selectedKeyInfo = keyRingStore.selectedKeyInfo;
+  const selectedKeyType = selectedKeyInfo?.type ?? "";
 
   return (
     <React.Fragment>
       <SettingItem
-        label={getPrivateDataTitle(keyRingStore.keyRingType)}
+        label={getPrivateDataTitle(selectedKeyType)}
         left={<KeyIconSmall color="#151a1a" />}
         onPress={() => {
           setIsOpenModal(true);
@@ -34,24 +37,21 @@ export const SettingViewPrivateDataItem: FunctionComponent = () => {
         isOpen={isOpenModal}
         close={() => setIsOpenModal(false)}
         title={`Enter your password to view your ${
-          keyRingStore.keyRingType === "mnemonic"
-            ? "mnemonic seed"
-            : "private key"
+          selectedKeyType === "mnemonic" ? "mnemonic seed" : "private key"
         }`}
         onEnterPassword={async (password) => {
-          const index = keyRingStore.multiKeyStoreInfo.findIndex(
-            (keyStore) => keyStore.selected
-          );
-
-          if (index >= 0) {
-            const privateData = await keyRingStore.showKeyRing(index, password);
+          if (selectedKeyInfo) {
+            const privateData = await keyRingStore.showKeyRing(
+              selectedKeyInfo.id,
+              password
+            );
             smartNavigation.navigateSmart("Setting.ViewPrivateData", {
               privateData,
-              privateDataType: keyRingStore.keyRingType,
+              privateDataType: selectedKeyType,
             });
           }
         }}
       />
     </React.Fragment>
   );
-};
+});

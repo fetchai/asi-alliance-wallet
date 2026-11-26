@@ -66,11 +66,16 @@ const altResolve = () => {
   return {};
 };
 const sassRule = {
-  test: /(\.s?css)|(\.sass)$/,
+  // Anchor to end of filename so Web3Auth's prebuilt `*.css.js` modules are
+  // not mis-matched as Sass (the old `/(\.s?css)|(\.sass)$/` matched `.css`
+  // anywhere in the name).
+  test: /\.(s?css|sass)$/,
+  // Prebuilt CSS-in-JS from dependencies must stay as JS.
+  exclude: /\.css\.js$/,
   oneOf: [
     // if ext includes module as prefix, it perform by css loader.
     {
-      test: /.module(\.s?css)|(\.sass)$/,
+      test: /\.module\.(s?css|sass)$/,
       use: [
         "style-loader",
         {
@@ -120,6 +125,11 @@ const extensionConfig = () => {
     devtool: isEnvDevelopment ? "cheap-source-map" : false,
     // In development environment, webpack watch the file changes, and recompile
     watch: isEnvDevelopment,
+    // Web3Auth/viem/Solana pull a huge node_modules tree; watching it exhausts
+    // Linux inotify (ENOSPC) and slows rebuilds. Source changes still rebuild.
+    watchOptions: {
+      ignored: /node_modules/,
+    },
     entry: {
       background: ["./src/background/background.ts"],
       popup: ["./src/index.tsx"],
@@ -231,7 +241,13 @@ const extensionConfig = () => {
         Buffer: ["buffer", "Buffer"],
       }),
       new webpack.EnvironmentPlugin(envDefaults),
-      new ForkTsCheckerWebpackPlugin(),
+      new ForkTsCheckerWebpackPlugin({
+        // Keep typechecking our src; skipLibCheck in tsconfig avoids the
+        // hundreds of third-party .d.ts errors from the Web3Auth stack.
+        typescript: {
+          memoryLimit: 4096,
+        },
+      }),
       new CopyWebpackPlugin({
         patterns: [
           ...(() => {

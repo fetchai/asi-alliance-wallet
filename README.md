@@ -38,7 +38,7 @@ For help using ASI Alliance Wallet, Visit our [Doc](https://network.fetch.ai/doc
     cp -r $HOME/protoc/bin /usr/local
   ```
 
-- [Node.js v18+](https://nodejs.org/)
+- [Node.js v22+](https://nodejs.org/) (see `.nvmrc`)
 
 ### Requirements
 
@@ -52,7 +52,7 @@ For help using ASI Alliance Wallet, Visit our [Doc](https://network.fetch.ai/doc
     cp -r $HOME/protoc/bin /usr/local
   ```
   
-- [Node.js v18+](https://nodejs.org/)
+- [Node.js v22+](https://nodejs.org/) (see `.nvmrc`)
   
 Clone this repo and run:
 

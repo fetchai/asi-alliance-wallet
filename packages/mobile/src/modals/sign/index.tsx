@@ -21,13 +21,13 @@ import { renderAminoMessage } from "./amino";
 import { renderDirectMessage } from "./direct";
 import { AnyWithUnpacked } from "@keplr-wallet/cosmos";
 import { unescapeHTML } from "@keplr-wallet/common";
-import { useUnmount } from "hooks/use-unmount";
 import { MemoInputView } from "components/new/card-view/memo-input";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { FeeInSign } from "modals/sign/fee";
 import { TabBarView } from "components/new/tab-bar/tab-bar";
 import { DataTab } from "./data-tab";
 import { LedgerTransectionGuideModel } from "modals/ledger/ledger-transection";
+import { signWithLedger } from "./ledger-sign";
 
 enum TransactionTabEnum {
   Details = "Details",
@@ -47,10 +47,6 @@ export const SignModal: FunctionComponent<{
     ledgerInitStore,
   } = useStore();
 
-  useUnmount(() => {
-    signInteractionStore.rejectAll();
-  });
-
   // Check that the request is from the wallet connect.
   // If this is undefiend, the request is not from the wallet connect.
   const [wcSession, setWCSession] = useState<
@@ -60,9 +56,10 @@ export const SignModal: FunctionComponent<{
   const style = useStyle();
 
   const [signer, setSigner] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
 
   const [chainId, setChainId] = useState(chainStore.current.chainId);
-  const [ethSignType, setEthSignType] = useState<EthSignType | undefined>();
+  const ethSignType: EthSignType | undefined = undefined;
 
   // There are services that sometimes use invalid tx to sign arbitrary data on the sign page.
   // In this case, there is no obligation to deal with it, but 0 gas is favorably allowed.
@@ -123,18 +120,15 @@ export const SignModal: FunctionComponent<{
       setSigner(data.data.signer);
 
       if (
-        data.data.msgOrigin &&
-        WCMessageRequester.isVirtualSessionURL(data.data.msgOrigin)
+        data.data.origin &&
+        WCMessageRequester.isVirtualSessionURL(data.data.origin)
       ) {
         const sessionId = WCMessageRequester.getSessionIdFromVirtualURL(
-          data.data.msgOrigin
+          data.data.origin
         );
         setWCSession(walletConnectStore.getSession(sessionId));
       } else {
         setWCSession(undefined);
-      }
-      if (data.data.ethSignType) {
-        setEthSignType(data.data.ethSignType);
       }
     }
   }, [
@@ -348,16 +342,36 @@ export const SignModal: FunctionComponent<{
           memoConfig.error != null ||
           feeConfig.error != null
         }
-        loading={signInteractionStore.isLoading}
+        loading={isApproving}
         onPress={async () => {
           try {
-            if (signDocHelper.signDocWrapper) {
-              signInteractionStore.approveAndWaitEnd(
-                signDocHelper.signDocWrapper
+            if (
+              signDocHelper.signDocWrapper &&
+              signInteractionStore.waitingData
+            ) {
+              setIsApproving(true);
+              const data = signInteractionStore.waitingData;
+              // The vault keyring expects the signature of Ledger keys from the UI.
+              let signature: Uint8Array | undefined;
+              if (data.data.keyType === "ledger") {
+                setShowLedgerGuide(true);
+                signature = await signWithLedger(
+                  data.data.keyInsensitive,
+                  signDocHelper.signDocWrapper
+                );
+              }
+              await signInteractionStore.approveWithProceedNext(
+                data.id,
+                signDocHelper.signDocWrapper,
+                signature,
+                () => {}
               );
             }
           } catch (error) {
             console.log("Sign:Error", error);
+          } finally {
+            setShowLedgerGuide(false);
+            setIsApproving(false);
           }
         }}
       />

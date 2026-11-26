@@ -26,3 +26,7 @@ cp ${DIR}/restart-fix/JSCRuntime.cpp ${DIR}/../../node_modules/react-native/Reac
 
 . ${DIR}/ios/fix-ios-blur-view.sh
 . ${DIR}/ios/fix-ios-legacy-pods.sh
+# Optional — script may be absent on some branches.
+if [ -f "${DIR}/ios/fix-ios-expo-cli-xcode27.sh" ]; then
+  . ${DIR}/ios/fix-ios-expo-cli-xcode27.sh
+fi

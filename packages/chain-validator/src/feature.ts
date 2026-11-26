@@ -219,10 +219,8 @@ export async function checkChainFeatures(
         newFeatures.push(method.feature);
         features.push(method.feature);
       }
-    } catch (e) {
-      console.log(
-        `Failed to try to fetch feature (${method.feature}): ${e.message || e}`
-      );
+    } catch {
+      // Dead / unreachable RPCs are common during feature probing — ignore.
     }
   }
 

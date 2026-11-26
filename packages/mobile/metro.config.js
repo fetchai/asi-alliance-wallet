@@ -1,8 +1,10 @@
 /* eslint-disable */
 const { getDefaultConfig } = require("expo/metro-config");
 const { mergeConfig } = require("@react-native/metro-config");
+const { withWeb3Auth } = require("@web3auth/react-native-sdk/metro-config");
 const exclusionList = require("metro-config/src/defaults/exclusionList");
 const getWorkspaces = require("get-yarn-workspaces");
+const fs = require("fs");
 const path = require("path");
 
 // Expo 52: required so Metro can resolve `.expo/.virtual-metro-entry`
@@ -18,6 +20,41 @@ const watchFolders = [
     return !(workspaceDir === __dirname);
   }),
 ];
+
+/**
+ * Metro doesn't honor package.json "exports" the same way Node does.
+ * Newer @ledgerhq packages expose deep paths like:
+ *   @ledgerhq/domain-service/signers/index
+ * which map to lib/<subpath>.js. Resolve those explicitly.
+ */
+const resolveLedgerhqSubpath = (moduleName) => {
+  const match = moduleName.match(/^(@ledgerhq\/[^/]+)\/(.+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, pkg, subpath] = match;
+  let pkgRoot;
+  try {
+    pkgRoot = path.dirname(require.resolve(`${pkg}/package.json`));
+  } catch {
+    return null;
+  }
+
+  const candidates = [
+    path.join(pkgRoot, "lib", `${subpath}.js`),
+    path.join(pkgRoot, "lib", subpath, "index.js"),
+    path.join(pkgRoot, `${subpath}.js`),
+  ];
+
+  for (const filePath of candidates) {
+    if (fs.existsSync(filePath)) {
+      return { filePath, type: "sourceFile" };
+    }
+  }
+
+  return null;
+};
 
 const config = {
   projectRoot: path.resolve(__dirname, "."),
@@ -39,15 +76,11 @@ const config = {
     sourceExts: [...defaultConfig.resolver.sourceExts, "svg"],
     // To prevent multiple React instances, block the one in this package and use root's.
     blockList: exclusionList([/packages\/mobile\/node_modules\/react\/.*/]),
+    // crypto / node:crypto are provided by withWeb3Auth (quick-crypto).
     extraNodeModules: {
       ...(defaultConfig.resolver.extraNodeModules || {}),
-      crypto: path.resolve(
-        __dirname,
-        "./node_modules/expo-standard-web-crypto"
-      ),
-      "node:crypto": path.resolve(
-        __dirname,
-        "./node_modules/expo-standard-web-crypto"
+      tslib: path.dirname(
+        require.resolve("tslib/tslib.js", { paths: [__dirname] })
       ),
       buffer: path.resolve(__dirname, "./node_modules/buffer"),
       stream: path.resolve(__dirname, "./node_modules/stream-browserify"),
@@ -58,10 +91,52 @@ const config = {
       os: path.resolve(__dirname, "./node_modules/os-browserify"),
       zlib: require.resolve("empty-module"),
     },
+    resolveRequest: (context, moduleName, platform) => {
+      const ledgerResolved = resolveLedgerhqSubpath(moduleName);
+      if (ledgerResolved) {
+        return ledgerResolved;
+      }
+
+      // withWeb3Auth enables package exports; Metro can then pick tslib's ESM
+      // entry, which leaves `__extends` undefined under Hermes/CJS interop.
+      if (moduleName === "tslib") {
+        return {
+          filePath: require.resolve("tslib/tslib.js", { paths: [__dirname] }),
+          type: "sourceFile",
+        };
+      }
+
+      // Expo + quick-crypto peer often imports this; pin to CJS entry.
+      if (moduleName === "react-native-quick-base64") {
+        try {
+          return {
+            filePath: require.resolve("react-native-quick-base64", {
+              paths: [__dirname],
+            }),
+            type: "sourceFile",
+          };
+        } catch {
+          // optional peer
+        }
+      }
+
+      // starknet's "browser" field points at index.global.js (IIFE). Metro prefers
+      // that, but the IIFE never assigns module.exports, so require("starknet")
+      // yields {} and `class X extends Account` throws Super expression errors.
+      // Node's require.resolve uses exports.require → dist/index.js instead.
+      if (moduleName === "starknet") {
+        return {
+          filePath: require.resolve("starknet", { paths: [__dirname] }),
+          type: "sourceFile",
+        };
+      }
+
+      return context.resolveRequest(context, moduleName, platform);
+    },
   },
   transformer: {
     babelTransformerPath: require.resolve("react-native-svg-transformer"),
   },
 };
 
-module.exports = mergeConfig(defaultConfig, config);
+module.exports = withWeb3Auth(mergeConfig(defaultConfig, config));

@@ -4,35 +4,39 @@ import {
   EthereumEndpoint,
 } from "../config";
 import {
-  KeyRingStore,
-  InteractionStore,
   QueriesStore,
   CoinGeckoPriceStore,
   AccountStore,
-  SignInteractionStore,
-  TokensStore,
   CosmosQueries,
   CosmwasmQueries,
   SecretQueries,
   CosmosAccount,
   CosmwasmAccount,
   SecretAccount,
-  LedgerInitStore,
-  IBCCurrencyRegsitrar,
-  PermissionStore,
-  ChainSuggestStore,
-  ObservableQueryBase,
+  ObservableQuery,
   DeferInitialQueryController,
   ActivityStore,
   ProposalStore,
   TokenGraphStore,
 } from "@keplr-wallet/stores";
+import {
+  KeyRingStore,
+  InteractionStore,
+  SignInteractionStore,
+  TokensStore,
+  LedgerInitStore,
+  PermissionStore,
+  PermissionManagerStore,
+  ChainSuggestStore,
+} from "@keplr-wallet/stores-core";
+import { IBCCurrencyRegistrar } from "@keplr-wallet/stores-ibc";
 import { AsyncKVStore } from "../common";
 import { APP_PORT } from "@keplr-wallet/router";
 import { ChainInfoWithCoreTypes } from "@keplr-wallet/background";
 import { RNEnv, RNRouterUI, RNMessageRequesterInternal } from "../router";
 import { ChainStore } from "./chain";
 import EventEmitter from "eventemitter3";
+import { reaction } from "mobx";
 import { Keplr } from "@keplr-wallet/provider";
 import { KeychainStore } from "./keychain";
 import { WalletConnectStore } from "./wallet-connect";
@@ -43,7 +47,7 @@ import { Amplitude } from "@amplitude/react-native";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import {
   AxelarEVMBridgeCurrencyRegistrar,
-  GravityBridgeCurrencyRegsitrar,
+  GravityBridgeCurrencyRegistrar,
   KeplrETCQueries,
 } from "@keplr-wallet/stores-etc";
 
@@ -51,8 +55,9 @@ export class RootStore {
   public readonly chainStore: ChainStore;
   public readonly keyRingStore: KeyRingStore;
 
-  protected readonly interactionStore: InteractionStore;
+  public readonly interactionStore: InteractionStore;
   public readonly permissionStore: PermissionStore;
+  public readonly generalPermissionStore: PermissionManagerStore;
   public readonly ledgerInitStore: LedgerInitStore;
   public readonly signInteractionStore: SignInteractionStore;
   public readonly chainSuggestStore: ChainSuggestStore;
@@ -68,11 +73,11 @@ export class RootStore {
     [CosmosAccount, CosmwasmAccount, SecretAccount]
   >;
   public readonly priceStore: CoinGeckoPriceStore;
-  public readonly tokensStore: TokensStore<ChainInfoWithCoreTypes>;
+  public readonly tokensStore: TokensStore;
 
-  protected readonly ibcCurrencyRegistrar: IBCCurrencyRegsitrar<ChainInfoWithCoreTypes>;
-  protected readonly gravityBridgeCurrencyRegistrar: GravityBridgeCurrencyRegsitrar<ChainInfoWithCoreTypes>;
-  protected readonly axelarEVMBridgeCurrencyRegistrar: AxelarEVMBridgeCurrencyRegistrar<ChainInfoWithCoreTypes>;
+  protected readonly ibcCurrencyRegistrar: IBCCurrencyRegistrar<ChainInfoWithCoreTypes>;
+  protected readonly gravityBridgeCurrencyRegistrar: GravityBridgeCurrencyRegistrar;
+  protected readonly axelarEVMBridgeCurrencyRegistrar: AxelarEVMBridgeCurrencyRegistrar;
 
   public readonly keychainStore: KeychainStore;
   public readonly walletConnectStore: WalletConnectStore;
@@ -120,8 +125,12 @@ export class RootStore {
       router,
       new RNMessageRequesterInternal()
     );
+    this.generalPermissionStore = new PermissionManagerStore(
+      new RNMessageRequesterInternal()
+    );
     this.permissionStore = new PermissionStore(
       this.interactionStore,
+      this.generalPermissionStore,
       new RNMessageRequesterInternal()
     );
     this.ledgerInitStore = new LedgerInitStore(
@@ -134,15 +143,8 @@ export class RootStore {
       CommunityChainInfoRepo
     );
 
-    ObservableQueryBase.experimentalDeferInitialQueryController =
+    ObservableQuery.experimentalDeferInitialQueryController =
       new DeferInitialQueryController();
-
-    this.chainStore = new ChainStore(
-      new AsyncKVStore("store_chain_config"),
-      EmbedChainInfos,
-      new RNMessageRequesterInternal(),
-      ObservableQueryBase.experimentalDeferInitialQueryController
-    );
 
     this.keyRingStore = new KeyRingStore(
       {
@@ -150,10 +152,15 @@ export class RootStore {
           eventEmitter.emit(type);
         },
       },
-      "pbkdf2",
-      this.chainStore,
+      new RNMessageRequesterInternal()
+    );
+
+    this.chainStore = new ChainStore(
+      new AsyncKVStore("store_chain_config"),
+      EmbedChainInfos,
       new RNMessageRequesterInternal(),
-      this.interactionStore
+      this.keyRingStore,
+      ObservableQuery.experimentalDeferInitialQueryController
     );
 
     this.queriesStore = new QueriesStore(
@@ -165,16 +172,22 @@ export class RootStore {
       // https://github.com/chainapsis/keplr-wallet/issues/318
       new AsyncKVStore("store_queries_fix3"),
       this.chainStore,
+      {
+        responseDebounceMs: 75,
+      },
       CosmosQueries.use(),
       CosmwasmQueries.use(),
       SecretQueries.use({
         apiGetter: async () => {
-          // TOOD: Set version for Keplr API
-          return new Keplr("0.12.12", "core", new RNMessageRequesterInternal());
+          return new Keplr("0.13.11", "core", new RNMessageRequesterInternal());
         },
       }),
       KeplrETCQueries.use({
         ethereumURL: EthereumEndpoint,
+        skipTokenInfoBaseURL: "",
+        skipTokenInfoAPIURI: "",
+        txCodecBaseURL: "",
+        topupBaseURL: "",
       })
     );
 
@@ -202,14 +215,16 @@ export class RootStore {
       this.activityStore,
       this.tokenGraphStore,
       this.accountBaseStore,
+      async () => {
+        return new Keplr("0.13.11", "core", new RNMessageRequesterInternal());
+      },
       () => {
         return {
           suggestChain: false,
           autoInit: true,
           getKeplr: async () => {
-            // TOOD: Set version for Keplr API
             return new Keplr(
-              "0.12.12",
+              "0.13.11",
               "core",
               new RNMessageRequesterInternal()
             );
@@ -635,20 +650,43 @@ export class RootStore {
       "usd"
     );
 
+    // CoinGeckoPriceStore keeps the selected currency in memory only, so
+    // persist it here and restore it on launch.
+    const uiSettingsStore = new AsyncKVStore("store_ui_settings");
+    uiSettingsStore
+      .get<string>("default_vs_currency")
+      .then((saved) => {
+        if (saved && this.priceStore.supportedVsCurrencies[saved]) {
+          this.priceStore.setDefaultVsCurrency(saved);
+        }
+      })
+      .catch((e) => console.log("Failed to restore currency", e));
+    reaction(
+      () => this.priceStore.defaultVsCurrency,
+      (vsCurrency) => {
+        uiSettingsStore
+          .set("default_vs_currency", vsCurrency)
+          .catch((e) => console.log("Failed to save currency", e));
+      }
+    );
+
     this.tokensStore = new TokensStore(
       {
         addEventListener: (type: string, fn: () => void) => {
           eventEmitter.addListener(type, fn);
         },
       },
-      this.chainStore,
       new RNMessageRequesterInternal(),
+      this.chainStore,
+      this.accountStore,
+      this.keyRingStore,
       this.interactionStore
     );
 
     this.ibcCurrencyRegistrar =
-      new IBCCurrencyRegsitrar<ChainInfoWithCoreTypes>(
+      new IBCCurrencyRegistrar<ChainInfoWithCoreTypes>(
         new AsyncKVStore("store_test_ibc_currency_registrar"),
+        24 * 3600 * 1000,
         24 * 3600 * 1000,
         this.chainStore,
         this.accountStore,
@@ -656,14 +694,16 @@ export class RootStore {
         this.queriesStore
       );
 
-    this.gravityBridgeCurrencyRegistrar = new GravityBridgeCurrencyRegsitrar(
+    this.gravityBridgeCurrencyRegistrar = new GravityBridgeCurrencyRegistrar(
       new AsyncKVStore("store_gravity_bridge_currency_registrar"),
+      24 * 3600 * 1000,
       this.chainStore,
       this.queriesStore
     );
     this.axelarEVMBridgeCurrencyRegistrar =
-      new AxelarEVMBridgeCurrencyRegistrar<ChainInfoWithCoreTypes>(
+      new AxelarEVMBridgeCurrencyRegistrar(
         new AsyncKVStore("store_axelar_evm_bridge_currency_registrar"),
+        24 * 3600 * 1000,
         this.chainStore,
         this.queriesStore,
         "ethereum"
@@ -688,7 +728,8 @@ export class RootStore {
       },
       this.chainStore,
       this.keyRingStore,
-      this.permissionStore
+      this.permissionStore,
+      this.generalPermissionStore
     );
 
     this.analyticsStore = new AnalyticsStore(

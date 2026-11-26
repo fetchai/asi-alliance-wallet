@@ -32,6 +32,7 @@ import {
 } from "@react-navigation/native";
 import { KeyIconLarge } from "components/new/icon/key";
 import { AsiIcon } from "components/new/icon/asi-icon";
+import { isWeb3AuthEnabled } from "../../config";
 
 const SelectWalletOptionCard: FunctionComponent<{
   img: any;
@@ -345,34 +346,38 @@ export const NewWalletModal: FunctionComponent<{
       title="Create a New Wallet"
       close={() => close()}
     >
-      <TokenCardView
-        title="Continue with Google"
-        leadingIcon={<GoogleIcon width={30} height={30} />}
-        subtitle={"Powered by Web3Auth"}
-        containerStyle={
-          style.flatten(["margin-bottom-6", "height-80"]) as ViewStyle
-        }
-        titleStyle={
-          style.flatten(["text-caption1", "font-medium"]) as ViewStyle
-        }
-        onPress={() => {
-          onSelectGoogle();
-        }}
-      />
-      {Platform.OS === "ios" ? (
-        <TokenCardView
-          title="Continue with Apple"
-          leadingIcon={<AppleIcon width={30} height={30} />}
-          containerStyle={
-            style.flatten(["margin-bottom-6", "height-80"]) as ViewStyle
-          }
-          titleStyle={
-            style.flatten(["text-caption1", "font-medium"]) as ViewStyle
-          }
-          onPress={() => {
-            onSelectApple();
-          }}
-        />
+      {isWeb3AuthEnabled ? (
+        <React.Fragment>
+          <TokenCardView
+            title="Continue with Google"
+            leadingIcon={<GoogleIcon width={30} height={30} />}
+            subtitle={"Powered by Web3Auth"}
+            containerStyle={
+              style.flatten(["margin-bottom-6", "height-80"]) as ViewStyle
+            }
+            titleStyle={
+              style.flatten(["text-caption1", "font-medium"]) as ViewStyle
+            }
+            onPress={() => {
+              onSelectGoogle();
+            }}
+          />
+          {Platform.OS === "ios" ? (
+            <TokenCardView
+              title="Continue with Apple"
+              leadingIcon={<AppleIcon width={30} height={30} />}
+              containerStyle={
+                style.flatten(["margin-bottom-6", "height-80"]) as ViewStyle
+              }
+              titleStyle={
+                style.flatten(["text-caption1", "font-medium"]) as ViewStyle
+              }
+              onPress={() => {
+                onSelectApple();
+              }}
+            />
+          ) : null}
+        </React.Fragment>
       ) : null}
 
       <TokenCardView
