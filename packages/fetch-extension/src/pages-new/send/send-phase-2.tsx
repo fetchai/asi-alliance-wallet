@@ -445,6 +445,17 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                       },
                     },
                   });
+                } else {
+                  notification.push({
+                    type: "warning",
+                    placement: "top-center",
+                    duration: 5,
+                    content: `Transaction Failed`,
+                    canDelete: true,
+                    transition: {
+                      duration: 0.25,
+                    },
+                  });
                 }
               } finally {
                 // XXX: If the page is in detached state,

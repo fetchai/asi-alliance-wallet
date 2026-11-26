@@ -146,6 +146,9 @@
   align-items: center;
 
   .icon {
+    img {
+      filter: invert(1);
+    }
     min-width: 50px;
     display: flex;
     justify-content: center;
