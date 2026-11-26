@@ -189,7 +189,6 @@ export const IBCTransferPageChannel: FunctionComponent<{
   onNext: () => void;
 }> = observer(({ channelConfig, recipientConfig, memoConfig, onNext }) => {
   const intl = useIntl();
-  const { analyticsStore } = useStore();
   const isValid =
     channelConfig.error == null &&
     recipientConfig.error == null &&
@@ -237,9 +236,6 @@ export const IBCTransferPageChannel: FunctionComponent<{
           disabled={!isValid}
           onClick={(e) => {
             e.preventDefault();
-            analyticsStore.logEvent("ibc_next_click", {
-              pageName: "IBC Transfer",
-            });
             onNext();
           }}
         >

@@ -1,26 +1,24 @@
-@import "../../styles/var";
-
 .title {
-  color: $font-dark;
-  font-family: $font-family-base;
+  color: var(--grey-white, #fff);
+  font-family: Lexend;
   font-size: 32px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
 .card {
-  color: $font-dark;
+  color: #fff;
   font-size: 14px;
   font-style: normal;
   font-weight: 500;
   line-height: normal;
   border-radius: 16px;
-  background: $card-bg;
+  background: rgba(255, 255, 255, 0.1);
   padding: 16px;
   margin-bottom: 35px;
 }
 .heading {
-  font-family: $font-family-base;
+  font-family: Lexend;
   margin-bottom: 24px;
 }
 .doughnut-graph {
@@ -28,11 +26,10 @@
   height: 120px;
   width: 240px;
   position: absolute;
-  right: -52px;
+  right: -68px;
   top: 50%;
   transform: translateY(-50%);
 }
-
 .legend {
   display: flex;
   gap: 10px;
@@ -40,22 +37,21 @@
 
 .legends {
   display: flex;
-  flex: 3;
   justify-content: center;
   flex-direction: column;
   gap: 12px;
 }
 .label {
-  color: $font-secondary;
-  font-family: $font-family-base;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
 .value {
-  color: $font-dark;
-  font-family: $font-family-base;
+  color: #fff;
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -86,7 +82,6 @@
   font-weight: 400;
   text-align: center;
   line-height: 28.8px;
-  color: $bg-dark;
 }
 
 .claim-rewards-dropdown-subtitle {
@@ -94,7 +89,7 @@
   font-weight: 400;
   text-align: center;
   line-height: 28.8px;
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .claim-rewards-reward {
@@ -106,24 +101,4 @@
   align-items: center;
   border-radius: 12px;
   height: 45px;
-
-  .label {
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 17.5px;
-    color: $font-dark;
-  }
-
-  .value {
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 17.5px;
-    color: $font-secondary;
-  }
-}
-
-.amountInUSD {
-  font-size: 14px;
-  font-weight: 400;
-  color: $font-secondary;
 }

@@ -1,9 +1,7 @@
-@import "../../styles/var";
-
 .validator-card-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   cursor: pointer;
 }
 
@@ -26,23 +24,12 @@
 
 .validator-data-container {
   display: flex;
-  padding-top: 6px;
+  // gap: 24px;
   justify-content: space-between;
-  border-top: 1px solid $border-grey;
 }
 .validator-data {
   display: flex;
   flex-direction: column;
   gap: 6px;
   font-size: 12px;
-}
-
-.validator-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #eeeeee;
 }

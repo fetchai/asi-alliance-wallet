@@ -1,24 +1,14 @@
-@import "../../styles//var";
-
 .searchInput {
   background: transparent;
   border: none;
   width: 260px;
-  color: $font-dark;
+  color: white;
   font-weight: 400;
   &::placeholder {
-    color: $font-dark;
+    color: white;
   }
 }
 
 .searchInput:disabled {
   cursor: not-allowed;
-}
-
-.noResults {
-  text-align: center;
-  color: $font-secondary;
-  font-size: 14px;
-  font-weight: 400;
-  opacity: 1;
 }

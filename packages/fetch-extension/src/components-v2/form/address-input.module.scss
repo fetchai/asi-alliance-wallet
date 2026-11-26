@@ -1,7 +1,6 @@
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/functions";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/mixins";
 @import "../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
-@import "../../styles/var";
 
 .fullModal {
   width: 100%;
@@ -23,23 +22,17 @@
   background: transparent !important;
   border: none;
   margin-top: -4px;
-  color: $font-dark;
-  font-weight: 400;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
 
   &:focus {
     box-shadow: none !important;
     background: transparent !important;
     border: none;
-    color: $font-dark !important;
+    color: white !important;
     font-weight: 400;
   }
 }
 .input::placeholder {
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.6);
   opacity: 1 !important;
 }
 .addressBookButton {
@@ -69,9 +62,7 @@
   border: none !important;
   padding: 0px;
   background: transparent !important;
-  box-shadow: none !important;
 }
-
 .righContentButtons:disabled {
   border: none !important;
   padding: 0px;
@@ -80,16 +71,14 @@
 }
 .righContent {
   display: flex;
-  flex-shrink: 0;
-  margin-left: 8px;
-  gap: 4px;
 }
 .label {
-  color: $font-secondary;
-  font-family: $font-family-base;
+  color: #fff;
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: 24px;
-  margin-bottom: 10px;
+  opacity: 0.6;
+  margin-bottom: 8px;
 }

@@ -1,11 +1,9 @@
-@import "../../styles/var";
-
 .searchContainer {
   margin: 6px 0px 0px 0px;
   font-size: 14px;
   display: flex;
   align-items: center;
-  background-color: $card-bg;
+  background-color: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
 
   .searchBox {
@@ -26,9 +24,9 @@
       background: transparent;
       border: none;
       outline: none;
-      color: $font-dark;
+      color: white;
       &::placeholder {
-        color: $font-secondary;
+        color: rgba(255, 255, 255, 0.6);
         font-weight: 400;
       }
       flex-grow: 1;
@@ -46,26 +44,17 @@
   gap: 8px;
   align-self: stretch;
   border-radius: 100px;
-  border: 1px solid $bg-grey-dark;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(10px);
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 14px;
   font-weight: 400;
-
-  .sort-by {
-    color: $font-secondary;
-    margin-left: 8px;
-  }
-
-  & > div {
-    color: $font-dark;
-  }
 }
 
 .loader {
   display: inline-block;
   margin: 0 16px;
-  color: $font-secondary;
+  color: white;
 }
 
 .loader {
@@ -112,17 +101,4 @@
   stroke-dasharray: 192 64 192 64;
   stroke-dashoffset: 0;
   animation: pathRect 2s cubic-bezier(0.785, 0.135, 0.15, 0.86) infinite;
-}
-
-.validatorListContainer {
-  display: flex;
-  flex-direction: column;
-}
-
-.loading-message {
-  height: 310px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: $font-secondary;
 }

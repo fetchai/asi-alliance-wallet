@@ -20,7 +20,7 @@ export const NotificationContainer: FunctionComponent<Props> = ({
 
   return (
     <motion.ul id={id} style={{ listStyle: "none" }}>
-      <AnimatePresence {...({} as any)}>
+      <AnimatePresence>
         {properties.map((property) => {
           return (
             <motion.li

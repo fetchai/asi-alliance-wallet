@@ -7,11 +7,6 @@ import { Card } from "@components-v2/card";
 import style from "./style.module.scss";
 import { Dropdown } from "@components-v2/dropdown";
 import { TXNTYPE } from "../../../config";
-import {
-  useMoonpayCurrency,
-  checkAddressIsBuySellWhitelisted,
-} from "@utils/moonpay-currency";
-import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
 
 interface WalletActionsProps {
   isOpen: boolean;
@@ -21,29 +16,11 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
   ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
 
-    const {
-      accountStore,
-      chainStore,
-      queriesStore,
-      activityStore,
-      analyticsStore,
-    } = useStore();
+    const { accountStore, chainStore, queriesStore, activityStore } =
+      useStore();
 
-    const chainId = chainStore.current.chainId;
-    const accountInfo = accountStore.getAccount(chainId);
-    const queries = queriesStore.get(chainId);
-    const { data } = useMoonpayCurrency();
-
-    const allowedTokenList = data?.filter(
-      (item: any) =>
-        item?.type === "crypto" && (item?.isSellSupported || !item.isSuspended)
-    );
-
-    const moonpaySupportedTokens = moonpaySupportedTokensByChainId(
-      chainId,
-      allowedTokenList,
-      chainStore.chainInfos
-    );
+    const accountInfo = accountStore.getAccount(chainStore.current.chainId);
+    const queries = queriesStore.get(chainStore.current.chainId);
     // const queryBalances = queries.queryBalances.getQueryBech32Address(
     //   accountInfo.bech32Address
     // );
@@ -60,20 +37,11 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
     }, [stakable.balance]);
     console.log(isStakableExist);
 
-    // check if address is whitelisted for Buy/Sell feature
-    const isAddressWhitelisted = accountInfo?.bech32Address
-      ? checkAddressIsBuySellWhitelisted(
-          chainId === "eip155:1" || chainId === "injective-1"
-            ? accountInfo.ethereumHexAddress || ""
-            : accountInfo.bech32Address
-        )
-      : false;
-
     return (
       <div className={style["actions"]}>
         <Dropdown
           styleProp={{ color: "transparent" }}
-          title={""}
+          title={"_"}
           closeClicked={() => !isOpen}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
@@ -81,7 +49,7 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
           <Card
             leftImageStyle={{ background: "transparent", height: "16px" }}
             style={{
-              background: "var(--card-bg)",
+              background: "rgba(255,255,255,0.1)",
               height: "60px",
               marginBottom: "6px",
               opacity: activityStore.getPendingTxnTypes[TXNTYPE.send]
@@ -96,19 +64,13 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
               )
             }
             heading={"Send"}
-            onClick={() => {
-              navigate("/send");
-              analyticsStore.logEvent("send_click", {
-                tabName: "fund_transfer_tab",
-                pageName: "Home",
-              });
-            }}
+            onClick={() => navigate("/send")}
           />
 
           <Card
             leftImageStyle={{ background: "transparent", height: "16px" }}
             style={{
-              background: "var(--card-bg)",
+              background: "rgba(255,255,255,0.1)",
               height: "60px",
               marginBottom: "6px",
             }}
@@ -116,34 +78,22 @@ export const WalletActions: React.FC<WalletActionsProps> = observer(
             heading={"Receive"}
             onClick={() => {
               navigate("/receive");
-              analyticsStore.logEvent("receive_click", {
-                tabName: "fund_transfer_tab",
-                pageName: "Home",
-              });
             }}
           />
-          {moonpaySupportedTokens?.length > 0 &&
-          !chainStore.current.beta &&
-          isAddressWhitelisted ? (
-            <Card
-              leftImageStyle={{
-                background: "transparent",
-                height: "18px",
-              }}
-              style={{
-                background: "var(--card-bg)",
-                height: "60px",
-                marginBottom: "6px",
-              }}
-              leftImage={require("@assets/svg/wireframe/plus-minus.svg")}
-              heading="Buy / Sell"
-              onClick={() => {
-                navigate("/more/token/moonpay");
-              }}
-            />
-          ) : (
-            ""
-          )}
+
+          <Card
+            leftImageStyle={{ background: "transparent", height: "22px" }}
+            style={{
+              background: "rgba(255,255,255,0.1)",
+              height: "60px",
+              marginBottom: "6px",
+            }}
+            leftImage={require("@assets/svg/wireframe/bridge.svg")}
+            heading={"Native Bridge"}
+            onClick={() => {
+              navigate("/bridge");
+            }}
+          />
         </Dropdown>
       </div>
     );

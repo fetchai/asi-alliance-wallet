@@ -2,15 +2,12 @@ import React, { FunctionComponent } from "react";
 
 import { ToolTip } from "../tooltip";
 import { Bech32Address } from "@keplr-wallet/cosmos";
-import { PopperOptions } from "popper.js";
 
 export interface AddressProps {
-  children: React.ReactNode;
+  children: string;
   tooltipFontSize?: string;
   tooltipAddress?: string;
   iconClass?: string;
-  placement?: PopperOptions["placement"];
-  childrenStyle?: React.CSSProperties;
 }
 
 export interface Bech32AddressProps {
@@ -27,8 +24,7 @@ export const Address: FunctionComponent<
   AddressProps & (Bech32AddressProps | RawAddressProps)
 > = (props) => {
   const { tooltipFontSize, children } = props;
-  const tooltipAddress =
-    props.tooltipAddress || (typeof children === "string" ? children : "");
+  const tooltipAddress = props.tooltipAddress ? props.tooltipAddress : children;
 
   if ("maxCharacters" in props) {
     const { lineBreakBeforePrefix } = props;
@@ -38,11 +34,10 @@ export const Address: FunctionComponent<
     return (
       <ToolTip
         trigger="hover"
-        options={{ placement: props?.placement || "bottom-end" }}
+        options={{ placement: "top-end" }}
         tooltipStyle={{
-          background: "var(--bg-green-light)",
-          width: "330px",
-          color: "var(--font-dark)",
+          background: "#5F38FB",
+          width: "324px",
         }}
         tooltip={
           <div
@@ -61,14 +56,10 @@ export const Address: FunctionComponent<
         }
         childrenStyle={{
           opacity: 0.6,
-          color: "var(--font-secondary)",
-          ...props.childrenStyle,
         }}
       >
         {props.iconClass ? <i className={iconClass} /> : ""}
-        {typeof children === "string"
-          ? Bech32Address.shortenAddress(children, props.maxCharacters)
-          : children}
+        {Bech32Address.shortenAddress(children, props.maxCharacters)}
       </ToolTip>
     );
   }
@@ -76,11 +67,7 @@ export const Address: FunctionComponent<
   return (
     <ToolTip
       trigger="hover"
-      options={{ placement: props?.placement || "top" }}
-      tooltipStyle={{
-        background: "var(--bg-green-light)",
-        color: "var(--font-dark)",
-      }}
+      options={{ placement: "top" }}
       tooltip={
         <div className="address-tooltip" style={{ fontSize: tooltipFontSize }}>
           {tooltipAddress}

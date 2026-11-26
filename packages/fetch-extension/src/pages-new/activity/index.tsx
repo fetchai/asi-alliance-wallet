@@ -21,7 +21,7 @@ export const ActivityPage: FunctionComponent = observer(() => {
       component: <NativeTab />,
     },
     {
-      id: "Proposals",
+      id: "Gov Proposals",
       component: <GovProposalsTab latestBlock={latestBlock} />,
     },
   ];
@@ -33,16 +33,9 @@ export const ActivityPage: FunctionComponent = observer(() => {
     // url /activity?tab=Transactions will open transactions tab
     const tab = searchParams.get("tab");
     const tabIds = {
-      Proposals: "Proposals",
+      Proposals: "Gov Proposals",
       Transactions: "Transactions",
     };
-    const eventName =
-      activeTabId === tabIds.Transactions
-        ? "activity_transaction_tab_click"
-        : "activity_gov_proposal_tab_click";
-    analyticsStore.logEvent(eventName, {
-      pageName: "Activity",
-    });
 
     if (tab === "Proposals") {
       setActiveTabId(tabIds[tab]);
@@ -66,7 +59,7 @@ export const ActivityPage: FunctionComponent = observer(() => {
           <FormattedMessage id="main.menu.activity" />
         </div>
         {
-          <div className={style["tabContainer"]}>
+          <div style={{ width: "326px" }} className={style["tabContainer"]}>
             <TabsPanel
               activeTabId={activeTabId}
               tabs={tabs}

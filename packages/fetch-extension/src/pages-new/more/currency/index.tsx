@@ -21,14 +21,6 @@ export const CurrencyPge: FunctionComponent = observer(() => {
     []
   );
 
-  const handleClick = (currency: string) => {
-    language.setFiatCurrency(currency);
-    analyticsStore.logEvent("currency_change_click", {
-      pageName: "More",
-    });
-    navigate({ pathname: "/" });
-  };
-
   return (
     <HeaderLayout
       showChainName={false}
@@ -49,7 +41,7 @@ export const CurrencyPge: FunctionComponent = observer(() => {
           style={
             language.isFiatCurrencyAutomatic
               ? {
-                  background: "var(--bg-green-light)",
+                  background: "var(--Indigo---Fetch, #5F38FB)",
                   marginBottom: "5px",
                 }
               : { marginBottom: "5px" }
@@ -67,49 +59,41 @@ export const CurrencyPge: FunctionComponent = observer(() => {
             language.isFiatCurrencyAutomatic ? selectedIcon : undefined
           }
         />
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          {Object.keys(priceStore.supportedVsCurrencies).map((currency) => {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const fiatCurrency = priceStore.supportedVsCurrencies[currency]!;
-            return (
-              <div
-                key={fiatCurrency.currency}
-                className={style["currencyItem"]}
-                style={{
-                  background:
-                    language.fiatCurrency === fiatCurrency.currency &&
-                    !language.isFiatCurrencyAutomatic
-                      ? "var(--bg-green-light)"
-                      : "var(--card-bg)",
-                }}
-                onClick={() => handleClick(fiatCurrency.currency)}
-              >
-                <div className={style["currency"]}>
-                  {fiatCurrency.currency.toUpperCase()}
-                </div>
-                <div
-                  style={{
-                    color:
-                      language.fiatCurrency === fiatCurrency.currency &&
-                      !language.isFiatCurrencyAutomatic
-                        ? "var(--font-secondary)"
-                        : "gray",
-                    margin: "4px",
-                  }}
-                >
-                  {`${fiatCurrency.name}  (${fiatCurrency.symbol})`}
-                </div>
-                <div style={{ marginLeft: "auto" }}>
-                  {!language.isFiatCurrencyAutomatic
-                    ? language.fiatCurrency === fiatCurrency.currency
-                      ? selectedIcon
-                      : undefined
-                    : undefined}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {Object.keys(priceStore.supportedVsCurrencies).map((currency) => {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          const fiatCurrency = priceStore.supportedVsCurrencies[currency]!;
+
+          return (
+            <Card
+              style={
+                language.fiatCurrency === fiatCurrency.currency &&
+                !language.isFiatCurrencyAutomatic
+                  ? {
+                      background: "var(--Indigo---Fetch, #5F38FB)",
+                      marginBottom: "5px",
+                    }
+                  : { marginBottom: "5px" }
+              }
+              key={fiatCurrency.currency}
+              heading={`${fiatCurrency.currency.toUpperCase()} (${
+                fiatCurrency.symbol
+              })`}
+              onClick={() => {
+                language.setFiatCurrency(fiatCurrency.currency);
+                navigate({
+                  pathname: "/",
+                });
+              }}
+              rightContent={
+                !language.isFiatCurrencyAutomatic
+                  ? language.fiatCurrency === fiatCurrency.currency
+                    ? selectedIcon
+                    : undefined
+                  : undefined
+              }
+            />
+          );
+        })}
       </div>
     </HeaderLayout>
   );

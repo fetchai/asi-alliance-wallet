@@ -1,136 +1,90 @@
-import {
-  Env,
-  Handler,
-  InternalHandler,
-  KeplrError,
-  Message,
-} from "@keplr-wallet/router";
+import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
 import { ChainsService } from "./service";
 import {
-  GetChainInfosWithCoreTypesMsg,
+  GetNetworkMsg,
+  GetChainInfosMsg,
   GetChainInfosWithoutEndpointsMsg,
   RemoveSuggestedChainInfoMsg,
   SuggestChainInfoMsg,
-  NeedSuggestChainInfoInteractionMsg,
-  SetChainEndpointsMsg,
-  ClearChainEndpointsMsg,
-  GetChainOriginalEndpointsMsg,
-  ClearAllSuggestedChainInfosMsg,
-  ClearAllChainEndpointsMsg,
-  GetChainInfoWithoutEndpointsMsg,
-  PingMsg,
+  ListNetworksMsg,
+  AddNetworkAndSwitchMsg,
   SwitchNetworkByChainIdMsg,
   SetSelectedChainMsg,
-  GetNetworkMsg,
 } from "./messages";
 import { ChainInfo } from "@keplr-wallet/types";
-import { getBasicAccessPermissionType, PermissionService } from "../permission";
-import { PermissionInteractiveService } from "../permission-interactive";
 
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
-export const getHandler: (
-  chainsService: ChainsService,
-  permissionService: PermissionService,
-  permissionInteractiveService: PermissionInteractiveService
-) => Handler = (
-  chainsService,
-  permissionService,
-  permissionInteractiveService
-) => {
+export const getHandler: (service: ChainsService) => Handler = (service) => {
   return (env: Env, msg: Message<unknown>) => {
     switch (msg.constructor) {
-      case PingMsg:
-        return {};
-      case GetChainInfosWithCoreTypesMsg:
-        return handleGetInfosWithCoreTypesMsg(
-          chainsService,
-          permissionInteractiveService
-        )(env, msg as GetChainInfosWithCoreTypesMsg);
+      case GetChainInfosMsg:
+        return handleGetChainInfosMsg(service)(env, msg as GetChainInfosMsg);
+      case GetChainInfosWithoutEndpointsMsg:
+        return handleGetChainInfosWithoutEndpointsMsg(service)(
+          env,
+          msg as GetChainInfosWithoutEndpointsMsg
+        );
+      case SuggestChainInfoMsg:
+        return handleSuggestChainInfoMsg(service)(
+          env,
+          msg as SuggestChainInfoMsg
+        );
       case SetSelectedChainMsg:
-        return handleSetSelectedChainMsg(chainsService)(
+        return handleSetSelectedChainMsg(service)(
           env,
           msg as SetSelectedChainMsg
         );
-      case GetChainInfosWithoutEndpointsMsg:
-        return handleGetChainInfosWithoutEndpointsMsg(
-          chainsService,
-          permissionInteractiveService
-        )(env, msg as GetChainInfosWithoutEndpointsMsg);
-      case GetChainInfoWithoutEndpointsMsg:
-        return handleGetChainInfoWithoutEndpointsMsg(
-          chainsService,
-          permissionInteractiveService
-        )(env, msg as GetChainInfoWithoutEndpointsMsg);
-      case SuggestChainInfoMsg:
-        return handleSuggestChainInfoMsg(
-          chainsService,
-          permissionService,
-          permissionInteractiveService
-        )(env, msg as SuggestChainInfoMsg);
-      case NeedSuggestChainInfoInteractionMsg:
-        return handleNeedSuggestChainInfoInteractionMsg(chainsService)(
+      case AddNetworkAndSwitchMsg:
+        return handleAddNetworkAndSwitch(service)(
           env,
-          msg as NeedSuggestChainInfoInteractionMsg
-        );
-      case RemoveSuggestedChainInfoMsg:
-        return handleRemoveSuggestedChainInfoMsg(chainsService)(
-          env,
-          msg as RemoveSuggestedChainInfoMsg
-        );
-      case SetChainEndpointsMsg:
-        return handleSetChainEndpointsMsg(chainsService)(
-          env,
-          msg as SetChainEndpointsMsg
-        );
-      case ClearChainEndpointsMsg:
-        return handleClearChainEndpointsMsg(chainsService)(
-          env,
-          msg as ClearChainEndpointsMsg
+          msg as AddNetworkAndSwitchMsg
         );
       case SwitchNetworkByChainIdMsg:
-        return handleSwitchNetworkByChainId(chainsService, permissionService)(
+        return handleSwitchNetworkByChainId(service)(
           env,
           msg as SwitchNetworkByChainIdMsg
         );
-      case GetChainOriginalEndpointsMsg:
-        return handleGetChainOriginalEndpointsMsg(chainsService)(
+      case RemoveSuggestedChainInfoMsg:
+        return handleRemoveSuggestedChainInfoMsg(service)(
           env,
-          msg as GetChainOriginalEndpointsMsg
-        );
-      case ClearAllSuggestedChainInfosMsg:
-        return handleClearAllSuggestedChainInfosMsg(chainsService)(
-          env,
-          msg as ClearAllSuggestedChainInfosMsg
-        );
-      case ClearAllChainEndpointsMsg:
-        return handleClearAllChainEndpointsMsg(chainsService)(
-          env,
-          msg as ClearAllChainEndpointsMsg
+          msg as RemoveSuggestedChainInfoMsg
         );
       case GetNetworkMsg:
-        return handleGetNetworkMsg(chainsService)(env, msg as GetNetworkMsg);
+        return handleGetNetworkMsg(service)(env, msg as GetNetworkMsg);
+      case ListNetworksMsg:
+        return handleListNetworksMsg(service)(env, msg as ListNetworksMsg);
       default:
-        throw new KeplrError("chains", 110, "Unknown msg type");
+        throw new Error("Unknown msg type");
     }
   };
 };
 
-const handleGetInfosWithCoreTypesMsg: (
-  service: ChainsService,
-  permissionInteractiveService: PermissionInteractiveService
-) => InternalHandler<GetChainInfosWithCoreTypesMsg> = (
-  service,
-  permissionInteractiveService
-) => {
+const handleGetChainInfosMsg: (
+  service: ChainsService
+) => InternalHandler<GetChainInfosMsg> = (service) => {
+  return async () => {
+    const chainInfos = await service.getChainInfos();
+    return {
+      chainInfos,
+    };
+  };
+};
+
+const handleGetChainInfosWithoutEndpointsMsg: (
+  service: ChainsService
+) => InternalHandler<GetChainInfosWithoutEndpointsMsg> = (service) => {
   return async (env, msg) => {
-    await permissionInteractiveService.checkOrGrantGetChainInfosWithoutEndpointsPermission(
+    await service.permissionService.checkOrGrantGlobalPermission(
       env,
+      "/permissions/grant/get-chain-infos",
+      "get-chain-infos",
       msg.origin
     );
+
+    const chainInfos = await service.getChainInfosWithoutEndpoints();
     return {
-      chainInfos: service.getChainInfosWithCoreTypes(),
-      modulrChainInfos: service.getModularChainInfos(),
+      chainInfos,
     };
   };
 };
@@ -143,172 +97,29 @@ const handleSetSelectedChainMsg: (
   };
 };
 
-const handleSwitchNetworkByChainId: (
-  service: ChainsService,
-  permissionService: PermissionService
-) => InternalHandler<SwitchNetworkByChainIdMsg> = (
-  service,
-  permissionService
-) => {
-  return async (env, msg) => {
-    if (await service.hasChainInfo(msg.chainId)) {
-      // If suggested chain info is registered then switch else just return.
-      await service.switchChainByChainId(
-        env,
-        msg.chainId,
-        msg.origin,
-        permissionService
-      );
-    }
-  };
-};
-
-const handleGetChainInfosWithoutEndpointsMsg: (
-  service: ChainsService,
-  permissionInteractiveService: PermissionInteractiveService
-) => InternalHandler<GetChainInfosWithoutEndpointsMsg> = (
-  service,
-  permissionInteractiveService
-) => {
-  return async (env, msg) => {
-    await permissionInteractiveService.checkOrGrantGetChainInfosWithoutEndpointsPermission(
-      env,
-      msg.origin
-    );
-
-    const chainInfos = service.getChainInfosWithoutEndpoints();
-    return {
-      chainInfos,
-    };
-  };
-};
-
-const handleGetChainInfoWithoutEndpointsMsg: (
-  service: ChainsService,
-  permissionInteractiveService: PermissionInteractiveService
-) => InternalHandler<GetChainInfoWithoutEndpointsMsg> = (
-  service,
-  permissionInteractiveService
-) => {
-  return async (env, msg) => {
-    await permissionInteractiveService.ensureEnabled(
-      env,
-      [msg.chainId],
-      msg.origin
-    );
-
-    const chainInfo = service.getChainInfoWithoutEndpoints(msg.chainId);
-
-    return {
-      chainInfo,
-    };
-  };
-};
-
 const handleSuggestChainInfoMsg: (
-  chainsService: ChainsService,
-  permissionService: PermissionService,
-  permissionInteractiveService: PermissionInteractiveService
-) => InternalHandler<SuggestChainInfoMsg> = (
-  chainsService,
-  permissionService,
-  permissionInteractiveService
-) => {
+  service: ChainsService
+) => InternalHandler<SuggestChainInfoMsg> = (service) => {
   return async (env, msg) => {
-    if (chainsService.getChainInfo(msg.chainInfo.chainId) != null) {
+    if (await service.hasChainInfo(msg.chainInfo.chainId)) {
       // If suggested chain info is already registered, just return.
       return;
     }
 
-    await permissionInteractiveService.ensureKeyRingNotEmpty(env);
-
     const chainInfo = msg.chainInfo as Writeable<ChainInfo>;
+    // And, always handle it as beta.
     chainInfo.beta = true;
 
-    await chainsService.suggestChainInfo(env, chainInfo, msg.origin);
-
-    permissionService.addPermission(
-      [chainInfo.chainId],
-      getBasicAccessPermissionType(),
-      [msg.origin]
-    );
-  };
-};
-
-const handleNeedSuggestChainInfoInteractionMsg: (
-  chainsService: ChainsService
-) => InternalHandler<NeedSuggestChainInfoInteractionMsg> = (chainsService) => {
-  return async (_env, msg) => {
-    if (chainsService.getChainInfo(msg.chainInfo.chainId) != null) {
-      // If suggested chain info is already registered, just return.
-      return false;
-    }
-
-    return chainsService.needSuggestChainInfoInteraction(msg.origin);
+    await service.suggestChainInfo(env, chainInfo, msg.origin);
   };
 };
 
 const handleRemoveSuggestedChainInfoMsg: (
   service: ChainsService
 ) => InternalHandler<RemoveSuggestedChainInfoMsg> = (service) => {
-  return (_, msg) => {
-    service.removeSuggestedChainInfo(msg.chainId);
-    return {
-      chainInfos: service.getChainInfosWithCoreTypes(),
-      modularChainInfos: service.getModularChainInfos(),
-    };
-  };
-};
-
-const handleSetChainEndpointsMsg: (
-  service: ChainsService
-) => InternalHandler<SetChainEndpointsMsg> = (service) => {
-  return (_, msg) => {
-    service.setEndpoint(msg.chainId, {
-      rpc: msg.rpc,
-      rest: msg.rest,
-      evmRpc: msg.evmRpc,
-    });
-    return {
-      chainInfos: service.getChainInfosWithCoreTypes(),
-      modularChainInfos: service.getModularChainInfos(),
-    };
-  };
-};
-
-const handleClearChainEndpointsMsg: (
-  service: ChainsService
-) => InternalHandler<ClearChainEndpointsMsg> = (service) => {
-  return (_, msg) => {
-    service.clearEndpoint(msg.chainId);
-    return {
-      chainInfos: service.getChainInfosWithCoreTypes(),
-      modularChainInfos: service.getModularChainInfos(),
-    };
-  };
-};
-
-const handleGetChainOriginalEndpointsMsg: (
-  service: ChainsService
-) => InternalHandler<GetChainOriginalEndpointsMsg> = (service) => {
-  return (_, msg) => {
-    return service.getOriginalEndpoint(msg.chainId);
-  };
-};
-
-const handleClearAllSuggestedChainInfosMsg: (
-  service: ChainsService
-) => InternalHandler<ClearAllSuggestedChainInfosMsg> = (service) => {
-  return () => {
-    return service.clearAllSuggestedChainInfos();
-  };
-};
-
-const handleClearAllChainEndpointsMsg: (
-  service: ChainsService
-) => InternalHandler<ClearAllChainEndpointsMsg> = (service) => {
-  return () => {
-    return service.clearAllEndpoints();
+  return async (_, msg) => {
+    await service.removeChainInfo(msg.chainId);
+    return await service.getChainInfos();
   };
 };
 
@@ -317,7 +128,46 @@ const handleGetNetworkMsg: (
 ) => InternalHandler<GetNetworkMsg> = (service) => {
   return async () => {
     const chainId = await service.getSelectedChain();
-    const chainInfo = await service.getChainInfoWithCoreTypes(chainId);
-    return chainInfo;
+    const chainInfo = await service.getChainInfo(chainId);
+    return service.getNetworkConfig(chainInfo);
+  };
+};
+
+const handleListNetworksMsg: (
+  service: ChainsService
+) => InternalHandler<ListNetworksMsg> = (service) => {
+  return async (env, msg) => {
+    await service.permissionService.checkOrGrantGlobalPermission(
+      env,
+      "/permissions/grant/get-chain-infos",
+      "get-chain-infos",
+      msg.origin
+    );
+
+    return await service.getAllNetworks();
+  };
+};
+
+const handleAddNetworkAndSwitch: (
+  service: ChainsService
+) => InternalHandler<AddNetworkAndSwitchMsg> = (service) => {
+  return async (env, msg) => {
+    if (await service.hasChainInfo(msg.network.chainId)) {
+      // If suggested chain info is already registered, just return.
+      return;
+    }
+
+    await service.addChainByNetwork(env, msg.network, msg.origin);
+  };
+};
+
+const handleSwitchNetworkByChainId: (
+  service: ChainsService
+) => InternalHandler<SwitchNetworkByChainIdMsg> = (service) => {
+  return async (env, msg) => {
+    if (await service.hasChainInfo(msg.chainId)) {
+      // If suggested chain info is registered then switch else just return.
+      await service.switchChainByChainId(env, msg.chainId, msg.origin);
+    }
   };
 };

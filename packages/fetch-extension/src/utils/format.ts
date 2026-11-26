@@ -1,7 +1,5 @@
-import { CoinPretty } from "@keplr-wallet/unit";
 import { AGENT_ADDRESS } from "../config.ui.var";
 import { isToday, isYesterday, format } from "date-fns";
-import moment from "moment";
 
 export const formatAddress = (address: string) => {
   if (Object.values(AGENT_ADDRESS).includes(address)) return "Fetchbot";
@@ -10,16 +8,6 @@ export const formatAddress = (address: string) => {
       address.substring(0, 8).toLowerCase() +
       "..." +
       address.substring(36, 44).toLowerCase()
-    );
-  else return address;
-};
-
-export const formatToTruncated = (address: string) => {
-  if (address?.length > 12)
-    return (
-      address.substring(0, 8) +
-      "..." +
-      address.substring(address.length - 4, address.length)
     );
   else return address;
 };
@@ -72,6 +60,10 @@ export const shortenNumber = (value: string, decimal = 18) => {
   return result;
 };
 
+export const formatActivityHash = (address: string) => {
+  if (address?.length > 12) return address.substring(0, 10) + "...";
+  else return address;
+};
 export const formatString = (address: string) => {
   if (address?.length > 30) return address.substring(0, 30) + "...";
   else return address;
@@ -133,26 +125,24 @@ export const formatAmount = (amount: string) => {
 
 export const separateNumericAndDenom = (value: any) => {
   const [numericPart, denomPart] = value
-    ? value.replaceAll(",", "").split(" ")
+    ? value.replace(",", "").split(" ")
     : ["", ""];
   return { numericPart, denomPart };
 };
 
 export const parseDollarAmount = (dollarString: any) => {
-  if (dollarString) {
-    const match = dollarString.match(
-      /(?<=\D|\b)(\d{1,2}(?:,\d{2})*(?:,\d{3})*|\d{1,3}(?:,\d{3})*)(?:\.\d+)?(?=\b|\D)/g
-    );
-    let cleanedMatches = [];
+  const match = dollarString.match(
+    /(?<=\D|\b)(\d{1,2}(?:,\d{2})*(?:,\d{3})*|\d{1,3}(?:,\d{3})*)(?:\.\d+)?(?=\b|\D)/g
+  );
+  let cleanedMatches = [];
 
-    if (match) {
-      // removes commas from matched result
-      cleanedMatches = match.map((match: any) => match.replace(/,/g, ""));
-    }
+  if (match) {
+    // removes commas from matched result
+    cleanedMatches = match.map((match: any) => match.replace(/,/g, ""));
+  }
 
-    if (cleanedMatches && cleanedMatches.length > 0) {
-      return parseFloat(cleanedMatches[0]);
-    }
+  if (cleanedMatches && cleanedMatches.length > 0) {
+    return parseFloat(cleanedMatches[0]);
   }
   return NaN;
 };
@@ -184,123 +174,4 @@ export const getDate = (timestamp: number): string => {
 export const formatPendingTxn = (amount: any) => {
   const curr = Number(amount) * 10 ** 18;
   return `-${curr}`;
-};
-
-export const getEnumKeyByEnumValue = <T extends Record<string, string>>(
-  value: string,
-  _enum: T
-) => {
-  return Object.keys(_enum).find(
-    (key) => _enum[key as keyof typeof _enum] === value
-  );
-};
-
-export const convertEpochToDate = (
-  epochTime: number,
-  formatType: string = "DD MMM YYYY hh:mm A"
-) => {
-  const date = new Date(epochTime * 1000); // Multiply by 1000 to convert seconds to milliseconds
-  return moment(date).format(formatType);
-};
-
-export const isVestingExpired = (timestamp: number) =>
-  Math.floor(Date.now() / 1000) > timestamp;
-
-export const removeTrailingZeros = (number: string) => {
-  const splitNumber = number.split(".");
-  const countStartNumber = splitNumber[0].length;
-  const decimal =
-    countStartNumber > 3
-      ? 2
-      : countStartNumber == 3
-      ? 3
-      : countStartNumber > 1
-      ? 4
-      : 6;
-  return Number(number)
-    .toFixed(decimal)
-    .toString()
-    .replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, "$1");
-};
-
-export const removeComma = (value: string) => value.replace(/,/g, "");
-
-export const validateDecimalPlaces = (value: string, maxDigits = 20) => {
-  const decimalRegex = new RegExp(`^\\d+(\\.\\d{0,${maxDigits}})?$`);
-  return decimalRegex.test(value);
-};
-
-export const hasValidDecimals = (value: string) => {
-  if (value == null || value === "") return false;
-  const str = value.toString();
-  const parts = str.split(".");
-  return parts.length < 2 || parts[1].length <= 18;
-};
-
-export const splitBech32 = (address: string) => {
-  const index = address.indexOf("1");
-  if (index === -1) {
-    return { prefix: address, rest: "" };
-  }
-
-  const prefix = address.slice(0, index + 1);
-  const rest = address.slice(index + 1);
-
-  return { prefix, rest };
-};
-
-export const formatAddressWithCustom = (
-  address: string,
-  startChars: number = 8,
-  endChars: number = 8
-) => {
-  if (Object.values(AGENT_ADDRESS).includes(address)) return "Fetchbot";
-
-  if (address?.length > startChars + endChars) {
-    return (
-      address.substring(0, startChars).toLowerCase() +
-      "..." +
-      address.substring(address.length - endChars).toLowerCase()
-    );
-  } else {
-    return address;
-  }
-};
-
-export const formatBalance = (
-  balance: CoinPretty,
-  maxDecimals = 6,
-  useCoinPrettyFormatting = true
-) => {
-  const minimumValue = 1 / Math.pow(10, maxDecimals);
-
-  const shrunk = useCoinPrettyFormatting
-    ? balance.shrink(true).trim(true).maxDecimals(maxDecimals)
-    : balance.shrink(true);
-
-  const dec = shrunk.toDec();
-  const numericValue = Number(dec.toString());
-
-  // show minimum display value for very small non-zero amounts
-  if (!dec.isZero() && numericValue < minimumValue) {
-    return `< ${minimumValue.toFixed(maxDecimals)} ${
-      balance.currency.coinDenom
-    }`;
-  }
-
-  // if value is zero show no decimals
-  if (dec.isZero()) {
-    return useCoinPrettyFormatting
-      ? shrunk.maxDecimals(0).toString()
-      : `0 ${balance.currency.coinDenom}`;
-  }
-
-  if (useCoinPrettyFormatting) {
-    return shrunk.toString();
-  }
-
-  return `${numericValue.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: maxDecimals,
-  })} ${balance.currency.coinDenom}`;
 };

@@ -35,11 +35,12 @@ export const Tab = ({
   return (
     <div
       id={title}
+      style={{ backgroundColor: "#000D3D" }}
       className={`${style["tab"]} `}
       onClick={() => {
         if (!disabled) {
           if (path !== "/") {
-            analyticsStore.logEvent(`${title.toLowerCase()}_tab_click`);
+            analyticsStore.logEvent(`${title} tab click`);
           }
           navigate(path);
         }
@@ -59,7 +60,7 @@ export const Tab = ({
       </div>
       <div
         className={`${style["title"]} ${
-          isActive ? style["active"] : disabled ? style["disabled"] : null
+          !isActive ? style["active"] : disabled ? style["disabled"] : null
         }`}
       >
         {title}

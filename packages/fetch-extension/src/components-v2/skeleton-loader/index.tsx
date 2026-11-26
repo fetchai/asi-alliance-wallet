@@ -1,12 +1,6 @@
 import React from "react";
 import style from "./style.module.scss";
 
-export const Skeleton = ({
-  height,
-  width = "100%",
-}: {
-  height: string;
-  width?: string;
-}) => {
-  return <div style={{ height, width }} className={style["isLoading"]} />;
+export const Skeleton = ({ height }: { height: string }) => {
+  return <div style={{ height }} className={style["isLoading"]} />;
 };

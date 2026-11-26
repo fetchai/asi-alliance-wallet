@@ -1,12 +1,10 @@
-import { ToggleSwitchButton } from "@components-v2/buttons/toggle-switch-button";
+import React, { FunctionComponent, useState } from "react";
+import { Button, FormGroup, Input, Label } from "reactstrap";
 import { useConfirm } from "@components/confirm";
-import { BIP44HDPath } from "@keplr-wallet/background";
+import { FormattedMessage, useIntl } from "react-intl";
 import { action, computed, makeObservable, observable } from "mobx";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
-import { FormGroup, Input, Label } from "reactstrap";
-import { useStore } from "../../stores";
+import { BIP44HDPath } from "@keplr-wallet/background";
 import style from "./style.module.scss";
 
 export class BIP44Option {
@@ -85,7 +83,6 @@ export const AdvancedBIP44Option: FunctionComponent<{
   bip44Option: BIP44Option;
 }> = observer(({ bip44Option }) => {
   const intl = useIntl();
-  const { analyticsStore } = useStore();
 
   const confirm = useConfirm();
 
@@ -117,39 +114,47 @@ export const AdvancedBIP44Option: FunctionComponent<{
 
   return (
     <React.Fragment>
-      <div className={style["advancedSection"]}>
-        <div className={style["label"]}>
-          <FormattedMessage id="register.bip44.button.advanced" />
-        </div>
-        <ToggleSwitchButton
-          checked={isOpen}
-          onChange={() => {
-            toggleOpen();
-            analyticsStore.logEvent("register_advance_click", {
-              pageName: "Register",
-            });
-          }}
-        />
-      </div>
+      <Button
+        className={style["advanced"]}
+        type="button"
+        color="link"
+        onClick={(e) => {
+          e.preventDefault();
+          toggleOpen();
+        }}
+      >
+        <FormattedMessage id="register.bip44.button.advanced" />
+      </Button>
       {isOpen ? (
         <FormGroup
           style={{
             marginBottom: 0,
           }}
         >
-          <Label target="bip44-path" className={style["label"]}>
+          <Label target="bip44-path" className="form-control-label">
             <FormattedMessage id="register.bip44.input.hd-path" />
           </Label>
-          <div id="bip44-path" className={style["bip44PathSection"]}>
-            <div className={style["pathSeperator"]}>{`m/44'/${
+          <div
+            id="bip44-path"
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              color: "white",
+              width: "410px",
+            }}
+          >
+            <div style={{ margin: "5px" }}>{`m/44'/${
               bip44Option.coinType != null ? bip44Option.coinType : "···"
             }'/`}</div>
             <Input
               type="number"
+              className="form-control-alternative"
               style={{
                 width: "76.67px",
                 textAlign: "right",
                 borderRadius: "12px",
+                background: "rgba(255, 255, 255, 0.10)",
+                color: "white",
               }}
               value={bip44Option.account.toString()}
               onChange={(e) => {
@@ -181,13 +186,16 @@ export const AdvancedBIP44Option: FunctionComponent<{
                 }
               }}
             />
-            <div className={style["pathSeperator"]}>{`'/`}</div>
+            <div style={{ margin: "5px" }}>{`'/`}</div>
             <Input
               type="number"
+              className="form-control-alternative"
               style={{
                 width: "76.67px",
                 textAlign: "right",
                 borderRadius: "12px",
+                background: "rgba(255, 255, 255, 0.10)",
+                color: "white",
               }}
               value={bip44Option.change.toString()}
               onChange={(e) => {
@@ -222,13 +230,16 @@ export const AdvancedBIP44Option: FunctionComponent<{
                 }
               }}
             />
-            <div className={style["pathSeperator"]}>/</div>
+            <div style={{ margin: "5px" }}>/</div>
             <Input
               type="number"
+              className="form-control-alternative"
               style={{
                 width: "76.67px",
                 textAlign: "right",
                 borderRadius: "12px",
+                background: "rgba(255, 255, 255, 0.10)",
+                color: "white",
               }}
               value={bip44Option.index.toString()}
               onChange={(e) => {

@@ -20,7 +20,7 @@ export const LedgerErrorView: FunctionComponent<{
         style={
           style.flatten([
             "subtitle3",
-            "color-gray-300",
+            "color-white",
             "margin-top-16",
           ]) as ViewStyle
         }

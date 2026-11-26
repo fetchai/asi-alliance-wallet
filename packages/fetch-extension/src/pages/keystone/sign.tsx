@@ -1,4 +1,4 @@
-import { KeystoneUR as UR } from "@utils/keystone";
+import { UR } from "@keplr-wallet/stores";
 import { AnimatedQRCode } from "@keystonehq/animated-qr";
 import { observer } from "mobx-react-lite";
 import React, { useCallback, useEffect, useRef, useState } from "react";

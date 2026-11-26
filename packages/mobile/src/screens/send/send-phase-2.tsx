@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import {
   AmountConfig,
@@ -6,10 +6,7 @@ import {
   MemoConfig,
   RecipientConfig,
   SendGasConfig,
-  useGasSimulator,
 } from "@keplr-wallet/hooks";
-import { DenomHelper } from "@keplr-wallet/common";
-import { AsyncKVStore } from "../../common";
 import { useStore } from "stores/index";
 import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
@@ -34,12 +31,7 @@ import { txnTypeKey, txType } from "components/new/txn-status.tsx";
 import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-modal";
 import { GearIcon } from "components/new/icon/gear-icon";
 import { IconButton } from "components/new/button/icon";
-import {
-  formatBalance,
-  formatFiatBalance,
-  removeComma,
-  formatFeeAmount,
-} from "utils/format/format";
+import { clearDecimals } from "modals/sign/messages";
 
 interface SendConfigs {
   amountConfig: AmountConfig;
@@ -52,15 +44,13 @@ interface SendConfigs {
 export const SendPhase2: FunctionComponent<{
   sendConfigs: SendConfigs;
   setIsNext: any;
-  isMaxAmount: boolean;
-}> = observer(({ sendConfigs, setIsNext, isMaxAmount }) => {
+}> = observer(({ sendConfigs, setIsNext }) => {
   const {
     chainStore,
     accountStore,
     priceStore,
     analyticsStore,
     activityStore,
-    queriesStore,
   } = useStore();
 
   const [txnHash, setTxnHash] = useState<string>("");
@@ -92,91 +82,21 @@ export const SendPhase2: FunctionComponent<{
 
   const account = accountStore.getAccount(chainId);
 
-  const spendableBalances = queriesStore
-    .get(chainId)
-    .cosmos.querySpendableBalances.getQueryBech32Address(account.bech32Address)
-    .balances?.find(
-      (bal) =>
-        sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-        bal.currency.coinMinimalDenom
-    );
-  const balance = spendableBalances
-    ? spendableBalances
-    : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
-
-  useEffect(() => {
-    if (!isMaxAmount) return;
-    const fee = sendConfigs.feeConfig.fee;
-    if (!fee) return;
-    try {
-      const maxAmount = balance.sub(fee);
-      if (maxAmount.toDec().isNegative()) return;
-      sendConfigs.amountConfig.setAmount(
-        removeComma(maxAmount.shrink(true).hideDenom(true).toString())
-      );
-    } catch {
-      // fee and send currency differ (e.g. CW20 send); cannot adjust
-    }
-  }, [
-    isMaxAmount,
-    sendConfigs.feeConfig.fee,
-    sendConfigs.feeConfig.feeType,
-    balance,
-  ]);
-
-  const gasSimulatorKey = useMemo(() => {
-    if (sendConfigs.amountConfig.sendCurrency) {
-      const denomHelper = new DenomHelper(
-        sendConfigs.amountConfig.sendCurrency.coinMinimalDenom
-      );
-      if (denomHelper.type !== "native") {
-        if (denomHelper.type === "cw20") {
-          return `${denomHelper.type}/${denomHelper.contractAddress}`;
-        }
-        return denomHelper.type;
-      }
-    }
-    return "native";
-  }, [sendConfigs.amountConfig.sendCurrency]);
-
-  const gasSimulator = useGasSimulator(
-    new AsyncKVStore("gas-simulator.main.send"),
-    chainStore,
-    chainId,
-    sendConfigs.gasConfig,
-    sendConfigs.feeConfig,
-    gasSimulatorKey,
-    () => {
-      if (!sendConfigs.amountConfig.sendCurrency) {
-        throw new Error("Send currency not set");
-      }
-      if (
-        sendConfigs.amountConfig.error != null ||
-        sendConfigs.recipientConfig.error != null
-      ) {
-        throw new Error("Not ready to simulate tx");
-      }
-      return account.makeSendTokenTx(
-        sendConfigs.amountConfig.amount,
-        sendConfigs.amountConfig.sendCurrency,
-        sendConfigs.recipientConfig.recipient
-      );
-    }
-  );
-
   const netInfo = useNetInfo();
   const networkIsConnected =
     typeof netInfo.isConnected !== "boolean" || netInfo.isConnected;
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value ? formatFiatBalance(value) : undefined;
+    return value && value.shrink(true).maxDecimals(6).toString();
   };
 
   const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const feePrice = sendConfigs.feeConfig.fee;
+  const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
+    sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
+  );
 
   const usdValue = () => {
     try {
@@ -197,12 +117,17 @@ export const SendPhase2: FunctionComponent<{
     }
   };
 
-  function getAmountCoinPretty(): CoinPretty {
+  function getAmountLabel() {
     const amountConfig = sendConfigs.amountConfig;
     let dec = new Dec(amountConfig.amount ? amountConfig.amount : "0");
     dec = dec.mul(DecUtils.getTenExponentNInPrecisionRange(decimals));
     const amountInNumber = dec.truncate().toString();
-    return new CoinPretty(amountConfig.sendCurrency, new Int(amountInNumber));
+
+    return `${clearDecimals(
+      new CoinPretty(amountConfig.sendCurrency, new Int(amountInNumber))
+        .hideDenom(true)
+        .toString()
+    )} ${amountConfig.sendCurrency.coinDenom}`;
   }
 
   useEffect(() => {
@@ -233,14 +158,14 @@ export const SendPhase2: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No Internet Connection",
+        text1: "No internet connection",
       });
       return;
     }
     if (activityStore.getPendingTxnTypes[txnTypeKey.send]) {
       Toast.show({
         type: "error",
-        text1: `${txType[txnTypeKey.send]} In Progress`,
+        text1: `${txType[txnTypeKey.send]} in progress`,
       });
       return;
     }
@@ -281,7 +206,7 @@ export const SendPhase2: FunctionComponent<{
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction Rejected",
+            text1: "Transaction rejected",
           });
           return;
         } else {
@@ -310,27 +235,26 @@ export const SendPhase2: FunctionComponent<{
           style.flatten([
             "flex-row",
             "border-width-1",
-            "border-color-gray-100",
+            "border-color-white@20%",
             "border-radius-12",
             "padding-x-14",
             "padding-y-10",
             "items-center",
-            "background-color-gray-5",
           ]) as ViewStyle
         }
       >
         <View style={style.flatten(["flex-3", "justify-center"]) as ViewStyle}>
           {usdValue() ? (
-            <Text style={style.flatten(["color-dark", "body3"]) as ViewStyle}>
+            <Text style={style.flatten(["color-white", "body3"]) as ViewStyle}>
               {usdValue()} {`${priceStore.defaultVsCurrency.toUpperCase()}`}
             </Text>
           ) : null}
           <Text
             style={
-              style.flatten(["color-gray-300", "text-caption2"]) as ViewStyle
+              style.flatten(["color-white@60%", "text-caption2"]) as ViewStyle
             }
           >
-            {formatBalance(getAmountCoinPretty())}
+            {getAmountLabel()}
           </Text>
         </View>
         <BlurButton
@@ -340,12 +264,12 @@ export const SendPhase2: FunctionComponent<{
           containerStyle={
             style.flatten([
               "border-width-1",
-              "border-color-gray-100",
+              activityStore.getPendingTxnTypes[txnTypeKey.send]
+                ? "border-color-white@20%"
+                : "border-color-white@40%",
             ]) as ViewStyle
           }
-          textStyle={
-            style.flatten(["padding-x-14", "body3", "color-dark"]) as ViewStyle
-          }
+          textStyle={style.flatten(["padding-x-14", "body3"]) as ViewStyle}
           disable={activityStore.getPendingTxnTypes[txnTypeKey.send]}
           onPress={() => setIsNext(false)}
         />
@@ -382,37 +306,20 @@ export const SendPhase2: FunctionComponent<{
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
           Transaction fee:
         </Text>
-        <View
-          style={
-            [
-              style.flatten([
-                "flex-row",
-                "items-center",
-                "flex-1",
-                "justify-end",
-              ]),
-            ] as ViewStyle
-          }
-        >
+        <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
           <Text
-            numberOfLines={1}
             style={
-              [
-                style.flatten([
-                  "body3",
-                  "color-dark",
-                  "margin-x-6",
-                  "flex-shrink-1",
-                ]),
-              ] as ViewStyle
+              style.flatten([
+                "body3",
+                "color-white",
+                "margin-right-6",
+              ]) as ViewStyle
             }
           >
-            {feePrice
-              ? formatFeeAmount(feePrice.hideIBCMetadata(true), isEvm)
-              : ""}
+            {feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
           </Text>
           <IconButton
             backgroundBlur={false}
@@ -420,8 +327,8 @@ export const SendPhase2: FunctionComponent<{
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.send]
-                    ? "#DCDCE3"
-                    : "#151a1a"
+                    ? style.get("color-white@20%").color
+                    : "white"
                 }
               />
             }
@@ -432,7 +339,9 @@ export const SendPhase2: FunctionComponent<{
                 "items-center",
                 "justify-center",
                 "border-width-1",
-                "border-color-gray-100",
+                activityStore.getPendingTxnTypes[txnTypeKey.send]
+                  ? "border-color-white@20%"
+                  : "border-color-white@40%",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.send]}
@@ -457,20 +366,19 @@ export const SendPhase2: FunctionComponent<{
       ) : null}
       <View style={style.flatten(["flex-1"])} />
       <Button
-        text="Review Transaction"
+        text="Review transaction"
         size="large"
         containerStyle={
-          {
-            ...style.flatten([
-              "border-radius-64",
-              "margin-top-20",
-              "background-color-dark",
-            ]),
-          } as ViewStyle
+          style.flatten(
+            ["border-radius-64", "margin-top-20"],
+            [
+              sendConfigs.amountConfig.amount === "" ||
+                sendConfigs.amountConfig.amount == "0",
+            ]
+          ) as ViewStyle
         }
-        textStyle={
-          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
-        }
+        textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
+        rippleColor="black@50%"
         disabled={
           !account.isReadyToSendTx ||
           !txStateIsValid ||
@@ -498,7 +406,6 @@ export const SendPhase2: FunctionComponent<{
         title={"Transaction fee"}
         feeConfig={sendConfigs.feeConfig}
         gasConfig={sendConfigs.gasConfig}
-        gasSimulator={gasSimulator}
       />
     </React.Fragment>
   );

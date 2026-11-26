@@ -36,11 +36,12 @@ import {
   Bech32Address,
   ChainIdHelper,
   EthermintChainIdHelper,
+  TendermintTxTracer,
 } from "@keplr-wallet/cosmos";
 import { BondStatus } from "../query/cosmos/staking/types";
 import { CosmosQueries, IQueriesStore, QueriesSetBase } from "../query";
 import { DeepPartial, DeepReadonly, Mutable } from "utility-types";
-import { ChainGetter } from "../chain";
+import { ChainGetter } from "../common";
 import deepmerge from "deepmerge";
 import { Buffer } from "buffer/";
 import { MakeTxResponse, ProtoMsgsOrWithAminoMsgs } from "./types";
@@ -52,30 +53,11 @@ import {
   txEventsWithPreOnFulfill,
   updateNodeOnTxnCompleted,
   updateProposalNodeOnTxnCompleted,
-  protoFeeToStdFee,
 } from "./utils";
 import { ExtensionOptionsWeb3Tx } from "@keplr-wallet/proto-types/ethermint/types/v1/web3";
 import { MsgRevoke } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
 import { simpleFetch } from "@keplr-wallet/simple-fetch";
-import { ActivityStore } from "../activity";
-import { CosmosTxTracer } from "./cosmos-tx-tracer";
-import {
-  createProtobufRpcClient,
-  makeMultisignedTx,
-  QueryClient,
-} from "@cosmjs/stargate";
-/* eslint-disable import/no-extraneous-dependencies */
-import { MultisigThresholdPubkey } from "@cosmjs/amino";
-import { pubkeyToAddress } from "@cosmjs/amino";
-import { ServiceClientImpl } from "cosmjs-types/cosmos/tx/v1beta1/service";
-import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
-
-export interface TxRawJSON {
-  body: TxBody;
-  auth_info: AuthInfo;
-  signatures: string[];
-}
-
+import { ActivityStore } from "src/activity";
 export interface CosmosAccount {
   cosmos: CosmosAccountImpl;
 }
@@ -192,7 +174,6 @@ export interface CosmosMsgOpts {
   // The gas multiplication per rewards.
   readonly withdrawRewards: MsgOpt;
   readonly govVote: MsgOpt;
-  readonly govSubmitProposal: MsgOpt;
 }
 
 /**
@@ -228,10 +209,6 @@ export const defaultCosmosMsgOpts: CosmosMsgOpts = {
   },
   govVote: {
     type: "cosmos-sdk/MsgVote",
-    gas: 300000,
-  },
-  govSubmitProposal: {
-    type: "cosmos-sdk/MsgSubmitProposal",
     gas: 300000,
   },
 };
@@ -272,11 +249,8 @@ export class CosmosAccountImpl {
     recipient: string
   ) {
     const denomHelper = new DenomHelper(currency.coinMinimalDenom);
-    const chainInfo = this.chainGetter.getChain(this.chainId);
     const isEvm =
-      (chainInfo.features?.includes("eth-key-sign") &&
-        chainInfo.features?.includes("eth-address-gen") &&
-        chainInfo.evm) ??
+      this.chainGetter.getChain(this.chainId).features?.includes("evm") ??
       false;
     if (denomHelper.type === "native" && !isEvm) {
       const actualAmount = (() => {
@@ -287,8 +261,7 @@ export class CosmosAccountImpl {
 
       Bech32Address.validate(
         recipient,
-        this.chainGetter.getChain(this.chainId)?.bech32Config
-          ?.bech32PrefixAccAddr
+        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
       );
 
       const msg = {
@@ -458,7 +431,6 @@ export class CosmosAccountImpl {
 
     let txHash: Uint8Array;
     let signDoc: StdSignDoc;
-    let signature: string;
     let txId: string;
     let proposalNode: ProposalNode;
 
@@ -476,7 +448,6 @@ export class CosmosAccountImpl {
       );
       txHash = result.txHash;
       signDoc = result.signDoc;
-      signature = result.signature;
 
       txId = Buffer.from(txHash).toString("hex").toLocaleUpperCase();
 
@@ -489,7 +460,7 @@ export class CosmosAccountImpl {
           signerAddress,
           type,
           fee,
-          memo: memo || signDoc?.memo,
+          memo,
           nodes,
         });
         this.activityStore.addProposalNode(proposalNode);
@@ -501,7 +472,7 @@ export class CosmosAccountImpl {
           signDoc,
           type,
           fee,
-          memo: memo || signDoc?.memo,
+          memo,
           nodes,
         });
         this.activityStore.addNode(newNode);
@@ -558,7 +529,7 @@ export class CosmosAccountImpl {
       onBroadcasted(txHash);
     }
 
-    const txTracer = new CosmosTxTracer(
+    const txTracer = new TendermintTxTracer(
       this.chainGetter.getChain(this.chainId).rpc,
       "/websocket",
       {
@@ -606,7 +577,7 @@ export class CosmosAccountImpl {
         }
 
         if (onFulfill) {
-          onFulfill({ ...tx, signature });
+          onFulfill(tx);
         }
       })
       .catch(() => {
@@ -634,7 +605,6 @@ export class CosmosAccountImpl {
   ): Promise<{
     txHash: Uint8Array;
     signDoc: StdSignDoc;
-    signature: string;
   }> {
     if (this.base.walletStatus !== WalletStatus.Loaded) {
       throw new Error(`Wallet is not loaded: ${this.base.walletStatus}`);
@@ -826,121 +796,6 @@ export class CosmosAccountImpl {
           throw err;
         }),
       signDoc: signResponse.signed,
-      signature: signResponse.signature.signature,
-    };
-  }
-
-  /**
-   * Broadcast a Cosmos multisig transaction.
-   *
-   * This method assembles and broadcasts a multisig transaction using a
-   * LegacyAmino multisig public key. It supports both unsigned multisig
-   * transactions (where signatures are supplied separately) and fully
-   * signed multisig transactions.
-   *
-   * Important:
-   * - The full multisig public key (threshold + all pubkeys) is required,
-   *   even if only a subset of cosigners provide signatures.
-   * - Multisig signing uses SIGN_MODE_LEGACY_AMINO_JSON.
-   * - The provided multisig address is validated against the derived address
-   *   from the multisig public key and the current chain's bech32 prefix.
-   *
-   * @param multisigPubKey - The multisig threshold public key (LegacyAminoPubKey)
-   * @param msgs - Transaction messages (proto or amino-compatible)
-   * @param signDoc - Unsigned or signed transaction JSON payload
-   * @param signatures - Map of signer address to signature bytes (used for unsigned flow)
-   * @param multisigAddress - Bech32 multisig account address for the current chain
-   * @param mode - Broadcast mode: "block", "sync", or "async"
-   *
-   * @returns An object containing:
-   * - txHash: Broadcast transaction hash (hex-encoded)
-   * - signDoc: The original transaction payload
-   * - signature: Base64-encoded aggregated multisig signature
-   *
-   * @throws Error if the multisig public key does not match the provided address
-   * @throws Error if the transaction cannot be assembled or broadcast
-   */
-  async broadcastMultisigMsgs(
-    multisigPubKey: MultisigThresholdPubkey,
-    msgs: ProtoMsgsOrWithAminoMsgs["protoMsgs"],
-    signDoc: TxRawJSON,
-    signatures: Map<string, Uint8Array> = new Map<string, Uint8Array>([]),
-    multisigAddress: string,
-    mode: "block" | "async" | "sync" = "sync"
-  ): Promise<{
-    txHash: string;
-    signDoc: TxRawJSON;
-    signature: string;
-  }> {
-    const keplr = (await this.base.getKeplr())!;
-    const multisigAddressDerived = pubkeyToAddress(
-      multisigPubKey,
-      this.chainGetter.getChain(this.chainId)?.bech32Config
-        ?.bech32PrefixAccAddr || ""
-    );
-
-    if (multisigAddress !== multisigAddressDerived) {
-      throw new Error(
-        "Multisig public key does not match the multisig address in the transaction"
-      );
-    }
-
-    const account = await BaseAccount.fetchFromRest(
-      this.chainGetter.getChain(this.chainId).rest,
-      multisigAddress,
-      true
-    );
-
-    const sequence = account.getSequence().toString();
-
-    const bodyBytes = TxBody.encode({
-      messages: msgs,
-      memo: signDoc.body.memo,
-      timeoutHeight: signDoc.body.timeoutHeight,
-      extensionOptions: signDoc.body.extensionOptions,
-      nonCriticalExtensionOptions: signDoc.body.nonCriticalExtensionOptions,
-    }).finish();
-
-    const stdFee = protoFeeToStdFee(signDoc.auth_info.fee);
-
-    // Create the multisigned tx
-    const multisignedTx = makeMultisignedTx(
-      multisigPubKey,
-      parseInt(sequence),
-      stdFee,
-      bodyBytes,
-      signatures
-    );
-    const authInfoBytes = multisignedTx.authInfoBytes;
-
-    const signatureBytes = multisignedTx.signatures;
-
-    const txRaw = TxRaw.encode({
-      bodyBytes,
-      authInfoBytes,
-      signatures: signatureBytes,
-    }).finish();
-
-    this.base.setBroadcastInProgress(true);
-
-    const txHash = await keplr
-      .sendTx(this.chainId, txRaw, mode as BroadcastMode)
-      .then((res) => {
-        this.base.setBroadcastInProgress(false);
-        return res;
-      })
-      .catch((err) => {
-        this.base.setBroadcastInProgress(false);
-        throw err;
-      });
-
-    return {
-      txHash: Buffer.from(txHash).toString("hex").toLocaleUpperCase(),
-      signDoc,
-      signature: Buffer.from(
-        // combine all signatures as one base64 string
-        Uint8Array.from(multisignedTx.signatures[0])
-      ).toString("base64"),
     };
   }
 
@@ -1007,57 +862,29 @@ export class CosmosAccountImpl {
       signatures: [new Uint8Array(64)],
     }).finish();
 
-    try {
-      const result = await simpleFetch<any>(
-        this.chainGetter.getChain(this.chainId).rest,
-        "/cosmos/tx/v1beta1/simulate",
-        {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            tx_bytes: Buffer.from(unsignedTx).toString("base64"),
-          }),
-        }
-      );
-
-      const gasUsed = parseInt(result.data.gas_info.gas_used);
-      if (Number.isNaN(gasUsed)) {
-        throw new Error(
-          `Invalid integer gas: ${result.data.gas_info.gas_used}`
-        );
+    // TODO: Add response type
+    const result = await simpleFetch<any>(
+      this.chainGetter.getChain(this.chainId).rest,
+      "/cosmos/tx/v1beta1/simulate",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          tx_bytes: Buffer.from(unsignedTx).toString("base64"),
+        }),
       }
+    );
 
-      return { gasUsed };
-    } catch {
-      // fallback simulation using RPC if REST simulation fails
-      const tendermintClient = await Tendermint37Client.connect(
-        this.chainGetter.getChain(this.chainId).rpc
-      );
-
-      const queryClient = new QueryClient(tendermintClient);
-      const rpcClient = createProtobufRpcClient(queryClient);
-      const txService = new ServiceClientImpl(rpcClient);
-
-      const simulateResponse = await txService.Simulate({
-        txBytes: unsignedTx,
-      });
-
-      const gasUsedBigInt = simulateResponse.gasInfo?.gasUsed;
-
-      if (!gasUsedBigInt) {
-        throw new Error(`Invalid gas from simulate: ${gasUsedBigInt}`);
-      }
-
-      const gasUsed = parseInt(gasUsedBigInt.toString());
-
-      if (Number.isNaN(gasUsed)) {
-        throw new Error(`Invalid integer gas: ${gasUsedBigInt}`);
-      }
-
-      return { gasUsed };
+    const gasUsed = parseInt(result.data.gas_info.gas_used);
+    if (Number.isNaN(gasUsed)) {
+      throw new Error(`Invalid integer gas: ${result.data.gas_info.gas_used}`);
     }
+
+    return {
+      gasUsed,
+    };
   }
 
   makeTx(
@@ -1512,7 +1339,7 @@ export class CosmosAccountImpl {
   makeRevokeMsg(grantee: string, messageType: string) {
     Bech32Address.validate(
       grantee,
-      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixAccAddr
+      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixAccAddr
     );
 
     const msg = {
@@ -1549,15 +1376,13 @@ export class CosmosAccountImpl {
   makeDelegateTx(amount: string, validatorAddress: string) {
     Bech32Address.validate(
       validatorAddress,
-      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
     );
 
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(
-      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
-    );
+    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
 
     const msg = {
       type: this.msgOpts.delegate.type,
@@ -1565,7 +1390,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency?.coinMinimalDenom,
+          denom: currency.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1581,7 +1406,7 @@ export class CosmosAccountImpl {
             value: MsgDelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount as any,
+              amount: msg.value.amount,
             }).finish(),
           },
         ],
@@ -1638,9 +1463,7 @@ export class CosmosAccountImpl {
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(
-      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
-    );
+    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
 
     const msg = {
       type: this.msgOpts.delegate.type,
@@ -1648,7 +1471,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency?.coinMinimalDenom,
+          denom: currency.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1664,7 +1487,7 @@ export class CosmosAccountImpl {
             value: MsgDelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount as any,
+              amount: msg.value.amount,
             }).finish(),
           },
         ],
@@ -1695,15 +1518,13 @@ export class CosmosAccountImpl {
   makeUndelegateTx(amount: string, validatorAddress: string) {
     Bech32Address.validate(
       validatorAddress,
-      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
     );
 
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(
-      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
-    );
+    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
 
     const msg = {
       type: this.msgOpts.undelegate.type,
@@ -1711,7 +1532,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency?.coinMinimalDenom,
+          denom: currency.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1727,7 +1548,7 @@ export class CosmosAccountImpl {
             value: MsgUndelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount as any,
+              amount: msg.value.amount,
             }).finish(),
           },
         ],
@@ -1788,9 +1609,7 @@ export class CosmosAccountImpl {
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(
-      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
-    );
+    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
 
     const msg = {
       type: this.msgOpts.undelegate.type,
@@ -1798,7 +1617,7 @@ export class CosmosAccountImpl {
         delegator_address: this.base.bech32Address,
         validator_address: validatorAddress,
         amount: {
-          denom: currency?.coinMinimalDenom,
+          denom: currency.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1814,7 +1633,7 @@ export class CosmosAccountImpl {
             value: MsgUndelegate.encode({
               delegatorAddress: msg.value.delegator_address,
               validatorAddress: msg.value.validator_address,
-              amount: msg.value.amount as any,
+              amount: msg.value.amount,
             }).finish(),
           },
         ],
@@ -1852,19 +1671,17 @@ export class CosmosAccountImpl {
   ) {
     Bech32Address.validate(
       srcValidatorAddress,
-      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
     );
     Bech32Address.validate(
       dstValidatorAddress,
-      this.chainGetter.getChain(this.chainId)?.bech32Config?.bech32PrefixValAddr
+      this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
     );
 
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(
-      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
-    );
+    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
 
     const msg = {
       type: this.msgOpts.redelegate.type,
@@ -1873,7 +1690,7 @@ export class CosmosAccountImpl {
         validator_src_address: srcValidatorAddress,
         validator_dst_address: dstValidatorAddress,
         amount: {
-          denom: currency?.coinMinimalDenom,
+          denom: currency.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1890,7 +1707,7 @@ export class CosmosAccountImpl {
               delegatorAddress: msg.value.delegator_address,
               validatorSrcAddress: msg.value.validator_src_address,
               validatorDstAddress: msg.value.validator_dst_address,
-              amount: msg.value.amount as any,
+              amount: msg.value.amount,
             }).finish(),
           },
         ],
@@ -1951,9 +1768,7 @@ export class CosmosAccountImpl {
     const currency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
     let dec = new Dec(amount);
-    dec = dec.mulTruncate(
-      DecUtils.getPrecisionDec(currency?.coinDecimals || 0)
-    );
+    dec = dec.mulTruncate(DecUtils.getPrecisionDec(currency.coinDecimals));
 
     const msg = {
       type: this.msgOpts.redelegate.type,
@@ -1962,7 +1777,7 @@ export class CosmosAccountImpl {
         validator_src_address: srcValidatorAddress,
         validator_dst_address: dstValidatorAddress,
         amount: {
-          denom: currency?.coinMinimalDenom,
+          denom: currency.coinMinimalDenom,
           amount: dec.truncate().toString(),
         },
       },
@@ -1979,7 +1794,7 @@ export class CosmosAccountImpl {
               delegatorAddress: msg.value.delegator_address,
               validatorSrcAddress: msg.value.validator_src_address,
               validatorDstAddress: msg.value.validator_dst_address,
-              amount: msg.value.amount as any,
+              amount: msg.value.amount,
             }).finish(),
           },
         ],
@@ -2011,8 +1826,7 @@ export class CosmosAccountImpl {
     for (const validatorAddress of validatorAddresses) {
       Bech32Address.validate(
         validatorAddress,
-        this.chainGetter.getChain(this.chainId)?.bech32Config
-          ?.bech32PrefixValAddr
+        this.chainGetter.getChain(this.chainId).bech32Config.bech32PrefixValAddr
       );
     }
 

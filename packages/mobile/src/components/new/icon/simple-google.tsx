@@ -4,7 +4,7 @@ import Svg, { Path } from "react-native-svg";
 export const SimpleGoogleIcon: FunctionComponent<{
   size?: number;
   color?: string;
-}> = ({ size = 10, color = "#151a1a" }) => {
+}> = ({ size = 10, color = "white" }) => {
   return (
     <Svg
       width={size}

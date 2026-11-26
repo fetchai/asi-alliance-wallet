@@ -15,6 +15,7 @@ import { observer } from "mobx-react-lite";
 import { NoActivityView } from "screens/activity/activity-transaction/no-activity-view";
 import { processFilters, txOptions } from "screens/activity/utils";
 import { FilterItem, FilterView } from "components/filter";
+import { isFeatureAvailable } from "utils/index";
 
 export const ActivityNativeTab: FunctionComponent<{
   isOpenModal: boolean;
@@ -33,7 +34,8 @@ export const ActivityNativeTab: FunctionComponent<{
     setTxnFilters,
   }) => {
     const style = useStyle();
-    const { activityStore } = useStore();
+    const { chainStore, activityStore } = useStore();
+    const current = chainStore.current;
 
     const [_date, setDate] = useState("");
 
@@ -56,8 +58,6 @@ export const ActivityNativeTab: FunctionComponent<{
       intervalRef.current = setInterval(() => {
         if (activityStore.sortedNodes.length > 0) {
           setActivities(activityStore.sortedNodes);
-        } else {
-          setActivities([]);
         }
       }, 3000);
       // Clean up the interval on component unmount
@@ -121,7 +121,7 @@ export const ActivityNativeTab: FunctionComponent<{
           }}
           keyExtractor={(_item, index) => index.toString()}
           ItemSeparatorComponent={() => (
-            <CardDivider style={style.flatten(["margin-y-8"]) as ViewStyle} />
+            <CardDivider style={style.flatten(["margin-y-16"]) as ViewStyle} />
           )}
         />
       );
@@ -135,12 +135,14 @@ export const ActivityNativeTab: FunctionComponent<{
 
     return (
       <React.Fragment>
-        {data.length > 0 && activities.length > 0 ? (
+        {isFeatureAvailable(current.chainId) &&
+        data.length > 0 &&
+        activities.length > 0 ? (
           renderList(data)
         ) : activities.length == 0 && isLoading ? (
           <ActivityIndicator
             size="large"
-            color={style.get("color-dark").color}
+            color={style.get("color-white").color}
           />
         ) : (
           <NoActivityView />

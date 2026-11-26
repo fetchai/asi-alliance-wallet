@@ -85,12 +85,10 @@ export class AddressBookConfig {
   async saveAddressBookDatas() {
     const chainInfo = this.chainGetter.getChain(this.chainId);
 
-    if (chainInfo) {
-      await this.kvStore.set(
-        AddressBookConfig.keyForChainInfo(chainInfo as ChainInfo),
-        toJS(this._addressBookDatas)
-      );
-    }
+    await this.kvStore.set(
+      AddressBookConfig.keyForChainInfo(chainInfo),
+      toJS(this._addressBookDatas)
+    );
   }
 
   @flow
@@ -99,7 +97,7 @@ export class AddressBookConfig {
 
     const datas = yield* toGenerator(
       this.kvStore.get<AddressBookData[]>(
-        AddressBookConfig.keyForChainInfo(chainInfo as ChainInfo)
+        AddressBookConfig.keyForChainInfo(chainInfo)
       )
     );
     if (!datas) {

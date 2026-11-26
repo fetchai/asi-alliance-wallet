@@ -78,8 +78,8 @@ export const ActivityScreen = observer(() => {
 
   return (
     <PageWithViewInBottomTabView
-      backgroundMode={"secondary"}
-      hasFloatingHeader={true}
+      backgroundMode={"image"}
+      isTransparentHeader={true}
       style={{
         paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
         flexGrow: 1,
@@ -91,16 +91,15 @@ export const ActivityScreen = observer(() => {
         >
           <ChipButton
             text="Filter"
-            icon={<FilterIcon color="#151a1a" />}
+            icon={<FilterIcon />}
             iconStyle={style.get("padding-top-2") as ViewStyle}
             containerStyle={
               style.flatten([
                 "border-width-1",
-                "border-color-gray-100",
+                "border-color-gray-300",
               ]) as ViewStyle
             }
             backgroundBlur={false}
-            textStyle={style.flatten(["color-dark"]) as ViewStyle}
             onPress={() => {
               setIsOpenModal(true);
               analyticsStore.logEvent("activity_filter_click", {
@@ -115,7 +114,7 @@ export const ActivityScreen = observer(() => {
         style={
           style.flatten([
             "h1",
-            "color-dark",
+            "color-white",
             "margin-x-18",
             "margin-y-16",
             "font-normal",
@@ -129,11 +128,9 @@ export const ActivityScreen = observer(() => {
         selected={selectedId}
         setSelected={setSelectedId}
         containerStyle={style.flatten(["margin-x-20"]) as ViewStyle}
-        backgroundColorToken="background-color-gray-100"
-        unselectedTextColorToken="color-gray-300"
       />
       <ScrollView
-        indicatorStyle={"black"}
+        indicatorStyle={"white"}
         contentContainerStyle={
           style.flatten(["margin-y-16", "flex-grow-1"]) as ViewStyle
         }

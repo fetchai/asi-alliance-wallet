@@ -6,7 +6,7 @@ import React, {
 } from "react";
 import { CardModal } from "modals/card";
 import { Text, View, ViewStyle } from "react-native";
-import { ColorPalette, useStyle } from "styles/index";
+import { useStyle } from "styles/index";
 import { IconButton } from "components/new/button/icon";
 import { RectButton } from "components/rect-button";
 import { BlurBackground } from "components/new/blur-background/blur-background";
@@ -74,13 +74,13 @@ export const FilterView: FunctionComponent<{
       <Button
         text={selectAllButtonText}
         size="small"
-        textStyle={style.flatten(["color-dark", "body3"]) as ViewStyle}
+        textStyle={style.flatten(["color-white", "body3"]) as ViewStyle}
         containerStyle={
           style.flatten([
             "border-radius-64",
             "background-color-transparent",
             "border-width-1",
-            "border-color-gray-200",
+            "border-color-gray-400",
           ]) as ViewStyle
         }
         onPress={handleClicks}
@@ -94,17 +94,14 @@ export const FilterView: FunctionComponent<{
           <BlurBackground
             key={index}
             borderRadius={12}
-            blurIntensity={0}
+            blurIntensity={15}
             containerStyle={
-              [
-                style.flatten(["margin-bottom-6"]),
-                {
-                  backgroundColor:
-                    selectedFilter[index]?.isSelected ?? false
-                      ? "#e0fedd"
-                      : "#f6f6f6",
-                },
-              ] as ViewStyle
+              style.flatten([
+                "margin-bottom-6",
+                selectedFilter[index]?.isSelected ?? false
+                  ? "background-color-indigo"
+                  : "background-color-transparent",
+              ]) as ViewStyle
             }
           >
             <RectButton
@@ -121,9 +118,7 @@ export const FilterView: FunctionComponent<{
                 setSelectedFilter(updatedFilters);
               }}
               activeOpacity={0.5}
-              underlayColor={
-                selectedFilter[index]?.isSelected ? "#c8f5c5" : "#e0e0e0"
-              }
+              underlayColor={style.flatten(["color-indigo"]).color}
             >
               <View
                 style={
@@ -153,7 +148,7 @@ export const FilterView: FunctionComponent<{
                     style.flatten([
                       "body3",
                       "margin-left-18",
-                      "color-dark",
+                      "color-white",
                     ]) as ViewStyle
                   }
                 >
@@ -163,7 +158,7 @@ export const FilterView: FunctionComponent<{
                   <View
                     style={style.flatten(["flex-1", "items-end"]) as ViewStyle}
                   >
-                    <CheckIcon />
+                    <CheckIcon color={"transparent"} />
                   </View>
                 )}
               </View>
@@ -172,23 +167,11 @@ export const FilterView: FunctionComponent<{
         ))}
       </View>
       <Button
-        text="Apply Filters"
+        text="Save changes"
         size="large"
-        containerStyle={
-          {
-            ...style.flatten(["border-radius-64"]),
-            backgroundColor:
-              filters == selectedFilter
-                ? ColorPalette["gray-55"]
-                : style.get("color-dark").color,
-          } as ViewStyle
-        }
-        textStyle={
-          style.flatten([
-            "body2",
-            filters == selectedFilter ? "color-gray-300" : "color-white",
-          ]) as ViewStyle
-        }
+        containerStyle={style.flatten(["border-radius-64"]) as ViewStyle}
+        textStyle={style.flatten(["body2"]) as ViewStyle}
+        rippleColor="black@50%"
         disabled={filters == selectedFilter}
         onPress={() => handleFilterChange(selectedFilter)}
       />

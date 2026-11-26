@@ -27,15 +27,7 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
       <PasswordInputModal
         title={
           !isTurnOffBiometryFallback
-            ? keychainStore.biometryType === "FaceID"
-              ? "Enable Face ID"
-              : keychainStore.biometryType === "TouchID"
-              ? "Enable Touch ID"
-              : "Enable Biometric Authentication"
-            : keychainStore.biometryType === "FaceID"
-            ? "Disable Face ID"
-            : keychainStore.biometryType === "TouchID"
-            ? "Disable Touch ID"
+            ? "Enable Biometric Authentication"
             : "Disable Biometric Authentication"
         }
         isOpen={isOpenModal}
@@ -56,23 +48,23 @@ export const SettingBiometricLockItem: FunctionComponent = observer(() => {
         }}
       />
       <SettingItem
-        label={
-          keychainStore.biometryType === "FaceID"
-            ? "Use Face ID"
-            : keychainStore.biometryType === "TouchID"
-            ? "Use Touch ID"
-            : Platform.OS === "ios"
-            ? "Use Face ID"
-            : "Use Biometric Authentication"
-        }
+        label="Use biometric authentication"
         left={<FingerPrintIconWithoutCircle size={16} />}
         right={
           <Switch
             trackColor={{
-              false: "#DCDCE3",
-              true: "#DCDCE3",
+              false: "#767577",
+              true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
             }}
-            thumbColor={keychainStore.isBiometryOn ? "#73A271" : "#9A9AA2"}
+            thumbColor={keychainStore.isBiometryOn ? "#5F38FB" : "#D0BCFF66"}
+            style={[
+              {
+                borderRadius: 16,
+                borderWidth: 1,
+                // transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
+              },
+              style.flatten(["border-color-pink-light@40%"]),
+            ]}
             onValueChange={async (value) => {
               if (value) {
                 setIsOpenModal(true);

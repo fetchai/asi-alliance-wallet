@@ -4,7 +4,8 @@ import {
   injectKeplrToWindow,
 } from "@keplr-wallet/provider";
 
-const keplr = new RNInjectedKeplr("0.13.11", "mobile-web");
-const fetchWallet = new BrowserInjectedFetchWallet(keplr, "0.13.11");
+// TODO: Set the Keplr version properly
+const keplr = new RNInjectedKeplr("0.10.10", "mobile-web");
+const fetchWallet = new BrowserInjectedFetchWallet(keplr, "0.10.10");
 
 injectKeplrToWindow(keplr, fetchWallet);

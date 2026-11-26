@@ -8,10 +8,6 @@ interface LineGraphViewProps {
   tokenName: string | undefined;
   setTokenState: any;
   tokenState: any;
-  setTokenCurrentPrice?: any;
-  tokenDenom?: string;
-  priceInVsCurrency?: number;
-  vsCurrencySymbol: string;
 }
 
 const tabs = [
@@ -41,10 +37,6 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
   tokenName,
   setTokenState,
   tokenState,
-  tokenDenom,
-  setTokenCurrentPrice,
-  priceInVsCurrency,
-  vsCurrencySymbol,
 }) => {
   const [activeTab, setActiveTab] = useState<any>(tabs[0]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -55,22 +47,7 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
   return (
     <div className={style["graph-container"]}>
       {!loading && !tokenState?.diff && (
-        <div className={style["errorText"]}>
-          Price history unavailable for this network.
-        </div>
-      )}
-      {tokenDenom && priceInVsCurrency ? (
-        <div className={style["vsCurrencyTokenPrice"]}>
-          <div>
-            {tokenDenom}/{fiatCurrency?.toUpperCase()}
-          </div>
-          <div className={style["vsCurrencyPrice"]}>
-            {vsCurrencySymbol}
-            {priceInVsCurrency}
-          </div>
-        </div>
-      ) : (
-        ""
+        <div className={style["errorText"]}>Line Graph unavailable</div>
       )}
       <LineGraph
         duration={activeTab.duration}
@@ -78,22 +55,16 @@ export const LineGraphView: React.FC<LineGraphViewProps> = ({
         setTokenState={setTokenState}
         loading={loading}
         setLoading={setLoading}
-        vsCurrencySymbol={vsCurrencySymbol}
         vsCurrency={fiatCurrency}
-        setTokenCurrentPrice={setTokenCurrentPrice}
       />
-      {tokenState?.diff ? (
+      {tokenState?.diff && (
         <div style={{ marginBottom: "-18px" }}>
           <TabsPanel
-            className={style["graphOption"]}
-            activeClassName={style["activeGraphOption"]}
             tabs={tabs}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
           />
         </div>
-      ) : (
-        ""
       )}
     </div>
   );

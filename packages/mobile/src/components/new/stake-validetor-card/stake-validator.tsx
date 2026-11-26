@@ -72,12 +72,9 @@ export const StakeValidatorCardView: FunctionComponent<{
     >
       <BlurBackground
         borderRadius={12}
-        backgroundBlur={false}
+        blurIntensity={16}
         containerStyle={
-          [
-            style.flatten(["padding-18", "background-color-gray-5"]),
-            containerStyle,
-          ] as ViewStyle
+          [style.flatten(["padding-18"]), containerStyle] as ViewStyle
         }
       >
         <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
@@ -94,31 +91,25 @@ export const StakeValidatorCardView: FunctionComponent<{
               />
             ) : (
               <BlurBackground
-                backgroundBlur={false}
+                backgroundBlur={true}
+                blurIntensity={16}
                 containerStyle={
-                  {
-                    ...style.flatten([
-                      "width-32",
-                      "height-32",
-                      "border-radius-64",
-                      "items-center",
-                      "justify-center",
-                      "margin-right-12",
-                    ]),
-                    backgroundColor: "#dddfdf",
-                  } as ViewStyle
+                  style.flatten([
+                    "width-32",
+                    "height-32",
+                    "border-radius-64",
+                    "items-center",
+                    "justify-center",
+                    "margin-right-12",
+                  ]) as ViewStyle
                 }
               >
-                <VectorCharacter
-                  char={heading[0]}
-                  color="#151a1a"
-                  height={12}
-                />
+                <VectorCharacter char={heading[0]} color="white" height={12} />
               </BlurBackground>
             )}
             <View>
               <Text
-                style={style.flatten(["subtitle2", "color-dark"]) as ViewStyle}
+                style={style.flatten(["subtitle2", "color-white"]) as ViewStyle}
               >
                 {heading}
               </Text>
@@ -127,7 +118,7 @@ export const StakeValidatorCardView: FunctionComponent<{
                 style={
                   style.flatten([
                     "text-caption2",
-                    "color-gray-300",
+                    "color-white@80%",
                     "margin-y-2",
                   ]) as ViewStyle
                 }
@@ -144,7 +135,7 @@ export const StakeValidatorCardView: FunctionComponent<{
           style={
             style.flatten([
               "height-1",
-              "background-color-gray-100",
+              "background-color-white@20%",
               "margin-y-16",
             ]) as ViewStyle
           }
@@ -154,7 +145,11 @@ export const StakeValidatorCardView: FunctionComponent<{
           scrollEnabled={false}
           horizontal={true}
           contentContainerStyle={
-            style.flatten(["width-full", "justify-between"]) as ViewStyle
+            style.flatten([
+              "width-full",
+              "justify-between",
+              "flex-wrap",
+            ]) as ViewStyle
           }
           renderItem={({ item, index }: { item: ItemData; index: number }) => {
             return (
@@ -164,13 +159,13 @@ export const StakeValidatorCardView: FunctionComponent<{
               >
                 <Text
                   style={
-                    style.flatten(["body3", "color-gray-300"]) as ViewStyle
+                    style.flatten(["body3", "color-white@60%"]) as ViewStyle
                   }
                 >
                   {item.title}
                 </Text>
                 <Text
-                  style={style.flatten(["color-dark", "body3"]) as ViewStyle}
+                  style={style.flatten(["color-white", "body3"]) as ViewStyle}
                 >
                   {item.value}
                 </Text>
@@ -186,7 +181,7 @@ export const StakeValidatorCardView: FunctionComponent<{
           <Text
             style={
               style.flatten([
-                "color-dark",
+                "color-indigo-250",
                 "text-caption2",
                 "font-bold",
               ]) as ViewStyle

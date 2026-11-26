@@ -5,16 +5,12 @@ export interface TabsProps {
   tabs: any[];
   activeTab: any;
   setActiveTab: any;
-  className?: string;
-  activeClassName?: string;
 }
 
 export const TabsPanel: React.FC<TabsProps> = ({
   tabs,
   activeTab,
   setActiveTab,
-  className,
-  activeClassName,
 }) => {
   const handleTabClick = (tab: any) => {
     setActiveTab(tab);
@@ -31,7 +27,7 @@ export const TabsPanel: React.FC<TabsProps> = ({
               <button
                 className={`${style["tab"]} ${
                   isSelected ? style["selected"] : ""
-                } ${isSelected ? activeClassName : className}`}
+                }`}
                 style={{
                   color: `${isSelected ? "#FFF" : "rgba(255,255,255,0.6)"}`,
                   background: `${

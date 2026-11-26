@@ -1,9 +1,6 @@
 import React, { FunctionComponent } from "react";
 import { TransitionPresets } from "@react-navigation/stack";
-import {
-  HeaderLeftBackLightButton,
-  TransparentHeaderOptionsPreset,
-} from "components/header";
+import { TransparentHeaderOptionsPreset } from "components/header";
 import { PortfolioScreen } from "screens/portfolio";
 import { Stack } from "./navigation";
 import { InboxScreen } from "screens/inbox";
@@ -31,7 +28,6 @@ export const HomeNavigation: FunctionComponent = () => {
           ...TransparentHeaderOptionsPreset,
           // Only show the back button.
           title: "",
-          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Portfolio"
         component={PortfolioScreen}

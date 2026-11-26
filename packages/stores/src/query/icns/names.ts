@@ -1,32 +1,21 @@
 import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
-import { ChainGetter } from "../../chain";
-import { ObservableQueryMap } from "../../common";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../common";
 import { computed } from "mobx";
+import { ObservableChainQueryMap } from "../chain-query";
 import { ICNSNames } from "./types";
-import { QuerySharedContext } from "../../common";
 
 export class ObservableQueryICNSNamesInner extends ObservableCosmwasmContractChainQuery<ICNSNames> {
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly contractAddress: string,
+    protected override readonly contractAddress: string,
     protected readonly address: string
   ) {
-    super(
-      sharedContext,
-      chainId,
-      chainGetter,
-      contractAddress,
-      {
-        icns_names: { address: address },
-      },
-      `icns-names-${contractAddress}-${address}-${chainId}`
-    );
-  }
-
-  protected override canFetch(): boolean {
-    return this.address !== "";
+    super(kvStore, chainId, chainGetter, contractAddress, {
+      icns_names: { address: address },
+    });
   }
 
   @computed
@@ -48,21 +37,20 @@ export class ObservableQueryICNSNamesInner extends ObservableCosmwasmContractCha
   }
 }
 
-export class ObservableQueryICNSNames extends ObservableQueryMap<ICNSNames> {
+export class ObservableQueryICNSNames extends ObservableChainQueryMap<ICNSNames> {
   constructor(
-    kvStore: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((key: string) => {
-      const [contractAddress, address] = key.split("/");
-
+    super(kvStore, chainId, chainGetter, (key: string) => {
+      const split = key.split("/");
       return new ObservableQueryICNSNamesInner(
-        kvStore,
-        chainId,
-        chainGetter,
-        contractAddress,
-        address
+        this.kvStore,
+        this.chainId,
+        this.chainGetter,
+        split[0],
+        split[1]
       );
     });
   }

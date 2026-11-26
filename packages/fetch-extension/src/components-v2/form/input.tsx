@@ -21,13 +21,12 @@ export interface InputProps {
   label?: string;
   text?: string | React.ReactElement;
   error?: string;
+
   prepend?: React.ReactElement;
   append?: React.ReactElement;
+
   formGroupClassName?: string;
   inputGroupClassName?: string;
-  formFeedbackClassName?: string;
-  formTextClassName?: string;
-  floatLabel?: boolean;
 }
 
 // eslint-disable-next-line react/display-name
@@ -39,15 +38,13 @@ export const Input = forwardRef<
     className,
     formGroupClassName,
     inputGroupClassName,
-    formFeedbackClassName,
-    formTextClassName,
     type,
     label,
     text,
     error,
     prepend,
     append,
-    floatLabel,
+
     // XXX: It's been so long I can't remember why I did this...
     color: _color,
     children: _children,
@@ -60,33 +57,21 @@ export const Input = forwardRef<
     return `input-${Buffer.from(bytes).toString("hex")}`;
   });
 
-  if (floatLabel) {
-    return (
-      <FormGroup
-        className={classnames(styleInput["form-floating"], formGroupClassName)}
-      >
-        <ReactStrapInput
-          id={inputId}
-          type={type}
-          placeholder=" "
-          className={classnames("form-control", className, styleInput["input"])}
-          innerRef={ref}
-          {...attributes}
-        />
-        {label && <label htmlFor={inputId}>{label}</label>}
-        {error ? (
-          <FormFeedback style={{ display: "block" }}>{error}</FormFeedback>
-        ) : text ? (
-          <FormText>{text}</FormText>
-        ) : null}
-      </FormGroup>
-    );
-  }
-
   return (
-    <FormGroup className={formGroupClassName}>
+    <FormGroup
+      className={formGroupClassName}
+      style={{
+        marginBottom: "0px",
+      }}
+    >
       {label ? (
-        <Label for={inputId} className={styleInput["inputLabel"]}>
+        <Label
+          for={inputId}
+          className="form-control-label"
+          style={{
+            fontWeight: 400,
+          }}
+        >
           {label}
         </Label>
       ) : null}
@@ -106,14 +91,11 @@ export const Input = forwardRef<
         {append}
       </InputGroup>
       {error ? (
-        <FormFeedback
-          style={{ display: "block" }}
-          className={formFeedbackClassName}
-        >
+        <FormFeedback style={{ display: "block", marginTop: "3px" }}>
           {error}
         </FormFeedback>
       ) : text ? (
-        <FormText className={formTextClassName}>{text}</FormText>
+        <FormText>{text}</FormText>
       ) : null}
     </FormGroup>
   );

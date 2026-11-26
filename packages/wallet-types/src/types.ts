@@ -8,9 +8,9 @@ import {
   DirectSignResponse,
   StdSignature,
   EthSignType,
-  ChainInfo,
 } from "@keplr-wallet/types";
 import { PublicKey } from "./public-keys";
+import { NetworkConfig } from "./network-info";
 
 export enum WalletStatus {
   NOTLOADED,
@@ -18,29 +18,6 @@ export enum WalletStatus {
   LOCKED,
   UNLOCKED,
 }
-
-type Primitive = string | number | boolean;
-export type PlainObject = {
-  [key: string]: PlainObject | Primitive | undefined;
-};
-
-export interface KeyInfo {
-  readonly id: string;
-  readonly name: string;
-  readonly type: string;
-  readonly isSelected: boolean;
-  readonly insensitive: PlainObject;
-}
-
-export type KeyRingStatus = "empty" | "locked" | "unlocked";
-
-export type ChainInfoWithSuggestedOptions = ChainInfo & {
-  readonly updateFromRepoDisabled?: boolean;
-};
-
-export type ChainInfoWithCoreTypes = ChainInfoWithSuggestedOptions & {
-  readonly embedded?: boolean;
-};
 
 /**
  * The representation of the Account
@@ -116,7 +93,7 @@ export interface NetworksApi {
    *
    * @throws An error if the wallet is locked or if the dApp does not have permission to the networks API
    */
-  getNetwork(): Promise<ChainInfoWithCoreTypes | undefined>;
+  getNetwork(): Promise<NetworkConfig>;
 
   /**
    * Switch a specified network
@@ -124,7 +101,7 @@ export interface NetworksApi {
    * @param network The new network to target the Wallet at.
    * @throws An error if the dApp does not have permission to the networks API
    */
-  switchToNetwork(chain: ChainInfo): Promise<void>;
+  switchToNetwork(network: NetworkConfig): Promise<void>;
 
   /**
    * Switch to a previous network by chain id
@@ -139,7 +116,7 @@ export interface NetworksApi {
    *
    * @throws An error if the dApp does not have permission to the networks API
    */
-  listNetworks(): Promise<ChainInfoWithCoreTypes[]>;
+  listNetworks(): Promise<NetworkConfig[]>;
 }
 
 /**
@@ -369,7 +346,7 @@ export interface WalletApi {
   status(): Promise<WalletStatus>;
 
   /**
-   * @deprecated Keyring is loaded at background init. Same as {@link status}.
+   * Allows the user to restore the wallet from the UI in case the wallet keyring is not loaded
    */
   restoreWallet(): Promise<WalletStatus>;
 

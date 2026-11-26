@@ -8,12 +8,15 @@ import selectedMoreTabIcon from "@assets/svg/wireframe/selected-more.svg";
 import selectedStakeTabIcon from "@assets/svg/wireframe/selected-stake.svg";
 import stakeTabIcon from "@assets/svg/wireframe/stake-bottom-icon-new.svg";
 import React, { useEffect, useState } from "react";
-
+import {
+  CHAIN_ID_DORADO,
+  CHAIN_ID_ERIDANUS,
+  CHAIN_ID_FETCHHUB,
+} from "../../config.ui.var";
 import { WalletActions } from "../../pages-new/main/wallet-actions";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { Tab } from "./tab";
-import { isPureEvmChain } from "@utils/filters";
 
 const bottomNav = [
   {
@@ -35,7 +38,6 @@ const bottomNav = [
 
 export const BottomNav = () => {
   const [isAssetsOpen, setIsAssetsOpen] = useState(false);
-  const { analyticsStore } = useStore();
   return !isAssetsOpen ? (
     <div className={style["bottomNavContainer"]}>
       <HomeTab />
@@ -43,10 +45,7 @@ export const BottomNav = () => {
       <button
         style={{ cursor: "pointer" }}
         className={style["toggle"]}
-        onClick={() => {
-          setIsAssetsOpen(!isAssetsOpen);
-          analyticsStore.logEvent("fund_transfer_tab_click");
-        }}
+        onClick={() => setIsAssetsOpen(!isAssetsOpen)}
       >
         <img src={require("@assets/svg/wireframe/openAsset.svg")} alt="" />
       </button>
@@ -62,17 +61,20 @@ const HomeTab = () => <Tab {...bottomNav[0]} />;
 const StakeTab = () => {
   const { chainStore } = useStore();
   const current = chainStore.current;
-  const isEvm = isPureEvmChain(current);
 
   const [stakingTooltip, setStakingTooltip] = useState("");
   const [stakingDisabled, setStakingDisabled] = useState(false);
   useEffect(() => {
-    if (isEvm || current.chainId === "noble-1") {
-      setStakingDisabled(true);
-      setStakingTooltip("Feature not available on this network");
-    } else {
+    if (
+      current.chainId == CHAIN_ID_DORADO ||
+      current.chainId == CHAIN_ID_FETCHHUB ||
+      current.chainId == CHAIN_ID_ERIDANUS
+    ) {
       setStakingDisabled(false);
       setStakingTooltip("");
+    } else {
+      setStakingDisabled(true);
+      setStakingTooltip("Feature not available on this network");
     }
   }, [current.chainId]);
 
@@ -92,10 +94,10 @@ const StakeTab = () => {
 
 const ActivityTab = () => {
   const { chainStore } = useStore();
+  const current = chainStore.current;
   const [activityTooltip, setActivityTooltip] = useState("");
   const [activityDisabled, setActivityDisabled] = useState(false);
-  const current = chainStore.current;
-  const isEvm = isPureEvmChain(current);
+  const isEvm = current.features?.includes("evm") ?? false;
   useEffect(() => {
     if (isEvm) {
       setActivityTooltip("Feature not available on this network");

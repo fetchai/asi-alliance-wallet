@@ -91,11 +91,11 @@ export class BaseAccount implements Account {
     // the actual base account exists under the base vesting account.
     // But, this can be different according to the version of cosmos-sdk.
     // So, anyway, try to parse it by some ways...
-    let baseVestingAccount =
+    const baseVestingAccount =
       value.BaseVestingAccount ||
       value.baseVestingAccount ||
       value.base_vesting_account;
-    while (baseVestingAccount) {
+    if (baseVestingAccount) {
       value = baseVestingAccount;
 
       const baseAccount =
@@ -103,11 +103,6 @@ export class BaseAccount implements Account {
       if (baseAccount) {
         value = baseAccount;
       }
-
-      baseVestingAccount =
-        value.BaseVestingAccount ||
-        value.baseVestingAccount ||
-        value.base_vesting_account;
     }
 
     let address = value.address;

@@ -12,7 +12,7 @@ import { useStyle } from "styles/index";
 import { Staking } from "@keplr-wallet/stores";
 import { useRedelegateTxConfig } from "@keplr-wallet/hooks";
 import { PageWithScrollView } from "components/page";
-import { Platform, Text, View, ViewStyle } from "react-native";
+import { Text, View, ViewStyle } from "react-native";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { DropDownCardView } from "components/new/card-view/drop-down-card";
@@ -22,18 +22,11 @@ import { UseMaxButton } from "components/new/button/use-max-button";
 import { MemoInputView } from "components/new/card-view/memo-input";
 import { TransactionModal } from "modals/transaction";
 import { IconButton } from "components/new/button/icon";
-import { CircleExclamationIcon } from "components/new/icon/circle-exclamation";
 import { GearIcon } from "components/new/icon/gear-icon";
 import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-modal";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { txnTypeKey } from "components/new/txn-status.tsx";
-import {
-  formatBalance,
-  formatFiatBalance,
-  formatFeeAmount,
-} from "utils/format/format";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const RedelegateScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -71,11 +64,6 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
   } = useStore();
 
   const style = useStyle();
-  const safeAreaInsets = useSafeAreaInsets();
-  const isAndroid = Platform.OS === "android";
-  const footerPaddingBottom = isAndroid
-    ? (safeAreaInsets.bottom > 0 ? safeAreaInsets.bottom : 48) + 20
-    : Math.max(safeAreaInsets.bottom, 16);
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -146,7 +134,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value ? formatFiatBalance(value) : undefined;
+    return value && value.shrink(true).maxDecimals(6).toString();
   };
   useEffect(() => {
     const inputValueInUsd = convertToUsd(staked);
@@ -157,20 +145,22 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
     ? ` (${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
 
+  const availableBalance = `${staked
+    .trim(true)
+    .shrink(true)
+    .maxDecimals(6)
+    .toString()}${Usd}`;
+
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const feePrice = sendConfigs.feeConfig.isManual
-    ? sendConfigs.feeConfig.fee
-    : sendConfigs.feeConfig.getFeeTypePretty(
-        sendConfigs.feeConfig.feeType
-          ? sendConfigs.feeConfig.feeType
-          : "average"
-      );
+  const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
+    sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
+  );
 
   const redelegateAmount = async () => {
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No Internet Connection",
+        text1: "No internet connection",
       });
       return;
     }
@@ -210,7 +200,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction Rejected",
+            text1: "Transaction rejected",
           });
           return;
         } else {
@@ -233,69 +223,36 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
-      contentContainerStyle={{
-        paddingBottom: Math.max(safeAreaInsets.bottom, 16) + 80,
-      }}
-      pinFixed={Platform.OS === "android"}
-      fixed={
-        <View
-          pointerEvents="box-none"
-          style={{
-            flex: 1,
-            justifyContent: "flex-end",
-            paddingHorizontal: 16,
-            paddingBottom: footerPaddingBottom,
-            paddingTop: 16,
-          }}
-        >
-          <Button
-            text="Confirm"
-            disabled={!account.isReadyToSendTx || !txStateIsValid}
-            loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
-            containerStyle={
-              style.flatten([
-                "border-radius-32",
-                "background-color-dark",
-              ]) as ViewStyle
-            }
-            textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
-            onPress={redelegateAmount}
-          />
-        </View>
-      }
+      contentContainerStyle={style.get("flex-grow-1")}
     >
-      <View style={style.flatten(["margin-y-16"]) as ViewStyle}>
-        <Text
-          style={
-            style.flatten([
-              "body3",
-              "color-gray-300",
-              "margin-bottom-8",
-            ]) as ViewStyle
-          }
-        >
+      <View
+        style={
+          style.flatten([
+            "flex-row",
+            "items-center",
+            "border-width-1",
+            "border-color-white@20%",
+            "border-radius-12",
+            "padding-12",
+            "justify-between",
+            "margin-y-16",
+          ]) as ViewStyle
+        }
+      >
+        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
           Current staked amount
         </Text>
-        <View
-          style={{
-            backgroundColor: "#f6f6f6",
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            paddingVertical: 12,
-          }}
-        >
-          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
-            {formatBalance(staked)}
-          </Text>
-        </View>
+        <Text style={style.flatten(["subtitle3", "color-white"]) as ViewStyle}>
+          {staked.trim(true).shrink(true).maxDecimals(6).toString()}
+        </Text>
       </View>
       <Text
         style={
           style.flatten([
             "body3",
-            "color-gray-300",
+            "color-white@60%",
             "margin-bottom-8",
           ]) as ViewStyle
         }
@@ -306,7 +263,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         style={
           style.flatten([
             "border-width-1",
-            "border-color-gray-100",
+            "border-color-white@20%",
             "border-radius-12",
             "padding-x-18",
             "padding-y-12",
@@ -314,19 +271,15 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
           {srcValidator ? srcValidator.description.moniker : "..."}
         </Text>
       </View>
+
       <DropDownCardView
-        containerStyle={
-          {
-            ...style.flatten(["margin-bottom-8"]),
-            backgroundColor: "#f6f6f6",
-          } as ViewStyle
-        }
+        containerStyle={style.flatten(["margin-bottom-16"]) as ViewStyle}
         mainHeadingrStyle={style.flatten(["body3"]) as ViewStyle}
-        headingrStyle={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
+        headingrStyle={style.flatten(["body3", "color-white@60%"]) as ViewStyle}
         mainHeading="To"
         heading={
           dstValidator ? dstValidator.description.moniker : "Choose validator"
@@ -335,8 +288,8 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           <ChevronRightIcon
             color={
               activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
-                ? "#DCDCE3"
-                : "#151a1a"
+                ? style.get("color-white@20%").color
+                : "white"
             }
           />
         }
@@ -348,37 +301,12 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         }}
         disable={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
       />
-      <View
-        style={
-          style.flatten([
-            "margin-bottom-16",
-            "padding-12",
-            "background-color-gray-50",
-            "flex-row",
-            "border-radius-12",
-          ]) as ViewStyle
-        }
-      >
-        <View
-          style={
-            [style.flatten(["margin-top-4", "margin-right-10"])] as ViewStyle
-          }
-        >
-          <CircleExclamationIcon />
-        </View>
-        <Text
-          style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}
-        >
-          Once you redelegate to a validator, you won&apos;t be able to
-          redelegate from that validator for ~21 days
-        </Text>
-      </View>
       <StakeAmountInput
         label="Amount"
         labelStyle={
           style.flatten([
             "body3",
-            "color-gray-300",
+            "color-white@60%",
             "margin-y-0",
             "margin-bottom-8",
           ]) as ViewStyle
@@ -390,12 +318,12 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
       <Text
         style={
           style.flatten([
-            "color-gray-300",
+            "color-white@60%",
             "text-caption2",
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${formatBalance(staked)}${Usd}`}</Text>
+      >{`Available: ${availableBalance}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}
@@ -407,7 +335,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-gray-300",
+            "color-white@60%",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -428,37 +356,20 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
           Transaction fee:
         </Text>
-        <View
-          style={
-            [
-              style.flatten([
-                "flex-row",
-                "items-center",
-                "flex-1",
-                "justify-end",
-              ]),
-            ] as ViewStyle
-          }
-        >
+        <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
           <Text
-            numberOfLines={1}
             style={
-              [
-                style.flatten([
-                  "body3",
-                  "color-dark",
-                  "margin-x-6",
-                  "flex-shrink-1",
-                ]),
-              ] as ViewStyle
+              style.flatten([
+                "body3",
+                "color-white",
+                "margin-right-6",
+              ]) as ViewStyle
             }
           >
-            {feePrice
-              ? formatFeeAmount(feePrice.hideIBCMetadata(true), isEvm)
-              : ""}
+            {feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
           </Text>
           <IconButton
             backgroundBlur={false}
@@ -466,8 +377,8 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
-                    ? "#DCDCE3"
-                    : "#151a1a"
+                    ? style.get("color-white@20%").color
+                    : "white"
                 }
               />
             }
@@ -480,7 +391,7 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
                 "border-width-1",
                 activityStore.getPendingTxnTypes[txnTypeKey.redelegate]
                   ? "border-color-white@20%"
-                  : "border-color-gray-100",
+                  : "border-color-white@40%",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
@@ -503,6 +414,18 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
             : sendConfigs.feeConfig.error.message}
         </Text>
       ) : null}
+      <View style={style.flatten(["flex-1"])} />
+      <Button
+        text="Confirm"
+        disabled={!account.isReadyToSendTx || !txStateIsValid}
+        loading={activityStore.getPendingTxnTypes[txnTypeKey.redelegate]}
+        containerStyle={
+          style.flatten(["margin-top-16", "border-radius-32"]) as ViewStyle
+        }
+        textStyle={style.flatten(["body2"]) as ViewStyle}
+        onPress={redelegateAmount}
+      />
+      <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
       <TransactionModal
         isOpen={showTransectionModal}
         close={() => {
@@ -510,26 +433,8 @@ export const RedelegateScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        onFailed={(log) => {
-          if (log.includes("too many redelegation entries")) {
-            Toast.show({
-              type: "error",
-              text1: "Redelegation limit reached",
-              text2:
-                "Too many active redelegations between these validators. Try again later.",
-            });
-          } else if (
-            log.includes("redelegation to this validator already in progress")
-          ) {
-            Toast.show({
-              type: "error",
-              text1: "Redelegation already active",
-              text2:
-                "Wait for the existing redelegation to complete before trying again.",
-            });
-          }
-        }}
-        onHomeClick={() => navigation.navigate("Home", {})}
+        buttonText="Go to activity screen"
+        onHomeClick={() => navigation.navigate("ActivityTab", {})}
         onTryAgainClick={redelegateAmount}
       />
       <TransactionFeeModel

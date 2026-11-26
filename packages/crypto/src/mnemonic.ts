@@ -4,6 +4,7 @@ const bip39 = require("bip39");
 const bip32 = require("bip32");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bs58check = require("bs58check");
+
 import { Buffer } from "buffer/";
 
 export type RNG = <
@@ -85,10 +86,7 @@ export class Mnemonic {
   static generatePrivateKeyFromMasterSeed(
     seed: Uint8Array,
     path: string = `m/44'/118'/0'/0/0`
-  ): {
-    privateKey: Uint8Array;
-    masterFingerprint: string;
-  } {
+  ): Uint8Array {
     const masterSeed = bip32.fromBase58(bs58check.encode(seed));
     const hd = masterSeed.derivePath(path);
 
@@ -96,9 +94,6 @@ export class Mnemonic {
     if (!privateKey) {
       throw new Error("null hd key");
     }
-    return {
-      privateKey,
-      masterFingerprint: masterSeed.fingerprint.toString("hex"),
-    };
+    return privateKey;
   }
 }

@@ -13,7 +13,6 @@ import { BlurBackground } from "components/new/blur-background/blur-background";
 import { ConfirmCardModel } from "components/new/confirm-modal";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
-import { TokenInfo } from "@keplr-wallet/background";
 
 export const SettingManageTokensScreen: FunctionComponent = observer(() => {
   const {
@@ -28,7 +27,7 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
 
   const style = useStyle();
 
-  const tokens = tokensStore.getTokens(chainStore.current.chainId);
+  const tokensOf = tokensStore.getTokensOf(chainStore.current.chainId);
 
   const queryBalances = queriesStore
     .get(chainStore.current.chainId)
@@ -38,21 +37,20 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
       <View style={style.flatten(["height-card-gap"]) as ViewStyle} />
-      {tokens.length > 0 ? (
-        tokens.map((token) => {
-          const balance = queryBalances.getBalanceFromCurrency(token.currency);
+      {tokensOf.tokens.length > 0 ? (
+        tokensOf.tokens.map((token) => {
+          const balance = queryBalances.getBalanceFromCurrency(token);
 
           return (
             <ManageTokenItem
-              key={token.currency.coinMinimalDenom}
+              key={token.coinMinimalDenom}
               chainInfo={chainStore.current}
               balance={balance}
-              token={token}
             />
           );
         })
@@ -72,7 +70,8 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
               style={style.flatten([
                 "h3",
                 "font-medium",
-                "color-dark",
+                "color-gray-100",
+                "dark:color-platinum-300",
                 "text-center",
               ])}
             >
@@ -83,21 +82,10 @@ export const SettingManageTokensScreen: FunctionComponent = observer(() => {
             style={style.flatten(["margin-top-68", "flex-1"]) as ViewStyle}
           />
           <Button
-            text="Add Token"
+            text="Add token"
             size="large"
-            containerStyle={
-              style.flatten([
-                "border-radius-32",
-                "background-color-dark",
-              ]) as ViewStyle
-            }
-            textStyle={
-              style.flatten([
-                "body2",
-                "font-normal",
-                "color-white",
-              ]) as ViewStyle
-            }
+            containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+            textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
             onPress={() => {
               smartNavigation.navigateSmart("Setting.AddToken", {});
               analyticsStore.logEvent("add_token_icon_click", {
@@ -116,14 +104,15 @@ export const ManageTokenItem: FunctionComponent<{
   containerStyle?: ViewStyle;
 
   chainInfo: {
-    stakeCurrency?: Currency;
+    stakeCurrency: Currency;
   };
   balance: CoinPretty;
-  token: TokenInfo;
-}> = observer(({ containerStyle, balance, token }) => {
+}> = observer(({ containerStyle, balance }) => {
   const { chainStore, tokensStore, analyticsStore } = useStore();
 
   const style = useStyle();
+
+  const tokensOf = tokensStore.getTokensOf(chainStore.current.chainId);
 
   const smartNavigation = useSmartNavigation();
 
@@ -135,7 +124,7 @@ export const ManageTokenItem: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      backgroundBlur={false}
+      blurIntensity={14}
       containerStyle={
         [
           style.flatten([
@@ -144,7 +133,6 @@ export const ManageTokenItem: FunctionComponent<{
             "margin-y-6",
             "flex-row",
             "items-center",
-            "background-color-gray-5",
           ]),
           containerStyle,
         ] as ViewStyle
@@ -152,7 +140,7 @@ export const ManageTokenItem: FunctionComponent<{
     >
       <Text
         style={
-          style.flatten(["subtitle3", "color-dark", "uppercase"]) as ViewStyle
+          style.flatten(["subtitle3", "color-white", "uppercase"]) as ViewStyle
         }
       >
         {balance.currency.coinDenom}
@@ -177,10 +165,7 @@ export const ManageTokenItem: FunctionComponent<{
           onPress={() => {
             setConfirmModal(true);
 
-            if (
-              tokensStore.getTokens(chainStore.current.chainId).length === 0 &&
-              smartNavigation.canGoBack()
-            ) {
+            if (tokensOf.tokens.length === 0 && smartNavigation.canGoBack()) {
               smartNavigation.goBack();
             }
           }}
@@ -195,10 +180,7 @@ export const ManageTokenItem: FunctionComponent<{
                 action: confirm ? "Yes" : "No",
               });
               if (confirm) {
-                await tokensStore.removeToken(
-                  chainStore.current.chainId,
-                  token
-                );
+                await tokensOf.removeToken(balance.currency);
               }
             }}
           />

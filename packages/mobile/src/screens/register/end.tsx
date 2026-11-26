@@ -9,6 +9,7 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "stores/index";
 import { Toggle } from "components/toggle";
 import delay from "delay";
+import { LinearGradientText } from "components/svg/linear-gradient-text";
 import { RocketIcon } from "components/new/icon/rocket";
 
 export const RegisterEndScreen: FunctionComponent = observer(() => {
@@ -44,30 +45,25 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithView
-      backgroundMode="secondary"
+      backgroundMode="image"
+      isTransparentHeader={true}
+      backgroundBlur={true}
       style={style.flatten(["padding-x-20"]) as ViewStyle}
     >
       <View style={style.get("flex-8")} />
       <View style={style.flatten(["items-center"])}>
         <RocketIcon />
 
+        <LinearGradientText
+          text="You’re all set!"
+          color1="#CF447B"
+          color2="#F9774B"
+        />
         <Text
           style={
             style.flatten([
-              "h2",
-              "color-dark",
-              "font-medium",
-              "margin-top-10",
-            ]) as ViewStyle
-          }
-        >
-          You’re all set!
-        </Text>
-        <Text
-          style={
-            style.flatten([
-              "body1",
-              "color-gray-400",
+              "h4",
+              "color-text-low",
               "text-center",
               "margin-top-10",
             ]) as ViewStyle
@@ -79,26 +75,17 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
       {password && keychainStore.isBiometrySupported ? (
         <View
           style={
-            [
-              style.flatten([
-                "flex-row",
-                "margin-top-58",
-                "items-center",
-                "padding-18",
-                "border-radius-12",
-                "border-width-1",
-                "border-color-gray-100",
-                "background-color-white",
-              ]),
-            ] as ViewStyle
+            style.flatten([
+              "flex-row",
+              "margin-top-58",
+              "items-center",
+            ]) as ViewStyle
           }
         >
-          <Text style={style.flatten(["subtitle1", "color-dark"]) as ViewStyle}>
-            {keychainStore.biometryType === "FaceID"
-              ? "Enable Face ID"
-              : keychainStore.biometryType === "TouchID"
-              ? "Enable Touch ID"
-              : "Enable Biometric"}
+          <Text
+            style={style.flatten(["subtitle1", "color-text-low"]) as ViewStyle}
+          >
+            Enable Biometric
           </Text>
           <View style={style.get("flex-1")} />
           <Toggle
@@ -113,13 +100,15 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
           style.flatten([
             "margin-top-44",
             "margin-bottom-20",
-            "background-color-dark",
+            "background-color-white",
             "border-radius-32",
           ]) as ViewStyle
         }
-        textStyle={style.flatten(["color-white"]) as ViewStyle}
+        textStyle={{
+          color: "#0B1742",
+        }}
         size="large"
-        text="Start Using Your Wallet"
+        text="Start using your wallet"
         loading={isLoading}
         onPress={async () => {
           setIsLoading(true);
@@ -133,12 +122,12 @@ export const RegisterEndScreen: FunctionComponent = observer(() => {
             }
 
             // Definetly, the last key is newest keyring.
-            if (keyRingStore.keyInfos.length > 0) {
-              await keyRingStore.selectKeyRing(
-                keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+            if (keyRingStore.multiKeyStoreInfo.length > 0) {
+              await keyRingStore.changeKeyRing(
+                keyRingStore.multiKeyStoreInfo.length - 1
               );
             }
-            analyticsStore.logEvent("staart_using_your_wallet_click", {
+            analyticsStore.logEvent("start_using_your_wallet_click", {
               pageName: "Register",
             });
             smartNavigation.reset({

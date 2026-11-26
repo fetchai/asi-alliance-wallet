@@ -1,7 +1,7 @@
-import React, { PropsWithChildren } from "react";
+import React from "react";
 import styles from "./style.module.scss";
 
-export interface CardProps extends PropsWithChildren {
+export interface CardProps {
   leftImage?: any;
   leftImageStyle?: React.CSSProperties;
   heading: any;
@@ -9,16 +9,13 @@ export interface CardProps extends PropsWithChildren {
   rightContent?: any;
   isActive?: boolean;
   style?: any;
-  subheadingStyle?: React.CSSProperties;
-  headingStyle?: React.CSSProperties;
+  subheadingStyle?: any;
+  headingStyle?: any;
   onClick?: any;
   rightContentOnClick?: any;
-  rightContentStyle?: React.CSSProperties;
+  rightContentStyle?: any;
   inActiveBackground?: any;
   disabled?: boolean;
-  bottomContent?: any;
-  bottomContentStyle?: React.CSSProperties;
-  middleSectionStyle?: React.CSSProperties;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -28,12 +25,9 @@ export const Card: React.FC<CardProps> = ({
   subheading,
   rightContent,
   rightContentStyle,
-  bottomContent,
-  bottomContentStyle,
   isActive,
   style,
   subheadingStyle,
-  middleSectionStyle,
   headingStyle,
   onClick,
   rightContentOnClick,
@@ -42,10 +36,10 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const containerStyle: React.CSSProperties = {
     backgroundColor: isActive
-      ? "var(--bg-green-light)"
+      ? "var(--Indigo---Fetch, #5F38FB)"
       : inActiveBackground
       ? inActiveBackground
-      : "var(--card-bg)",
+      : "rgba(255,255,255,0.1)",
     cursor: disabled
       ? "not-allowed"
       : onClick || rightContentOnClick
@@ -60,79 +54,63 @@ export const Card: React.FC<CardProps> = ({
       className={styles["cardContainer"]}
       onClick={!disabled && onClick}
     >
-      <div className={styles["cardTopContainer"]}>
-        {leftImage &&
-          (leftImage.length > 1 ? (
+      {leftImage &&
+        (leftImage.length > 1 ? (
+          <img
+            src={leftImage.length > 1 && leftImage}
+            alt={leftImage[0]}
+            className={styles["leftImage"]}
+            style={leftImageStyle}
+          />
+        ) : (
+          <div className={styles["leftImage"]} style={leftImageStyle}>
+            {leftImage}
+          </div>
+        ))}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
+        <div className={styles["middleSection"]}>
+          <div
+            style={{ ...headingStyle }}
+            className={`${styles["heading"]} ${styles["wordBreak"]}`}
+          >
+            {heading}
+          </div>
+          {subheading && (
+            <div
+              className={styles["subHeading"]}
+              style={{ ...subheadingStyle }}
+            >
+              {subheading}
+            </div>
+          )}
+        </div>
+
+        <div className={styles["rightSection"]}>
+          {React.isValidElement(rightContent) ? (
+            <div style={rightContentStyle}> {rightContent}</div>
+          ) : rightContent && rightContent.includes("extension://") ? (
             <img
-              src={leftImage.length > 1 && leftImage}
-              alt={leftImage[0]}
-              className={styles["leftImage"]}
-              style={leftImageStyle}
+              onClick={rightContentOnClick}
+              src={rightContent}
+              alt="Right Section"
+              className={styles["rightImage"]}
+              style={rightContentStyle}
             />
           ) : (
-            <div className={styles["leftImage"]} style={leftImageStyle}>
-              {leftImage}
+            <div onClick={rightContentOnClick} className={styles["rightText"]}>
+              {rightContent}
             </div>
-          ))}
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            width: "100%",
-          }}
-        >
-          <div
-            className={styles["middleSection"]}
-            style={{ ...middleSectionStyle }}
-          >
-            <div
-              style={{ ...headingStyle }}
-              className={`${styles["heading"]} ${styles["wordBreak"]}`}
-            >
-              {heading}
-            </div>
-            {subheading && (
-              <div
-                className={styles["subHeading"]}
-                style={{ ...subheadingStyle }}
-              >
-                {subheading}
-              </div>
-            )}
-          </div>
-
-          <div className={styles["rightSection"]}>
-            {React.isValidElement(rightContent) ? (
-              <div style={rightContentStyle}> {rightContent}</div>
-            ) : rightContent && rightContent.includes("extension://") ? (
-              <img
-                onClick={rightContentOnClick}
-                src={rightContent}
-                alt="Right Section"
-                className={styles["rightImage"]}
-                style={rightContentStyle}
-              />
-            ) : (
-              <div
-                onClick={rightContentOnClick}
-                className={styles["rightText"]}
-              >
-                {rightContent}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
-      {bottomContent && (
-        <div
-          className={styles["cardBottomContainer"]}
-          style={bottomContentStyle}
-        >
-          {bottomContent}
-        </div>
-      )}
     </div>
   );
 };

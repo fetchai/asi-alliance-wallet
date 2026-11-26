@@ -1,16 +1,12 @@
+import { KVStore } from "@keplr-wallet/common";
 import { Dec } from "@keplr-wallet/unit";
 import { computed, makeObservable } from "mobx";
-import { QuerySharedContext } from "../../../../common";
-import { ChainGetter } from "../../../../chain";
+import { ChainGetter } from "../../../../common";
 import { ObservableChainQuery } from "../../../chain-query";
 import { StrideMintParams } from "./types";
 
 export class ObservableQueryStrideMintParams extends ObservableChainQuery<StrideMintParams> {
-  constructor(
-    kvStore: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
-  ) {
+  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
     super(kvStore, chainId, chainGetter, `/mint/v1beta1/params`);
 
     makeObservable(this);

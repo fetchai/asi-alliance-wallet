@@ -9,7 +9,7 @@ export class BaseKVStore implements KVStore {
   async get<T = unknown>(key: string): Promise<T | undefined> {
     const k = this.prefix() + "/" + key;
 
-    const data = await this.provider.get(k);
+    const data = await this.provider.get();
     return data[k];
   }
 

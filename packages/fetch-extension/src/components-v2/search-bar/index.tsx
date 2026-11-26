@@ -12,18 +12,14 @@ interface Props {
   itemsStyleProp?: any;
   filterFunction: any;
   midElement?: React.ReactNode;
-  emptyContent?: React.ReactNode;
   disabled?: boolean;
-  placeholder?: string;
 }
 
 export const SearchBar: React.FC<Props> = ({
   searchTerm,
-  placeholder,
   valuesArray,
   renderResult,
   onSearchTermChange,
-  emptyContent,
   itemsStyleProp,
   filterFunction,
   midElement,
@@ -48,7 +44,7 @@ export const SearchBar: React.FC<Props> = ({
     <div>
       <Card
         style={{
-          background: "var(--card-bg)",
+          background: "rgba(255,255,255,0.1)",
           marginBottom: "24px",
           padding: "12px 18px",
         }}
@@ -57,7 +53,7 @@ export const SearchBar: React.FC<Props> = ({
             className={style["searchInput"]}
             type="text"
             id="searchInput"
-            placeholder={placeholder || "Search"}
+            placeholder="Search"
             value={searchTerm}
             disabled={disabled}
             onChange={(e) => onSearchTermChange(e.target.value)}
@@ -82,12 +78,19 @@ export const SearchBar: React.FC<Props> = ({
           ))}
         </div>
       ) : (
-        searchTerm.length > 0 &&
-        (emptyContent ? (
-          emptyContent
-        ) : (
-          <div className={style["noResults"]}>No results found!</div>
-        ))
+        searchTerm.length > 0 && (
+          <div
+            style={{
+              textAlign: "center",
+              color: "white",
+              fontSize: "14px",
+              fontWeight: 400,
+              opacity: 1,
+            }}
+          >
+            No results found!
+          </div>
+        )
       )}
     </div>
   );

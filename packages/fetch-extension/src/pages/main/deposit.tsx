@@ -49,13 +49,7 @@ export const DepositView: FunctionComponent = observer(() => {
   const { isBuySupportChain, buySupportServiceInfos } = useBuy();
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
-  const current = chainStore.current;
-  const isEvm =
-    Boolean(
-      current.features?.includes("eth-key-sign") &&
-        current.features?.includes("eth-address-gen") &&
-        current.evm
-    ) ?? false;
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
 
   return (
     <div>
@@ -79,7 +73,7 @@ export const DepositView: FunctionComponent = observer(() => {
             )}
           >
             <FormattedMessage id="main.account.button.deposit" />{" "}
-            {chainStore.current.stakeCurrency?.coinDenom?.toUpperCase()}
+            {chainStore.current.stakeCurrency.coinDenom.toUpperCase()}
           </p>
           <p
             className={classnames(
@@ -107,7 +101,7 @@ export const DepositView: FunctionComponent = observer(() => {
         </Button>
       </div>
 
-      {["fetchhub-4", "eip155:1"].includes(chainStore.current.chainId) && (
+      {["fetchhub-4", "1"].includes(chainStore.current.chainId) && (
         <div>
           <hr className={styleDeposit["hr"]} />
           <div className={styleDeposit["containerInner"]}>
@@ -170,7 +164,7 @@ export const DepositView: FunctionComponent = observer(() => {
                 )}
               >
                 <FormattedMessage id="main.account.button.buy" />{" "}
-                {chainStore.current.stakeCurrency?.coinDenom?.toUpperCase()}
+                {chainStore.current.stakeCurrency.coinDenom.toUpperCase()}
               </p>
               <p
                 className={classnames(

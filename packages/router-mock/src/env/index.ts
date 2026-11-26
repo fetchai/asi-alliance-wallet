@@ -17,7 +17,6 @@ export class MockEnv {
         requestInteraction: () => {
           throw new Error("TODO: Implement me");
         },
-        sender,
       };
     };
   }

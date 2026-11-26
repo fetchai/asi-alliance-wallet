@@ -1,5 +1,3 @@
-/// <reference types="jest" />
-import { Buffer } from "buffer/";
 import { Ledger } from "./ledger";
 
 describe("ledger utils", () => {
@@ -49,7 +47,7 @@ describe("ledger utils", () => {
 
     let bytes = Ledger.ethSignatureToBytes(sig);
     let expBytes = Buffer.from(sig.r + sig.s + "1b", "hex");
-    expect(Buffer.from(bytes)).toEqual(expBytes);
+    expect(Buffer.from(bytes).equals(expBytes)).toBe(true);
 
     sig = {
       v: 28,
@@ -59,7 +57,7 @@ describe("ledger utils", () => {
 
     bytes = Ledger.ethSignatureToBytes(sig);
     expBytes = Buffer.from(sig.r + sig.s + "1c", "hex");
-    expect(Buffer.from(bytes)).toEqual(expBytes);
+    expect(Buffer.from(bytes).equals(expBytes)).toBe(true);
   });
 
   it("throw error if ethereum signatures is invalid", () => {

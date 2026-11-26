@@ -14,14 +14,7 @@ import {
 } from "@keplr-wallet/hooks";
 import { AppCurrency } from "@keplr-wallet/types";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
-import {
-  formatBalance,
-  hasValidDecimals,
-  parseDollarAmount,
-  parseExponential,
-  validateDecimalPlaces,
-} from "@utils/format";
-import { isPureEvmChain } from "@utils/filters";
+import { parseDollarAmount, parseExponential } from "@utils/format";
 import { observer } from "mobx-react-lite";
 import { useIntl } from "react-intl";
 import { FormGroup, Label } from "reactstrap";
@@ -36,22 +29,13 @@ export interface CoinInputProps {
   balanceText?: string;
   className?: string;
   label?: string;
-  showAllBalance?: boolean;
   disableAllBalance?: boolean;
   overrideSelectableCurrencies?: AppCurrency[];
   dropdownDisabled?: boolean;
-  onAmountChange?: (value: string) => void;
-  onPress?: () => void;
 }
 
 export const CoinInput: FunctionComponent<CoinInputProps> = observer(
-  ({
-    amountConfig,
-    showAllBalance,
-    disableAllBalance,
-    onPress,
-    onAmountChange,
-  }) => {
+  ({ amountConfig, disableAllBalance }) => {
     const intl = useIntl();
     const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
       string | undefined
@@ -152,82 +136,52 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
       }
     }, [inputInFiatCurrency, isToggleClicked]);
 
-    const currency =
-      priceStore.supportedVsCurrencies[fiatCurrency]?.currency?.toUpperCase();
-
     return (
       <React.Fragment>
         <FormGroup className={styleCoinInput["input-size"]}>
           <div className={styleCoinInput["input-container"]}>
             <div className={styleCoinInput["amount-label"]}>
-              <div>ENTER AMOUNT</div>
+              <div>Amount</div>
             </div>
             <div className={styleCoinInput["input-wrapper"]}>
               <input
-                placeholder={`0`}
+                placeholder={`0.00`}
                 className={classnames(
                   "form-control-alternative",
                   styleCoinInput["input"],
                   { [styleCoinInput["input-error"]]: errorText != null }
                 )}
                 id={`input-${randomId}`}
-                type="text"
-                inputMode="decimal"
+                type="number"
+                step="any"
                 value={
-                  isToggleClicked &&
-                  amountConfig.sendCurrency["coinGeckoId"] !== undefined
+                  isToggleClicked === true
                     ? parseDollarAmount(inputInFiatCurrency).toString()
                     : parseExponential(
                         amountConfig.amount,
                         amountConfig.sendCurrency.coinDecimals
                       )
                 }
-                onBeforeInput={(e) => {
-                  const data = (e as any).data;
-                  if (data && !/[0-9.]/.test(data)) {
-                    e.preventDefault();
-                  }
-                }}
                 onChange={(e: any) => {
                   e.preventDefault();
-                  let value = e.target.value.replace(/[^0-9.]/g, "");
-                  if (value.startsWith(".")) {
-                    value = "0" + value;
-                  }
-                  onAmountChange?.(value);
-
-                  if (value === "") {
-                    amountConfig.setAmount("");
-                    return;
-                  }
-
-                  if (!validateDecimalPlaces(value) || Number(value) < 0) {
-                    return;
-                  }
-
-                  if (value !== "0") {
-                    // Remove leading zeros
-                    value = value.replace(/^0+(?!\.)/, "");
-                  }
 
                   if (
-                    (Number(value) < 10 ** 9 && hasValidDecimals(value)) ||
-                    value === "0" ||
-                    value === ""
+                    e.target.value < 10 ** 9 ||
+                    e.target.value === "0" ||
+                    e.target.value === ""
                   ) {
                     if (
                       parseExponential(
                         amountConfig.amount,
                         amountConfig.sendCurrency.coinDecimals
                       ).toString().length > 1 &&
-                      isNaN(parseFloat(value))
+                      isNaN(parseFloat(e.target.value))
                     ) {
                       return;
                     }
-                    isToggleClicked &&
-                    amountConfig.sendCurrency["coinGeckoId"] !== undefined
+                    isToggleClicked === true
                       ? parseDollarAmount(inputInFiatCurrency)
-                      : amountConfig.setAmount(value);
+                      : amountConfig.setAmount(e.target.value);
                   }
                 }}
                 min={0}
@@ -235,17 +189,15 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
               />
 
               <span>
-                {isToggleClicked &&
-                amountConfig.sendCurrency["coinGeckoId"] !== undefined
+                {isToggleClicked === true
                   ? fiatCurrency.toUpperCase()
                   : amountConfig.sendCurrency.coinDenom.split(" ")[0]}
               </span>
             </div>
             <div className={styleCoinInput["amount-usd"]}>
-              {isToggleClicked ||
-              amountConfig.sendCurrency["coinGeckoId"] == undefined
+              {isToggleClicked === true
                 ? `${amountConfig.amount} ${amountConfig.sendCurrency.coinDenom}`
-                : `${inputInFiatCurrency} ${currency}`}
+                : inputInFiatCurrency}
             </div>
             {errorText != null ? (
               <div className={styleCoinInput["errorText"]}>{errorText}</div>
@@ -257,29 +209,26 @@ export const CoinInput: FunctionComponent<CoinInputProps> = observer(
               className={styleCoinInput["widgetButton"]}
               onClick={isClicked}
               disabled={
-                !SUPPORTED_LOCALE_FIAT_CURRENCIES.includes(fiatCurrency) ||
-                amountConfig.sendCurrency["coinGeckoId"] == undefined
+                !SUPPORTED_LOCALE_FIAT_CURRENCIES.includes(fiatCurrency)
               }
             >
               <img src={require("@assets/svg/wireframe/chevron.svg")} alt="" />
               {`Change to ${
-                !isToggleClicked ||
-                amountConfig.sendCurrency["coinGeckoId"] == undefined
+                !isToggleClicked
                   ? fiatCurrency.toUpperCase()
                   : amountConfig.sendCurrency.coinDenom
               }`}
             </button>
-            {!showAllBalance ? (
+            {!disableAllBalance ? (
               <button
                 style={{ margin: "0px" }}
                 className={styleCoinInput["widgetButton"]}
-                disabled={disableAllBalance}
                 onClick={(e) => {
                   e.preventDefault();
-                  onPress ? onPress() : amountConfig.toggleIsMax();
+                  amountConfig.toggleIsMax();
                 }}
               >
-                Use max
+                Use max available
               </button>
             ) : null}
           </div>
@@ -302,21 +251,14 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
   >("");
-  const { queriesStore, priceStore, accountStore, chainStore, analyticsStore } =
-    useStore();
-  const current = chainStore.current;
-  const isEvm = isPureEvmChain(current);
-  const accountInfo = accountStore.getAccount(chainStore.current.chainId);
-  const queries = queriesStore.get(chainStore.current.chainId);
+
+  const { queriesStore, priceStore } = useStore();
   const queryBalances = queriesStore
     .get(amountConfig.chainId)
     .queryBalances.getQueryBech32Address(amountConfig.sender);
 
   const selectableCurrencies = (
-    overrideSelectableCurrencies ||
-    queries.cosmos.querySpendableBalances
-      .getQueryBech32Address(accountInfo.bech32Address)
-      .balances.map((b) => b.currency)
+    overrideSelectableCurrencies || amountConfig.sendableCurrencies
   )
     .filter((cur) => {
       const bal = queryBalances.getBalanceFromCurrency(cur);
@@ -325,15 +267,14 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
     .sort((a, b) => {
       return a.coinDenom < b.coinDenom ? -1 : 1;
     });
-  const spendableBalances = queries.cosmos.querySpendableBalances
-    .getQueryBech32Address(accountInfo.bech32Address)
-    .balances?.find(
-      (bal) =>
-        amountConfig.sendCurrency.coinMinimalDenom ===
-        bal.currency.coinMinimalDenom
-    );
-  const balance = spendableBalances
-    ? spendableBalances
+
+  const queryBalance = queryBalances.balances.find(
+    (bal) =>
+      amountConfig.sendCurrency.coinMinimalDenom ===
+      bal.currency.coinMinimalDenom
+  );
+  const balance = queryBalance
+    ? queryBalance.balance
     : new CoinPretty(amountConfig.sendCurrency, new Int(0));
 
   const language = useLanguage();
@@ -343,6 +284,10 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
     const inUsd = value && value.shrink(true).maxDecimals(6).toString();
     return inUsd;
   };
+  useEffect(() => {
+    const valueInUsd = convertToFiatCurrency(balance);
+    setInputInFiatCurrency(valueInUsd);
+  }, [amountConfig.sendCurrency]);
 
   const balancesMap = new Map(
     queryBalances.balances.map((bal) => [
@@ -350,47 +295,29 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
       bal.balance,
     ])
   );
-
-  const balanceETH =
-    balancesMap.get(amountConfig.sendCurrency.coinMinimalDenom) ||
-    new CoinPretty(amountConfig.sendCurrency, new Int(0));
-
-  useEffect(() => {
-    const currentChainBalance = isEvm ? balanceETH : balance;
-    const valueInUsd = convertToFiatCurrency(currentChainBalance);
-    setInputInFiatCurrency(valueInUsd);
-  }, [amountConfig.sendCurrency]);
-
-  const displayBalanceEvm = formatBalance(balanceETH);
-  const displayBalanceCosmos = formatBalance(balance);
-  const availableBalance = isEvm ? displayBalanceEvm : displayBalanceCosmos;
-
   return (
     <React.Fragment>
-      <Label className={styleCoinInput["label"]}>Asset</Label>
+      <Label style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
+        Asset
+      </Label>
       <Card
         style={{
-          border: "1px solid var(--bg-grey-dark)",
-          background: "#FFF",
+          backgroundColor: "rgba(255,255,255,0.1)",
           padding: "12px 18px",
           marginBottom: "0px",
         }}
-        onClick={() => {
-          setIsOpenTokenSelector(!isOpenTokenSelector);
-          analyticsStore.logEvent("send_from_click", {
-            pageName: "Send",
-          });
-        }}
+        onClick={() => setIsOpenTokenSelector(!isOpenTokenSelector)}
         heading={<div>{amountConfig.sendCurrency.coinDenom}</div>}
         rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
         subheading={
           <div
             style={{
-              color: "var(--font-secondary)",
+              color: "rgba(255,255,255,0.6)",
               fontSize: "12px",
             }}
           >
-            {`Available: ${availableBalance}`}
+            {" "}
+            {`Available: ${balance.shrink(true).maxDecimals(6).toString()} `}
             {inputInFiatCurrency &&
               `(${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`}
           </div>
@@ -400,9 +327,7 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
         setIsOpen={setIsOpenTokenSelector}
         isOpen={isOpenTokenSelector}
         title="Asset"
-        closeClicked={() => {
-          setIsOpenTokenSelector(false);
-        }}
+        closeClicked={() => setIsOpenTokenSelector(false)}
       >
         {selectableCurrencies.map((currency) => {
           const currencyBalance =
@@ -420,9 +345,6 @@ export const TokenSelectorDropdown: React.FC<TokenDropdownProps> = ({
               onClick={async (e: any) => {
                 e.preventDefault();
                 amountConfig.setSendCurrency(currency);
-                analyticsStore.logEvent("select_token_click", {
-                  pageName: "Send",
-                });
               }}
               rightContent={`${currencyBalance
                 .shrink(true)

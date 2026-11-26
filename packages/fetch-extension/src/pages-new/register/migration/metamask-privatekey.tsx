@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState, useEffect } from "react";
+import React, { FunctionComponent } from "react";
 import { BackButton } from "../index";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Input, TextArea } from "@components/form";
@@ -9,18 +9,6 @@ import { Buffer } from "buffer";
 import { parseEthPrivateKey } from "@fetchai/eth-migration";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { PasswordInput } from "@components-v2/form";
-import { observer } from "mobx-react-lite";
-import { useStore } from "../../../stores";
-import { SelectNetwork } from "../select-network";
-import classNames from "classnames";
-import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
-// import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-// import { BACKGROUND_PORT } from "@keplr-wallet/router";
-// import { RefreshAccountList } from "@keplr-wallet/background";
-import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
-import { Checkbox } from "@components-v2/checkbox/checkbox";
-import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 interface FormData {
   name: string;
@@ -41,55 +29,28 @@ function isPrivateKey(str: string): boolean {
 export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
   registerConfig: RegisterConfig;
   onBack: () => void;
-}> = observer(({ registerConfig, onBack }) => {
+}> = ({ registerConfig, onBack }) => {
   const intl = useIntl();
-  const { keyRingStore } = useStore();
-
-  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [passwordCheckbox, setPasswordCheckbox] = useState(false);
-  const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
-  const accountList = keyRingStore.keyInfos;
-  const defaultAccountName = getNextDefaultAccountName(accountList);
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
-    trigger,
-    watch,
+    getValues,
   } = useForm<FormData>({
     defaultValues: {
-      name: defaultAccountName,
+      name: "",
       ethAddress: "",
       ethPrivateKey: "",
       password: "",
       confirmPassword: "",
     },
-    mode: "onChange",
-    reValidateMode: "onChange",
   });
-
-  const { name, password, ethAddress, confirmPassword, ethPrivateKey } =
-    watch();
-
-  useEffect(() => {
-    if (confirmPassword) {
-      trigger("confirmPassword");
-    }
-  }, [password, trigger]);
-
-  const areInputsEmpty =
-    name === "" ||
-    ethPrivateKey === "" ||
-    ethAddress === "" ||
-    (registerConfig.mode === "create" &&
-      (password === "" || confirmPassword === ""));
 
   return (
     <div className={style["migrateContainer"]}>
       <BackButton onClick={onBack} />
-      <h1>
+      <h1 style={{ color: "rgba(255,255,255)" }}>
         <FormattedMessage id="register.eth-migrate.metamask-private-key.title" />
       </h1>
       <Form
@@ -99,7 +60,7 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
           const privateKey = Buffer.from(
             data.ethPrivateKey.trim().replace("0x", ""),
             "hex"
-          ) as Uint8Array;
+          );
 
           // attempt to parse the private key information
           const parsedKey = parseEthPrivateKey(privateKey);
@@ -118,25 +79,11 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
           await registerConfig.createPrivateKey(
             data.name,
             privateKey,
-            data.password,
-            {},
-            selectedNetworks
+            data.password
           );
-          await keyRingStore.selectKeyRing(
-            keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
-          );
-          dispatchGlobalEventExceptSelf(
-            "keplr_new_key_created",
-            keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
-          );
-          // await new InExtensionMessageRequester().sendMessage(
-          //   BACKGROUND_PORT,
-          //   new RefreshAccountList()
-          // );
         })}
       >
         <Input
-          formGroupClassName="mb-0"
           className={style["input"]}
           label={intl.formatMessage({
             id: "register.name",
@@ -146,38 +93,9 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
             required: intl.formatMessage({
               id: "register.name.error.required",
             }),
-            validate: (value: string) =>
-              validateAccountName(
-                value,
-                keyRingStore?.keyInfos,
-                registerConfig.mode
-              ),
           })}
           error={errors.name && errors.name.message}
-          onChange={(e: any) => {
-            const trimmedValue = e.target.value.trimStart();
-            setValue(e.target.name, trimmedValue, { shouldValidate: true });
-          }}
           maxLength={20}
-        />
-        <div
-          className={classNames(
-            style["label"],
-            "mb-1 text-xs",
-            name === defaultAccountName || (errors.name && errors.name.message)
-              ? "invisible"
-              : "visible"
-          )}
-        >
-          * (Account name for unselected networks will be {defaultAccountName})
-        </div>
-        <SelectNetwork
-          className="mb-3"
-          selectedNetworks={selectedNetworks}
-          disabled={name === defaultAccountName}
-          onMultiSelectChange={(values) => {
-            setSelectedNetworks(values);
-          }}
         />
         <Input
           className={style["input"]}
@@ -229,15 +147,13 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                 }
 
                 // parse the private key
-                const parsedKey = parseEthPrivateKey(
-                  privateKeyData as Uint8Array
-                );
+                const parsedKey = parseEthPrivateKey(privateKeyData);
                 if (parsedKey === undefined) {
                   return "Invalid ETH private key";
                 }
 
                 // check that the parsed private key matches
-                if (ethAddress && parsedKey.ethAddress !== ethAddress) {
+                if (parsedKey.ethAddress !== getValues()["ethAddress"]) {
                   return "The key provided doesn't match the supplied ETH addres";
                 }
               }
@@ -247,12 +163,16 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
         />
         {registerConfig.mode === "create" && (
           <React.Fragment>
-            <PasswordInput
+            <Input
+              className={style["input"]}
+              label={intl.formatMessage({
+                id: "register.create.input.password",
+              })}
+              type="password"
               {...register("password", {
                 required: intl.formatMessage({
                   id: "register.create.input.password.error.required",
                 }),
-                setValueAs: (value: string) => value.trim(),
                 validate: (password: string): string | undefined => {
                   if (password.length < 8) {
                     return intl.formatMessage({
@@ -261,51 +181,31 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
                   }
                 },
               })}
-              placeholder="Enter Password (min 8 characters)"
               error={errors.password && errors.password.message}
-              labelStyle={{
-                marginTop: "0px",
-              }}
             />
-            <PasswordInput
-              passwordLabel="Confirm Password"
+            <Input
+              className={style["input"]}
+              label={intl.formatMessage({
+                id: "register.create.input.confirm-password",
+              })}
+              type="password"
               {...register("confirmPassword", {
                 required: intl.formatMessage({
                   id: "register.create.input.confirm-password.error.required",
                 }),
-                setValueAs: (value: string) => value.trim(),
                 validate: (confirmPassword: string): string | undefined => {
-                  if (confirmPassword !== password) {
+                  if (confirmPassword !== getValues()["password"]) {
                     return intl.formatMessage({
                       id: "register.create.input.confirm-password.error.unmatched",
                     });
                   }
                 },
               })}
-              placeholder="Confirm Password"
-              labelStyle={{
-                marginTop: "0px",
-              }}
               error={errors.confirmPassword && errors.confirmPassword.message}
             />
-            <div className="pt-2 space-y-1 text-sm">
-              <PasswordStrengthMeter
-                password={password}
-                onStrengthChange={(score) => setPasswordStrengthScore(score)}
-              />
-            </div>
-            {passwordStrengthScore < 3 && password.length >= 8 && (
-              <Checkbox
-                isChecked={passwordCheckbox}
-                className="py-2"
-                setIsChecked={setPasswordCheckbox}
-                label="I understand this password is not strong and still want to continue."
-              />
-            )}
           </React.Fragment>
         )}
         <ButtonV2
-          variant="dark"
           styleProps={{ marginBottom: "20px" }}
           text={
             registerConfig.isLoading ? (
@@ -314,21 +214,9 @@ export const MigrateMetamaskPrivateKeyPage: FunctionComponent<{
               <FormattedMessage id="register.create.button.next" />
             )
           }
-          disabled={
-            registerConfig.isLoading ||
-            (registerConfig.mode === "create" &&
-              (Boolean(
-                errors?.confirmPassword?.message || errors?.password?.message
-              ) ||
-                (password !== "" &&
-                  passwordStrengthScore < 3 &&
-                  !passwordCheckbox))) ||
-            areInputsEmpty ||
-            Boolean(errors?.name?.message) ||
-            (selectedNetworks.length === 0 && name !== defaultAccountName)
-          }
+          disabled={registerConfig.isLoading}
         />
       </Form>
     </div>
   );
-});
+};

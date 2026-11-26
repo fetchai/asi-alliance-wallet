@@ -1,11 +1,6 @@
 export const PopupSize = {
   width: 360,
-  // Keplr's default popup height is 600px.
-  // Remember that below height includes status bar of OS.
-  // If actual height excluded status bar is lesser than 600px,
-  // it is hard to manage scroll bar of popup.
-  // So, we need to add additional value to make sure that the actual height is greater than 600px.
-  height: 660,
+  height: 580,
 };
 
 const lastWindowIds: Record<string, number | undefined> = {};
@@ -19,26 +14,15 @@ const lastWindowIds: Record<string, number | undefined> = {};
 export async function openPopupWindow(
   url: string,
   channel: string = "default",
-  options:
-    | Partial<Parameters<typeof browser.windows.create>[0]> & {
-        ignoreURIReplacement?: boolean;
-      } = {}
+  options: Partial<Parameters<typeof browser.windows.create>[0]> = {}
 ): Promise<number> {
-  const ignoreURIReplacement = options.ignoreURIReplacement;
-  const windowInfo = await browser.windows.getCurrent();
   const option = {
-    top: (windowInfo.top || 0) + 80,
-    left: Math.max(
-      0,
-      (windowInfo.left || 0) + (windowInfo.width || 0) - PopupSize.width - 100
-    ),
     width: PopupSize.width,
     height: PopupSize.height,
     url: url,
     type: "popup" as const,
     ...options,
   };
-  delete option.ignoreURIReplacement;
 
   if (lastWindowIds[channel] !== undefined) {
     try {
@@ -51,9 +35,7 @@ export async function openPopupWindow(
       if (window?.tabs?.length) {
         const tab = window.tabs[0];
         if (tab?.id) {
-          if (!ignoreURIReplacement) {
-            await browser.tabs.update(tab.id, { active: true, url });
-          }
+          await browser.tabs.update(tab.id, { active: true, url });
         } else {
           throw new Error("Null window or tabs");
         }

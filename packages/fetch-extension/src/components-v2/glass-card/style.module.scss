@@ -1,13 +1,11 @@
-@import "../../styles/var";
-
 .glass {
-  color: $font-dark;
+  color: #fff;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
   border-radius: 16px;
-  background: $card-bg;
+  background: rgba(255, 255, 255, 0.1);
   padding: 18px;
 }
 

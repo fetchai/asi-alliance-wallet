@@ -4,11 +4,7 @@ import { Staking } from "@keplr-wallet/stores";
 import { FlatList, Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
-import {
-  numberLocalFormat,
-  shortenNumber,
-  titleCase,
-} from "utils/format/format";
+import { shortenNumber, titleCase } from "utils/format/format";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { ValidatorThumbnail } from "components/thumbnail";
 import { BlurBackground } from "components/new/blur-background/blur-background";
@@ -99,9 +95,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
     {
       title: "Voting power",
       value: votingPower
-        ? `${numberLocalFormat(votingPower.split(" ")[0])} ${
-            votingPower.split(" ")[1]
-          }`
+        ? `${votingPower.split(" ")[0]} ${votingPower.split(" ")[1]}`
         : "NA",
     },
   ];
@@ -111,12 +105,9 @@ export const ValidatorDetailsCard: FunctionComponent<{
       {validator ? (
         <BlurBackground
           borderRadius={12}
-          backgroundBlur={false}
+          blurIntensity={16}
           containerStyle={
-            [
-              style.flatten(["padding-18", "background-color-gray-5"]),
-              containerStyle,
-            ] as ViewStyle
+            [style.flatten(["padding-18"]), containerStyle] as ViewStyle
           }
         >
           <View
@@ -136,31 +127,29 @@ export const ValidatorDetailsCard: FunctionComponent<{
               />
             ) : (
               <BlurBackground
-                backgroundBlur={false}
+                backgroundBlur={true}
+                blurIntensity={16}
                 containerStyle={
-                  {
-                    ...style.flatten([
-                      "width-32",
-                      "height-32",
-                      "border-radius-64",
-                      "items-center",
-                      "justify-center",
-                      "margin-right-10",
-                    ]),
-                    backgroundColor: "#dddfdf",
-                  } as ViewStyle
+                  style.flatten([
+                    "width-32",
+                    "height-32",
+                    "border-radius-64",
+                    "items-center",
+                    "justify-center",
+                    "margin-right-10",
+                  ]) as ViewStyle
                 }
               >
                 <VectorCharacter
                   char={validator.description.moniker.trim()[0]}
-                  color="#151a1a"
+                  color="white"
                   height={12}
                 />
               </BlurBackground>
             )}
             <View>
               <Text
-                style={style.flatten(["subtitle2", "color-dark"]) as ViewStyle}
+                style={style.flatten(["subtitle2", "color-white"]) as ViewStyle}
               >
                 {validator.description.moniker?.trim()}
               </Text>
@@ -169,7 +158,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
                 style={
                   style.flatten([
                     "body3",
-                    "color-gray-300",
+                    "color-white@80%",
                     "padding-y-2",
                   ]) as ViewStyle
                 }
@@ -180,7 +169,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
           </View>
           {validator?.description.details ? (
             <Text
-              style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
+              style={style.flatten(["body3", "color-white@80%"]) as ViewStyle}
             >
               {validator?.description.details}
             </Text>
@@ -193,7 +182,7 @@ export const ValidatorDetailsCard: FunctionComponent<{
                 <CardDivider
                   style={
                     style.flatten([
-                      "background-color-gray-100",
+                      "background-color-white@20%",
                       "height-1",
                       "margin-x-0",
                     ]) as ViewStyle
@@ -220,19 +209,14 @@ export const ValidatorDetailsCard: FunctionComponent<{
                   >
                     <Text
                       style={
-                        style.flatten(["body3", "color-gray-300"]) as ViewStyle
+                        style.flatten(["body3", "color-white@60%"]) as ViewStyle
                       }
                     >
                       {item.title}
                     </Text>
                     <Text
                       style={
-                        style.flatten([
-                          "color-dark",
-                          "subtitle3",
-                          "flex-1",
-                          "text-right",
-                        ]) as ViewStyle
+                        style.flatten(["color-white", "subtitle3"]) as ViewStyle
                       }
                     >
                       {item.value}

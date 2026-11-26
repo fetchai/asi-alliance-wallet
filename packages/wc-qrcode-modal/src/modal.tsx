@@ -5,8 +5,14 @@ import React, {
   useMemo,
   useState,
 } from "react";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import QRCode from "qrcode.react";
-import { isAndroid, isMobile } from "./util";
+import {
+  isMobile,
+  isAndroid,
+  saveMobileLinkInfo,
+} from "@walletconnect/browser-utils";
 
 export type ModalUIOptions = {
   backdrop?: {
@@ -47,10 +53,6 @@ export const Modal: FunctionComponent<{
 }> = ({ uiOptions, uri, close }) => {
   const [checkMobile] = useState(() => isMobile());
   const [checkAndroid] = useState(() => isAndroid());
-
-  const saveMobileLinkInfo = (info: { name: string; href: string }) => {
-    localStorage.setItem("wallet-connect-v2-mobile-link", JSON.stringify(info));
-  };
 
   const navigateToAppURL = useMemo(() => {
     if (checkMobile) {

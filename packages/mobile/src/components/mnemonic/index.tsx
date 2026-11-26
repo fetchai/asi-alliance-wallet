@@ -13,22 +13,16 @@ export const WordChip: FunctionComponent<{
 
   return (
     <BlurBackground
-      blurIntensity={0}
-      borderRadius={8}
+      blurIntensity={15}
+      borderRadius={12}
       containerStyle={
-        [
-          style.flatten(
-            ["padding-y-12", "margin-4", "flex-1", "items-center"],
-            dashedBorder ? ["border-width-1"] : []
-          ),
-          {
-            backgroundColor: "white",
-            ...(dashedBorder ? { borderColor: "#d0d1d1" } : {}),
-          },
-        ] as ViewStyle
+        style.flatten(
+          ["padding-y-12", "margin-4", "flex-1", "items-center"],
+          dashedBorder ? ["border-color-indigo", "border-width-1"] : []
+        ) as ViewStyle
       }
     >
-      <Text style={style.flatten(["body3", "color-black"]) as ViewStyle}>
+      <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
         {empty ? `` : `${word}`}
       </Text>
     </BlurBackground>

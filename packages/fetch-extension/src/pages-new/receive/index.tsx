@@ -17,7 +17,7 @@ export const Receive: FunctionComponent = () => {
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   const qrCodeRef = useCallback(
-    (node: any) => {
+    (node) => {
       if (node !== null && accountInfo.bech32Address) {
         QrCode.toCanvas(node, accountInfo.bech32Address);
       }
@@ -28,16 +28,12 @@ export const Receive: FunctionComponent = () => {
   const copyAddress = useCallback(
     async (address: string) => {
       if (accountInfo.walletStatus === WalletStatus.Loaded) {
-        window.getSelection()?.removeAllRanges();
         await navigator.clipboard.writeText(address);
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
         notification.push({
           placement: "top-center",
           type: "success",
           duration: 2,
-          content: "Address Copied",
+          content: "Copied Address",
           canDelete: true,
           transition: {
             duration: 0.25,
@@ -76,36 +72,20 @@ export const Receive: FunctionComponent = () => {
         </div>
         <Card
           style={{
+            background: "rgba(255, 255, 255, 0.10)",
             marginBottom: "24px",
-            userSelect: "none",
           }}
           headingStyle={{
-            width: "100%",
-            userSelect: "none",
+            width: "270px",
           }}
           heading={accountInfo.bech32Address}
-          rightContent={
-            <img
-              className={StyleQrCode["copyIcon"]}
-              src={require("@assets/svg/wireframe/copy.svg")}
-              alt="Copy address"
-              draggable={false}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                copyAddress(accountInfo.bech32Address);
-              }}
-            />
-          }
+          rightContent={require("@assets/svg/wireframe/copy.svg")}
+          rightContentOnClick={() => copyAddress(accountInfo.bech32Address)}
         />
         <div className={StyleQrCode["depositWarning"]}>
-          <img src={require("@assets/svg/info-mark.svg")} alt="" />
-          <div>
-            Deposits must be using the {chainStore.current.chainName} Network.
-            Do not send token from other networks to this address or they may be
-            lost.
-          </div>
+          Deposits must be using the {chainStore.current.chainName} Network. Do
+          not send token from other networks to this address or they may be
+          lost.
         </div>
       </div>
     </HeaderLayout>

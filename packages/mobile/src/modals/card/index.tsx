@@ -1,21 +1,11 @@
 import { IconButton } from "components/new/button/icon";
 import { XmarkIcon } from "components/new/icon/xmark";
 import React, { FunctionComponent } from "react";
-import {
-  Dimensions,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-  ViewStyle,
-} from "react-native";
+import { Dimensions, StyleSheet, Text, View, ViewStyle } from "react-native";
 import Modal from "react-native-modal";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStyle } from "styles/index";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import Toast from "react-native-toast-message";
-import { toastConfig } from "utils/toast-config";
 
 export const CardModal: FunctionComponent<{
   isOpen: boolean;
@@ -37,11 +27,6 @@ export const CardModal: FunctionComponent<{
   titleStyle,
 }) => {
   const style = useStyle();
-  const insets = useSafeAreaInsets();
-  const isAndroid = Platform.OS === "android";
-  const bottomInset = isAndroid
-    ? (insets.bottom > 0 ? insets.bottom : 48) + 30
-    : 0;
   const windowHeight = Dimensions.get("window").height;
 
   return (
@@ -58,23 +43,14 @@ export const CardModal: FunctionComponent<{
       animationOut={"slideOutDown"}
       animationInTiming={500}
       animationOutTiming={500}
-      backdropColor={style.get("color-dark").color}
-      // Android edge-to-edge: without this the sheet stays under the keyboard.
-      // KeyboardSpacerView is iOS-only; KeyboardAware needs enableOnAndroid.
-      avoidKeyboard={isAndroid}
-      {...(isAndroid
-        ? {
-            statusBarTranslucent: true,
-            deviceHeight: Dimensions.get("screen").height,
-          }
-        : {})}
+      backdropColor={style.get("color-indigo-backdrop").color}
     >
-      <GestureHandlerRootView style={{ flex: 1, justifyContent: "flex-end" }}>
+      <GestureHandlerRootView>
         <View
           style={[
             StyleSheet.flatten([
               style.flatten([
-                "background-color-white",
+                "background-color-indigo-900",
                 "border-radius-top-left-32",
                 "border-radius-top-right-32",
                 "overflow-hidden",
@@ -82,7 +58,6 @@ export const CardModal: FunctionComponent<{
             ]) as ViewStyle,
             {
               maxHeight: windowHeight - 24,
-              ...(isAndroid ? { paddingBottom: bottomInset } : {}),
             },
             cardStyle,
           ]}
@@ -102,15 +77,15 @@ export const CardModal: FunctionComponent<{
               {title ? (
                 <Text
                   style={
-                    StyleSheet.flatten([
+                    [
                       style.flatten([
                         "subtitle2",
                         "color-text-high",
-                        "color-dark",
+                        "color-white",
                         "flex-3",
                       ]),
                       titleStyle,
-                    ]) as ViewStyle
+                    ] as ViewStyle
                   }
                 >
                   {title}
@@ -119,7 +94,7 @@ export const CardModal: FunctionComponent<{
               {showCloseButton && close ? (
                 <View style={style.flatten(["flex-1", "items-end"])}>
                   <IconButton
-                    icon={<XmarkIcon color={"black"} />}
+                    icon={<XmarkIcon color={"white"} />}
                     backgroundBlur={false}
                     blurIntensity={20}
                     borderRadius={50}
@@ -130,7 +105,7 @@ export const CardModal: FunctionComponent<{
                         "items-center",
                         "justify-center",
                         "border-width-1",
-                        "border-color-gray-200",
+                        "border-color-white@20%",
                       ]) as ViewStyle
                     }
                     onPress={() => close()}
@@ -140,25 +115,18 @@ export const CardModal: FunctionComponent<{
             </View>
           ) : null}
           <KeyboardAwareScrollView
-            enableOnAndroid
-            keyboardShouldPersistTaps="handled"
-            extraScrollHeight={isAndroid ? 24 : 0}
             style={StyleSheet.flatten([
               style.flatten(["padding-x-20", "margin-top-24"]) as ViewStyle,
               childrenContainerStyle,
             ])}
           >
             {children}
-            {!isAndroid ? (
-              <View
-                style={style.flatten(["height-page-double-pad"]) as ViewStyle}
-              />
-            ) : null}
+            <View
+              style={style.flatten(["height-page-double-pad"]) as ViewStyle}
+            />
           </KeyboardAwareScrollView>
         </View>
       </GestureHandlerRootView>
-      {/* Rendered inside the modal so toasts appear above the native modal layer */}
-      <Toast config={toastConfig} />
     </Modal>
   );
 };

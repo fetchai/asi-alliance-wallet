@@ -1,21 +1,20 @@
-@import "../../styles/var";
-
 .title {
-  color: $font-dark;
-  font-family: $font-family-base;
+  color: var(--grey-white, #fff);
+  font-family: Lexend;
   font-size: 32px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
 .heading {
-  font-family: $font-family-base;
+  font-family: Lexend;
   margin-bottom: 24px;
 }
 
 .stake-container {
   margin-top: 24px;
   position: relative;
+  display: flex;
 }
 
 .doughnut-graph {
@@ -40,17 +39,16 @@
 }
 
 .label {
-  color: $font-secondary;
-  font-family: $font-family-base;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
-
 .value {
-  color: $font-dark;
-  font-family: $font-family-base;
+  color: #fff;
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
@@ -60,7 +58,7 @@
 .dashboard {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  // height: 100%;
 }
 
 .empty-stake-container {
@@ -69,8 +67,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: $font-dark;
-  font-family: $font-family-base;
+  color: #fff;
+  font-family: Lexend;
   padding: 32px 0 40px 0;
   gap: 6px;
 }
@@ -82,9 +80,10 @@
   align-items: center;
   justify-content: center;
 
-  & img {
+  img {
     height: 106px;
     width: 106px;
+    margin-bottom: -38px;
   }
 }
 
@@ -92,7 +91,6 @@
   font-size: 24px;
   font-weight: 400;
   line-height: 34px;
-  color: $font-dark;
 }
 
 .subtitle-text {
@@ -100,12 +98,6 @@
   text-align: center;
   width: 80%;
   font-weight: 400;
-  color: $font-secondary;
+  color: #ffff;
   opacity: 80%;
-}
-
-.amountInUSD {
-  font-size: 14px;
-  font-weight: 400;
-  color: $font-secondary;
 }

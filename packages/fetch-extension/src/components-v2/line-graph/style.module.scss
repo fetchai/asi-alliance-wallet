@@ -1,31 +1,25 @@
-@import "../../styles/var";
-
 .line-graph {
   height: 118px;
   margin-top: 28px;
   display: flex;
   justify-content: center;
-  color: $font-secondary !important;
+  color: white !important;
   margin-bottom: -9px;
 }
-
-.line-graph-sidepanel {
-  height: 180px;
-}
-
 .graph-container {
   // position: absolute;
-  width: 100%;
+  width: 335px;
 }
 
 .errorText {
   justify-content: center;
   display: flex;
+  margin-top: 44px;
   color: #fa8f6b;
 }
 
 .loadingText {
-  color: $font-dark;
+  color: white;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -33,29 +27,5 @@
   padding: 6px 12px;
   font-weight: 400;
   border-radius: 8px;
-  background: $bg-green-base;
-}
-
-.graphOption {
-  color: $font-secondary !important;
-  font-size: 12px !important;
-}
-
-.activeGraphOption {
-  color: $font-dark !important;
-  font-size: 12px !important;
-  background-color: $bg-grey-dark !important;
-}
-
-.vsCurrencyTokenPrice {
-  margin-top: 16px;
-  display: flex;
-  column-gap: 5px;
-  color: $font-dark;
-  font-size: 12px;
-  justify-content: center;
-
-  & .vsCurrencyPrice {
-    color: $neutral;
-  }
+  background: var(--Indigo-Indigo-800, #270e8d);
 }

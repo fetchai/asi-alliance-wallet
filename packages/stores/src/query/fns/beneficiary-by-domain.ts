@@ -1,28 +1,21 @@
 import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
-import { ChainGetter } from "../../chain";
-import { ObservableQueryMap } from "../../common";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../common";
 import { computed } from "mobx";
+import { ObservableChainQueryMap } from "../chain-query";
 import { BeneficiaryAddress } from "./types";
-import { QuerySharedContext } from "../../common";
 
 export class ObservableQueryGetBeneficiaryAddressInner extends ObservableCosmwasmContractChainQuery<BeneficiaryAddress> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly contractAddress: string,
+    protected override readonly contractAddress: string,
     protected readonly domain: string
   ) {
-    super(
-      kvStore,
-      chainId,
-      chainGetter,
-      contractAddress,
-      {
-        resolve_name: { domain: domain },
-      },
-      `beneficiary-address-${contractAddress}-${domain}-${chainId}`
-    );
+    super(kvStore, chainId, chainGetter, contractAddress, {
+      resolve_name: { domain: domain },
+    });
   }
 
   @computed
@@ -35,13 +28,13 @@ export class ObservableQueryGetBeneficiaryAddressInner extends ObservableCosmwas
   }
 }
 
-export class ObservableQueryBeneficiaryAddress extends ObservableQueryMap<BeneficiaryAddress> {
+export class ObservableQueryBeneficiaryAddress extends ObservableChainQueryMap<BeneficiaryAddress> {
   constructor(
-    protected readonly kvStore: QuerySharedContext,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((key: string) => {
+    super(kvStore, chainId, chainGetter, (key: string) => {
       const split = key.split("/");
       return new ObservableQueryGetBeneficiaryAddressInner(
         this.kvStore,

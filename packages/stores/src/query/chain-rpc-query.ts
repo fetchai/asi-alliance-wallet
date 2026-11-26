@@ -1,5 +1,8 @@
-import { ObservableQuery, QuerySharedContext } from "../common";
-import { ChainGetter } from "../chain";
+import { ObservableQuery } from "../common";
+import { KVStore } from "@keplr-wallet/common";
+import Axios, { AxiosInstance } from "axios";
+import { override } from "mobx";
+import { ChainGetter } from "../common";
 import { HasMapStore } from "../common";
 
 export class ObservableChainQueryRPC<
@@ -11,17 +14,36 @@ export class ObservableChainQueryRPC<
   protected readonly chainGetter: ChainGetter;
 
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     url: string
   ) {
     const chainInfo = chainGetter.getChain(chainId);
 
-    super(sharedContext, chainInfo.rpc, url);
+    const instance = Axios.create({
+      ...{
+        baseURL: chainInfo.rpc,
+      },
+      ...chainInfo.rpcConfig,
+    });
+
+    super(kvStore, instance, url);
 
     this._chainId = chainId;
     this.chainGetter = chainGetter;
+  }
+
+  @override
+  protected override get instance(): AxiosInstance {
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+
+    return Axios.create({
+      ...{
+        baseURL: chainInfo.rpc,
+      },
+      ...chainInfo.rpcConfig,
+    });
   }
 
   get chainId(): string {
@@ -34,7 +56,7 @@ export class ObservableChainQueryRPCMap<
   E = unknown
 > extends HasMapStore<ObservableChainQueryRPC<T, E>> {
   constructor(
-    protected readonly sharedContext: QuerySharedContext,
+    protected readonly kvStore: KVStore,
     protected readonly chainId: string,
     protected readonly chainGetter: ChainGetter,
     creater: (key: string) => ObservableChainQueryRPC<T, E>

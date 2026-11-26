@@ -36,13 +36,12 @@ import { action, autorun, makeObservable, observable } from "mobx";
 import { GasContainer } from "../gas-form";
 import styleCoinInput from "../coin-input.module.scss";
 import { useStore } from "../../../stores";
-import { isPureEvmChain } from "@utils/filters";
 
 export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
   priceStore: CoinGeckoPriceStore;
-  pageName?: string;
+
   className?: string;
   label?: string;
   feeSelectLabels?: {
@@ -85,7 +84,6 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
     gasLabel,
     gasSimulator,
     showFeeCurrencySelectorUnderSetGas,
-    pageName,
   }) => {
     const { queriesStore } = useStore();
 
@@ -171,7 +169,6 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
             feeSelectLabels={feeSelectLabels}
             feeButtonState={feeButtonState}
             gasSimulator={gasSimulator}
-            pageName={pageName}
           />
         ) : null}
         {feeButtonState.isGasInputOpen || !feeConfig.feeCurrency ? (
@@ -290,37 +287,27 @@ export const FeeCurrencySelector: FunctionComponent<{
 export const FeeButtonsInner: FunctionComponent<
   Pick<
     FeeButtonsProps,
-    | "feeConfig"
-    | "priceStore"
-    | "label"
-    | "feeSelectLabels"
-    | "gasSimulator"
-    | "pageName"
+    "feeConfig" | "priceStore" | "label" | "feeSelectLabels" | "gasSimulator"
   > & { feeButtonState: FeeButtonState }
 > = observer(
   ({
     feeConfig,
-    pageName,
     priceStore,
     label,
     feeSelectLabels = { low: "Low", average: "Average", high: "High" },
     feeButtonState,
     gasSimulator,
   }) => {
-    const { chainStore, analyticsStore } = useStore();
     useEffect(() => {
       if (feeConfig.feeCurrency && !feeConfig.fee) {
         feeConfig.setFeeType("average");
-        if (pageName)
-          analyticsStore.logEvent("fee_type_select", {
-            pageName,
-            feeType: "average",
-          });
       }
     }, [feeConfig, feeConfig.feeCurrency, feeConfig.fee]);
+
+    const { chainStore } = useStore();
+
     const intl = useIntl();
-    const current = chainStore.current;
-    const isEvm = isPureEvmChain(current);
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
 
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);
@@ -394,10 +381,6 @@ export const FeeButtonsInner: FunctionComponent<
             color={feeConfig.feeType === "low" ? "primary" : undefined}
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("low");
-              analyticsStore.logEvent("fee_type_select", {
-                pageName,
-                feeType: "low",
-              });
               e.preventDefault();
             }}
           >
@@ -440,10 +423,6 @@ export const FeeButtonsInner: FunctionComponent<
             color={feeConfig.feeType === "average" ? "primary" : undefined}
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("average");
-              analyticsStore.logEvent("fee_type_select", {
-                pageName,
-                feeType: "average",
-              });
               e.preventDefault();
             }}
           >
@@ -482,10 +461,6 @@ export const FeeButtonsInner: FunctionComponent<
             color={feeConfig.feeType === "high" ? "primary" : undefined}
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("high");
-              analyticsStore.logEvent("fee_type_select", {
-                pageName,
-                feeType: "high",
-              });
               e.preventDefault();
             }}
           >

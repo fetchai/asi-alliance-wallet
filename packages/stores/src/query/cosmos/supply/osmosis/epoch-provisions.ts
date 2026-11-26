@@ -1,14 +1,14 @@
-import { QuerySharedContext } from "../../../../common";
+import { ChainGetter } from "../../../../common";
 import { ObservableChainQuery } from "../../../chain-query";
 import { EpochProvisions } from "../types";
-import { ChainGetter } from "../../../../chain";
+import { KVStore } from "@keplr-wallet/common";
 import { computed, makeObservable } from "mobx";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { ObservableQueryOsmosisMintParmas } from "./params";
 
 export class ObservableQueryOsmosisEpochProvisions extends ObservableChainQuery<EpochProvisions> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly queryMintParmas: ObservableQueryOsmosisMintParmas

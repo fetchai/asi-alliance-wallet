@@ -10,24 +10,18 @@ import { ButtonV2 } from "@components-v2/buttons/button";
 import { Label } from "reactstrap";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { CoinPretty, Dec } from "@keplr-wallet/unit";
-import { removeComma } from "@utils/format";
-import style from "./style.module.scss";
-import { SendConfigs } from "./types";
 
 interface SendPhase1Props {
-  sendConfigs: SendConfigs;
+  sendConfigs: any;
   setIsNext: any;
   setFromPhase1: any;
-  balance: CoinPretty;
 }
 
 export const SendPhase1: React.FC<SendPhase1Props> = observer(
-  ({ setIsNext, balance, sendConfigs, setFromPhase1 }) => {
+  ({ setIsNext, sendConfigs, setFromPhase1 }) => {
     const [isChangeWalletOpen, setIsChangeWalletOpen] = useState(false);
-    const { chainStore, accountStore, analyticsStore } = useStore();
+    const { chainStore, accountStore } = useStore();
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
-    const [isMaxAmount, setIsMaxAmount] = useState(false);
     const navigate = useNavigate();
     const intl = useIntl();
     useEffect(() => {
@@ -38,27 +32,12 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
     return (
       <div>
         <CoinInput
-          onPress={() => {
-            const fees = sendConfigs.feeConfig.getFeeTypePrettyForFeeCurrency(
-              sendConfigs?.feeConfig?.feeCurrencies?.[0],
-              sendConfigs.feeConfig.feeType ?? "average" // fee type is not set at this point, so default to average
-            );
-            // subtract fee from balance to set max amount to avoid insufficient balance error
-            const actualAmount = balance
-              .sub(fees)
-              .shrink(true)
-              .hideDenom(true)
-              .toString();
-            sendConfigs.amountConfig.setAmount(removeComma(actualAmount));
-            setIsMaxAmount(true);
-          }}
-          onAmountChange={(_) => setIsMaxAmount(false)}
           amountConfig={sendConfigs.amountConfig}
           label={intl.formatMessage({ id: "send.input.amount" })}
           balanceText={intl.formatMessage({
             id: "send.input-button.balance",
           })}
-          showAllBalance={(() => {
+          disableAllBalance={(() => {
             if (
               // In the case of terra classic, tax is applied in proportion to the amount.
               // However, in this case, the tax itself changes the fee,
@@ -73,7 +52,6 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
             }
             return false;
           })()}
-          disableAllBalance={balance.toDec().lte(new Dec(0))}
           overrideSelectableCurrencies={(() => {
             if (
               chainStore.current.features &&
@@ -94,43 +72,44 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           })()}
         />
         <TokenSelectorDropdown amountConfig={sendConfigs.amountConfig} />
-        <Label className={style["label"]}>Send from</Label>
+        <Label
+          style={{
+            fontSize: "14px",
+            color: "rgba(255,255,255,0.6)",
+            marginTop: "16px",
+          }}
+        >
+          Send from
+        </Label>
         <Card
           style={{
-            background: "white",
-            border: "1px solid var(--bg-grey-dark)",
-            color: "var(--font-dark)",
+            background: "rgba(255, 255, 255, 0.10)",
+            color: "rgba(255, 255, 255, 0.6)",
             fontSize: "14px",
             padding: "12px 18px",
           }}
           headingStyle={{
             fontSize: "14px",
-            fontWeight: 400,
+            color: "white",
+            fontWeight: "400",
             opacity: "1",
           }}
           heading={accountInfo.name}
           rightContent={require("@assets/svg/wireframe/chevron-down.svg")}
-          onClick={() => {
-            setIsChangeWalletOpen(!isChangeWalletOpen);
-            analyticsStore.logEvent("send_from_click", {
-              pageName: "Send",
-            });
-          }}
+          onClick={() => setIsChangeWalletOpen(!isChangeWalletOpen)}
         />
         <ButtonV2
-          variant="dark"
-          disabled={Boolean(
+          disabled={
             sendConfigs.amountConfig.amount === "" ||
-              sendConfigs.amountConfig.error
-          )}
+            sendConfigs.amountConfig.error
+          }
           text="Next"
           onClick={() => {
             setIsNext(true);
-            navigate("/send", { state: { isFromPhase1: true, isMaxAmount } });
-            analyticsStore.logEvent("next_click", { pageName: "Send" });
+            navigate("/send", { state: { isFromPhase1: true } });
           }}
           styleProps={{
-            width: "94%",
+            width: "336px",
             padding: "12px",
             height: "56px",
             margin: "0 auto",
@@ -145,17 +124,9 @@ export const SendPhase1: React.FC<SendPhase1Props> = observer(
           isOpen={isChangeWalletOpen}
           setIsOpen={setIsChangeWalletOpen}
           title="Select Wallet"
-          closeClicked={() => {
-            setIsChangeWalletOpen(false);
-            analyticsStore.logEvent("select_wallet_click", {
-              pageName: "Send",
-            });
-          }}
+          closeClicked={() => setIsChangeWalletOpen(false)}
         >
-          <SetKeyRingPage
-            navigateTo={"/send"}
-            onItemSelect={() => setIsChangeWalletOpen(false)}
-          />
+          <SetKeyRingPage navigateTo={"/send"} />
         </Dropdown>
       </div>
     );

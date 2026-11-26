@@ -4,17 +4,18 @@ import { IconWithText } from "components/new/icon-with-text/icon-with-text";
 import { useStyle } from "styles/index";
 import { RowFrame } from "components/new/icon/row-frame";
 import { useStore } from "stores/index";
+import { isFeatureAvailable } from "utils/index";
 
 export const NoActivityView: FunctionComponent = () => {
   const style = useStyle();
   const { chainStore } = useStore();
-  const isAvailable = !chainStore.current?.features?.includes("evm");
+  const isAvailable = isFeatureAvailable(chainStore.current.chainId);
 
   return (
     <IconWithText
       title={
         isAvailable
-          ? "No Activity Yet"
+          ? "No activity yet"
           : "Feature not available \non this network"
       }
       subtitle={

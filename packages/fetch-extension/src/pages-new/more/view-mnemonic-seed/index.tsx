@@ -7,10 +7,11 @@ import React, {
 
 import { useNavigate, useLocation, useParams } from "react-router";
 import { FormattedMessage, useIntl } from "react-intl";
-import { Alert, Form } from "reactstrap";
+import { Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { WarningView } from "./warning-view";
 import classnames from "classnames";
+import queryString from "query-string";
 import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
@@ -19,7 +20,6 @@ import { HeaderLayout } from "@layouts-v2/header-layout";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { PasswordInput } from "@components-v2/form";
 import { useNotification } from "@components/notification";
-import { Card } from "@components-v2/card";
 
 interface FormData {
   password: string;
@@ -28,13 +28,15 @@ interface FormData {
 export const ExportPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { index = "" } = useParams<{ index: string; type?: string }>();
+  const { index = "-1 " } = useParams<{ index: string; type?: string }>();
 
   const intl = useIntl();
   const notification = useNotification();
   const { keyRingStore, analyticsStore } = useStore();
 
-  const type = location?.state?.type ?? "mnemonic";
+  const query = queryString.parse(location.search);
+
+  const type = query["type"] ?? "mnemonic";
 
   const [loading, setLoading] = useState(false);
   const [keyRing, setKeyRing] = useState("");
@@ -52,16 +54,14 @@ export const ExportPage: FunctionComponent = observer(() => {
   });
 
   useEffect(() => {
-    if (!index || !keyRingStore.keyInfos.find((item) => item.id === index)) {
-      throw new Error("Invalid account id");
+    if (parseInt(index).toString() !== index) {
+      throw new Error("Invalid index");
     }
-  }, [index, keyRingStore]);
+  }, [index]);
 
   useEffect(() => {
     if (keyRing) {
-      type === "mnemonic"
-        ? setDisplayKeyRing(keyRing.split(" "))
-        : setDisplayKeyRing([keyRing]);
+      setDisplayKeyRing(keyRing.split(" "));
     }
   }, [keyRing]);
 
@@ -72,9 +72,7 @@ export const ExportPage: FunctionComponent = observer(() => {
         placement: "top-center",
         type: "success",
         duration: 5,
-        content: `${
-          type === "mnemonic" ? "Mnemonic" : "Private key"
-        } copied to clipboard!`,
+        content: "Mnemonic copied to clipboard!",
         canDelete: true,
         transition: {
           duration: 0.25,
@@ -105,123 +103,42 @@ export const ExportPage: FunctionComponent = observer(() => {
     >
       <div className={style["container"]}>
         {keyRing ? (
-          <React.Fragment>
-            <Alert className={style["alertMessage"]}>
-              <i className="fas fa-exclamation-circle" />
-              <div>
-                <h1>
-                  Your Secret&nbsp;
-                  {type === "mnemonic" ? "Recovery Phrase" : "Private Key"}
-                </h1>
-                <p>Make sure no one is looking at your screen</p>
-              </div>
-            </Alert>
+          <div
+            className={classnames(style["mnemonic"], {
+              [style["altHex"]]: type !== "mnemonic",
+            })}
+          >
             <div
-              className={classnames(style["mnemonic"], {
-                [style["altHex"]]: type !== "mnemonic",
-              })}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+                marginBottom: "30px",
+              }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  margin: "30px 0px",
-                }}
-              >
-                {type === "mnemonic" ? (
-                  <Card
-                    heading=""
-                    style={{
-                      borderRadius: "8px",
-                    }}
-                    rightContent={
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "6px",
-                          flexWrap: "wrap",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {displayKeyRing.map((key) => (
-                          <div
-                            style={{
-                              fontSize: "20px",
-                            }}
-                            key={key}
-                          >
-                            {key}
-                          </div>
-                        ))}
-                      </div>
-                    }
-                  />
-                ) : (
-                  displayKeyRing[0] &&
-                  (type === "ledger" ? (
-                    Object.keys(JSON.parse(displayKeyRing[0])).map((key) => (
-                      <div
-                        key={key}
-                        style={{
-                          marginBottom: "24px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "24px",
-                            alignItems: "center",
-                            marginBottom: "18px",
-                          }}
-                        >
-                          {key}
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            wordBreak: "break-all",
-                          }}
-                        >
-                          {JSON.parse(displayKeyRing[0])[key]}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <Card
-                      heading=""
-                      style={{
-                        borderRadius: "8px",
-                      }}
-                      rightContent={
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            wordBreak: "break-all",
-                          }}
-                        >
-                          {displayKeyRing[0]}
-                        </div>
-                      }
-                    />
-                  ))
-                )}
-              </div>
-              <ButtonV2
-                variant="dark"
-                styleProps={{
-                  position: "fixed",
-                  bottom: "12px",
-                  width: "333px",
-                  height: "56px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                }}
-                text="Copy to clipboard"
-                onClick={() => copyMnemonic(keyRing)}
-              />
+              {displayKeyRing.map((key) => (
+                <div
+                  style={{
+                    fontSize: "26px",
+                  }}
+                  key={key}
+                >
+                  {key}
+                </div>
+              ))}
             </div>
-          </React.Fragment>
+            <ButtonV2
+              styleProps={{
+                position: "fixed",
+                bottom: "12px",
+                right: "4%",
+                width: "333px",
+                height: "56px",
+              }}
+              text={"Copy to clipboard"}
+              onClick={() => copyMnemonic(keyRing)}
+            />
+          </div>
         ) : (
           <React.Fragment>
             <WarningView />
@@ -231,7 +148,7 @@ export const ExportPage: FunctionComponent = observer(() => {
                 try {
                   setKeyRing(
                     await flowResult(
-                      keyRingStore.showKeyRing(index, data.password)
+                      keyRingStore.showKeyRing(parseInt(index), data.password)
                     )
                   );
                 } catch (e) {
@@ -255,7 +172,6 @@ export const ExportPage: FunctionComponent = observer(() => {
                 })}
               />
               <ButtonV2
-                variant="dark"
                 text={
                   loading ? (
                     <i className="fas fa-spinner fa-spin ml-2" />

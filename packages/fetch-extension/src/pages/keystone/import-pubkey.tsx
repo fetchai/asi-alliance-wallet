@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useStore } from "../../stores";
 import { Guide } from "./guide";
 import { Scan, ScanType } from "./scan";
-import { KeystoneUR as UR } from "@utils/keystone";
+import { UR } from "@keplr-wallet/stores";
 
 export const KeystoneImportPubkeyPage = observer(() => {
   const [isScan, setIsScan] = useState(false);

@@ -4,7 +4,7 @@ import Svg, { Path } from "react-native-svg";
 export const EditIcon: FunctionComponent<{
   size?: number;
   color?: string;
-}> = ({ size = 15, color = "#151a1a" }) => {
+}> = ({ size = 15, color = "white" }) => {
   return (
     <Svg
       width={size}

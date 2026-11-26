@@ -3,7 +3,6 @@ import { shortenNumber } from "@utils/format";
 import sendIcon from "@assets/svg/wireframe/asi-send.svg";
 import recieveIcon from "@assets/svg/wireframe/activity-recieve.svg";
 import stakeIcon from "@assets/svg/wireframe/asi-staked.svg";
-import proposalIcon from "@assets/svg/wireframe/proposal.svg";
 import { fetchGovProposalTransactions } from "@graphQL/activity-api";
 
 const getAmount = (denom: string, amount: string, chainStore: any) => {
@@ -32,13 +31,8 @@ export const getDetails = (node: any, chainStore: any): any => {
   const { typeUrl, json } = nodes[0];
   const parsedJson = JSON.parse(json);
   const toAddress = parsedJson.toAddress;
-  const {
-    delegatorAddress,
-    validatorAddress,
-    validatorDstAddress,
-    receiver,
-    proposer,
-  } = parsedJson;
+  const { delegatorAddress, validatorAddress, validatorDstAddress, receiver } =
+    parsedJson;
   const {
     fees,
     memo,
@@ -52,18 +46,6 @@ export const getDetails = (node: any, chainStore: any): any => {
   const amt = parsedJson.amount;
   let currency = "afet";
   const isAmountDeducted = parseFloat(node.balanceOffset) < 0;
-  const proposalTitle =
-    parsedJson.content?.value?.title || parsedJson.title || null;
-  let proposalType = parsedJson.content?.type || null;
-
-  if (proposalType) {
-    proposalType = proposalType
-      .split("/")
-      ?.pop()
-      ?.replace(/([A-Z])/g, " $1")
-      .trim();
-  }
-
   if (parsedJson.amount) {
     currency = Array.isArray(parsedJson.amount)
       ? parsedJson.amount[0].denom
@@ -72,55 +54,34 @@ export const getDetails = (node: any, chainStore: any): any => {
     currency = parsedJson.token.denom;
   }
 
-  const isInProgress = ["Pending", "Unconfirmed"].includes(status);
-
   let verb = "Spent";
 
   switch (typeUrl) {
     case "/cosmos.staking.v1beta1.MsgBeginRedelegate":
-      verb = isInProgress ? "Redelegating" : "Redelegated";
+      verb = "Redelegated";
       break;
-
     case "/cosmos.bank.v1beta1.MsgSend":
-      if (isInProgress) {
-        verb = isAmountDeducted ? "Sending" : "Receiving";
-      } else {
-        verb = isAmountDeducted ? "Sent" : "Received";
-      }
+      verb = isAmountDeducted ? "Sent" : "Received";
       break;
-
     case "/ibc.applications.transfer.v1.MsgTransfer":
-      verb = "IBC Transfer";
+      verb = "IBC transfer";
       break;
-
     case "/cosmos.staking.v1beta1.MsgDelegate":
-      verb = isInProgress ? "Staking" : "Staked";
+      verb = "Staked";
       break;
-
     case "/cosmos.staking.v1beta1.MsgUndelegate":
-      verb = isInProgress ? "Unstaking" : "Unstaked";
+      verb = "Unstaked";
       break;
-
     case "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward":
-      verb = isInProgress ? "Claiming" : "Claimed";
+      verb = "Claimed";
       break;
-
-    case "/cosmos.gov.v1beta1.MsgSubmitProposal":
-      verb = isInProgress ? "Submitting Proposal" : "Submitted Proposal";
-      break;
-
     case "/cosmos.authz.v1beta1.MsgExec":
     case "/cosmwasm.wasm.v1.MsgExecuteContract":
     case "/cosmos.authz.v1beta1.MsgRevoke":
       verb = "Smart Contract Interaction";
       break;
-
     default:
-      if (isInProgress) {
-        verb = isAmountDeducted ? "Transferring" : "Receiving";
-      } else {
-        verb = isAmountDeducted ? "Transferred" : "Received";
-      }
+      verb = isAmountDeducted ? "Transferred" : "Received";
   }
   const amount = getAmount(currency, node.balanceOffset, chainStore);
   const [amountNumber, amountAlphabetic] = parseAmount(amount);
@@ -151,9 +112,6 @@ export const getDetails = (node: any, chainStore: any): any => {
     validatorAddress,
     delegatorAddress,
     validatorDstAddress,
-    proposer,
-    proposalTitle,
-    proposalType,
     receiver,
     feeNumber,
     feeAlphabetic,
@@ -168,8 +126,6 @@ export const getActivityIcon = (type: string, verb: string): string => {
   switch (type) {
     case "/cosmos.bank.v1beta1.MsgSend":
       return verb === "Sent" ? sendIcon : recieveIcon;
-    case "/cosmos.gov.v1beta1.MsgSubmitProposal":
-      return proposalIcon;
     case "/cosmos.staking.v1beta1.MsgDelegate":
     case "/cosmos.staking.v1beta1.MsgUndelegate":
     case "/cosmos.staking.v1beta1.MsgBeginRedelegate":

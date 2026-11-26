@@ -3,7 +3,6 @@ import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
 import { StatusButton } from "@components-v2/status-button";
 import { useStore } from "../../../stores";
-import { explorerBaseURL } from "@utils/index";
 
 const cardStatus = (status: string) => {
   switch (status) {
@@ -45,31 +44,20 @@ const cardStatusTitle = (details: string) => {
 
 export const ActivityRow = observer(({ node }: { node: any }) => {
   const details = node.option;
-  const { proposalId, transaction } = node;
-  const { status, id } = transaction;
-  const { queriesStore, chainStore, analyticsStore } = useStore();
+  const { proposalId, transaction, id } = node;
+  const { status } = transaction;
+  const { queriesStore, chainStore } = useStore();
 
   const current = chainStore.current;
   const queries = queriesStore.get(current.chainId);
   const proposal = queries.cosmos.queryGovernance.getProposal(proposalId || "");
-  const chainId = current.chainId;
-
-  const handleClick = () => {
-    const explorerURL = explorerBaseURL(chainId);
-    if (!explorerURL) {
-      return;
-    }
-    const url = `${explorerURL}/transactions/${id}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    analyticsStore.logEvent("activity_transactions_click", {
-      tabName: "Gov Proposals",
-      pageName: "Activity",
-    });
-  };
-
   return (
     <React.Fragment>
-      <div onClick={handleClick}>
+      <a
+        href={`https://www.mintscan.io/fetchai/tx/${id}`}
+        target="_blank"
+        rel="noreferrer"
+      >
         <div className={style["activityRow"]}>
           <div className={style["middle"]}>
             <div className={style["activityCol"]}>
@@ -100,7 +88,7 @@ export const ActivityRow = observer(({ node }: { node: any }) => {
             />
           </div>
         </div>
-      </div>
+      </a>
       <div className={style["hr"]} />
     </React.Fragment>
   );

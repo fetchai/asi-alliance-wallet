@@ -1,7 +1,6 @@
 import React from "react";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { ValidatorData } from "@components-v2/validator-data";
-import { useStore } from "../../../stores";
 
 export const RedelegateValidatorDetail = ({
   validatorAddress,
@@ -10,7 +9,6 @@ export const RedelegateValidatorDetail = ({
   validatorAddress: string;
   onClick: () => void;
 }) => {
-  const { analyticsStore } = useStore();
   return (
     <div
       style={{
@@ -18,28 +16,22 @@ export const RedelegateValidatorDetail = ({
         flexDirection: "column",
         gap: "16px",
         height: "520px",
+        position: "relative",
       }}
     >
       <ValidatorData validatorAddress={validatorAddress} />
       <ButtonV2
         styleProps={{
-          width: "94%",
           height: "56px",
-          margin: "0px auto",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           marginTop: "0px",
           position: "absolute",
-          bottom: "15px",
+          bottom: "10px",
         }}
         text="Choose this validator"
-        onClick={() => {
-          onClick();
-          analyticsStore.logEvent("choose_validator_click", {
-            pageName: "Validator Details",
-          });
-        }}
+        onClick={onClick}
       />
     </div>
   );

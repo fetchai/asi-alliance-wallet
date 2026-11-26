@@ -1,5 +1,5 @@
-import React, { FunctionComponent, useEffect } from "react";
-import { CameraView, CameraViewProps } from "expo-camera";
+import React, { FunctionComponent } from "react";
+import { Camera, CameraProps } from "expo-camera";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useStyle } from "styles/index";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
@@ -9,9 +9,8 @@ import { LoadingSpinner } from "components/spinner";
 import { IconButton } from "components/new/button/icon";
 import { XmarkIcon } from "components/new/icon/xmark";
 import { ScannerFrame } from "./scanner-frame";
-import { restoreAndroidStatusBarAfterCamera } from "utils/android-status-bar";
 
-interface CameraProp extends CameraViewProps {
+interface CameraProp extends CameraProps {
   containerBottom?: React.ReactElement;
   isLoading?: boolean;
   scannerBottomText: string;
@@ -27,21 +26,10 @@ export const FullScreenCameraView: FunctionComponent<CameraProp> = (props) => {
   const { children, containerBottom, isLoading, scannerBottomText, ...rest } =
     props;
 
-  // CameraView can leave a black notch/status-bar strip on Android after leave.
-  useEffect(() => {
-    if (!isFocused) {
-      restoreAndroidStatusBarAfterCamera();
-    }
-    return () => {
-      restoreAndroidStatusBarAfterCamera();
-    };
-  }, [isFocused]);
-
   return (
     <React.Fragment>
       {isFocused ? (
-        <CameraView
-          facing="back"
+        <Camera
           style={StyleSheet.flatten([style.flatten(["absolute-fill"])])}
           {...rest}
         />
@@ -133,13 +121,13 @@ export const FullScreenCameraView: FunctionComponent<CameraProp> = (props) => {
               >
                 <LoadingSpinner
                   size={42}
-                  color={style.flatten(["color-dark"]).color}
+                  color={style.flatten(["color-indigo-900"]).color}
                 />
                 <Text
                   style={
                     style.flatten([
                       "subtitle1",
-                      "color-dark",
+                      "color-indigo-900",
                       "margin-top-34",
                     ]) as ViewStyle
                   }

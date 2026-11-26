@@ -1,4 +1,5 @@
 import React, { FunctionComponent, useRef } from "react";
+import { KeyRingStatus } from "@keplr-wallet/background";
 import { NavigationContainer } from "@react-navigation/native";
 import { observer } from "mobx-react-lite";
 import {
@@ -17,25 +18,17 @@ import {
   EditAddressBookScreen,
 } from "screens/setting/screens/address-book";
 import { PageScrollPositionProvider } from "providers/page-scroll-position";
-import {
-  HeaderOnSecondaryScreenOptionsPreset,
-  TransparentHeaderOptionsPreset,
-} from "components/header";
-import { Platform } from "react-native";
-
-// On iOS, list content scrolls behind the transparent header — use an opaque/blur
-// header to cover it. Android is unaffected so keep the transparent header there.
-const SecondaryScreenHeaderPreset =
-  Platform.OS === "ios"
-    ? HeaderOnSecondaryScreenOptionsPreset
-    : TransparentHeaderOptionsPreset;
-import { HeaderLeftBackLightButton } from "components/header/button";
-import { getPlatformFontFamily } from "styles/builder/utils";
+import { BlurHeaderOptionsPreset } from "components/header";
 import { FocusedScreenProvider } from "providers/focused-screen";
 
 import { SmartNavigatorProvider } from "navigation/smart-navigation";
+import { RegisterNavigation } from "navigation/register-navigation";
+import { OtherNavigation } from "navigation/other-navigation";
+import { MainTabNavigationWithDrawer } from "navigation/navigation-tab-with-drawer";
 import { ViewStyle } from "react-native";
-import { navigationIntegration } from "../../index";
+import { StakeNavigation } from "./stake-navigation";
+import { MoreNavigation } from "./more-navigation";
+import { routingInstrumentation } from "../../index";
 
 export const Stack = createStackNavigator();
 
@@ -52,42 +45,25 @@ export const AddressBookStackScreen: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          title: "Address Book",
-          headerTitleStyle: {
-            color: style.get("color-dark").color,
-            fontSize: 16,
-            fontFamily: getPlatformFontFamily("400"),
-          },
-          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
+          ...BlurHeaderOptionsPreset,
+
+          title: "Address book",
         }}
         name="AddressBook"
         component={AddressBookScreen}
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          title: "Add an Address",
-          headerTitleStyle: {
-            color: style.get("color-dark").color,
-            fontSize: 16,
-            fontFamily: getPlatformFontFamily("400"),
-          },
-          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
+          ...BlurHeaderOptionsPreset,
+          title: "Add an address",
         }}
         name="AddAddressBook"
         component={AddAddressBookScreen}
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          title: "Edit Address Book",
-          headerTitleStyle: {
-            color: style.get("color-dark").color,
-            fontSize: 16,
-            fontFamily: getPlatformFontFamily("400"),
-          },
-          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
+          ...BlurHeaderOptionsPreset,
+          title: "Edit address book",
         }}
         name="EditAddressBook"
         component={EditAddressBookScreen}
@@ -109,14 +85,8 @@ export const ChainListStackScreen: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...SecondaryScreenHeaderPreset,
-          title: "Manage Networks",
-          headerTitleStyle: {
-            color: style.get("color-dark").color,
-            fontSize: 16,
-            fontFamily: getPlatformFontFamily("400"),
-          },
-          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
+          ...BlurHeaderOptionsPreset,
+          title: "Manage networks",
         }}
         name="Setting.ChainList"
         component={SettingChainListScreen}
@@ -136,12 +106,14 @@ export const AppNavigation: FunctionComponent = observer(() => {
           <NavigationContainer
             ref={navigation}
             onReady={() => {
-              navigationIntegration.registerNavigationContainer(navigation);
+              routingInstrumentation.registerNavigationContainer(navigation);
             }}
           >
             <Stack.Navigator
               initialRouteName={
-                keyRingStore.status !== "unlocked" ? "Unlock" : "MainTabDrawer"
+                keyRingStore.status !== KeyRingStatus.UNLOCKED
+                  ? "Unlock"
+                  : "MainTabDrawer"
               }
               screenOptions={{
                 headerShown: false,
@@ -150,49 +122,19 @@ export const AppNavigation: FunctionComponent = observer(() => {
               }}
             >
               <Stack.Screen name="Unlock" component={UnlockScreen} />
-              {/* Deferred until navigated: keeps Unlock/splash path free of
-                  home/stake/register/send/settings screen graphs. */}
               <Stack.Screen
                 name="MainTabDrawer"
-                getComponent={() =>
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  require("navigation/navigation-tab-with-drawer")
-                    .MainTabNavigationWithDrawer
-                }
+                component={MainTabNavigationWithDrawer}
               />
-              <Stack.Screen
-                name="Register"
-                getComponent={() =>
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  require("navigation/register-navigation").RegisterNavigation
-                }
-              />
-              <Stack.Screen
-                name="Others"
-                getComponent={() =>
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  require("navigation/other-navigation").OtherNavigation
-                }
-              />
+              <Stack.Screen name="Register" component={RegisterNavigation} />
+              <Stack.Screen name="Others" component={OtherNavigation} />
               <Stack.Screen
                 name="AddressBooks"
                 component={AddressBookStackScreen}
               />
               <Stack.Screen name="ChainList" component={ChainListStackScreen} />
-              <Stack.Screen
-                name="Stake"
-                getComponent={() =>
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  require("./stake-navigation").StakeNavigation
-                }
-              />
-              <Stack.Screen
-                name="Setting"
-                getComponent={() =>
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  require("./more-navigation").MoreNavigation
-                }
-              />
+              <Stack.Screen name="Stake" component={StakeNavigation} />
+              <Stack.Screen name="Setting" component={MoreNavigation} />
             </Stack.Navigator>
           </NavigationContainer>
         </SmartNavigatorProvider>

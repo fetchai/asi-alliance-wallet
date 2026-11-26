@@ -1,7 +1,11 @@
 import { observer } from "mobx-react-lite";
 import moment from "moment";
 import React, { useEffect, useState } from "react";
-
+import {
+  CHAIN_ID_DORADO,
+  CHAIN_ID_ERIDANUS,
+  CHAIN_ID_FETCHHUB,
+} from "../../../config.ui.var";
 import { useStore } from "../../../stores";
 import { FilterActivities, FilterDropdown } from "../filter";
 import style from "../style.module.scss";
@@ -9,13 +13,12 @@ import { ActivityRow } from "./activity-row";
 import styles from "./style.module.scss";
 import { NoActivity } from "../no-activity";
 import { UnsupportedNetwork } from "../unsupported-network";
-import { isPureEvmChain } from "@utils/filters";
 
 const options = [
   {
     icon: require("@assets/svg/wireframe/arrow-down.svg"),
     value: "/cosmos.bank.v1beta1.MsgSend",
-    label: "Funds Transfers",
+    label: "Funds transfers",
   },
   {
     icon: require("@assets/svg/wireframe/stake.svg"),
@@ -46,12 +49,7 @@ const options = [
   {
     icon: require("@assets/svg/wireframe/arrow-down-up-across-line.svg"),
     value: "/ibc.applications.transfer.v1.MsgTransfer",
-    label: "IBC Transfers",
-  },
-  {
-    icon: require("@assets/svg/wireframe/proposal.svg"),
-    value: "/cosmos.gov.v1beta1.MsgSubmitProposal",
-    label: "Governance Proposal",
+    label: "IBC transfers",
   },
 ];
 
@@ -68,7 +66,6 @@ export const NativeTab = observer(() => {
     useStore();
   const current = chainStore.current;
   const accountInfo = accountStore.getAccount(current.chainId);
-  const isActivitySupported = !isPureEvmChain(current);
   const [isOpen, setIsOpen] = useState(false);
   const [_date, setDate] = useState("");
   const [activities, setActivities] = useState<unknown[]>([]);
@@ -127,7 +124,7 @@ export const NativeTab = observer(() => {
 
   // const handleClick = () => {
   //   analyticsStore.logEvent("activity_transactions_click", {
-  //     pageName: "Transactions",
+  //     pageName: "Transaction Tab",
   //   });
   //   setLoadingRequest(true);
   //   fetchNodes(activityStore.getPageInfo.endCursor, "");
@@ -137,8 +134,7 @@ export const NativeTab = observer(() => {
     setFilter(selectedFilter);
     setSelectedFilter(selectedFilter);
     analyticsStore.logEvent("activity_filter_click", {
-      tabName: "Transactions",
-      pageName: "Activity",
+      pageName: "Transaction Tab",
     });
   };
 
@@ -187,7 +183,7 @@ export const NativeTab = observer(() => {
           {shouldDisplayDate && (
             <div
               className={styles["rowSubtitle"]}
-              style={{ margin: "12px 0px" }}
+              style={{ marginTop: "12px" }}
             >
               {currentDate}
             </div>
@@ -227,7 +223,12 @@ export const NativeTab = observer(() => {
         />
       </div>
 
-      {isActivitySupported ? (
+      {current.chainId === CHAIN_ID_FETCHHUB ||
+      current.chainId === CHAIN_ID_DORADO ||
+      current.chainId === CHAIN_ID_ERIDANUS ? (
+        // isError ? (
+        //   <ErrorActivity />
+        // ) :
         activities.length > 0 &&
         activities.filter((node: any) =>
           processFilters(selectedFilter).includes(
@@ -242,6 +243,23 @@ export const NativeTab = observer(() => {
                 )
               )
             )}
+            {/* {activityStore.getPageInfo?.hasNextPage && (
+              <ButtonV2
+                text={
+                  loadingRequest ? (
+                    <i className="fas fa-spinner fa-spin ml-2" />
+                  ) : (
+                    "Load more"
+                  )
+                }
+                disabled={
+                  !activityStore.getPageInfo?.hasNextPage ||
+                  loadingRequest === true
+                }
+                onClick={handleClick}
+                styleProps={{ width: "326px" }}
+              />
+            )} */}
           </React.Fragment>
         ) : (
           <NoActivity label="No Activity Yet" />

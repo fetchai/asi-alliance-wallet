@@ -1,6 +1,6 @@
 import { FullStateData, NativeBridgeStatus } from "./types";
-import { QuerySharedContext } from "../../common";
-import { ChainGetter } from "../../chain";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../common";
 import { computed } from "mobx";
 import { ObservableCosmwasmContractChainQuery } from "./contract-query";
 import { ObservableQueryRPCStatus } from "../cosmos/status";
@@ -8,19 +8,12 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 export class ObservableQueryBridgeStatus extends ObservableCosmwasmContractChainQuery<FullStateData> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainGetter: ChainGetter,
     chainId: string,
     contractAddress: string
   ) {
-    super(
-      kvStore,
-      chainId,
-      chainGetter,
-      contractAddress,
-      { full_state: {} },
-      `bridge-status-${contractAddress}-${chainId}`
-    );
+    super(kvStore, chainId, chainGetter, contractAddress, { full_state: {} });
   }
 
   @computed
@@ -38,7 +31,7 @@ export class ObservableQueryNativeFetCosmosBridge {
   protected readonly _queryBridgeStatus: ObservableQueryBridgeStatus;
   protected readonly _nativeBridgeAddress: string;
 
-  constructor(kvStore: QuerySharedContext, chainGetter: ChainGetter) {
+  constructor(kvStore: KVStore, chainGetter: ChainGetter) {
     const chainId = "fetchhub-4";
 
     this._nativeBridgeAddress = "fetch1qxxlalvsdjd07p07y3rc5fu6ll8k4tmetpha8n";
@@ -76,7 +69,7 @@ export class ObservableQueryNativeFetCosmosBridge {
     );
 
     const height = BigNumber.from(
-      this._queryRPCStatus.latestBlockHeight?.toString()
+      this._queryRPCStatus.latestBlockHeight.toString()
     );
 
     const isPaused = height.gte(pausedSince);

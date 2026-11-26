@@ -1,15 +1,10 @@
 import { Address } from "@components/address";
 import { useNotification } from "@components/notification";
 import { ToolTip } from "@components/tooltip";
+import { KeplrError } from "@keplr-wallet/router";
 import { WalletStatus } from "@keplr-wallet/stores";
-import { isPureEvmChain } from "@utils/filters";
-import {
-  formatAddress,
-  separateNumericAndDenom,
-  splitBech32,
-} from "@utils/format";
-import { getRejectionMessage, isKeyRingRejection } from "@utils/rejection";
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import { formatAddress, separateNumericAndDenom } from "@utils/format";
+import React, { useCallback, useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { Button } from "reactstrap";
@@ -21,8 +16,6 @@ import { observer } from "mobx-react-lite";
 import { txType } from "./constants";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { fetchProposalNodes } from "../../activity/utils";
-import { ResponsiveAddressView } from "./address-view";
-import { AddressFloatingMenu } from "@components-v2/address-modal";
 
 export const WalletDetailsView = observer(
   ({
@@ -42,7 +35,6 @@ export const WalletDetailsView = observer(
       queriesStore,
       uiConfigStore,
       activityStore,
-      analyticsStore,
     } = useStore();
     const userState = chatStore.userDetailsStore;
 
@@ -51,68 +43,11 @@ export const WalletDetailsView = observer(
     const current = chainStore.current;
     const [chatTooltip, setChatTooltip] = useState("");
     const [chatDisabled, setChatDisabled] = useState(false);
-    const outerDivRef = useRef<HTMLDivElement>(null);
-    const outerDivRefEvm = useRef<HTMLDivElement>(null);
 
     const [currentTxnType, setCurrentTxnType] = useState<string>("");
-    const [open, setOpen] = useState(false);
-
-    const addresses: any[] = (() => {
-      if (keyRingStore.status === "unlocked") {
-        return chainStore.modularChainInfos
-          .filter((item) => {
-            if (item.isTestnet && chainStore.isEnabledChain(item.chainId)) {
-              return chainStore.showTestnet;
-            }
-            return chainStore.isEnabledChain(item.chainId);
-          })
-          .map((modularChainInfo) => {
-            const accountInfo = accountStore.getAccount(
-              modularChainInfo.chainId
-            );
-            const bech32Address = (() => {
-              if (!("cosmos" in modularChainInfo)) {
-                return undefined;
-              }
-
-              if (modularChainInfo.chainId.startsWith("eip155")) {
-                return undefined;
-              }
-
-              return accountInfo.bech32Address;
-            })();
-            const ethereumAddress = (() => {
-              if (!("cosmos" in modularChainInfo)) {
-                return undefined;
-              }
-
-              return accountInfo.hasEthereumHexAddress
-                ? accountInfo.ethereumHexAddress
-                : undefined;
-            })();
-
-            const bitcoinAddress = (() => {
-              if (!("bitcoin" in modularChainInfo)) {
-                return undefined;
-              }
-
-              return accountInfo.bitcoinAddress;
-            })();
-
-            return {
-              modularChainInfo,
-              bech32Address,
-              ethereumAddress,
-              bitcoinAddress,
-            };
-          });
-      } else {
-        return [];
-      }
-    })();
 
     useEffect(() => {
-      if (keyRingStore.selectedKeyInfo?.type === "ledger") {
+      if (keyRingStore.keyRingType === "ledger") {
         setChatTooltip("Coming soon for ledger");
         setChatDisabled(true);
         return;
@@ -141,7 +76,7 @@ export const WalletDetailsView = observer(
       hasFET,
       enabledChainIds,
       config.requiredNative,
-      keyRingStore.selectedKeyInfo?.type,
+      keyRingStore.keyRingType,
       current.chainId,
     ]);
     const navigate = useNavigate();
@@ -162,11 +97,7 @@ export const WalletDetailsView = observer(
       }
     })();
 
-    const isEthAddressSupported =
-      chainStore.current.features?.includes("eth-key-sign") &&
-      chainStore.current.features?.includes("eth-address-gen");
-
-    const isEvm = isPureEvmChain(chainStore.current);
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
 
     const intl = useIntl();
     const notification = useNotification();
@@ -199,31 +130,28 @@ export const WalletDetailsView = observer(
       /*  this is required because accountInit sets the nodes on reload, 
           so we wait for accountInit to set the proposal nodes and then we 
           store the proposal votes from api in activity store */
-      if (!isEvm) {
-        const timeout = setTimeout(async () => {
-          const nodes = activityStore.sortedNodesProposals;
-          if (nodes.length === 0) {
-            const nodes = await fetchProposalNodes(
-              "",
-              current.chainId,
-              accountInfo.bech32Address
-            );
-            if (nodes.length) {
-              nodes.forEach((node: any) => activityStore.addProposalNode(node));
-            }
+      const timeout = setTimeout(async () => {
+        const nodes = activityStore.sortedNodesProposals;
+        if (nodes.length === 0) {
+          const nodes = await fetchProposalNodes(
+            "",
+            current.chainId,
+            accountInfo.bech32Address
+          );
+          if (nodes.length) {
+            nodes.forEach((node: any) => activityStore.addProposalNode(node));
           }
-        }, 100);
+        }
+      }, 100);
 
-        return () => {
-          clearTimeout(timeout);
-        };
-      }
+      return () => {
+        clearTimeout(timeout);
+      };
     }, [
       accountInfo.bech32Address,
       current.chainId,
       accountOrChainChanged,
       activityStore,
-      isEvm,
     ]);
 
     useEffect(() => {
@@ -231,7 +159,7 @@ export const WalletDetailsView = observer(
         activityStore.setAddress(accountInfo.bech32Address);
         activityStore.setChainId(current.chainId);
       }
-      if (accountInfo.bech32Address !== "" && !isEvm) {
+      if (accountInfo.bech32Address !== "") {
         activityStore.accountInit();
       }
     }, [
@@ -239,7 +167,6 @@ export const WalletDetailsView = observer(
       current.chainId,
       accountOrChainChanged,
       activityStore,
-      isEvm,
     ]);
 
     useEffect(() => {
@@ -268,7 +195,7 @@ export const WalletDetailsView = observer(
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "16px",
+            marginBottom: "24px",
             fontWeight: 400,
           }}
         >
@@ -310,12 +237,7 @@ export const WalletDetailsView = observer(
             style={
               accountInfo.walletStatus === WalletStatus.Rejected
                 ? { display: "flex", gap: "10px", alignItems: "center" }
-                : {
-                    display: "flex",
-                    columnGap: "10px",
-                    flexDirection: "column",
-                    width: "85%",
-                  }
+                : {}
             }
           >
             <div className={style["wallet-address"]}>
@@ -338,23 +260,24 @@ export const WalletDetailsView = observer(
                 }
               })()}
             </div>
-            <div style={{ width: "100%" }}>
+            <div>
               <div className={style["walletRejected"]}>
                 {accountInfo.walletStatus === WalletStatus.Rejected && (
                   <ToolTip
                     tooltip={(() => {
                       if (
-                        isKeyRingRejection(accountInfo.rejectionReason, 152)
+                        accountInfo.rejectionReason &&
+                        accountInfo.rejectionReason instanceof KeplrError &&
+                        accountInfo.rejectionReason.module === "keyring" &&
+                        accountInfo.rejectionReason.code === 152
                       ) {
+                        // Return unsupported device message
                         return "Ledger is not supported for this chain";
                       }
 
                       let result = "Failed to load account by unknown reason";
-                      const message = getRejectionMessage(
-                        accountInfo.rejectionReason
-                      );
-                      if (message) {
-                        result += `: ${message}`;
+                      if (accountInfo.rejectionReason) {
+                        result += `: ${accountInfo.rejectionReason.toString()}`;
                       }
 
                       return result;
@@ -372,7 +295,7 @@ export const WalletDetailsView = observer(
                 )}
               </div>
               {accountInfo.walletStatus !== WalletStatus.Rejected && !isEvm && (
-                <React.Fragment>
+                <div>
                   {accountInfo.walletStatus === WalletStatus.Loaded &&
                   accountInfo.bech32Address ? (
                     <div
@@ -383,112 +306,70 @@ export const WalletDetailsView = observer(
                         cursor: "pointer",
                         fontWeight: 400,
                       }}
-                      ref={outerDivRef}
                       onClick={() => copyAddress(accountInfo.bech32Address)}
                     >
-                      <Address
-                        maxCharacters={16}
-                        lineBreakBeforePrefix={false}
-                        tooltipAddress={accountInfo.bech32Address}
-                        childrenStyle={{ opacity: 1 }}
-                      >
-                        <span style={{ display: "flex" }}>
-                          {splitBech32(accountInfo.bech32Address).prefix}
-                          <span className={style["wallet-address-text"]}>
-                            <ResponsiveAddressView
-                              containerRef={outerDivRef}
-                              address={
-                                splitBech32(accountInfo.bech32Address).rest
-                              }
-                            />
-                          </span>
-                        </span>
+                      <Address maxCharacters={16} lineBreakBeforePrefix={false}>
+                        {accountInfo.bech32Address}
                       </Address>
-                      <AddressFloatingMenu
-                        isOpen={open}
-                        toggle={() => setOpen((prev) => !prev)}
-                        addresses={addresses}
-                        onCopy={(address: string) => copyAddress(address)}
+                      <img
+                        style={{ cursor: "pointer" }}
+                        src={require("@assets/svg/wireframe/copy.svg")}
+                        alt=""
                       />
                     </div>
                   ) : (
                     <Skeleton height="21px" />
                   )}
-                </React.Fragment>
+                </div>
               )}
               {accountInfo.walletStatus !== WalletStatus.Rejected &&
-              isEthAddressSupported &&
-              accountInfo.hasEthereumHexAddress ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    gap: "6px",
-                  }}
-                  ref={outerDivRefEvm}
-                  onClick={() => copyAddress(accountInfo.ethereumHexAddress)}
-                >
-                  <Address
-                    isRaw={true}
-                    placement="bottom-end"
-                    tooltipAddress={accountInfo.ethereumHexAddress}
-                    childrenStyle={{ opacity: 1 }}
+                (isEvm || accountInfo.hasEthereumHexAddress) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
                   >
-                    <span style={{ display: "flex" }}>
-                      {accountInfo.walletStatus === WalletStatus.Loaded &&
-                      accountInfo.ethereumHexAddress ? (
-                        accountInfo.ethereumHexAddress.length === 42 ? (
-                          <React.Fragment>
-                            {accountInfo.ethereumHexAddress.slice(0, 2)}
-                            <span className={style["wallet-address-text"]}>
-                              <ResponsiveAddressView
-                                containerRef={outerDivRefEvm}
-                                address={accountInfo.ethereumHexAddress.slice(
-                                  2
-                                )}
-                              />
-                            </span>
-                          </React.Fragment>
-                        ) : (
-                          <React.Fragment>
-                            {accountInfo.ethereumHexAddress}
-                          </React.Fragment>
-                        )
-                      ) : (
-                        "..."
-                      )}
-                    </span>
-                  </Address>
-                  {isEvm && (
-                    <AddressFloatingMenu
-                      isOpen={open}
-                      toggle={() => setOpen((prev) => !prev)}
-                      addresses={addresses}
-                      onCopy={(address: string) => copyAddress(address)}
+                    <div
+                      onClick={() =>
+                        copyAddress(accountInfo.ethereumHexAddress)
+                      }
+                    >
+                      <Address
+                        isRaw={true}
+                        tooltipAddress={accountInfo.ethereumHexAddress}
+                      >
+                        {accountInfo.walletStatus === WalletStatus.Loaded &&
+                        accountInfo.ethereumHexAddress
+                          ? accountInfo.ethereumHexAddress.length === 42
+                            ? `${accountInfo.ethereumHexAddress.slice(
+                                0,
+                                6
+                              )}...${accountInfo.ethereumHexAddress.slice(-6)}`
+                            : accountInfo.ethereumHexAddress
+                          : "..."}
+                      </Address>
+                    </div>
+                    <img
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        copyAddress(accountInfo.ethereumHexAddress)
+                      }
+                      src={require("@assets/svg/wireframe/copy.svg")}
+                      alt=""
                     />
-                  )}
-                </div>
-              ) : (
-                <React.Fragment />
-              )}
+                  </div>
+                )}
             </div>
           </div>
           <Button
-            onClick={() => {
-              setIsSelectWalletOpen(true);
-              analyticsStore.logEvent("change_wallet_click", {
-                pageName: "Home",
-              });
-              // analyticsStore.logEvent("account_icon_click", {
-              //   pageName: "Home",
-              // });
-            }}
+            onClick={() => setIsSelectWalletOpen(true)}
             className={style["change-net"]}
           >
             <img
               style={{ width: "14px", height: "16px" }}
-              src={require("@assets/svg/wireframe/chevron-down.svg")}
+              src={require("@assets/svg/wireframe/changeNet.svg")}
               alt=""
             />
           </Button>
@@ -537,12 +418,12 @@ export const WalletDetailsView = observer(
         {rewardsBalNumber > 0 && (
           <div
             className={style["rewards-card"]}
-            onClick={() => {
-              analyticsStore.logEvent("claim_all_staking_reward_click", {
-                pageName: "Home",
-              });
-              navigate("/stake");
+            style={{
+              marginTop: "12px",
+              gap: "2px",
+              cursor: "pointer",
             }}
+            onClick={() => navigate("/stake")}
           >
             <div
               style={{

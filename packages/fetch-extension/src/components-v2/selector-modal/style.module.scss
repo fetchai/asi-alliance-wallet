@@ -1,24 +1,19 @@
-@import "../../styles/var";
-
 .modal {
   overflow: hidden;
   color: "white";
   backdrop-filter: blur(10px);
   border-radius: 12px;
-  background: transparent;
+  background: #000d3d;
   z-index: 100;
 }
 
 .selector-container {
-  display: flex;
-  flex-direction: column;
-  row-gap: 5px;
   overflow: scroll;
-  color: $font-dark;
+  color: "white";
 }
 
 .selector-element {
-  padding: 20px 16px;
+  padding: 12px 16px;
   display: flex;
   flex: row;
   align-items: center;

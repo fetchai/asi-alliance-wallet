@@ -2,27 +2,13 @@ import { InteractionForegroundHandler } from "./types";
 import { InteractionWaitingData } from "../types";
 
 export class InteractionForegroundService {
-  constructor(
-    protected handler: InteractionForegroundHandler,
-    public readonly pingHandler?: (
-      windowId: number | undefined,
-      ignoreWindowIdAndForcePing: boolean
-    ) => Promise<boolean>,
-    public readonly interactionIdPingHandler?: (
-      interactionId: string
-    ) => Promise<boolean>
-  ) {}
+  constructor(protected handler: InteractionForegroundHandler) {}
 
   pushData(data: InteractionWaitingData): void {
     this.handler.onInteractionDataReceived(data);
   }
 
-  pushEvent(
-    data: Omit<
-      InteractionWaitingData,
-      "id" | "uri" | "isInternal" | "tabId" | "windowId"
-    >
-  ): void {
+  pushEvent(data: Omit<InteractionWaitingData, "id" | "isInternal">): void {
     this.handler.onEventDataReceived(data);
   }
 }

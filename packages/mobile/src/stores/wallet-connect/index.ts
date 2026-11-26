@@ -1,9 +1,5 @@
 import WalletConnect from "@walletconnect/client";
-import {
-  KeyRingStore,
-  PermissionStore,
-  PermissionManagerStore,
-} from "@keplr-wallet/stores-core";
+import { KeyRingStore, PermissionStore } from "@keplr-wallet/stores";
 import {
   action,
   autorun,
@@ -18,7 +14,10 @@ import { Buffer } from "buffer/";
 import { KVStore } from "@keplr-wallet/common";
 import { WCMessageRequester } from "./msg-requester";
 import { RNRouterBackground } from "../../router";
-import { getBasicAccessPermissionType } from "@keplr-wallet/background";
+import {
+  getBasicAccessPermissionType,
+  KeyRingStatus,
+} from "@keplr-wallet/background";
 import { computedFn } from "mobx-utils";
 import { Key } from "@keplr-wallet/types";
 import { AppState, Linking } from "react-native";
@@ -124,10 +123,10 @@ export abstract class WalletConnectManager {
       });
     }
 
-    if (this.keyRingStore.status !== "unlocked") {
+    if (this.keyRingStore.status !== KeyRingStatus.UNLOCKED) {
       await new Promise<void>((resolve) => {
         const disposer = autorun(() => {
-          if (this.keyRingStore.status === "unlocked") {
+          if (this.keyRingStore.status === KeyRingStatus.UNLOCKED) {
             resolve();
             if (disposer) {
               disposer();
@@ -248,7 +247,8 @@ export abstract class WalletConnectManager {
 
   protected createKeplrAPI(sessionId: string) {
     return new Keplr(
-      "0.13.11",
+      // TODO: Set version
+      "0.12.12",
       "core",
       new WCMessageRequester(RNRouterBackground.EventEmitter, sessionId)
     );
@@ -412,8 +412,7 @@ export class WalletConnectStore extends WalletConnectManager {
     },
     protected override readonly chainStore: ChainStore,
     protected override readonly keyRingStore: KeyRingStore,
-    protected readonly permissionStore: PermissionStore,
-    protected readonly permissionManagerStore: PermissionManagerStore
+    protected readonly permissionStore: PermissionStore
   ) {
     super(chainStore, keyRingStore);
 
@@ -716,8 +715,12 @@ export class WalletConnectStore extends WalletConnectManager {
       })
     );
 
-    await this.permissionManagerStore.clearOrigin(
-      WCMessageRequester.getVirtualSessionURL(client.session.key)
-    );
+    for (const chainInfo of this.chainStore.chainInfos) {
+      await this.permissionStore
+        .getBasicAccessInfo(chainInfo.chainId)
+        .removeOrigin(
+          WCMessageRequester.getVirtualSessionURL(client.session.key)
+        );
+    }
   }
 }

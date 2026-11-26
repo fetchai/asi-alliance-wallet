@@ -1,11 +1,10 @@
 import { QueriesSetBase } from "../queries";
-import { ChainGetter } from "../../chain";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../common";
 import { DeepReadonly } from "utility-types";
 import { ObservableQueryTxFeesFeeTokens } from "./txfees/fee-tokens";
 import { ObservableQueryTxFeesSpotPriceByDenom } from "./txfees/spot-price-by-denom";
 import { ObservableQueryTxFeesBaseDenom } from "./txfees/base-denom";
-import { QuerySharedContext } from "../../common";
-import { ObservableQueryBaseFee } from "./base-fee";
 
 export interface OsmosisQueries {
   osmosis: OsmosisQueriesImpl;
@@ -14,20 +13,20 @@ export interface OsmosisQueries {
 export const OsmosisQueries = {
   use(): (
     queriesSetBase: QueriesSetBase,
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter
   ) => OsmosisQueries {
     return (
       queriesSetBase: QueriesSetBase,
-      sharedContext: QuerySharedContext,
+      kvStore: KVStore,
       chainId: string,
       chainGetter: ChainGetter
     ) => {
       return {
         osmosis: new OsmosisQueriesImpl(
           queriesSetBase,
-          sharedContext,
+          kvStore,
           chainId,
           chainGetter
         ),
@@ -41,33 +40,21 @@ export class OsmosisQueriesImpl {
   public readonly queryTxFeesSpotPriceByDenom: DeepReadonly<ObservableQueryTxFeesSpotPriceByDenom>;
   public readonly queryTxFeesBaseDenom: DeepReadonly<ObservableQueryTxFeesBaseDenom>;
 
-  public readonly queryBaseFee: DeepReadonly<ObservableQueryBaseFee>;
-
   constructor(
     _: QueriesSetBase,
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter
   ) {
     this.queryTxFeesFeeTokens = new ObservableQueryTxFeesFeeTokens(
-      sharedContext,
+      kvStore,
       chainId,
       chainGetter
     );
     this.queryTxFeesSpotPriceByDenom =
-      new ObservableQueryTxFeesSpotPriceByDenom(
-        sharedContext,
-        chainId,
-        chainGetter
-      );
+      new ObservableQueryTxFeesSpotPriceByDenom(kvStore, chainId, chainGetter);
     this.queryTxFeesBaseDenom = new ObservableQueryTxFeesBaseDenom(
-      sharedContext,
-      chainId,
-      chainGetter
-    );
-
-    this.queryBaseFee = new ObservableQueryBaseFee(
-      sharedContext,
+      kvStore,
       chainId,
       chainGetter
     );

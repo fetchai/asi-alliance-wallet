@@ -1,58 +1,13 @@
 import React from "react";
 import ReactDom from "react-dom";
 import { Modal, ModalUIOptions } from "./modal";
-import SignClient from "@walletconnect/sign-client";
-import { ProposalTypes } from "@walletconnect/types";
-import SessionProperties = ProposalTypes.SessionProperties;
 
-export class KeplrQRCodeModalV2 {
-  constructor(
-    public readonly signClient: SignClient,
-    protected readonly uiOptions?: ModalUIOptions
-  ) {}
-
-  async connect(chainIds: string[]): Promise<SessionProperties | undefined> {
-    const { uri, approval } = await this.signClient.connect({
-      requiredNamespaces: {
-        cosmos: {
-          methods: [
-            "cosmos_getAccounts",
-            "cosmos_signDirect",
-            "cosmos_signAmino",
-            "keplr_getKey",
-            "keplr_signAmino",
-            "keplr_signDirect",
-            "keplr_signArbitrary",
-            "keplr_enable",
-            "keplr_signEthereum",
-            "keplr_experimentalSuggestChain",
-            "keplr_suggestToken",
-          ],
-          chains: [...chainIds.map((chainId) => `cosmos:${chainId}`)],
-          events: ["accountsChanged", "chainChanged", "keplr_accountsChanged"],
-        },
-      },
-    });
-
-    if (!uri) {
-      throw new Error("No uri");
-    }
-
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      this.open(uri, () => {});
-      const session = await approval();
-      return session.sessionProperties;
-    } catch (e) {
-      console.error(e);
-    } finally {
-      this.close();
-    }
-  }
+export class KeplrQRCodeModalV1 {
+  constructor(protected readonly uiOptions?: ModalUIOptions) {}
 
   open(uri: string, cb: any) {
     const wrapper = document.createElement("div");
-    wrapper.setAttribute("id", "keplr-qrcode-modal-v2");
+    wrapper.setAttribute("id", "keplr-qrcode-modal-v1");
     document.body.appendChild(wrapper);
 
     ReactDom.render(
@@ -69,7 +24,7 @@ export class KeplrQRCodeModalV2 {
   }
 
   close() {
-    const wrapper = document.getElementById("keplr-qrcode-modal-v2");
+    const wrapper = document.getElementById("keplr-qrcode-modal-v1");
     if (wrapper) {
       document.body.removeChild(wrapper);
     }

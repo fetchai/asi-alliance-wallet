@@ -1,45 +1,28 @@
-@import "../../../styles/var";
-
 .container {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
-
-.formGroup {
-  margin-bottom: 0.5rem !important;
-}
-
 .input {
-  background: transparent !important;
-  color: $font-dark !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
   margin-bottom: 16px;
-  box-shadow: none !important;
-  border: 1.5px solid $border-grey !important;
 }
 
 .input:read-only {
-  background: $bg-grey !important;
+  border: 0px !important;
 }
 
 .input:focus {
-  color: $font-dark !important;
-  border: 1.5px solid $border-sky-focus !important;
+  background: rgba(255, 255, 255, 0.2);
+  color: white !important;
+  border: 1px solid #7655fc;
 }
 .label {
-  color: $font-dark;
-  font-family: $font-family-base;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: 24px;
-}
-
-.labelNetworkSelector {
-  color: $font-secondary;
-  font-family: $font-family-base;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 400;
-  margin-bottom: 8px;
 }

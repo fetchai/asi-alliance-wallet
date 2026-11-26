@@ -1,12 +1,13 @@
-import { getRandomBytes } from "expo-crypto";
+import * as Crypto from "expo-crypto";
 const MAX_RANDOM_BYTES = 65536;
 /**
- * An implementation of Crypto.getRandomValues that uses expo-random's secure random generator if
+ * An implementation of Crypto.getRandomValues that uses expo-crypto's secure random generator if
  * available and falls back to Math.random (cryptographically insecure) when synchronous bridged
  * methods are unavailable.
  *
  * See https://www.w3.org/TR/WebCryptoAPI/#Crypto-method-getRandomValues
  */
+// eslint-disable-next-line import/no-default-export
 export default function getRandomValues(values) {
   if (arguments.length < 1) {
     throw new TypeError(
@@ -34,11 +35,13 @@ export default function getRandomValues(values) {
   let randomBytes;
   try {
     // NOTE: Consider implementing `fillRandomBytes` to populate the given TypedArray directly
-    randomBytes = getRandomBytes(values.byteLength);
+    randomBytes = Crypto.getRandomBytes(values.byteLength);
   } catch (e) {
     // TODO: rethrow the error if it's not due to a lack of synchronous methods
-    console.warn(`Random.getRandomBytes is not supported`);
-    throw e;
+    console.warn(
+      `Crypto.getRandomBytes is not supported; falling back to insecure Math.random`
+    );
+    return getRandomValuesInsecure(values);
   }
   // Create a new TypedArray that is of the same type as the given TypedArray but is backed with the
   // array buffer containing random bytes. This is cheap and copies no data.
@@ -50,6 +53,19 @@ export default function getRandomValues(values) {
   );
   // Copy the data into the given TypedArray, letting the VM optimize the copy if possible
   values.set(randomValues);
+  return values;
+}
+export function getRandomValuesInsecure(values) {
+  // Write random bytes to the given TypedArray's underlying ArrayBuffer
+  const byteView = new Uint8Array(
+    values.buffer,
+    values.byteOffset,
+    values.byteLength
+  );
+  for (let i = 0; i < byteView.length; i++) {
+    // The range of Math.random() is [0, 1) and the ToUint8 abstract operation rounds down
+    byteView[i] = Math.random() * 256;
+  }
   return values;
 }
 class QuotaExceededError extends Error {

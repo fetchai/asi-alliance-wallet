@@ -1,6 +1,6 @@
 import React, { ReactElement } from "react";
 import { FlatList, View, ViewStyle } from "react-native";
-import { formatToTruncated } from "utils/format/format";
+import { formatActivityHash } from "utils/format/format";
 import { useStyle } from "styles/index";
 import { CardDivider } from "components/card";
 import { DetailRow } from "screens/activity/activity-details/activity-row";
@@ -9,6 +9,7 @@ import {
   ParamListBase,
   useNavigation,
 } from "@react-navigation/native";
+import { Button } from "components/button";
 import { StakeIcon } from "components/new/icon/stake-icon";
 import { ArrowUpIcon } from "components/new/icon/arrow-up";
 import { AppCurrency } from "@keplr-wallet/types";
@@ -16,8 +17,6 @@ import { clearDecimals } from "modals/sign/messages";
 import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
-import { BlurButton } from "components/new/button/blur-button";
-import { EXPLORER_URL } from "../../../config";
 
 interface ItemData {
   title: string;
@@ -39,7 +38,7 @@ export const DetailRows = ({ details }: { details: any }) => {
   const style = useStyle();
   const { chainStore, analyticsStore } = useStore();
   const fees = JSON.parse(details.fees);
-  const url = `${EXPLORER_URL}/${chainStore.current.chainId}/transactions/${details.hash}/`;
+  const mintScanURL = `https://www.mintscan.io/fetchai/tx/${details.hash}/`;
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const currency: AppCurrency = {
@@ -94,7 +93,7 @@ export const DetailRows = ({ details }: { details: any }) => {
     navigation.navigate("Others", {
       screen: "WebView",
       params: {
-        url: url,
+        url: mintScanURL,
       },
     });
     analyticsStore.logEvent("view_on_mintscan_click", {
@@ -160,7 +159,7 @@ export const DetailRows = ({ details }: { details: any }) => {
   const data: ItemData[] = [
     {
       title: "Transaction hash",
-      value: formatToTruncated(details.hash),
+      value: formatActivityHash(details.hash),
       hash: details.hash.toString(),
     },
     {
@@ -216,7 +215,6 @@ export const DetailRows = ({ details }: { details: any }) => {
           style.flatten([
             "flex-row",
             "justify-evenly",
-            "items-center",
             "margin-x-16",
             "margin-top-32",
             "margin-bottom-16",
@@ -225,20 +223,25 @@ export const DetailRows = ({ details }: { details: any }) => {
       >
         {decideButton().isVisible && (
           <View style={style.flatten(["flex-1"]) as ViewStyle}>
-            <BlurButton
+            <Button
               text={decideButton().title ?? ""}
+              size="default"
+              mode="outline"
               leftIcon={decideButton().icon}
-              backgroundBlur={false}
-              borderRadius={64}
-              containerStyle={
+              textStyle={
                 style.flatten([
-                  "background-color-dark",
-                  "margin-4",
-                  "padding-6",
-                  "justify-center",
+                  "body3",
+                  "color-white",
+                  "margin-left-8",
                 ]) as ViewStyle
               }
-              textStyle={style.flatten(["body3"]) as ViewStyle}
+              containerStyle={
+                style.flatten([
+                  "border-radius-32",
+                  "margin-right-6",
+                  "border-color-white@40%",
+                ]) as ViewStyle
+              }
               onPress={() => {
                 details.verb === "Staked"
                   ? handleValidatorClicked()
@@ -248,29 +251,43 @@ export const DetailRows = ({ details }: { details: any }) => {
           </View>
         )}
         <View style={style.flatten(["flex-1"]) as ViewStyle}>
-          <BlurButton
-            text="View on Explorer"
-            backgroundBlur={false}
-            borderRadius={64}
-            containerStyle={
-              style.flatten([
-                "background-color-dark",
-                "margin-4",
-                "padding-6",
-                "justify-center",
-              ]) as ViewStyle
+          <Button
+            text="View on Mintscan"
+            size="default"
+            mode="outline"
+            textStyle={
+              style.flatten(
+                ["body3", "items-center"],
+                [
+                  // details.status === "Pending"
+                  //   ? "color-white@20%"
+                  //   :
+                  "color-white",
+                ]
+              ) as ViewStyle
             }
-            textStyle={style.flatten(["body3", "text-center"]) as ViewStyle}
+            containerStyle={
+              style.flatten(
+                ["border-radius-32", "margin-left-6"],
+                [
+                  // details.status === "Pending"
+                  //   ? "border-color-white@20%"
+                  //   :
+                  "border-color-white@40%",
+                ]
+              ) as ViewStyle
+            }
             onPress={() => {
               if (!networkIsConnected) {
                 Toast.show({
                   type: "error",
-                  text1: "No Internet Connection",
+                  text1: "No internet connection",
                 });
                 return;
               }
               openURL();
             }}
+            // disabled={details.status === "Pending"}
           />
         </View>
       </View>

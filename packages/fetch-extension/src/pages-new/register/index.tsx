@@ -1,5 +1,4 @@
 // Shim ------------
-
 require("setimmediate");
 // Shim ------------
 import React, { FunctionComponent, useEffect } from "react";
@@ -87,7 +86,7 @@ export const RegisterPage: FunctionComponent = observer(() => {
         >
           <img
             className={style["icon"]}
-            src={require("@assets/png/Black.png")}
+            src={require("@assets/png/ASI-Logo-Icon-white.png")}
             alt="logo"
           />
         </div>

@@ -5,7 +5,7 @@ import style from "./style.module.scss";
 import moment from "moment";
 import { Card } from "@components-v2/card";
 import { useStore } from "../../../stores";
-import { formatAddress, formatToTruncated } from "@utils/format";
+import { formatAddress } from "@utils/format";
 import { useLanguage } from "../../../languages";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { AppCurrency } from "@keplr-wallet/types";
@@ -55,7 +55,7 @@ export const ActivityDetails = observer(() => {
       case Boolean(details.validatorAddress):
         return (
           <div>
-            {formatToTruncated(details.validatorAddress)}
+            {formatAddress(details.validatorAddress)}
             <div>
               {details.validatorCount > 0
                 ? ` +${details.validatorCount} others`
@@ -64,9 +64,7 @@ export const ActivityDetails = observer(() => {
           </div>
         );
       case Boolean(details.validatorDstAddress):
-        return formatToTruncated(details.validatorDstAddress);
-      case Boolean(details.proposer):
-        return formatToTruncated(details.proposer);
+        return formatAddress(details.validatorDstAddress);
       case details.verb == "IBC transfer":
         return formatAddress(details.receiver);
       default:
@@ -90,22 +88,14 @@ export const ActivityDetails = observer(() => {
         }}
       >
         <div className={style["topBar"]}>
-          <img
-            src={require("@assets/svg/wireframe/asi-black-circle.svg")}
-            alt="verb"
-          />
+          <img src={require("@assets/png/Black-white-circle.png")} alt="verb" />
           <div className={style["topBar-details"]}>
             <div className={style["verb"]}>{details.verb}</div>
             <div className={style["status"]}>
               {details.status === "Success" ||
               details.status === "Pending" ||
               details.status === "Failed" ? (
-                <StatusButton
-                  title={
-                    details.status === "Success" ? "Confirmed" : details.status
-                  }
-                  status={details.status}
-                />
+                <StatusButton title={details.status} status={details.status} />
               ) : (
                 <div>Error</div>
               )}
@@ -118,58 +108,18 @@ export const ActivityDetails = observer(() => {
         </div>
 
         <div className={style["card"]}>
-          {details.verb === "Governance Proposal" ? (
-            <React.Fragment>
-              <Card
-                leftImage={require("@assets/svg/wireframe/wallet.svg")}
-                leftImageStyle={{
-                  height: "32px",
-                  width: "32px",
-                  background: "white",
-                  padding: 0,
-                }}
-                heading="Proposer"
-                headingStyle={{ fontSize: "14px", fontWeight: 400 }}
-                subheading={formatAddress(details.proposer)}
-              />
-              <div
-                style={{ height: "56px" }}
-                className={style["verticalLine"]}
-              />
-              <Card
-                leftImage={require("@assets/svg/wireframe/proposal.svg")}
-                leftImageStyle={{
-                  height: "24px",
-                  width: "32px",
-                  background: "white",
-                  padding: 0,
-                }}
-                heading={details.proposalType || "Proposal"}
-                headingStyle={{ fontSize: "14px", fontWeight: 400 }}
-                subheading={details.proposalTitle || "—"}
-                rightContent={
-                  <div className={style["cardAmt"]}>
-                    <div className={style["inFET"]}>
-                      {`${details.amountNumber} ${details.amountAlphabetic}`}
-                    </div>
-                    {usdValue && (
-                      <div className={style["inUSD"]}>{usdValue}</div>
-                    )}
-                  </div>
-                }
-              />
-            </React.Fragment>
-          ) : details.verb == "Smart Contract Interaction" ? (
+          {details.verb == "Smart Contract Interaction" ? (
             <Card
               leftImage={require("@assets/svg/wireframe/contract-interaction.svg")}
               style={{
+                background: "transparent",
                 width: "100%",
                 height: "69px",
               }}
               leftImageStyle={{
                 height: "32px",
                 width: "32px",
-                background: "white",
+                background: "none",
                 padding: 0,
               }}
               heading={"Smart Contract"}
@@ -193,18 +143,20 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "white",
+                  background: "none",
                   padding: 0,
                 }}
-                heading={details.signerAddress ? "From" : "delegator address"}
+                style={{ background: "transparent" }}
+                heading={details.signerAddress ? "From" : "deligator address"}
                 headingStyle={{
                   fontSize: "14px",
+                  color: "rgba(255,255,255,0.6)",
                   fontWeight: 400,
                 }}
                 subheading={formatAddress(
                   details.signerAddress
                     ? details.signerAddress
-                    : details.delegatorAddress
+                    : details.deligatorAddress
                 )}
               />
               <div
@@ -222,9 +174,10 @@ export const ActivityDetails = observer(() => {
                 leftImageStyle={{
                   height: "32px",
                   width: "32px",
-                  background: "white",
+                  background: "none",
                   padding: 0,
                 }}
+                style={{ background: "transparent", width: "337px" }}
                 heading={
                   details.toAddress
                     ? "To"
@@ -234,6 +187,7 @@ export const ActivityDetails = observer(() => {
                 }
                 headingStyle={{
                   fontSize: "14px",
+                  color: "rgba(255,255,255,0.6)",
                   fontWeight: 400,
                 }}
                 subheading={toAddress(details)}

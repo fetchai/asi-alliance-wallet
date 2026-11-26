@@ -1,53 +1,6 @@
-import { KeplrError, Message } from "@keplr-wallet/router";
+import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 import { InteractionWaitingData } from "../types";
-
-export class InteractionPingMsg extends Message<boolean> {
-  public static type() {
-    return "interaction-ping";
-  }
-
-  constructor(
-    public readonly windowId: number | undefined,
-    public readonly ignoreWindowIdAndForcePing: boolean
-  ) {
-    super();
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  type(): string {
-    return InteractionPingMsg.type();
-  }
-}
-
-export class InteractionIdPingMsg extends Message<boolean> {
-  public static type() {
-    return "interaction-ping-id";
-  }
-
-  constructor(public readonly interactionId: string) {
-    super();
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  type(): string {
-    return InteractionIdPingMsg.type();
-  }
-}
 
 export class PushInteractionDataMsg extends Message<void> {
   public static type() {
@@ -60,7 +13,7 @@ export class PushInteractionDataMsg extends Message<void> {
 
   validateBasic(): void {
     if (!this.data.type) {
-      throw new KeplrError("interaction", 101, "Type should not be empty");
+      throw new Error("Type should not be empty");
     }
   }
 
@@ -79,17 +32,14 @@ export class PushEventDataMsg extends Message<void> {
   }
 
   constructor(
-    public readonly data: Omit<
-      InteractionWaitingData,
-      "id" | "uri" | "isInternal" | "tabId" | "windowId"
-    >
+    public readonly data: Omit<InteractionWaitingData, "id" | "isInternal">
   ) {
     super();
   }
 
   validateBasic(): void {
     if (!this.data.type) {
-      throw new KeplrError("interaction", 101, "Type should not be empty");
+      throw new Error("Type should not be empty");
     }
   }
 

@@ -50,6 +50,7 @@
   border: 0;
   margin: 0;
   padding: 0;
+  background: transparent;
 
   &:global(.modal-content) {
     box-shadow: none;
@@ -74,18 +75,23 @@
 }
 
 .label {
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
   margin-bottom: 0px;
 }
-
-.formGroupInput {
-  margin-bottom: 8px;
-}
-
 .input {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
   border-radius: 12px;
   margin-bottom: 0px;
+  &::placeholder {
+    font-weight: bold;
+  }
+}
+.input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid #7655fc !important;
 }
 
 .noAddressContainer {
@@ -100,18 +106,18 @@
 }
 
 .noAddressTitle {
-  color: $font-dark;
+  color: #fff;
   text-align: center;
-  font-family: $font-family-base;
+  font-family: Lexend;
   font-size: 24px;
   font-style: normal;
   font-weight: 400;
   line-height: 34px;
 }
 .content {
-  color: $font-dark;
+  color: #fff;
   text-align: center;
-  font-family: $font-family-base;
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;

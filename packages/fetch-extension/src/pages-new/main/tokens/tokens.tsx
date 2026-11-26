@@ -8,7 +8,7 @@ import { useLoadingIndicator } from "@components/loading-indicator";
 import { useLanguage } from "../../../languages";
 import { Card } from "@components-v2/card";
 import { ToolTip } from "@components/tooltip";
-import { formatBalance, formatTokenName } from "@utils/format";
+import { formatTokenName } from "@utils/format";
 import { WrongViewingKeyError } from "@keplr-wallet/stores";
 import { UncontrolledTooltip } from "reactstrap";
 import { useNotification } from "@components/notification";
@@ -19,14 +19,8 @@ export const Tokens = observer(() => {
   const language = useLanguage();
   const notification = useNotification();
   const fiatCurrency = language.fiatCurrency;
-  const {
-    chainStore,
-    accountStore,
-    queriesStore,
-    tokensStore,
-    priceStore,
-    analyticsStore,
-  } = useStore();
+  const { chainStore, accountStore, queriesStore, tokensStore, priceStore } =
+    useStore();
   const current = chainStore.current;
   const accountInfo = accountStore.getAccount(current.chainId);
   const loadingIndicator = useLoadingIndicator();
@@ -68,15 +62,12 @@ export const Tokens = observer(() => {
     const inUsd = value && value.shrink(true).maxDecimals(6).toString();
     return inUsd;
   };
-
   return (
     <React.Fragment>
       {tokens.map((token) => {
         const error = token.error;
         const validSelector = Buffer.from(
-          Hash.sha256(
-            Buffer.from(token.balance.currency.coinMinimalDenom) as Uint8Array
-          )
+          Hash.sha256(Buffer.from(token.balance.currency.coinMinimalDenom))
         )
           .toString("hex")
           .replace(/\d+/g, "")
@@ -114,19 +105,17 @@ export const Tokens = observer(() => {
 
         const inputValue = new CoinPretty(
           tokenInfo,
-          new Int(tokenInfo ? parseInt(amountInNumber?.toString() || "0") : 0)
+          new Int(tokenInfo ? amountInNumber : 0)
         );
         const tokenInUsd = convertToUsd(inputValue);
         const tokenString = encodeURIComponent(JSON.stringify(tokenInfo));
         const tokenBalance = {
-          balance: token.balance.hideDenom(false).toString(),
+          balance: token.balance.maxDecimals(6).hideDenom(false).toString(),
           balanceInUsd: tokenInUsd ? tokenInUsd : "",
         };
         const tokenBalanceString = encodeURIComponent(
           JSON.stringify(tokenBalance)
         );
-        const formattedValue = formatBalance(token.balance, 6);
-
         return (
           <React.Fragment key={token.currency.coinDenom}>
             <Card
@@ -147,19 +136,18 @@ export const Tokens = observer(() => {
                 token.isFetching ? (
                   <i className="fas fa-spinner fa-spin ml-1" />
                 ) : (
-                  formattedValue
+                  token.balance.maxDecimals(6).hideDenom(false).toString()
                 )
               }
-              subheadingStyle={{ fontSize: "14px" }}
+              subheadingStyle={{ fontSize: "14px", color: "#808da0" }}
               rightContent={tokenInUsd ? tokenInUsd : ""}
               style={{
+                background: "rgba(255, 255, 255, 0.12)",
+                height: "78px",
                 marginBottom: "6px",
                 padding: "18px",
               }}
               onClick={() => {
-                analyticsStore.logEvent("token_click", {
-                  pageName: "Portfolio",
-                });
                 navigate({
                   pathname: "/asset",
                   search: `?tokenDetails=${tokenString}&balance=${tokenBalanceString}`,
@@ -201,7 +189,8 @@ export const Tokens = observer(() => {
                       });
                       return;
                     }
-                    await tokensStore.addToken(current.chainId, {
+                    const tokenOf = tokensStore.getTokensOf(current.chainId);
+                    await tokenOf.addToken({
                       ...token.balance.currency,
                       viewingKey,
                     });

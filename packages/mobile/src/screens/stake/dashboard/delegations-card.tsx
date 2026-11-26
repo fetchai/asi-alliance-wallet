@@ -22,7 +22,6 @@ import {
 import { VectorCharacter } from "components/vector-character";
 import { KeplrETCQueriesImpl } from "@keplr-wallet/stores-etc";
 import { IconButton } from "components/new/button/icon";
-import { formatBalance, formatFiatBalance } from "utils/format/format";
 
 interface DeepReadonlyObject {
   queryBalances: ObservableQueryBalances;
@@ -70,11 +69,11 @@ export const DelegationsCard: FunctionComponent<{
     const validatorsData = useMemo(() => {
       const data: Staking.Validator[] = [];
       for (const val of validators) {
-        const delegation = delegations.find(
+        const isAvailable = delegations.find(
           (element) =>
             element.delegation.validator_address == val.operator_address
         );
-        if (delegation && new Dec(delegation.balance.amount).gt(new Dec(0))) {
+        if (isAvailable) {
           data.push(val);
         }
       }
@@ -97,7 +96,7 @@ export const DelegationsCard: FunctionComponent<{
           <Text
             style={
               [
-                style.flatten(["color-gray-300", "body3"]),
+                style.flatten(["color-white@60%", "body3"]),
                 { lineHeight: 16 },
               ] as ViewStyle
             }
@@ -109,7 +108,11 @@ export const DelegationsCard: FunctionComponent<{
               <Text
                 style={
                   [
-                    style.flatten(["text-caption2", "color-dark", "font-bold"]),
+                    style.flatten([
+                      "text-caption2",
+                      "color-white",
+                      "font-bold",
+                    ]),
                     { lineHeight: 14 },
                   ] as ViewStyle
                 }
@@ -153,14 +156,10 @@ export const DelegationsCard: FunctionComponent<{
               <BlurBackground
                 key={val.operator_address}
                 borderRadius={12}
-                backgroundBlur={false}
+                blurIntensity={20}
                 containerStyle={
                   [
-                    style.flatten([
-                      "padding-18",
-                      "flex-row",
-                      "background-color-gray-5",
-                    ]),
+                    style.flatten(["padding-18", "flex-row"]),
                     containerStyle,
                   ] as ViewStyle
                 }
@@ -189,24 +188,22 @@ export const DelegationsCard: FunctionComponent<{
                     <ValidatorThumbnail size={32} url={thumbnail} />
                   ) : (
                     <BlurBackground
-                      backgroundBlur={false}
+                      backgroundBlur={true}
+                      blurIntensity={16}
                       containerStyle={
-                        {
-                          ...style.flatten([
-                            "width-32",
-                            "height-32",
-                            "border-radius-64",
-                            "items-center",
-                            "justify-center",
-                            "margin-right-12",
-                          ]),
-                          backgroundColor: "#dddfdf",
-                        } as ViewStyle
+                        style.flatten([
+                          "width-32",
+                          "height-32",
+                          "border-radius-64",
+                          "items-center",
+                          "justify-center",
+                          "margin-right-12",
+                        ]) as ViewStyle
                       }
                     >
                       <VectorCharacter
                         char={val.description.moniker.trim()[0]}
-                        color="#151a1a"
+                        color="white"
                         height={12}
                       />
                     </BlurBackground>
@@ -219,7 +216,7 @@ export const DelegationsCard: FunctionComponent<{
                         style={
                           style.flatten([
                             "body3",
-                            "color-dark",
+                            "color-white",
                             "margin-bottom-2",
                           ]) as ViewStyle
                         }
@@ -230,12 +227,16 @@ export const DelegationsCard: FunctionComponent<{
                         style={
                           style.flatten([
                             "body3",
-                            "color-gray-300",
+                            "color-white@60%",
                             "font-medium",
                           ]) as ViewStyle
                         }
                       >
-                        {formatBalance(amount)}
+                        {amount
+                          .maxDecimals(4)
+                          .trim(true)
+                          .shrink(true)
+                          .toString()}
                       </Text>
                     </View>
                     <View style={style.flatten(["items-end"])}>
@@ -245,18 +246,22 @@ export const DelegationsCard: FunctionComponent<{
                             style={
                               style.flatten([
                                 "body3",
-                                "color-dark",
+                                "color-white",
                                 "margin-right-2",
                               ]) as ViewStyle
                             }
                           >
-                            {formatFiatBalance(amountUSD)}
+                            {amountUSD
+                              .shrink(true)
+                              .maxDecimals(6)
+                              .trim(true)
+                              .toString()}
                           </Text>
                           <Text
                             style={
                               style.flatten([
                                 "body3",
-                                "color-gray-300",
+                                "color-white@60%",
                               ]) as ViewStyle
                             }
                           >
@@ -270,7 +275,7 @@ export const DelegationsCard: FunctionComponent<{
                     style={
                       style.flatten([
                         "height-1",
-                        "background-color-gray-100",
+                        "background-color-white@20%",
                         "margin-y-10",
                       ]) as ViewStyle
                     }
@@ -281,7 +286,7 @@ export const DelegationsCard: FunctionComponent<{
                         style.flatten([
                           "flex-1",
                           "text-caption2",
-                          "color-gray-300",
+                          "color-white@60%",
                         ]) as ViewStyle
                       }
                     >
@@ -296,17 +301,21 @@ export const DelegationsCard: FunctionComponent<{
                         style={
                           style.flatten([
                             "text-caption2",
-                            "color-dark",
+                            "color-white",
                           ]) as ViewStyle
                         }
                       >
-                        {formatBalance(reward, 6)}
+                        {reward
+                          .maxDecimals(6)
+                          .trim(true)
+                          .shrink(true)
+                          .toString()}
                       </Text>
                       <Text
                         style={
                           style.flatten([
                             "text-caption2",
-                            "color-gray-300",
+                            "color-white@60%",
                             "margin-left-2",
                           ]) as ViewStyle
                         }
@@ -319,12 +328,12 @@ export const DelegationsCard: FunctionComponent<{
               </BlurBackground>
             );
           })
-        ) : !queryDelegations.response && !queryDelegations.error ? (
+        ) : (
           <ActivityIndicator
             size="large"
-            color={style.get("color-dark").color}
+            color={style.get("color-white").color}
           />
-        ) : null}
+        )}
       </React.Fragment>
     );
   }

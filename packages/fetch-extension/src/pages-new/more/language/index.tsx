@@ -30,37 +30,33 @@ export const MoreLanguagePage: FunctionComponent = () => {
         analyticsStore.logEvent("back_click", { pageName: "Language" });
       }, [navigate])}
     >
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <Card
-          isActive={language.automatic}
-          heading={intl.formatMessage({
-            id: "setting.language.automatic",
-          })}
-          onClick={useCallback(() => {
-            language.clearLanguage();
-            navigate("/");
-          }, [navigate, language])}
-          rightContent={language.automatic ? selectedIcon : undefined}
-        />
-        <Card
-          isActive={!language.automatic && language.language == "en"}
-          heading={intl.formatMessage({
-            id: "setting.language.en",
-          })}
-          onClick={useCallback(() => {
-            language.setLanguage("en");
-            analyticsStore.logEvent("language_change_click", {
-              pageName: "Language",
-            });
-            navigate("/");
-          }, [navigate, language])}
-          rightContent={
-            !language.automatic && language.language == "en"
-              ? selectedIcon
-              : undefined
-          }
-        />
-        {/* <Card
+      <Card
+        isActive={language.automatic}
+        heading={intl.formatMessage({
+          id: "setting.language.automatic",
+        })}
+        onClick={useCallback(() => {
+          language.clearLanguage();
+          navigate("/");
+        }, [navigate, language])}
+        rightContent={language.automatic ? selectedIcon : undefined}
+      />
+      <Card
+        isActive={!language.automatic && language.language == "en"}
+        heading={intl.formatMessage({
+          id: "setting.language.en",
+        })}
+        onClick={useCallback(() => {
+          language.setLanguage("en");
+          navigate("/");
+        }, [navigate, language])}
+        rightContent={
+          !language.automatic && language.language == "en"
+            ? selectedIcon
+            : undefined
+        }
+      />
+      {/* <Card
         isActive={language.language == "ko"}
         heading={intl.formatMessage({
           id: "setting.language.ko",
@@ -75,7 +71,6 @@ export const MoreLanguagePage: FunctionComponent = () => {
             : undefined
         }
       /> */}
-      </div>
     </HeaderLayout>
   );
 };

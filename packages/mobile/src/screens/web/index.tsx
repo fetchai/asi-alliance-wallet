@@ -23,7 +23,7 @@ export const WebViewScreen: FunctionComponent = () => {
   const [isLoading, setLoading] = useState<boolean>(true);
 
   return (
-    <PageWithView backgroundMode={"secondary"}>
+    <PageWithView backgroundMode={"image"}>
       <WebView
         source={{ uri: url }}
         onLoadEnd={(syntheticEvent) => {

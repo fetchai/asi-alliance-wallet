@@ -1,18 +1,24 @@
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import style from "../style.module.scss";
 import { useNavigate } from "react-router";
 import { useIntl } from "react-intl";
-import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { Card } from "@components-v2/card";
 
-export const SecurityPrivacyPage: FunctionComponent = observer(() => {
+export const SecurityPrivacyPage: FunctionComponent = () => {
   const navigate = useNavigate();
   const { analyticsStore, keyRingStore } = useStore();
+  const [accountIndex, setAccountIndex] = useState<number>(0);
 
   const intl = useIntl();
-  const selectedKeyId = keyRingStore.selectedKeyInfo?.id;
+
+  useEffect(() => {
+    const firstAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
+      (value) => value.selected
+    );
+    setAccountIndex(firstAccountIndex);
+  }, [keyRingStore.multiKeyStoreInfo]);
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -33,50 +39,24 @@ export const SecurityPrivacyPage: FunctionComponent = observer(() => {
       <div className={style["container"]}>
         <Card
           style={{
+            background: "rgba(255,255,255,0.1)",
             marginBottom: "8px",
+            height: "78px",
             padding: "18px",
           }}
           leftImageStyle={{ background: "transparent" }}
           leftImage={require("@assets/svg/wireframe/key.svg")}
-          heading={`View ${
-            keyRingStore.selectedKeyInfo?.type === "mnemonic"
-              ? "mnemonic seed"
-              : "Private key"
-          }`}
+          heading={"View mnemonic seed"}
           onClick={() => {
-            if (!selectedKeyId) {
-              return;
-            }
-            navigate(`/more/export/${selectedKeyId}`, {
-              state: { type: keyRingStore.selectedKeyInfo?.type },
-            });
-            analyticsStore.logEvent("view_mnemonic_seed_click", {
-              pageName: "Security & Privacy",
-            });
-          }}
-        />
-        <Card
-          leftImage={require("@assets/svg/wireframe/change-password.svg")}
-          style={{
-            marginBottom: "8px",
-            padding: "18px",
-          }}
-          leftImageStyle={{ background: "transparent" }}
-          heading={
-            "Change Password"
-            //   intl.formatMessage({
-            //   id: "setting.permissions.get-chain-infos",
-            // })
-          }
-          onClick={() => {
-            navigate("/more/security-privacy/change-password");
-            analyticsStore.logEvent("change_password_click", {
+            navigate(`/more/export/${accountIndex}`);
+            analyticsStore.logEvent("wallet_access_permissions_click", {
               pageName: "Security & Privacy",
             });
           }}
         />
         <Card
           style={{
+            background: "rgba(255,255,255,0.1)",
             marginBottom: "8px",
             height: "78px",
             padding: "18px",
@@ -89,6 +69,9 @@ export const SecurityPrivacyPage: FunctionComponent = observer(() => {
           subheading={intl.formatMessage({
             id: "setting.connections.paragraph",
           })}
+          subheadingStyle={{
+            color: "rgba(255,255,255,0.6)",
+          }}
           onClick={() => {
             navigate("/more/security-privacy/connections");
             analyticsStore.logEvent("wallet_access_permissions_click", {
@@ -99,8 +82,10 @@ export const SecurityPrivacyPage: FunctionComponent = observer(() => {
         <Card
           leftImage={require("@assets/svg/wireframe/chain-list-access.svg")}
           style={{
+            background: "rgba(255,255,255,0.1)",
             marginBottom: "8px",
             height: "78px",
+            padding: "18px",
           }}
           leftImageStyle={{ background: "transparent" }}
           heading={intl.formatMessage({
@@ -109,6 +94,9 @@ export const SecurityPrivacyPage: FunctionComponent = observer(() => {
           subheading={intl.formatMessage({
             id: "setting.permissions.get-chain-infos.paragraph",
           })}
+          subheadingStyle={{
+            color: "rgba(255,255,255,0.6)",
+          }}
           onClick={() => {
             navigate("/more/permissions/get-chain-infos");
             analyticsStore.logEvent("chain_list_access_click", {
@@ -119,11 +107,11 @@ export const SecurityPrivacyPage: FunctionComponent = observer(() => {
         <Card
           leftImage={require("@assets/svg/wireframe/auto-lock-timer.svg")}
           style={{
-            paddingLeft: "18px",
+            background: "rgba(255,255,255,0.1)",
+            height: "78px",
+            padding: "18px",
           }}
-          leftImageStyle={{
-            background: "transparent",
-          }}
+          leftImageStyle={{ background: "transparent" }}
           heading={intl.formatMessage({
             id: "setting.autolock",
           })}
@@ -137,4 +125,4 @@ export const SecurityPrivacyPage: FunctionComponent = observer(() => {
       </div>
     </HeaderLayout>
   );
-});
+};

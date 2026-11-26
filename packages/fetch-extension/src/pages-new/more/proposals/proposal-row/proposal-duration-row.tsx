@@ -42,17 +42,6 @@ export const cardStatusTitle = (status: string) => {
   }
 };
 
-const formatVotingDate = (votingStartTime: string) => {
-  const date = moment(votingStartTime);
-  const currentYear = moment().year();
-
-  // Include year only if different from current year
-  const format =
-    date.year() === currentYear ? "ddd, MMM DD" : "ddd, MMM DD, YYYY";
-
-  return date.format(format);
-};
-
 export const ProposalDurationRow = ({
   voting_start_time,
   voting_end_time,
@@ -70,7 +59,7 @@ export const ProposalDurationRow = ({
             Voting start time
           </div>
           <div className={style["proposal-duration-date"]}>
-            {formatVotingDate(voting_start_time)}
+            {moment(voting_start_time).format("ddd, MMM DD")}
           </div>
         </div>
         <div className={style["proposal-duration"]}>
@@ -78,7 +67,7 @@ export const ProposalDurationRow = ({
             Voting end time
           </div>
           <div className={style["proposal-duration-date"]}>
-            {formatVotingDate(voting_end_time)}
+            {moment(voting_end_time).format("ddd, MMM DD")}
           </div>
         </div>
       </div>

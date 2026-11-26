@@ -11,12 +11,11 @@ import { Button, Popover, PopoverBody } from "reactstrap";
 import style from "./style.module.scss";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { PageButton } from "../page-button";
+import { MultiKeyStoreInfoWithSelectedElem } from "@keplr-wallet/background";
 import { FormattedMessage, useIntl } from "react-intl";
 import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
-import { KeyInfo } from "@keplr-wallet/background";
-import { isPrivateKeyType } from "@utils/index";
 
 export const SetKeyRingPage: FunctionComponent = observer(() => {
   const intl = useIntl();
@@ -67,29 +66,29 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
             </Button>
           </div>
         </div>
-        {keyRingStore.keyInfos.map((keyStore, i) => {
-          const bip44HDPath: any = keyStore.insensitive["bip44HDPath"]
-            ? keyStore.insensitive["bip44HDPath"]
+        {keyRingStore.multiKeyStoreInfo.map((keyStore, i) => {
+          const bip44HDPath = keyStore.bip44HDPath
+            ? keyStore.bip44HDPath
             : {
                 account: 0,
                 change: 0,
                 addressIndex: 0,
               };
-          let paragraph = keyStore.insensitive["email"]
-            ? keyStore.insensitive["email"]
+          let paragraph = keyStore.meta?.["email"]
+            ? keyStore.meta["email"]
             : undefined;
           if (keyStore.type === "keystone") {
             paragraph = "Keystone";
           } else if (keyStore.type === "ledger") {
             const coinType = (() => {
               if (
-                keyStore.insensitive &&
-                keyStore.insensitive["__ledger__cosmos_app_like__"] &&
-                keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
+                keyStore.meta &&
+                keyStore.meta["__ledger__cosmos_app_like__"] &&
+                keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
               ) {
                 return (
                   AppCoinType[
-                    keyStore.insensitive["__ledger__cosmos_app_like__"] as App
+                    keyStore.meta["__ledger__cosmos_app_like__"] as App
                   ] || 118
                 );
               }
@@ -97,20 +96,18 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
               return 118;
             })();
 
-            paragraph = `Ledger - m/44'/${coinType}'/${
-              bip44HDPath["account"]
-            }'${
+            paragraph = `Ledger - m/44'/${coinType}'/${bip44HDPath.account}'${
               bip44HDPath.change !== 0 || bip44HDPath.addressIndex !== 0
                 ? `/${bip44HDPath.change}/${bip44HDPath.addressIndex}`
                 : ""
             }`;
 
             if (
-              keyStore.insensitive &&
-              keyStore.insensitive["__ledger__cosmos_app_like__"] &&
-              keyStore.insensitive["__ledger__cosmos_app_like__"] !== "Cosmos"
+              keyStore.meta &&
+              keyStore.meta["__ledger__cosmos_app_like__"] &&
+              keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
             ) {
-              paragraph += ` (${keyStore.insensitive["__ledger__cosmos_app_like__"]})`;
+              paragraph += ` (${keyStore.meta["__ledger__cosmos_app_like__"]})`;
             }
           }
 
@@ -118,27 +115,27 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
             <PageButton
               key={i.toString()}
               title={`${
-                keyStore.name
-                  ? keyStore.name
+                keyStore.meta?.["name"]
+                  ? keyStore.meta["name"]
                   : intl.formatMessage({
                       id: "setting.keyring.unnamed-account",
                     })
               } ${
-                keyStore.isSelected
+                keyStore.selected
                   ? intl.formatMessage({
                       id: "setting.keyring.selected-account",
                     })
                   : ""
               }`}
-              paragraph={paragraph as string}
+              paragraph={paragraph}
               onClick={
-                keyStore.isSelected
+                keyStore.selected
                   ? undefined
                   : async (e) => {
                       e.preventDefault();
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
-                        await keyRingStore.selectKeyRing(keyStore.id);
+                        await keyRingStore.changeKeyRing(i);
                         analyticsStore.logEvent("select_account_click");
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();
@@ -155,13 +152,9 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
                       }
                     }
               }
-              style={keyStore.isSelected ? { cursor: "default" } : undefined}
+              style={keyStore.selected ? { cursor: "default" } : undefined}
               icons={[
-                <KeyRingToolsIcon
-                  key="tools"
-                  index={keyStore.id}
-                  keyStore={keyStore}
-                />,
+                <KeyRingToolsIcon key="tools" index={i} keyStore={keyStore} />,
               ]}
             />
           );
@@ -172,8 +165,8 @@ export const SetKeyRingPage: FunctionComponent = observer(() => {
 });
 
 const KeyRingToolsIcon: FunctionComponent<{
-  index: string;
-  keyStore: KeyInfo;
+  index: number;
+  keyStore: MultiKeyStoreInfoWithSelectedElem;
 }> = ({ index, keyStore }) => {
   const { analyticsStore } = useStore();
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -203,7 +196,7 @@ const KeyRingToolsIcon: FunctionComponent<{
             navigate("");
           }}
         >
-          {keyStore.type === "mnemonic" || isPrivateKeyType(keyStore.type) ? (
+          {keyStore.type === "mnemonic" || keyStore.type === "privateKey" ? (
             <div
               style={{ cursor: "pointer" }}
               onClick={(e) => {
@@ -215,9 +208,7 @@ const KeyRingToolsIcon: FunctionComponent<{
                     : "view_private_key_click"
                 );
 
-                navigate(`/more/export/${index}`, {
-                  state: { type: keyStore.type },
-                });
+                navigate(`/more/export/${index}?type=${keyStore.type}`);
               }}
             >
               <FormattedMessage
@@ -245,9 +236,7 @@ const KeyRingToolsIcon: FunctionComponent<{
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              analyticsStore.logEvent("delete_account_click", {
-                action: "Cancel",
-              });
+              analyticsStore.logEvent("delete_account_click", { action: "No" });
               navigate(`/setting/clear/${index}`);
             }}
           >

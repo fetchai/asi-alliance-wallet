@@ -1,62 +1,40 @@
-import "setimmediate";
-import { BackHandler } from "react-native";
-
-// RN 0.77 removed BackHandler.removeEventListener. Track subscriptions from
-// addEventListener so older libs (react-native-modal 13) and app code still work.
-if (typeof BackHandler.removeEventListener !== "function") {
-  const subscriptionsByEvent = new Map();
-  const originalAddEventListener =
-    BackHandler.addEventListener.bind(BackHandler);
-
-  BackHandler.addEventListener = (eventName, handler) => {
-    const subscription = originalAddEventListener(eventName, handler);
-    let handlers = subscriptionsByEvent.get(eventName);
-    if (!handlers) {
-      handlers = new Map();
-      subscriptionsByEvent.set(eventName, handlers);
-    }
-    handlers.set(handler, subscription);
-    return subscription;
-  };
-
-  BackHandler.removeEventListener = (eventName, handler) => {
-    const handlers = subscriptionsByEvent.get(eventName);
-    if (!handlers) {
-      return;
-    }
-    const subscription = handlers.get(handler);
-    if (subscription) {
-      subscription.remove();
-      handlers.delete(handler);
-    }
-  };
-}
-
-if (typeof Buffer === "undefined") {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  global.Buffer = require("buffer").Buffer;
-}
-
-if (!global.atob || !global.btoa) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const base64 = require("./shim-base64.js");
-  global.atob = base64.atob;
-  global.btoa = base64.btoa;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const TextEncodingPolyfill = require("text-encoding");
-Object.assign(global, {
-  TextEncoder: TextEncodingPolyfill.TextEncoder,
-  TextDecoder: TextEncodingPolyfill.TextDecoder,
-});
-
-import { polyfillWebCrypto } from "expo-standard-web-crypto";
+import { polyfillWebCrypto } from "react-native-crypto-polyfill";
 
 polyfillWebCrypto();
 // crypto is now globally defined
 
-import "react-native-url-polyfill/auto";
+if (typeof __dirname === "undefined") global.__dirname = "/";
+if (typeof __filename === "undefined") global.__filename = "";
+if (typeof process === "undefined") {
+  global.process = require("process");
+} else {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const bProcess = require("process");
+  for (const p in bProcess) {
+    if (!(p in process)) {
+      process[p] = bProcess[p];
+    }
+  }
+}
+
+process.browser = false;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+if (typeof Buffer === "undefined") global.Buffer = require("buffer").Buffer;
+
+if (!global.atob || !global.btoa) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Buffer = require("buffer").Buffer;
+  global.atob = (data) => {
+    return Buffer.from(data, "base64").toString();
+  };
+
+  global.btoa = (data) => {
+    return Buffer.from(data).toString("base64");
+  };
+}
+
+const isDev = typeof __DEV__ === "boolean" && __DEV__;
+process.env["NODE_ENV"] = isDev ? "development" : "production";
 
 import EventEmitter from "eventemitter3";
 

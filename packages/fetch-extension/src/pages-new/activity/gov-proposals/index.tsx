@@ -1,12 +1,12 @@
 import { observer } from "mobx-react-lite";
 import React, { FunctionComponent, useEffect, useState } from "react";
+import { CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB } from "../../../config.ui.var";
 import { useStore } from "../../../stores";
 import { FilterActivities, FilterDropdown } from "../filter";
 import { NoActivity } from "../no-activity";
 import { UnsupportedNetwork } from "../unsupported-network";
 import { govOptions } from "../utils";
 import { ActivityRow } from "./activity-row";
-import { isPureEvmChain } from "@utils/filters";
 
 export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
   observer(({}) => {
@@ -47,8 +47,7 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
     const handleFilterChange = (selectedFilter: string[]) => {
       setFilter(selectedFilter);
       analyticsStore.logEvent("activity_filter_click", {
-        tabName: "Gov Proposal",
-        pageName: "Activity",
+        pageName: "Transaction Tab",
       });
     };
 
@@ -82,8 +81,6 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
       setIsOpen(false);
     };
 
-    const isSupportedNetwork = !isPureEvmChain(current);
-
     return (
       <React.Fragment>
         <FilterDropdown
@@ -105,7 +102,10 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
           setIsOpen={setIsOpen}
           isOpen={isOpen}
         />
-        {isSupportedNetwork ? (
+        {current.chainId === CHAIN_ID_FETCHHUB ||
+        current.chainId === CHAIN_ID_DORADO ||
+        current.chainId === "test" ||
+        current.chainId === "test-local" ? (
           proposalNodes.length > 0 &&
           proposalNodes.filter((node: any) => filter.includes(node.option))
             .length > 0 ? (
@@ -117,20 +117,14 @@ export const GovProposalsTab: FunctionComponent<{ latestBlock: any }> =
                 ))}
             </React.Fragment>
           ) : (
-            <NoActivity
-              label="No Gov Proposal Activity Yet"
-              content="Governance proposals you’ve voted on will appear here"
-            />
+            <NoActivity label="No Gov Proposal Activity Yet" />
           )
         ) : (
           <UnsupportedNetwork chainID={current.chainName} />
         )}
 
         {filter.length === 0 && (
-          <NoActivity
-            label="No Gov Proposal Activity Yet"
-            content="Governance proposals you’ve voted on will appear here"
-          />
+          <NoActivity label="No Gov Proposal Activity Yet" />
         )}
       </React.Fragment>
     );

@@ -6,7 +6,7 @@ import React, {
 } from "react";
 import { BIP44Option } from "./bip44-option";
 import { useStyle } from "styles/index";
-import { ScrollView, Text, ViewStyle } from "react-native";
+import { Text, View, ViewStyle } from "react-native";
 import { InputCardView } from "components/new/card-view/input-card";
 
 const useZeroOrPositiveIntegerString = (initialValue: string) => {
@@ -64,19 +64,20 @@ export const BIP44AdvancedButton: FunctionComponent<{
           >
             HD Derivation Path
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={style.flatten(["margin-bottom-16"]) as ViewStyle}
-            contentContainerStyle={
-              style.flatten(["flex-row", "items-center"]) as ViewStyle
+          <View
+            style={
+              style.flatten([
+                "flex-row",
+                "items-center",
+                "margin-bottom-16",
+              ]) as ViewStyle
             }
           >
             <Text
               style={
                 style.flatten([
                   "body2",
-                  "color-black",
+                  "color-white",
                   "margin-right-4",
                 ]) as ViewStyle
               }
@@ -84,7 +85,6 @@ export const BIP44AdvancedButton: FunctionComponent<{
             <InputCardView
               value={bip44Option.account.toString()}
               containerStyle={style.flatten(["min-width-72"]) as ViewStyle}
-              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               keyboardType="number-pad"
               onChangeText={(value: string) => {
                 if (value) {
@@ -109,14 +109,13 @@ export const BIP44AdvancedButton: FunctionComponent<{
               }}
             />
             <Text
-              style={style.flatten(["color-black", "margin-x-4"]) as ViewStyle}
+              style={style.flatten(["color-white", "margin-x-4"]) as ViewStyle}
             >
               ’/
             </Text>
             <InputCardView
               value={bip44Option.change.toString()}
               containerStyle={style.flatten(["min-width-72"]) as ViewStyle}
-              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               keyboardType="number-pad"
               onChangeText={(value: string) => {
                 if (value) {
@@ -144,14 +143,13 @@ export const BIP44AdvancedButton: FunctionComponent<{
               }}
             />
             <Text
-              style={style.flatten(["color-black", "margin-x-4"]) as ViewStyle}
+              style={style.flatten(["color-white", "margin-x-4"]) as ViewStyle}
             >
               /
             </Text>
             <InputCardView
               value={bip44Option.index.toString()}
               containerStyle={style.flatten(["min-width-72"]) as ViewStyle}
-              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               keyboardType="number-pad"
               onChangeText={(value: string) => {
                 if (value) {
@@ -175,7 +173,7 @@ export const BIP44AdvancedButton: FunctionComponent<{
                 }
               }}
             />
-          </ScrollView>
+          </View>
           {change.isValid && !isChangeZeroOrOne ? (
             <Text
               style={

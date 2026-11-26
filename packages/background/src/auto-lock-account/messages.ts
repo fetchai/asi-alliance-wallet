@@ -1,4 +1,4 @@
-import { KeplrError, Message } from "@keplr-wallet/router";
+import { Message } from "@keplr-wallet/router";
 import { ROUTE } from "./constants";
 
 export class GetAutoLockAccountDurationMsg extends Message<number> {
@@ -34,11 +34,7 @@ export class UpdateAutoLockAccountDurationMsg extends Message<void> {
 
   validateBasic(): void {
     if (this.duration < 0) {
-      throw new KeplrError(
-        "auto-lock-account",
-        101,
-        "duration cannot be set to a negative number."
-      );
+      throw new Error("duration cannot be set to a negative number.");
     }
   }
 
@@ -70,74 +66,5 @@ export class StartAutoLockMonitoringMsg extends Message<void> {
 
   type(): string {
     return StartAutoLockMonitoringMsg.type();
-  }
-}
-
-export class GetLockOnSleepMsg extends Message<boolean> {
-  public static type() {
-    return "get-lock-on-sleep";
-  }
-
-  constructor() {
-    super();
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  type(): string {
-    return GetLockOnSleepMsg.type();
-  }
-}
-
-export class SetLockOnSleepMsg extends Message<void> {
-  public static type() {
-    return "set-lock-on-sleep";
-  }
-
-  constructor(public readonly lockOnSleep: boolean) {
-    super();
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  type(): string {
-    return SetLockOnSleepMsg.type();
-  }
-}
-
-export class GetAutoLockStateMsg extends Message<{
-  duration: number;
-  lockOnSleep: boolean;
-}> {
-  public static type() {
-    return "get-auto-lock-state";
-  }
-
-  constructor() {
-    super();
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return ROUTE;
-  }
-
-  type(): string {
-    return GetAutoLockStateMsg.type();
   }
 }

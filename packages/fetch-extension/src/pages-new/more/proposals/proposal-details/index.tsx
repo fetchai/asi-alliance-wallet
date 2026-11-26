@@ -13,13 +13,6 @@ import { ProposalDurationRow } from "../proposal-row/proposal-duration-row";
 import { ProgressBar } from "./progress-bar";
 import style from "./style.module.scss";
 import { VoteDropdown } from "./vote-dropdown";
-import Markdown from "react-markdown";
-import {
-  CHAIN_ID_FETCHHUB,
-  CHAIN_ID_DORADO,
-  CHAIN_ID_GEMINI,
-} from "../../../../config.ui.var";
-import { explorerBaseURL } from "@utils/index";
 
 type TallyResult = {
   title: string;
@@ -40,7 +33,6 @@ export const ProposalDetail = observer(() => {
   const accountInfo = accountStore.getAccount(current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
   const proposal = queries.cosmos.queryGovernance.getProposal(id || "");
-  const chainId = current.chainId;
 
   useEffect(() => {
     if (proposal) {
@@ -109,7 +101,7 @@ export const ProposalDetail = observer(() => {
     proposal?.proposalStatus === Governance.ProposalStatus.VOTING_PERIOD;
 
   const { setIsDropdownOpen } = useDropdown();
-  const { analyticsStore } = useStore();
+
   return (
     <HeaderLayout
       showChainName={false}
@@ -132,7 +124,7 @@ export const ProposalDetail = observer(() => {
                 {proposal?.raw.content.title}
               </div>
               <div className={style["description"]}>
-                <Markdown>{proposal?.raw.content.description}</Markdown>
+                {proposal?.raw.content.description}
               </div>
             </div>
 
@@ -141,39 +133,28 @@ export const ProposalDetail = observer(() => {
               voting_end_time={proposal?.raw.voting_end_time}
               status={proposal?.raw.status}
             />
-            {[CHAIN_ID_FETCHHUB, CHAIN_ID_DORADO, CHAIN_ID_GEMINI].includes(
-              chainId
-            ) && (
-              <Link
-                to={`${explorerBaseURL(chainId)}/proposals/${id}`}
-                target="_blank"
-                onClick={() => {
-                  analyticsStore.logEvent(
-                    "proposal_view_in_block_explorer_click",
-                    {
-                      pageName: "Proposals",
-                    }
-                  );
+
+            <Link
+              to={`https://www.mintscan.io/fetchai/proposals/${id}`}
+              target="_blank"
+            >
+              <Card
+                style={{
+                  cursor: "pointer",
                 }}
-              >
-                <Card
-                  style={{
-                    cursor: "pointer",
-                  }}
-                  heading="View full text of the proposal"
-                  leftImage={require("@assets/svg/wireframe/proposal.svg")}
-                  rightContent={require("@assets/svg/wireframe/external-link.svg")}
-                  leftImageStyle={{
-                    height: "32px",
-                    width: "32px",
-                    padding: "4px",
-                  }}
-                />
-              </Link>
-            )}
+                heading="View full text of the proposal"
+                leftImage={require("@assets/svg/wireframe/proposal.svg")}
+                rightContent={require("@assets/svg/wireframe/external-link.svg")}
+                leftImageStyle={{
+                  height: "32px",
+                  width: "32px",
+                  padding: "4px",
+                }}
+              />
+            </Link>
 
             <div className={style["turnout"]}>
-              <div className={style["label"]}>TURNOUT</div>
+              <div className={style["label"]}>Turnout</div>
               <ProgressBar
                 progressWidth={
                   parseInt(proposal?.turnout.toString() || "0") ?? 0
@@ -183,7 +164,7 @@ export const ProposalDetail = observer(() => {
                   .trim(true)
                   .maxDecimals(2)
                   .toString()}%`}
-                bgColor="var(--bg-green-lightest)"
+                bgColor="rgba(249, 119, 75, 1)"
                 isShowPercentage={false}
               />
             </div>
@@ -200,7 +181,7 @@ export const ProposalDetail = observer(() => {
                   height="54px"
                   borderRadius="12px"
                   title={item.title}
-                  bgColor="var(--bg-green-base)"
+                  bgColor={item.color}
                   isShowPercentage={true}
                   isYourVote={voted === item.isVote}
                 />
@@ -216,11 +197,13 @@ export const ProposalDetail = observer(() => {
 
           <ButtonV2
             text={voteText}
-            variant={voted !== "Unspecified" ? "dark" : "light"}
             styleProps={{
-              width: "100%",
+              width: "336px",
               padding: "12px",
               height: "56px",
+              background: voted !== "Unspecified" ? "transparent" : "",
+              color: voted !== "Unspecified" ? "white" : "",
+              border: "1px solid rgba(255,255,255,0.4)",
             }}
             disabled={!voteEnabled || !accountInfo.isReadyToSendTx}
             onClick={() => {

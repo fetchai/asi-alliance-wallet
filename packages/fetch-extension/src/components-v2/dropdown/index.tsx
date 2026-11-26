@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import style from "./style.module.scss";
 import { useDropdown } from "./dropdown-context";
-import { PropsWithChildren } from "react";
 
 export interface DropdownProps {
   isOpen?: boolean;
@@ -13,7 +12,7 @@ export interface DropdownProps {
   showTopNav?: boolean;
 }
 
-export const Dropdown: React.FC<PropsWithChildren<DropdownProps>> = ({
+export const Dropdown: React.FC<DropdownProps> = ({
   children,
   title,
   setIsOpen,
@@ -40,18 +39,14 @@ export const Dropdown: React.FC<PropsWithChildren<DropdownProps>> = ({
         <div className={style["header"]}>
           {title}
           {showCloseIcon && (
-            <div
-              className={style["closeIconContainer"]}
+            <img
+              className={style["closeIcon"]}
               onClick={() => {
                 closeClicked();
                 setIsOpen(false);
               }}
-            >
-              <img
-                className={style["closeIcon"]}
-                src={require("@assets/svg/wireframe/xmark.svg")}
-              />
-            </div>
+              src={require("@assets/svg/wireframe/xmark.svg")}
+            />
           )}
         </div>
         {children}

@@ -7,7 +7,7 @@ import { getActivityIcon, getDetails } from "../utils";
 
 export const ActivityRow = ({ node, setDate }: { node: any; setDate: any }) => {
   const navigate = useNavigate();
-  const { chainStore, analyticsStore } = useStore();
+  const { chainStore } = useStore();
 
   useEffect(() => {
     const details = getDetails(node, chainStore);
@@ -24,26 +24,18 @@ export const ActivityRow = ({ node, setDate }: { node: any; setDate: any }) => {
     <React.Fragment>
       <div
         className={style["activityRow"]}
-        onClick={() => {
+        onClick={() =>
           navigate("/activity-details", {
             state: {
               nodeId: node.id,
             },
-          });
-          analyticsStore.logEvent("activity_transactions_click", {
-            tabName: "Transactions",
-            pageName: "Activity",
-          });
-        }}
+          })
+        }
       >
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div className={style["leftImage"]}>
             <img
-              className={
-                details.verb !== "Governance Proposal"
-                  ? style["img"]
-                  : style["imgProposal"]
-              }
+              className={style["img"]}
               src={getActivityIcon(typeUrl, details.verb)}
               alt={typeUrl}
             />

@@ -1,33 +1,23 @@
-@import "../../styles/var";
-
-.emptyLayout {
-  background-color: white;
-}
-
 .container {
   display: flex;
   flex-direction: column;
-  font-family: $font-family-base;
   height: 100%;
 
   .header {
     margin-top: 20px;
     text-align: center;
-    font-weight: 500;
-    color: $font-dark;
   }
 
   .paragraph {
     text-align: center;
     padding: 0 24px;
     overflow-y: auto;
-    color: $font-secondary;
   }
 
   .permission {
     margin-top: 30px;
     font-size: 14px;
-    color: $font-secondary;
+    color: #525f7f;
     text-align: center;
   }
 
@@ -37,7 +27,7 @@
     padding: 0;
     width: fit-content;
     margin: auto;
-    color: $font-secondary;
+    color: #525f7f;
 
     li:before {
       content: "- ";
@@ -46,8 +36,6 @@
 
   .buttons {
     display: flex;
-    margin-bottom: 10px;
-    gap: 10px;
   }
 
   .button {

@@ -5,13 +5,13 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { LedgerApp, TryLedgerInitMsg } from "@keplr-wallet/background";
-import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
-import { isKeyRingRejection } from "../../utils/rejection";
+import {
+  InitNonDefaultLedgerAppMsg,
+  LedgerApp,
+} from "@keplr-wallet/background";
 
 export const LedgerAppModal: FunctionComponent = observer(() => {
-  const { chainStore, accountStore, ledgerInitStore, keyRingStore } =
-    useStore();
+  const { chainStore, accountStore } = useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   // [prev, current]
@@ -30,7 +30,17 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const isOpen = isKeyRingRejection(accountInfo.rejectionReason, 901);
+  const isOpen = (() => {
+    if (
+      accountInfo.rejectionReason &&
+      accountInfo.rejectionReason.message ===
+        "No Ethereum public key. Initialize Ethereum app on Ledger by selecting the chain in the extension"
+    ) {
+      return true;
+    }
+
+    return false;
+  })();
 
   return (
     <Modal isOpen={isOpen} centered>
@@ -76,25 +86,11 @@ export const LedgerAppModal: FunctionComponent = observer(() => {
               setIsLoading(true);
 
               try {
-                const pubkey =
-                  await new InExtensionMessageRequester().sendMessage(
-                    BACKGROUND_PORT,
-                    new TryLedgerInitMsg(
-                      LedgerApp.Ethereum,
-                      ledgerInitStore.cosmosLikeApp || "Cosmos"
-                    )
-                  );
-                if (keyRingStore?.selectedKeyInfo) {
-                  await keyRingStore.appendLedgerKeyApp(
-                    keyRingStore.selectedKeyInfo.id,
-                    pubkey,
-                    "Ethereum"
-                  );
-                  dispatchGlobalEventExceptSelf(
-                    "keplr_ledger_app_connected",
-                    keyRingStore.selectedKeyInfo.id
-                  );
-                }
+                await new InExtensionMessageRequester().sendMessage(
+                  BACKGROUND_PORT,
+                  new InitNonDefaultLedgerAppMsg(LedgerApp.Ethereum)
+                );
+
                 accountInfo.disconnect();
 
                 await accountInfo.init();

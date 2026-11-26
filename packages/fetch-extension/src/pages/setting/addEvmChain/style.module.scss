@@ -4,26 +4,20 @@
   flex-direction: column;
   height: 100%;
   label {
-    color: $font-secondary;
+    color: rgba(255, 255, 255, 0.6);
   }
   input:read-only {
     background: rgba(255, 255, 255, 0.1);
-    color: $font-dark;
+    color: white;
   }
 }
 
 .formGroup {
-  margin-bottom: 1rem;
+  margin-bottom: 2.5rem;
 }
 
 .info {
   color: green;
-}
-
-.infoMessage {
-  color: $font-secondary;
-  font-size: 12px;
-  margin: 4px 0px;
 }
 
 .inputField,
@@ -33,5 +27,6 @@
   align-items: center;
   align-self: stretch;
   border-radius: 12px;
-  color: $font-dark;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
 }

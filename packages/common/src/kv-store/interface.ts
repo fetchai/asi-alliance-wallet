@@ -9,6 +9,6 @@ export interface MultiGet {
 }
 
 export interface KVStoreProvider {
-  get(key: string): Promise<{ [key: string]: any }>;
+  get(): Promise<{ [key: string]: any }>;
   set(items: { [key: string]: any }): Promise<void>;
 }

@@ -66,7 +66,7 @@ export const SendToken: React.FC<SendTokenProps> = ({
       };
       const txn: DeliverTxResponse = (await api.sendToken(
         requestOptions
-      )) as unknown as DeliverTxResponse;
+      )) as DeliverTxResponse;
       console.log(txn);
       setIsTrsnxInProgress(false);
       navigate("/axl-bridge-cosmos");

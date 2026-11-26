@@ -298,7 +298,7 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
       );
     }
 
-    if (this.chainId === "eip155:1") {
+    if (this.chainId === "1") {
       const ethereumFees = this.queriesStore.get(this.chainId).evm
         ?.queryEthGasFees.fees;
 
@@ -315,9 +315,7 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
       }
     }
 
-    if (
-      this.chainGetter.getChain(this.chainId).features?.includes("eth-key-sign")
-    ) {
+    if (this.chainGetter.getChain(this.chainId).features?.includes("evm")) {
       const evmGasPrice = this.queriesStore.get(this.chainId).evm?.queryGasPrice
         .gasPrice;
       if (evmGasPrice) {
@@ -383,7 +381,7 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
     // For legacy support
     // Fallback gas price step to legacy chain info which includes gas price step field in root,
     // if there is no gas price step in fee currency.
-    const chainInfoWithGasPriceStep = (this.chainInfo.embedded ?? {}) as {
+    const chainInfoWithGasPriceStep = (this.chainInfo.raw ?? {}) as {
       gasPriceStep?: {
         low: number;
         average: number;
@@ -505,7 +503,7 @@ export class FeeConfig extends TxChainSetter implements IFeeConfig {
       return undefined;
     }
 
-    if (this.chainId === "eip155:1") {
+    if (this.chainId === "1") {
       const ethereumFeesQuery = this.queriesStore.get(this.chainId).evm
         ?.queryEthGasFees;
 

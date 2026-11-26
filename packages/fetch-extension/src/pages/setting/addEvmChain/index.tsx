@@ -6,16 +6,13 @@ import { Form } from "reactstrap";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import style from "./style.module.scss";
 import { useStore } from "../../../stores";
+import { Bech32Address } from "@keplr-wallet/cosmos";
 import axios from "axios";
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { ChainInfo } from "@keplr-wallet/types";
-import { Bech32Address } from "@keplr-wallet/cosmos";
-import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
-import { useNotification } from "@components/notification";
 
 export const AddEvmChain: FunctionComponent = () => {
   const navigate = useNavigate();
-  const notification = useNotification();
   const { chainStore, analyticsStore } = useStore();
   const [hasErrors, setHasErrors] = useState(false);
   const [info, setInfo] = useState("");
@@ -57,15 +54,10 @@ export const AddEvmChain: FunctionComponent = () => {
         },
       },
     ],
-    features: ["eth-address-gen", "eth-key-sign"],
+    features: ["evm"],
+    explorerUrl: "",
   };
   const [newChainInfo, setNewChainInfo] = useState(initialState);
-
-  const toEip155ChainId = (evmChainId: number) => `eip155:${evmChainId}`;
-
-  const hasExistingEvmChain = (evmChainId: number) => {
-    return chainStore.hasChain(toEip155ChainId(evmChainId));
-  };
 
   const getChainInfo = async (rpcUrl: string) => {
     loadingIndicator.setIsLoading("chain-details", true);
@@ -89,10 +81,9 @@ export const AddEvmChain: FunctionComponent = () => {
         return;
       }
 
-      const evmChainId = parseInt(response.data.result, 16);
-      const caip2ChainId = toEip155ChainId(evmChainId);
+      const chainId = parseInt(response.data.result, 16);
 
-      if (hasExistingEvmChain(evmChainId)) {
+      if (chainStore.hasChain(chainId.toString())) {
         setInfo(
           "Network already exists. You can go to network settings if you want to update the RPC"
         );
@@ -100,20 +91,10 @@ export const AddEvmChain: FunctionComponent = () => {
         return;
       }
 
-      const baseChainInfo = {
+      setNewChainInfo({
         ...newChainInfo,
-        chainId: caip2ChainId,
-        rpc: rpcUrl,
-        rest: rpcUrl,
-        updateFromRepoDisabled: true,
-        evm: {
-          chainId: evmChainId,
-          rpc: rpcUrl,
-          websocket: "",
-        },
-      };
-
-      setNewChainInfo(baseChainInfo);
+        chainId: chainId.toString(),
+      });
 
       const chains = await axios.get("https://chainid.network/chains.json");
       if (chains.status !== 200) {
@@ -124,38 +105,37 @@ export const AddEvmChain: FunctionComponent = () => {
       }
 
       const chainData = chains.data.find(
-        (element: any) => evmChainId === element.chainId
+        (element: any) => chainId === element.chainId
       );
 
       if (chainData) {
         setInfo("We've fetched information based on the provided RPC.");
         const symbol = chainData.nativeCurrency.symbol;
-        const coinMinimalDenom = symbol.toLowerCase();
         setNewChainInfo({
-          ...baseChainInfo,
+          ...newChainInfo,
           currencies: [
             {
               coinDenom: symbol,
-              coinMinimalDenom,
+              coinMinimalDenom: symbol,
               coinDecimals: chainData.nativeCurrency
                 ? chainData.nativeCurrency.decimals
-                : 18,
+                : 0,
             },
           ],
           stakeCurrency: {
             coinDenom: symbol,
-            coinMinimalDenom,
+            coinMinimalDenom: symbol,
             coinDecimals: chainData.nativeCurrency
               ? chainData.nativeCurrency.decimals
-              : 18,
+              : 0,
           },
           feeCurrencies: [
             {
               coinDenom: symbol,
-              coinMinimalDenom,
+              coinMinimalDenom: symbol,
               coinDecimals: chainData.nativeCurrency
                 ? chainData.nativeCurrency.decimals
-                : 18,
+                : 0,
               gasPriceStep: {
                 low: 10000000000,
                 average: 10000000000,
@@ -163,8 +143,16 @@ export const AddEvmChain: FunctionComponent = () => {
               },
             },
           ],
+          rpc: rpcUrl,
+          rest: rpcUrl,
+          chainId: chainId.toString(),
           chainName: chainData.name,
-        } as ChainInfo);
+          bech32Config: Bech32Address.defaultBech32Config(symbol.toLowerCase()),
+          explorerUrl:
+            chainData.explorers && chainData.explorers.length > 0
+              ? chainData.explorers[0].url
+              : undefined,
+        });
       } else {
         setInfo(
           "We've fetched chain id based on the provided RPC. You will need to enter other details manaually"
@@ -254,91 +242,14 @@ export const AddEvmChain: FunctionComponent = () => {
     }
   };
 
-  const buildChainInfoToAdd = (): ChainInfo & {
-    updateFromRepoDisabled: boolean;
-  } => {
-    const evmChainId =
-      newChainInfo.evm?.chainId ??
-      parseInt(newChainInfo.chainId.replace(/^eip155:/, ""), 10);
-    const rpc = newChainInfo.rpc.trim();
-    const symbol = newChainInfo.currencies[0].coinDenom;
-    const coinMinimalDenom =
-      newChainInfo.currencies[0].coinMinimalDenom || symbol.toLowerCase();
-    const coinDecimals = newChainInfo.currencies[0].coinDecimals || 18;
+  const isValid = !hasErrors && newChainInfo.rpc && newChainInfo.chainId;
 
-    return {
-      ...newChainInfo,
-      chainId: toEip155ChainId(evmChainId),
-      rpc,
-      rest: rpc,
-      updateFromRepoDisabled: true,
-      evm: {
-        chainId: evmChainId,
-        rpc,
-        websocket: newChainInfo.evm?.websocket ?? "",
-      },
-      currencies: [
-        {
-          coinDenom: symbol,
-          coinMinimalDenom,
-          coinDecimals,
-        },
-      ],
-      stakeCurrency: {
-        coinDenom: symbol,
-        coinMinimalDenom,
-        coinDecimals,
-      },
-      feeCurrencies: [
-        {
-          ...newChainInfo.feeCurrencies[0],
-          coinDenom: symbol,
-          coinMinimalDenom,
-          coinDecimals,
-        },
-      ],
-    };
-  };
-
-  const isValid =
-    !hasErrors &&
-    newChainInfo.rpc &&
-    newChainInfo.chainId &&
-    newChainInfo.chainName &&
-    newChainInfo.currencies[0].coinDenom &&
-    newChainInfo.currencies[0].coinDecimals > 0;
-
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
-    const chainInfoToAdd = buildChainInfoToAdd();
     try {
-      loadingIndicator.setIsLoading("chain-suggest-switch", true);
-      await chainStore.addCustomChainInfo(chainInfoToAdd);
-      dispatchGlobalEventExceptSelf("keplr_suggested_chain_added");
-      await chainStore.selectChain(chainInfoToAdd.chainId);
-      await chainStore.saveLastViewChainId();
-      notification.push({
-        type: "success",
-        placement: "top-center",
-        duration: 5,
-        content: `Succesfully added chain ${chainInfoToAdd.chainName}`,
-        canDelete: true,
-        transition: { duration: 0.25 },
-      });
-      navigate("/", { replace: true });
-      analyticsStore.logEvent("add_chain_click", {
-        pageName: "Add new EVM chain",
-      });
+      chainStore.addEVMChainInfo(newChainInfo);
+      chainStore.selectChain(newChainInfo.chainId);
     } catch (error) {
-      notification.push({
-        type: "danger",
-        placement: "top-center",
-        duration: 5,
-        content: error.message || "Unable to add custom chain",
-        canDelete: true,
-        transition: { duration: 0.25 },
-      });
-      loadingIndicator.setIsLoading("chain-suggest-switch", false);
       console.log("error", error);
     }
   };
@@ -360,7 +271,6 @@ export const AddEvmChain: FunctionComponent = () => {
     >
       <Form onSubmit={handleSubmit} className={style["container"]}>
         <Input
-          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="RPC URL"
           type="text"
@@ -369,9 +279,19 @@ export const AddEvmChain: FunctionComponent = () => {
           onChange={handleChange}
           required
         />
-        {info && <p className={style["infoMessage"]}>{info}</p>}
+        {info && (
+          <p
+            style={{
+              color: "rgba(255, 255, 255, 0.6)",
+              fontSize: "12px",
+              marginTop: "4px",
+              marginBottom: "0px",
+            }}
+          >
+            {info}
+          </p>
+        )}
         <Input
-          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Chain id"
           type="text"
@@ -381,7 +301,6 @@ export const AddEvmChain: FunctionComponent = () => {
           required
         />
         <Input
-          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Network Name"
           type="text"
@@ -391,7 +310,6 @@ export const AddEvmChain: FunctionComponent = () => {
           required
         />
         <Input
-          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Symbol"
           type="text"
@@ -401,7 +319,6 @@ export const AddEvmChain: FunctionComponent = () => {
           required
         />
         <Input
-          formGroupClassName={style["formGroup"]}
           className={style["inputField"]}
           label="Decimal"
           type="number"
@@ -410,32 +327,28 @@ export const AddEvmChain: FunctionComponent = () => {
           onChange={handleChange}
           required
         />
-        {/* <Input
-          formGroupClassName={style["formGroup"]}
+        <Input
           className={style["inputField"]}
           label="Explorer Url"
           type="text"
           name="explorerUrl"
-          value={newChainInfo?.explorerUrl ?? ""}
+          value={newChainInfo.explorerUrl}
           onChange={handleChange}
-        /> */}
+        />
         <ButtonV2
-          variant="dark"
           styleProps={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.4)",
+            color: "white",
             height: "48px",
             fontSize: "14px",
             fontWeight: 400,
           }}
           disabled={!isValid}
-          text={
-            loadingIndicator.isLoading("chain-suggest-switch") ||
-            loadingIndicator.isLoading("chain-details")
-              ? "Loading..."
-              : "Add Chain"
-          }
+          text={"Add Chain"}
         />
       </Form>
     </HeaderLayout>

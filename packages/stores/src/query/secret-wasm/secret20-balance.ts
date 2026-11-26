@@ -1,61 +1,45 @@
-import { computed, makeObservable } from "mobx";
-import { DenomHelper } from "@keplr-wallet/common";
-import { QuerySharedContext } from "../../common";
-import { ChainGetter } from "../../chain";
+import { computed, makeObservable, override } from "mobx";
+import { DenomHelper, KVStore } from "@keplr-wallet/common";
+import { ChainGetter, QueryResponse } from "../../common";
 import { ObservableQuerySecretContractCodeHash } from "./contract-hash";
+import { QueryError } from "../../common";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { BalanceRegistry, IObservableQueryBalanceImpl } from "../balances";
+import { BalanceRegistry, ObservableQueryBalanceInner } from "../balances";
 import { ObservableSecretContractChainQuery } from "./contract-query";
 import { WrongViewingKeyError } from "./errors";
-import { AppCurrency, Keplr } from "@keplr-wallet/types";
+import { Keplr } from "@keplr-wallet/types";
 
-export class ObservableQuerySecret20BalanceImpl
-  extends ObservableSecretContractChainQuery<{
-    balance: { amount: string };
-    ["viewing_key_error"]?: {
-      msg: string;
-    };
-  }>
-  implements IObservableQueryBalanceImpl
-{
-  protected readonly viewingKey: string;
-
+export class ObservableQuerySecret20Balance extends ObservableSecretContractChainQuery<{
+  balance: { amount: string };
+  ["viewing_key_error"]?: {
+    msg: string;
+  };
+}> {
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    apiGetter: () => Promise<Keplr | undefined>,
-    protected readonly denomHelper: DenomHelper,
+    protected override readonly apiGetter: () => Promise<Keplr | undefined>,
+    protected override readonly contractAddress: string,
     protected readonly bech32Address: string,
-    querySecretContractCodeHash: ObservableQuerySecretContractCodeHash
+    protected readonly viewingKey: string,
+    protected override readonly querySecretContractCodeHash: ObservableQuerySecretContractCodeHash
   ) {
-    if (denomHelper.type !== "secret20") {
-      throw new Error(`Denom helper must be secret20: ${denomHelper.denom}`);
-    }
-    const currency = chainGetter
-      .getChain(chainId)
-      .forceFindCurrency(denomHelper.denom);
-    let viewingKey = "";
-    if ("type" in currency && currency.type === "secret20") {
-      viewingKey = currency.viewingKey;
-    }
     super(
-      sharedContext,
+      kvStore,
       chainId,
       chainGetter,
       apiGetter,
-      denomHelper.contractAddress,
+      contractAddress,
       {
         balance: { address: bech32Address, key: viewingKey },
       },
       querySecretContractCodeHash
     );
 
-    this.viewingKey = viewingKey;
-
     makeObservable(this);
 
-    if (!viewingKey) {
+    if (!this.viewingKey) {
       this.setError({
         status: 0,
         statusText: "Viewing key is empty",
@@ -73,19 +57,90 @@ export class ObservableQuerySecret20BalanceImpl
   protected override async fetchResponse(
     abortController: AbortController
   ): Promise<{
-    data: { balance: { amount: string } };
+    response: QueryResponse<{ balance: { amount: string } }>;
     headers: any;
   }> {
-    const { data, headers } = await super.fetchResponse(abortController);
+    const { response, headers } = await super.fetchResponse(abortController);
 
-    if (data["viewing_key_error"]) {
-      throw new WrongViewingKeyError(data["viewing_key_error"]?.msg);
+    if (response.data["viewing_key_error"]) {
+      throw new WrongViewingKeyError(response.data["viewing_key_error"]?.msg);
     }
 
     return {
       headers,
-      data,
+      response,
     };
+  }
+}
+
+export class ObservableQuerySecret20BalanceInner extends ObservableQueryBalanceInner {
+  protected readonly querySecret20Balance: ObservableQuerySecret20Balance;
+
+  constructor(
+    kvStore: KVStore,
+    chainId: string,
+    chainGetter: ChainGetter,
+    protected readonly apiGetter: () => Promise<Keplr | undefined>,
+    denomHelper: DenomHelper,
+    protected readonly bech32Address: string,
+    protected readonly querySecretContractCodeHash: ObservableQuerySecretContractCodeHash
+  ) {
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      // No need to set the url at initial.
+      "",
+      denomHelper
+    );
+
+    makeObservable(this);
+
+    const viewingKey = (() => {
+      const currency = this.currency;
+      if ("type" in currency && currency.type === "secret20") {
+        return currency.viewingKey;
+      }
+
+      return "";
+    })();
+
+    this.querySecret20Balance = new ObservableQuerySecret20Balance(
+      kvStore,
+      chainId,
+      chainGetter,
+      this.apiGetter,
+      denomHelper.contractAddress,
+      bech32Address,
+      viewingKey,
+      this.querySecretContractCodeHash
+    );
+  }
+
+  // This method doesn't have the role because the fetching is actually exeucnted in the `ObservableQuerySecret20Balance`.
+  protected override canFetch(): boolean {
+    return false;
+  }
+
+  @override
+  override *fetch() {
+    yield this.querySecret20Balance.fetch();
+  }
+
+  override get isFetching(): boolean {
+    return (
+      this.querySecretContractCodeHash.getQueryContract(
+        this.denomHelper.contractAddress
+      ).isFetching || this.querySecret20Balance.isFetching
+    );
+  }
+
+  override get error(): Readonly<QueryError<unknown>> | undefined {
+    return (
+      this.querySecretContractCodeHash.getQueryContract(
+        this.denomHelper.contractAddress
+      ).error || this.querySecret20Balance.error
+    );
   }
 
   @computed
@@ -100,39 +155,37 @@ export class ObservableQuerySecret20BalanceImpl
       throw new Error(`Unknown currency: ${denom}`);
     }
 
-    if (!this.response || !this.response.data.balance) {
+    if (
+      !this.querySecret20Balance.response ||
+      !this.querySecret20Balance.response.data.balance
+    ) {
       return new CoinPretty(currency, new Int(0)).ready(false);
     }
 
-    return new CoinPretty(currency, new Int(this.response.data.balance.amount));
-  }
-
-  @computed
-  get currency(): AppCurrency {
-    const denom = this.denomHelper.denom;
-
-    const chainInfo = this.chainGetter.getChain(this.chainId);
-    return chainInfo.forceFindCurrency(denom);
+    return new CoinPretty(
+      currency,
+      new Int(this.querySecret20Balance.response.data.balance.amount)
+    );
   }
 }
 
 export class ObservableQuerySecret20BalanceRegistry implements BalanceRegistry {
   constructor(
-    protected readonly sharedContext: QuerySharedContext,
+    protected readonly kvStore: KVStore,
     protected readonly apiGetter: () => Promise<Keplr | undefined>,
     protected readonly querySecretContractCodeHash: ObservableQuerySecretContractCodeHash
   ) {}
 
-  getBalanceImpl(
+  getBalanceInner(
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string,
     minimalDenom: string
-  ): IObservableQueryBalanceImpl | undefined {
+  ): ObservableQueryBalanceInner | undefined {
     const denomHelper = new DenomHelper(minimalDenom);
     if (denomHelper.type === "secret20") {
-      return new ObservableQuerySecret20BalanceImpl(
-        this.sharedContext,
+      return new ObservableQuerySecret20BalanceInner(
+        this.kvStore,
         chainId,
         chainGetter,
         this.apiGetter,

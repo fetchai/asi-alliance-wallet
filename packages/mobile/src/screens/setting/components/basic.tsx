@@ -11,7 +11,7 @@ export const SettingSectionTitle: FunctionComponent<{
 
   return (
     <View style={style.flatten(["padding-y-12"]) as ViewStyle}>
-      <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+      <Text style={style.flatten(["body3", "color-text-low"]) as ViewStyle}>
         {title}
       </Text>
     </View>
@@ -50,8 +50,10 @@ export const SettingItem: FunctionComponent<{
   onPress,
   bottomBorder,
   borderColor,
+  rippleColor,
   underlayColor,
   activeOpacity,
+  backgroundBlur,
 }) => {
   const style = useStyle();
 
@@ -67,7 +69,7 @@ export const SettingItem: FunctionComponent<{
           <Text
             style={
               StyleSheet.flatten([
-                style.flatten(["body3", "color-dark"]),
+                style.flatten(["body3", "color-white"]),
                 labelStyle,
               ]) as ViewStyle
             }
@@ -78,7 +80,7 @@ export const SettingItem: FunctionComponent<{
             <Text
               style={
                 StyleSheet.flatten([
-                  style.flatten(["subtitle3", "color-gray-300"]),
+                  style.flatten(["subtitle3", "color-text-low"]),
                   paragraphStyle,
                 ]) as ViewStyle
               }
@@ -100,12 +102,10 @@ export const SettingItem: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      backgroundBlur={false}
+      blurIntensity={16}
+      backgroundBlur={backgroundBlur}
       containerStyle={
-        [
-          style.flatten(["margin-y-2", "background-color-gray-5"]),
-          containerStyle,
-        ] as ViewStyle
+        [style.flatten(["margin-y-2"]), containerStyle] as ViewStyle
       }
     >
       {onPress ? (
@@ -120,7 +120,8 @@ export const SettingItem: FunctionComponent<{
             propStyle,
           ])}
           onPress={onPress}
-          underlayColor={underlayColor ?? "#e0fedd"}
+          rippleColor={rippleColor}
+          underlayColor={underlayColor}
           activeOpacity={activeOpacity}
         >
           {renderChildren()}
@@ -128,10 +129,12 @@ export const SettingItem: FunctionComponent<{
       ) : (
         <View
           style={StyleSheet.flatten([
-            style.flatten(
-              ["padding-x-20", "flex-row", "items-center"],
-              [paragraph ? "padding-y-14" : "height-56"]
-            ) as ViewStyle,
+            style.flatten([
+              "height-56",
+              "padding-x-20",
+              "flex-row",
+              "items-center",
+            ]) as ViewStyle,
             propStyle,
           ])}
         >
@@ -143,7 +146,7 @@ export const SettingItem: FunctionComponent<{
           style={StyleSheet.flatten([
             style.flatten([
               "height-1",
-              "background-color-gray-100",
+              "background-color-white@20%",
             ]) as ViewStyle,
             borderColor ? { backgroundColor: borderColor } : {},
           ])}
@@ -161,7 +164,7 @@ export const Right: FunctionComponent<{
   return (
     <React.Fragment>
       {paragraph ? (
-        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-text-low"]) as ViewStyle}>
           {paragraph}
         </Text>
       ) : null}

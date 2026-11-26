@@ -8,11 +8,9 @@ import { Button, Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { useStore } from "../../../../stores";
 import { observer } from "mobx-react-lite";
-import { InteractionWaitingData } from "@keplr-wallet/background";
 
 import styleName from "./name.module.scss";
-import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
-import { useInteractionInfo } from "@hooks/interaction";
+import { KeyRingStatus } from "@keplr-wallet/background";
 
 interface FormData {
   name: string;
@@ -24,10 +22,9 @@ export const ChangeNamePage: FunctionComponent = observer(() => {
 
   const intl = useIntl();
 
-  const { keyRingStore, analyticsStore, interactionStore } = useStore();
+  const { keyRingStore, analyticsStore } = useStore();
 
-  const interactionData: InteractionWaitingData | undefined =
-    interactionStore.getAllData("change-keyring-name")[0];
+  const waitingNameData = keyRingStore.waitingNameData?.data;
 
   const {
     register,
@@ -41,30 +38,19 @@ export const ChangeNamePage: FunctionComponent = observer(() => {
     },
   });
 
-  const handleRejectChangeKeyRingName = () =>
-    interactionStore.rejectAll("change-keyring-name");
-
-  const interactionInfo = useInteractionInfo({
-    onWindowClose: handleRejectChangeKeyRingName,
-    onUnmount: handleRejectChangeKeyRingName,
-  });
-
   useEffect(() => {
-    if (interactionData?.data) {
-      const defaultName = (interactionData.data as any).defaultName;
-      if (defaultName) {
-        setValue("name", defaultName);
-      }
+    if (waitingNameData?.defaultName) {
+      setValue("name", waitingNameData.defaultName);
     }
-  }, [interactionData?.data, setValue]);
+  }, [waitingNameData, setValue]);
 
   const [loading, setLoading] = useState(false);
 
   const keyStore = useMemo(() => {
-    return keyRingStore.keyInfos[parseInt(index)];
-  }, [keyRingStore.keyInfos, index]);
+    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
+  }, [keyRingStore.multiKeyStoreInfo, index]);
 
-  const isKeyStoreReady = keyRingStore.status === "unlocked";
+  const isKeyStoreReady = keyRingStore.status === KeyRingStatus.UNLOCKED;
 
   useEffect(() => {
     if (parseInt(index).toString() !== index) {
@@ -75,10 +61,6 @@ export const ChangeNamePage: FunctionComponent = observer(() => {
   if (isKeyStoreReady && keyStore == null) {
     return null;
   }
-
-  const notEditable =
-    interactionData?.data != null &&
-    (interactionData.data as any).editable === false;
 
   return (
     <HeaderLayout
@@ -101,31 +83,20 @@ export const ChangeNamePage: FunctionComponent = observer(() => {
         onSubmit={handleSubmit(async (data) => {
           setLoading(true);
           try {
-            // Close the popup by external change name messag
-            if (index) {
-              const trimmedName = data.name.trim();
-              if (
-                interactionInfo.interaction &&
-                !interactionInfo.interactionInternal
-              ) {
-                await interactionStore.approveWithProceedNextV2(
-                  interactionStore
-                    .getAllData("change-keyring-name")
-                    .map((data) => data.id),
-                  trimmedName,
-                  (proceedNext) => {
-                    if (!proceedNext) {
-                      handleExternalInteractionWithNoProceedNext();
-                    }
-                  }
-                );
-              } else {
-                // Make sure that name is changed
-                await keyRingStore.changeKeyRingName(index, data.name.trim());
-                analyticsStore.logEvent("save_account_name_click");
-                navigate("/");
-              }
+            // Close the popup by external change name message
+            if (waitingNameData != null) {
+              await keyRingStore.approveChangeName(data.name);
+              window.close();
+              return;
             }
+
+            // Make sure that name is changed
+            await keyRingStore.updateNameKeyRing(
+              parseInt(index),
+              data.name.trim()
+            );
+            analyticsStore.logEvent("save_account_name_click");
+            navigate("/");
           } catch (e) {
             console.log("Fail to decrypt: " + e.message);
             setError("name", {
@@ -142,7 +113,7 @@ export const ChangeNamePage: FunctionComponent = observer(() => {
           label={intl.formatMessage({
             id: "setting.keyring.change.previous-name",
           })}
-          value={keyStore?.name ?? ""}
+          value={keyStore?.meta?.["name"] ?? ""}
           readOnly={true}
         />
         <Input
@@ -157,7 +128,7 @@ export const ChangeNamePage: FunctionComponent = observer(() => {
             }),
           })}
           maxLength={20}
-          readOnly={notEditable}
+          readOnly={waitingNameData !== undefined && !waitingNameData?.editable}
         />
 
         <div style={{ flex: 1 }} />

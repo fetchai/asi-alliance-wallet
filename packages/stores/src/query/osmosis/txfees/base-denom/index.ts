@@ -1,21 +1,12 @@
 import { ObservableChainQuery } from "../../../chain-query";
-import { ChainGetter } from "../../../../chain";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../../common";
 import { makeObservable } from "mobx";
 import { BaseDenom } from "./types";
-import { QuerySharedContext } from "../../../../common";
 
 export class ObservableQueryTxFeesBaseDenom extends ObservableChainQuery<BaseDenom> {
-  constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
-  ) {
-    super(
-      sharedContext,
-      chainId,
-      chainGetter,
-      "/osmosis/txfees/v1beta1/base_denom"
-    );
+  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+    super(kvStore, chainId, chainGetter, "/osmosis/txfees/v1beta1/base_denom");
 
     makeObservable(this);
   }

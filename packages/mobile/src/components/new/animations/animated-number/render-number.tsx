@@ -1,20 +1,21 @@
 import React from "react";
-import { Text, View, ViewStyle } from "react-native";
+import { Text, View, StyleSheet, ViewStyle } from "react-native";
 import Animated, {
   withSpring,
   withTiming,
+  useSharedValue,
   useAnimatedStyle,
   Easing,
   ReduceMotion,
 } from "react-native-reanimated";
-import { useStyle } from "styles/index";
 
 interface RenderNumberProps {
   numberSymbol: number;
+  gap: number;
+  colorValue?: string;
   fontSizeValue?: number;
   hookName: string;
-  containerStyle?: ViewStyle;
-  textColor?: string;
+  fontWeight?: string;
   listProperties: {
     durationValue?: number;
     easingValue?: string;
@@ -27,86 +28,61 @@ interface RenderNumberProps {
   };
 }
 
+const easingLists = {
+  linear: Easing.linear,
+  ease: Easing.ease,
+  bounce: Easing.bounce,
+  poly: Easing.poly(4),
+  circle: Easing.circle,
+  bezier: Easing.bezier(0.25, 0.1, 0.25, 1),
+};
 const NUMBERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-
 export function RenderNumber({
   numberSymbol,
+  gap,
   hookName,
   listProperties,
-  fontSizeValue = 50,
-  containerStyle,
-  textColor = "white",
+  colorValue,
+  fontSizeValue,
+  fontWeight,
 }: RenderNumberProps) {
-  const heightChange = fontSizeValue;
-  // Plain number — do not read SharedValue `.value` during render (Reanimated strict).
-  const targetTranslateY = -(numberSymbol * heightChange);
-  const easingValue = listProperties.easingValue || "linear";
-  const style = useStyle();
-
+  const heightChange = fontSizeValue || 50;
+  const initialY = useSharedValue(0);
+  const negativeTranslateY = -(initialY.value + numberSymbol * heightChange);
+  const easingValue =
+    listProperties.easingValue !== undefined
+      ? listProperties.easingValue
+      : "linear";
   const animatedStylesTiming = useAnimatedStyle(() => {
-    "worklet";
-    let easing;
-    if (easingValue === "bounce") {
-      easing = Easing.bounce;
-    } else if (easingValue === "poly") {
-      easing = Easing.poly(4);
-    } else if (easingValue === "circle") {
-      easing = Easing.circle;
-    } else if (easingValue === "bezier") {
-      easing = Easing.bezier(0.25, 0.1, 0.25, 1);
-    } else if (easingValue === "ease") {
-      easing = Easing.ease;
-    } else {
-      easing = Easing.linear;
-    }
     return {
       transform: [
         {
-          translateY: withTiming(targetTranslateY, {
+          translateY: withTiming(negativeTranslateY, {
             duration: listProperties.durationValue,
-            easing,
+            easing: easingLists[easingValue as keyof typeof easingLists],
           }),
         },
       ],
     };
-  }, [targetTranslateY, easingValue, listProperties.durationValue]);
-
-  const animatedStylesSpring = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateY: withSpring(targetTranslateY, {
-            mass: listProperties.mass,
-            damping: listProperties.damping,
-            stiffness: listProperties.stiffness,
-            restDisplacementThreshold: listProperties.restDisplacementThreshold,
-            overshootClamping: listProperties.overshootClamping,
-            restSpeedThreshold: listProperties.restSpeedThreshold,
-            reduceMotion: ReduceMotion.System,
-          }),
-        },
-      ],
-    };
-  }, [
-    targetTranslateY,
-    listProperties.mass,
-    listProperties.damping,
-    listProperties.stiffness,
-    listProperties.restDisplacementThreshold,
-    listProperties.overshootClamping,
-    listProperties.restSpeedThreshold,
-  ]);
+  });
+  const animatedStylesSpring = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: withSpring(negativeTranslateY, {
+          mass: listProperties.mass,
+          damping: listProperties.damping,
+          stiffness: listProperties.stiffness,
+          restDisplacementThreshold: listProperties.restDisplacementThreshold,
+          overshootClamping: listProperties.overshootClamping,
+          restSpeedThreshold: listProperties.restSpeedThreshold,
+          reduceMotion: ReduceMotion.System,
+        }),
+      },
+    ],
+  }));
 
   return (
-    <View
-      style={
-        [
-          style.flatten(["flex-row", "justify-center", "overflow-hidden"]),
-          { height: fontSizeValue * 1.0 },
-          containerStyle,
-        ] as ViewStyle
-      }
-    >
+    <View style={styles.container}>
       <Animated.View
         style={
           hookName === "withSpring"
@@ -119,15 +95,15 @@ export function RenderNumber({
             <Text
               key={i}
               style={
-                [
-                  style.flatten(["font-normal", "overflow-hidden"]),
-                  {
-                    color: textColor,
-                    lineHeight: fontSizeValue * 1.0,
-                    fontSize: fontSizeValue,
-                    height: fontSizeValue,
-                  },
-                ] as ViewStyle
+                {
+                  color: colorValue,
+                  fontSize: fontSizeValue,
+                  height: fontSizeValue,
+                  marginHorizontal: gap,
+                  fontWeight: fontWeight ? fontWeight : "normal",
+                  // includeFontPadding: false,
+                  lineHeight: fontSizeValue! * 1.1,
+                } as ViewStyle
               }
             >
               {numberCharacter}
@@ -138,3 +114,7 @@ export function RenderNumber({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {},
+});

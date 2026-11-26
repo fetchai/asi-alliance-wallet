@@ -266,15 +266,12 @@ describe("Test phishing list service", () => {
   };
 
   test("Test basic PhishingListService with valid cases", async () => {
-    const service = new PhishingListService(
-      {
-        blockListUrl: `http://127.0.0.1:${port}/list1`,
-        fetchingIntervalMs: 3600,
-        retryIntervalMs: 3600,
-        allowTimeoutMs: 100,
-      },
-      "http://noop.com"
-    );
+    const service = new PhishingListService({
+      blockListUrl: `http://127.0.0.1:${port}/list1`,
+      fetchingIntervalMs: 3600,
+      retryIntervalMs: 3600,
+      allowTimeoutMs: 100,
+    });
     eachService = service;
 
     service.init();
@@ -285,15 +282,12 @@ describe("Test phishing list service", () => {
   });
 
   test("Test basic PhishingListService with strange separators", async () => {
-    const service = new PhishingListService(
-      {
-        blockListUrl: `http://127.0.0.1:${port}/list2`,
-        fetchingIntervalMs: 3600,
-        retryIntervalMs: 3600,
-        allowTimeoutMs: 100,
-      },
-      "http://noop.com"
-    );
+    const service = new PhishingListService({
+      blockListUrl: `http://127.0.0.1:${port}/list2`,
+      fetchingIntervalMs: 3600,
+      retryIntervalMs: 3600,
+      allowTimeoutMs: 100,
+    });
     eachService = service;
 
     service.init();
@@ -304,15 +298,12 @@ describe("Test phishing list service", () => {
   });
 
   test("Test basic PhishingListService with strange cases", async () => {
-    const service = new PhishingListService(
-      {
-        blockListUrl: `http://127.0.0.1:${port}/list3`,
-        fetchingIntervalMs: 3600,
-        retryIntervalMs: 3600,
-        allowTimeoutMs: 100,
-      },
-      "http://noop.com"
-    );
+    const service = new PhishingListService({
+      blockListUrl: `http://127.0.0.1:${port}/list3`,
+      fetchingIntervalMs: 3600,
+      retryIntervalMs: 3600,
+      allowTimeoutMs: 100,
+    });
     eachService = service;
 
     service.init();
@@ -323,15 +314,12 @@ describe("Test phishing list service", () => {
   });
 
   test("Test basic PhishingListService fetching interval", async () => {
-    const service = new PhishingListService(
-      {
-        blockListUrl: `http://127.0.0.1:${port}/list3`,
-        fetchingIntervalMs: 200,
-        retryIntervalMs: 3600,
-        allowTimeoutMs: 100,
-      },
-      "http://noop.com"
-    );
+    const service = new PhishingListService({
+      blockListUrl: `http://127.0.0.1:${port}/list3`,
+      fetchingIntervalMs: 200,
+      retryIntervalMs: 3600,
+      allowTimeoutMs: 100,
+    });
     const spyFetch = jest.spyOn(service.urlFetcher, "fetch");
     eachService = service;
 
@@ -369,15 +357,12 @@ describe("Test phishing list service", () => {
   });
 
   test("Test basic PhishingListService fetching interval with retry interval", async () => {
-    const service = new PhishingListService(
-      {
-        blockListUrl: `http://127.0.0.1:${port}/test-retry`,
-        fetchingIntervalMs: 200,
-        retryIntervalMs: 100,
-        allowTimeoutMs: 100,
-      },
-      "http://noop.com"
-    );
+    const service = new PhishingListService({
+      blockListUrl: `http://127.0.0.1:${port}/test-retry`,
+      fetchingIntervalMs: 200,
+      retryIntervalMs: 100,
+      allowTimeoutMs: 100,
+    });
     const spyFetch = jest.spyOn(service.urlFetcher, "fetch");
     eachService = service;
 
@@ -448,15 +433,12 @@ describe("Test phishing list service", () => {
   });
 
   test("Test addUrlTemp allow blocked url", async () => {
-    const service = new PhishingListService(
-      {
-        blockListUrl: `http://127.0.0.1:${port}/list1`,
-        fetchingIntervalMs: 200,
-        retryIntervalMs: 100,
-        allowTimeoutMs: 100,
-      },
-      "http://noop.com"
-    );
+    const service = new PhishingListService({
+      blockListUrl: `http://127.0.0.1:${port}/list1`,
+      fetchingIntervalMs: 200,
+      retryIntervalMs: 100,
+      allowTimeoutMs: 100,
+    });
     eachService = service;
 
     service.init();
@@ -494,15 +476,12 @@ describe("Test phishing list service", () => {
   });
 
   test("Test subdomains", async () => {
-    const service = new PhishingListService(
-      {
-        blockListUrl: `http://127.0.0.1:${port}/subdomains`,
-        fetchingIntervalMs: 200,
-        retryIntervalMs: 100,
-        allowTimeoutMs: 100,
-      },
-      "http://noop.com"
-    );
+    const service = new PhishingListService({
+      blockListUrl: `http://127.0.0.1:${port}/subdomains`,
+      fetchingIntervalMs: 200,
+      retryIntervalMs: 100,
+      allowTimeoutMs: 100,
+    });
     eachService = service;
 
     service.init();

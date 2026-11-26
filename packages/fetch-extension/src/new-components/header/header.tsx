@@ -1,9 +1,9 @@
-import React, { FunctionComponent, PropsWithChildren } from "react";
+import React, { FunctionComponent } from "react";
 import classnames from "classnames";
 
 import style from "./style.module.scss";
 
-export interface HeaderProps extends PropsWithChildren {
+export interface HeaderProps {
   fixed?: boolean;
   left?: React.ReactNode;
   right?: React.ReactNode;

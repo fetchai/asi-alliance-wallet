@@ -56,10 +56,9 @@ export const IconWithText: FunctionComponent<{
             style={
               [
                 style.flatten([
-                  "h6",
+                  "h5",
                   "items-center",
-                  "margin-y-8",
-                  "color-dark",
+                  "color-white",
                   "text-center",
                 ]),
                 titleStyle,

@@ -47,7 +47,6 @@ export interface IFeeConfig extends ITxChainSetter {
   ): CoinPretty;
   getEthBaseFee(): string | undefined;
   getFeePrimitive(): CoinPrimitive | undefined;
-  setManualFee(fee: CoinPrimitive): void;
   isManual: boolean;
   error: Error | undefined;
 }

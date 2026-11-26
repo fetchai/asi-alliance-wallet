@@ -1,4 +1,4 @@
-import React, { FunctionComponent, PropsWithChildren } from "react";
+import React, { FunctionComponent } from "react";
 
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
@@ -21,7 +21,6 @@ import { renderDirectMessage } from "./direct";
 import { AnyWithUnpacked } from "@keplr-wallet/cosmos";
 import { CoinPretty } from "@keplr-wallet/unit";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
-import { isPureEvmChain } from "@utils/filters";
 
 export const DetailsTab: FunctionComponent<{
   signDocHelper: SignDocHelper;
@@ -49,6 +48,7 @@ export const DetailsTab: FunctionComponent<{
     const { chainStore, priceStore, accountStore } = useStore();
     const intl = useIntl();
     const language = useLanguage();
+
     const mode = signDocHelper.signDocWrapper
       ? signDocHelper.signDocWrapper.mode
       : "none";
@@ -57,8 +57,6 @@ export const DetailsTab: FunctionComponent<{
         ? signDocHelper.signDocWrapper.aminoSignDoc.msgs
         : signDocHelper.signDocWrapper.protoSignDoc.txMsgs
       : [];
-    const current = chainStore.current;
-    const isEvm = isPureEvmChain(current);
 
     const renderedMsgs = (() => {
       if (mode === "amino") {
@@ -103,7 +101,8 @@ export const DetailsTab: FunctionComponent<{
       <div className={styleDetailsTab["container"]}>
         <Label
           for="signing-messages"
-          className={styleDetailsTab["signMessageLabel"]}
+          className="form-control-label"
+          style={{ display: "flex", fontWeight: 400, fontSize: "14px" }}
         >
           {msgs.length} <FormattedMessage id="sign.list.messages.label" />
         </Label>
@@ -120,23 +119,19 @@ export const DetailsTab: FunctionComponent<{
             />
             <div
               style={{
-                marginTop: "18px",
+                marginTop: "24px",
               }}
             />
           </div>
         ) : (
-          <div>
-            <Label for="memo" className={styleDetailsTab["label"]}>
+          <div style={{ color: "white" }}>
+            <Label for="memo" className="form-control-label">
               <FormattedMessage id="sign.info.memo" />
             </Label>
-            <div
-              id="memo"
-              style={{ marginBottom: "18px" }}
-              className={styleDetailsTab["memoInput"]}
-            >
+            <div id="memo" style={{ marginBottom: "8px" }}>
               <div
                 className={styleDetailsTab["cards"]}
-                style={{ color: memoConfig.memo ? undefined : "inherit" }}
+                style={{ color: memoConfig.memo ? undefined : "#AAAAAA" }}
               >
                 {memoConfig.memo
                   ? memoConfig.memo
@@ -156,15 +151,15 @@ export const DetailsTab: FunctionComponent<{
           />
         ) : (
           <React.Fragment>
-            <Label for="fee-price" className={styleDetailsTab["label"]}>
+            <Label for="fee-price" className="form-control-label">
               <FormattedMessage id="sign.info.fee" />
             </Label>
             <div
               id="fee-price"
-              style={{
-                padding: "10px 8px",
-              }}
               className={styleDetailsTab["cards"]}
+              style={{
+                background: "background: var(--Indigo---Fetch, #5F38FB)",
+              }}
             >
               <div>
                 {(() => {
@@ -175,10 +170,7 @@ export const DetailsTab: FunctionComponent<{
                   const feeOrZero =
                     feeConfig.fee ??
                     (() => {
-                      if (
-                        chainStore.current.feeCurrencies.length === 0 &&
-                        chainStore.current?.stakeCurrency
-                      ) {
+                      if (chainStore.current.feeCurrencies.length === 0) {
                         return new CoinPretty(
                           chainStore.current.stakeCurrency,
                           "0"
@@ -191,22 +183,16 @@ export const DetailsTab: FunctionComponent<{
                       );
                     })();
 
-                  const fee = feeOrZero
-                    .hideIBCMetadata(true)
-                    .trim(true)
-                    .toMetricPrefix(isEvm);
-
                   return (
-                    <div className={styleDetailsTab["feePrice"]}>
-                      {fee !== "0"
-                        ? fee
-                        : feeOrZero.maxDecimals(6).trim(true).toString()}
+                    <div>
+                      {feeOrZero.maxDecimals(6).trim(true).toString()}
                       {priceStore.calculatePrice(
                         feeOrZero,
                         language.fiatCurrency
                       ) ? (
                         <div
-                          className={`ml-2 ${styleDetailsTab["feePriceFiat"]}`}
+                          className="ml-2"
+                          style={{ display: "inline-block", fontSize: "12px" }}
                         >
                           {priceStore
                             .calculatePrice(feeOrZero, language.fiatCurrency)
@@ -260,11 +246,9 @@ export const DetailsTab: FunctionComponent<{
   }
 );
 
-export const MsgRender: FunctionComponent<
-  PropsWithChildren<{
-    title: string;
-  }>
-> = ({ title, children }) => {
+export const MsgRender: FunctionComponent<{
+  title: string;
+}> = ({ title, children }) => {
   return (
     <div className={styleDetailsTab["msg"]}>
       <div className={styleDetailsTab["contentContainer"]}>

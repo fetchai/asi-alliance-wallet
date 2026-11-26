@@ -29,12 +29,6 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { txnTypeKey } from "components/new/txn-status.tsx";
-import {
-  formatBalance,
-  formatFiatBalance,
-  numberLocalFormat,
-  formatFeeAmount,
-} from "utils/format/format";
 
 interface ItemData {
   title: string;
@@ -127,7 +121,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value ? formatFiatBalance(value) : undefined;
+    return value && value.shrink(true).maxDecimals(6).toString();
   };
   useEffect(() => {
     const inputValueInUsd = convertToUsd(balance);
@@ -138,18 +132,20 @@ export const DelegateScreen: FunctionComponent = observer(() => {
     ? ` (${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
 
+  const availableBalance = `${balance
+    .trim(true)
+    .shrink(true)
+    .maxDecimals(6)
+    .toString()}${Usd}`;
+
   const bondedValidators = queries.cosmos.queryValidators.getQueryStatus(
     Staking.BondStatus.Bonded
   );
 
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const feePrice = sendConfigs.feeConfig.isManual
-    ? sendConfigs.feeConfig.fee
-    : sendConfigs.feeConfig.getFeeTypePretty(
-        sendConfigs.feeConfig.feeType
-          ? sendConfigs.feeConfig.feeType
-          : "average"
-      );
+  const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
+    sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
+  );
 
   const validator = bondedValidators.getValidator(validatorAddress);
 
@@ -179,9 +175,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
     {
       title: "Voting power",
       value: votingPower
-        ? `${numberLocalFormat(votingPower.split(" ")[0])} ${
-            votingPower.split(" ")[1]
-          }`
+        ? `${votingPower.split(" ")[0]} ${votingPower.split(" ")[1]}`
         : "NA",
     },
     {
@@ -198,7 +192,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No Internet Connection",
+        text1: "No internet connection",
       });
       return;
     }
@@ -234,7 +228,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction Rejected",
+            text1: "Transaction rejected",
           });
           return;
         } else {
@@ -257,19 +251,15 @@ export const DelegateScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
     >
       <BlurBackground
         borderRadius={12}
-        backgroundBlur={false}
+        blurIntensity={16}
         containerStyle={
-          style.flatten([
-            "padding-18",
-            "margin-y-16",
-            "background-color-gray-5",
-          ]) as ViewStyle
+          style.flatten(["padding-18", "margin-y-16"]) as ViewStyle
         }
       >
         <View
@@ -289,30 +279,28 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             />
           ) : (
             <BlurBackground
-              backgroundBlur={false}
+              backgroundBlur={true}
+              blurIntensity={16}
               containerStyle={
-                {
-                  ...style.flatten([
-                    "width-32",
-                    "height-32",
-                    "border-radius-64",
-                    "items-center",
-                    "justify-center",
-                    "margin-right-8",
-                  ]),
-                  backgroundColor: "#dddfdf",
-                } as ViewStyle
+                style.flatten([
+                  "width-32",
+                  "height-32",
+                  "border-radius-64",
+                  "items-center",
+                  "justify-center",
+                  "margin-right-8",
+                ]) as ViewStyle
               }
             >
               <VectorCharacter
                 char={validator.description.moniker.trim()[0]}
-                color="#151a1a"
+                color="white"
                 height={12}
               />
             </BlurBackground>
           )}
 
-          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
+          <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
             {validator?.description.moniker?.trim()}
           </Text>
         </View>
@@ -331,7 +319,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
                   style={
                     style.flatten([
                       "text-caption2",
-                      "color-gray-300",
+                      "color-white@60%",
                     ]) as ViewStyle
                   }
                 >
@@ -339,7 +327,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
                 </Text>
                 <Text
                   style={
-                    style.flatten(["color-dark", "text-caption2"]) as ViewStyle
+                    style.flatten(["color-white", "text-caption2"]) as ViewStyle
                   }
                 >
                   {item.value}
@@ -355,7 +343,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-gray-300",
+            "color-white@60%",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -368,12 +356,12 @@ export const DelegateScreen: FunctionComponent = observer(() => {
       <Text
         style={
           style.flatten([
-            "color-gray-300",
+            "color-white@60%",
             "text-caption2",
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${formatBalance(balance)}${Usd}`}</Text>
+      >{`Available: ${availableBalance}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}
@@ -385,7 +373,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-gray-300",
+            "color-white@60%",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -400,7 +388,7 @@ export const DelegateScreen: FunctionComponent = observer(() => {
           style.flatten([
             "margin-y-16",
             "padding-12",
-            "background-color-gray-50",
+            "background-color-cardColor@25%",
             "flex-row",
             "border-radius-12",
           ]) as ViewStyle
@@ -411,10 +399,10 @@ export const DelegateScreen: FunctionComponent = observer(() => {
             [style.flatten(["margin-top-4", "margin-right-10"])] as ViewStyle
           }
         >
-          <CircleExclamationIcon color="#151a1a" />
+          <CircleExclamationIcon />
         </View>
         <Text
-          style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}
+          style={style.flatten(["body3", "color-white", "flex-1"]) as ViewStyle}
         >
           When you decide to unstake, your assets will be locked 21 days to be
           liquid again
@@ -430,37 +418,20 @@ export const DelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
           Transaction fee:
         </Text>
-        <View
-          style={
-            [
-              style.flatten([
-                "flex-row",
-                "items-center",
-                "flex-1",
-                "justify-end",
-              ]),
-            ] as ViewStyle
-          }
-        >
+        <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
           <Text
-            numberOfLines={1}
             style={
-              [
-                style.flatten([
-                  "body3",
-                  "color-dark",
-                  "margin-x-6",
-                  "flex-shrink-1",
-                ]),
-              ] as ViewStyle
+              style.flatten([
+                "body3",
+                "color-white",
+                "margin-right-6",
+              ]) as ViewStyle
             }
           >
-            {feePrice
-              ? formatFeeAmount(feePrice.hideIBCMetadata(true), isEvm)
-              : ""}
+            {feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
           </Text>
           <IconButton
             backgroundBlur={false}
@@ -468,8 +439,8 @@ export const DelegateScreen: FunctionComponent = observer(() => {
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.delegate]
-                    ? "#DCDCE3"
-                    : "#151a1a"
+                    ? style.get("color-white@20%").color
+                    : "white"
                 }
               />
             }
@@ -481,8 +452,8 @@ export const DelegateScreen: FunctionComponent = observer(() => {
                 "justify-center",
                 "border-width-1",
                 activityStore.getPendingTxnTypes[txnTypeKey.delegate]
-                  ? "border-color-gray-100"
-                  : "border-color-gray-100",
+                  ? "border-color-white@20%"
+                  : "border-color-white@40%",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.delegate]}
@@ -508,13 +479,9 @@ export const DelegateScreen: FunctionComponent = observer(() => {
       <View style={style.flatten(["flex-1"])} />
       <Button
         text="Confirm"
-        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+        textStyle={style.flatten(["body2"]) as ViewStyle}
         containerStyle={
-          style.flatten([
-            "margin-top-16",
-            "border-radius-32",
-            "background-color-dark",
-          ]) as ViewStyle
+          style.flatten(["margin-top-16", "border-radius-32"]) as ViewStyle
         }
         disabled={!account.isReadyToSendTx || !txStateIsValid}
         loading={activityStore.getPendingTxnTypes[txnTypeKey.delegate]}
@@ -528,7 +495,8 @@ export const DelegateScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        onHomeClick={() => navigation.navigate("Home", {})}
+        buttonText="Go to activity screen"
+        onHomeClick={() => navigation.navigate("ActivityTab", {})}
         onTryAgainClick={stakeAmount}
       />
       <TransactionFeeModel

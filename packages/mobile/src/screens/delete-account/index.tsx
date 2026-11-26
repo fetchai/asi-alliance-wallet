@@ -18,9 +18,8 @@ import { PasswordInputModal } from "modals/password-input/modal";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { ConfirmCardModel } from "components/new/confirm-modal";
 import { DeleteWalletIcon } from "components/new/icon/delete-wallet";
-import { observer } from "mobx-react-lite";
 
-export const DeleteWalletScreen: FunctionComponent = observer(() => {
+export const DeleteWalletScreen: FunctionComponent = () => {
   const { keyRingStore, keychainStore, analyticsStore } = useStore();
   const style = useStyle();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -34,15 +33,16 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const selectedKeyInfo = keyRingStore.selectedKeyInfo;
-  const selectedKeyType = selectedKeyInfo?.type ?? "";
-  const showPrivateData = canShowPrivateData(selectedKeyType);
+  const showPrivateData = canShowPrivateData(keyRingStore.keyRingType);
 
   const submitPassword = async () => {
     setIsLoading(true);
+    const index = keyRingStore.multiKeyStoreInfo.findIndex(
+      (keyStore) => keyStore.selected
+    );
     try {
-      if (selectedKeyInfo) {
-        await keyRingStore.showKeyRing(selectedKeyInfo.id, password);
+      if (index >= 0) {
+        await keyRingStore.showKeyRing(index, password);
         setIsInvalidPassword(false);
         setConfirmModal(true);
       }
@@ -56,7 +56,7 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
@@ -67,12 +67,8 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
           subtitle={
             "You will no longer have access to\nyour wallet on ASI Alliance Wallet"
           }
-          titleStyle={
-            style.flatten(["h3", "font-normal", "color-dark"]) as ViewStyle
-          }
-          subtitleStyle={
-            style.flatten(["body3", "color-gray-300"]) as ViewStyle
-          }
+          titleStyle={style.flatten(["h3", "font-normal"]) as ViewStyle}
+          subtitleStyle={style.flatten(["body3"]) as ViewStyle}
         />
       </View>
       <InputCardView
@@ -101,7 +97,7 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
           <SimpleCardView
             backgroundBlur={false}
             heading="Make sure you’ve backed up your mnemonic seed before proceeding."
-            headingStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
+            headingStyle={style.flatten(["body3"]) as ViewStyle}
             cardStyle={
               style.flatten([
                 "background-color-coral-red@25%",
@@ -111,7 +107,7 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
             }
           />
           <Button
-            text="Back Up Mnemonic Seed"
+            text="Back up mnemonic seed"
             size="large"
             mode="outline"
             onPress={() => {
@@ -121,13 +117,17 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
               });
             }}
             textStyle={
-              style.flatten(["color-dark", "body2", "font-normal"]) as ViewStyle
+              style.flatten([
+                "color-white",
+                "body2",
+                "font-normal",
+              ]) as ViewStyle
             }
             containerStyle={
               style.flatten([
                 "border-radius-32",
                 "margin-y-12",
-                "border-color-gray-100",
+                "border-color-white@20%",
               ]) as ViewStyle
             }
           />
@@ -144,33 +144,25 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
           });
         }}
         disabled={!password}
-        containerStyle={
-          style.flatten([
-            "border-radius-32",
-            "background-color-dark",
-          ]) as ViewStyle
-        }
-        textStyle={
-          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
-        }
+        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+        textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
       />
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
       <KeyboardSpacerView />
       <PasswordInputModal
         isOpen={isOpenModal}
         close={() => setIsOpenModal(false)}
-        title={`Enter your password to view your ${
-          selectedKeyType === "mnemonic" ? "mnemonic seed" : "private key"
-        }`}
+        title={"Enter your password to view your mnemonic seed"}
         onEnterPassword={async (password) => {
-          if (selectedKeyInfo) {
-            const privateData = await keyRingStore.showKeyRing(
-              selectedKeyInfo.id,
-              password
-            );
+          const index = keyRingStore.multiKeyStoreInfo.findIndex(
+            (keyStore) => keyStore.selected
+          );
+
+          if (index >= 0) {
+            const privateData = await keyRingStore.showKeyRing(index, password);
             smartNavigation.navigateSmart("Setting.ViewPrivateData", {
               privateData,
-              privateDataType: selectedKeyType,
+              privateDataType: keyRingStore.keyRingType,
             });
           }
         }}
@@ -182,10 +174,13 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
         subtitle={"Are you sure you want to delete this wallet?"}
         select={async (confirm: boolean) => {
           if (confirm) {
+            const index = keyRingStore.multiKeyStoreInfo.findIndex(
+              (keyStore) => keyStore.selected
+            );
             try {
-              if (selectedKeyInfo) {
-                await keyRingStore.deleteKeyRing(selectedKeyInfo.id, password);
-                if (keyRingStore.keyInfos.length === 0) {
+              if (index >= 0) {
+                await keyRingStore.deleteKeyRing(index, password);
+                if (keyRingStore.multiKeyStoreInfo.length === 0) {
                   await keychainStore.reset();
                   navigation.reset({
                     index: 0,
@@ -217,4 +212,4 @@ export const DeleteWalletScreen: FunctionComponent = observer(() => {
       />
     </PageWithScrollView>
   );
-});
+};

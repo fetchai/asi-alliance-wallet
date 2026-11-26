@@ -1,11 +1,7 @@
-@import "../../styles/var";
-
 .formContainer {
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%;
-  align-items: center;
 }
 
 .capslockTooltipArrow {
@@ -13,11 +9,10 @@
 }
 .layout {
   height: 100%;
-  background-color: white;
-  background-size: cover;
-  margin: 0 auto;
+  background-color: #030e3b;
+  box-shadow: 3.172px 3.172px 15.859px 0px rgba(255, 255, 255, 0.1) inset;
+  background-image: url("../../public/assets/svg/wireframe/bg-returning-user.svg");
 }
-
 .banner {
   margin-top: 15px;
   width: 336px;
@@ -39,8 +34,8 @@
   flex-direction: column;
 }
 .text {
-  color: $font-secondary;
-  font-family: $font-family-base;
+  color: #fff;
+  font-family: Lexend;
   font-size: 16px;
   font-style: normal;
   font-weight: 400;
@@ -48,7 +43,7 @@
   opacity: 0.6;
 }
 .welcome-text {
-  font-family: $font-family-base;
+  font-family: Lexend;
   font-size: 24px;
   font-style: normal;
   font-weight: 400;
@@ -56,11 +51,14 @@
   letter-spacing: -0.48px;
 
   font-size: 24px;
-  color: $font-dark;
+  background: white;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .sign-in {
-  color: white !important;
+  color: var(--Fetch-Navy, #0b1742);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -68,26 +66,7 @@
   gap: 5px;
   z-index: 1111;
   position: relative;
-  background-color: $bg-dark;
   overflow: hidden;
-  font-family: $font-family-base;
-  font-size: 14px;
-  font-weight: 500;
-  margin-top: 5px;
-  box-shadow: none !important;
-  transform: translateY(0px) !important;
-}
-
-.sign-in:hover,
-.sign-in:focus,
-.sign-in:active,
-.sign-in:disabled,
-.sign-in.disabled,
-.sign-in[data-loading="true"] {
-  opacity: 0.9;
-  color: white !important;
-  background-color: $bg-dark !important;
-  border-color: $bg-dark !important;
 }
 
 .racing-button {

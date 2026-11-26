@@ -1,6 +1,7 @@
 import React, { FunctionComponent } from "react";
 import { Text, View, ViewStyle } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
+import { LinearGradient, Stop } from "react-native-svg";
 import { useStyle } from "styles/index";
 
 export const IOSLineChart: FunctionComponent<{
@@ -21,85 +22,66 @@ export const IOSLineChart: FunctionComponent<{
 
   const chartMaxValue = Number(maxValue - minValue);
 
-  const getSignificantDecimals = (v: number): number => {
-    if (v === 0) return 2;
-    const abs = Math.abs(v);
-    if (abs >= 1) return 2;
-    const decPart = abs.toFixed(10).split(".")[1] ?? "";
-    let firstNonZero = 0;
-    for (let i = 0; i < decPart.length; i++) {
-      if (decPart[i] !== "0") {
-        firstNonZero = i;
-        break;
-      }
-    }
-    return firstNonZero + 2;
-  };
-
-  const maxDecimals = Math.max(
-    getSignificantDecimals(minValue),
-    getSignificantDecimals(maxValue)
-  );
-
-  const formatYLabel = (label: string) => {
-    const val = parseFloat(label);
-    if (isNaN(val)) return "";
-    const formatted = Number.isInteger(val)
-      ? val.toString()
-      : val.toFixed(maxDecimals);
-    return `${currencySymbol}${formatted}`;
-  };
-
   return (
     <LineChart
       // chart variable
-      areaChart={false}
+      areaChart={!loading}
       height={height}
+      areaGradientComponent={() => {
+        return (
+          <LinearGradient id="Gradient" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={"#F9774B"} stopOpacity={"0.4"} />
+            <Stop offset="0.5" stopColor={"#CF447B"} stopOpacity={"0.2"} />
+            <Stop offset="1" stopColor={"#5F38FB"} stopOpacity={"0"} />
+          </LinearGradient>
+        );
+      }}
       data={data}
       curved={true}
       //   animation variable
-
-      isAnimated={false}
-      // animationDuration={1200}
-      // animateOnDataChange={true}
-      // onDataChangeAnimationDuration={300}
-
+      isAnimated={true}
+      animationDuration={1200}
+      animateOnDataChange={true}
+      onDataChangeAnimationDuration={300}
       // data points variable
       hideDataPoints={true}
       adjustToWidth={true}
       thickness={2}
-      initialSpacing={8}
-      endSpacing={8}
+      initialSpacing={0}
+      endSpacing={0}
       // y label variable
       showFractionalValues={true}
       maxValue={chartMaxValue}
       yAxisOffset={minValue}
-      noOfSections={1}
       // y axis variable
       disableScroll={true}
       yAxisThickness={0}
-      yAxisColor={"transparent"}
-      hideYAxisText={chartMaxValue === 0}
-      yAxisTextStyle={{ color: "#9A9AA2", fontSize: 10 }}
-      yAxisLabelWidth={46}
-      formatYLabel={formatYLabel}
-      // x axis variable
+      yAxisColor={"lightgray"}
+      hideYAxisText={true}
       xAxisThickness={0}
-      // horizontal line variable
+      // horizontal line vriable
       hideRules={true}
       // line variable
-      lineGradient={false}
-      color={loading ? "#DCDCE3" : "#151a1a"}
+      lineGradient={true}
+      lineGradientId="lineGradient"
+      lineGradientComponent={() => {
+        return (
+          <LinearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={loading ? "#37373E" : "#F9774B"} />
+            <Stop offset="0.5" stopColor={loading ? "#37373E" : "#CF447B"} />
+            <Stop offset="1" stopColor={loading ? "#37373E" : "#5F38FB"} />
+          </LinearGradient>
+        );
+      }}
       pointerConfig={{
         pointerStripUptoDataPoint: true,
-        pointerStripColor: "#9A9AA2",
+        pointerStripColor: "lightgray",
         strokeDashArray: [8, 8],
-        pointerColor: "#73A271",
+        pointerColor: "lightgray",
         pointerLabelHeight: 50,
         activatePointersOnLongPress: true,
         autoAdjustPointerLabelPosition: true,
         showPointerStrip: true,
-        pointerEvents: "none",
         pointerLabelComponent: (items: any) => {
           return (
             <View
@@ -110,7 +92,7 @@ export const IOSLineChart: FunctionComponent<{
               <Text
                 style={
                   style.flatten([
-                    "color-dark",
+                    "color-white",
                     "text-caption2",
                     "font-medium",
                     "margin-bottom-4",
@@ -125,7 +107,7 @@ export const IOSLineChart: FunctionComponent<{
                 style={
                   style.flatten([
                     "text-center",
-                    "color-gray-300",
+                    "color-gray-200",
                     "text-caption2",
                     "font-medium",
                   ]) as ViewStyle

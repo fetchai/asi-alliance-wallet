@@ -40,8 +40,8 @@ export const BalanceCard: FunctionComponent<{
           marginBottom: 6,
         },
       ]}
-      boneColor={style.get("color-gray-100").color}
-      highlightColor={style.get("color-gray-50").color}
+      boneColor={style.get("color-white@20%").color}
+      highlightColor={style.get("color-white@60%").color}
     >
       <View
         style={
@@ -58,8 +58,9 @@ export const BalanceCard: FunctionComponent<{
           numberForAnimated={parseFloat(totalNumber)}
           includeComma={true}
           decimalAmount={2}
+          gap={0}
+          colorValue={"white"}
           fontSizeValue={32}
-          textColor={style.get("color-dark").color}
           hookName={"withTiming"}
           withTimingProps={{
             durationValue: 1000,
@@ -71,11 +72,11 @@ export const BalanceCard: FunctionComponent<{
             [
               style.flatten([
                 "h1",
-                "color-gray-300",
+                "color-new-gray-700",
                 "margin-left-8",
                 "font-normal",
               ]),
-              { lineHeight: 32 },
+              { lineHeight: 35 },
             ] as ViewStyle
           }
         >
@@ -86,7 +87,7 @@ export const BalanceCard: FunctionComponent<{
         <Text
           style={
             style.flatten([
-              "color-gray-300",
+              "color-white@60%",
               "body2",
               "width-full",
               "text-center",

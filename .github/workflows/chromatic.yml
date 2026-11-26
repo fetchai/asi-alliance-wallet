@@ -7,7 +7,7 @@ on:
 jobs:
   chromatic:
     name: Upload to chromatic
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v3
@@ -16,7 +16,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: '18'
       - run: npm install --global yarn
       - run: sudo apt-get update
       - run: sudo apt-get install libusb-1.0-0-dev

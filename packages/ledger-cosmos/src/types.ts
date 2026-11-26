@@ -1,15 +1,11 @@
-export type App = "Cosmos" | "Terra" | "Secret" | "THORChain";
+export type App = "Cosmos" | "Terra";
 export const AppCoinType: Record<App, number | undefined> = {
   Cosmos: 118,
   Terra: 330,
-  Secret: 529,
-  THORChain: 931,
 };
 export const AppHRP: Record<App, string | undefined> = {
   Cosmos: "cosmos",
   Terra: "terra",
-  Secret: "secret",
-  THORChain: "thor",
 };
 
 export interface CommonResponse {

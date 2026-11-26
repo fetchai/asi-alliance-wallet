@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import style from "./style.module.scss";
 import { AnimatedQRScanner, Purpose, URType } from "@keystonehq/animated-qr";
-import { KeystoneUR as UR } from "@utils/keystone";
+import { UR } from "@keplr-wallet/stores";
 import { Loading } from "./loading";
 import { Message } from "./message";
 

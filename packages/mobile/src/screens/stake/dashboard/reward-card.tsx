@@ -2,14 +2,11 @@ import React, { FunctionComponent, useMemo, useState } from "react";
 import { Text, View, ViewStyle } from "react-native";
 import { BlurBackground } from "components/new/blur-background/blur-background";
 import { useStyle } from "styles/index";
+import { GradientButton } from "components/new/button/gradient-button";
 import { useStore } from "stores/index";
 import { useNetInfo } from "@react-native-community/netinfo";
-import {
-  formatBalance,
-  formatFiatBalance,
-  separateNumericAndDenom,
-} from "utils/format/format";
-import { CoinPretty, Dec } from "@keplr-wallet/unit";
+import { separateNumericAndDenom } from "utils/format/format";
+import { Dec } from "@keplr-wallet/unit";
 import Toast from "react-native-toast-message";
 import { ChevronDownIcon } from "components/new/icon/chevron-down";
 import { Button } from "components/button";
@@ -39,7 +36,7 @@ import { KeplrETCQueriesImpl } from "@keplr-wallet/stores-etc";
 import Skeleton from "react-native-reanimated-skeleton";
 
 interface ClaimData {
-  reward?: CoinPretty;
+  reward: string;
   validatorAddress: string;
 }
 
@@ -116,7 +113,7 @@ export const MyRewardCard: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No Internet Connection",
+        text1: "No internet connection",
       });
       return;
     }
@@ -147,7 +144,7 @@ export const MyRewardCard: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "Claim In Progress",
+        text1: "claim in process",
       });
       await tx.send(
         { amount: [], gas: gas.toString() },
@@ -172,7 +169,7 @@ export const MyRewardCard: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction Rejected",
+          text1: "Transaction rejected",
         });
         return;
       } else {
@@ -197,12 +194,9 @@ export const MyRewardCard: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      backgroundBlur={false}
+      blurIntensity={20}
       containerStyle={
-        [
-          style.flatten(["padding-18", "background-color-gray-5"]),
-          containerStyle,
-        ] as ViewStyle
+        [style.flatten(["padding-18"]), containerStyle] as ViewStyle
       }
     >
       <View
@@ -220,7 +214,7 @@ export const MyRewardCard: FunctionComponent<{
               style.flatten([
                 "body3",
                 "padding-bottom-6",
-                "color-gray-300",
+                "color-white@60%",
               ]) as ViewStyle
             }
           >
@@ -238,51 +232,47 @@ export const MyRewardCard: FunctionComponent<{
                 height: 15,
               },
             ]}
-            boneColor={"#DCDCE3"}
-            highlightColor={"#F6F6F6"}
+            boneColor={style.get("color-white@20%").color}
+            highlightColor={style.get("color-white@60%").color}
           >
             <View style={style.flatten(["flex-row", "flex-wrap"]) as ViewStyle}>
-              {pendingStakableRewardUSD ? (
-                <Text
-                  style={
-                    [
-                      style.flatten(["body3", "color-dark"]),
-                      { lineHeight: 14 },
-                    ] as ViewStyle
-                  }
-                >
-                  {formatFiatBalance(pendingStakableRewardUSD, 8)}
-                </Text>
-              ) : (
-                <React.Fragment>
-                  <AnimatedNumber
-                    numberForAnimated={totalNumber as any}
-                    includeComma={true}
-                    decimalAmount={2}
-                    fontSizeValue={14}
-                    hookName={"withTiming"}
-                    withTimingProps={{
-                      durationValue: 1000,
-                      easingValue: "linear",
-                    }}
-                    textColor={style.get("color-dark").color}
-                  />
-                  <Text
-                    style={
-                      [
-                        style.flatten([
-                          "body3",
-                          "padding-left-4",
-                          "color-gray-300",
-                        ]),
-                        { lineHeight: 14 },
-                      ] as ViewStyle
-                    }
-                  >
-                    {totalDenom}
-                  </Text>
-                </React.Fragment>
-              )}
+              <AnimatedNumber
+                numberForAnimated={
+                  pendingStakableRewardUSD
+                    ? pendingStakableRewardUSD
+                        .shrink(true)
+                        .maxDecimals(8)
+                        .trim(true)
+                        .toString()
+                    : totalNumber
+                }
+                includeComma={true}
+                decimalAmount={2}
+                gap={0}
+                colorValue={"white"}
+                fontSizeValue={14}
+                hookName={"withTiming"}
+                withTimingProps={{
+                  durationValue: 1000,
+                  easingValue: "linear",
+                }}
+              />
+              <Text
+                style={
+                  [
+                    style.flatten([
+                      "body3",
+                      "padding-left-4",
+                      "color-gray-300",
+                    ]),
+                    { lineHeight: 16 },
+                  ] as ViewStyle
+                }
+              >
+                {pendingStakableRewardUSD
+                  ? priceStore.defaultVsCurrency.toUpperCase()
+                  : totalDenom}
+              </Text>
             </View>
           </Skeleton>
         </View>
@@ -293,23 +283,22 @@ export const MyRewardCard: FunctionComponent<{
           queryReward.pendingRewardValidatorAddresses.length === 0 ||
           !stakedSum.isReady
         ) ? (
-          <Button
-            text={"Claim All"}
+          <GradientButton
+            text={"Claim all"}
+            color1={"#F9774B"}
+            color2={"#CF447B"}
+            rippleColor="black@50%"
             size="small"
             containerStyle={
-              style.flatten([
-                "border-radius-64",
-                "height-32",
-                "padding-x-4",
-                "background-color-green-250",
-              ]) as ViewStyle
+              style.flatten(["border-radius-64", "height-32"]) as ViewStyle
             }
-            textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
+            buttonStyle={style.flatten(["padding-x-4"]) as ViewStyle}
+            textStyle={style.flatten(["body3"]) as ViewStyle}
             onPress={() => {
               if (!networkIsConnected) {
                 Toast.show({
                   type: "error",
-                  text1: "No Internet Connection",
+                  text1: "No internet connection",
                 });
                 return;
               }
@@ -318,7 +307,7 @@ export const MyRewardCard: FunctionComponent<{
               ) {
                 Toast.show({
                   type: "error",
-                  text1: `${txType[txnTypeKey.withdrawRewards]} In Progress`,
+                  text1: `${txType[txnTypeKey.withdrawRewards]} in progress`,
                 });
                 return;
               }
@@ -327,7 +316,6 @@ export const MyRewardCard: FunctionComponent<{
               });
               setClaimModel(true);
             }}
-            showLoadingSpinner={true}
             loading={isSendingTx}
             disabled={
               !account.isReadyToSendTx ||
@@ -357,18 +345,18 @@ export const MyRewardCard: FunctionComponent<{
           <Text
             style={
               [
-                style.flatten(["color-dark", "text-caption2"]),
+                style.flatten(["color-indigo-250", "text-caption2"]),
                 { lineHeight: 15 },
               ] as ViewStyle
             }
           >
-            {!showRewars ? "View Rewards" : "Hide Rewards"}
+            {!showRewars ? "View rewards" : "Hide rewards"}
           </Text>
           <View style={style.flatten(["margin-left-6"]) as ViewStyle}>
             {!showRewars ? (
-              <ChevronDownIcon color="#151a1a" size={12} />
+              <ChevronDownIcon color="#BFAFFD" size={12} />
             ) : (
-              <ChevronUpIcon color="#151a1a" size={12} />
+              <ChevronUpIcon color="#BFAFFD" size={12} />
             )}
           </View>
         </TouchableOpacity>
@@ -384,7 +372,7 @@ export const MyRewardCard: FunctionComponent<{
       <ClaimRewardsModal
         isOpen={showClaimModel}
         close={() => setClaimModel(false)}
-        earnedAmount={pendingStakableReward}
+        earnedAmount={pendingStakableReward.shrink(true).trim(true).toString()}
         onPress={handleAllClaim}
         buttonLoading={
           isSendingTx ||
@@ -398,7 +386,8 @@ export const MyRewardCard: FunctionComponent<{
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        onHomeClick={() => navigation.navigate("Home", {})}
+        buttonText="Go to activity screen"
+        onHomeClick={() => navigation.navigate("ActivityTab", {})}
         onTryAgainClick={handleAllClaim}
       />
     </BlurBackground>
@@ -421,7 +410,7 @@ const DelegateReward: FunctionComponent<{
   const [txnHash, setTxnHash] = useState<string>("");
   const [showClaimModel, setClaimModel] = useState(false);
   const [claimData, setClaimData] = useState<ClaimData>({
-    reward: undefined,
+    reward: "",
     validatorAddress: "",
   });
 
@@ -467,7 +456,7 @@ const DelegateReward: FunctionComponent<{
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No Internet Connection",
+        text1: "No internet connection",
       });
       return;
     }
@@ -481,7 +470,7 @@ const DelegateReward: FunctionComponent<{
       setClaimModel(false);
       Toast.show({
         type: "success",
-        text1: "Claim In Progress",
+        text1: "claim in process",
       });
       await account.cosmos.sendWithdrawDelegationRewardMsgs(
         [validatorAddress],
@@ -507,7 +496,7 @@ const DelegateReward: FunctionComponent<{
       ) {
         Toast.show({
           type: "error",
-          text1: "Transaction Rejected",
+          text1: "Transaction rejected",
         });
         return;
       } else {
@@ -579,24 +568,22 @@ const DelegateReward: FunctionComponent<{
                 />
               ) : (
                 <BlurBackground
-                  backgroundBlur={false}
+                  backgroundBlur={true}
+                  blurIntensity={16}
                   containerStyle={
-                    {
-                      ...style.flatten([
-                        "width-32",
-                        "height-32",
-                        "border-radius-64",
-                        "items-center",
-                        "justify-center",
-                        "margin-right-12",
-                      ]),
-                      backgroundColor: "#dddfdf",
-                    } as ViewStyle
+                    style.flatten([
+                      "width-32",
+                      "height-32",
+                      "border-radius-64",
+                      "items-center",
+                      "justify-center",
+                      "margin-right-12",
+                    ]) as ViewStyle
                   }
                 >
                   <VectorCharacter
                     char={val.description.moniker.trim()[0]}
-                    color="#151a1a"
+                    color="white"
                     height={12}
                   />
                 </BlurBackground>
@@ -608,7 +595,7 @@ const DelegateReward: FunctionComponent<{
                       "body3",
 
                       "padding-bottom-2",
-                      "color-dark",
+                      "color-white",
                     ]) as ViewStyle
                   }
                 >
@@ -616,10 +603,10 @@ const DelegateReward: FunctionComponent<{
                 </Text>
                 <Text
                   style={
-                    style.flatten(["body3", "color-gray-300"]) as ViewStyle
+                    style.flatten(["body3", "color-white@60%"]) as ViewStyle
                   }
                 >
-                  {formatBalance(rewards, 10, false)}
+                  {rewards.maxDecimals(8).trim(true).shrink(true).toString()}
                 </Text>
               </View>
             </View>
@@ -627,25 +614,25 @@ const DelegateReward: FunctionComponent<{
               <View style={style.flatten(["flex-2", "items-end"])}>
                 <Button
                   text={"Claim"}
+                  rippleColor="black@50%"
                   size="small"
                   mode="outline"
                   containerStyle={
                     style.flatten([
                       "border-radius-64",
-                      "border-color-gray-100",
-                      "background-color-green-250",
+                      "border-color-white@40%",
                       "padding-x-6",
                       "height-30",
                     ]) as ViewStyle
                   }
                   textStyle={
-                    style.flatten(["body3", "color-dark"]) as ViewStyle
+                    style.flatten(["body3", "color-white"]) as ViewStyle
                   }
                   onPress={() => {
                     if (!networkIsConnected) {
                       Toast.show({
                         type: "error",
-                        text1: "No Internet Connection",
+                        text1: "No internet connection",
                       });
                       return;
                     }
@@ -658,7 +645,7 @@ const DelegateReward: FunctionComponent<{
                         type: "error",
                         text1: `${
                           txType[txnTypeKey.withdrawRewards]
-                        } In Progress`,
+                        } in progress`,
                       });
                       return;
                     }
@@ -666,15 +653,17 @@ const DelegateReward: FunctionComponent<{
                       pageName: "Stake",
                     });
                     setClaimData({
-                      reward: rewards,
+                      reward: rewards
+                        .maxDecimals(10)
+                        .trim(true)
+                        .shrink(true)
+                        .toString(),
                       validatorAddress: val.operator_address,
                     });
                     setClaimModel(true);
                   }}
                   disabled={!account.isReadyToSendTx}
                   loading={isSendingTx == val.operator_address}
-                  showLoadingSpinner={true}
-                  loaderColor={style.get("color-dark").color}
                 />
               </View>
             ) : null}
@@ -693,7 +682,8 @@ const DelegateReward: FunctionComponent<{
         close={() => setTransectionModal(false)}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        onHomeClick={() => navigation.navigate("Home", {})}
+        buttonText="Go to activity screen"
+        onHomeClick={() => navigation.navigate("ActivityTab", {})}
         onTryAgainClick={() => handleClaim(claimData.validatorAddress)}
       />
     </React.Fragment>

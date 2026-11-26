@@ -63,31 +63,33 @@ export type GovProposals = {
 };
 
 export type GovParamsDeposit = {
-  depositParams: {
-    minDeposit: {
-      denom: string;
-      amount: string;
-    }[];
+  deposit_params: {
+    min_deposit: [
+      {
+        denom: string;
+        amount: string;
+      }
+    ];
     // Ex) 1209600s
-    maxDepositPeriod: string;
+    max_deposit_period: string;
   };
 };
 
 export type GovParamsVoting = {
-  votingParams: {
+  voting_params: {
     // Ex) 1209600s
-    votingPeriod: string;
+    voting_period: string;
   };
 };
 
 export type GovParamsTally = {
-  tallyParams: {
+  tally_params: {
     // Dec
     quorum: string;
     // Dec
     threshold: string;
     // Dec
-    vetoThreshold: string;
+    veto_threshold: string;
   };
 };
 

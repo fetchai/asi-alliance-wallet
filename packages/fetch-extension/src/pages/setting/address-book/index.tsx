@@ -115,9 +115,7 @@ export const AddressBookPage: FunctionComponent<{
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            analyticsStore.logEvent("edit_address_icon_click", {
-              pageName: "Address Book",
-            });
+            analyticsStore.logEvent("edit_address_book_click");
             setAddAddressModalOpen(true);
             setAddAddressModalIndex(index);
           }}
@@ -129,9 +127,8 @@ export const AddressBookPage: FunctionComponent<{
           onClick={async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            analyticsStore.logEvent("delete_address_click", {
-              action: confirm ? "Yes" : "No",
-              pageName: "Address Book",
+            analyticsStore.logEvent("delete_address_book_click", {
+              action: "No",
             });
 
             if (
@@ -151,6 +148,9 @@ export const AddressBookPage: FunctionComponent<{
                 }),
               })
             ) {
+              analyticsStore.logEvent("delete_address_book_click", {
+                action: "Yes",
+              });
               setAddAddressModalOpen(false);
               setAddAddressModalIndex(-1);
               addressBookConfig.removeAddressBook(index);
@@ -188,7 +188,7 @@ export const AddressBookPage: FunctionComponent<{
             ? onBackButton
             : () => {
                 analyticsStore.logEvent("back_click", {
-                  pageName: "Address Book",
+                  pageName: "Address Book Page",
                 });
                 navigate(-1);
               }
@@ -256,7 +256,7 @@ export const AddressBookPage: FunctionComponent<{
                     e.preventDefault();
                     e.stopPropagation();
                     analyticsStore.logEvent("add_new_address_click", {
-                      pageName: "More",
+                      pageName: "Drawer",
                     });
                     setAddAddressModalOpen(true);
                   }}
@@ -278,7 +278,7 @@ export const AddressBookPage: FunctionComponent<{
                     paragraph={
                       data.address.indexOf(
                         chainStore.getChain(selectedChainId).bech32Config
-                          ?.bech32PrefixAccAddr || ""
+                          .bech32PrefixAccAddr
                       ) === 0
                         ? Bech32Address.shortenAddress(data.address, 34)
                         : data.address.startsWith("agent")

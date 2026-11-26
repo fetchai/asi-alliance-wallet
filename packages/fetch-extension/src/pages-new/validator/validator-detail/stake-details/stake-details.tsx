@@ -1,5 +1,5 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { GlassCard } from "@components-v2/glass-card/index";
+import { GlassCardGradient } from "@components-v2/glass-card/glass-card-gradient";
 import { useNotification } from "@components/notification";
 import { observer } from "mobx-react-lite";
 import React, { useState } from "react";
@@ -7,18 +7,12 @@ import { useLocation, useNavigate } from "react-router";
 import { useStore } from "../../../../stores";
 import style from "../style.module.scss";
 import { TXNTYPE } from "../../../../config";
-import { formatBalance } from "@utils/format";
 
 export const StakeDetails = observer(
   ({ validatorAddress }: { validatorAddress: string }) => {
     const navigate = useNavigate();
-    const {
-      chainStore,
-      accountStore,
-      queriesStore,
-      activityStore,
-      analyticsStore,
-    } = useStore();
+    const { chainStore, accountStore, queriesStore, activityStore } =
+      useStore();
     const account = accountStore.getAccount(chainStore.current.chainId);
     const queries = queriesStore.get(chainStore.current.chainId);
     const location = useLocation();
@@ -45,9 +39,6 @@ export const StakeDetails = observer(
     const handleClaim = async () => {
       setIsWithdrawingRewards(true);
       try {
-        analyticsStore.logEvent("claim_click", {
-          pageName: "Validator Details",
-        });
         await accountInfo.cosmos.sendWithdrawDelegationRewardMsgs(
           [validatorAddress],
           "",
@@ -64,11 +55,6 @@ export const StakeDetails = observer(
                 transition: {
                   duration: 0.25,
                 },
-              });
-              analyticsStore.logEvent("claim_txn_broadcasted", {
-                chainId: chainStore.current.chainId,
-                chainName: chainStore.current.chainName,
-                pageName: "Validator Details",
               });
             },
             onFulfill: (tx: any) => {
@@ -93,11 +79,6 @@ export const StakeDetails = observer(
         }, 200);
       } catch (err) {
         console.error(err);
-        analyticsStore.logEvent("claim_txn_broadcasted_fail", {
-          chainId: chainStore.current.chainId,
-          chainName: chainStore.current.chainName,
-          pageName: "Validator Details",
-        });
         if (err.toString().includes("Error: Request rejected")) {
           navigate(`/validator/${validatorAddress}`, {
             state: { previousAddress: previousAddress },
@@ -109,13 +90,13 @@ export const StakeDetails = observer(
     };
 
     return (
-      <GlassCard styleProps={{ backgroundColor: "var(--bg-green-lightest)" }}>
+      <GlassCardGradient>
         <div className={style["stake-data-container"]}>
           <div className={style["stake-details-container"]}>
             <div className={style["stake-data-row"]}>
               <div className={style["stake-data-title"]}>Staked amount</div>
               <div className={style["stake-data-value"]}>
-                {formatBalance(amount, 6, false)}
+                {amount.maxDecimals(4).trim(true).toString()}
               </div>
             </div>
 
@@ -126,15 +107,12 @@ export const StakeDetails = observer(
                   <div>
                     {!rewards ||
                     rewards.length === 0 ||
-                    parseFloat(rewards[0]?.toString().split(" ")[0]) <
-                      0.000001 ? (
-                      <span style={{ color: "var(--font-dark)" }}>
-                        {parseFloat(rewards[0]?.hideDenom(true).toString()) > 0
-                          ? formatBalance(rewards[0], 6, false)
-                          : `0 ${amount?.denom || ""}`}
-                      </span>
+                    parseFloat(
+                      rewards[0]?.maxDecimals(4).toString().split(" ")[0]
+                    ) < 0.00001 ? (
+                      <span style={{ color: "white" }}>0</span>
                     ) : (
-                      formatBalance(rewards[0], 6, false)
+                      rewards[0]?.maxDecimals(4).toString()
                     )}
                   </div>
                 ) : (
@@ -153,50 +131,37 @@ export const StakeDetails = observer(
 
           <div className={style["stake-buttons"]}>
             <ButtonV2
-              variant="light"
               styleProps={{
+                border: "1px solid rgba(255,255,255,0.4)",
+                background: "transparent",
+                color: "white",
                 height: "36px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginTop: "0px",
-                backgroundColor: "transparent",
               }}
-              text={
-                <React.Fragment>
-                  Unstake
-                  {activityStore.getPendingTxnTypes[TXNTYPE.undelegate] && (
-                    <i className="fas fa-spinner fa-spin ml-2 mr-2" />
-                  )}
-                </React.Fragment>
-              }
-              disabled={activityStore.getPendingTxnTypes[TXNTYPE.undelegate]}
-              onClick={() => {
-                if (activityStore.getPendingTxnTypes[TXNTYPE.undelegate])
-                  return;
-                analyticsStore.logEvent("unstake_click", {
-                  chainId: chainStore.current.chainId,
-                  chainName: chainStore.current.chainName,
-                  pageName: "Validator Detail",
-                });
-                navigate(`/validator/${validatorAddress}/unstake`);
-              }}
+              text="Unstake"
+              onClick={() => navigate(`/validator/${validatorAddress}/unstake`)}
             />
 
             <ButtonV2
-              variant="light"
               styleProps={{
+                background:
+                  "linear-gradient(270deg, #F9774B 10.08%, #cf447b 70.82%",
+                color: "white",
                 height: "36px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginTop: "0px",
-                backgroundColor: "#B1FCAB",
               }}
               disabled={
                 !rewards ||
                 rewards.length === 0 ||
-                parseFloat(rewards[0]?.toString().split(" ")[0]) <= 0 ||
+                parseFloat(
+                  rewards[0]?.maxDecimals(4).toString().split(" ")[0]
+                ) <= 0.0 ||
                 activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
               }
               onClick={() => {
@@ -224,7 +189,7 @@ export const StakeDetails = observer(
             </ButtonV2>
           </div>
         </div>
-      </GlassCard>
+      </GlassCardGradient>
     );
   }
 );

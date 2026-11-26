@@ -5,12 +5,7 @@ import {
   FeeButtons,
   FeeButtonsInner,
 } from "../fee-button/fee-button-component";
-import {
-  FeeType,
-  IFeeConfig,
-  IGasConfig,
-  IGasSimulator,
-} from "@keplr-wallet/hooks";
+import { FeeType, IFeeConfig, IGasConfig } from "@keplr-wallet/hooks";
 import { Button } from "components/button";
 import { ViewStyle } from "react-native";
 import { observer } from "mobx-react-lite";
@@ -21,27 +16,16 @@ export const TransactionFeeModel: FunctionComponent<{
   title: string;
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
-  gasSimulator?: IGasSimulator;
   feeButtonInner?: boolean;
 }> = observer(
-  ({
-    close,
-    title,
-    isOpen,
-    feeConfig,
-    gasConfig,
-    gasSimulator,
-    feeButtonInner = false,
-  }) => {
+  ({ close, title, isOpen, feeConfig, gasConfig, feeButtonInner = false }) => {
     const style = useStyle();
     const [selectFeeButton, setSelectFeeButton] = useState<FeeType>(
       feeConfig.feeType ? feeConfig.feeType : "average"
     );
-    const [hasManualFeeError, setHasManualFeeError] = useState(false);
 
     useEffect(() => {
       setSelectFeeButton(feeConfig.feeType ? feeConfig.feeType : "average");
-      setHasManualFeeError(false);
     }, [isOpen]);
 
     if (!isOpen) {
@@ -55,10 +39,8 @@ export const TransactionFeeModel: FunctionComponent<{
             gasLabel="gas"
             feeConfig={feeConfig}
             gasConfig={gasConfig}
-            gasSimulator={gasSimulator}
             setFeeButton={setSelectFeeButton}
             selectFeeButton={selectFeeButton}
-            onValidationChange={setHasManualFeeError}
           />
         ) : (
           <FeeButtonsInner
@@ -73,22 +55,11 @@ export const TransactionFeeModel: FunctionComponent<{
         <Button
           text="Save changes"
           containerStyle={
-            {
-              ...style.flatten([
-                "margin-top-24",
-                "border-radius-32",
-                "background-color-dark",
-              ]),
-              ...(hasManualFeeError && { opacity: 0.8 }),
-            } as ViewStyle
+            style.flatten(["margin-top-24", "border-radius-32"]) as ViewStyle
           }
-          textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
-          rippleColor="#333333"
-          disabled={hasManualFeeError}
+          textStyle={style.flatten(["body2"]) as ViewStyle}
           onPress={() => {
-            if (!feeConfig.isManual) {
-              feeConfig.setFeeType(selectFeeButton);
-            }
+            feeConfig.setFeeType(selectFeeButton);
             close();
           }}
         />

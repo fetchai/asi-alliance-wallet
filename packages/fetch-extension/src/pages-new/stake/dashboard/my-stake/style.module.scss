@@ -1,5 +1,3 @@
-@import "../../../../styles/var";
-
 .row {
   display: flex;
   flex-direction: column;
@@ -38,8 +36,7 @@
   justify-content: center;
   align-items: center;
   border-radius: 100px;
-  color: $font-dark;
-  background: $card-bg;
+  background: rgba(255, 255, 255, 0.2);
   font-size: 12px;
 }
 
@@ -71,7 +68,7 @@
 }
 
 .validator-currency {
-  color: $font-dark;
+  color: rgba(255, 255, 255, 0.6);
   font-weight: 400;
 }
 
@@ -81,13 +78,13 @@
   justify-content: space-between;
   align-items: start;
   font-size: 12px;
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .show-rewards {
   display: flex;
   flex-direction: column;
-  color: $font-dark;
+  color: white;
   gap: 16px;
 }
 
@@ -96,7 +93,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  & img {
+
+  img {
     height: 32px;
     width: 32px;
     border-radius: 100%;
@@ -112,56 +110,11 @@
 
 .reward-title {
   font-weight: 400;
-  color: $font-dark;
 }
 
 .reward-amount {
   font-size: 14px;
-  color: $font-secondary;
+  color: white;
   opacity: 60%;
   font-weight: 400;
-}
-
-.validator-avatar {
-  width: 32px;
-  height: 28px;
-  border-radius: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(221, 223, 223, 0.8);
-  margin-top: 6px;
-}
-
-.label {
-  color: $font-secondary;
-  font-family: $font-family-base;
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: normal;
-}
-
-.total-rewards {
-  font-weight: 400;
-  color: rgba($font-dark, 0.9);
-
-  & > span {
-    color: $font-secondary;
-  }
-}
-
-.right-col {
-  .amount {
-    color: rgba($font-dark, 0.9);
-  }
-  .validator-reward {
-    color: $link-green;
-  }
-}
-
-.rewards-toggle {
-  font-size: 12px;
-  color: $link-green;
-  padding-right: 5px;
 }

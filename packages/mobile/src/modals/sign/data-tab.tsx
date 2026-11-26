@@ -29,7 +29,7 @@ export const DataTab: FunctionComponent<{
       Buffer.from(
         signDocHelper.signDocWrapper.aminoSignDoc.msgs[0].value.data,
         "base64"
-      )``
+      )
     );
     return JSON.stringify(JSON.parse(jsonStr), undefined, 2);
   }, [signDocHelper.signDocWrapper?.aminoSignDoc.msgs, ethSignType]);
@@ -37,16 +37,15 @@ export const DataTab: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      backgroundBlur={false}
+      blurIntensity={16}
       containerStyle={
         [
           style.flatten(["border-radius-8", "overflow-hidden", "margin-y-16"]),
-          { backgroundColor: "#f6f6f6" },
         ] as ViewStyle
       }
     >
       <ScrollView
-        indicatorStyle={"black"}
+        indicatorStyle={"white"}
         nestedScrollEnabled={true}
         scrollEnabled={true}
         style={[
@@ -56,7 +55,9 @@ export const DataTab: FunctionComponent<{
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={style.flatten(["color-dark", "padding-12"]) as ViewStyle}>
+        <Text
+          style={style.flatten(["color-gray-200", "padding-12"]) as ViewStyle}
+        >
           {content}
         </Text>
       </ScrollView>

@@ -12,13 +12,8 @@ export const ValidatorDetails = observer(
   ({ validatorAddress }: { validatorAddress: string }) => {
     const navigate = useNavigate();
 
-    const {
-      chainStore,
-      accountStore,
-      queriesStore,
-      activityStore,
-      analyticsStore,
-    } = useStore();
+    const { chainStore, accountStore, queriesStore, activityStore } =
+      useStore();
     const account = accountStore.getAccount(chainStore.current.chainId);
     const queries = queriesStore.get(chainStore.current.chainId);
 
@@ -40,14 +35,6 @@ export const ValidatorDetails = observer(
       };
     }, [queryDelegations, validatorAddress]);
 
-    const parsedStake = parseFloat(amount?.hideDenom(true).toString() || "0");
-
-    function isStake() {
-      return amount && parsedStake >= 0.000001;
-    }
-
-    const hasLowStake = amount && parsedStake > 0 && parsedStake < 0.000001;
-
     return (
       <div
         className={style["validator-details-container"]}
@@ -64,50 +51,52 @@ export const ValidatorDetails = observer(
           <ValidatorData validatorAddress={validatorAddress} />
         </div>
 
-        {hasLowStake && (
-          <div className={style["alert"]}>
-            <div className={style["low-stake-message"]}>
-              <p>
-                Your staked balance is too low to perform staking actions.
-                Please stake additional tokens to enable Unstake, Redelegate, or
-                Claim Rewards.
-              </p>
-            </div>
-          </div>
-        )}
+        {amount &&
+          parseFloat(
+            amount?.maxDecimals(4).trim(true).toString().split(" ")[0]
+          ) > 0.00001 && <StakeDetails validatorAddress={validatorAddress} />}
 
-        {isStake() && <StakeDetails validatorAddress={validatorAddress} />}
-
-        <div className={style["validator-buttons"]}>
-          {isStake() && (
-            <ButtonV2
-              variant="light"
-              styleProps={{
-                height: "56px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginTop: "0px",
-              }}
-              disabled={activityStore.getPendingTxnTypes[TXNTYPE.redelegate]}
-              text="Redelegate"
-              onClick={() => {
-                analyticsStore.logEvent("redelegate_click", {
-                  pageName: "Validator Details",
-                });
-                if (activityStore.getPendingTxnTypes[TXNTYPE.redelegate])
-                  return;
-                navigate(`/validator/${validatorAddress}/redelegate`);
-              }}
-            >
-              {activityStore.getPendingTxnTypes[TXNTYPE.redelegate] && (
-                <i className="fas fa-spinner fa-spin ml-2 mr-2" />
-              )}
-            </ButtonV2>
-          )}
+        <div
+          className={style["validator-buttons"]}
+          // style={{
+          //   position: "fixed",
+          //   bottom: "15px",
+          //   margin: "0 auto",
+          //   left: 0,
+          //   right: 0,
+          //   width: "336px",
+          // }}
+        >
+          {amount &&
+            parseFloat(
+              amount?.maxDecimals(4).trim(true).toString().split(" ")[0]
+            ) > 0.00001 && (
+              <ButtonV2
+                styleProps={{
+                  border: "1px solid rgba(255,255,255,0.4)",
+                  background: "transparent",
+                  color: "white",
+                  height: "56px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: "0px",
+                }}
+                disabled={activityStore.getPendingTxnTypes[TXNTYPE.redelegate]}
+                text="Redelegate"
+                onClick={() => {
+                  if (activityStore.getPendingTxnTypes[TXNTYPE.redelegate])
+                    return;
+                  navigate(`/validator/${validatorAddress}/redelegate`);
+                }}
+              >
+                {activityStore.getPendingTxnTypes[TXNTYPE.redelegate] && (
+                  <i className="fas fa-spinner fa-spin ml-2 mr-2" />
+                )}
+              </ButtonV2>
+            )}
 
           <ButtonV2
-            variant="dark"
             styleProps={{
               height: "56px",
               display: "flex",
@@ -115,17 +104,18 @@ export const ValidatorDetails = observer(
               justifyContent: "center",
               marginTop: "0px",
             }}
-            text={`${isStake() ? "Stake" : "Stake with this validator"}`}
+            text={`${
+              amount &&
+              parseFloat(
+                amount?.maxDecimals(4).trim(true).toString().split(" ")[0]
+              ) > 0.00001
+                ? "Stake"
+                : "Stake with this validator"
+            }`}
             disabled={activityStore.getPendingTxnTypes[TXNTYPE.delegate]}
             onClick={() => {
               if (activityStore.getPendingTxnTypes[TXNTYPE.delegate]) return;
               navigate(`/validator/${validatorAddress}/delegate`);
-              analyticsStore.logEvent(
-                isStake() ? "stake_more_click" : "stake_with_validator_click",
-                {
-                  pageName: "Validator Details",
-                }
-              );
             }}
           >
             {activityStore.getPendingTxnTypes[TXNTYPE.delegate] && (

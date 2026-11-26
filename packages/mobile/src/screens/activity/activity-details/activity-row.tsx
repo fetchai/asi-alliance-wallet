@@ -5,7 +5,6 @@ import { RectButton } from "components/rect-button";
 import { useSimpleTimer } from "hooks/use-simple-timer";
 import LottieView from "lottie-react-native";
 import * as Clipboard from "expo-clipboard";
-import Toast from "react-native-toast-message";
 import { CopyIcon } from "components/new/icon/copy-icon";
 
 export const DetailRow = ({
@@ -27,7 +26,7 @@ export const DetailRow = ({
       }
     >
       <View style={style.flatten(["flex-2"]) as ViewStyle}>
-        <Text style={style.flatten(["color-dark"]) as ViewStyle}>{label}</Text>
+        <Text style={style.flatten(["color-white"]) as ViewStyle}>{label}</Text>
       </View>
       <RectButton
         style={StyleSheet.flatten([
@@ -38,10 +37,6 @@ export const DetailRow = ({
             ? async () => {
                 await Clipboard.setStringAsync(hash);
                 setTimer(2000);
-                Toast.show({
-                  type: "success",
-                  text1: "Transaction Hash Copied",
-                });
               }
             : undefined
         }
@@ -106,7 +101,7 @@ export const DetailRow = ({
           </View>
         )}
         <Text
-          style={style.flatten(["color-gray-400", "text-right"]) as ViewStyle}
+          style={style.flatten(["color-gray-200", "text-right"]) as ViewStyle}
         >
           {value}
         </Text>

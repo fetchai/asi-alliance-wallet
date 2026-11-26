@@ -1,92 +1,33 @@
 import {
-  ObservableQueryTendermint,
-  ObservableQueryMap,
-  camelToSnake,
-  decodeAccount,
-} from "../../../common";
-import { ChainGetter } from "../../../chain";
+  ObservableChainQuery,
+  ObservableChainQueryMap,
+} from "../../chain-query";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../common";
 import { AuthAccount } from "./types";
 import { computed, makeObservable } from "mobx";
 import { BaseAccount } from "@keplr-wallet/cosmos";
-import { AuthExtension, setupAuthExtension } from "@cosmjs/stargate";
-import { QuerySharedContext } from "../../../common";
 
-interface PubKey {
-  "@type": string;
-  key: string;
-}
-
-interface Base_Account {
-  account_number: string;
-  address: string;
-  pub_key: PubKey;
-  sequence: string;
-}
-
-interface Delegated {
-  amount: string;
-  denom: string;
-}
-
-interface BaseVestingAccount {
-  base_account: Base_Account;
-  delegated_free: Delegated[];
-  delegated_vesting: Delegated[];
-  end_time: string;
-  original_vesting: Delegated[];
-}
-interface VestingAccount {
-  "@type"?: string;
-  base_vesting_account?: BaseVestingAccount;
-  start_time?: string;
-}
-
-export enum VestingType {
-  Continuous = "/cosmos.vesting.v1beta1.ContinuousVestingAccount",
-  Delayed = "/cosmos.vesting.v1beta1.DelayedVestingAccount",
-}
-
-export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthAccount> {
-  protected readonly chainGetter: ChainGetter;
-  protected readonly chainId: string;
+export class ObservableQueryAccountInner extends ObservableChainQuery<AuthAccount> {
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly bech32Address: string
   ) {
-    const chainInfo = chainGetter.getChain(chainId);
     super(
-      sharedContext,
-      chainInfo.rpc,
-      async (queryClient) => {
-        const client = queryClient as unknown as AuthExtension;
-        const result = await client.auth.account(bech32Address);
-        const decodedResponse = result ? decodeAccount(result) : {};
-        return {
-          account: camelToSnake(decodedResponse),
-        };
-      },
-      setupAuthExtension,
+      kvStore,
+      chainId,
+      chainGetter,
       `/cosmos/auth/v1beta1/accounts/${bech32Address}`
     );
-    this.chainId = chainId;
-    this.bech32Address = bech32Address;
-    this.chainGetter = chainGetter;
+
     makeObservable(this);
   }
 
   protected override canFetch(): boolean {
-    /* If bech32 address is empty, it will always fail, so don't need to fetch it.
-    also avoid fetching the endpoint for evm networks*/
-    const chainInfo = this.chainGetter.getChain(this.chainId);
-    const isEvm =
-      Boolean(
-        chainInfo.features?.includes("eth-key-sign") &&
-          chainInfo.features?.includes("eth-address-gen") &&
-          chainInfo.evm
-      ) ?? false;
-    return this.bech32Address.length > 0 && !isEvm;
+    // If bech32 address is empty, it will always fail, so don't need to fetch it.
+    return this.bech32Address.length > 0;
   }
 
   @computed
@@ -119,28 +60,19 @@ export class ObservableQueryAccountInner extends ObservableQueryTendermint<AuthA
 
     return !!this.response.data?.account.base_vesting_account;
   }
-
-  @computed
-  get vestingAccount(): VestingAccount {
-    if (!this.response) {
-      return {};
-    }
-
-    return this.response.data?.account;
-  }
 }
 
-export class ObservableQueryAccount extends ObservableQueryMap<AuthAccount> {
+export class ObservableQueryAccount extends ObservableChainQueryMap<AuthAccount> {
   constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((bech32Address) => {
+    super(kvStore, chainId, chainGetter, (bech32Address) => {
       return new ObservableQueryAccountInner(
-        sharedContext,
-        chainId,
-        chainGetter,
+        this.kvStore,
+        this.chainId,
+        this.chainGetter,
         bech32Address
       );
     });

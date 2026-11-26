@@ -1,6 +1,6 @@
 import classnames from "classnames";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, PropsWithChildren } from "react";
+import React, { FunctionComponent } from "react";
 import { useIntl } from "react-intl";
 import { useConfirm } from "@components/confirm";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
@@ -8,11 +8,9 @@ import { useStore } from "../../stores";
 import style from "./chain-list.module.scss";
 import { ChainInfoWithCoreTypes } from "@keplr-wallet/background";
 import { useNavigate } from "react-router";
-const ChainElement: FunctionComponent<
-  PropsWithChildren<{
-    chainInfo: ChainInfoWithCoreTypes;
-  }>
-> = observer(({ chainInfo }) => {
+const ChainElement: FunctionComponent<{
+  chainInfo: ChainInfoWithCoreTypes;
+}> = observer(({ chainInfo }) => {
   const { chainStore, analyticsStore, chatStore, proposalStore } = useStore();
   const navigate = useNavigate();
   const intl = useIntl();
@@ -43,12 +41,12 @@ const ChainElement: FunctionComponent<
         messageAndGroupListenerUnsubscribe();
         navigate("/");
         if (Object.values(properties).length > 0) {
-          analyticsStore.logEvent("chain_change_click", properties);
+          analyticsStore.logEvent("Chain changed", properties);
         }
       }}
     >
       {chainInfo.chainName}
-      {!chainInfo.embedded &&
+      {!chainInfo.embeded &&
       chainStore.current.chainId !== chainInfo.chainId ? (
         <div className={style["removeBtn"]}>
           <i
@@ -79,7 +77,7 @@ const ChainElement: FunctionComponent<
   );
 });
 
-const Divider: FunctionComponent<PropsWithChildren> = (props) => {
+const Divider: FunctionComponent = (props) => {
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <hr
@@ -125,11 +123,11 @@ export const ChainList: FunctionComponent = observer(() => {
   return (
     <div className={style["chainListContainer"]}>
       {mainChainList.map((chainInfo) => (
-        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.embedded} />
+        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />
       ))}
       {betaChainList.length > 0 ? <Divider>Beta support</Divider> : null}
       {betaChainList.map((chainInfo) => (
-        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.embedded} />
+        <ChainElement key={chainInfo.chainId} chainInfo={chainInfo.raw} />
       ))}
 
       {/* <Divider /> */}

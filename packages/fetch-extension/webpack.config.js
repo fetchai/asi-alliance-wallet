@@ -29,8 +29,6 @@ const envDefaults = {
     process.env["KEPLR_EXT_COINGECKO_GETPRICE"] || "/simple/price",
   DEV_AUTH_CLIENT_ID: process.env["DEV_AUTH_CLIENT_ID"] || "",
   PROD_AUTH_CLIENT_ID: process.env["PROD_AUTH_CLIENT_ID"] || "",
-  DEV_MOONPAY_API_KEY: process.env["DEV_MOONPAY_API_KEY"] || "",
-  PROD_MOONPAY_API_KEY: process.env["PROD_MOONPAY_API_KEY"] || "",
 };
 const commonResolve = () => ({
   extensions: [".ts", ".tsx", ".js", ".jsx", ".css", ".scss", ".svg"],
@@ -66,16 +64,11 @@ const altResolve = () => {
   return {};
 };
 const sassRule = {
-  // Anchor to end of filename so Web3Auth's prebuilt `*.css.js` modules are
-  // not mis-matched as Sass (the old `/(\.s?css)|(\.sass)$/` matched `.css`
-  // anywhere in the name).
-  test: /\.(s?css|sass)$/,
-  // Prebuilt CSS-in-JS from dependencies must stay as JS.
-  exclude: /\.css\.js$/,
+  test: /(\.s?css)|(\.sass)$/,
   oneOf: [
     // if ext includes module as prefix, it perform by css loader.
     {
-      test: /\.module\.(s?css|sass)$/,
+      test: /.module(\.s?css)|(\.sass)$/,
       use: [
         "style-loader",
         {
@@ -125,11 +118,6 @@ const extensionConfig = () => {
     devtool: isEnvDevelopment ? "cheap-source-map" : false,
     // In development environment, webpack watch the file changes, and recompile
     watch: isEnvDevelopment,
-    // Web3Auth/viem/Solana pull a huge node_modules tree; watching it exhausts
-    // Linux inotify (ENOSPC) and slows rebuilds. Source changes still rebuild.
-    watchOptions: {
-      ignored: /node_modules/,
-    },
     entry: {
       background: ["./src/background/background.ts"],
       popup: ["./src/index.tsx"],
@@ -241,13 +229,7 @@ const extensionConfig = () => {
         Buffer: ["buffer", "Buffer"],
       }),
       new webpack.EnvironmentPlugin(envDefaults),
-      new ForkTsCheckerWebpackPlugin({
-        // Keep typechecking our src; skipLibCheck in tsconfig avoids the
-        // hundreds of third-party .d.ts errors from the Web3Auth stack.
-        typescript: {
-          memoryLimit: 4096,
-        },
-      }),
+      new ForkTsCheckerWebpackPlugin(),
       new CopyWebpackPlugin({
         patterns: [
           ...(() => {
@@ -274,26 +256,9 @@ const extensionConfig = () => {
         ],
       }),
       new HtmlWebpackPlugin({
-        template: "./src/popup.html",
+        template: "./src/index.html",
         filename: "popup.html",
         chunks: ["popup"],
-      }),
-      new HtmlWebpackPlugin({
-        template: "./src/popup.html",
-        filename: "sidePanel.html",
-        chunks: ["popup"],
-      }),
-      new HtmlWebpackPlugin({
-        template: "./src/popup-loading.html",
-        filename: "popup-loading.html",
-        inject: false,
-        redirectURL: "/popup.html",
-      }),
-      new HtmlWebpackPlugin({
-        template: "./src/popup-loading.html",
-        filename: "sidepanel-loading.html",
-        inject: false,
-        redirectURL: "/sidePanel.html",
       }),
       new HtmlWebpackPlugin({
         template: "./src/index.html",

@@ -6,19 +6,21 @@ import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
 import { TokensView } from "../main/tokens";
 import { Stats } from "./stats";
 import { useStore } from "../../stores";
+import { CHAIN_ID_ERIDANUS } from "../../config.ui.var";
 
 export const Portfolio = () => {
   const navigate = useNavigate();
   const [isClaimRewardsOpen, setIsClaimRewardsOpen] = useState(false);
-  const { chainStore, analyticsStore } = useStore();
 
+  const { chainStore } = useStore();
   const tabs = [
     { id: "Tokens", component: <TokensView /> },
     {
       id: "Stats",
       disabled:
-        chainStore.current.features?.includes("eth-key-sign") ||
-        chainStore.current.chainId === "noble-1",
+        chainStore.current.chainId !== "fetchhub-4" &&
+        chainStore.current.chainId !== "dorado-1" &&
+        chainStore.current.chainId !== CHAIN_ID_ERIDANUS,
       component: (
         <Stats
           isClaimRewardsOpen={isClaimRewardsOpen}
@@ -27,7 +29,6 @@ export const Portfolio = () => {
       ),
     },
   ];
-
   return (
     <HeaderLayout
       showBottomMenu={true}
@@ -35,15 +36,7 @@ export const Portfolio = () => {
       onBackButton={() => navigate("/")}
     >
       <div className={style["title"]}>Portfolio</div>
-      <TabsPanel
-        tabHeight="calc(100vh - 296px)"
-        tabs={tabs}
-        onTabChange={(tabId: string) => {
-          analyticsStore.logEvent(`${tabId.toLowerCase()}_tab_click`, {
-            pageName: "Portfolio",
-          });
-        }}
-      />
+      <TabsPanel tabHeight="330px" tabs={tabs} />
     </HeaderLayout>
   );
 };

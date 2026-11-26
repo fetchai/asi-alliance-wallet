@@ -1,9 +1,4 @@
-import React, {
-  FunctionComponent,
-  PropsWithChildren,
-  useEffect,
-  useState,
-} from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { IntlProvider } from "react-intl";
 
 import MessagesEn from "./en.json";
@@ -66,13 +61,11 @@ export type LanguageToFiatCurrency = { ["default"]: string } & {
   [language: string]: string | undefined;
 };
 
-export const AppIntlProvider: FunctionComponent<
-  PropsWithChildren<{
-    additionalMessages: IntlMessages;
-    // Set the fiat currency according to the language if the fiat currency is not set (automatic).
-    languageToFiatCurrency: LanguageToFiatCurrency;
-  }>
-> = ({ additionalMessages, languageToFiatCurrency, children }) => {
+export const AppIntlProvider: FunctionComponent<{
+  additionalMessages: IntlMessages;
+  // Set the fiat currency according to the language if the fiat currency is not set (automatic).
+  languageToFiatCurrency: LanguageToFiatCurrency;
+}> = ({ additionalMessages, languageToFiatCurrency, children }) => {
   const [language, _setLanguage] = useState(() =>
     initLanguage(additionalMessages)
   );

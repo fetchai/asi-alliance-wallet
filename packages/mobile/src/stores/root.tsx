@@ -4,39 +4,35 @@ import {
   EthereumEndpoint,
 } from "../config";
 import {
+  KeyRingStore,
+  InteractionStore,
   QueriesStore,
   CoinGeckoPriceStore,
   AccountStore,
+  SignInteractionStore,
+  TokensStore,
   CosmosQueries,
   CosmwasmQueries,
   SecretQueries,
   CosmosAccount,
   CosmwasmAccount,
   SecretAccount,
-  ObservableQuery,
+  LedgerInitStore,
+  IBCCurrencyRegsitrar,
+  PermissionStore,
+  ChainSuggestStore,
+  ObservableQueryBase,
   DeferInitialQueryController,
   ActivityStore,
   ProposalStore,
   TokenGraphStore,
 } from "@keplr-wallet/stores";
-import {
-  KeyRingStore,
-  InteractionStore,
-  SignInteractionStore,
-  TokensStore,
-  LedgerInitStore,
-  PermissionStore,
-  PermissionManagerStore,
-  ChainSuggestStore,
-} from "@keplr-wallet/stores-core";
-import { IBCCurrencyRegistrar } from "@keplr-wallet/stores-ibc";
 import { AsyncKVStore } from "../common";
 import { APP_PORT } from "@keplr-wallet/router";
 import { ChainInfoWithCoreTypes } from "@keplr-wallet/background";
 import { RNEnv, RNRouterUI, RNMessageRequesterInternal } from "../router";
 import { ChainStore } from "./chain";
 import EventEmitter from "eventemitter3";
-import { reaction } from "mobx";
 import { Keplr } from "@keplr-wallet/provider";
 import { KeychainStore } from "./keychain";
 import { WalletConnectStore } from "./wallet-connect";
@@ -47,7 +43,7 @@ import { Amplitude } from "@amplitude/react-native";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import {
   AxelarEVMBridgeCurrencyRegistrar,
-  GravityBridgeCurrencyRegistrar,
+  GravityBridgeCurrencyRegsitrar,
   KeplrETCQueries,
 } from "@keplr-wallet/stores-etc";
 
@@ -55,9 +51,8 @@ export class RootStore {
   public readonly chainStore: ChainStore;
   public readonly keyRingStore: KeyRingStore;
 
-  public readonly interactionStore: InteractionStore;
+  protected readonly interactionStore: InteractionStore;
   public readonly permissionStore: PermissionStore;
-  public readonly generalPermissionStore: PermissionManagerStore;
   public readonly ledgerInitStore: LedgerInitStore;
   public readonly signInteractionStore: SignInteractionStore;
   public readonly chainSuggestStore: ChainSuggestStore;
@@ -73,11 +68,11 @@ export class RootStore {
     [CosmosAccount, CosmwasmAccount, SecretAccount]
   >;
   public readonly priceStore: CoinGeckoPriceStore;
-  public readonly tokensStore: TokensStore;
+  public readonly tokensStore: TokensStore<ChainInfoWithCoreTypes>;
 
-  protected readonly ibcCurrencyRegistrar: IBCCurrencyRegistrar<ChainInfoWithCoreTypes>;
-  protected readonly gravityBridgeCurrencyRegistrar: GravityBridgeCurrencyRegistrar;
-  protected readonly axelarEVMBridgeCurrencyRegistrar: AxelarEVMBridgeCurrencyRegistrar;
+  protected readonly ibcCurrencyRegistrar: IBCCurrencyRegsitrar<ChainInfoWithCoreTypes>;
+  protected readonly gravityBridgeCurrencyRegistrar: GravityBridgeCurrencyRegsitrar<ChainInfoWithCoreTypes>;
+  protected readonly axelarEVMBridgeCurrencyRegistrar: AxelarEVMBridgeCurrencyRegistrar<ChainInfoWithCoreTypes>;
 
   public readonly keychainStore: KeychainStore;
   public readonly walletConnectStore: WalletConnectStore;
@@ -125,12 +120,8 @@ export class RootStore {
       router,
       new RNMessageRequesterInternal()
     );
-    this.generalPermissionStore = new PermissionManagerStore(
-      new RNMessageRequesterInternal()
-    );
     this.permissionStore = new PermissionStore(
       this.interactionStore,
-      this.generalPermissionStore,
       new RNMessageRequesterInternal()
     );
     this.ledgerInitStore = new LedgerInitStore(
@@ -143,8 +134,15 @@ export class RootStore {
       CommunityChainInfoRepo
     );
 
-    ObservableQuery.experimentalDeferInitialQueryController =
+    ObservableQueryBase.experimentalDeferInitialQueryController =
       new DeferInitialQueryController();
+
+    this.chainStore = new ChainStore(
+      new AsyncKVStore("store_chain_config"),
+      EmbedChainInfos,
+      new RNMessageRequesterInternal(),
+      ObservableQueryBase.experimentalDeferInitialQueryController
+    );
 
     this.keyRingStore = new KeyRingStore(
       {
@@ -152,15 +150,10 @@ export class RootStore {
           eventEmitter.emit(type);
         },
       },
-      new RNMessageRequesterInternal()
-    );
-
-    this.chainStore = new ChainStore(
-      new AsyncKVStore("store_chain_config"),
-      EmbedChainInfos,
+      "pbkdf2",
+      this.chainStore,
       new RNMessageRequesterInternal(),
-      this.keyRingStore,
-      ObservableQuery.experimentalDeferInitialQueryController
+      this.interactionStore
     );
 
     this.queriesStore = new QueriesStore(
@@ -172,22 +165,16 @@ export class RootStore {
       // https://github.com/chainapsis/keplr-wallet/issues/318
       new AsyncKVStore("store_queries_fix3"),
       this.chainStore,
-      {
-        responseDebounceMs: 75,
-      },
       CosmosQueries.use(),
       CosmwasmQueries.use(),
       SecretQueries.use({
         apiGetter: async () => {
-          return new Keplr("0.13.11", "core", new RNMessageRequesterInternal());
+          // TOOD: Set version for Keplr API
+          return new Keplr("0.12.12", "core", new RNMessageRequesterInternal());
         },
       }),
       KeplrETCQueries.use({
         ethereumURL: EthereumEndpoint,
-        skipTokenInfoBaseURL: "",
-        skipTokenInfoAPIURI: "",
-        txCodecBaseURL: "",
-        topupBaseURL: "",
       })
     );
 
@@ -215,16 +202,14 @@ export class RootStore {
       this.activityStore,
       this.tokenGraphStore,
       this.accountBaseStore,
-      async () => {
-        return new Keplr("0.13.11", "core", new RNMessageRequesterInternal());
-      },
       () => {
         return {
           suggestChain: false,
           autoInit: true,
           getKeplr: async () => {
+            // TOOD: Set version for Keplr API
             return new Keplr(
-              "0.13.11",
+              "0.12.12",
               "core",
               new RNMessageRequesterInternal()
             );
@@ -281,7 +266,6 @@ export class RootStore {
         usd: {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 2,
           locale: "en-US",
           name: "United States Dollar",
@@ -289,7 +273,6 @@ export class RootStore {
         aed: {
           currency: "aed",
           symbol: "د.إ",
-          symbolName: "AED",
           maxDecimals: 2,
           locale: "ar-AE",
           name: "United Arab Emirates Dirham",
@@ -297,7 +280,6 @@ export class RootStore {
         ars: {
           currency: "ars",
           symbol: "$",
-          symbolName: "ARS",
           maxDecimals: 2,
           locale: "es-AR",
           name: "Argentine Peso",
@@ -305,7 +287,6 @@ export class RootStore {
         aud: {
           currency: "aud",
           symbol: "AU$",
-          symbolName: "AU$",
           maxDecimals: 2,
           locale: "en-AU",
           name: "Australian Dollar",
@@ -313,7 +294,6 @@ export class RootStore {
         bdt: {
           currency: "bdt",
           symbol: "৳",
-          symbolName: "BDT",
           maxDecimals: 2,
           locale: "bn-BD",
           name: "Bangladeshi Taka",
@@ -321,7 +301,6 @@ export class RootStore {
         bhd: {
           currency: "bhd",
           symbol: ".د.ب",
-          symbolName: "BHD",
           maxDecimals: 3,
           locale: "ar-BH",
           name: "Bahraini Dinar",
@@ -329,7 +308,6 @@ export class RootStore {
         bmd: {
           currency: "bmd",
           symbol: "BD$",
-          symbolName: "BD$",
           maxDecimals: 2,
           locale: "en-BM",
           name: "Bermudian Dollar",
@@ -337,7 +315,6 @@ export class RootStore {
         brl: {
           currency: "brl",
           symbol: "R$",
-          symbolName: "R$",
           maxDecimals: 2,
           locale: "pt-BR",
           name: "Brazilian Real",
@@ -345,7 +322,6 @@ export class RootStore {
         cad: {
           currency: "cad",
           symbol: "CA$",
-          symbolName: "CA$",
           maxDecimals: 2,
           locale: "en-CA",
           name: "Canadian Dollar",
@@ -353,7 +329,6 @@ export class RootStore {
         chf: {
           currency: "chf",
           symbol: "CHF",
-          symbolName: "CHF",
           maxDecimals: 2,
           locale: "de-CH",
           name: "Swiss Franc",
@@ -361,7 +336,6 @@ export class RootStore {
         clp: {
           currency: "clp",
           symbol: "$",
-          symbolName: "CLP",
           maxDecimals: 2,
           locale: "es-CL",
           name: "Chilean Peso",
@@ -369,7 +343,6 @@ export class RootStore {
         cny: {
           currency: "cny",
           symbol: "¥",
-          symbolName: "CN¥",
           maxDecimals: 1,
           locale: "zh-CN",
           name: "Chinese Yuan",
@@ -377,7 +350,6 @@ export class RootStore {
         czk: {
           currency: "czk",
           symbol: "Kč",
-          symbolName: "CZK",
           maxDecimals: 2,
           locale: "cs-CZ",
           name: "Czech Koruna",
@@ -385,7 +357,6 @@ export class RootStore {
         dkk: {
           currency: "dkk",
           symbol: "kr",
-          symbolName: "DKK",
           maxDecimals: 2,
           locale: "da-DK",
           name: "Danish Krone",
@@ -393,7 +364,6 @@ export class RootStore {
         eur: {
           currency: "eur",
           symbol: "€",
-          symbolName: "€",
           maxDecimals: 2,
           locale: "en-IE",
           name: "Euro",
@@ -401,7 +371,6 @@ export class RootStore {
         gbp: {
           currency: "gbp",
           symbol: "£",
-          symbolName: "£",
           maxDecimals: 2,
           locale: "en-GB",
           name: "British Pound Sterling",
@@ -409,7 +378,6 @@ export class RootStore {
         gel: {
           currency: "gel",
           symbol: "₾",
-          symbolName: "GEL",
           maxDecimals: 2,
           locale: "ka-GE",
           name: "Georgian Lari",
@@ -417,7 +385,6 @@ export class RootStore {
         hkd: {
           currency: "hkd",
           symbol: "HK$",
-          symbolName: "HK$",
           maxDecimals: 1,
           locale: "en-HK",
           name: "Hong Kong Dollar",
@@ -425,7 +392,6 @@ export class RootStore {
         huf: {
           currency: "huf",
           symbol: "Ft",
-          symbolName: "HUF",
           maxDecimals: 2,
           locale: "hu-HU",
           name: "Hungarian Forint",
@@ -433,7 +399,6 @@ export class RootStore {
         idr: {
           currency: "idr",
           symbol: "Rp",
-          symbolName: "IDR",
           maxDecimals: 2,
           locale: "id-ID",
           name: "Indonesian Rupiah",
@@ -441,7 +406,6 @@ export class RootStore {
         ils: {
           currency: "ils",
           symbol: "₪",
-          symbolName: "₪",
           maxDecimals: 2,
           locale: "he-IL",
           name: "Israeli New Shekel",
@@ -449,7 +413,6 @@ export class RootStore {
         inr: {
           currency: "inr",
           symbol: "₹",
-          symbolName: "₹",
           maxDecimals: 1,
           locale: "en-IN",
           name: "Indian Rupee",
@@ -457,7 +420,6 @@ export class RootStore {
         jpy: {
           currency: "jpy",
           symbol: "¥",
-          symbolName: "¥",
           maxDecimals: 2,
           locale: "ja-JP",
           name: "Japanese Yen",
@@ -465,7 +427,6 @@ export class RootStore {
         krw: {
           currency: "krw",
           symbol: "₩",
-          symbolName: "₩",
           maxDecimals: 2,
           locale: "ko-KR",
           name: "South Korean Won",
@@ -473,7 +434,6 @@ export class RootStore {
         kwd: {
           currency: "kwd",
           symbol: "د.ك",
-          symbolName: "KWD",
           maxDecimals: 3,
           locale: "ar-KW",
           name: "Kuwaiti Dinar",
@@ -481,7 +441,6 @@ export class RootStore {
         lkr: {
           currency: "lkr",
           symbol: "Rs",
-          symbolName: "LKR",
           maxDecimals: 2,
           locale: "si-LK",
           name: "Sri Lankan Rupee",
@@ -489,7 +448,6 @@ export class RootStore {
         mmk: {
           currency: "mmk",
           symbol: "K",
-          symbolName: "MMK",
           maxDecimals: 0,
           locale: "my-MM",
           name: "Myanmar Kyat",
@@ -497,7 +455,6 @@ export class RootStore {
         mxn: {
           currency: "mxn",
           symbol: "MX$",
-          symbolName: "MX$",
           maxDecimals: 2,
           locale: "es-MX",
           name: "Mexican Peso",
@@ -505,7 +462,6 @@ export class RootStore {
         myr: {
           currency: "myr",
           symbol: "RM",
-          symbolName: "RM",
           maxDecimals: 2,
           locale: "ms-MY",
           name: "Malaysian Ringgit",
@@ -513,7 +469,6 @@ export class RootStore {
         ngn: {
           currency: "ngn",
           symbol: "₦",
-          symbolName: "NGN",
           maxDecimals: 2,
           locale: "en-NG",
           name: "Nigerian Naira",
@@ -521,7 +476,6 @@ export class RootStore {
         nok: {
           currency: "nok",
           symbol: "kr",
-          symbolName: "NOK",
           maxDecimals: 2,
           locale: "nb-NO",
           name: "Norwegian Krone",
@@ -529,7 +483,6 @@ export class RootStore {
         nzd: {
           currency: "nzd",
           symbol: "NZ$",
-          symbolName: "NZ$",
           maxDecimals: 2,
           locale: "en-NZ",
           name: "New Zealand Dollar",
@@ -537,7 +490,6 @@ export class RootStore {
         php: {
           currency: "php",
           symbol: "₱",
-          symbolName: "₱",
           maxDecimals: 2,
           locale: "en-PH",
           name: "Philippine Peso",
@@ -545,7 +497,6 @@ export class RootStore {
         pkr: {
           currency: "pkr",
           symbol: "₨",
-          symbolName: "PKR",
           maxDecimals: 2,
           locale: "en-PK",
           name: "Pakistani Rupee",
@@ -553,7 +504,6 @@ export class RootStore {
         pln: {
           currency: "pln",
           symbol: "zł",
-          symbolName: "PLN",
           maxDecimals: 2,
           locale: "pl-PL",
           name: "Polish Zloty",
@@ -561,7 +511,6 @@ export class RootStore {
         rub: {
           currency: "rub",
           symbol: "₽",
-          symbolName: "RUB",
           maxDecimals: 2,
           locale: "ru-RU",
           name: "Russian Ruble",
@@ -569,7 +518,6 @@ export class RootStore {
         sar: {
           currency: "sar",
           symbol: "ر.س",
-          symbolName: "SAR",
           maxDecimals: 2,
           locale: "ar-SA",
           name: "Saudi Riyal",
@@ -577,7 +525,6 @@ export class RootStore {
         sek: {
           currency: "sek",
           symbol: "kr",
-          symbolName: "SEK",
           maxDecimals: 2,
           locale: "sv-SE",
           name: "Swedish Krona",
@@ -585,7 +532,6 @@ export class RootStore {
         sgd: {
           currency: "sgd",
           symbol: "S$",
-          symbolName: "S$",
           maxDecimals: 2,
           locale: "en-SG",
           name: "Singapore Dollar",
@@ -593,7 +539,6 @@ export class RootStore {
         thb: {
           currency: "thb",
           symbol: "฿",
-          symbolName: "THB",
           maxDecimals: 2,
           locale: "th-TH",
           name: "Thai Baht",
@@ -601,7 +546,6 @@ export class RootStore {
         try: {
           currency: "try",
           symbol: "₺",
-          symbolName: "TRY",
           maxDecimals: 2,
           locale: "tr-TR",
           name: "Turkish Lira",
@@ -609,7 +553,6 @@ export class RootStore {
         twd: {
           currency: "twd",
           symbol: "NT$",
-          symbolName: "NT$",
           maxDecimals: 2,
           locale: "zh-TW",
           name: "New Taiwan Dollar",
@@ -617,7 +560,6 @@ export class RootStore {
         uah: {
           currency: "uah",
           symbol: "₴",
-          symbolName: "UAH",
           maxDecimals: 2,
           locale: "uk-UA",
           name: "Ukrainian Hryvnia",
@@ -625,7 +567,6 @@ export class RootStore {
         vef: {
           currency: "vef",
           symbol: "Bs",
-          symbolName: "VEF",
           maxDecimals: 2,
           locale: "es-VE",
           name: "Venezuelan Bolívar",
@@ -633,7 +574,6 @@ export class RootStore {
         vnd: {
           currency: "vnd",
           symbol: "₫",
-          symbolName: "VND",
           maxDecimals: 2,
           locale: "vi-VN",
           name: "Vietnamese Dong",
@@ -641,7 +581,6 @@ export class RootStore {
         zar: {
           currency: "zar",
           symbol: "R",
-          symbolName: "ZAR",
           maxDecimals: 2,
           locale: "en-ZA",
           name: "South African Rand",
@@ -650,43 +589,20 @@ export class RootStore {
       "usd"
     );
 
-    // CoinGeckoPriceStore keeps the selected currency in memory only, so
-    // persist it here and restore it on launch.
-    const uiSettingsStore = new AsyncKVStore("store_ui_settings");
-    uiSettingsStore
-      .get<string>("default_vs_currency")
-      .then((saved) => {
-        if (saved && this.priceStore.supportedVsCurrencies[saved]) {
-          this.priceStore.setDefaultVsCurrency(saved);
-        }
-      })
-      .catch((e) => console.log("Failed to restore currency", e));
-    reaction(
-      () => this.priceStore.defaultVsCurrency,
-      (vsCurrency) => {
-        uiSettingsStore
-          .set("default_vs_currency", vsCurrency)
-          .catch((e) => console.log("Failed to save currency", e));
-      }
-    );
-
     this.tokensStore = new TokensStore(
       {
         addEventListener: (type: string, fn: () => void) => {
           eventEmitter.addListener(type, fn);
         },
       },
-      new RNMessageRequesterInternal(),
       this.chainStore,
-      this.accountStore,
-      this.keyRingStore,
+      new RNMessageRequesterInternal(),
       this.interactionStore
     );
 
     this.ibcCurrencyRegistrar =
-      new IBCCurrencyRegistrar<ChainInfoWithCoreTypes>(
+      new IBCCurrencyRegsitrar<ChainInfoWithCoreTypes>(
         new AsyncKVStore("store_test_ibc_currency_registrar"),
-        24 * 3600 * 1000,
         24 * 3600 * 1000,
         this.chainStore,
         this.accountStore,
@@ -694,16 +610,14 @@ export class RootStore {
         this.queriesStore
       );
 
-    this.gravityBridgeCurrencyRegistrar = new GravityBridgeCurrencyRegistrar(
+    this.gravityBridgeCurrencyRegistrar = new GravityBridgeCurrencyRegsitrar(
       new AsyncKVStore("store_gravity_bridge_currency_registrar"),
-      24 * 3600 * 1000,
       this.chainStore,
       this.queriesStore
     );
     this.axelarEVMBridgeCurrencyRegistrar =
-      new AxelarEVMBridgeCurrencyRegistrar(
+      new AxelarEVMBridgeCurrencyRegistrar<ChainInfoWithCoreTypes>(
         new AsyncKVStore("store_axelar_evm_bridge_currency_registrar"),
-        24 * 3600 * 1000,
         this.chainStore,
         this.queriesStore,
         "ethereum"
@@ -728,8 +642,7 @@ export class RootStore {
       },
       this.chainStore,
       this.keyRingStore,
-      this.permissionStore,
-      this.generalPermissionStore
+      this.permissionStore
     );
 
     this.analyticsStore = new AnalyticsStore(

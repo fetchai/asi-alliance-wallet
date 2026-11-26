@@ -1,5 +1,5 @@
 import React, { FunctionComponent, ReactElement } from "react";
-import { StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Text, View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { RectButton } from "components/rect-button";
 import { CheckIcon } from "components/new/icon/check";
@@ -33,7 +33,7 @@ export const SelectorModal: FunctionComponent<{
       return (
         <IconButton
           backgroundBlur={false}
-          icon={<CheckIcon size={16} color="#151a1a" />}
+          icon={<CheckIcon size={16} />}
           iconStyle={
             style.flatten([
               "width-24",
@@ -60,24 +60,23 @@ export const SelectorModal: FunctionComponent<{
           <BlurBackground
             key={item.key}
             borderRadius={12}
-            backgroundBlur={false}
+            blurIntensity={15}
             containerStyle={style.flatten(["margin-bottom-6"]) as ViewStyle}
           >
             <RectButton
-              style={StyleSheet.flatten([
-                style.flatten([
-                  "flex-row",
-                  "items-center",
-                  "justify-between",
-                  "border-radius-12",
-                  "padding-x-12",
-                  "padding-y-18",
-                ]) as ViewStyle,
-                {
-                  backgroundColor:
-                    item.key === selectedKey ? "#e0fedd" : "#f6f6f6",
-                },
-              ])}
+              style={
+                style.flatten(
+                  [
+                    "flex-row",
+                    "items-center",
+                    "justify-between",
+                    "border-radius-12",
+                    "padding-x-12",
+                    "padding-y-18",
+                  ],
+                  [item.key === selectedKey && "background-color-indigo"]
+                ) as ViewStyle
+              }
               onPress={() => {
                 setSelectedKey(item.key);
                 if (!modalPersistent) {
@@ -102,7 +101,7 @@ export const SelectorModal: FunctionComponent<{
                   }
                 />
                 <Text
-                  style={style.flatten(["body3", "color-dark"]) as ViewStyle}
+                  style={style.flatten(["body3", "color-white"]) as ViewStyle}
                 >
                   {item.label.trim()}
                 </Text>

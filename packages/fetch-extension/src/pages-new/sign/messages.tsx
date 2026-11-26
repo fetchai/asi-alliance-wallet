@@ -107,14 +107,6 @@ export interface MsgVote {
   };
 }
 
-export interface MsgSubmitProposal {
-  value: {
-    content: any;
-    initial_deposit: CoinPrimitive[];
-    proposer: string;
-  };
-}
-
 export interface MsgInstantiateContract {
   value: {
     // Admin field can be omitted.
@@ -467,91 +459,6 @@ export function renderMsgInstantiateContract(
   };
 }
 
-export function renderMsgSubmitProposal(
-  intl: IntlShape,
-  proposer: string,
-  content: any,
-  initialDeposit: CoinPrimitive[] | undefined
-) {
-  const proposalTitle = content?.value?.title || content?.title;
-  const proposalType = (
-    content?.type?.split("/").pop() || content?.["@type"]?.split(".").pop()
-  )
-    ?.replace(/([A-Z])/g, " $1")
-    .trim();
-
-  return {
-    icon: "fas fa-file-alt",
-    title:
-      proposalTitle ||
-      intl.formatMessage({
-        id: "sign.list.message.cosmos-sdk/MsgSubmitProposal.title",
-      }),
-    content: (
-      <React.Fragment>
-        <FormattedMessage
-          id="sign.list.message.cosmos-sdk/MsgSubmitProposal.content"
-          values={{
-            b: (...chunks: any[]) => <b>{chunks}</b>,
-            br: <br />,
-            proposer: Bech32Address.shortenAddress(proposer, 24),
-            proposalType: proposalType || "Proposal",
-          }}
-        />
-        <br />
-        <Label
-          for="sign-value"
-          className="form-control-label"
-          style={{
-            marginTop: "8px",
-            marginBottom: "0",
-            display: "block",
-            fontSize: "14px",
-            color: "inherit",
-          }}
-        >
-          Content:
-        </Label>
-        <pre
-          style={{
-            width: "100%",
-            whiteSpace: "pre-wrap",
-            wordWrap: "break-word",
-          }}
-        >
-          {JSON.stringify(content, null, 2)}
-        </pre>
-        {initialDeposit && initialDeposit.length > 0 && (
-          <React.Fragment>
-            <Label
-              for="sign-value"
-              className="form-control-label"
-              style={{
-                marginTop: "8px",
-                marginBottom: "0",
-                display: "block",
-                fontSize: "14px",
-                color: "inherit",
-              }}
-            >
-              Deposit:
-            </Label>
-            <pre
-              style={{
-                width: "100%",
-                whiteSpace: "pre-wrap",
-                wordWrap: "break-word",
-              }}
-            >
-              {initialDeposit.map((d) => `${d.amount} ${d.denom}`).join(", ")}
-            </pre>
-          </React.Fragment>
-        )}
-      </React.Fragment>
-    ),
-  };
-}
-
 export function renderMsgEvmExecuteContract(
   intl: IntlShape,
   sent: CoinPrimitive | undefined,
@@ -887,7 +794,7 @@ export const WasmExecutionMsgView: FunctionComponent<{
     <div>
       {isOpen ? (
         <React.Fragment>
-          <pre style={{ width: "280px", color: "var(--font-secondary)" }}>
+          <pre style={{ width: "280px", color: "white" }}>
             {isOpen ? detailsMsg : ""}
           </pre>
           {warningMsg ? <div>{warningMsg}</div> : null}
@@ -928,9 +835,7 @@ export const UnknownMsgView: FunctionComponent<{ msg: object }> = ({ msg }) => {
 
   return (
     <div>
-      <pre style={{ width: "280px", color: "var(--font-secondary)" }}>
-        {prettyMsg}
-      </pre>
+      <pre style={{ width: "280px", color: "white" }}>{prettyMsg}</pre>
     </div>
   );
 };

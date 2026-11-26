@@ -2,9 +2,7 @@ import {
   MessageRequester,
   Message,
   Result,
-  KeplrError,
   JSONUint8Array,
-  EthereumProviderRpcError,
 } from "@keplr-wallet/router";
 import { MockRouter } from "../router";
 
@@ -46,22 +44,6 @@ export class MockMessageRequester implements MessageRequester {
     if (result.error) {
       if (typeof result.error === "string") {
         throw new Error(result.error);
-      } else {
-        if ("module" in result.error) {
-          if (typeof result.error.module === "string") {
-            throw new KeplrError(
-              result.error.module,
-              result.error.code,
-              result.error.message
-            );
-          }
-        } else {
-          throw new EthereumProviderRpcError(
-            result.error.code,
-            result.error.message,
-            result.error.data
-          );
-        }
       }
     }
 

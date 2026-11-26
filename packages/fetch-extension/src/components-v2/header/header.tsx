@@ -1,9 +1,9 @@
-import React, { FunctionComponent, PropsWithChildren } from "react";
+import React, { FunctionComponent } from "react";
 import classnames from "classnames";
 
 import "./style";
 
-export interface HeaderProps extends PropsWithChildren {
+export interface HeaderProps {
   fixed?: boolean;
   left?: React.ReactNode;
   right?: React.ReactNode;
@@ -19,7 +19,7 @@ export const Header: FunctionComponent<HeaderProps> = ({
 }) => {
   const headerStyle = {
     backdropFilter: "none",
-    // background: children ? "white" : "transparent",
+    background: children ? "rgba(0,13,61,0.3)" : "transparent",
   };
 
   return (

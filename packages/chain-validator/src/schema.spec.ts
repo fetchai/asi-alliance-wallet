@@ -745,21 +745,6 @@ describe("Test chain info schema", () => {
 
       await ChainInfoSchema.validateAsync({
         ...chainInfo,
-        currencies: [
-          {
-            coinDenom: "TEST2",
-            coinMinimalDenom: "utest2",
-            coinDecimals: 6,
-          },
-        ],
-      });
-    }, "Should throw if stakeCurrency is not included in currencies");
-
-    await assert.rejects(async () => {
-      const chainInfo = generatePlainChainInfo();
-
-      await ChainInfoSchema.validateAsync({
-        ...chainInfo,
         chainSymbolImageUrl: "not url",
       });
     });
@@ -992,13 +977,13 @@ describe("Test chain info schema", () => {
       await ChainInfoSchema.validateAsync(chainInfo);
     }, "Should throw error when chain name is empty string");
 
-    await assert.doesNotReject(async () => {
+    await assert.rejects(async () => {
       const chainInfo = generatePlainChainInfo();
       // @ts-ignore
       chainInfo["stakeCurrency"] = undefined;
 
       await ChainInfoSchema.validateAsync(chainInfo);
-    }, "Should not throw error when stake currency is undefined");
+    }, "Should throw error when stake currency is undefined");
 
     await assert.rejects(async () => {
       const chainInfo = generatePlainChainInfo();
@@ -1236,11 +1221,6 @@ describe("Test chain info schema", () => {
 
     const chainInfo = generatePlainChainInfo();
     const currencies = [
-      {
-        coinDenom: "TEST",
-        coinMinimalDenom: "utest",
-        coinDecimals: 6,
-      },
       {
         coinDenom: "EVMOS",
         coinMinimalDenom: "aevmos",

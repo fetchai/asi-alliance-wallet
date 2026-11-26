@@ -42,39 +42,22 @@
 }
 
 .title {
-  color: $font-dark;
-  font-family: $font-family-base;
+  color: var(--Grey-White, #fff);
+  font-family: Lexend;
   font-size: 32px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
   margin-bottom: 22px;
-  margin-top: 15px;
+  margin-top: 10px;
 }
 .subTitle {
-  color: $font-secondary;
-  font-family: $font-family-base;
+  color: #fff;
+  font-family: Lexend;
   font-size: 14px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
   opacity: 0.6;
   margin-bottom: 10px;
-}
-
-.version {
-  opacity: 0.6;
-}
-
-.currencyItem {
-  display: flex;
-  color: $font-dark;
-  padding: 18px;
-  font-size: 13px;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
 }

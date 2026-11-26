@@ -15,7 +15,6 @@ export const SelectorModal = ({
   items: {
     label: string;
     key: string;
-    icon?: string;
   }[];
   selectedKey: string | undefined;
   setSelectedKey: (key: string | undefined) => void;
@@ -44,16 +43,14 @@ export const SelectorModal = ({
         ...styleProps,
       }}
     >
-      <div className={style["selector-container"]}>
+      <div className={style["selector-container"]} style={{ color: "white" }}>
         {items.map((item) => {
           return (
             <div
               className={style["selector-element"]}
               style={{
                 background:
-                  item.key === selectedKey
-                    ? "var(--bg-green-light)"
-                    : "var(--card-bg)",
+                  item.key === selectedKey ? "#5F38FB" : "transparent",
               }}
               key={item.key}
               onClick={() => {
@@ -64,23 +61,12 @@ export const SelectorModal = ({
               }}
             >
               <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 400,
+                }}
               >
-                {item?.icon && (
-                  <img
-                    style={{ width: 20, height: 15 }}
-                    alt=""
-                    src={item.icon}
-                  />
-                )}
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 400,
-                  }}
-                >
-                  {item.label.trim()}
-                </div>
+                {item.label.trim()}
               </div>
               {renderBall(item.key === selectedKey)}
             </div>

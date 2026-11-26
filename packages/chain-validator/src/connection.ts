@@ -36,7 +36,8 @@ export async function checkRPCConnectivity(
   try {
     // Get the status to get the chain id.
     resultStatus = await simpleFetch(rpc, "/status");
-  } catch {
+  } catch (e) {
+    console.log(e);
     throw new Error("Failed to get response /status from rpc endpoint");
   }
 
@@ -121,7 +122,8 @@ export async function checkRestConnectivity(
         network: string;
       };
     }>(rest, "/cosmos/base/tendermint/v1beta1/node_info");
-  } catch {
+  } catch (e) {
+    console.log(e);
     throw new Error(
       "Failed to get response /cosmos/base/tendermint/v1beta1/node_info from lcd endpoint"
     );
@@ -143,87 +145,6 @@ export async function checkRestConnectivity(
     // In this case, it is possible to treat as a warning and proceed as it is, so this is separated with above error.
     throw new DifferentChainVersionError(
       `LCD endpoint has different chain id (expected: ${chainId}, actual: ${resultLCDNodeInfo.data.default_node_info.network})`
-    );
-  }
-}
-
-export async function checkEvmRpcConnectivity(
-  evmChainId: number,
-  evmRpc: string
-) {
-  let resultEvmChainId: SimpleFetchResponse<{
-    result: string;
-  }>;
-
-  try {
-    // get the EVM chain id.
-    resultEvmChainId = await simpleFetch<{
-      result: string;
-    }>(evmRpc, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "request-source": "keplr-wallet-extension/chain-validator",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_chainId",
-        params: [],
-        id: 1,
-      }),
-    });
-  } catch {
-    throw new Error("Failed to get response eth_chainId from EVM RPC endpoint");
-  }
-
-  const evmChainIdFromResult = Number(resultEvmChainId.data.result);
-
-  if (evmChainIdFromResult !== evmChainId) {
-    throw new Error(
-      `EVM RPC endpoint has different chain id (expected: ${evmChainId}, actual: ${evmChainIdFromResult})`
-    );
-  }
-}
-
-export async function checkStarknetRpcConnectivity(
-  chainId: string,
-  rpc: string
-) {
-  const starknetChainId = chainId.split(":")[1];
-  let resultStarknetChainId: SimpleFetchResponse<{
-    result: string;
-  }>;
-
-  try {
-    resultStarknetChainId = await simpleFetch<{
-      result: string;
-    }>(rpc, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "request-source": "keplr-wallet-extension/chain-validator",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "starknet_chainId",
-        params: [],
-        id: 1,
-      }),
-    });
-  } catch {
-    throw new Error(
-      "Failed to get response starknet_chainId from Starknet RPC endpoint"
-    );
-  }
-
-  const starknetChainIdFromResult = Buffer.from(
-    resultStarknetChainId.data.result.replace("0x", ""),
-    "hex"
-  ).toString();
-
-  if (starknetChainIdFromResult !== starknetChainId) {
-    throw new Error(
-      `Starknet RPC endpoint has different chain id (expected: ${starknetChainId}, actual: ${starknetChainIdFromResult})`
     );
   }
 }

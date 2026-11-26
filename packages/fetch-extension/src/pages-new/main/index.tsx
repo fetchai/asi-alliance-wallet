@@ -2,7 +2,6 @@ import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 
 import { HeaderLayout } from "@layouts-v2/header-layout";
 
-import { ButtonV2 } from "@components-v2/buttons/button";
 import { Dropdown } from "@components-v2/dropdown";
 import { useConfirm } from "@components/confirm";
 import { getWalletConfig } from "@graphQL/config-api";
@@ -14,38 +13,26 @@ import { LineGraphView } from "../../components-v2/line-graph";
 import { AUTH_SERVER } from "../../config.ui.var";
 import { useStore } from "../../stores";
 import { SetKeyRingPage } from "../keyring-dev";
-import { LedgerAppModal } from "./ledger-app-modal";
 import { WalletDetailsView } from "./wallet-details";
 import { WalletOptions } from "./wallet-options";
-import { useLanguage } from "../../languages";
-import { useLoadingIndicator } from "@components/loading-indicator";
+import { LedgerAppModal } from "./ledger-app-modal";
 
 export const MainPage: FunctionComponent = observer(() => {
   const [isSelectNetOpen, setIsSelectNetOpen] = useState(false);
   const [isSelectWalletOpen, setIsSelectWalletOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState<boolean>(false);
-  const [selectedWalletId, setSelectedWalletId] = useState<string>("");
   const [tokenState, setTokenState] = useState({});
   const intl = useIntl();
-  const language = useLanguage();
-  const loadingIndicator = useLoadingIndicator();
-  const fiatCurrency = language.fiatCurrency;
-  const {
-    chainStore,
-    accountStore,
-    keyRingStore,
-    analyticsStore,
-    chatStore,
-    priceStore,
-  } = useStore();
+  const { chainStore, accountStore, keyRingStore, analyticsStore, chatStore } =
+    useStore();
 
   const userState = chatStore.userDetailsStore;
   useEffect(() => {
-    analyticsStore.logEvent("home_tab_click");
+    analyticsStore.logEvent("Home tab click");
     analyticsStore.setUserProperties({
-      totalAccounts: keyRingStore.keyInfos.length,
+      totalAccounts: keyRingStore.multiKeyStoreInfo.length,
     });
-  }, [analyticsStore, keyRingStore.keyInfos.length]);
+  }, [analyticsStore, keyRingStore.multiKeyStoreInfo.length]);
 
   const confirm = useConfirm();
 
@@ -69,18 +56,9 @@ export const MainPage: FunctionComponent = observer(() => {
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
-  const currentCoinGeckoId =
-    chainStore.current.feeCurrencies?.[0]?.coinGeckoId ??
-    chainStore.current.stakeCurrency?.coinGeckoId ??
-    chainStore.current.currencies?.[0]?.coinGeckoId;
-
-  const priceInVsCurrency = currentCoinGeckoId
-    ? priceStore.getPrice(currentCoinGeckoId, fiatCurrency)
-    : undefined;
-
   /// Fetching wallet config info
   useEffect(() => {
-    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
+    if (keyRingStore.keyRingType === "ledger") {
       return;
     }
     getJWT(chainStore.current.chainId, AUTH_SERVER).then((res) => {
@@ -95,16 +73,8 @@ export const MainPage: FunctionComponent = observer(() => {
     chainStore,
     chainStore.current.chainId,
     accountInfo.bech32Address,
-    keyRingStore.selectedKeyInfo?.type,
+    keyRingStore.keyRingType,
   ]);
-
-  // hides the loader after current chain is switched
-  // to the added custom chain from /suggest page
-  useEffect(() => {
-    if (chainStore.selectedChainId === chainStore.current.chainId) {
-      loadingIndicator.setIsLoading("chain-suggest-switch", false);
-    }
-  }, [chainStore.selectedChainId, chainStore.current]);
 
   return (
     <HeaderLayout
@@ -120,21 +90,8 @@ export const MainPage: FunctionComponent = observer(() => {
       />
       <LineGraphView
         setTokenState={setTokenState}
-        tokenName={
-          chainStore.current.feeCurrencies?.[0]?.coinGeckoId ??
-          chainStore.current.stakeCurrency?.coinGeckoId ??
-          chainStore.current.currencies?.[0]?.coinGeckoId
-        }
-        tokenDenom={
-          chainStore.current.feeCurrencies?.[0]?.coinDenom ??
-          chainStore.current.stakeCurrency?.coinDenom ??
-          chainStore.current.currencies?.[0]?.coinDenom
-        }
+        tokenName={chainStore.current.feeCurrencies[0].coinGeckoId}
         tokenState={tokenState}
-        priceInVsCurrency={priceInVsCurrency}
-        vsCurrencySymbol={
-          priceStore.supportedVsCurrencies[fiatCurrency]?.symbol || ""
-        }
       />
 
       <Dropdown
@@ -147,50 +104,23 @@ export const MainPage: FunctionComponent = observer(() => {
         <ChainList setIsSelectNetOpen={setIsSelectNetOpen} />
       </Dropdown>
       <Dropdown
-        isOpen={isSelectWalletOpen}
         setIsOpen={setIsSelectWalletOpen}
-        title="Change Wallet"
-        closeClicked={() => {
-          setIsSelectWalletOpen(false);
-          analyticsStore.logEvent("change_wallet_click", {
-            pageName: "Home",
-          });
-        }}
+        isOpen={isSelectWalletOpen}
+        title={"Manage Wallet"}
+        closeClicked={() => setIsSelectWalletOpen(false)}
       >
-        <SetKeyRingPage
-          onItemSelect={() => setIsSelectWalletOpen(false)}
-          setSelectedWalletId={setSelectedWalletId}
+        <WalletOptions
           setIsSelectWalletOpen={setIsSelectWalletOpen}
           setIsOptionsOpen={setIsOptionsOpen}
         />
-        <ButtonV2
-          text="Add New Wallet"
-          styleProps={{
-            height: "56px",
-            background: "white",
-            fontSize: "14px",
-            paddingBottom: "14px",
-            paddingTop: "14px",
-          }}
-          onClick={(e: any) => {
-            e.preventDefault();
-            analyticsStore.logEvent("add_new_wallet_click", {
-              pageName: "Home",
-            });
-            setIsSelectWalletOpen(false);
-            browser.tabs.create({
-              url: "/popup.html#/register",
-            });
-          }}
-        />
       </Dropdown>
       <Dropdown
-        setIsOpen={setIsOptionsOpen}
         isOpen={isOptionsOpen}
-        title={"Manage Wallet"}
+        setIsOpen={setIsOptionsOpen}
+        title="Change Wallet"
         closeClicked={() => setIsOptionsOpen(false)}
       >
-        <WalletOptions selectedWalletId={selectedWalletId} />
+        <SetKeyRingPage />
       </Dropdown>
     </HeaderLayout>
   );

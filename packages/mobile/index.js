@@ -2,34 +2,18 @@
  * @format
  */
 
-import "@web3auth/react-native-sdk/setup";
 import "./shim";
+
+import "text-encoding";
+
 import "react-native-gesture-handler";
+
+import "react-native-url-polyfill/auto";
+
 import { AppRegistry, LogBox } from "react-native";
-import * as SplashScreen from "expo-splash-screen";
-import {
-  configureReanimatedLogger,
-  ReanimatedLogLevel,
-} from "react-native-reanimated";
-
-// Strict mode warns on SharedValue reads during render; we fixed the known
-// AnimatedNumber path, but keep noise down if other libs still trip it.
-configureReanimatedLogger({
-  level: ReanimatedLogLevel.warn,
-  strict: false,
-});
-
-// Expo 52: must run before other JS so splash is not dismissed on CONTENT_APPEARED.
-SplashScreen.preventAutoHideAsync().catch(() => {});
-try {
-  SplashScreen.setOptions({ duration: 0, fade: false });
-} catch {
-  // Expo Go / old native splash module
-}
 
 import "./init";
 import * as Sentry from "@sentry/react-native";
-import { SENTRY_DSN } from "@env";
 
 // The use of "require" is intentional.
 // In case of "import" statement, it is located before execution of the next line,
@@ -39,26 +23,27 @@ import { SENTRY_DSN } from "@env";
 const App = require("./src/app").App;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const appName = require("./app.json").name;
+export const routingInstrumentation =
+  new Sentry.ReactNavigationInstrumentation();
 
-export const navigationIntegration = SENTRY_DSN
-  ? Sentry.reactNavigationIntegration({ enableTimeToInitialDisplay: true })
-  : { registerNavigationContainer: () => {} };
-
-if (SENTRY_DSN) {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    // Adds more context data to events (IP address, cookies, user, etc.)
-    // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
-    sendDefaultPii: true,
-    // Configure Session Replay
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1,
-    integrations: [Sentry.mobileReplayIntegration(), navigationIntegration],
-  });
-}
-
+Sentry.init({
+  dsn: process.env["SENTRY_DSN"] || "",
+  integrations: [
+    new Sentry.ReactNativeTracing({
+      routingInstrumentation,
+    }),
+  ],
+  // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
+  // We recommend adjusting this value in production.
+  tracesSampleRate: 1.0,
+  _experiments: {
+    // profilesSampleRate is relative to tracesSampleRate.
+    // Here, we'll capture profiles for 100% of transactions.
+    profilesSampleRate: 1.0,
+  },
+});
 // eslint-disable-next-line import/no-default-export
-export default SENTRY_DSN ? Sentry.wrap(App) : App;
+export default Sentry.wrap(App);
 
 LogBox.ignoreLogs([
   "No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.",

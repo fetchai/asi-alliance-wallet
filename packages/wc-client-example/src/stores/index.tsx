@@ -1,12 +1,10 @@
-import React, { FunctionComponent, PropsWithChildren, useState } from "react";
+import React, { FunctionComponent, useState } from "react";
 
 import { createRootStore, RootStore } from "./root";
 
 const storeContext = React.createContext<RootStore | null>(null);
 
-export const StoreProvider: FunctionComponent<PropsWithChildren> = ({
-  children,
-}) => {
+export const StoreProvider: FunctionComponent = ({ children }) => {
   const [stores] = useState(() => createRootStore());
 
   return (

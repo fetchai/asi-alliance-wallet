@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useState } from "react";
 import { Input } from "reactstrap";
-import { IGasConfig, MAX_GAS_LIMIT_DIGITS } from "@keplr-wallet/hooks";
+import { IGasConfig } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
 import { Card } from "../card";
 import style from "./gas-input.style.module.scss";
@@ -18,13 +18,12 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
       crypto.getRandomValues(bytes);
       return `input-${Buffer.from(bytes).toString("hex")}`;
     });
-    const [rawGasInput, setRawGasInput] = useState(gasConfig.gasRaw);
 
     return (
       <React.Fragment>
         <div
           style={{
-            color: "var(--font-secondary)",
+            color: "rgba(255,255,255,0.6)",
             fontSize: "14px",
             fontWeight: 400,
             marginBottom: "8px",
@@ -33,21 +32,19 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
           {label}
         </div>
         <Card
-          style={{ height: "48px", display: "flex", alignItems: "center" }}
+          style={{ background: "rgba(255,255,255,0.1)", height: "48px" }}
           heading={
             <Input
               id={inputId}
               className={style["input"]}
-              type="text"
-              inputMode="numeric"
-              value={rawGasInput}
-              maxLength={MAX_GAS_LIMIT_DIGITS}
+              type="number"
+              step={1}
+              min={0}
+              value={gasConfig.gasRaw}
               onChange={(e) => {
-                const value = e.target.value
-                  .replace(/[^0-9]/g, "")
-                  .slice(0, MAX_GAS_LIMIT_DIGITS);
-                setRawGasInput(value);
-                gasConfig.setGas(value);
+                if (parseFloat(e.target.value) < 10 ** 18) {
+                  gasConfig.setGas(e.target.value);
+                }
 
                 e.preventDefault();
               }}

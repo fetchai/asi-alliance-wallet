@@ -1,42 +1,22 @@
 import {
-  camelToSnake,
-  decodeGrantAuthorization,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-  QuerySharedContext,
-} from "../../../common";
-import { ChainGetter } from "../../../chain";
+  ObservableChainQuery,
+  ObservableChainQueryMap,
+} from "../../chain-query";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../common";
 import { Granter } from "./types";
-import { setupAuthzExtension } from "@cosmjs/stargate";
-import { AuthzExtension } from "@cosmjs/stargate/build/modules/authz/queries";
-import { QueryGranterGrantsResponse } from "cosmjs-types/cosmos/authz/v1beta1/query";
 
-export class ObservableQueryAuthZGranterInner extends ObservableQueryTendermint<Granter> {
+export class ObservableQueryAuthZGranterInner extends ObservableChainQuery<Granter> {
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly granter: string
   ) {
-    const chainInfo = chainGetter.getChain(chainId);
     super(
-      sharedContext,
-      chainInfo.rpc,
-      async (queryClient) => {
-        const client = queryClient as unknown as AuthzExtension;
-        const response = await client.authz.granterGrants(granter);
-        const decodedResponse = QueryGranterGrantsResponse.toJSON(response);
-        const grantResponse = {
-          ...decodedResponse,
-          grants: decodedResponse.grants.map((item) => ({
-            ...item,
-            authorization: decodeGrantAuthorization(item.authorization),
-            expiration: item.expiration,
-          })),
-        };
-        return camelToSnake(grantResponse) as Granter;
-      },
-      setupAuthzExtension,
+      kvStore,
+      chainId,
+      chainGetter,
       `/cosmos/authz/v1beta1/grants/granter/${granter}?pagination.limit=1000`
     );
   }
@@ -46,17 +26,13 @@ export class ObservableQueryAuthZGranterInner extends ObservableQueryTendermint<
   }
 }
 
-export class ObservableQueryAuthZGranter extends ObservableQueryMap<Granter> {
-  constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
-  ) {
-    super((granter) => {
+export class ObservableQueryAuthZGranter extends ObservableChainQueryMap<Granter> {
+  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+    super(kvStore, chainId, chainGetter, (granter) => {
       return new ObservableQueryAuthZGranterInner(
-        sharedContext,
-        chainId,
-        chainGetter,
+        this.kvStore,
+        this.chainId,
+        this.chainGetter,
         granter
       );
     });

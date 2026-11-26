@@ -1,41 +1,34 @@
 import { SupplyTotal } from "./types";
+import { KVStore } from "@keplr-wallet/common";
 import {
-  QuerySharedContext,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
-import { BankExtension, setupBankExtension } from "@cosmjs/stargate";
-import { ChainGetter } from "../../../chain";
+  ObservableChainQuery,
+  ObservableChainQueryMap,
+} from "../../chain-query";
+import { ChainGetter } from "../../../common";
 
-export class ObservableChainQuerySupplyTotal extends ObservableQueryTendermint<SupplyTotal> {
+export class ObservableChainQuerySupplyTotal extends ObservableChainQuery<SupplyTotal> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     denom: string
   ) {
-    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainInfo.rpc,
-      async (queryClient) => {
-        const client = queryClient as unknown as BankExtension;
-        const result = await client.bank.supplyOf(denom);
-        return { amount: result };
-      },
-      setupBankExtension,
+      chainId,
+      chainGetter,
       `/cosmos/bank/v1beta1/supply/${denom}`
     );
   }
 }
 
-export class ObservableQuerySupplyTotal extends ObservableQueryMap<SupplyTotal> {
+export class ObservableQuerySupplyTotal extends ObservableChainQueryMap<SupplyTotal> {
   constructor(
-    protected readonly kvStore: QuerySharedContext,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((denom: string) => {
+    super(kvStore, chainId, chainGetter, (denom: string) => {
       return new ObservableChainQuerySupplyTotal(
         this.kvStore,
         this.chainId,
@@ -45,17 +38,17 @@ export class ObservableQuerySupplyTotal extends ObservableQueryMap<SupplyTotal> 
     });
   }
 
-  getQueryDenom(denom: string) {
+  getQueryDenom(denom: string): ObservableChainQuerySupplyTotal {
     return this.get(denom);
   }
 
   // cosmos-sdk v0.46.0+ has changed the API to use query string.
-  getQueryDenomByQueryString(denom: string) {
+  getQueryDenomByQueryString(denom: string): ObservableChainQuerySupplyTotal {
     return this.get(`by_denom?denom=${denom}`);
   }
 
-  getQueryStakeDenom() {
+  getQueryStakeDenom(): ObservableChainQuerySupplyTotal {
     const chainInfo = this.chainGetter.getChain(this.chainId);
-    return this.get(chainInfo?.stakeCurrency?.coinMinimalDenom || "");
+    return this.get(chainInfo.stakeCurrency.coinMinimalDenom);
   }
 }

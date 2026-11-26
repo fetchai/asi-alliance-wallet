@@ -1,105 +1,33 @@
-import { AppCurrency } from "@keplr-wallet/types";
-import { ChainStore, IQueriesStore } from "@keplr-wallet/stores";
+import { observable, runInAction } from "mobx";
+import { AppCurrency, ChainInfo } from "@keplr-wallet/types";
+import {
+  ChainInfoInner,
+  ChainStore,
+  IQueriesStore,
+} from "@keplr-wallet/stores";
 import { KVStore } from "@keplr-wallet/common";
 import { DeepReadonly } from "utility-types";
 import { ObservableQueryEVMTokenInfo } from "./token-info";
-import { autorun, makeObservable, observable, runInAction, toJS } from "mobx";
 
-export class AxelarEVMBridgeCurrencyRegistrar {
-  @observable
-  public _isInitialized = false;
-
-  // Key: ${chain}/${minimalDenom}
-  @observable.shallow
-  protected cacheMetadata: Map<
-    string,
-    {
-      symbol: string;
-      decimals: number;
-      timestamp: number;
-    }
-  > = new Map();
-
+export class AxelarEVMBridgeCurrencyRegistrarInner<
+  C extends ChainInfo = ChainInfo
+> {
   constructor(
     protected readonly kvStore: KVStore,
-    protected readonly cacheDuration: number = 24 * 3600 * 1000, // 1 days
-    protected readonly chainStore: ChainStore,
+    protected readonly chainInfoInner: ChainInfoInner<C>,
+    protected readonly chainStore: ChainStore<C>,
     protected readonly queriesStore: IQueriesStore<{
       keplrETC: {
         readonly queryEVMTokenInfo: DeepReadonly<ObservableQueryEVMTokenInfo>;
       };
     }>,
-    public readonly mainChain: string
-  ) {
-    this.chainStore.registerCurrencyRegistrar(
-      this.currencyRegistrar.bind(this)
-    );
+    protected readonly mainChain: string
+  ) {}
 
-    makeObservable(this);
-
-    this.init();
-  }
-
-  async init(): Promise<void> {
-    const key = `cacheMetadata`;
-    const saved = await this.kvStore.get<
-      Record<
-        string,
-        {
-          symbol: string;
-          decimals: number;
-          timestamp: number;
-        }
-      >
-    >(key);
-    if (saved) {
-      runInAction(() => {
-        for (const [key, value] of Object.entries(saved)) {
-          if (Date.now() - value.timestamp < this.cacheDuration) {
-            this.cacheMetadata.set(key, value);
-          }
-        }
-      });
-    }
-
-    autorun(() => {
-      const js = toJS(this.cacheMetadata);
-      const obj = Object.fromEntries(js);
-      this.kvStore.set<
-        Record<
-          string,
-          {
-            symbol: string;
-            decimals: number;
-            timestamp: number;
-          }
-        >
-      >(key, obj);
-    });
-
-    runInAction(() => {
-      this._isInitialized = true;
-    });
-  }
-
-  get isInitialized(): boolean {
-    return this._isInitialized;
-  }
-
-  protected currencyRegistrar(
-    chainId: string,
+  registerUnknownCurrencies(
     coinMinimalDenom: string
-  ):
-    | {
-        value: AppCurrency | undefined;
-        done: boolean;
-      }
-    | undefined {
-    if (!this.chainStore.hasChain(chainId)) {
-      return;
-    }
-
-    const chainInfo = this.chainStore.getChain(chainId);
+  ): [AppCurrency | undefined, boolean] | undefined {
+    const chainInfo = this.chainStore.getChain(this.chainInfoInner.chainId);
     if (
       !chainInfo.features ||
       !chainInfo.features.includes("axelar-evm-bridge")
@@ -107,26 +35,7 @@ export class AxelarEVMBridgeCurrencyRegistrar {
       return;
     }
 
-    const cacheKey = `${chainId}/${coinMinimalDenom}`;
-    const cached = this.cacheMetadata.get(cacheKey);
-    if (cached) {
-      if (Date.now() - cached.timestamp < this.cacheDuration) {
-        return {
-          value: {
-            coinMinimalDenom,
-            coinDenom: cached.symbol,
-            coinDecimals: cached.decimals,
-          },
-          done: true,
-        };
-      } else {
-        runInAction(() => {
-          this.cacheMetadata.delete(cacheKey);
-        });
-      }
-    }
-
-    const queries = this.queriesStore.get(chainId);
+    const queries = this.queriesStore.get(this.chainInfoInner.chainId);
 
     const tokenInfo = queries.keplrETC.queryEVMTokenInfo.getAsset(
       this.mainChain,
@@ -137,36 +46,72 @@ export class AxelarEVMBridgeCurrencyRegistrar {
       tokenInfo.decimals != null &&
       tokenInfo.isConfirmed
     ) {
-      if (!tokenInfo.isFetching) {
-        runInAction(() => {
-          this.cacheMetadata.set(cacheKey, {
-            symbol: tokenInfo.symbol!,
-            decimals: tokenInfo.decimals!,
-            timestamp: Date.now(),
-          });
-        });
-      }
-
-      return {
-        value: {
+      return [
+        {
           coinMinimalDenom,
           coinDenom: tokenInfo.symbol,
           coinDecimals: tokenInfo.decimals,
         },
-        done: !tokenInfo.isFetching,
-      };
+        !tokenInfo.isFetching,
+      ];
     }
 
-    if (tokenInfo.isFetching) {
-      return {
-        value: undefined,
-        done: false,
-      };
+    // There is no matching response after query completes,
+    // there is no way to get the asset info.
+    if (!tokenInfo.isFetching) {
+      return;
     }
 
-    return {
-      value: undefined,
-      done: true,
-    };
+    return [undefined, false];
+  }
+}
+
+export class AxelarEVMBridgeCurrencyRegistrar<C extends ChainInfo = ChainInfo> {
+  @observable.shallow
+  protected map: Map<string, AxelarEVMBridgeCurrencyRegistrarInner<C>> =
+    new Map();
+
+  constructor(
+    protected readonly kvStore: KVStore,
+    protected readonly chainStore: ChainStore<C>,
+    protected readonly queriesStore: IQueriesStore<{
+      keplrETC: {
+        readonly queryEVMTokenInfo: DeepReadonly<ObservableQueryEVMTokenInfo>;
+      };
+    }>,
+    public readonly mainChain: string
+  ) {
+    this.chainStore.addSetChainInfoHandler((chainInfoInner) =>
+      this.setChainInfoHandler(chainInfoInner)
+    );
+  }
+
+  setChainInfoHandler(chainInfoInner: ChainInfoInner<C>): void {
+    const inner = this.get(chainInfoInner);
+    chainInfoInner.registerCurrencyRegistrar((coinMinimalDenom) =>
+      inner.registerUnknownCurrencies(coinMinimalDenom)
+    );
+  }
+
+  protected get(
+    chainInfoInner: ChainInfoInner<C>
+  ): AxelarEVMBridgeCurrencyRegistrarInner<C> {
+    if (!this.map.has(chainInfoInner.chainId)) {
+      runInAction(() => {
+        this.map.set(
+          chainInfoInner.chainId,
+          new AxelarEVMBridgeCurrencyRegistrarInner<C>(
+            this.kvStore,
+            chainInfoInner,
+            this.chainStore,
+            this.queriesStore,
+            this.mainChain
+          )
+        );
+      });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.map.get(chainInfoInner.chainId)!;
   }
 }

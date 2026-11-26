@@ -1,23 +1,22 @@
 import React, { FunctionComponent } from "react";
-import { IFeeConfig, IGasConfig, IGasSimulator } from "@keplr-wallet/hooks";
+import { IGasConfig, IGasSimulator } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
 import { GasAutoContainer } from "./auto";
-import { ManualFeeInput } from "./manual";
+import { GasInput } from "../gas-input";
 import styleContainer from "./container.module.scss";
 import { Alert } from "reactstrap";
 import { ToggleSwitchButton } from "@components-v2/buttons/toggle-switch-button";
 
 export const GasContainer: FunctionComponent<{
   label?: string;
-  feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
-  onValidationChange?: (hasError: boolean) => void;
+
   gasSimulator: IGasSimulator & {
     outdatedCosmosSdk?: boolean;
     forceDisabled?: boolean;
     forceDisableReason?: Error | undefined;
   };
-}> = observer(({ feeConfig, gasConfig, gasSimulator, onValidationChange }) => {
+}> = observer(({ label, gasConfig, gasSimulator }) => {
   return (
     <div className={styleContainer["container"]}>
       <div className={styleContainer["autoButtonGroup"]}>
@@ -44,12 +43,7 @@ export const GasContainer: FunctionComponent<{
       {gasSimulator.enabled ? (
         <GasAutoContainer gasConfig={gasConfig} gasSimulator={gasSimulator} />
       ) : (
-        <ManualFeeInput
-          feeConfig={feeConfig}
-          gasConfig={gasConfig}
-          gasSimulator={gasSimulator}
-          onValidationChange={onValidationChange}
-        />
+        <GasInput label={label} gasConfig={gasConfig} />
       )}
     </div>
   );

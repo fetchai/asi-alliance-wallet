@@ -1,7 +1,7 @@
 import React, { FunctionComponent, useEffect, useMemo } from "react";
 
-import { useInteractionInfo } from "@hooks/interaction";
-import { ButtonV2 } from "@components-v2/buttons/button";
+import { useInteractionInfo } from "@keplr-wallet/hooks";
+import { Button } from "reactstrap";
 
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 
@@ -11,31 +11,18 @@ import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { EmptyLayout } from "@layouts/empty-layout";
 import { FormattedMessage } from "react-intl";
-import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
-import { useNavigate } from "react-router";
 
 export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
   const { chainStore, permissionStore } = useStore();
-  const navigate = useNavigate();
 
-  const waitingPermission = permissionStore.waitingPermissionData;
+  const waitingPermission =
+    permissionStore.waitingSecret20ViewingKeyAccessPermissions.length > 0
+      ? permissionStore.waitingSecret20ViewingKeyAccessPermissions[0]
+      : undefined;
 
-  const interactionInfo = useInteractionInfo({
-    onUnmount: async () => {
-      if (waitingPermission) {
-        await permissionStore.rejectPermissionWithProceedNext(
-          [waitingPermission.id],
-          () => {
-            // Handle cleanup if needed
-          }
-        );
-      }
-    },
+  const ineractionInfo = useInteractionInfo(() => {
+    permissionStore.rejectAll();
   });
-
-  const isLoading = waitingPermission
-    ? permissionStore.isObsoleteInteractionApproved(waitingPermission.id)
-    : false;
 
   useEffect(() => {
     if (waitingPermission) {
@@ -57,21 +44,13 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
     }
   }, [waitingPermission]);
 
-  const contractAddress =
-    (waitingPermission?.data.options?.interactionData?.[
-      "contractAddress"
-    ] as string) ?? "Loading...";
-
   return (
-    <EmptyLayout
-      className={style["emptyLayout"]}
-      style={{ height: "100%", paddingTop: "80px" }}
-    >
+    <EmptyLayout style={{ height: "100%", paddingTop: "80px" }}>
       <div className={style["container"]}>
         <img
-          src={require("@assets/png/ASI-Logo-Icon-black.png")}
+          src={require("@assets/logo-256.svg")}
           alt="logo"
-          style={{ width: "180px", height: "40px", margin: "0 auto" }}
+          style={{ width: "92px", height: "92px", margin: "0 auto" }}
         />
         <h1 className={style["header"]}>
           <FormattedMessage id="access.viewing-key.title" />
@@ -81,7 +60,9 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
             id="access.viewing-key.paragraph"
             values={{
               host,
-              contractAddress,
+              contractAddress: waitingPermission
+                ? waitingPermission.data.contractAddress
+                : "loading...",
               // eslint-disable-next-line react/display-name
               b: (...chunks: any) => <b>{chunks}</b>,
             }}
@@ -97,67 +78,51 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
         </ul>
         <div style={{ flex: 1 }} />
         <div className={style["buttons"]}>
-          <ButtonV2
-            styleProps={{
-              padding: "10px",
-              height: "40px",
-              fontSize: "0.9rem",
-            }}
-            onClick={async (e: any) => {
+          <Button
+            className={style["button"]}
+            color="danger"
+            outline
+            onClick={async (e) => {
               e.preventDefault();
 
               if (waitingPermission) {
-                await permissionStore.rejectPermissionWithProceedNext(
-                  [waitingPermission.id],
-                  (proceedNext) => {
-                    if (!proceedNext) {
-                      if (
-                        interactionInfo.interaction &&
-                        !interactionInfo.interactionInternal
-                      ) {
-                        handleExternalInteractionWithNoProceedNext();
-                      } else if (
-                        interactionInfo.interaction &&
-                        interactionInfo.interactionInternal
-                      ) {
-                        window.history.length > 1
-                          ? navigate(-1)
-                          : navigate("/");
-                      } else {
-                        navigate("/", { replace: true });
-                      }
-                    }
+                await permissionStore.reject(waitingPermission.id);
+                if (
+                  permissionStore.waitingSecret20ViewingKeyAccessPermissions
+                    .length === 0
+                ) {
+                  if (
+                    ineractionInfo.interaction &&
+                    !ineractionInfo.interactionInternal
+                  ) {
+                    window.close();
                   }
-                );
+                }
               }
             }}
-            dataLoading={isLoading}
-            text={<FormattedMessage id="access.viewing-key.button.reject" />}
-          />
-          <ButtonV2
-            variant="dark"
-            styleProps={{
-              padding: "10px",
-              height: "40px",
-              fontSize: "0.9rem",
-            }}
-            onClick={async (e: any) => {
+            data-loading={permissionStore.isLoading}
+          >
+            <FormattedMessage id="access.viewing-key.button.reject" />
+          </Button>
+          <Button
+            className={style["button"]}
+            color="primary"
+            onClick={async (e) => {
               e.preventDefault();
 
               if (waitingPermission) {
-                await permissionStore.approvePermissionWithProceedNext(
-                  [waitingPermission.id],
-                  (proceedNext) => {
-                    if (!proceedNext) {
-                      if (
-                        interactionInfo.interaction &&
-                        !interactionInfo.interactionInternal
-                      ) {
-                        handleExternalInteractionWithNoProceedNext();
-                      }
-                    }
+                await permissionStore.approve(waitingPermission.id);
+                if (
+                  permissionStore.waitingSecret20ViewingKeyAccessPermissions
+                    .length === 0
+                ) {
+                  if (
+                    ineractionInfo.interaction &&
+                    !ineractionInfo.interactionInternal
+                  ) {
+                    window.close();
                   }
-                );
+                }
               }
             }}
             disabled={
@@ -166,9 +131,10 @@ export const Secret20ViewingKeyAccessPage: FunctionComponent = observer(() => {
                 ChainIdHelper.parse(waitingPermission.data.chainIds[0])
                   .identifier
             }
-            dataLoading={isLoading}
-            text={<FormattedMessage id="access.viewing-key.button.approve" />}
-          />
+            data-loading={permissionStore.isLoading}
+          >
+            <FormattedMessage id="access.viewing-key.button.approve" />
+          </Button>
         </div>
       </div>
     </EmptyLayout>

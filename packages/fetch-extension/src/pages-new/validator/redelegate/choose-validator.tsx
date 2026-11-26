@@ -16,9 +16,22 @@ export const ChooseValidator = ({
       className={style["choose-validator-outer-container"]}
       onClick={onClick}
     >
-      <div className={style[`label`]}>To</div>
+      <div
+        style={{
+          color: "rgba(255, 255, 255, 0.6)",
+        }}
+        className={style[`label`]}
+      >
+        To
+      </div>
 
-      <div className={style["choose-validator-inner-container"]}>
+      <div
+        style={{
+          background: "rgba(255, 255, 255, 0.1)",
+          border: "none",
+        }}
+        className={style["choose-validator-inner-container"]}
+      >
         <React.Fragment>
           <div className={style["choose-validator-heading"]}>
             {selectedValidator
@@ -27,7 +40,7 @@ export const ChooseValidator = ({
                 : "Choose validator"
               : "Choose validator"}
           </div>
-          <img src={require("@assets/svg/wireframe/chevron-down.svg")} alt="" />
+          <img src={require("@assets/svg/chevron-right.svg")} alt="" />
         </React.Fragment>
       </div>
     </div>

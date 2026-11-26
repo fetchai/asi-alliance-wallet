@@ -1,5 +1,5 @@
-export * from "./types";
-export * from "./messages";
 export * from "./service";
-export * from "./constants";
-export * as KeyRingLegacy from "./legacy";
+export * from "./messages";
+export * from "./types";
+export * from "./keyring";
+export * from "./eip712";

@@ -66,15 +66,9 @@ export const GovernanceVoteModal: FunctionComponent<{
           text="Submit"
           size="large"
           containerStyle={
-            {
-              ...style.flatten([
-                "border-radius-64",
-                "margin-top-18",
-                "background-color-dark",
-              ]),
-            } as ViewStyle
+            style.flatten(["border-radius-64", "margin-top-18"]) as ViewStyle
           }
-          textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
+          textStyle={style.flatten(["body2"]) as ViewStyle}
           disabled={
             vote === "Unspecified" ||
             !account.isReadyToSendTx ||
@@ -99,27 +93,19 @@ const VoteButton: FunctionComponent<{
   return (
     <BlurBackground
       borderRadius={12}
-      backgroundBlur={false}
-      containerStyle={
-        [
-          style.flatten(["margin-bottom-6", "background-color-gray-5"]),
-          select ? { backgroundColor: "#e0fedd" } : null,
-        ] as ViewStyle
-      }
+      blurIntensity={15}
+      containerStyle={style.flatten(["margin-bottom-6"]) as ViewStyle}
     >
       <RectButton
         style={
-          style.flatten([
-            "flex-row",
-            "items-center",
-            "justify-between",
-            "padding-18",
-          ]) as ViewStyle
+          style.flatten(
+            ["flex-row", "items-center", "justify-between", "padding-18"],
+            [select && "background-color-indigo"]
+          ) as ViewStyle
         }
-        underlayColor="#e0fedd"
         onPress={onPress}
       >
-        <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
           {text}
         </Text>
       </RectButton>

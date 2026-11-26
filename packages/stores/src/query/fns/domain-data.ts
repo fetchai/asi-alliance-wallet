@@ -1,28 +1,21 @@
 import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
-import { ChainGetter } from "../../chain";
-import { ObservableQueryMap } from "../../common";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../common";
 import { computed } from "mobx";
+import { ObservableChainQueryMap } from "../chain-query";
 import { DomainData, DomainDataType } from "./types";
-import { QuerySharedContext } from "../../common";
 
 export class ObservableQueryDomainDataInner extends ObservableCosmwasmContractChainQuery<DomainData> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    protected readonly contractAddress: string,
+    protected override readonly contractAddress: string,
     protected readonly domain: string
   ) {
-    super(
-      kvStore,
-      chainId,
-      chainGetter,
-      contractAddress,
-      {
-        get_domain_data: { domain: domain },
-      },
-      `domain-data-${contractAddress}-${domain}-${chainId}`
-    );
+    super(kvStore, chainId, chainGetter, contractAddress, {
+      get_domain_data: { domain: domain },
+    });
   }
 
   @computed
@@ -31,13 +24,13 @@ export class ObservableQueryDomainDataInner extends ObservableCosmwasmContractCh
   }
 }
 
-export class ObservableQueryDomainData extends ObservableQueryMap<DomainData> {
+export class ObservableQueryDomainData extends ObservableChainQueryMap<DomainData> {
   constructor(
-    protected readonly kvStore: QuerySharedContext,
-    protected readonly chainId: string,
-    protected readonly chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((key: string) => {
+    super(kvStore, chainId, chainGetter, (key: string) => {
       const split = key.split("/");
       return new ObservableQueryDomainDataInner(
         this.kvStore,

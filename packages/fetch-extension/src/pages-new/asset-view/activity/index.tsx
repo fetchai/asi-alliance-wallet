@@ -12,7 +12,16 @@ export const Activity: FunctionComponent<ActivityProps> = observer(
       <div className={style[""]}>
         {token === "FET" && (
           <div className={style["activity-tab"]}>
-            <div className={style["heading"]}>Activity</div>
+            <div
+              style={{
+                color: "white",
+                fontSize: "18px",
+                fontWeight: 400,
+                marginBottom: "24px",
+              }}
+            >
+              Activity
+            </div>
             <NativeTab />
           </div>
         )}

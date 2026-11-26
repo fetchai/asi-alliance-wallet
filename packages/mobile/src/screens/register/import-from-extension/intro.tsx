@@ -42,11 +42,12 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
   const { analyticsStore } = useStore();
   const smartNavigation = useSmartNavigation();
   const style = useStyle();
+  const [permission, requestPermission] = Camera.useCameraPermissions();
   const [openCameraModel, setIsOpenCameraModel] = useState(false);
   const [modelStatus, setModelStatus] = useState(ModelStatus.First);
 
   return (
-    <PageWithView backgroundMode="secondary">
+    <PageWithView backgroundMode="image">
       <View style={style.flatten(["padding-page", "flex-grow-1"]) as ViewStyle}>
         <View style={style.get("flex-2")} />
         <IconWithText
@@ -70,12 +71,9 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
               "margin-x-20",
               "text-center",
               "font-medium",
-              "color-black",
             ]) as ViewStyle
           }
-          subtitleStyle={
-            style.flatten(["body3", "color-gray-400"]) as ViewStyle
-          }
+          subtitleStyle={style.flatten(["subtitle3"]) as ViewStyle}
         />
         <BlurBackground
           borderRadius={12}
@@ -92,7 +90,7 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
             style={
               style.flatten([
                 "subtitle3",
-                "color-black",
+                "color-white",
                 "text-center",
                 "margin-x-24",
                 "margin-y-14",
@@ -106,15 +104,8 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
         <Button
           text="Continue"
           size="large"
-          containerStyle={
-            style.flatten([
-              "border-radius-32",
-              "background-color-dark",
-            ]) as ViewStyle
-          }
-          textStyle={style.flatten(["color-white"]) as ViewStyle}
-          onPress={async () => {
-            const permission = await Camera.getCameraPermissionsAsync();
+          containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+          onPress={() => {
             if (permission?.status == PermissionStatus.UNDETERMINED) {
               setIsOpenCameraModel(true);
             } else {
@@ -126,7 +117,6 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
                   pageName: "Register",
                   registerType: "qr",
                 });
-
                 smartNavigation.navigateSmart("Register.ImportFromExtension", {
                   registerConfig: route.params.registerConfig,
                 });
@@ -156,8 +146,11 @@ export const ImportFromExtensionIntroScreen: FunctionComponent = () => {
         isOpen={openCameraModel}
         close={() => setIsOpenCameraModel(false)}
         onPress={async () => {
-          const permissionStatus = await Camera.requestCameraPermissionsAsync();
-          if (permissionStatus.status === PermissionStatus.DENIED) {
+          const permissionStatus = await requestPermission();
+          if (
+            !permission?.granted &&
+            permissionStatus.status === PermissionStatus.DENIED
+          ) {
             if (permissionStatus.canAskAgain) {
               setIsOpenCameraModel(false);
             } else {

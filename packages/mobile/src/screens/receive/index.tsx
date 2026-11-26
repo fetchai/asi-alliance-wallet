@@ -10,7 +10,6 @@ import {
   ViewStyle,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import Toast from "react-native-toast-message";
 import { PageWithScrollView } from "components/page";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import QRCode from "react-native-qrcode-svg";
@@ -19,7 +18,6 @@ import LottieView from "lottie-react-native";
 import { useSimpleTimer } from "hooks/use-simple-timer";
 import { CopyIcon } from "components/new/icon/copy-icon";
 import { titleCase } from "utils/format/format";
-import { CircleExclamationIcon } from "components/new/icon/circle-exclamation";
 
 export const ReceiveScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -47,7 +45,7 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -64,8 +62,8 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
           style={
             style.flatten([
               "h3",
-              "color-dark",
-              "font-normal",
+              "color-white",
+              "font-semibold",
               "text-center",
               "margin-bottom-12",
             ]) as ViewStyle
@@ -76,8 +74,8 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "body3",
-              "color-gray-400",
+              "h7",
+              "color-platinum-100",
               "text-center",
             ]) as ViewStyle
           }
@@ -85,7 +83,7 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
           Scan to code or use the address below to copy your deposit address
         </Text>
       </View>
-      <View style={style.flatten(["items-center", "margin-y-24"]) as ViewStyle}>
+      <View style={style.flatten(["items-center", "margin-y-12"]) as ViewStyle}>
         {account.bech32Address ? (
           <View
             style={
@@ -113,20 +111,13 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
         onPress={async () => {
           await Clipboard.setStringAsync(account.bech32Address);
           setTimer(2000);
-          Toast.show({ type: "success", text1: "Address Copied" });
         }}
         activeOpacity={0.6}
       >
         <SimpleCardView
           heading={account.bech32Address}
-          backgroundBlur={false}
-          headingStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
-          cardStyle={
-            style.flatten([
-              "margin-y-12",
-              "background-color-gray-5",
-            ]) as ViewStyle
-          }
+          headingStyle={style.flatten(["body3"]) as ViewStyle}
+          cardStyle={style.flatten(["margin-y-12"]) as ViewStyle}
           trailingIconComponent={
             isTimedOut ? (
               <View style={style.flatten(["margin-left-2"]) as ViewStyle}>
@@ -182,38 +173,26 @@ export const ReceiveScreen: FunctionComponent = observer(() => {
                 </View>
               </View>
             ) : (
-              <CopyIcon size={16} iconOpacity={1} color="#151a1a" />
+              <CopyIcon size={16} iconOpacity={1} />
             )
           }
         />
       </TouchableOpacity>
-      <View
-        style={
+      <SimpleCardView
+        backgroundBlur={false}
+        heading={`Deposits must be using the ${titleCase(
+          chainStore.current.chainName
+        )} Network. Do not send token from other networks to this address or they may be lost.`}
+        headingStyle={style.flatten(["body3"]) as ViewStyle}
+        cardStyle={
           style.flatten([
-            "flex-row",
-            "border-radius-12",
-            "padding-12",
+            "background-color-coral-red@25%",
             "margin-top-12",
             "margin-bottom-48",
-            "background-color-coral-red@25%",
+            "padding-12",
           ]) as ViewStyle
         }
-      >
-        <View
-          style={
-            style.flatten(["margin-right-16", "margin-top-2"]) as ViewStyle
-          }
-        >
-          <CircleExclamationIcon size={16} color="#151a1a" />
-        </View>
-        <Text
-          style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}
-        >
-          {`Deposits must be using the ${titleCase(
-            chainStore.current.chainName
-          )} Network. Do not send token from other networks to this address or they may be lost.`}
-        </Text>
-      </View>
+      />
     </PageWithScrollView>
   );
 });

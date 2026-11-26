@@ -1,18 +1,18 @@
 import React from "react";
-import { Text, View, ViewStyle } from "react-native";
+import { Text, View, StyleSheet, ViewStyle } from "react-native";
 import { RenderNumber } from "components/new/animations/animated-number/render-number";
 import { AddComma } from "components/new/animations/animated-number/add-comma";
-import { useStyle } from "styles/index";
 
 interface Props {
   numberForAnimated: number;
   decimalAmount?: number;
   includeComma?: boolean;
+  gap?: number;
+  colorValue?: string;
+  fontWeight?: string;
   fontSizeValue?: number;
-  textColor?: string;
   hookName: "withTiming" | "withSpring";
   containerStyle?: ViewStyle;
-  comaStyle?: ViewStyle;
   withTimingProps?: {
     durationValue?: number;
     easingValue: string;
@@ -31,13 +31,14 @@ export function AnimatedNumber({
   numberForAnimated,
   decimalAmount = 1,
   includeComma = true,
+  gap = 5,
   hookName = "withSpring",
   withTimingProps,
   withSpringProps,
-  fontSizeValue = 50,
-  textColor = "white",
+  colorValue,
+  fontSizeValue,
+  fontWeight,
   containerStyle,
-  comaStyle,
 }: Props) {
   if (withTimingProps && withSpringProps) {
     throw new Error(
@@ -50,7 +51,7 @@ export function AnimatedNumber({
 
   if (numberForAnimated < 1 && numberForAnimated > 0) {
     if (decimalAmount + 2 > numberArray.length) {
-      // Add zeros if decimal precision is not met
+      // why + 2, because the zero and the comma.
       const numberLacks = decimalAmount + 2 - numberArray.length;
       for (let i = 0; i < numberLacks; i++) {
         numberArray.push("0");
@@ -61,63 +62,59 @@ export function AnimatedNumber({
       const newArray = AddComma(numberForAnimated, numberArray, decimalAmount);
       numberArray = [...newArray];
     }
+    // console.log(numberArray)
   }
-
-  const style = useStyle();
-  const lineHeight = fontSizeValue * 1.0;
+  const heightContainer = fontSizeValue! || 70;
 
   return (
     <View
-      style={
-        [
-          style.flatten(["flex-row", "justify-center", "overflow-hidden"]),
-          containerStyle,
-        ] as ViewStyle
-      }
+      style={[styles.container, { height: heightContainer }, containerStyle]}
     >
       {numberArray.map((numberSymbol, i) => {
-        const isNonNumeric = isNaN(+numberSymbol);
+        const validNumber = isNaN(+numberSymbol);
         return (
           <React.Fragment key={i}>
-            {!isNonNumeric ? (
-              <RenderNumber
-                fontSizeValue={fontSizeValue}
-                numberSymbol={Number(numberSymbol)}
-                hookName={hookName}
-                containerStyle={containerStyle}
-                textColor={textColor}
-                listProperties={
-                  hookName === "withTiming"
-                    ? {
-                        durationValue: withTimingProps?.durationValue || 500,
-                        easingValue: withTimingProps?.easingValue || "linear",
-                      }
-                    : {
-                        mass: withSpringProps?.mass || 3,
-                        damping: withSpringProps?.damping || 20,
-                        stiffness: withSpringProps?.stiffness || 500,
-                        restDisplacementThreshold:
-                          withSpringProps?.restDisplacementThreshold || 0.01,
-                        overshootClamping:
-                          withSpringProps?.overshootClamping || false,
-                        restSpeedThreshold:
-                          withSpringProps?.restSpeedThreshold || 2,
-                      }
-                }
-              />
+            {!validNumber ? (
+              <View key={i}>
+                <RenderNumber
+                  gap={gap}
+                  colorValue={colorValue || "red"}
+                  fontSizeValue={fontSizeValue || 50}
+                  numberSymbol={Number(numberSymbol)}
+                  hookName={hookName}
+                  fontWeight={fontWeight}
+                  listProperties={
+                    hookName === "withTiming"
+                      ? {
+                          durationValue: withTimingProps?.durationValue || 500,
+                          easingValue: withTimingProps?.easingValue || "linear",
+                        }
+                      : {
+                          mass: withSpringProps?.mass || 3,
+                          damping: withSpringProps?.damping || 20,
+                          stiffness: withSpringProps?.stiffness || 500,
+                          restDisplacementThreshold:
+                            withSpringProps?.restDisplacementThreshold || 0.01,
+                          overshootClamping:
+                            withSpringProps?.overshootClamping || false,
+                          restSpeedThreshold:
+                            withSpringProps?.restSpeedThreshold || 2,
+                        }
+                  }
+                />
+              </View>
             ) : (
               <Text
-                style={
-                  [
-                    style.flatten(["font-normal", "overflow-hidden"]),
-                    {
-                      color: textColor,
-                      fontSize: fontSizeValue,
-                      lineHeight: lineHeight,
-                    },
-                    comaStyle,
-                  ] as ViewStyle
-                }
+                style={[
+                  styles.dot,
+                  {
+                    marginHorizontal: gap,
+                    color: colorValue || "red",
+                    fontSize: fontSizeValue || 50,
+                    // includeFontPadding: false,
+                    lineHeight: fontSizeValue! * 1.1,
+                  },
+                ]}
               >
                 {numberSymbol}
               </Text>
@@ -128,3 +125,17 @@ export function AnimatedNumber({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  animatedStyle: {},
+  dot: {
+    right: 0,
+    margin: 0,
+    padding: 0,
+  },
+});

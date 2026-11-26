@@ -15,10 +15,6 @@ export class ListEntriesMsg extends Message<AddressBookEntry[]> {
     // noop
   }
 
-  override approveExternal(): boolean {
-    return true;
-  }
-
   route(): string {
     return ROUTE;
   }
@@ -39,10 +35,6 @@ export class AddEntryMsg extends Message<void> {
 
   validateBasic(): void {
     // noop
-  }
-
-  override approveExternal(): boolean {
-    return true;
   }
 
   route(): string {
@@ -67,10 +59,6 @@ export class UpdateEntryMsg extends Message<void> {
     // noop
   }
 
-  override approveExternal(): boolean {
-    return true;
-  }
-
   route(): string {
     return ROUTE;
   }
@@ -91,10 +79,6 @@ export class DeleteEntryMsg extends Message<void> {
 
   validateBasic(): void {
     // noop
-  }
-
-  override approveExternal(): boolean {
-    return true;
   }
 
   route(): string {

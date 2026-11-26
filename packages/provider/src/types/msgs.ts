@@ -3,9 +3,6 @@ import {
   AddressBookEntry,
   NetworkConfig,
   WalletStatus,
-  ChainInfoWithCoreTypes,
-  KeyInfo,
-  KeyRingStatus,
 } from "@fetchai/wallet-types";
 import { Message } from "@keplr-wallet/router";
 import {
@@ -17,8 +14,6 @@ import {
   StdSignature,
   StdSignDoc,
   ChainInfoWithoutEndpoints,
-  ModularChainInfo,
-  SettledResponses,
 } from "@keplr-wallet/types";
 
 export class EnableAccessMsg extends Message<void> {
@@ -741,19 +736,13 @@ export class StatusMsg extends Message<WalletStatus> {
   }
 }
 
-export class GetKeyRingStatusOnlyMsg extends Message<{
-  status: KeyRingStatus;
-}> {
+export class UnlockWalletMsg extends Message<void> {
   public static type() {
-    return "get-keyring-status-only";
+    return "unlock-wallet-msg";
   }
 
   constructor() {
     super();
-  }
-
-  override approveExternal(): boolean {
-    return true;
   }
 
   validateBasic(): void {
@@ -761,38 +750,55 @@ export class GetKeyRingStatusOnlyMsg extends Message<{
   }
 
   route(): string {
-    return "keyring-v2";
+    return "keyring";
   }
 
   type(): string {
-    return GetKeyRingStatusOnlyMsg.type();
+    return UnlockWalletMsg.type();
   }
 }
 
-export class UnlockKeyRingMsg extends Message<{
-  status: KeyRingStatus;
-  keyInfos: KeyInfo[];
-}> {
+export class LockWalletMsg extends Message<void> {
   public static type() {
-    return "unlock-keyring";
+    return "lock-wallet-msg";
   }
 
-  constructor(public readonly password: string) {
+  constructor() {
     super();
   }
 
   validateBasic(): void {
-    if (!this.password) {
-      throw new Error("password not set");
-    }
+    // noop
   }
 
   route(): string {
-    return "keyring-v2";
+    return "keyring";
   }
 
   type(): string {
-    return UnlockKeyRingMsg.type();
+    return LockWalletMsg.type();
+  }
+}
+
+export class RestoreWalletMsg extends Message<WalletStatus> {
+  public static type() {
+    return "restore-wallet";
+  }
+
+  constructor() {
+    super();
+  }
+
+  validateBasic(): void {
+    // noop
+  }
+
+  route(): string {
+    return "keyring";
+  }
+
+  type(): string {
+    return RestoreWalletMsg.type();
   }
 }
 
@@ -827,10 +833,6 @@ export class SwitchAccountMsg extends Message<void> {
     super();
   }
 
-  override approveExternal(): boolean {
-    return true;
-  }
-
   validateBasic(): void {
     if (!this.address) {
       throw new Error("address is empty");
@@ -838,7 +840,7 @@ export class SwitchAccountMsg extends Message<void> {
   }
 
   route(): string {
-    return "keyring-V2";
+    return "keyring";
   }
 
   type(): string {
@@ -892,7 +894,7 @@ export class GetAccountMsg extends Message<Account | null> {
   }
 }
 
-export class GetNetworkMsg extends Message<ChainInfoWithCoreTypes | undefined> {
+export class GetNetworkMsg extends Message<NetworkConfig> {
   public static type() {
     return "current-network-msg";
   }
@@ -911,59 +913,6 @@ export class GetNetworkMsg extends Message<ChainInfoWithCoreTypes | undefined> {
 
   type(): string {
     return GetNetworkMsg.type();
-  }
-}
-
-export class LockKeyRingMsg extends Message<{
-  status: "empty" | "locked" | "unlocked";
-}> {
-  public static type() {
-    return "lock-keyring";
-  }
-
-  constructor() {
-    super();
-  }
-
-  override approveExternal(): boolean {
-    return true;
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return "keyring-v2";
-  }
-
-  type(): string {
-    return LockKeyRingMsg.type();
-  }
-}
-
-export class GetChainInfosWithCoreTypesMsg extends Message<{
-  chainInfos: ChainInfoWithCoreTypes[];
-  modulrChainInfos: ModularChainInfo[];
-}> {
-  public static type() {
-    return "get-chain-infos-with-core-types";
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  override approveExternal(): boolean {
-    return true;
-  }
-
-  route(): string {
-    return "chains";
-  }
-
-  type(): string {
-    return GetChainInfosWithCoreTypesMsg.type();
   }
 }
 
@@ -1191,88 +1140,6 @@ export class RequestVerifyADR36AminoSignDocFetchSigning extends Message<boolean>
 
   type(): string {
     return RequestVerifyADR36AminoSignDocFetchSigning.type();
-  }
-}
-
-export class GetKeyRingStatusMsg extends Message<{
-  status: KeyRingStatus;
-  keyInfos: KeyInfo[];
-  needMigration: boolean;
-  isMigrating: boolean;
-}> {
-  public static type() {
-    return "get-keyring-status";
-  }
-
-  constructor() {
-    super();
-  }
-
-  override approveExternal(): boolean {
-    return true;
-  }
-
-  validateBasic(): void {
-    // noop
-  }
-
-  route(): string {
-    return "keyring-v2";
-  }
-
-  type(): string {
-    return GetKeyRingStatusMsg.type();
-  }
-}
-
-export class GetCosmosKeysForEachVaultSettledMsg extends Message<
-  SettledResponses<
-    Key & {
-      vaultId: string;
-    }
-  >
-> {
-  public static type() {
-    return "GetCosmosKeysForEachVaultSettledMsg";
-  }
-
-  constructor(
-    public readonly chainId: string,
-    public readonly vaultIds: string[]
-  ) {
-    super();
-  }
-
-  override approveExternal(): boolean {
-    return true;
-  }
-
-  validateBasic(): void {
-    if (!this.chainId) {
-      throw new Error("chain id not set");
-    }
-
-    if (!this.vaultIds || this.vaultIds.length === 0) {
-      throw new Error("vaultIds are not set");
-    }
-
-    const seen = new Map<string, boolean>();
-
-    for (const vaultId of this.vaultIds) {
-      if (seen.get(vaultId)) {
-        throw new Error(`vaultId ${vaultId} is duplicated`);
-      }
-
-      seen.set(vaultId, true);
-    }
-  }
-
-  route(): string {
-    return "keyring-cosmos";
-  }
-
-  type(): string {
-    return GetCosmosKeysForEachVaultSettledMsg.type();
   }
 }
 

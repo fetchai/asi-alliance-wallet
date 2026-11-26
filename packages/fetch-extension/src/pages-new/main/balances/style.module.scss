@@ -1,101 +1,86 @@
 @import "../../../styles/var";
 
 .balance-card {
-  margin-top: 20px;
-  color: $font-dark;
+  margin-top: 32px;
+  color: white;
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
+  gap: 24px;
   align-self: stretch;
-  flex-wrap: wrap;
-  row-gap: 10px;
 }
 
 .balance-field {
   display: flex;
   flex-direction: column;
-  align-items: baseline;
   gap: 6px;
 }
-
 .priceChangesGreen {
-  color: $bg-green-dark;
+  color: var(--green-green-500-vibrant-green, #2de376);
 
   display: flex;
   gap: 4px;
   justify-content: center;
   align-items: center;
-  font-size: 16px;
-  .changeInPer {
-    color: $bg-green-dark;
-  }
+  font-size: 14px;
 }
-
 .priceChangesOrange {
   color: #f9774b;
   display: flex;
   gap: 4px;
   justify-content: center;
   align-items: center;
-  font-size: 16px;
-  .changeInPer {
-    color: #f9774b;
-  }
+  font-size: 14px;
 }
-
 .balance {
-  font-size: $lg;
+  font-size: $xl;
   display: flex;
   gap: 8px;
-  font-family: $font-family-base;
+  font-family: Lexend;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
+  justify-content: center;
 }
 
 .denom {
-  color: $neutral;
-  // color: var(--grey-grey-700, #556578);
+  color: var(--grey-grey-700, #556578);
 }
 
 .portfolio {
   padding: 0px;
   cursor: pointer;
-  width: 100px;
+  width: 128px;
   height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(10px);
   font-size: 14px;
   border-radius: 100px;
-  color: white;
-  background: $bg-dark;
-
-  img {
-    width: 14px;
-    height: 14px;
-    margin-left: 2px;
-    filter: invert(1);
-  }
+  color: #fff;
+  background: transparent;
 }
 
 .portfolio:hover {
-  opacity: 0.8;
+  border-color: white;
+  color: white;
+  background: transparent !important;
   box-shadow: none;
+  // padding-top: 1px; can be used with Button
 }
 
 .portfolio:focus {
   color: #fff;
-  opacity: 0.9;
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .inUsd {
-  color: $font-grey;
-  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
   align-items: center;
   justify-content: center;
   display: flex;
@@ -124,12 +109,12 @@
 }
 
 .day {
-  color: $neutral;
-  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
 }
 
 .changeInDollars-green {
-  color: $bg-green-dark;
+  color: var(--green-green-500-vibrant-green, #2de376);
 }
 
 .changeInDollars-orange {
@@ -137,7 +122,7 @@
 }
 
 .increaseInDollarsGreen {
-  color: $bg-green-dark;
+  color: var(--green-green-500-vibrant-green, #2de376);
 }
 
 .increaseInDollarsOrange {
@@ -154,14 +139,4 @@
 
 .negative {
   color: #f9774b;
-}
-
-.btnContainer {
-  display: flex;
-  justify-content: center;
-  column-gap: 8px;
-}
-
-.buy {
-  width: 90px;
 }

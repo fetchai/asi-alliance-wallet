@@ -42,9 +42,9 @@ export const GasAutoContainer: FunctionComponent<{
               ? gasSimulator.gasAdjustmentRaw
               : "-"
           }
-          type="text"
-          inputMode="decimal"
+          type={gasSimulator.gasEstimated != null ? "number" : "text"}
           readOnly={gasSimulator.gasEstimated == null}
+          step={0.1}
           onChange={(e) => {
             e.preventDefault();
 

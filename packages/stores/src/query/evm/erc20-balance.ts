@@ -1,35 +1,48 @@
 import { computed, makeObservable, override } from "mobx";
-import { DenomHelper } from "@keplr-wallet/common";
-import { QuerySharedContext } from "../../common";
-import { ObservableJsonRPCQuery, erc20MetadataInterface } from "../../common";
+import { DenomHelper, KVStore } from "@keplr-wallet/common";
+import {
+  ChainGetter,
+  ObservableJsonRPCQuery,
+  erc20MetadataInterface,
+} from "../../common";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { BalanceRegistry, ObservableQueryBalanceInner } from "../balances";
 import { Bech32Address } from "@keplr-wallet/cosmos";
+import Axios from "axios";
 import { BigNumber } from "@ethersproject/bignumber";
-import { ChainGetter } from "../../chain";
 
 export class ObservableQueryErc20Balance extends ObservableJsonRPCQuery<string> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly bech32Address: string,
     protected readonly contractAddress: string
   ) {
-    super(kvStore, chainGetter.getChain(chainId).rpc, "", "eth_call", [
-      {
-        to: contractAddress,
-        data: erc20MetadataInterface.encodeFunctionData("balanceOf", [
-          bech32Address
-            ? Bech32Address.fromBech32(
-                bech32Address,
-                chainGetter.getChain(chainId)?.bech32Config?.bech32PrefixAccAddr
-              ).toHex(true)
-            : "0x0000000000000000000000000000000000000000",
-        ]),
-      },
-      "latest",
-    ]);
+    super(
+      kvStore,
+      Axios.create({
+        ...{
+          baseURL: chainGetter.getChain(chainId).rpc,
+        },
+      }),
+      "",
+      "eth_call",
+      [
+        {
+          to: contractAddress,
+          data: erc20MetadataInterface.encodeFunctionData("balanceOf", [
+            bech32Address
+              ? Bech32Address.fromBech32(
+                  bech32Address,
+                  chainGetter.getChain(chainId).bech32Config.bech32PrefixAccAddr
+                ).toHex(true)
+              : "0x0000000000000000000000000000000000000000",
+          ]),
+        },
+        "latest",
+      ]
+    );
   }
 
   protected override canFetch(): boolean {
@@ -41,7 +54,7 @@ export class ObservableQueryErc20BalanceInner extends ObservableQueryBalanceInne
   protected readonly queryErc20Balance: ObservableQueryErc20Balance;
 
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     denomHelper: DenomHelper,
@@ -70,18 +83,6 @@ export class ObservableQueryErc20BalanceInner extends ObservableQueryBalanceInne
   // This method doesn't have the role because the fetching is actually exeucnted in the `ObservableQueryErc20Balance`.
   protected override canFetch(): boolean {
     return false;
-  }
-
-  override get isFetching(): boolean {
-    return this.queryErc20Balance.isFetching;
-  }
-
-  override get error() {
-    return this.queryErc20Balance.error;
-  }
-
-  override get response() {
-    return this.queryErc20Balance.response;
   }
 
   @override
@@ -118,9 +119,9 @@ export class ObservableQueryErc20BalanceInner extends ObservableQueryBalanceInne
 }
 
 export class ObservableQueryErc20BalanceRegistry implements BalanceRegistry {
-  constructor(protected readonly kvStore: QuerySharedContext) {}
+  constructor(protected readonly kvStore: KVStore) {}
 
-  getBalanceImpl(
+  getBalanceInner(
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string,

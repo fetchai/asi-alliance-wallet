@@ -1,17 +1,10 @@
-import { Ledger, LedgerApp } from "@keplr-wallet/background";
+import { Ledger, LedgerApp, LedgerInitErrorOn } from "@keplr-wallet/background";
 import React, { FunctionComponent, useState } from "react";
 import { useStyle } from "styles/index";
 import { BluetoothMode } from ".";
 import { ViewStyle } from "react-native";
 import { BlurButton } from "components/new/button/blur-button";
 import TransportBLE from "@ledgerhq/react-native-hw-transport-ble";
-import { KeplrError as WalletError } from "@keplr-wallet/router";
-import {
-  ErrCodeAppNotInitialised,
-  ErrCodeDeviceLocked,
-  ErrFailedInit,
-  ErrModuleLedgerSign,
-} from "@keplr-wallet/background/build/ledger/types";
 
 export const LedgerNanoBLESelector: FunctionComponent<{
   deviceId: string;
@@ -33,9 +26,12 @@ export const LedgerNanoBLESelector: FunctionComponent<{
 }) => {
   const style = useStyle();
 
+  // const [pairingText, setIsPairingText] = useState<string>("");
   const [isConnecting, setIsConnecting] = useState(false);
 
   const testLedgerConnection = async () => {
+    let initErrorOn: LedgerInitErrorOn | undefined;
+
     try {
       setIsPaired(false);
       setIsConnecting(true);
@@ -59,28 +55,33 @@ export const LedgerNanoBLESelector: FunctionComponent<{
         setIsPairingText(`Paired with ${name}`);
       }, 2000);
       await ledger.close();
-      onCanResume();
+      setTimeout(function () {
+        onCanResume();
+        setBluetoothMode(BluetoothMode.Ledger);
+        setIsPairingText("Waiting for bluetooth signal...");
+        setMainContent(
+          "press and hold two buttons at the same time and enter your pin"
+        );
+        setIsPaired(false);
+      }, 6000);
     } catch (e) {
-      if (e instanceof WalletError && e.module === ErrModuleLedgerSign) {
-        setBluetoothMode(BluetoothMode.Device);
-        if (e.code === ErrFailedInit) {
-          setMainContent(
-            "press and hold two buttons at the same time and enter your pin"
-          );
-          setIsConnecting(false);
-        } else if (e.code === ErrCodeAppNotInitialised) {
+      console.log(e);
+      if (e.errorOn != null) {
+        initErrorOn = e.errorOn;
+        if (initErrorOn === LedgerInitErrorOn.App) {
+          setBluetoothMode(BluetoothMode.Device);
           setMainContent(
             "Open Cosmos app on your ledger and pair with ASI Alliance Wallet"
           );
           setIsConnecting(false);
-        } else if (e.code === ErrCodeDeviceLocked) {
-          setMainContent(`Please unlock ledger ${name}`);
+        } else if (initErrorOn === LedgerInitErrorOn.Transport) {
+          setMainContent("Please unlock ledger nano X");
           setIsConnecting(false);
         }
       } else {
-        setMainContent(`Please unlock ledger ${name}`);
-        setIsConnecting(false);
+        initErrorOn = LedgerInitErrorOn.Unknown;
       }
+
       await TransportBLE.disconnect(deviceId);
     }
   };
@@ -88,14 +89,10 @@ export const LedgerNanoBLESelector: FunctionComponent<{
   return !isConnecting ? (
     <BlurButton
       text={name}
-      backgroundBlur={false}
+      blurIntensity={25}
       borderRadius={12}
-      textStyle={style.flatten(["color-dark"]) as ViewStyle}
       containerStyle={
-        [
-          style.flatten(["padding-12", "margin-bottom-6"]),
-          { backgroundColor: "#f6f6f6" },
-        ] as ViewStyle
+        style.flatten(["padding-12", "margin-bottom-6"]) as ViewStyle
       }
       onPress={async () => {
         await testLedgerConnection();

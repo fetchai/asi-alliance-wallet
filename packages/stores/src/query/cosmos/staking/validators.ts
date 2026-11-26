@@ -1,20 +1,16 @@
-import { BondStatus, Validator } from "./types";
 import {
-  base64ToBytes,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
+  ObservableChainQuery,
+  ObservableChainQueryMap,
+} from "../../chain-query";
+import { BondStatus, Validators, Validator } from "./types";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../common";
 import { computed, makeObservable, observable, runInAction } from "mobx";
-import { ObservableQuery, camelToSnake } from "../../../common";
+import { ObservableQuery, QueryResponse } from "../../../common";
+import Axios from "axios";
 import PQueue from "p-queue";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
 import { computedFn } from "mobx-utils";
-import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
-import { QueryValidatorsResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
-import { QuerySharedContext } from "../../../common";
-import { ChainGetter } from "../../../chain";
-/* eslint-disable-next-line import/no-extraneous-dependencies */
-import { decodePubkey } from "@cosmjs/proto-signing";
 
 interface KeybaseResult {
   status: {
@@ -48,10 +44,14 @@ export class ObservableQueryValidatorThumbnail extends ObservableQuery<KeybaseRe
 
   protected readonly validator: Validator;
 
-  constructor(sharedContext: QuerySharedContext, validator: Validator) {
+  constructor(kvStore: KVStore, validator: Validator) {
+    const instance = Axios.create({
+      baseURL: "https://keybase.io/",
+    });
+
     super(
-      sharedContext,
-      "https://keybase.io/",
+      kvStore,
+      instance,
       `_/api/1.0/user/lookup.json?fields=pictures&key_suffix=${validator.description.identity}`
     );
     makeObservable(this);
@@ -65,7 +65,7 @@ export class ObservableQueryValidatorThumbnail extends ObservableQuery<KeybaseRe
 
   protected override async fetchResponse(
     abortController: AbortController
-  ): Promise<{ data: KeybaseResult; headers: any }> {
+  ): Promise<{ response: QueryResponse<KeybaseResult>; headers: any }> {
     return await ObservableQueryValidatorThumbnail.fetchingThumbnailQueue.add(
       () => {
         return super.fetchResponse(abortController);
@@ -85,47 +85,35 @@ export class ObservableQueryValidatorThumbnail extends ObservableQuery<KeybaseRe
   }
 }
 
-export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<QueryValidatorsResponse> {
-  protected readonly chainId: string;
-  protected readonly chainGetter: ChainGetter;
+export class ObservableQueryValidatorsInner extends ObservableChainQuery<Validators> {
   @observable.shallow
   protected thumbnailMap: Map<string, ObservableQueryValidatorThumbnail> =
     new Map();
 
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
-    status: BondStatus
+    protected readonly status: BondStatus
   ) {
-    const chainInfo = chainGetter.getChain(chainId);
     super(
-      sharedContext,
-      chainInfo.rpc,
-      async (queryClient) => {
-        const client = queryClient as unknown as StakingExtension;
-        const bondStatus = (() => {
-          switch (status) {
-            case BondStatus.Bonded:
-              return "BOND_STATUS_BONDED";
-            case BondStatus.Unbonded:
-              return "BOND_STATUS_UNBONDED";
-            case BondStatus.Unbonding:
-              return "BOND_STATUS_UNBONDING";
-            default:
-              return "";
-          }
-        })();
-
-        const response = await client.staking.validators(bondStatus);
-        return response;
-      },
-      setupStakingExtension,
-      `/cosmos/staking/v1beta1/validators?status=${status}&pagination.limit=1000`
+      kvStore,
+      chainId,
+      chainGetter,
+      `/cosmos/staking/v1beta1/validators?pagination.limit=1000&status=${(() => {
+        switch (status) {
+          case BondStatus.Bonded:
+            return "BOND_STATUS_BONDED";
+          case BondStatus.Unbonded:
+            return "BOND_STATUS_UNBONDED";
+          case BondStatus.Unbonding:
+            return "BOND_STATUS_UNBONDING";
+          default:
+            return "BOND_STATUS_UNSPECIFIED";
+        }
+      })()}`
     );
     makeObservable(this);
-    this.chainId = chainId;
-    this.chainGetter = chainGetter;
   }
 
   @computed
@@ -134,45 +122,15 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
       return [];
     }
 
-    const decimals = this.chainGetter.getChain(this.chainId).currencies[0]
-      .coinDecimals;
-    const decodedResponse = QueryValidatorsResponse.toJSON(this.response.data);
-    const parsedValidators = decodedResponse.validators.map((item) => ({
-      ...item,
-      unbondingHeight: item.unbondingHeight.toString(),
-      delegatorShares: new Dec(item.delegatorShares, decimals).toString(),
-      consensusPubkey: {
-        "@type": item.consensusPubkey?.typeUrl,
-        key: item?.consensusPubkey
-          ? decodePubkey({
-              ...item.consensusPubkey,
-              value: base64ToBytes(item.consensusPubkey.value),
-            })?.value
-          : "",
-      },
-      commission: {
-        ...item.commission,
-        commissionRates: {
-          maxRate: new Dec(
-            item.commission.commissionRates.maxRate,
-            18
-          ).toString(),
-          rate: new Dec(item.commission.commissionRates.rate, 18).toString(),
-          maxChangeRate: new Dec(
-            item.commission.commissionRates.maxChangeRate,
-            18
-          ).toString(),
-        },
-      },
-    }));
-    return camelToSnake(parsedValidators) as Validator[];
+    return this.response.data.validators;
   }
 
   readonly getValidator = computedFn(
     (validatorAddress: string): Validator | undefined => {
       const validators = this.validators;
-      return camelToSnake(
-        validators.find((val) => val.operator_address === validatorAddress)
+
+      return validators.find(
+        (val) => val.operator_address === validatorAddress
       );
     }
   );
@@ -187,29 +145,16 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
 
   readonly getValidatorThumbnail = computedFn(
     (operatorAddress: string): string => {
-      const query = this.getQueryValidatorThumbnail(operatorAddress);
-      if (!query) {
-        return "";
-      }
-
-      return query.thumbnail;
-    }
-  );
-
-  readonly getQueryValidatorThumbnail = computedFn(
-    (
-      operatorAddress: string
-    ): ObservableQueryValidatorThumbnail | undefined => {
       const validators = this.validators;
       const validator = validators.find(
         (val) => val.operator_address === operatorAddress
       );
       if (!validator) {
-        return;
+        return "";
       }
 
       if (!validator.description.identity) {
-        return;
+        return "";
       }
 
       const identity = validator.description.identity;
@@ -218,13 +163,13 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
         runInAction(() => {
           this.thumbnailMap.set(
             identity,
-            new ObservableQueryValidatorThumbnail(this.sharedContext, validator)
+            new ObservableQueryValidatorThumbnail(this.kvStore, validator)
           );
         });
       }
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return this.thumbnailMap.get(identity)!;
+      return this.thumbnailMap.get(identity)!.thumbnail;
     }
   );
 
@@ -244,10 +189,6 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
       const chainInfo = this.chainGetter.getChain(this.chainId);
       const stakeCurrency = chainInfo.stakeCurrency;
 
-      if (!stakeCurrency) {
-        return;
-      }
-
       const power = new Dec(validator.tokens).truncate();
 
       return new CoinPretty(stakeCurrency, power);
@@ -255,17 +196,17 @@ export class ObservableQueryValidatorsInner extends ObservableQueryTendermint<Qu
   );
 }
 
-export class ObservableQueryValidators extends ObservableQueryMap<QueryValidatorsResponse> {
+export class ObservableQueryValidators extends ObservableChainQueryMap<Validators> {
   constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((status: string) => {
+    super(kvStore, chainId, chainGetter, (status: string) => {
       return new ObservableQueryValidatorsInner(
-        sharedContext,
-        chainId,
-        chainGetter,
+        this.kvStore,
+        this.chainId,
+        this.chainGetter,
         status as BondStatus
       );
     });

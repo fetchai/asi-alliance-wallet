@@ -1,11 +1,12 @@
+import { KVStore } from "@keplr-wallet/common";
+import Axios from "axios";
 import { computed, makeObservable } from "mobx";
 import {
+  ChainGetter,
   HasMapStore,
   ObservableJsonRPCQuery,
-  QuerySharedContext,
   nativeFetBridgeInterface,
 } from "../../common";
-import { ChainGetter } from "../../chain";
 import { NativeBridgeLogResponse } from "./types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ObservableQueryNativeFetEthBrige } from "./native-fet-bridge";
@@ -14,14 +15,20 @@ export class ObservableBridgeReverseSwapHashInner extends ObservableJsonRPCQuery
   NativeBridgeLogResponse[]
 > {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainGetter: ChainGetter,
     protected readonly nativeBridge: ObservableQueryNativeFetEthBrige,
     protected readonly swapId: string
   ) {
-    const ethereumURL = chainGetter.getChain("eip155:1").rpc;
+    const ethereumURL = chainGetter.getChain("1").rpc;
 
-    super(kvStore, ethereumURL, "", "eth_getLogs", [
+    const instance = Axios.create({
+      ...{
+        baseURL: ethereumURL,
+      },
+    });
+
+    super(kvStore, instance, "", "eth_getLogs", [
       {
         address: nativeBridge.nativeBridgeAddress,
         topics: nativeFetBridgeInterface.encodeFilterTopics("ReverseSwap", [
@@ -53,7 +60,7 @@ export class ObservableBridgeReverseSwapHashInner extends ObservableJsonRPCQuery
 
 export class ObservableQueryBridgeReverseSwapHash extends HasMapStore<ObservableBridgeReverseSwapHashInner> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainGetter: ChainGetter,
     nativeBridge: ObservableQueryNativeFetEthBrige
   ) {

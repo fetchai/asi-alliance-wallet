@@ -1,11 +1,10 @@
-import { ObservableQuery, QueryOptions } from "./query";
-import { QuerySharedContext } from "./context";
+import { ObservableQuery, QueryOptions, QueryResponse } from "./index";
+import { KVStore } from "@keplr-wallet/common";
+import { AxiosInstance } from "axios";
 import { action, makeObservable, observable } from "mobx";
 import { Hash } from "@keplr-wallet/crypto";
 import { Buffer } from "buffer/";
 import { HasMapStore } from "../map";
-import { simpleFetch } from "@keplr-wallet/simple-fetch";
-import { JsonRpcResponse } from "@keplr-wallet/types";
 
 /**
  * Experimental implementation for json rpc.
@@ -15,50 +14,53 @@ export class ObservableJsonRPCQuery<
   E = unknown
 > extends ObservableQuery<T, E> {
   @observable.ref
-  protected _params?: readonly unknown[] | Record<string, unknown>;
+  protected _params: readonly any[];
 
   constructor(
-    sharedContext: QuerySharedContext,
-    baseURL: string,
+    kvStore: KVStore,
+    instance: AxiosInstance,
     url: string,
     protected readonly method: string,
-    params?: readonly unknown[] | Record<string, unknown>,
+    params: readonly any[],
     options: Partial<QueryOptions> = {}
   ) {
-    super(sharedContext, baseURL, url, options);
+    super(kvStore, instance, url, options);
 
     this._params = params;
 
     makeObservable(this);
   }
 
-  get params(): readonly unknown[] | Record<string, unknown> | undefined {
+  get params(): readonly any[] {
     return this._params;
   }
 
   @action
-  protected setParams(params?: readonly unknown[] | Record<string, unknown>) {
+  protected setParams(params: readonly any[]) {
     this._params = params;
     this.fetch();
   }
 
   protected override async fetchResponse(
     abortController: AbortController
-  ): Promise<{ headers: any; data: T }> {
-    const result = await simpleFetch<JsonRpcResponse<T>>(
-      this.baseURL,
+  ): Promise<{ response: QueryResponse<T>; headers: any }> {
+    const result = await this.instance.post<{
+      jsonrpc: "2.0";
+      result?: T;
+      id: string;
+      error?: {
+        code?: number;
+        message?: string;
+      };
+    }>(
       this.url,
       {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "1",
-          method: this.method,
-          params: this.params,
-        }),
+        jsonrpc: "2.0",
+        id: "1",
+        method: this.method,
+        params: this.params,
+      },
+      {
         signal: abortController.signal,
       }
     );
@@ -73,7 +75,12 @@ export class ObservableJsonRPCQuery<
 
     return {
       headers: result.headers,
-      data: result.data.result,
+      response: {
+        data: result.data.result,
+        status: result.status,
+        staled: false,
+        timestamp: Date.now(),
+      },
     };
   }
 

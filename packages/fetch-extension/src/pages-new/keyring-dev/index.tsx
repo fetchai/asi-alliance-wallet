@@ -1,103 +1,56 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, { FunctionComponent } from "react";
 
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../stores";
 
 import { useLoadingIndicator } from "@components/loading-indicator";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
-import { GetCosmosKeysForEachVaultSettledMsg } from "@keplr-wallet/background";
+// import { MultiKeyStoreInfoWithSelectedElem } from "@keplr-wallet/background";
 import { Card } from "@components-v2/card";
+import { App, AppCoinType } from "@keplr-wallet/ledger-cosmos";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router";
-import { isPureEvmChain } from "@utils/filters";
 import { formatAddress } from "@utils/format";
 import style from "./style.module.scss";
-import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
-import { getKeyInfoSocial, isPrivateKeyType } from "@utils/index";
-import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
-import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { Skeleton } from "@components-v2/skeleton-loader";
 
 interface SetKeyRingProps {
   navigateTo?: any;
-  onItemSelect?: () => void;
-  setIsOptionsOpen?: React.Dispatch<React.SetStateAction<boolean>>;
-  setSelectedWalletId?: React.Dispatch<React.SetStateAction<string>>;
-  setIsSelectWalletOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }
-
 export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
-  ({
-    navigateTo,
-    onItemSelect,
-    setIsOptionsOpen,
-    setIsSelectWalletOpen,
-    setSelectedWalletId,
-  }) => {
+  ({ navigateTo }) => {
     const intl = useIntl();
     const navigate = useNavigate();
     const {
       chainStore,
+      accountStore,
       keyRingStore,
       analyticsStore,
       chatStore,
       proposalStore,
     } = useStore();
 
-    const chainId = chainStore.current.chainId;
+    const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const loadingIndicator = useLoadingIndicator();
-    const [addressByVaultId, setAddressByVaultId] = useState<
-      Record<string, string>
-    >({});
-
-    const isEvm = isPureEvmChain(chainStore.current);
-
-    useEffect(() => {
-      const fetchAddresses = async () => {
-        if (keyRingStore.keyInfos.length === 0) {
-          setAddressByVaultId({});
-          return;
-        }
-
-        const requester = new InExtensionMessageRequester();
-        const msg = new GetCosmosKeysForEachVaultSettledMsg(
-          chainId,
-          keyRingStore.keyInfos.map((item) => item.id)
-        );
-
-        const settledResponse = await requester.sendMessage(
-          BACKGROUND_PORT,
-          msg
-        );
-
-        const next: Record<string, string> = {};
-        for (const item of settledResponse) {
-          if (item.status === "fulfilled" && item.value) {
-            const address = isEvm
-              ? item.value.ethereumHexAddress?.trim()
-              : item.value.bech32Address?.trim();
-            if (address) {
-              next[item.value.vaultId] = address;
-            }
-          }
-        }
-        setAddressByVaultId(next);
-      };
-
-      fetchAddresses();
-    }, [chainId, keyRingStore.keyInfos.length, isEvm]);
 
     const getOptionIcon = (keyStore: any) => {
       if (keyStore.type === "ledger") {
         return require("@assets/svg/wireframe/ledger-indicator.svg");
       }
 
-      if (isPrivateKeyType(keyStore.type)) {
-        const { email, socialType } = getKeyInfoSocial(keyStore);
-        if (email && socialType === "apple") {
+      if (keyStore.type === "privateKey") {
+        if (
+          keyStore.meta &&
+          keyStore.meta?.["email"] &&
+          keyStore.meta?.["socialType"] === "apple"
+        ) {
           return require("@assets/svg/wireframe/apple-logo.svg");
         }
-        if (email && socialType === "google") {
+
+        if (
+          keyStore.meta &&
+          keyStore.meta?.["email"] &&
+          keyStore.meta?.["socialType"] === "google"
+        ) {
           return require("@assets/svg/wireframe/google-logo.svg");
         }
       }
@@ -106,26 +59,61 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
 
     return (
       <div>
-        {keyRingStore.keyInfos.map((keyStore, i) => {
-          const keyRingMeta = keyStore.insensitive["keyRingMeta"] as any;
+        {keyRingStore.multiKeyStoreInfo.map((keyStore, i) => {
+          const bip44HDPath = keyStore.bip44HDPath
+            ? keyStore.bip44HDPath
+            : {
+                account: 0,
+                change: 0,
+                addressIndex: 0,
+              };
+          let paragraph = keyStore.meta?.["email"]
+            ? keyStore.meta["email"]
+            : undefined;
+          if (keyStore.type === "keystone") {
+            paragraph = "Keystone";
+          } else if (keyStore.type === "ledger") {
+            const coinType = (() => {
+              if (
+                keyStore.meta &&
+                keyStore.meta["__ledger__cosmos_app_like__"] &&
+                keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
+              ) {
+                return (
+                  AppCoinType[
+                    keyStore.meta["__ledger__cosmos_app_like__"] as App
+                  ] || 118
+                );
+              }
 
-          const nameByChain = keyRingMeta?.nameByChain
-            ? JSON.parse(keyRingMeta?.nameByChain)
-            : {};
+              return 118;
+            })();
 
-          const accountName =
-            nameByChain?.[chainId] ||
-            keyStore.name ||
-            intl.formatMessage({
-              id: "setting.keyring.unnamed-account",
-            });
+            paragraph = `Ledger - m/44'/${coinType}'/${bip44HDPath.account}'${
+              bip44HDPath.change !== 0 || bip44HDPath.addressIndex !== 0
+                ? `/${bip44HDPath.change}/${bip44HDPath.addressIndex}`
+                : ""
+            }`;
 
+            if (
+              keyStore.meta &&
+              keyStore.meta["__ledger__cosmos_app_like__"] &&
+              keyStore.meta["__ledger__cosmos_app_like__"] !== "Cosmos"
+            ) {
+              paragraph += ` (${keyStore.meta["__ledger__cosmos_app_like__"]})`;
+            }
+          }
+          console.log(paragraph);
           return (
             <Card
               key={i}
               heading={
                 <React.Fragment>
-                  {accountName}
+                  {keyStore.meta?.["name"]
+                    ? keyStore.meta["name"]
+                    : intl.formatMessage({
+                        id: "setting.keyring.unnamed-account",
+                      })}
                   {getOptionIcon(keyStore) && (
                     <span className={style["rightIconContainer"]}>
                       <img
@@ -138,57 +126,28 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                 </React.Fragment>
               }
               rightContent={
-                <div style={{ display: "flex", columnGap: "12px" }}>
-                  {keyStore.isSelected ? (
-                    <img
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                      }}
-                      src={require("@assets/svg/wireframe/check.svg")}
-                      alt=""
-                    />
-                  ) : (
-                    ""
-                  )}
-                  <img
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      cursor: "pointer",
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsSelectWalletOpen?.(false);
-                      setIsOptionsOpen?.(true);
-                      setSelectedWalletId?.(keyStore.id);
-                    }}
-                    src={require("@assets/svg/edit-icon.svg")}
-                    alt=""
-                  />
-                </div>
+                keyStore.selected
+                  ? require("@assets/svg/wireframe/check.svg")
+                  : ""
               }
               subheading={
-                addressByVaultId[keyStore.id] ? (
-                  formatAddress(addressByVaultId[keyStore.id])
-                ) : (
-                  <Skeleton height="14px" width="100px" />
-                )
+                keyStore.selected
+                  ? formatAddress(accountInfo.bech32Address)
+                  : ""
               }
               style={{
-                padding: "18px 18px",
+                padding: keyStore.selected ? "18px 18px" : "18px 16px",
               }}
-              isActive={keyStore.isSelected}
+              isActive={keyStore.selected}
               onClick={
-                keyStore.isSelected
+                keyStore.selected
                   ? undefined
                   : async (e: any) => {
                       e.preventDefault();
                       loadingIndicator.setIsLoading("keyring", true);
                       try {
-                        await keyRingStore.selectKeyRing(keyStore.id);
-                        dispatchGlobalEventExceptSelf("keplr_keyring_changed");
-                        analyticsStore.logEvent("change_wallet_click");
+                        await keyRingStore.changeKeyRing(i);
+                        analyticsStore.logEvent("Account changed");
                         loadingIndicator.setIsLoading("keyring", false);
                         chatStore.userDetailsStore.resetUser();
                         proposalStore.resetProposals();
@@ -198,7 +157,6 @@ export const SetKeyRingPage: FunctionComponent<SetKeyRingProps> = observer(
                         );
                         messageAndGroupListenerUnsubscribe();
                         navigate(navigateTo);
-                        onItemSelect?.();
                       } catch (e: any) {
                         console.log(`Failed to change keyring: ${e.message}`);
                         loadingIndicator.setIsLoading("keyring", false);

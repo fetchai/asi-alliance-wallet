@@ -20,8 +20,8 @@
     "@types/keccak": "^3.0.1"
   },
   "dependencies": {
-    "@keplr-wallet/cosmos": "workspace:^",
-    "@keplr-wallet/crypto": "workspace:^",
+    "@keplr-wallet/cosmos": "0.12.12",
+    "@keplr-wallet/crypto": "0.12.12",
     "buffer": "^6.0.3",
     "crypto-js": "^4.0.0",
     "elliptic": "^6.5.3",

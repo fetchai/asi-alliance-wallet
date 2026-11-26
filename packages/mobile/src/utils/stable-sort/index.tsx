@@ -153,25 +153,25 @@ export const getDetails = (node: any, chainStore: any): any => {
   };
 };
 
-export const getActivityIcon = (verb: string, color = "white") => {
+export const getActivityIcon = (verb: string) => {
   switch (verb) {
     case "Sent":
-      return <ArrowUpIcon size={14} color={color} />;
+      return <ArrowUpIcon size={14} />;
     case "Received":
-      return <ArrowDownIcon size={14} color={color} />;
+      return <ArrowDownIcon size={14} />;
     case "Staked":
-      return <StakeIcon size={14} color={color} />;
+      return <StakeIcon size={14} />;
     case "Unstaked":
-      return <UnstakedIcon color={color} />;
+      return <UnstakedIcon />;
     case "Redelegated":
-      return <EditIcon color={color} />;
+      return <EditIcon />;
     case "Claimed":
-      return <ClaimIcon color={color} />;
+      return <ClaimIcon />;
     case "IBC transfer":
-      return <IbcUpDownIcon size={20} color={color} />;
+      return <IbcUpDownIcon size={20} />;
     case "Smart Contract Interaction":
-      return <LeftRightCrossIcon size={20} color={color} />;
+      return <LeftRightCrossIcon size={20} />;
     default:
-      return <WalletIcon size={16} color={color} />;
+      return <WalletIcon size={16} />;
   }
 };

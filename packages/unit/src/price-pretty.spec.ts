@@ -7,7 +7,6 @@ describe("Test PricePretty", () => {
       {
         currency: "usd",
         symbol: "$",
-        symbolName: "$",
         maxDecimals: 2,
         locale: "en-US",
       },
@@ -30,7 +29,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 2,
           locale: "en-US",
         },
@@ -43,7 +41,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 2,
           locale: "en-US",
         },
@@ -56,7 +53,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 2,
           locale: "en-US",
         },
@@ -69,7 +65,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 2,
           locale: "en-US",
         },
@@ -84,7 +79,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 2,
           locale: "en-US",
         },
@@ -97,7 +91,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 2,
           locale: "en-US",
         },
@@ -113,7 +106,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 3,
           locale: "en-US",
         },
@@ -126,7 +118,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 3,
           locale: "en-US",
         },
@@ -140,7 +131,6 @@ describe("Test PricePretty", () => {
         {
           currency: "usd",
           symbol: "$",
-          symbolName: "$",
           maxDecimals: 4,
           locale: "en-US",
         },

@@ -29,7 +29,9 @@ describe("Test cosmjs compatibility", () => {
     const signer = (await offlineSigner.getAccounts())[0].address;
     expect(signer).toBe("test1ce0nzfm5a0j5yg48xz88qr430caaxdrs2ec4f4");
 
-    const cosmJS = await SigningStargateClient.offline(offlineSigner);
+    const cosmJS = await SigningStargateClient.offline(offlineSigner, {
+      prefix: "test",
+    });
 
     await cosmJS.sign(
       signer,
@@ -87,7 +89,9 @@ describe("Test cosmjs compatibility", () => {
     const signer = (await offlineSigner.getAccounts())[0].address;
     expect(signer).toBe("test1ce0nzfm5a0j5yg48xz88qr430caaxdrs2ec4f4");
 
-    const cosmJS = await SigningStargateClient.offline(offlineSigner);
+    const cosmJS = await SigningStargateClient.offline(offlineSigner, {
+      prefix: "test",
+    });
 
     await cosmJS.sign(
       signer,

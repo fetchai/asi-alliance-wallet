@@ -2,21 +2,21 @@ import {
   ObservableChainQuery,
   ObservableChainQueryMap,
 } from "../../../chain-query";
-import { ChainGetter } from "../../../../chain";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../../common";
 import { computed, makeObservable } from "mobx";
 import { SpotPriceByDenom } from "./types";
 import { Dec } from "@keplr-wallet/unit";
-import { QuerySharedContext } from "../../../../common";
 
 export class ObservableQueryTxFeesSpotPriceByDenomInner extends ObservableChainQuery<SpotPriceByDenom> {
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     denom: string
   ) {
     super(
-      sharedContext,
+      kvStore,
       chainId,
       chainGetter,
       `osmosis/txfees/v1beta1/spot_price_by_denom?denom=${denom}`
@@ -45,13 +45,13 @@ export class ObservableQueryTxFeesSpotPriceByDenomInner extends ObservableChainQ
 
 export class ObservableQueryTxFeesSpotPriceByDenom extends ObservableChainQueryMap<SpotPriceByDenom> {
   constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super(sharedContext, chainId, chainGetter, (denom: string) => {
+    super(kvStore, chainId, chainGetter, (denom: string) => {
       return new ObservableQueryTxFeesSpotPriceByDenomInner(
-        this.sharedContext,
+        this.kvStore,
         this.chainId,
         this.chainGetter,
         denom

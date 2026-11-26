@@ -14,16 +14,6 @@
 }
 
 .menuImg {
-  border: 1px solid $bg-grey-dark;
-  width: 48px;
-  height: 32px;
-  border-radius: 100px;
-  border-width: 1px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
   cursor: pointer;
 }
 
@@ -41,7 +31,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: $font-dark;
 
     &.small {
       font-size: 16px;

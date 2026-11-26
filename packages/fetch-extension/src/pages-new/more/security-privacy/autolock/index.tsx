@@ -36,7 +36,6 @@ export const AutoLockPage: FunctionComponent = () => {
     setValue,
     register,
     handleSubmit,
-    setError,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -53,21 +52,17 @@ export const AutoLockPage: FunctionComponent = () => {
       });
   }, [setValue]);
 
+  function updateAutoLockDuration(input: string) {
+    let duration = parseInt(input);
+    if (duration >= 0) {
+      duration = duration * 60000;
+      const msg = new UpdateAutoLockAccountDurationMsg(duration);
+      new InExtensionMessageRequester().sendMessage(BACKGROUND_PORT, msg);
+    }
+    navigate(-1);
+  }
+
   const [isLoading, setIsLoading] = useState(false);
-
-  const validateInput = (value: string) => {
-    const duration = parseInt(value);
-
-    if (Number.isNaN(duration)) {
-      return "Please enter a valid number between 0 to 4320(3 days)";
-    }
-
-    if (duration < minDuration || duration > maxDuration) {
-      return intl.formatMessage({
-        id: "setting.autolock.error.out-of-range",
-      });
-    }
-  };
 
   return (
     <HeaderLayout
@@ -89,20 +84,7 @@ export const AutoLockPage: FunctionComponent = () => {
         <Form
           onSubmit={handleSubmit(async (data) => {
             setIsLoading(true);
-
-            const duration = parseInt(data.duration);
-
-            const msg = new UpdateAutoLockAccountDurationMsg(
-              !Number.isNaN(duration) && duration >= 0 ? duration * 60000 : 0
-            );
-
-            await new InExtensionMessageRequester().sendMessage(
-              BACKGROUND_PORT,
-              msg
-            );
-
-            setIsLoading(false);
-            navigate(-1);
+            updateAutoLockDuration(data.duration);
           })}
         >
           <Input
@@ -114,19 +96,27 @@ export const AutoLockPage: FunctionComponent = () => {
               required: intl.formatMessage({
                 id: "setting.autolock.error.required",
               }),
-              validate: validateInput,
+              validate: (input: string): string | undefined => {
+                const duration = parseInt(input);
+
+                if (Number.isNaN(duration)) {
+                  return "NaN";
+                }
+
+                if (duration < minDuration || duration > maxDuration) {
+                  return intl.formatMessage({
+                    id: "setting.autolock.error.out-of-range",
+                  });
+                }
+              },
             })}
-            onChange={(e: any) => {
-              setError("duration", { message: validateInput(e.target.value) });
-            }}
             type="number"
             pattern="[0-9]*"
             error={errors.duration && errors.duration.message}
           />
           <ButtonV2
-            variant="dark"
             styleProps={{
-              width: "94%",
+              width: "336px",
               padding: "12px",
               height: "56px",
               margin: "0 auto",
@@ -135,8 +125,7 @@ export const AutoLockPage: FunctionComponent = () => {
               left: "0px",
               right: "0px",
             }}
-            disabled={Boolean(errors.duration && errors.duration.message)}
-            dataLoading={isLoading}
+            data-loading={isLoading}
             text={""}
           >
             <FormattedMessage id="setting.endpoints.button.confirm" />

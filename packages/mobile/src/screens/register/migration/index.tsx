@@ -89,13 +89,11 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
-      <Text
-        style={style.flatten(["h2", "color-black", "margin-y-10"]) as ViewStyle}
-      >
+      <Text style={style.flatten(["color-white", "h2"]) as ViewStyle}>
         Migrate from ETH
       </Text>
       <Controller
@@ -107,13 +105,12 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
           return (
             <InputCardView
               label="Ethereum Address"
-              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
-              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               containerStyle={style.flatten(["margin-top-18"]) as ViewStyle}
               error={errors.ethAddress?.message}
               onBlur={onBlur}
               onChangeText={onChange}
               value={value}
+              multiline={true}
               onSubmitEditing={() => {
                 submit();
               }}
@@ -136,8 +133,6 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
           return (
             <InputCardView
               label="Private Key"
-              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
-              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               containerStyle={style.flatten(["margin-top-18"]) as ViewStyle}
               error={error ? error : errors.ethPrivateKey?.message}
               onBlur={onBlur}
@@ -154,6 +149,8 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
               onSubmitEditing={() => {
                 submit();
               }}
+              multiline={true}
+              numberOfLines={2}
               ref={ref}
             />
           );
@@ -166,12 +163,14 @@ export const MigrateETHScreen: FunctionComponent = observer(() => {
       <Button
         containerStyle={
           style.flatten([
-            "background-color-dark",
+            "background-color-white",
             "border-radius-32",
             "margin-y-24",
           ]) as ViewStyle
         }
-        textStyle={style.flatten(["color-white"]) as ViewStyle}
+        textStyle={{
+          color: "#0B1742",
+        }}
         text="Next"
         size="large"
         rippleColor="black@10%"

@@ -35,7 +35,7 @@ export const DropDownCardView: FunctionComponent<{
         <Text
           style={
             [
-              style.flatten(["text-button3", "margin-y-8", "color-dark@60%"]),
+              style.flatten(["text-button3", "margin-y-8", "color-white@60%"]),
               mainHeadingrStyle,
             ] as ViewStyle
           }
@@ -45,18 +45,17 @@ export const DropDownCardView: FunctionComponent<{
       ) : null}
       <BlurBackground
         borderRadius={12}
-        backgroundBlur={false}
+        blurIntensity={16}
         containerStyle={
           [
-            style.flatten([
-              "flex-row",
-              "padding-x-18",
-              "padding-y-12",
-              "items-center",
-              "background-color-gray-5",
-              "border-width-1",
-              "border-color-gray-100",
-            ]),
+            [
+              style.flatten([
+                "flex-row",
+                "padding-x-18",
+                "padding-y-12",
+                "items-center",
+              ]),
+            ],
             containerStyle,
           ] as ViewStyle
         }
@@ -68,7 +67,7 @@ export const DropDownCardView: FunctionComponent<{
                 style.flatten([
                   "body2",
                   "padding-bottom-2",
-                  "color-dark",
+                  "color-white",
                 ]) as ViewStyle,
                 headingrStyle,
               ]}
@@ -82,7 +81,7 @@ export const DropDownCardView: FunctionComponent<{
                 style.flatten([
                   "text-caption2",
                   "padding-top-2",
-                  "color-gray-300",
+                  "color-gray-200",
                 ]) as ViewStyle
               }
             >

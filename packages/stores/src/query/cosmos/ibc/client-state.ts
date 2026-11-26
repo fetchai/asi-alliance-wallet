@@ -1,48 +1,44 @@
+import { KVStore } from "@keplr-wallet/common";
 import {
-  camelToSnake,
-  decodeIBCClientState,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
-import { ChainGetter } from "../../../chain";
+  ObservableChainQuery,
+  ObservableChainQueryMap,
+} from "../../chain-query";
+import { ChainGetter } from "../../../common";
 import { ClientStateResponse } from "./types";
-import { computed } from "mobx";
-import { IbcExtension, setupIbcExtension } from "@cosmjs/stargate";
-import { QueryChannelClientStateResponse } from "cosmjs-types/ibc/core/channel/v1/query";
-import { QuerySharedContext } from "../../../common";
+import { autorun, computed } from "mobx";
 
-export class ObservableChainQueryClientState extends ObservableQueryTendermint<ClientStateResponse> {
+export class ObservableChainQueryClientState extends ObservableChainQuery<ClientStateResponse> {
   protected disposer?: () => void;
 
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly portId: string,
     protected readonly channelId: string
   ) {
-    const chainInfo = chainGetter.getChain(chainId);
     super(
-      sharedContext,
-      chainInfo.rpc,
-      async (queryClient) => {
-        const client = queryClient as unknown as IbcExtension;
-        const result = await client.ibc.channel.clientState(portId, channelId);
-        const decodedResponse = QueryChannelClientStateResponse.toJSON(result);
-        const ibcClentStateResponse = {
-          ...decodedResponse,
-          identifiedClientState: {
-            ...decodedResponse.identifiedClientState,
-            clientState: decodeIBCClientState(
-              decodedResponse.identifiedClientState?.clientState
-            ),
-          },
-        };
-        return camelToSnake(ibcClentStateResponse) as ClientStateResponse;
-      },
-      setupIbcExtension,
+      kvStore,
+      chainId,
+      chainGetter,
       `/ibc/core/channel/v1beta1/channels/${channelId}/ports/${portId}/client_state`
     );
+  }
+
+  protected override onStart() {
+    super.onStart();
+
+    return new Promise<void>((resolve) => {
+      this.disposer = autorun(() => {
+        const chainInfo = this.chainGetter.getChain(this.chainId);
+        if (chainInfo.features && chainInfo.features.includes("ibc-go")) {
+          this.setUrl(
+            `/ibc/core/channel/v1/channels/${this.channelId}/ports/${this.portId}/client_state`
+          );
+        }
+        resolve();
+      });
+    });
   }
 
   protected override onStop() {
@@ -68,19 +64,19 @@ export class ObservableChainQueryClientState extends ObservableQueryTendermint<C
   }
 }
 
-export class ObservableQueryIBCClientState extends ObservableQueryMap<ClientStateResponse> {
+export class ObservableQueryIBCClientState extends ObservableChainQueryMap<ClientStateResponse> {
   constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((key: string) => {
+    super(kvStore, chainId, chainGetter, (key: string) => {
       const params = JSON.parse(key);
 
       return new ObservableChainQueryClientState(
-        sharedContext,
-        chainId,
-        chainGetter,
+        this.kvStore,
+        this.chainId,
+        this.chainGetter,
         params.portId,
         params.channelId
       );

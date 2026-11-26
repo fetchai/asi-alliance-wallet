@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useRef } from "react";
-import { ColorPalette, useStyle } from "styles/index";
+import { useStyle } from "styles/index";
 import { useStore } from "stores/index";
 import {
   DrawerActions,
@@ -16,10 +16,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UpDownArrowIcon } from "components/new/icon/up-down-arrow";
 import { ClockIcon } from "components/new/icon/clock-icon";
 import { MoreIcon } from "components/new/icon/more-icon";
-import { AppState, BackHandler, Platform, View, ViewStyle } from "react-native";
+import { AppState, BackHandler, View, ViewStyle } from "react-native";
 import { IconButton } from "components/new/button/icon";
 import { BorderlessButton } from "react-native-gesture-handler";
-import { BottomTabBar } from "@react-navigation/bottom-tabs";
+import { BlurredBottomTabBar } from "components/bottom-tabbar";
 import { HomeNavigation } from "navigation/home-navigation";
 import { DrawerContent } from "components/drawer";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -58,9 +58,6 @@ export const MainTabNavigation: FunctionComponent = () => {
   const focusedScreen = useFocusedScreen();
   const isDrawerOpen = useDrawerStatus() === "open";
   const insets = useSafeAreaInsets();
-  // Trust safe-area insets. The targetSdk-36 fallback of 48 when bottom was 0
-  // left a tall empty footer that covered scroll content (stake list, etc.).
-  const tabBarHeight = 100 + insets.bottom;
 
   /// Auto lock app if app in bg
   useEffect(() => {
@@ -72,12 +69,7 @@ export const MainTabNavigation: FunctionComponent = () => {
       if (
         isBg &&
         keychainStore.isAutoLockOn &&
-        !(
-          focusedScreen.name?.startsWith("Register") ||
-          (Platform.OS === "ios" &&
-            nextAppState === "inactive" &&
-            focusedScreen.name?.startsWith("Setting.SecurityAndPrivacy"))
-        )
+        !focusedScreen.name?.startsWith("Register")
       ) {
         try {
           await keyRingStore.lock();
@@ -146,7 +138,7 @@ export const MainTabNavigation: FunctionComponent = () => {
         backClickCountRef.current++;
         Toast.show({
           type: "error",
-          text1: `Press Back Again to Exit the App`,
+          text1: `Press back again to exit the app`,
           visibilityTime: 3000,
         });
       }
@@ -170,31 +162,21 @@ export const MainTabNavigation: FunctionComponent = () => {
               case "HomeTab":
                 return (
                   <IconButton
-                    icon={
-                      <HomeIcon
-                        isSelected={focused}
-                        color={focused ? "#151a1a" : "#737676"}
-                      />
-                    }
+                    icon={<HomeIcon isSelected={focused} />}
                     bottomText={screenNames.Home}
-                    backgroundBlur={false}
+                    backgroundBlur={focused}
                     borderRadius={32}
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-dark" : "color-gray-300",
+                        focused ? "color-white" : "color-white@60%",
                       ]) as ViewStyle
                     }
                     iconStyle={
-                      {
-                        ...style.flatten([
-                          "padding-y-8",
-                          "padding-x-24",
-                          "margin-bottom-6",
-                        ]),
-                        ...(focused
-                          ? { backgroundColor: ColorPalette["gray-55"] }
-                          : {}),
-                      } as ViewStyle
+                      style.flatten([
+                        "padding-y-8",
+                        "padding-x-24",
+                        "margin-bottom-6",
+                      ]) as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
                   />
@@ -204,29 +186,24 @@ export const MainTabNavigation: FunctionComponent = () => {
                   <IconButton
                     icon={
                       focused ? (
-                        <StakeIcon isSelected={true} color="#151a1a" />
+                        <StakeIcon isSelected={true} />
                       ) : (
-                        <StakeIcon color={"#737676"} />
+                        <StakeIcon color={"#FFFFFF90"} />
                       )
                     }
                     bottomText={screenNames.Stake}
                     borderRadius={32}
-                    backgroundBlur={false}
+                    backgroundBlur={focused}
                     iconStyle={
-                      {
-                        ...style.flatten([
-                          "padding-y-8",
-                          "padding-x-24",
-                          "margin-bottom-6",
-                        ]),
-                        ...(focused
-                          ? { backgroundColor: ColorPalette["gray-55"] }
-                          : {}),
-                      } as ViewStyle
+                      style.flatten([
+                        "padding-y-8",
+                        "padding-x-24",
+                        "margin-bottom-6",
+                      ]) as ViewStyle
                     }
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-dark" : "color-gray-300",
+                        focused ? "color-white" : "color-white@60%",
                       ]) as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
@@ -235,24 +212,23 @@ export const MainTabNavigation: FunctionComponent = () => {
               case "InboxTab":
                 return (
                   <IconButton
-                    icon={
-                      <UpDownArrowIcon
-                        color1="#151a1a"
-                        color2="#151a1a"
-                        color3="#151a1a"
-                      />
-                    }
+                    icon={<UpDownArrowIcon />}
                     borderRadius={64}
                     backgroundBlur={false}
+                    onPress={() => {
+                      setQuickOptionEnable(true);
+                      analyticsStore.logEvent("fund_transfer_tab_click");
+                    }}
                     iconStyle={
-                      {
-                        ...style.flatten(["padding-16"]),
-                        backgroundColor: style.get("background-color-green-250")
-                          .backgroundColor,
-                      } as ViewStyle
+                      style.flatten([
+                        "padding-16",
+                        "background-color-white",
+                      ]) as ViewStyle
                     }
                     bottomTextStyle={
-                      style.flatten(["color-gray-300"]) as ViewStyle
+                      style.flatten([
+                        focused ? "color-white" : "color-white@60%",
+                      ]) as ViewStyle
                     }
                   />
                 );
@@ -261,29 +237,24 @@ export const MainTabNavigation: FunctionComponent = () => {
                   <IconButton
                     icon={
                       focused ? (
-                        <ClockIcon isSelected={true} color="#151a1a" />
+                        <ClockIcon isSelected={true} />
                       ) : (
-                        <ClockIcon color={"#737676"} />
+                        <ClockIcon color={"#FFFFFF90"} />
                       )
                     }
                     bottomText={screenNames.Activity}
                     borderRadius={32}
-                    backgroundBlur={false}
+                    backgroundBlur={focused}
                     iconStyle={
-                      {
-                        ...style.flatten([
-                          "padding-y-8",
-                          "padding-x-24",
-                          "margin-bottom-6",
-                        ]),
-                        ...(focused
-                          ? { backgroundColor: ColorPalette["gray-55"] }
-                          : {}),
-                      } as ViewStyle
+                      style.flatten([
+                        "padding-y-8",
+                        "padding-x-24",
+                        "margin-bottom-6",
+                      ]) as ViewStyle
                     }
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-dark" : "color-gray-300",
+                        focused ? "color-white" : "color-white@60%",
                       ]) as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
@@ -292,25 +263,20 @@ export const MainTabNavigation: FunctionComponent = () => {
               case "MoreTab":
                 return (
                   <IconButton
-                    icon={<MoreIcon color={focused ? "#151a1a" : "#737676"} />}
+                    icon={<MoreIcon color={focused ? "white" : "#FFFFFF90"} />}
                     bottomText={screenNames.More}
                     borderRadius={32}
-                    backgroundBlur={false}
+                    backgroundBlur={focused}
                     iconStyle={
-                      {
-                        ...style.flatten([
-                          "padding-y-8",
-                          "padding-x-24",
-                          "margin-bottom-6",
-                        ]),
-                        ...(focused
-                          ? { backgroundColor: ColorPalette["gray-55"] }
-                          : {}),
-                      } as ViewStyle
+                      style.flatten([
+                        "padding-y-8",
+                        "padding-x-24",
+                        "margin-bottom-6",
+                      ]) as ViewStyle
                     }
                     bottomTextStyle={
                       style.flatten([
-                        focused ? "color-dark" : "color-gray-300",
+                        focused ? "color-white" : "color-white@60%",
                       ]) as ViewStyle
                     }
                     containerStyle={style.flatten(["items-center"])}
@@ -344,36 +310,23 @@ export const MainTabNavigation: FunctionComponent = () => {
           tabBarActiveTint: true,
           tabBarInactiveTint: false,
           tabBarStyle: {
-            backgroundColor: "#ffffff",
+            backgroundColor: style.get("color-indigo-900").color,
             shadowColor: style.get("color-transparent").color,
             elevation: 0,
             paddingVertical: 16,
             paddingHorizontal: 20,
-            height: tabBarHeight,
-            borderTopWidth: 1,
-            borderTopColor: "#DCDCE3",
+            height: 100 + insets.bottom,
+            borderTopWidth: 0,
           },
           showLabel: false,
         })}
         tabBar={(props) => (
-          <View style={{ position: "absolute", bottom: 0, width: "100%" }}>
-            <BottomTabBar {...props} />
-          </View>
+          <BlurredBottomTabBar {...props} enabledScreens={["Home"]} />
         )}
       >
         <Tab.Screen name="HomeTab" component={HomeNavigation} />
         <Tab.Screen name="StakeTab" component={StakingDashboardScreen} />
-        <Tab.Screen
-          name="InboxTab"
-          component={SettingScreen}
-          listeners={{
-            tabPress: (e) => {
-              e.preventDefault();
-              setQuickOptionEnable(true);
-              analyticsStore.logEvent("fund_transfer_tab_click");
-            },
-          }}
-        />
+        <Tab.Screen name="InboxTab" component={SettingScreen} />
         <Tab.Screen name="ActivityTab" component={ActivityScreen} />
         <Tab.Screen name="MoreTab" component={SettingScreen} />
       </Tab.Navigator>
@@ -394,7 +347,7 @@ export const MainTabNavigation: FunctionComponent = () => {
               return navigation.navigate("Others", {
                 screen: "Send",
                 params: {
-                  currency: chainStore.current.stakeCurrency?.coinMinimalDenom,
+                  currency: chainStore.current.stakeCurrency.coinMinimalDenom,
                 },
               });
 

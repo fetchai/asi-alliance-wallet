@@ -49,8 +49,8 @@ export const ClearPage: FunctionComponent = observer(() => {
   }, [index]);
 
   const keyStore = useMemo(() => {
-    return keyRingStore.keyInfos[parseInt(index)];
-  }, [keyRingStore.keyInfos, index]);
+    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
+  }, [keyRingStore.multiKeyStoreInfo, index]);
 
   return (
     <HeaderLayout
@@ -73,9 +73,9 @@ export const ClearPage: FunctionComponent = observer(() => {
             setLoading(true);
             try {
               // Make sure that password is valid and keyring is cleared.
-              await keyRingStore.deleteKeyRing(index, data.password);
+              await keyRingStore.deleteKeyRing(parseInt(index), data.password);
               analyticsStore.logEvent("delete_account_click", {
-                action: "Remove",
+                action: "Yes",
               });
               navigate("/");
             } catch (e) {

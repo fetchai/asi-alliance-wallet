@@ -12,7 +12,9 @@ html[data-register-page="true"] {
   width: 100vw;
   display: flex;
   justify-content: center;
-  background-color: white;
+  background: #000d3d;
+  background-image: url("../../public/assets/svg/wireframe/bg-register.svg");
+  background-size: cover;
 }
 
 html[data-register-page="true"] body {
@@ -33,11 +35,11 @@ html[data-register-page="true"] #app .container {
 
 .container {
   width: $container-width;
-  margin: 0 auto;
+  margin-left: ($popup-size-width - $container-width) / 2;
 
   &:global(.large) {
     width: $large-container-width;
-    margin: 0 auto;
+    margin-left: ($popup-size-width - $large-container-width) / 2;
   }
 
   display: flex;
@@ -71,7 +73,7 @@ html[data-register-page="true"] #app .container {
 
       .icon {
         // height: 100px;
-        width: 80px;
+        width: 215px;
         // position: absolute;
         // top: 5px;
         // right: 45%;
@@ -127,108 +129,104 @@ html[data-register-page="true"] #app .container {
     letter-spacing: -1.07px;
     margin-bottom: 24px;
 
-    color: $font-dark;
+    color: #525f7f;
   }
   .newMnemonicContainer {
     border-radius: 12px;
-    background: $card-bg;
+    background: rgba(255, 255, 255, 0.1);
     margin-top: 24px;
     margin-bottom: 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: $font-family-base;
+    font-family: Lexand;
   }
   .copyImage {
     cursor: pointer;
     margin-right: 20px;
   }
   .newMnemonic {
-    font-family: $font-family-base;
+    font-family: Lexend;
     font-size: 16px;
     letter-spacing: -0.36px;
-    color: $font-dark;
+    background: linear-gradient(270deg, #f9774b 3.16%, #cf447b 86.63%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     padding: 20px 30px;
   }
   .addressInput {
     height: 53px;
-    color: $font-dark;
-    border: 1px solid $border-grey;
-    background: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     width: 333px !important;
   }
   .addressInput:hover {
-    border: 1px solid $border-sky-focus;
+    border: 1px solid var(--Indigo-Indigo-400, #7655fc);
   }
 
-  .advancedSection {
+  .advanced {
+    color: var(--Grey-White, #fff);
+    width: 114px;
     display: flex;
-    justify-content: space-between;
+    height: 32px;
+    padding: 6px 18px;
+    justify-content: center;
     align-items: center;
-    color: $font-secondary;
-    margin-bottom: 20px;
-  }
-
-  .bip44PathSection {
-    display: flex;
-    align-items: baseline;
-    color: $font-dark;
-    width: 410px;
-
-    & .pathSeperator {
-      margin: 5px;
-      color: $font-dark;
-    }
-  }
-
-  .label {
-    color: $font-secondary;
-    font-size: 14px;
+    gap: 8px;
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.2);
     font-weight: 400;
+    font-size: 12px;
+    width: 152px;
   }
-
+  .advanced:hover {
+    color: var(--Grey-White, #fff);
+    border: 1px solid var(--Indigo---Fetch, #5f38fb);
+  }
   .checkbox {
-    font-family: $font-family-base;
+    font-family: Lexend;
     font-size: 16px;
-    color: $font-secondary;
+    color: white;
   }
   .mnemonic {
-    font-family: $font-family-base;
+    font-family: Lexend;
     font-size: 16px;
     letter-spacing: -0.36px;
     border-radius: 12px;
-    background: white;
+    background: rgba(255, 255, 255, 0.1);
     padding: 20px 30px;
     text-align: center;
-    color: $font-dark;
+    color: white;
 
     &:read-only {
-      background: white;
+      background: rgba(255, 255, 255, 0.1);
     }
 
     &[readonly] {
-      background: white;
+      background: rgba(255, 255, 255, 0.1);
     }
 
     &::placeholder {
-      font-family: $font-family-base;
+      font-family: "Lexand", sans-serif;
 
       body[data-lang="ko"] & {
-        font-family: $font-family-base !important;
+        font-family: "Lexand", sans-serif !important;
       }
     }
   }
   .input {
-    font-family: $font-family-base;
+    font-family: Lexend;
     border-radius: 12px;
-    color: $font-dark;
-    background: white;
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
     &:hover {
-      background: white;
+      background: rgba(255, 255, 255, 0.1);
     }
     &:focus {
-      background: white;
+      background: rgba(255, 255, 255, 0.1);
     }
   }
 
@@ -238,7 +236,7 @@ html[data-register-page="true"] #app .container {
     font-size: 14px;
     font-weight: 300;
     text-align: center;
-    color: $font-secondary;
+    color: #9092b6;
   }
 
   hr {
@@ -251,14 +249,6 @@ html[data-register-page="true"] #app .container {
 .formContainer {
   display: flex;
   flex-direction: column;
-  width: 100%;
-
-  input {
-    &::placeholder {
-      color: $font-secondary !important;
-    }
-    margin-bottom: 0px !important;
-  }
 }
 
 .buttons {
@@ -272,50 +262,51 @@ html[data-register-page="true"] #app .container {
 .button {
   height: 48px;
   display: flex;
-  border-radius: 8px;
   padding: 12px 18px;
   align-items: center;
   gap: 24px;
   flex: 1 0 0;
-  background: white;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
   width: 124px;
-  color: $font-dark;
+  color: white;
   justify-content: center;
   margin-bottom: 8px;
-  border: 1px solid $border-grey;
-  box-shadow: none !important;
-  font-weight: 400;
+  border: transparent;
 }
-.button:hover,
+.button:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--Indigo-Indigo-400, #7655fc);
+}
 .button:focus {
-  border: 1px solid $border-sky-focus !important;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
 }
-
 .btn2 {
   width: 91.5px;
   height: 32px;
-  background: white;
-  color: $font-dark;
-  border: 1px solid $border-grey;
+  background: transparent;
+  color: white;
+  border: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 4px;
-  font-weight: 400;
-  box-shadow: none !important;
 }
 .btn2:hover {
-  opacity: 0.8;
-  background: white;
-  border: 1px solid $border-grey;
+  color: white;
+  background: transparent !important;
+  border: 1px solid white;
 }
-
 .btn2:disabled {
-  color: $neutral;
+  color: white;
   cursor: not-allowed;
-  background: $bg-grey-dark !important;
-  border: 1px solid transparent;
+  opacity: 0.2;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .introIcon {
@@ -344,7 +335,7 @@ html[data-register-page="true"] #app .container {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: white;
+  background: rgba(10, 14, 27, 0.5);
   .content {
     width: 420px;
     box-sizing: border-box;
@@ -356,7 +347,7 @@ html[data-register-page="true"] #app .container {
   }
 }
 .titleText {
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 400;
   font-size: 18px;
   margin-bottom: 27px;
@@ -365,25 +356,23 @@ html[data-register-page="true"] #app .container {
 .card {
   display: flex;
   padding: 18px;
-  background: $card-bg;
+  background: rgba(255, 255, 255, 0.1);
   cursor: pointer;
   border-radius: 12px;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
-  color: $font-dark;
+  color: rgba(255, 255, 255, 0.9);
   max-width: 390px;
 }
-
 .cardTitle {
   font-weight: 500;
   font-size: 16px;
   margin-bottom: 6px;
-  color: $font-dark;
 }
 .cardText {
   width: 252px;
   font-size: 14px;
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 400;
 }
 
@@ -408,106 +397,38 @@ html[data-register-page="true"] #app .container {
   flex-direction: column;
   width: 390px;
   margin-left: 22%;
-
-  h1 {
-    color: $font-dark;
-    font-weight: 500;
-  }
 }
 
 .mainpageTitle {
   font-size: 32px;
   font-weight: 400;
-  color: $font-dark;
+  color: white;
   width: 390px;
 }
 .backButton {
   display: flex;
   text-align: left;
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid $border-grey;
-  width: min-content;
+  padding: 0px;
 }
 .pageTitle {
   font-size: 32px;
-  color: $font-dark;
+  color: #fff;
   margin-top: 10px;
   margin-bottom: 10px;
   font-weight: 400;
 }
 .newMnemonicText {
   font-size: 18px;
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 10px;
   font-weight: 400;
 }
-
 .ledgerContainer {
   display: flex;
   flex-direction: column;
-  justify-content: start;
-  align-items: start;
+  justify-content: "center";
+  align-items: "start";
   width: 390px;
   height: 100%;
   position: relative;
-
-  .ledgerFormGroup {
-    margin-bottom: 0px;
-  }
-
-  & .invalid-feedback {
-    margin-top: 0px !important;
-  }
-}
-
-.welcomeText {
-  font-size: 36px;
-  color: $font-dark;
-  font-weight: 400;
-}
-
-.passwordValidationChecklist {
-  display: flex;
-  row-gap: 5px;
-  flex-direction: column;
-
-  .passwordValidationItem {
-    display: flex;
-    column-gap: 10px;
-    align-items: center;
-
-    & img {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .passwordCheclistValid {
-    font-weight: 500;
-    font-size: 14px;
-    color: $font-dark;
-  }
-
-  .passwordCheclistInvalid {
-    font-weight: 500;
-    font-size: 14px;
-    color: $bg-red-40;
-  }
-}
-
-.networkDropdownContainer {
-  & .label {
-    color: $font-secondary;
-    font-size: 14px;
-    font-weight: 400;
-  }
-}
-
-.networkDropdown {
-  width: 100% !important;
-}
-
-.inputFormGroup {
-  margin-bottom: 10px !important;
 }

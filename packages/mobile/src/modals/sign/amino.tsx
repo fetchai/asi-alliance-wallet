@@ -14,8 +14,6 @@ import {
   MsgVote,
   MsgWithdrawDelegatorReward,
   MsgExecuteContract,
-  MsgInstantiateContract,
-  MsgSubmitProposal,
   renderMsgSend,
   renderUnknownMessage,
   renderMsgTransfer,
@@ -24,8 +22,6 @@ import {
   renderMsgDelegate,
   renderMsgWithdrawDelegatorReward,
   renderMsgVote,
-  renderMsgSubmitProposal,
-  renderMsgInstantiateContract,
   renderMsgExecuteContract,
 } from "./messages";
 import { AppCurrency } from "@keplr-wallet/types";
@@ -98,35 +94,22 @@ export function renderAminoMessage(
     return renderMsgVote(value.proposal_id, value.option);
   }
 
-  if (msg.type === msgOpts.cosmos.msgOpts.govSubmitProposal.type) {
-    const value = msg.value as MsgSubmitProposal["value"];
-    return renderMsgSubmitProposal(
-      value.proposer,
-      value.content,
-      value.initial_deposit
-    );
-  }
-
-  if (msg.type === "wasm/MsgInstantiateContract") {
-    const value = msg.value as MsgInstantiateContract["value"];
-    return renderMsgInstantiateContract(
-      currencies,
-      value.init_funds,
-      value.admin,
-      value.code_id,
-      value.label,
-      value.init_msg
-    );
-  }
-
-  if (
-    msg.type === msgOpts.cosmwasm.msgOpts.executeWasm.type ||
-    msg.type === msgOpts.secret.msgOpts.executeSecretWasm.type
-  ) {
+  if (msg.type === msgOpts.cosmwasm.msgOpts.executeWasm.type) {
     const value = msg.value as MsgExecuteContract["value"];
     return renderMsgExecuteContract(
       currencies,
-      value.funds ?? value.sent_funds ?? [],
+      value.funds ?? [],
+      undefined,
+      value.contract,
+      value.msg
+    );
+  }
+
+  if (msg.type === msgOpts.secret.msgOpts.executeSecretWasm.type) {
+    const value = msg.value as MsgExecuteContract["value"];
+    return renderMsgExecuteContract(
+      currencies,
+      value.sent_funds ?? [],
       value.callback_code_hash,
       value.contract,
       value.msg

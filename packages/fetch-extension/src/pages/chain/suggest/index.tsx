@@ -1,5 +1,6 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { Button } from "reactstrap";
 
 import style from "./style.module.scss";
 import { EmptyLayout } from "@layouts/empty-layout";
@@ -10,31 +11,18 @@ import { useStore } from "../../../stores";
 import { ToolTip } from "@components/tooltip";
 import classNames from "classnames";
 import { GithubIcon, InformationCircleOutline } from "@components/icon";
-import { ButtonV2 } from "@components-v2/buttons/button";
-import { useLoadingIndicator } from "@components/loading-indicator";
-import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
-import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
-import { ChainInfo } from "@keplr-wallet/types";
 
 export const ChainSuggestedPage: FunctionComponent = observer(() => {
-  const {
-    chainSuggestStore,
-    analyticsStore,
-    uiConfigStore,
-    chainStore,
-    keyRingStore,
-    permissionStore,
-  } = useStore();
+  const { chainSuggestStore, analyticsStore, uiConfigStore, chainStore } =
+    useStore();
   const [updateFromRepoDisabled, setUpdateFromRepoDisabled] = useState(false);
   const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
   const navigate = useNavigate();
-  const loadingIndicator = useLoadingIndicator();
 
   const interactionInfo = useInteractionInfo(() => {
     chainSuggestStore.rejectAll();
   });
 
-  const waitingData = chainSuggestStore.waitingSuggestedChainInfo;
   const communityChainInfo = chainSuggestStore.waitingSuggestedChainInfo
     ? chainSuggestStore.getCommunityChainInfo(
         chainSuggestStore.waitingSuggestedChainInfo.data.chainInfo.chainId
@@ -53,10 +41,6 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
       });
     }
   }, [analyticsStore, chainSuggestStore.waitingSuggestedChainInfo]);
-
-  const isLoading = waitingData
-    ? permissionStore.isObsoleteInteractionApproved(waitingData.id)
-    : false;
 
   useEffect(() => {
     setTimeout(() => {
@@ -278,7 +262,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                     className={style["logoImage"]}
                     src={
                       communityChainInfo?.chainInfo?.chainSymbolImageUrl ||
-                      require("@assets/png/White-black-circle.png")
+                      require("@assets/logo-256.svg")
                     }
                     alt="chain logo"
                   />
@@ -292,8 +276,8 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   <div className={style["imageBackground"]} />
                   <img
                     className={style["logoImage"]}
-                    src={require("@assets/png/White-black-circle.png")}
-                    alt="chain logo"
+                    src={require("../../../public/assets/logo-256.svg")}
+                    alt="keplr logo"
                   />
                 </div>
               </div>
@@ -327,7 +311,7 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
                   >
                     <div className={style["item"]}>
                       <FormattedMessage id="chain.suggested.community-driven" />
-                      <GithubIcon fill="white" />
+                      <GithubIcon />
                     </div>
                   </a>
                 </div>
@@ -362,118 +346,63 @@ export const ChainSuggestedPage: FunctionComponent = observer(() => {
             </div>
           )}
           <div className={style["buttons"]}>
-            <ButtonV2
-              styleProps={{
-                padding: "10px",
-                height: "40px",
-                fontSize: "0.9rem",
-              }}
+            <Button
+              className={style["button"]}
+              color="danger"
+              outline
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              dataLoading={isLoading}
-              onClick={async (e: any) => {
+              data-loading={chainSuggestStore.isLoading}
+              onClick={async (e) => {
                 e.preventDefault();
-                if (waitingData && waitingData.id) {
-                  await chainSuggestStore.rejectWithProceedNext(
-                    waitingData.id,
-                    async (proceedNext) => {
-                      if (!proceedNext) {
-                        if (
-                          interactionInfo.interaction &&
-                          !interactionInfo.interactionInternal
-                        ) {
-                          handleExternalInteractionWithNoProceedNext();
-                        } else if (
-                          interactionInfo.interaction &&
-                          interactionInfo.interactionInternal
-                        ) {
-                          window.history.length > 1
-                            ? navigate(-1)
-                            : navigate("/");
-                        } else {
-                          navigate("/", { replace: true });
-                        }
-                      }
-                    }
-                  );
+
+                await chainSuggestStore.reject();
+
+                if (
+                  interactionInfo.interaction &&
+                  !interactionInfo.interactionInternal
+                ) {
+                  window.close();
+                } else {
+                  navigate("/");
                 }
               }}
-              text={<FormattedMessage id="chain.suggested.button.reject" />}
-            />
-            <ButtonV2
-              variant="dark"
-              styleProps={{
-                padding: "10px",
-                height: "40px",
-                fontSize: "0.9rem",
-              }}
+            >
+              <FormattedMessage id="chain.suggested.button.reject" />
+            </Button>
+            <Button
+              className={style["button"]}
+              color="primary"
               disabled={!chainSuggestStore.waitingSuggestedChainInfo}
-              dataLoading={isLoading}
-              onClick={async (e: any) => {
+              data-loading={chainSuggestStore.isLoading}
+              onClick={async (e) => {
                 e.preventDefault();
-                if (waitingData) {
-                  const chainInfo =
-                    communityChainInfo && !updateFromRepoDisabled
-                      ? communityChainInfo?.chainInfo
-                      : waitingData.data.chainInfo;
 
-                  const ids = new Set([waitingData.id]);
-                  for (const data of chainSuggestStore.waitingSuggestedChainInfos) {
-                    if (
-                      data.data.chainInfo.chainId ===
-                        waitingData.data.chainInfo.chainId &&
-                      data.data.origin === waitingData.data.origin
-                    ) {
-                      ids.add(data.id);
-                    }
-                  }
-                  const dataToApprove = {
+                const chainInfo = updateFromRepoDisabled
+                  ? chainSuggestStore.waitingSuggestedChainInfo?.data.chainInfo
+                  : communityChainInfo?.chainInfo ||
+                    chainSuggestStore.waitingSuggestedChainInfo?.data.chainInfo;
+
+                if (chainInfo) {
+                  await chainSuggestStore.approve({
                     ...chainInfo,
                     updateFromRepoDisabled,
-                  } as ChainInfo;
-                  await chainSuggestStore.approveWithProceedNext(
-                    Array.from(ids),
-                    dataToApprove,
-                    async (proceedNext) => {
-                      loadingIndicator.setIsLoading(
-                        "chain-suggest-switch",
-                        true
-                      );
-                      await keyRingStore.refreshKeyRingStatus();
-                      await chainStore.updateChainInfosFromBackground();
-                      await chainStore.updateEnabledChainIdentifiersFromBackground();
-                      if (chainInfo) {
-                        await chainStore.selectChain(chainInfo?.chainId);
-                      }
-                      await chainStore.saveLastViewChainId();
-                      analyticsStore.logEvent("approve_click");
+                  });
+                  chainStore.selectChain(chainInfo.chainId);
+                  chainStore.saveLastViewChainId();
+                }
 
-                      dispatchGlobalEventExceptSelf(
-                        "keplr_suggested_chain_added"
-                      );
-
-                      if (!proceedNext) {
-                        if (
-                          interactionInfo.interaction &&
-                          !interactionInfo.interactionInternal
-                        ) {
-                          loadingIndicator.setIsLoading(
-                            "chain-suggest-switch",
-                            false
-                          );
-                          handleExternalInteractionWithNoProceedNext();
-                        } else if (
-                          interactionInfo.interaction &&
-                          interactionInfo.interactionInternal
-                        ) {
-                          navigate("/");
-                        }
-                      }
-                    }
-                  );
+                if (
+                  interactionInfo.interaction &&
+                  !interactionInfo.interactionInternal
+                ) {
+                  window.close();
+                } else {
+                  navigate("/");
                 }
               }}
-              text={<FormattedMessage id="chain.suggested.button.approve" />}
-            />
+            >
+              <FormattedMessage id="chain.suggested.button.approve" />
+            </Button>
           </div>
         </div>
       )}

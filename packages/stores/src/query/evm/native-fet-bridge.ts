@@ -1,22 +1,29 @@
+import { KVStore } from "@keplr-wallet/common";
+import Axios from "axios";
 import { computed, makeObservable } from "mobx";
 import {
+  ChainGetter,
   ObservableJsonRPCQuery,
-  QuerySharedContext,
   nativeFetBridgeInterface,
 } from "../../common";
 import { EthBridgeStatus } from "./types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ObservableQueryLatestBlock } from "./block";
-import { ChainGetter } from "../../chain";
 
 export class ObservableQueryByFunction extends ObservableJsonRPCQuery<string> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     ethereumURL: string,
     contractAddress: string,
     protected readonly functionName: string
   ) {
-    super(kvStore, ethereumURL, "", "eth_call", [
+    const instance = Axios.create({
+      ...{
+        baseURL: ethereumURL,
+      },
+    });
+
+    super(kvStore, instance, "", "eth_call", [
       {
         to: contractAddress,
         data: nativeFetBridgeInterface.encodeFunctionData(functionName),
@@ -58,8 +65,8 @@ export class ObservableQueryNativeFetEthBrige {
   protected readonly _queryLatestBlock: ObservableQueryLatestBlock;
   protected readonly _nativeBridgeAddress: string;
 
-  constructor(kvStore: QuerySharedContext, chainGetter: ChainGetter) {
-    const ethereumURL = chainGetter.getChain("eip155:1").rpc;
+  constructor(kvStore: KVStore, chainGetter: ChainGetter) {
+    const ethereumURL = chainGetter.getChain("1").rpc;
     this._nativeBridgeAddress = "0x947872ad4d95e89E513d7202550A810aC1B626cC";
 
     this._querySwapMin = new ObservableQueryByFunction(
@@ -118,7 +125,7 @@ export class ObservableQueryNativeFetEthBrige {
     );
     this._queryLatestBlock = new ObservableQueryLatestBlock(
       kvStore,
-      "eip155:1",
+      "1",
       chainGetter
     );
   }

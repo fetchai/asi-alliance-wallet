@@ -10,7 +10,6 @@ import { useStyle } from "styles/index";
 import { SettingItem } from "screens/setting/components";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { EndPointIcon } from "components/new/icon/endpoint";
-import { LockIcon } from "components/new/icon/lock";
 import { AutoLockScreen } from "screens/setting/screens/security-and-privacy/auto-lock";
 
 export const SecurityAndPrivacyScreen: FunctionComponent = observer(() => {
@@ -18,35 +17,18 @@ export const SecurityAndPrivacyScreen: FunctionComponent = observer(() => {
 
   const smartNavigation = useSmartNavigation();
 
-  const showPrivateData = canShowPrivateData(
-    keyRingStore.selectedKeyInfo?.type ?? ""
-  );
+  const showPrivateData = canShowPrivateData(keyRingStore.keyRingType);
 
   const style = useStyle();
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
-      hasFloatingHeader={true}
-      contentContainerStyle={
-        style.flatten([
-          "flex-grow-1",
-          "margin-top-16",
-          "padding-top-0",
-        ]) as ViewStyle
-      }
-      style={style.flatten(["padding-x-page"]) as ViewStyle}
+      backgroundMode="image"
+      contentContainerStyle={style.flatten(["flex-grow-1"])}
+      style={style.flatten(["padding-x-page", "margin-top-16"]) as ViewStyle}
       scrollEnabled={false}
     >
       {showPrivateData && <SettingViewPrivateDataItem />}
-      <SettingItem
-        label="Change Password"
-        style={style.flatten(["height-72", "padding-18"]) as ViewStyle}
-        left={<LockIcon size={18} color="#151a1a" />}
-        onPress={() => {
-          smartNavigation.navigateSmart("Setting.ChangePassword", {});
-        }}
-      />
       {keychainStore.isBiometrySupported || keychainStore.isBiometryOn ? (
         <SettingBiometricLockItem />
       ) : null}

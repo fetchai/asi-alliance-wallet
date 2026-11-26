@@ -1,8 +1,10 @@
 import { AccountSetBaseSuper, WalletStatus } from "./base";
-import { IQueriesStore, QueriesSetBase } from "../query";
-import { EvmQueries } from "../query/evm";
-import { erc20MetadataInterface, nativeFetBridgeInterface } from "../common";
-import { ChainGetter } from "../chain";
+import { EvmQueries, IQueriesStore, QueriesSetBase } from "../query";
+import {
+  ChainGetter,
+  erc20MetadataInterface,
+  nativeFetBridgeInterface,
+} from "../common";
 import { DenomHelper, LocalKVStore } from "@keplr-wallet/common";
 import { Dec, DecUtils } from "@keplr-wallet/unit";
 import {
@@ -24,8 +26,6 @@ import {
 } from "@ethersproject/providers";
 
 import { isAddress } from "@ethersproject/address";
-// eslint-disable-next-line import/no-extraneous-dependencies
-import { serialize } from "@ethersproject/transactions";
 import { KVStore } from "@keplr-wallet/common";
 import { BigNumber } from "@ethersproject/bignumber";
 
@@ -94,11 +94,8 @@ export class EthereumAccountImpl {
       return dec.truncate().toBigNumber().toString(16);
     })()}`;
 
-    const chainInfo = this.chainGetter.getChain(this.chainId);
     const isEvm =
-      (chainInfo.features?.includes("eth-key-sign") &&
-        chainInfo.features?.includes("eth-address-gen") &&
-        chainInfo.evm) ??
+      this.chainGetter.getChain(this.chainId).features?.includes("evm") ??
       false;
     if (denomHelper.type === "native" && isEvm) {
       if (!isAddress(recipient)) {
@@ -469,17 +466,15 @@ export class EthereumAccountImpl {
     const gasPrice = BigNumber.from(fee.amount[0].amount).div(
       BigNumber.from(fee.gas)
     );
-    const chainInfo = this.chainGetter.getChain(this.chainId);
-    const evmInfo = chainInfo.evm;
     const rawTxData = {
       ...params,
-      chainId: evmInfo?.chainId,
+      chainId: parseInt(this.chainId),
       nonce,
       gasLimit: parseInt(fee.gas),
     };
 
     // EIP1995 support only for ethereum as of now
-    if (this.chainId === "eip155:1") {
+    if (this.chainId === "1") {
       const baseFee = this.queries.evm.queryEthGasFees.base;
 
       if (!baseFee) {
@@ -744,21 +739,16 @@ export class EthereumAccountImpl {
     const keplr = (await this.base.getKeplr())!;
     const signResponse = await keplr.signEthereum(
       this.chainId,
-      this.base.ethereumHexAddress,
+      this.base.bech32Address,
       rawTxn,
       EthSignType.TRANSACTION
-    );
-
-    const signedTx = Buffer.from(
-      serialize(txData, signResponse).replace("0x", ""),
-      "hex"
     );
 
     const result = await this.instance.post("", {
       jsonrpc: "2.0",
       id: "1",
       method: "eth_sendRawTransaction",
-      params: [`0x${Buffer.from(signedTx.toString("hex"))}`],
+      params: [`0x${Buffer.from(signResponse).toString("hex")}`],
     });
 
     if (!(result.data && result.data.result)) {

@@ -1,5 +1,5 @@
 import { ButtonV2 } from "@components-v2/buttons/button";
-import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
+import React, { FunctionComponent, useMemo, useState } from "react";
 import style from "./style.module.scss";
 
 import { GlassCard } from "@components-v2/glass-card";
@@ -25,29 +25,6 @@ import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { useLanguage } from "../../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 
-const singlePendingClaimValidator = (activityStore: {
-  getPendingTxn: Record<string, { id?: string; type?: string }>;
-  getNodes: Record<string, any>;
-}): string | null => {
-  const addresses = Object.values(activityStore.getPendingTxn || {}).flatMap(
-    (txn) => {
-      if (txn?.type !== TXNTYPE.withdrawRewards || !txn.id) {
-        return [];
-      }
-      const msgs =
-        activityStore.getNodes?.[txn.id]?.transaction?.messages?.nodes ?? [];
-      return msgs
-        .map(
-          (msg: { json?: { validatorAddress?: string } }) =>
-            msg?.json?.validatorAddress
-        )
-        .filter(Boolean);
-    }
-  );
-  const unique = [...new Set(addresses)];
-  return unique.length === 1 ? unique[0] : null;
-};
-
 export const MyStakes = observer(
   ({
     rewards,
@@ -66,7 +43,7 @@ export const MyStakes = observer(
 
     const fiatCurrency = language.fiatCurrency;
 
-    const [isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
+    const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
     const {
       chainStore,
       analyticsStore,
@@ -85,9 +62,7 @@ export const MyStakes = observer(
       queries.cosmos.queryDelegations.getQueryBech32Address(
         account.bech32Address
       );
-    const delegations = queryDelegations.delegations.filter((del) =>
-      new Dec(del.balance.amount).gt(new Dec(0))
-    );
+    const delegations = queryDelegations.delegations;
 
     const queryReward = queries.cosmos.queryRewards.getQueryBech32Address(
       account.bech32Address
@@ -128,9 +103,6 @@ export const MyStakes = observer(
 
           let gas: number;
           try {
-            analyticsStore.logEvent("claim_all_staking_reward_click", {
-              pageName: "Stake",
-            });
             // Gas adjustment is 1.5
             // Since there is currently no convenient way to adjust the gas adjustment on the UI,
             // Use high gas adjustment to prevent failure.
@@ -150,10 +122,9 @@ export const MyStakes = observer(
             undefined,
             {
               onBroadcasted: () => {
-                analyticsStore.logEvent("claim_txn_broadcasted", {
+                analyticsStore.logEvent("Claim reward tx broadcasted", {
                   chainId: chainStore.current.chainId,
                   chainName: chainStore.current.chainName,
-                  pageName: "Stake",
                 });
                 notification.push({
                   type: "primary",
@@ -202,11 +173,6 @@ export const MyStakes = observer(
               duration: 0.25,
             },
           });
-          analyticsStore.logEvent("claim_txn_broadcasted_fail", {
-            chainId: chainStore.current.chainId,
-            chainName: chainStore.current.chainName,
-            pageName: "Stake",
-          });
         } finally {
           setIsWithdrawingRewards(false);
 
@@ -231,21 +197,12 @@ export const MyStakes = observer(
     return (
       <div className={style["row"]}>
         <ButtonV2
-          variant="light"
           text="Stake more"
-          onClick={() => {
-            analyticsStore.logEvent("stake_click", {
-              chainId: chainStore.current.chainId,
-              chainName: chainStore.current.chainName,
-              pageName: "Stake",
-            });
-            navigate("/validator/validator-list");
-          }}
+          onClick={() => navigate("/validator/validator-list")}
           styleProps={{
             height: "44px",
             marginTop: "32px",
             marginBottom: "32px",
-            backgroundColor: "#B1FCAB",
           }}
         />
 
@@ -254,8 +211,17 @@ export const MyStakes = observer(
           <div className={style["reward-row"]}>
             <div className={style["reward-col"]}>
               <div className={style["left-col"]}>
-                <span className={style["label"]}>Staking rewards</span>
-                <span className={style["total-rewards"]}>
+                <span
+                  className={style["label"]}
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 400,
+                    color: "rgba(255,255,255,0.6)",
+                  }}
+                >
+                  Staking rewards
+                </span>
+                <span style={{ fontWeight: 400 }}>
                   {pendingStakableRewardUSD
                     ? pendingStakableRewardUSD
                         .shrink(true)
@@ -263,7 +229,9 @@ export const MyStakes = observer(
                         .trim(true)
                         .toString()
                     : totalNumber}{" "}
-                  <span>{fiatCurrency.toUpperCase()}</span>
+                  <span style={{ color: "#556578" }}>
+                    {fiatCurrency.toUpperCase()}
+                  </span>
                 </span>
               </div>
 
@@ -274,22 +242,24 @@ export const MyStakes = observer(
                 queryReward.pendingRewardValidatorAddresses.length === 0
               ) && (
                 <ButtonV2
-                  variant="light"
                   styleProps={{
                     width: "91px",
                     padding: "2px 15px",
                     height: "36px",
                     marginTop: "0",
                     fontSize: "14px",
-                    backgroundColor: "#B1FCAB",
+
+                    background:
+                      "linear-gradient(270deg, #F9774B 10.08%, #cf447b 70.82%",
+                    color: "white",
                   }}
                   disabled={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    isWithdrawingRewards
+                    _isWithdrawingRewards
                   }
                   text={
                     activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    isWithdrawingRewards
+                    _isWithdrawingRewards
                       ? ""
                       : "Claim all"
                   }
@@ -298,14 +268,14 @@ export const MyStakes = observer(
                       activityStore.getPendingTxnTypes[
                         TXNTYPE.withdrawRewards
                       ] ||
-                      isWithdrawingRewards
+                      _isWithdrawingRewards
                     )
                       return;
                     handleClaimRewards();
                   }}
                 >
                   {(activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] ||
-                    isWithdrawingRewards) && (
+                    _isWithdrawingRewards) && (
                     <i className="fas fa-spinner fa-spin ml-2 mr-2" />
                   )}
                 </ButtonV2>
@@ -324,7 +294,13 @@ export const MyStakes = observer(
                   cursor: "pointer",
                 }}
               >
-                <span className={style["rewards-toggle"]}>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "#BFAFFD",
+                    paddingRight: "5px",
+                  }}
+                >
                   {showReward ? "Hide" : "View"} rewards
                 </span>
                 {showReward ? (
@@ -349,27 +325,47 @@ export const MyStakes = observer(
           </div>
         </GlassCard>
 
-        <MyValidator />
+        <div
+          className={style["my-validators-container"]}
+          style={{
+            marginTop: "24px",
+          }}
+        >
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <div
+              style={{
+                color: "#fff",
+                opacity: "60%",
+                fontSize: "14px",
+                fontWeight: 400,
+              }}
+            >
+              Staked balances
+            </div>
+            <div className={style["stake-count"]}>{delegations.length}</div>
+          </div>
+
+          <div
+            className={style["my-validators-container"]}
+            style={{
+              paddingBottom: "30px",
+            }}
+          >
+            <MyValidator />
+          </div>
+        </div>
       </div>
     );
   }
 );
 
 const DelegateReward: FunctionComponent = observer(() => {
-  const {
-    chainStore,
-    accountStore,
-    queriesStore,
-    activityStore,
-    analyticsStore,
-  } = useStore();
+  const { chainStore, accountStore, queriesStore, activityStore } = useStore();
 
   const navigate = useNavigate();
 
   const notification = useNotification();
-  const [claimingValidator, setClaimingValidator] = useState<string | null>(
-    null
-  );
+  const [_isWithdrawingRewards, setIsWithdrawingRewards] = useState(false);
 
   const account = accountStore.getAccount(chainStore.current.chainId);
   const queries = queriesStore.get(chainStore.current.chainId);
@@ -411,11 +407,8 @@ const DelegateReward: FunctionComponent = observer(() => {
   }, [validators]);
 
   const handleClaim = async (validatorAddress: string) => {
-    setClaimingValidator(validatorAddress);
+    setIsWithdrawingRewards(true);
     try {
-      analyticsStore.logEvent("claim_click", {
-        pageName: "Stake",
-      });
       await account.cosmos.sendWithdrawDelegationRewardMsgs(
         [validatorAddress],
         "",
@@ -423,11 +416,6 @@ const DelegateReward: FunctionComponent = observer(() => {
         undefined,
         {
           onBroadcasted() {
-            analyticsStore.logEvent("claim_txn_broadcasted", {
-              chainId: chainStore.current.chainId,
-              chainName: chainStore.current.chainName,
-              pageName: "Stake",
-            });
             notification.push({
               type: "primary",
               placement: "top-center",
@@ -458,19 +446,11 @@ const DelegateReward: FunctionComponent = observer(() => {
       );
     } catch (err) {
       console.error(err);
-      setClaimingValidator(null);
-      analyticsStore.logEvent("claim_txn_broadcasted_fail", {
-        chainId: chainStore.current.chainId,
-        chainName: chainStore.current.chainName,
-        pageName: "Stake",
-      });
       if (err.toString().includes("Error: Request rejected")) {
         navigate(`/validators/${validatorAddress}`);
       }
     } finally {
-      if (!activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]) {
-        setClaimingValidator(null);
-      }
+      setIsWithdrawingRewards(false);
       const txnNavigationOptions = {
         redirect: () => {
           navigate("/stake");
@@ -481,19 +461,6 @@ const DelegateReward: FunctionComponent = observer(() => {
       navigateOnTxnEvents(txnNavigationOptions);
     }
   };
-
-  const withdrawInProgress = Boolean(
-    activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
-  );
-  const activeClaimValidator =
-    claimingValidator ||
-    (withdrawInProgress ? singlePendingClaimValidator(activityStore) : null);
-
-  useEffect(() => {
-    if (!withdrawInProgress) {
-      setClaimingValidator(null);
-    }
-  }, [withdrawInProgress]);
 
   return (
     <React.Fragment>
@@ -516,13 +483,6 @@ const DelegateReward: FunctionComponent = observer(() => {
           .getQueryBech32Address(account.bech32Address)
           .getStakableRewardOf(val.operator_address);
 
-        const parsedRewards =
-          parseFloat(rewards?.hideDenom(true).toString()) || 0;
-        const displayAmount =
-          parsedRewards >= 0.000001
-            ? rewards.maxDecimals(6).trim(true).shrink(true).toString()
-            : `< 0.000001 ${rewards?.denom}`;
-
         return parseFloat(rewards.toString().split(" ")[0]) > 0 ? (
           <div
             key={del.delegation.validator_address}
@@ -531,7 +491,17 @@ const DelegateReward: FunctionComponent = observer(() => {
             {thumbnail ? (
               <img src={thumbnail} alt={"validator"} />
             ) : (
-              <div className={style["validator-avatar"]}>
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "100%",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  background: "rgba(255, 255, 255, 0.1)",
+                }}
+              >
                 {val.description.moniker?.toString()[0].toUpperCase()}
               </div>
             )}
@@ -540,28 +510,37 @@ const DelegateReward: FunctionComponent = observer(() => {
               <div className={style["reward-title"]}>
                 {val.description.moniker?.trim()}
               </div>
-              <div className={style["reward-amount"]}>{displayAmount}</div>
+              <div className={style["reward-amount"]}>
+                {rewards.maxDecimals(4).trim(true).shrink(true).toString()}
+              </div>
             </div>
             <ButtonV2
-              variant="light"
               styleProps={{
                 width: "71px",
                 padding: "2px 15px",
                 height: "36px",
                 marginTop: "0",
                 fontSize: "14px",
-                backgroundColor: "var(--bg-green-base)",
+                fontWeight: 400,
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.4)",
               }}
-              disabled={activeClaimValidator != null || withdrawInProgress}
+              disabled={
+                activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
+              }
               text={
-                activeClaimValidator === val.operator_address ? "" : "Claim"
+                activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
+                  ? ""
+                  : "Claim"
               }
               onClick={() => {
-                if (activeClaimValidator != null || withdrawInProgress) return;
+                if (activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards])
+                  return;
                 handleClaim(val.operator_address);
               }}
             >
-              {activeClaimValidator === val.operator_address && (
+              {activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards] && (
                 <i className="fas fa-spinner fa-spin ml-2 mr-2" />
               )}
             </ButtonV2>

@@ -11,7 +11,7 @@ import {
 } from "@keplr-wallet/hooks";
 import * as RNLocalize from "react-native-localize";
 import { InputCardView } from "../card-view/input-card";
-import { formatFiatBalance, parseDollarAmount } from "utils/format/format";
+import { parseDollarAmount } from "utils/format/format";
 import { useStyle } from "styles/index";
 import { CardDivider } from "components/card";
 import { useStore } from "stores/index";
@@ -73,7 +73,7 @@ export const StakeAmountInput: FunctionComponent<{
 
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency);
-      return value ? formatFiatBalance(value) : undefined;
+      return value && value.shrink(true).maxDecimals(6).toString();
     };
 
     useEffect(() => {
@@ -134,7 +134,7 @@ export const StakeAmountInput: FunctionComponent<{
               style={
                 style.flatten([
                   "body3",
-                  "color-dark@60%",
+                  "color-white@60%",
                   "margin-left-8",
                 ]) as ViewStyle
               }

@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState, useEffect } from "react";
+import React, { FunctionComponent } from "react";
 import { RegisterConfig } from "@keplr-wallet/hooks";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Form, Label } from "reactstrap";
@@ -11,21 +11,6 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../../stores";
 import { ledgerUSBVendorId } from "@ledgerhq/devices";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { LedgerSetupView } from "../../../pages/ledger";
-import { useNotification } from "@components/notification";
-import { SelectNetwork } from "../select-network";
-import classNames from "classnames";
-import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
-import { PasswordStrengthMeter } from "../../../components-v2/password-strength/password-strength-meter";
-import { Checkbox } from "@components-v2/checkbox/checkbox";
-import {
-  Ledger,
-  LedgerApp,
-  LedgerWebHIDIniter,
-  LedgerWebUSBIniter,
-} from "@keplr-wallet/background";
-import delay from "delay";
-import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const TypeImportLedger = "import-ledger";
 
@@ -59,112 +44,53 @@ export const ImportLedgerPage: FunctionComponent<{
   setSelectedCard: any;
 }> = observer(({ registerConfig, setSelectedCard }) => {
   const intl = useIntl();
-  const notification = useNotification();
-  const bip44Option = useBIP44Option(118);
-  const [isShowLedgerSetup, setShowLedgerSetup] = useState<boolean>(false);
-  const { analyticsStore, keyRingStore, ledgerInitStore } = useStore();
 
-  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [passwordCheckbox, setPasswordCheckbox] = useState(false);
-  const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
-  const accountList = keyRingStore.keyInfos;
-  const defaultAccountName = getNextDefaultAccountName(accountList);
+  const bip44Option = useBIP44Option(118);
 
   const {
     register,
     handleSubmit,
     getValues,
-    setValue,
-    watch,
-    trigger,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      name: defaultAccountName,
+      name: "",
       password: "",
       confirmPassword: "",
     },
-    mode: "onChange",
-    reValidateMode: "onChange",
   });
 
-  const { confirmPassword, name, password } = watch();
-
-  useEffect(() => {
-    if (confirmPassword) {
-      trigger("confirmPassword");
-    }
-  }, [password, trigger]);
+  const { analyticsStore, ledgerInitStore } = useStore();
 
   const ensureUSBPermission = async () => {
     const anyNavigator = navigator as any;
-    let protocol: any;
     if (ledgerInitStore.isWebHID) {
-      protocol = anyNavigator.hid;
+      const device = await anyNavigator.hid.requestDevice({
+        filters: [
+          {
+            vendorId: ledgerUSBVendorId,
+          },
+        ],
+      });
+      if (!device || (Array.isArray(device) && device.length === 0)) {
+        throw new Error("No device selected");
+      }
     } else {
-      protocol = anyNavigator.usb;
-    }
-
-    const devices = await protocol.requestDevice({
-      filters: [
-        {
-          vendorId: ledgerUSBVendorId,
-        },
-      ],
-    });
-
-    if (!devices || (Array.isArray(devices) && devices.length === 0)) {
-      throw new Error("No device selected");
+      if (
+        !(await anyNavigator.usb.requestDevice({
+          filters: [
+            {
+              vendorId: ledgerUSBVendorId,
+            },
+          ],
+        }))
+      ) {
+        throw new Error("No device selected");
+      }
     }
   };
 
-  async function createLedger(
-    name: string,
-    password: string,
-    pubkey: Uint8Array
-  ) {
-    try {
-      await registerConfig.createLedger(
-        pubkey,
-        name,
-        password,
-        bip44Option.bip44HDPath,
-        "Cosmos",
-        selectedNetworks,
-        {}
-      );
-      analyticsStore.setUserProperties({
-        registerType: "ledger",
-        accountType: "ledger",
-      });
-      dispatchGlobalEventExceptSelf(
-        "keplr_ledger_app_connected",
-        ledgerInitStore.cosmosLikeApp || "Cosmos"
-      );
-      dispatchGlobalEventExceptSelf(
-        "keplr_new_key_created",
-        keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
-      );
-      setShowLedgerSetup(false);
-    } catch (e) {
-      setShowLedgerSetup(true);
-    }
-  }
-
-  const areInputsEmpty =
-    name === "" ||
-    (registerConfig.mode === "create" &&
-      (password === "" || confirmPassword === ""));
-
-  return isShowLedgerSetup ? (
-    <LedgerSetupView
-      bip44HDPath={bip44Option.bip44HDPath}
-      onBackPress={() => setShowLedgerSetup(false)}
-      onInitSucceed={async (pubkey) =>
-        await createLedger(getValues()["name"], getValues()["password"], pubkey)
-      }
-    />
-  ) : (
+  return (
     <div
       style={{
         width: "100%",
@@ -192,92 +118,53 @@ export const ImportLedgerPage: FunctionComponent<{
         >
           To keep your account safe, avoid any personal information or words
         </div>
-        <div style={{ display: "flex", width: "100%" }}>
+        <div style={{ display: "flex" }}>
           <Form
             className={style["formContainer"]}
             onSubmit={handleSubmit(async (data: FormData) => {
               try {
                 await ensureUSBPermission();
-                const ledger = await Ledger.init(
-                  ledgerInitStore.isWebHID
-                    ? LedgerWebHIDIniter
-                    : LedgerWebUSBIniter,
-                  undefined,
-                  LedgerApp.Cosmos,
+
+                await registerConfig.createLedger(
+                  data.name,
+                  data.password,
+                  bip44Option.bip44HDPath,
                   "Cosmos"
                 );
-                const pubkey = await ledger.getPublicKey(
-                  LedgerApp.Cosmos,
-                  bip44Option.bip44HDPath
-                );
-                await ledger.close();
-                // Unfortunately, closing ledger blocks the writing to Ledger on background process.
-                // I'm not sure why this happens. But, not closing reduce this problem if transport is webhid.
-                if (!ledgerInitStore.isWebHID) {
-                  await delay(1000);
-                } else {
-                  await delay(500);
-                }
-                await createLedger(data.name, data.password, pubkey);
-              } catch (e) {
-                notification.push({
-                  type: "warning",
-                  placement: "top-center",
-                  duration: 5,
-                  content: "Please select a device to continue.",
-                  canDelete: true,
-                  transition: {
-                    duration: 0.25,
-                  },
+                analyticsStore.setUserProperties({
+                  registerType: "ledger",
+                  accountType: "ledger",
                 });
-                return;
+              } catch (e) {
+                alert(e.message ? e.message : e.toString());
+                registerConfig.clear();
               }
             })}
           >
-            <Label for="name" className={classNames(style["label"], "mb-2")}>
+            <Label
+              for="name"
+              style={{
+                color: "rgba(255,255,255,0.6)",
+                fontWeight: 400,
+                fontSize: "14px",
+                marginBottom: "8px",
+              }}
+            >
               {intl.formatMessage({ id: "register.name" })}
             </Label>
             <Input
-              formGroupClassName={style["ledgerFormGroup"]}
-              className={classNames(style["addressInput"], "mt-0")}
+              className={style["addressInput"]}
               type="text"
               {...register("name", {
                 required: intl.formatMessage({
                   id: "register.name.error.required",
                 }),
-                validate: (value: string) =>
-                  validateAccountName(
-                    value,
-                    keyRingStore?.keyInfos,
-                    registerConfig.mode
-                  ),
               })}
               error={errors.name && errors.name.message}
-              onChange={(e: any) => {
-                const trimmedValue = e.target.value.trimStart();
-                setValue(e.target.name, trimmedValue, { shouldValidate: true });
-              }}
               maxLength={20}
-            />
-            <div
-              className={classNames(
-                style["label"],
-                "mb-2 text-xs",
-                name === defaultAccountName ||
-                  (errors.name && errors.name.message)
-                  ? "invisible"
-                  : "visible"
-              )}
-            >
-              * (Account name for unselected networks will be{" "}
-              {defaultAccountName})
-            </div>
-            <SelectNetwork
-              className="mb-4"
-              selectedNetworks={selectedNetworks}
-              disabled={name === defaultAccountName}
-              onMultiSelectChange={(values) => {
-                setSelectedNetworks(values);
+              style={{
+                marginTop: "0px",
+                marginBottom: "16px",
               }}
             />
             {registerConfig.mode === "create" ? (
@@ -287,7 +174,6 @@ export const ImportLedgerPage: FunctionComponent<{
                     required: intl.formatMessage({
                       id: "register.create.input.password.error.required",
                     }),
-                    setValueAs: (value: string) => value.trim(),
                     validate: (password: string): string | undefined => {
                       if (password.length < 8) {
                         return intl.formatMessage({
@@ -296,31 +182,27 @@ export const ImportLedgerPage: FunctionComponent<{
                       }
                     },
                   })}
-                  placeholder="Enter Password (min 8 characters)"
                   error={errors.password && errors.password.message}
                   labelStyle={{
                     marginTop: "0px",
                   }}
                   inputStyle={{
-                    marginBottom: "5px",
+                    marginBottom: "16px",
                   }}
                 />
                 <PasswordInput
-                  passwordLabel="Confirm Password"
                   {...register("confirmPassword", {
                     required: intl.formatMessage({
                       id: "register.create.input.confirm-password.error.required",
                     }),
-                    setValueAs: (value: string) => value.trim(),
                     validate: (confirmPassword: string): string | undefined => {
-                      if (confirmPassword !== password) {
+                      if (confirmPassword !== getValues()["password"]) {
                         return intl.formatMessage({
                           id: "register.create.input.confirm-password.error.unmatched",
                         });
                       }
                     },
                   })}
-                  placeholder="Confirm Password"
                   error={
                     errors.confirmPassword && errors.confirmPassword.message
                   }
@@ -328,32 +210,15 @@ export const ImportLedgerPage: FunctionComponent<{
                     marginTop: "0px",
                   }}
                   inputStyle={{
-                    marginBottom: "5px",
+                    marginBottom: "24px",
                   }}
                 />
-                <div className="pt-2 space-y-1 text-sm">
-                  <PasswordStrengthMeter
-                    password={password}
-                    onStrengthChange={(score) =>
-                      setPasswordStrengthScore(score)
-                    }
-                  />
-                </div>
-                {passwordStrengthScore < 3 && password.length >= 8 && (
-                  <Checkbox
-                    isChecked={passwordCheckbox}
-                    className="py-2"
-                    setIsChecked={setPasswordCheckbox}
-                    label="I understand this password is not strong and still want to continue."
-                  />
-                )}
               </React.Fragment>
             ) : null}
-            <div className="w-full mt-0">
+            <div style={{ width: "339px", marginTop: "0px" }}>
               <AdvancedBIP44Option bip44Option={bip44Option} />
             </div>
             <ButtonV2
-              variant="dark"
               data-loading={registerConfig.isLoading}
               text={
                 registerConfig.isLoading ? (
@@ -362,29 +227,11 @@ export const ImportLedgerPage: FunctionComponent<{
                   <FormattedMessage id="register.create.button.next" />
                 )
               }
-              onClick={() => {
-                analyticsStore.logEvent("register_next_click", {
-                  registerType: "ledger",
-                  accountType: "ledger",
-                  pageName: "Register",
-                });
-              }}
-              disabled={
-                registerConfig.isLoading ||
-                (registerConfig.mode === "create" &&
-                  (Boolean(
-                    errors?.confirmPassword?.message ||
-                      errors?.password?.message
-                  ) ||
-                    (password !== "" &&
-                      passwordStrengthScore < 3 &&
-                      !passwordCheckbox))) ||
-                areInputsEmpty ||
-                Boolean(errors?.name?.message) ||
-                (selectedNetworks.length === 0 && name !== defaultAccountName)
-              }
+              disabled={registerConfig.isLoading}
               styleProps={{
                 height: "56px",
+                position: "absolute",
+                bottom: "5px",
               }}
             />
 

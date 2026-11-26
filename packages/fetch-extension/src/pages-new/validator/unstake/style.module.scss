@@ -1,46 +1,26 @@
-@import "../../../styles/var";
-
 .unstake-container {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  color: $font-dark;
+  color: white;
   font-weight: 600;
   font-size: 14px;
 }
 
 .current-stake {
+  border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
-  margin-top: 12px;
-
-  & .current-stake-label {
-    color: $font-secondary;
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 17.5px;
-    margin: 6px 0px;
-  }
-
-  & .current-stake-value {
-    display: flex;
-    align-items: center;
-    font-weight: 500;
-    color: $font-secondary;
-    line-height: 17.5px;
-    border-radius: 12px;
-    padding: 0px 12px;
-    background-color: $card-bg;
-    height: 45px;
-  }
+  padding: 12px;
+  align-items: center;
+  border-radius: 12px;
+  height: 45px;
 }
 
 .label {
   font-size: 14px;
   font-weight: 650;
   line-height: 24px;
-  color: $font-secondary;
 }
 
 .alert {
@@ -51,12 +31,13 @@
   align-self: stretch;
   border: transparent;
   border-radius: 12px;
-  background: $bg-grey-dark;
-  box-shadow: none;
+  background: rgba(75, 161, 231, 0.25);
+  box-shadow: 0px -1px 2px 0px rgba(80, 158, 226, 0.25) inset,
+    0px 1px 2px 0px rgba(80, 158, 226, 0.25) inset,
+    0px -10px 30px 0px rgba(80, 158, 226, 0.1) inset;
   backdrop-filter: blur(15px);
-  margin-top: 16px;
-  margin-bottom: 16px;
-  color: $font-dark;
+  margin-bottom: 0;
+  color: white;
 
   i {
     font-size: 24px;
@@ -70,7 +51,7 @@
   h1 {
     font-size: 16px;
     font-weight: bold;
-    color: $font-dark;
+    color: #32325d;
     margin-bottom: 4px;
   }
 
@@ -80,16 +61,16 @@
     margin: 0;
   }
   .text {
-    color: $font-dark;
-    font-family: $font-family-base;
+    color: #fff;
+    font-family: Lexend;
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
     line-height: 160%; /* 22.4px */
   }
   .lightText {
-    color: $font-dark;
-    font-family: $font-family-base;
+    color: #fff;
+    font-family: Lexend;
     font-size: 14px;
     font-style: normal;
     font-weight: 400;

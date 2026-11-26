@@ -1,11 +1,11 @@
 import { QueriesSetBase } from "../queries";
-import { ChainGetter } from "../../chain";
+import { ChainGetter } from "../../common";
+import { KVStore } from "@keplr-wallet/common";
 import { ObservableQuerySecretContractCodeHash } from "./contract-hash";
 import { ObservableQuerySecret20ContractInfo } from "./secret20-contract-info";
 import { DeepReadonly } from "utility-types";
 import { ObservableQuerySecret20BalanceRegistry } from "./secret20-balance";
 import { Keplr } from "@keplr-wallet/types";
-import { QuerySharedContext } from "../../common";
 
 export interface SecretQueries {
   secret: SecretQueriesImpl;
@@ -16,20 +16,20 @@ export const SecretQueries = {
     apiGetter: () => Promise<Keplr | undefined>;
   }): (
     queriesSetBase: QueriesSetBase,
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter
   ) => SecretQueries {
     return (
       queriesSetBase: QueriesSetBase,
-      sharedContext: QuerySharedContext,
+      kvStore: KVStore,
       chainId: string,
       chainGetter: ChainGetter
     ) => {
       return {
         secret: new SecretQueriesImpl(
           queriesSetBase,
-          sharedContext,
+          kvStore,
           chainId,
           chainGetter,
           options.apiGetter
@@ -45,28 +45,24 @@ export class SecretQueriesImpl {
 
   constructor(
     base: QueriesSetBase,
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     apiGetter: () => Promise<Keplr | undefined>
   ) {
     this.querySecretContractCodeHash =
-      new ObservableQuerySecretContractCodeHash(
-        sharedContext,
-        chainId,
-        chainGetter
-      );
+      new ObservableQuerySecretContractCodeHash(kvStore, chainId, chainGetter);
 
     base.queryBalances.addBalanceRegistry(
       new ObservableQuerySecret20BalanceRegistry(
-        sharedContext,
+        kvStore,
         apiGetter,
         this.querySecretContractCodeHash
       )
     );
 
     this.querySecret20ContractInfo = new ObservableQuerySecret20ContractInfo(
-      sharedContext,
+      kvStore,
       chainId,
       chainGetter,
       apiGetter,

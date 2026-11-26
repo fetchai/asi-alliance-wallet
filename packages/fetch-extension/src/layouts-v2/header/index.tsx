@@ -17,7 +17,7 @@ import { motion } from "framer-motion";
 export interface Props {
   showChainName?: boolean;
   canChangeChainInfo?: boolean;
-  headerTitleClass?: string;
+
   alternativeTitle?: string;
   smallTitle?: boolean;
   menuRenderer?: ReactNode;
@@ -35,7 +35,6 @@ export const Header: FunctionComponent<Props & LocalProps> = observer(
     canChangeChainInfo,
     alternativeTitle,
     smallTitle,
-    headerTitleClass,
     menuRenderer,
     rightRenderer,
     isMenuOpen,
@@ -96,13 +95,9 @@ export const Header: FunctionComponent<Props & LocalProps> = observer(
               style={{ cursor: chainInfoChangable ? undefined : "default" }}
             >
               <div
-                className={classnames(
-                  style["title"],
-                  {
-                    [style["small"]]: smallTitle,
-                  },
-                  headerTitleClass
-                )}
+                className={classnames(style["title"], {
+                  [style["small"]]: smallTitle,
+                })}
               >
                 {showChainName
                   ? chainStore.current.chainName

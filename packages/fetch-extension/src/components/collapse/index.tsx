@@ -1,8 +1,8 @@
-import React, { FunctionComponent, PropsWithChildren, useState } from "react";
+import React, { FunctionComponent, useState } from "react";
 import styleCollapse from "./style.module.scss";
 import classNames from "classnames";
 
-interface Props extends PropsWithChildren {
+interface Props {
   title: string;
   count?: string;
 }

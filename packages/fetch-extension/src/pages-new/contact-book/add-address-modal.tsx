@@ -37,6 +37,7 @@ export const AddAddressModal: FunctionComponent<{
     const [name, setName] = useState("");
     const location = useLocation();
     const notification = useNotification();
+
     const chatSectionParams =
       (location.state as chatSectionParams) || defaultParamValues;
     useEffect(() => {
@@ -112,6 +113,7 @@ export const AddAddressModal: FunctionComponent<{
             onClick={async (e: any) => {
               e.preventDefault();
               e.stopPropagation();
+
               if (!recipientConfig.recipient) {
                 throw new Error("Invalid address");
               }

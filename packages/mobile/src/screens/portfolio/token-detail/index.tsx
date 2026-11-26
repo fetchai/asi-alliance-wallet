@@ -77,7 +77,8 @@ export const TokenDetail: FunctionComponent = observer(() => {
   useEffect(() => {
     if (tokenInfo?.coinGeckoId) {
       const fetchTokenImage = async () => {
-        const tokenImage = chainStore.current?.chainSymbolImageUrl;
+        const tokenImage =
+          chainStore.current?.["_chainInfo"]?.chainSymbolImageUrl;
         setTokenIcon(tokenImage);
       };
       fetchTokenImage();
@@ -88,7 +89,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       contentContainerStyle={style.flatten(["flex-grow-1"])}
       nestedScrollEnabled={false}
       style={{ overflow: "scroll" }}
@@ -114,9 +115,9 @@ export const TokenDetail: FunctionComponent = observer(() => {
                   borderRadius: 50,
                 }}
                 resizeMode={FastImage.resizeMode.contain}
-                source={
-                  typeof tokenIcon === "number" ? tokenIcon : { uri: tokenIcon }
-                }
+                source={{
+                  uri: tokenIcon,
+                }}
               />
             </View>
           ) : (
@@ -125,7 +126,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
                 <VectorCharacter
                   char={tokenInfo.coinDenom[0]}
                   height={Math.floor(size * 0.35)}
-                  color={style.flatten(["color-dark"]).color}
+                  color="white"
                 />
               }
               iconStyle={
@@ -134,8 +135,6 @@ export const TokenDetail: FunctionComponent = observer(() => {
                   `height-${size}`,
                   "items-center",
                   "justify-center",
-                  "background-color-gray-100",
-                  "border-radius-64",
                 ]) as ViewStyle
               }
             />
@@ -144,7 +143,7 @@ export const TokenDetail: FunctionComponent = observer(() => {
         <Text
           style={
             style.flatten([
-              "color-dark",
+              "color-gray-200",
               "h4",
               "margin-y-4",
               "text-center",
@@ -153,6 +152,25 @@ export const TokenDetail: FunctionComponent = observer(() => {
         >
           {tokenInfo.coinDenom}
         </Text>
+        {balances.balanceInUsd ? (
+          <View
+            style={
+              style.flatten([
+                "flex-row",
+                "margin-y-4",
+                "justify-center",
+              ]) as ViewStyle
+            }
+          >
+            <Text
+              style={
+                style.flatten(["color-white", "text-caption1"]) as ViewStyle
+              }
+            >
+              {balances.balanceInUsd}
+            </Text>
+          </View>
+        ) : null}
       </View>
       {tokenInfo.coinGeckoId ? (
         <TokenGraphSection
@@ -178,28 +196,25 @@ export const TokenDetail: FunctionComponent = observer(() => {
               ]) as ViewStyle
             }
           >
-            <Text style={style.flatten(["body1", "color-dark"]) as ViewStyle}>
+            <Text style={style.flatten(["body1", "color-white"]) as ViewStyle}>
               Activity
             </Text>
             {isFeatureAvailable(chainStore.current.chainId) && (
               <ChipButton
                 text="Filter"
-                icon={
-                  <FilterIcon color={style.flatten(["color-dark"]).color} />
-                }
+                icon={<FilterIcon />}
                 iconStyle={style.get("padding-top-2") as ViewStyle}
                 containerStyle={
                   style.flatten([
                     "border-width-1",
-                    "border-color-gray-100",
+                    "border-color-gray-300",
                     "width-90",
                   ]) as ViewStyle
                 }
-                textStyle={style.flatten(["color-dark"]) as ViewStyle}
                 backgroundBlur={false}
                 onPress={() => {
                   setIsOpenModal(true);
-                  analyticsStore.logEvent("activity_filter_click", {
+                  analyticsStore.logEvent("filter_click", {
                     pageName: "Token Detail",
                   });
                 }}

@@ -1,37 +1,44 @@
+import { KVStore } from "@keplr-wallet/common";
 import {
-  camelToSnake,
-  ObservableQueryMap,
-  ObservableQueryTendermint,
-} from "../../../common";
+  ObservableChainQuery,
+  ObservableChainQueryMap,
+} from "../../chain-query";
+import { ChainGetter } from "../../../common";
 import { ChannelResponse } from "./types";
-import { setupIbcExtension, IbcExtension } from "@cosmjs/stargate";
-import { QueryChannelResponse } from "cosmjs-types/ibc/core/channel/v1/query";
-import { QuerySharedContext } from "../../../common";
-import { ChainGetter } from "../../../chain";
+import { autorun } from "mobx";
 
-export class ObservableChainQueryIBCChannel extends ObservableQueryTendermint<ChannelResponse> {
+export class ObservableChainQueryIBCChannel extends ObservableChainQuery<ChannelResponse> {
   protected disposer?: () => void;
 
   constructor(
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly portId: string,
     protected readonly channelId: string
   ) {
-    const chainInfo = chainGetter.getChain(chainId);
     super(
-      sharedContext,
-      chainInfo.rpc,
-      async (queryClient) => {
-        const client = queryClient as unknown as IbcExtension;
-        const result = await client.ibc.channel.channel(portId, channelId);
-        const decodedResponse = QueryChannelResponse.toJSON(result);
-        return camelToSnake(decodedResponse) as ChannelResponse;
-      },
-      setupIbcExtension,
-      `/ibc/core/channel/v1/channels/${channelId}/ports/${portId}`
+      kvStore,
+      chainId,
+      chainGetter,
+      `/ibc/core/channel/v1beta1/channels/${channelId}/ports/${portId}`
     );
+  }
+
+  protected override onStart() {
+    super.onStart();
+
+    return new Promise<void>((resolve) => {
+      this.disposer = autorun(() => {
+        const chainInfo = this.chainGetter.getChain(this.chainId);
+        if (chainInfo.features && chainInfo.features.includes("ibc-go")) {
+          this.setUrl(
+            `/ibc/core/channel/v1/channels/${this.channelId}/ports/${this.portId}`
+          );
+        }
+        resolve();
+      });
+    });
   }
 
   protected override onStop() {
@@ -43,19 +50,19 @@ export class ObservableChainQueryIBCChannel extends ObservableQueryTendermint<Ch
   }
 }
 
-export class ObservableQueryIBCChannel extends ObservableQueryMap<ChannelResponse> {
+export class ObservableQueryIBCChannel extends ObservableChainQueryMap<ChannelResponse> {
   constructor(
-    sharedContext: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
+    protected override readonly kvStore: KVStore,
+    protected override readonly chainId: string,
+    protected override readonly chainGetter: ChainGetter
   ) {
-    super((key: string) => {
+    super(kvStore, chainId, chainGetter, (key: string) => {
       const params = JSON.parse(key);
 
       return new ObservableChainQueryIBCChannel(
-        sharedContext,
-        chainId,
-        chainGetter,
+        this.kvStore,
+        this.chainId,
+        this.chainGetter,
         params.portId,
         params.channelId
       );
@@ -66,9 +73,16 @@ export class ObservableQueryIBCChannel extends ObservableQueryMap<ChannelRespons
     return this.getChannel("transfer", channelId);
   }
 
-  getChannel(portId: string, channelId: string) {
+  getChannel(
+    portId: string,
+    channelId: string
+  ): ObservableChainQuery<ChannelResponse> {
     // Use key as the JSON encoded Object.
-    const key = JSON.stringify({ portId, channelId });
+    const key = JSON.stringify({
+      portId,
+      channelId,
+    });
+
     return this.get(key);
   }
 }

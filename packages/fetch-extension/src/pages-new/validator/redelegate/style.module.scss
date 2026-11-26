@@ -1,46 +1,26 @@
-@import "../../../styles/var";
-
 .redelegate-container {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  color: $font-dark;
+  color: white;
   font-weight: 600;
   font-size: 14px;
 }
 
 .current-stake {
+  border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
-  margin-top: 12px;
-
-  & .current-stake-label {
-    color: $font-secondary;
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 17.5px;
-    margin: 6px 0px;
-  }
-
-  & .current-stake-value {
-    display: flex;
-    align-items: center;
-    font-weight: 500;
-    color: $font-secondary;
-    line-height: 17.5px;
-    border-radius: 12px;
-    padding: 0px 12px;
-    background-color: $card-bg;
-    height: 45px;
-  }
+  padding: 12px;
+  align-items: center;
+  border-radius: 12px;
+  height: 45px;
 }
 
 .label {
   font-size: 14px;
   font-weight: 400;
   line-height: 24px;
-  color: $font-secondary;
 }
 
 .row-outer {
@@ -55,7 +35,7 @@
   font-size: 14px;
   display: flex;
   align-items: center;
-  background-color: $card-bg;
+  background-color: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
 
   .searchBox {
@@ -76,9 +56,9 @@
       background: transparent;
       border: none;
       outline: none;
-      color: $font-dark;
+      color: white;
       &::placeholder {
-        color: $font-secondary;
+        color: white;
         font-weight: 400;
       }
       flex-grow: 1;
@@ -96,20 +76,11 @@
   gap: 8px;
   align-self: stretch;
   border-radius: 100px;
-  border: 1px solid $bg-grey-dark;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(10px);
-  color: $font-secondary;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 14px;
   font-weight: 400;
-
-  .sort-by {
-    color: $font-secondary;
-    margin-left: 8px;
-  }
-
-  & > div {
-    color: $font-dark;
-  }
 }
 
 .choose-validator-outer-container {
@@ -126,30 +97,11 @@
   padding: 0 18px;
   border-radius: 12px;
   justify-content: space-between;
-  background-color: white;
-  border: 1px solid $border-grey;
-  color: $font-dark;
 }
 
 .choose-validator-heading {
-  color: $font-dark;
+  color: rgba(255, 255, 255, 1);
   font-size: 14px;
   font-weight: 400;
   line-height: 24px;
-}
-
-.fromValidatorInput {
-  height: 48px !important;
-  & > input {
-    font-size: 14px !important;
-    padding-left: 18px !important;
-  }
-}
-
-.loading-message {
-  height: 310px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: $font-secondary;
 }

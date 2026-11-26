@@ -4,7 +4,7 @@ import Svg, { Path } from "react-native-svg";
 export const HideEyeIcon: FunctionComponent<{
   size?: number;
   color?: any;
-}> = ({ size = 17, color = "#151a1a" }) => {
+}> = ({ size = 17, color = "white" }) => {
   return (
     <Svg
       width={size}

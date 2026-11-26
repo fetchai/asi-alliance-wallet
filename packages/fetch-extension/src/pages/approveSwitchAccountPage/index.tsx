@@ -1,5 +1,6 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { Button } from "reactstrap";
 
 import style from "./style.module.scss";
 import { EmptyLayout } from "@layouts/empty-layout";
@@ -8,13 +9,10 @@ import { useInteractionInfo } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
 import classNames from "classnames";
 import { useStore } from "../../stores";
-import { GetCosmosKeysForEachVaultSettledMsg } from "@keplr-wallet/background";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+import { ListAccountsMsg } from "@keplr-wallet/background";
 import { BACKGROUND_PORT } from "@keplr-wallet/router";
-import { ButtonV2 } from "@components-v2/buttons/button";
-import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
-import { isPureEvmChain } from "@utils/filters";
 
 export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
   () => {
@@ -28,7 +26,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
     } = useStore();
 
     const [isLoadingPlaceholder, setIsLoadingPlaceholder] = useState(true);
-    const [addressIndex, setAddressIndex] = useState<string>();
+    const [addressIndex, setAddressIndex] = useState<number>();
     const navigate = useNavigate();
 
     const interactionInfo = useInteractionInfo(() => {
@@ -40,21 +38,13 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
         if (accountSwitchStore.waitingSuggestedAccount) {
           // TODO: update event properties then change chainId below
           const requester = new InExtensionMessageRequester();
-          const msg = new GetCosmosKeysForEachVaultSettledMsg(
-            chainStore.current.chainId,
-            keyRingStore?.keyInfos.map((item) => item.id)
-          );
-          const settledResponse = await requester.sendMessage(
-            BACKGROUND_PORT,
-            msg
-          );
-          const accounts = settledResponse.map((item: any) => item.value);
+          const msg = new ListAccountsMsg();
+          const accounts = await requester.sendMessage(BACKGROUND_PORT, msg);
 
-          const current = chainStore.current;
-          const isEvm = isPureEvmChain(current);
+          const isEvm = chainStore.current.features?.includes("evm") ?? false;
           const addresses = accounts.map((account) => {
             if (isEvm) {
-              return account.ethereumHexAddress;
+              return account.EVMAddress;
             }
 
             return account.bech32Address;
@@ -67,7 +57,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
             );
           });
 
-          setAddressIndex(accounts[index]?.vaultId);
+          setAddressIndex(index);
           analyticsStore.logEvent("Account switch suggested", {
             chainId: accountSwitchStore.waitingSuggestedAccount.data.address,
           });
@@ -95,7 +85,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
     }
 
     return (
-      <EmptyLayout className={style["emptyLayout"]} style={{ height: "100%" }}>
+      <EmptyLayout style={{ height: "100%" }}>
         {isLoadingPlaceholder ? (
           <div className={style["container"]}>
             <div className={style["content"]}>
@@ -191,7 +181,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     <div className={style["imageBackground"]} />
                     <img
                       className={style["logoImage"]}
-                      src={require("@assets/png/White-black-circle.png")}
+                      src={require("@assets/logo-256.svg")}
                       alt="chain logo"
                     />
                   </div>
@@ -204,7 +194,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     <div className={style["imageBackground"]} />
                     <img
                       className={style["logoImage"]}
-                      src={require("@assets/png/White-black-circle.png")}
+                      src={require("../../public/assets/logo-256.svg")}
                       alt="keplr logo"
                     />
                   </div>
@@ -235,7 +225,7 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                   />
                 </div>
 
-                {addressIndex === "" && (
+                {addressIndex === -1 && (
                   <p>
                     Provided addresses not found in keyring. Nothing to Approve,
                     reject to close this window
@@ -244,14 +234,12 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
               </div>
             }
             <div className={style["buttons"]}>
-              <ButtonV2
-                styleProps={{
-                  padding: "10px",
-                  height: "40px",
-                  fontSize: "0.9rem",
-                }}
+              <Button
+                className={style["button"]}
+                color="danger"
+                outline
                 disabled={!accountSwitchStore.waitingSuggestedAccount}
-                dataLoading={accountSwitchStore.isLoading}
+                data-loading={accountSwitchStore.isLoading}
                 onClick={async (e: any) => {
                   e.preventDefault();
 
@@ -266,20 +254,17 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     navigate("/");
                   }
                 }}
-                text={<FormattedMessage id="chain.suggested.button.reject" />}
-              />
-              <ButtonV2
-                variant="dark"
-                styleProps={{
-                  padding: "10px",
-                  height: "40px",
-                  fontSize: "0.9rem",
-                }}
+              >
+                <FormattedMessage id="chain.suggested.button.reject" />
+              </Button>
+              <Button
+                className={style["button"]}
+                color="primary"
                 disabled={
                   !accountSwitchStore.waitingSuggestedAccount ||
-                  addressIndex === ""
+                  addressIndex === -1
                 }
-                dataLoading={accountSwitchStore.isLoading}
+                data-loading={accountSwitchStore.isLoading}
                 onClick={async (e: any) => {
                   e.preventDefault();
 
@@ -287,9 +272,9 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     accountSwitchStore.waitingSuggestedAccount?.data.address;
                   if (address !== undefined && addressIndex !== undefined) {
                     try {
-                      await accountSwitchStore.approve(address);
-                      await keyRingStore.selectKeyRing(addressIndex);
-                      analyticsStore.logEvent("change_wallet_click");
+                      accountSwitchStore.approve(address);
+                      keyRingStore.changeKeyRing(addressIndex);
+                      analyticsStore.logEvent("Account changed");
                       chatStore.userDetailsStore.resetUser();
                       proposalStore.resetProposals();
                       chatStore.messagesStore.resetChatList();
@@ -309,13 +294,14 @@ export const ApproveSwitchAccountByAddressPage: FunctionComponent = observer(
                     interactionInfo.interaction &&
                     !interactionInfo.interactionInternal
                   ) {
-                    handleExternalInteractionWithNoProceedNext();
+                    window.close();
                   } else {
                     navigate("/");
                   }
                 }}
-                text={<FormattedMessage id="chain.suggested.button.approve" />}
-              />
+              >
+                <FormattedMessage id="chain.suggested.button.approve" />
+              </Button>
             </div>
           </div>
         )}

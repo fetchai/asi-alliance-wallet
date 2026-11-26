@@ -52,7 +52,6 @@ export const HomeScreen: FunctionComponent = observer(() => {
     useStore();
 
   const [tokenState, setTokenState] = useState({
-    percentageDiff: 0,
     diff: 0,
     time: "TODAY",
     type: "positive",
@@ -83,9 +82,6 @@ export const HomeScreen: FunctionComponent = observer(() => {
     activityStore.getAddress !== account.bech32Address ||
     activityStore.getChainId !== chainStore.current.chainId;
 
-  const pendingTxnCount = Object.keys(activityStore.getPendingTxn).length;
-  const previousPendingTxnCount = usePrevious(pendingTxnCount);
-
   async function fetchAppVersion(): Promise<UpdateData | undefined> {
     try {
       const apiUrl =
@@ -109,6 +105,44 @@ export const HomeScreen: FunctionComponent = observer(() => {
     }
   }, [chainStore, chainStoreIsInitializing, currentChainId]);
 
+  useEffect(() => {
+    const appStateHandler = (state: AppStateStatus) => {
+      if (state === "active") {
+        checkAndUpdateChainInfo();
+      }
+    };
+
+    const callback = AppState.addEventListener("change", appStateHandler);
+
+    return () => {
+      callback.remove();
+    };
+  }, [checkAndUpdateChainInfo]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (
+        (chainStoreIsInitializing !== previousChainStoreIsInitializing &&
+          !chainStoreIsInitializing) ||
+        currentChainId !== previousChainId
+      ) {
+        checkAndUpdateChainInfo();
+      }
+    }, [
+      chainStoreIsInitializing,
+      previousChainStoreIsInitializing,
+      currentChainId,
+      previousChainId,
+      checkAndUpdateChainInfo,
+    ])
+  );
+
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0 });
+    }
+  }, [chainStore.current.chainId]);
+
   const onRefresh = React.useCallback(
     async (isLoading: boolean) => {
       // Because the components share the states related to the queries,
@@ -131,74 +165,12 @@ export const HomeScreen: FunctionComponent = observer(() => {
         queries.cosmos.queryUnbondingDelegations
           .getQueryBech32Address(account.bech32Address)
           .waitFreshResponse(),
-        queries.cosmos.querySpendableBalances
-          .getQueryBech32Address(account.bech32Address)
-          .waitFreshResponse(),
       ]).finally(() => {
         setRefreshing(false);
       });
     },
-    [account, queries, priceStore]
+    [accountStore, chainStore, priceStore, queriesStore]
   );
-
-  useEffect(() => {
-    const appStateHandler = (state: AppStateStatus) => {
-      if (state === "active") {
-        checkAndUpdateChainInfo();
-        onRefresh(false);
-      }
-    };
-
-    const callback = AppState.addEventListener("change", appStateHandler);
-
-    return () => {
-      callback.remove();
-    };
-  }, [checkAndUpdateChainInfo, onRefresh]);
-
-  // Refresh when a pending transaction is confirmed
-  useEffect(() => {
-    if (
-      previousPendingTxnCount !== undefined &&
-      pendingTxnCount < previousPendingTxnCount
-    ) {
-      onRefresh(false);
-    }
-  }, [pendingTxnCount]);
-
-  const isMounted = useRef(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (
-        (chainStoreIsInitializing !== previousChainStoreIsInitializing &&
-          !chainStoreIsInitializing) ||
-        currentChainId !== previousChainId
-      ) {
-        checkAndUpdateChainInfo();
-      }
-
-      // Refresh balances when user navigates back to the home screen
-      if (isMounted.current) {
-        onRefresh(false);
-      } else {
-        isMounted.current = true;
-      }
-    }, [
-      chainStoreIsInitializing,
-      previousChainStoreIsInitializing,
-      currentChainId,
-      previousChainId,
-      checkAndUpdateChainInfo,
-      onRefresh,
-    ])
-  );
-
-  useEffect(() => {
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ y: 0 });
-    }
-  }, [chainStore.current.chainId]);
 
   function autoRefreshBalances(isLoading: boolean) {
     if (intervalRef.current) {
@@ -219,7 +191,7 @@ export const HomeScreen: FunctionComponent = observer(() => {
   /// 30 sec Auto-Refresh balances
   useEffect(() => {
     autoRefreshBalances(false);
-  }, [chainStore.current.chainId, account.bech32Address]);
+  }, [chainStore.current.chainId]);
 
   /// Hide Refreshing when tab change
   useEffect(() => {
@@ -268,18 +240,23 @@ export const HomeScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollViewInBottomTabView
-      backgroundMode={"secondary"}
+      backgroundMode={"image"}
+      isTransparentHeader={true}
       refreshControl={
         <RefreshControl
-          tintColor={"black"}
+          tintColor={"white"}
           refreshing={refreshing}
           onRefresh={() => autoRefreshBalances(true)}
-          progressViewOffset={Platform.OS === "ios" ? safeAreaInsets.top : 16}
+          progressViewOffset={
+            Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48
+          }
         />
       }
       contentContainerStyle={[
         style.get("flex-grow-1"),
-        { paddingTop: safeAreaInsets.top + 16 },
+        {
+          paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
+        },
       ]}
       containerStyle={style.flatten(["overflow-scroll"]) as ViewStyle}
       ref={scrollViewRef}

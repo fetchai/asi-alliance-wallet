@@ -4,7 +4,6 @@ import { useStyle } from "styles/index";
 import { CheckIcon } from "components/icon";
 import { Button } from "components/button";
 import * as Clipboard from "expo-clipboard";
-import Toast from "react-native-toast-message";
 import { PageWithScrollView } from "components/page";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { useSimpleTimer } from "hooks/use-simple-timer";
@@ -27,7 +26,6 @@ export const canShowPrivateData = (keyRingType: string): boolean => {
   return (
     keyRingType === "mnemonic" ||
     keyRingType === "privateKey" ||
-    keyRingType === "private-key" ||
     keyRingType === "ledger"
   );
 };
@@ -77,12 +75,12 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
             "items-center",
             "border-radius-64",
             "border-width-1",
-            "border-color-gray-100",
+            "border-color-white@40%",
           ]) as ViewStyle
         }
       >
         <Text
-          style={style.flatten(["text-caption2", "color-dark"]) as ViewStyle}
+          style={style.flatten(["text-caption2", "color-white"]) as ViewStyle}
         >
           {item}
         </Text>
@@ -92,20 +90,18 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
-      hasFloatingHeader={true}
+      backgroundMode="image"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
       <BlurBackground
         borderRadius={12}
-        backgroundBlur={false}
+        blurIntensity={10}
         containerStyle={
           style.flatten([
             "margin-top-24",
             "padding-x-16",
             "padding-y-24",
-            "background-color-gray-5",
           ]) as ViewStyle
         }
       >
@@ -126,7 +122,7 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                     style.flatten([
                       "h4",
                       "margin-bottom-8",
-                      "color-dark",
+                      "color-white",
                       "text-center",
                       "width-full",
                     ]) as ViewStyle
@@ -140,7 +136,7 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                   style.flatten([
                     "h6",
                     "margin-bottom-30",
-                    "color-dark",
+                    "color-white",
                   ]) as ViewStyle
                 }
               >
@@ -151,17 +147,17 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
         </View>
         <View style={style.flatten(["width-full"]) as ViewStyle}>
           <Button
-            mode="fill"
+            mode="outline"
             containerStyle={
               style.flatten(
-                ["border-radius-32", "margin-top-38", "background-color-dark"],
-                [isTimedOut && "background-color-vibrant-green-500"]
+                ["border-radius-32", "margin-top-38", "border-color-white@40%"],
+                [isTimedOut && "border-color-green-400"]
               ) as ViewStyle
             }
             textStyle={
               style.flatten(
                 ["text-button1", "color-white"],
-                [isTimedOut && "color-white"]
+                [isTimedOut && "color-green-400"]
               ) as ViewStyle
             }
             {...(isTimedOut && {
@@ -171,19 +167,12 @@ export const ViewPrivateDataScreen: FunctionComponent = () => {
                 </View>
               ),
             })}
-            text="Copy to Clipboard"
+            text="Copy to clipboard"
             onPress={async () => {
               await Clipboard.setStringAsync(
                 privateDataType === "ledger" ? words["cosmos"] : words.join(" ")
               );
               setTimer(3000);
-              Toast.show({
-                type: "success",
-                text1:
-                  privateDataType === "mnemonic"
-                    ? "Mnemonic Seed Copied"
-                    : "Private Key Copied",
-              });
             }}
           />
         </View>

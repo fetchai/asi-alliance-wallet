@@ -12,7 +12,7 @@ const ValidatorData = ({ label, value }: { label: string; value: any }) => {
     <div className={style["validator-data"]}>
       <div
         style={{
-          color: "var(--font-secondary)",
+          color: "rgba(255,255,255,0.6)",
           fontWeight: 400,
         }}
       >
@@ -66,7 +66,7 @@ export const ValidatorCardV2 = observer(
     const votingPower =
       validator &&
       new CoinPretty(
-        chainStore.current?.stakeCurrency || chainStore.current.currencies[0],
+        chainStore.current.stakeCurrency,
         new Dec(validator?.tokens)
       )
         .maxDecimals(0)
@@ -78,7 +78,7 @@ export const ValidatorCardV2 = observer(
           marginBottom: "6px",
           paddingTop: "18px",
           paddingBottom: "18px",
-          background: selected ? "var(--bg-green-light)" : "",
+          background: selected ? "#5F38FB" : "",
         }}
         onClick={onClick}
       >
@@ -94,7 +94,17 @@ export const ValidatorCardV2 = observer(
               {thumbnail ? (
                 <img src={thumbnail} alt={"validator"} />
               ) : (
-                <div className={style["validator-avatar"]}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    background: "rgba(255, 255, 255, 0.1)",
+                  }}
+                >
                   {validator.description.moniker?.toString()[0].toUpperCase()}
                 </div>
               )}

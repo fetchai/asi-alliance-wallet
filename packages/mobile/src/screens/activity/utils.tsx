@@ -29,9 +29,9 @@ export const txOptions: FilterItem[] = [
     icon: (
       <UpDownArrowIcon
         size={14}
-        color1={"#151a1a"}
-        color2={"#151a1a"}
-        color3={"#151a1a"}
+        color1={"white"}
+        color2={"white"}
+        color3={"white"}
       />
     ),
     title: "Funds transfers",
@@ -39,38 +39,38 @@ export const txOptions: FilterItem[] = [
     isSelected: true,
   },
   {
-    icon: <StakeIcon size={14} color="#151a1a" />,
+    icon: <StakeIcon size={14} />,
     title: "Staked Funds",
     value: "/cosmos.staking.v1beta1.MsgDelegate",
     isSelected: true,
   },
   {
-    icon: <UnstakedIcon color="#151a1a" />,
+    icon: <UnstakedIcon />,
     title: "Unstaked Funds",
     value: "/cosmos.staking.v1beta1.MsgUndelegate",
     isSelected: true,
   },
   {
-    icon: <EditIcon color="#151a1a" />,
+    icon: <EditIcon />,
     title: "Redelegate Funds",
     value: "/cosmos.staking.v1beta1.MsgBeginRedelegate",
     isSelected: true,
   },
   {
-    icon: <LeftRightCrossIcon size={20} color="#151a1a" />,
+    icon: <LeftRightCrossIcon size={20} />,
     title: "Contract Interactions",
     value:
       "/cosmos.authz.v1beta1.MsgExec,/cosmwasm.wasm.v1.MsgExecuteContract,/cosmos.authz.v1beta1.MsgRevoke",
     isSelected: true,
   },
   {
-    icon: <ClaimIcon color="#151a1a" />,
+    icon: <ClaimIcon />,
     title: "Claim Rewards",
     value: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
     isSelected: true,
   },
   {
-    icon: <IbcUpDownIcon size={20} color="#151a1a" />,
+    icon: <IbcUpDownIcon size={20} />,
     title: "IBC transfers",
     value: "/ibc.applications.transfer.v1.MsgTransfer",
     isSelected: true,

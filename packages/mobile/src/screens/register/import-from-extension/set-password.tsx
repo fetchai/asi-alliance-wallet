@@ -1,7 +1,7 @@
-import React, { FunctionComponent, useCallback, useState } from "react";
-import { RouteProp, useFocusEffect, useRoute } from "@react-navigation/native";
+import React, { FunctionComponent, useState } from "react";
+import { RouteProp, useRoute } from "@react-navigation/native";
 import { PageWithScrollView } from "components/page";
-import { Text, View, ViewStyle } from "react-native";
+import { View, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { Button } from "components/button";
 import { useSmartNavigation } from "navigation/smart-navigation";
@@ -25,7 +25,6 @@ import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import { PasswordValidateView } from "components/new/password-validate/password-validate";
 import { XmarkIcon } from "components/new/icon/xmark";
 import { CheckIcon } from "components/new/icon/check";
-import { restoreAndroidStatusBarAfterCamera } from "utils/android-status-bar";
 
 interface FormData {
   password: string;
@@ -33,7 +32,7 @@ interface FormData {
 }
 
 export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
-  const { chainStore, keyRingStore, analyticsStore } = useStore();
+  const { chainStore, keyRingStore } = useStore();
 
   const [addressBookConfigMap] = useState(
     () => new AddressBookConfigMap(new AsyncKVStore("address_book"), chainStore)
@@ -56,15 +55,6 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
   const smartNavigation = useSmartNavigation();
 
   const style = useStyle();
-
-  // Camera may re-apply black status-bar chrome after navigate; restore on focus.
-  useFocusEffect(
-    useCallback(() => {
-      restoreAndroidStatusBarAfterCamera();
-      const t = setTimeout(() => restoreAndroidStatusBarAfterCamera(), 50);
-      return () => clearTimeout(t);
-    }, [])
-  );
 
   const [isCreating, setIsCreating] = useState(false);
 
@@ -95,9 +85,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
         addressBookConfigMap,
         route.params.addressBooks
       );
-      analyticsStore.logEvent("register_done_click", {
-        pageName: "Register",
-      });
+
       smartNavigation.reset({
         index: 0,
         routes: [
@@ -144,33 +132,10 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
-      <Text
-        style={
-          style.flatten([
-            "h1",
-            "color-black",
-            "margin-y-10",
-            "font-medium",
-          ]) as ViewStyle
-        }
-      >
-        Create wallet password
-      </Text>
-      <Text
-        style={
-          style.flatten([
-            "body2",
-            "color-gray-400",
-            "margin-bottom-18",
-          ]) as ViewStyle
-        }
-      >
-        To keep your account safe, avoid any personal information or words
-      </Text>
       <Controller
         control={control}
         rules={{
@@ -186,8 +151,6 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
           return (
             <InputCardView
               label="Password"
-              labelStyle={style.flatten(["color-gray-300"]) as ViewStyle}
-              inputStyle={style.flatten(["color-black"]) as ViewStyle}
               keyboardType={"default"}
               secureTextEntry={!showPassword}
               returnKeyType="next"
@@ -203,7 +166,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
               rightIcon={
                 !showPassword ? (
                   <IconButton
-                    icon={<EyeIcon color="black" />}
+                    icon={<EyeIcon />}
                     backgroundBlur={false}
                     onPress={() => {
                       setShowPassword(!showPassword);
@@ -211,7 +174,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
                   />
                 ) : (
                   <IconButton
-                    icon={<HideEyeIcon color="black" />}
+                    icon={<HideEyeIcon />}
                     backgroundBlur={false}
                     onPress={() => {
                       setShowPassword(!showPassword);
@@ -335,13 +298,7 @@ export const ImportFromExtensionSetPasswordScreen: FunctionComponent = () => {
           setShowPassword(false);
           submit();
         }}
-        containerStyle={
-          style.flatten([
-            "border-radius-32",
-            "background-color-dark",
-          ]) as ViewStyle
-        }
-        textStyle={style.flatten(["color-white"]) as ViewStyle}
+        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
       />
       {/* Mock element for bottom padding */}
       <View style={style.flatten(["height-page-pad"]) as ViewStyle} />

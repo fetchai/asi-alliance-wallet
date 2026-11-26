@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useRef, useState } from "react";
+import React, { FunctionComponent, useState } from "react";
 import { FullScreenCameraView } from "components/camera";
 import { useSmartNavigation } from "navigation/smart-navigation";
 import { useStore } from "stores/index";
@@ -15,8 +15,8 @@ import {
   registerExportedKeyRingDatas,
 } from "utils/import-from-extension";
 import { AsyncKVStore } from "../../../common";
-import { BarcodeScanningResult } from "expo-camera";
-import { restoreAndroidStatusBarAfterCamera } from "utils/android-status-bar";
+import { BarCodeScanner } from "expo-barcode-scanner";
+import { CameraType } from "expo-camera/src/Camera.types";
 
 export * from "./intro";
 export * from "./set-password";
@@ -62,17 +62,15 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
   const smartNavigation = useSmartNavigation();
 
   const [isLoading, setIsLoading] = useState(false);
-  const isLoadingRef = useRef(false);
 
-  const onBarcodeScanned = async ({ data }: { data: string }) => {
-    if (isLoadingRef.current) {
+  const onBarCodeScanned = async ({ data }: { data: string }) => {
+    if (isLoading) {
       return;
     }
 
     try {
       const sharedData = parseQRCodeDataForImportFromExtension(data);
 
-      isLoadingRef.current = true;
       setIsLoading(true);
 
       const imported = await importFromExtension(
@@ -84,14 +82,7 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
         accountType: imported.KeyRingDatas[0].type,
       });
 
-      analyticsStore.logEvent("register_done_click", {
-        pageName: "Register",
-      });
-
-      // Undo CameraView's Android status-bar chrome before leaving this screen.
-      restoreAndroidStatusBarAfterCamera();
-
-      if (keyRingStore.keyInfos.length > 0) {
+      if (keyRingStore.multiKeyStoreInfo.length > 0) {
         // If already has accounts,
         await registerExportedKeyRingDatas(
           keyRingStore,
@@ -128,26 +119,18 @@ export const ImportFromExtensionScreen: FunctionComponent = () => {
       }
     } catch (e) {
       console.log(e);
-      isLoadingRef.current = false;
       setIsLoading(false);
-      // Progress errors from animated QR frame collection are expected — stay on camera
-      const msg = e?.message ?? "";
-      if (
-        msg.startsWith("Scanning QR:") ||
-        msg.startsWith("Waiting for QR frame 0")
-      ) {
-        return;
-      }
       smartNavigation.goBack();
     }
   };
 
   return (
     <FullScreenCameraView
-      barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-      onBarcodeScanned={(scanningResult: BarcodeScanningResult) =>
-        onBarcodeScanned(scanningResult)
-      }
+      type={CameraType.back}
+      barCodeScannerSettings={{
+        barCodeTypes: [BarCodeScanner.Constants.BarCodeType.qr],
+      }}
+      onBarCodeScanned={onBarCodeScanned}
       scannerBottomText={
         "Connect to ASI Alliance Wallet\nbrowser extension by scanning a QR code"
       }

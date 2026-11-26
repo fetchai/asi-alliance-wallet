@@ -51,8 +51,8 @@ export const StakeView: FunctionComponent = observer(() => {
 
         let gas: number;
         try {
-          analyticsStore.logEvent("claim_all_staking_reward_click", {
-            pageName: "Home",
+          analyticsStore.logEvent("claim_click", {
+            pageName: "Home Tab",
           });
           // Gas adjustment is 1.5
           // Since there is currently no convenient way to adjust the gas adjustment on the UI,

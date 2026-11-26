@@ -7,18 +7,13 @@ import {
 
 import delay from "delay";
 
-import { APP_PORT, Env, KeplrError as WalletError } from "@keplr-wallet/router";
+import { APP_PORT, Env } from "@keplr-wallet/router";
 import { BIP44HDPath } from "../keyring";
 import { KVStore } from "@keplr-wallet/common";
 import { InteractionService } from "../interaction";
 import { LedgerOptions } from "./options";
 import { Buffer } from "buffer/";
 import { EthSignType } from "@keplr-wallet/types";
-import {
-  ErrFailedInit,
-  ErrModuleLedgerSign,
-  ErrPublicKeyUnmatched,
-} from "./types";
 
 export class LedgerService {
   private previousInitAborter: ((e: Error) => void) | undefined;
@@ -34,7 +29,6 @@ export class LedgerService {
     this.options = {
       defaultMode: options.defaultMode || "webusb",
       transportIniters: options.transportIniters ?? {},
-      platform: options.platform || "extension",
     };
 
     if (!this.options.transportIniters["webusb"]) {
@@ -53,8 +47,8 @@ export class LedgerService {
     env: Env,
     ledgerApp: LedgerApp,
     cosmosLikeApp: string = "Cosmos"
-  ): Promise<Uint8Array> {
-    return await this.getPublicKey(
+  ): Promise<void> {
+    await this.getPublicKey(
       env,
       ledgerApp,
       {
@@ -79,9 +73,6 @@ export class LedgerService {
         try {
           // Specific apps only support each coin type for app.
           return await ledger.getPublicKey(ledgerApp, bip44HDPath);
-        } catch (e) {
-          console.log(e);
-          throw e;
         } finally {
           // Notify UI Ledger pubkey derivation succeeded only when Ledger initialization is tried again.
           if (retryCount > 0) {
@@ -119,11 +110,7 @@ export class LedgerService {
             Buffer.from(expectedPubKey).toString("hex") !==
             Buffer.from(pubKey).toString("hex")
           ) {
-            throw new WalletError(
-              ErrModuleLedgerSign,
-              ErrPublicKeyUnmatched,
-              "Unmatched public key"
-            );
+            throw new Error("Unmatched public key");
           }
           // Cosmos App on Ledger doesn't support the coin type other than 118.
           const signature: Uint8Array = await ledger.sign(bip44HDPath, message);
@@ -181,11 +168,7 @@ export class LedgerService {
             Buffer.from(expectedPubKey).toString("hex") !==
             Buffer.from(pubKey).toString("hex")
           ) {
-            throw new WalletError(
-              ErrModuleLedgerSign,
-              ErrPublicKeyUnmatched,
-              "Unmatched public key"
-            );
+            throw new Error("Unmatched public key");
           }
           const signature = await ledger.signEthereum(
             bip44HDPath,
@@ -230,10 +213,7 @@ export class LedgerService {
   ): Promise<T> {
     let ledger: { ledger: Ledger; retryCount: number } | undefined;
     try {
-      ledger =
-        this.options.platform === "extension"
-          ? await this.initLedger(env, ledgerApp, cosmosLikeApp)
-          : await this.initLedgerMobile(env, ledgerApp, cosmosLikeApp);
+      ledger = await this.initLedger(env, ledgerApp, cosmosLikeApp);
       return await fn(ledger.ledger, ledger.retryCount);
     } finally {
       if (ledger) {
@@ -243,51 +223,6 @@ export class LedgerService {
   }
 
   async initLedger(
-    env: Env,
-    ledgerApp: LedgerApp,
-    cosmosLikeApp: string = "Cosmos"
-  ): Promise<{ ledger: Ledger; retryCount: number }> {
-    const retryCount = 0;
-    while (true) {
-      const mode = await this.getMode();
-      try {
-        const transportIniter = this.options.transportIniters[mode];
-        if (!transportIniter) {
-          throw new WalletError(
-            ErrModuleLedgerSign,
-            ErrFailedInit,
-            `Unknown mode: ${mode}`
-          );
-        }
-
-        const ledger = await Ledger.init(
-          transportIniter,
-          undefined,
-          ledgerApp,
-          cosmosLikeApp
-        );
-        return {
-          ledger,
-          retryCount,
-        };
-      } catch (e) {
-        this.interactionService.dispatchEventAndData(
-          env,
-          APP_PORT,
-          "ledger-init",
-          {
-            event: "init-failed",
-            ledgerApp,
-            cosmosLikeApp,
-          }
-        );
-
-        throw e;
-      }
-    }
-  }
-
-  async initLedgerMobile(
     env: Env,
     ledgerApp: LedgerApp,
     cosmosLikeApp: string = "Cosmos"
@@ -343,7 +278,7 @@ export class LedgerService {
           retryCount,
         };
       } catch (e) {
-        console.log("Mobile-Ledger:Error", e);
+        console.log(e);
 
         const timeoutAbortController = new AbortController();
 
@@ -359,11 +294,11 @@ export class LedgerService {
                   ledgerApp,
                   mode,
                   cosmosLikeApp,
+                },
+                {
+                  forceOpenWindow: false,
+                  channel: "ledger",
                 }
-                // {
-                //   forceOpenWindow: false,
-                //   channel: "ledger",
-                // }
               )) as
                 | {
                     abort?: boolean;
@@ -408,6 +343,11 @@ export class LedgerService {
 
           promises.push(aborter.wait());
 
+          // Check that the Ledger Popup is opened only if the environment is extension.
+          if (typeof browser !== "undefined") {
+            promises.push(this.testLedgerGrantUIOpened());
+          }
+
           await Promise.race(promises);
         } finally {
           timeoutAbortController.abort();
@@ -415,6 +355,36 @@ export class LedgerService {
       }
 
       retryCount++;
+    }
+  }
+
+  // Test that the exntesion's granting ledger page is opened.
+  async testLedgerGrantUIOpened() {
+    await delay(1000);
+
+    while (true) {
+      try {
+        const views = browser.extension.getViews();
+        let find = false;
+        for (const view of views) {
+          if (
+            view.location.href.includes(
+              browser.runtime.getURL("popup.html#/ledger-grant")
+            )
+          ) {
+            find = true;
+            break;
+          }
+        }
+
+        if (!find) {
+          throw new Error("Ledger init aborted");
+        }
+      } catch (e) {
+        console.log("testLedgerGrantUIOpened:error", e);
+      }
+
+      await delay(1000);
     }
   }
 

@@ -1,7 +1,19 @@
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { observer } from "mobx-react-lite";
 import { useStore } from "stores/index";
-import { StyleSheet, Switch, Text, View, ViewStyle } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  ViewStyle,
+} from "react-native";
 import { useStyle } from "styles/index";
 import FastImage from "react-native-fast-image";
 import { VectorCharacter } from "components/vector-character";
@@ -16,34 +28,47 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
   const { chainStore } = useStore();
   const style = useStyle();
 
+  const isTestnetEnabled = useCallback(() => {
+    const testnetList = chainStore.chainInfosWithUIConfig.filter(
+      (item) => item.chainInfo.isTestnet
+    );
+    const testnetDisabledList = testnetList.filter((item) => !item.disabled);
+    return testnetList.length === testnetDisabledList.length;
+  }, [chainStore.chainInfosWithUIConfig]);
+
+  const [isEnabled, setIsEnabled] = useState(isTestnetEnabled);
   const [search, setSearch] = useState("");
   const [filterChainInfos, setFilterChainInfos] = useState(
     chainStore.chainInfosWithUIConfig
   );
 
   useEffect(() => {
+    setIsEnabled(isTestnetEnabled);
+  }, [isTestnetEnabled]);
+
+  useEffect(() => {
     const searchTrim = search.trim();
     const newChainInfos = chainStore.chainInfosWithUIConfig.filter(
       (chainInfoUI) => {
-        if (!chainStore.showTestnet && chainInfoUI.chainInfo.isTestnet) {
-          return false;
-        }
         return chainInfoUI.chainInfo.chainName
           .toLowerCase()
           .includes(searchTrim.toLowerCase());
       }
     );
     setFilterChainInfos(newChainInfos);
-  }, [chainStore.chainInfosWithUIConfig, chainStore.showTestnet, search]);
+  }, [chainStore.chainInfosWithUIConfig, search]);
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
-      contentContainerStyle={StyleSheet.flatten([
-        style.flatten(["flex-grow-1"]),
-        filterChainInfos.length === 0 ? { height: "100%" as const } : null,
-      ])}
-      hasFloatingHeader={true}
+      backgroundMode="image"
+      contentContainerStyle={
+        [
+          style.flatten(["flex-grow-1"]),
+          {
+            height: filterChainInfos.length === 0 ? "100%" : undefined,
+          },
+        ] as ViewStyle
+      }
       style={style.flatten(["padding-x-page", "padding-y-page"]) as ViewStyle}
     >
       <View
@@ -60,7 +85,7 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
           style={StyleSheet.flatten([
             style.flatten([
               "body3",
-              "color-dark",
+              "color-platinum-100",
               "margin-right-18",
             ]) as ViewStyle,
           ])}
@@ -69,25 +94,58 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
         </Text>
         <Switch
           trackColor={{
-            false: "#DCDCE3",
-            true: "#DCDCE3",
+            false: "#767577",
+            true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
           }}
-          thumbColor={chainStore.showTestnet ? "#73A271" : "#9A9AA2"}
+          thumbColor={isEnabled ? "#5F38FB" : "#D0BCFF66"}
+          style={[
+            {
+              borderRadius: 16,
+              borderWidth: 1,
+              // transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
+            },
+            style.flatten(["border-color-pink-light@40%"]),
+          ]}
           onValueChange={(isToggleOn) => {
-            chainStore.toggleShowTestnet(isToggleOn);
+            chainStore.toggleMultipleChainInfoInUI(
+              filterChainInfos
+                .filter((chainInfoUI) => {
+                  return chainInfoUI.chainInfo.isTestnet;
+                })
+                .map((chainInfoUI) => chainInfoUI.chainInfo.chainId),
+              isToggleOn
+            );
+            setIsEnabled(isToggleOn);
           }}
-          value={chainStore.showTestnet}
+          value={isEnabled}
         />
       </View>
       <InputCardView
         placeholder="Search"
+        placeholderTextColor={"white"}
         value={search}
         onChangeText={(text: string) => {
           setSearch(text);
         }}
-        rightIcon={<SearchIcon size={12} color="black" />}
+        rightIcon={<SearchIcon size={12} />}
         containerStyle={style.flatten(["margin-bottom-24"]) as ViewStyle}
       />
+      {/* <FlatList
+        renderItem={({ item }) => <SettingChainListScreenElement {...item} />}
+        keyExtractor={(item) => item.key}
+        data={chainStore.chainInfosWithUIConfig.map((chainInfoUI, index) => {
+          return {
+            key: chainInfoUI.chainInfo.chainId,
+            isFirst: index === 0,
+            isLast: index === chainStore.chainInfosWithUIConfig.length - 1,
+            chainId: chainInfoUI.chainInfo.chainId,
+            chainName: chainInfoUI.chainInfo.chainName,
+            chainSymbolImageUrl: chainInfoUI.chainInfo.raw.chainSymbolImageUrl,
+            disabled: chainInfoUI.disabled,
+          };
+        })}
+        scrollEnabled={false}
+      /> */}
       {filterChainInfos.length === 0 ? (
         <EmptyView />
       ) : (
@@ -96,10 +154,12 @@ export const SettingChainListScreen: FunctionComponent = observer(() => {
             <SettingChainListScreenElement
               key={chainInfoUI.chainInfo.chainId}
               isFirst={index === 0}
-              isLast={index === filterChainInfos.length - 1}
+              isLast={index === chainStore.chainInfosWithUIConfig.length - 1}
               chainId={chainInfoUI.chainInfo.chainId}
               chainName={chainInfoUI.chainInfo.chainName}
-              chainSymbolImageUrl={chainInfoUI.chainInfo.chainSymbolImageUrl}
+              chainSymbolImageUrl={
+                chainInfoUI.chainInfo.raw.chainSymbolImageUrl
+              }
               disabled={chainInfoUI.disabled}
             />
           );
@@ -125,7 +185,7 @@ export const SettingChainListScreenElement: FunctionComponent<{
 
   return (
     <BlurBackground
-      backgroundBlur={false}
+      blurIntensity={15}
       borderRadius={12}
       containerStyle={
         style.flatten([
@@ -134,24 +194,20 @@ export const SettingChainListScreenElement: FunctionComponent<{
           "items-center",
           "margin-y-2",
           "padding-x-12",
-          "background-color-gray-5",
         ]) as ViewStyle
       }
     >
       <BlurBackground
-        backgroundBlur={false}
+        backgroundBlur={true}
         containerStyle={
-          {
-            ...style.flatten([
-              "width-32",
-              "height-32",
-              "border-radius-64",
-              "items-center",
-              "justify-center",
-              "margin-right-12",
-            ]),
-            backgroundColor: "#dddfdf",
-          } as ViewStyle
+          style.flatten([
+            "width-32",
+            "height-32",
+            "border-radius-64",
+            "items-center",
+            "justify-center",
+            "margin-right-12",
+          ]) as ViewStyle
         }
       >
         {chainSymbolImageUrl ? (
@@ -161,18 +217,16 @@ export const SettingChainListScreenElement: FunctionComponent<{
               height: 22,
             }}
             resizeMode={FastImage.resizeMode.contain}
-            source={
-              typeof chainSymbolImageUrl === "number"
-                ? chainSymbolImageUrl
-                : { uri: chainSymbolImageUrl }
-            }
+            source={{
+              uri: chainSymbolImageUrl,
+            }}
           />
         ) : (
-          <VectorCharacter char={chainName[0]} color="#151a1a" height={15} />
+          <VectorCharacter char={chainName[0]} color="white" height={15} />
         )}
       </BlurBackground>
       <View style={style.flatten(["justify-center"]) as ViewStyle}>
-        <Text style={style.flatten(["subtitle3", "color-dark"]) as ViewStyle}>
+        <Text style={style.flatten(["subtitle3", "color-white"]) as ViewStyle}>
           {titleCase(chainName)}
         </Text>
       </View>
@@ -180,10 +234,18 @@ export const SettingChainListScreenElement: FunctionComponent<{
       <View>
         <Switch
           trackColor={{
-            false: "#DCDCE3",
-            true: "#DCDCE3",
+            false: "#767577",
+            true: Platform.OS === "ios" ? "#ffffff00" : "#767577",
           }}
-          thumbColor={!disabled ? "#73A271" : "#9A9AA2"}
+          thumbColor={!disabled ? "#5F38FB" : "#D0BCFF66"}
+          style={[
+            {
+              borderRadius: 16,
+              borderWidth: 1,
+              // transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
+            },
+            style.flatten(["border-color-pink-light@40%"]),
+          ]}
           onValueChange={(_) => {
             chainStore.toggleChainInfoInUI(chainId);
           }}

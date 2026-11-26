@@ -37,14 +37,8 @@ export const ManageAddressCardModel: FunctionComponent<{
       <View style={style.flatten([]) as ViewStyle}>
         <BlurBackground
           borderRadius={12}
-          backgroundBlur={false}
-          blurIntensity={0}
-          containerStyle={
-            [
-              style.flatten(["margin-bottom-6"]),
-              { backgroundColor: "#f6f6f6" },
-            ] as ViewStyle
-          }
+          blurIntensity={15}
+          containerStyle={style.flatten(["margin-bottom-6"]) as ViewStyle}
         >
           <RectButton
             onPress={() => {
@@ -52,7 +46,7 @@ export const ManageAddressCardModel: FunctionComponent<{
             }}
             style={style.flatten(["border-radius-12"]) as ViewStyle}
             activeOpacity={0.5}
-            underlayColor={"#e0e0e0"}
+            underlayColor={style.flatten(["color-gray-50"]).color}
           >
             <View
               style={
@@ -72,7 +66,7 @@ export const ManageAddressCardModel: FunctionComponent<{
                 style={
                   style.flatten([
                     "body2",
-                    "color-dark",
+                    "color-white",
                     "margin-left-18",
                   ]) as ViewStyle
                 }
@@ -84,9 +78,8 @@ export const ManageAddressCardModel: FunctionComponent<{
         </BlurBackground>
         <BlurBackground
           borderRadius={12}
-          backgroundBlur={false}
-          blurIntensity={0}
-          containerStyle={[{ backgroundColor: "#f6f6f6" }] as ViewStyle}
+          blurIntensity={15}
+          containerStyle={style.flatten([]) as ViewStyle}
         >
           <RectButton
             onPress={() => {
@@ -94,7 +87,7 @@ export const ManageAddressCardModel: FunctionComponent<{
             }}
             style={style.flatten(["border-radius-12"]) as ViewStyle}
             activeOpacity={0.5}
-            underlayColor={"#e0e0e0"}
+            underlayColor={style.flatten(["color-gray-50"]).color}
           >
             <View
               style={
@@ -117,8 +110,9 @@ export const ManageAddressCardModel: FunctionComponent<{
                 style={
                   style.flatten([
                     "body2",
-                    "color-orange-400",
+                    "color-white",
                     "margin-left-18",
+                    "color-orange-400",
                   ]) as ViewStyle
                 }
               >

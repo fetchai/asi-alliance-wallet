@@ -4,7 +4,7 @@ import Svg, { Path } from "react-native-svg";
 export const AutoLockTimer: FunctionComponent<{
   size?: number;
   color?: any;
-}> = ({ size = 24, color = "#151a1a" }) => {
+}> = ({ size = 24, color = "white" }) => {
   return (
     <Svg
       width={size}

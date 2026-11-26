@@ -8,18 +8,12 @@ import { useStyle } from "styles/index";
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
 import { TokenSymbolUsingChainInfo } from "components/token-symbol/token-symbol-chain";
-import {
-  numberLocalFormat,
-  separateNumericAndDenom,
-} from "utils/format/format";
+import { separateNumericAndDenom } from "utils/format/format";
 import {
   NavigationProp,
   ParamListBase,
   useNavigation,
 } from "@react-navigation/native";
-import { BlurButton } from "components/new/button/blur-button";
-import { LockIcon } from "components/new/icon/lock";
-import { StakeIcon } from "components/new/icon/stake-icon";
 
 export const NativeTokensSection: FunctionComponent = observer(() => {
   const style = useStyle();
@@ -30,10 +24,6 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
   const queries = queriesStore.get(current.chainId);
 
   const accountInfo = accountStore.getAccount(current.chainId);
-
-  const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
-    accountInfo.bech32Address
-  ).isVestingAccount;
 
   const balanceQuery = queries.queryBalances.getQueryBech32Address(
     accountInfo.bech32Address
@@ -54,7 +44,9 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
 
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { numericPart: totalNumber, denomPart: totalDenom } =
-    separateNumericAndDenom(stakable.shrink(true).trim(true).toString());
+    separateNumericAndDenom(
+      stakable.shrink(true).trim(true).maxDecimals(6).toString()
+    );
   const totalPrice = priceStore.calculatePrice(stakable);
 
   const NativeTokenDetailsString = encodeURIComponent(
@@ -93,69 +85,9 @@ export const NativeTokensSection: FunctionComponent = observer(() => {
         />
       }
       title={totalDenom}
-      subtitle={`${numberLocalFormat(
-        stakable.shrink(true).maxDecimals(6).toString().split(" ")[0]
-      )} ${stakable.shrink(true).maxDecimals(6).toString().split(" ")[1]}`}
+      subtitle={stakable.shrink(true).maxDecimals(6).toString()}
       trailingStart={totalPrice ? `${totalPrice.toString()}` : ""}
       trailingEnd={totalPrice ? priceStore.defaultVsCurrency.toUpperCase() : ""}
-      bottomContent={
-        isVesting ? (
-          <React.Fragment>
-            <BlurButton
-              text={"Staked"}
-              backgroundBlur={false}
-              leftIcon={
-                <StakeIcon
-                  size={12}
-                  color={style.flatten(["color-dark"]).color}
-                />
-              }
-              borderRadius={8}
-              containerStyle={
-                style.flatten([
-                  "border-width-1",
-                  "padding-x-12",
-                  "padding-y-6",
-                  "margin-right-8",
-                  "justify-center",
-                  "border-color-gray-100",
-                ]) as ViewStyle
-              }
-              textStyle={
-                style.flatten([
-                  "text-caption2",
-                  "color-dark",
-                  "margin-0",
-                ]) as ViewStyle
-              }
-            />
-            <BlurButton
-              text={"Vesting"}
-              backgroundBlur={false}
-              leftIcon={
-                <LockIcon color={style.flatten(["color-dark"]).color} />
-              }
-              borderRadius={8}
-              containerStyle={
-                style.flatten([
-                  "border-width-1",
-                  "padding-x-12",
-                  "padding-y-6",
-                  "justify-center",
-                  "border-color-gray-100",
-                ]) as ViewStyle
-              }
-              textStyle={
-                style.flatten([
-                  "text-caption2",
-                  "color-dark",
-                  "margin-0",
-                ]) as ViewStyle
-              }
-            />
-          </React.Fragment>
-        ) : null
-      }
     />
   );
 });

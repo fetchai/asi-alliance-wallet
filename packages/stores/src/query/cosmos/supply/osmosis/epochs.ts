@@ -1,5 +1,5 @@
-import { QuerySharedContext } from "../../../../common";
-import { ChainGetter } from "../../../../chain";
+import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../../common";
 import { ObservableChainQuery } from "../../../chain-query";
 import { Epochs } from "./types";
 import { computed, observable } from "mobx";
@@ -51,11 +51,7 @@ export class ObservableQueryOsmosisEpochs extends ObservableChainQuery<Epochs> {
   @observable.shallow
   protected map: Map<string, ObservableQueryOsmosisEpochsInner> = new Map();
 
-  constructor(
-    kvStore: QuerySharedContext,
-    chainId: string,
-    chainGetter: ChainGetter
-  ) {
+  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
     super(kvStore, chainId, chainGetter, "/osmosis/epochs/v1beta1/epochs");
   }
 

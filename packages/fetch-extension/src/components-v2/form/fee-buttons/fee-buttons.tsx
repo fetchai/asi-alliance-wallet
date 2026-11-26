@@ -20,19 +20,18 @@ import {
 import { CoinGeckoPriceStore } from "@keplr-wallet/stores";
 import { useLanguage } from "../../../languages";
 import { useIntl } from "react-intl";
+import { GasInput } from "../gas-input";
 import { action, autorun, makeObservable, observable } from "mobx";
 import { GasContainer } from "../gas-form";
-import { ManualFeeInput } from "../gas-form/manual";
 import { useStore } from "../../../stores";
 import { Card } from "@components-v2/card";
 import { FeeCurrencySelector } from "./fee-currency-selector";
-import { isPureEvmChain } from "@utils/filters";
 
 export interface FeeButtonsProps {
   feeConfig: IFeeConfig;
   gasConfig: IGasConfig;
   priceStore: CoinGeckoPriceStore;
-  pageName?: string;
+
   className?: string;
   label?: string;
   feeSelectLabels?: {
@@ -169,7 +168,6 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
               <React.Fragment>
                 <GasContainer
                   label={gasLabel}
-                  feeConfig={feeConfig}
                   gasConfig={gasConfig}
                   gasSimulator={gasSimulator}
                 />
@@ -177,7 +175,6 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
             ) : (
               <GasContainer
                 label={gasLabel}
-                feeConfig={feeConfig}
                 gasConfig={gasConfig}
                 gasSimulator={gasSimulator}
               />
@@ -188,12 +185,17 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
               <Card
                 style={{ background: "rgba(255, 255, 255, 0.10)" }}
                 heading={<FeeCurrencySelector feeConfig={feeConfig} />}
-              >
-                <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
-              </Card>
+                rightContent={
+                  <GasInput label={gasLabel} gasConfig={gasConfig} />
+                }
+              />
             </React.Fragment>
           ) : (
-            <ManualFeeInput feeConfig={feeConfig} gasConfig={gasConfig} />
+            <Card
+              style={{ background: "rgba(255, 255, 255, 0.10)" }}
+              heading={""}
+              rightContent={<GasInput label={gasLabel} gasConfig={gasConfig} />}
+            />
           )
         ) : null}
       </React.Fragment>
@@ -204,19 +206,13 @@ export const FeeButtons: FunctionComponent<FeeButtonsProps> = observer(
 export const FeeButtonsInner: FunctionComponent<
   Pick<
     FeeButtonsProps,
-    | "feeConfig"
-    | "priceStore"
-    | "label"
-    | "feeSelectLabels"
-    | "gasSimulator"
-    | "pageName"
+    "feeConfig" | "priceStore" | "label" | "feeSelectLabels" | "gasSimulator"
   > & { feeButtonState: FeeButtonState }
 > = observer(
   ({
     feeConfig,
     priceStore,
     label,
-    pageName,
     feeSelectLabels = { low: "Low", average: "Average", high: "High" },
     feeButtonState,
   }) => {
@@ -226,11 +222,10 @@ export const FeeButtonsInner: FunctionComponent<
       }
     }, [feeConfig, feeConfig.feeCurrency, feeConfig.fee]);
 
-    const { chainStore, analyticsStore } = useStore();
+    const { chainStore } = useStore();
 
     const intl = useIntl();
-    const current = chainStore.current;
-    const isEvm = isPureEvmChain(current);
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
 
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);
@@ -254,26 +249,14 @@ export const FeeButtonsInner: FunctionComponent<
 
     const fiatCurrency = language.fiatCurrency;
 
-    const lowFee = !feeConfig.isManual
-      ? feeConfig.getFeeTypePretty("low")
-      : undefined;
-    const lowFeePrice = lowFee
-      ? priceStore.calculatePrice(lowFee, fiatCurrency)
-      : undefined;
+    const lowFee = feeConfig.getFeeTypePretty("low");
+    const lowFeePrice = priceStore.calculatePrice(lowFee, fiatCurrency);
 
-    const averageFee = !feeConfig.isManual
-      ? feeConfig.getFeeTypePretty("average")
-      : undefined;
-    const averageFeePrice = averageFee
-      ? priceStore.calculatePrice(averageFee, fiatCurrency)
-      : undefined;
+    const averageFee = feeConfig.getFeeTypePretty("average");
+    const averageFeePrice = priceStore.calculatePrice(averageFee, fiatCurrency);
 
-    const highFee = !feeConfig.isManual
-      ? feeConfig.getFeeTypePretty("high")
-      : undefined;
-    const highFeePrice = highFee
-      ? priceStore.calculatePrice(highFee, fiatCurrency)
-      : undefined;
+    const highFee = feeConfig.getFeeTypePretty("high");
+    const highFeePrice = priceStore.calculatePrice(highFee, fiatCurrency);
 
     const error = feeConfig.error;
     const errorText: string | undefined = (() => {
@@ -302,7 +285,7 @@ export const FeeButtonsInner: FunctionComponent<
               style={{
                 marginTop: "0px",
                 marginBottom: "12px",
-                color: "var(--font-dark)",
+                color: "white",
                 fontSize: "14px",
               }}
             >
@@ -312,10 +295,6 @@ export const FeeButtonsInner: FunctionComponent<
           <Card
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("low");
-              analyticsStore.logEvent("fee_type_select", {
-                pageName: pageName,
-                feeType: "low",
-              });
               e.preventDefault();
             }}
             style={{
@@ -329,7 +308,7 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{
                     opacity: "0.6",
                     fontWeight: 400,
-                    color: "var(--font-dark)",
+                    color: "var(--grey-white, #FFF)",
                     fontSize: "12px",
                     marginLeft: "5px",
                   }}
@@ -343,7 +322,7 @@ export const FeeButtonsInner: FunctionComponent<
               <div
                 style={{ fontSize: "12px", fontWeight: 400, opacity: "0.6" }}
               >
-                {lowFee?.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+                {lowFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
               </div>
             }
             inActiveBackground={"transparent"}
@@ -357,7 +336,7 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{
                     opacity: "0.6",
                     fontWeight: 400,
-                    color: "var(--font-dark)",
+                    color: "var(--grey-white, #FFF)",
                     fontSize: "12px",
                     marginLeft: "5px",
                   }}
@@ -368,10 +347,6 @@ export const FeeButtonsInner: FunctionComponent<
             }
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("average");
-              analyticsStore.logEvent("fee_type_select", {
-                pageName: pageName,
-                feeType: "average",
-              });
               e.preventDefault();
             }}
             style={{
@@ -383,7 +358,7 @@ export const FeeButtonsInner: FunctionComponent<
                 style={{ fontSize: "12px", fontWeight: 400, opacity: "0.6" }}
               >
                 {averageFee
-                  ?.hideIBCMetadata(true)
+                  .hideIBCMetadata(true)
                   .trim(true)
                   .toMetricPrefix(isEvm)}
               </div>
@@ -399,7 +374,7 @@ export const FeeButtonsInner: FunctionComponent<
                   style={{
                     opacity: "0.6",
                     fontWeight: 400,
-                    color: "var(--font-dark)",
+                    color: "var(--grey-white, #FFF)",
                     fontSize: "12px",
                     marginLeft: "5px",
                   }}
@@ -410,10 +385,6 @@ export const FeeButtonsInner: FunctionComponent<
             }
             onClick={(e: MouseEvent) => {
               feeConfig.setFeeType("high");
-              analyticsStore.logEvent("fee_type_select", {
-                pageName: pageName,
-                feeType: "high",
-              });
               e.preventDefault();
             }}
             style={{
@@ -424,10 +395,7 @@ export const FeeButtonsInner: FunctionComponent<
               <div
                 style={{ fontSize: "12px", fontWeight: 400, opacity: "0.6" }}
               >
-                {highFee
-                  ?.hideIBCMetadata(true)
-                  .trim(true)
-                  .toMetricPrefix(isEvm)}
+                {highFee.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
               </div>
             }
             inActiveBackground={"transparent"}
@@ -458,10 +426,6 @@ export const FeeButtonsInner: FunctionComponent<
             onClick={(e) => {
               e.preventDefault();
               feeButtonState.setIsGasInputOpen(!feeButtonState.isGasInputOpen);
-              if (pageName)
-                analyticsStore.logEvent("fee_advance_click", {
-                  pageName: pageName,
-                });
             }}
           >
             {/* XXX: In fact, it is not only set gas, but fee currency can also be set depending on the option. */}

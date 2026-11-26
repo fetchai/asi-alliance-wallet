@@ -10,7 +10,7 @@ import {
   ParamListBase,
   useNavigation,
 } from "@react-navigation/native";
-import { AsiIcon } from "components/new/icon/asi-icon";
+import { FetchAiIcon } from "components/new/icon/fetchai-icon";
 
 export const ActivityRow: FunctionComponent<{
   node: any;
@@ -36,17 +36,7 @@ export const ActivityRow: FunctionComponent<{
 
   return (
     <TouchableOpacity
-      style={
-        style.flatten([
-          "flex-row",
-          "items-center",
-          "background-color-gray-5",
-          "border-radius-12",
-          "padding-x-8",
-          "padding-y-12",
-          "margin-y-4",
-        ]) as ViewStyle
-      }
+      style={style.flatten(["flex-row", "items-center"]) as ViewStyle}
       onPress={() => {
         navigation.navigate("Others", {
           screen: "ActivityDetails",
@@ -76,44 +66,44 @@ export const ActivityRow: FunctionComponent<{
               "height-32",
               "items-center",
               "justify-center",
+              "border-radius-64",
+              "background-color-indigo-900",
               "absolute",
             ]) as ViewStyle
           }
         >
-          <AsiIcon size={25} />
+          <FetchAiIcon size={14} />
         </View>
         <View
           style={
             style.flatten([
               "border-radius-64",
-              "background-color-gray-100",
+              "background-color-indigo-900",
               "margin-left-16",
             ]) as ViewStyle
           }
         >
           <IconButton
-            icon={getActivityIcon(details.verb, "#151a1a")}
-            backgroundBlur={false}
+            icon={getActivityIcon(details.verb)}
+            backgroundBlur={true}
             iconStyle={
               style.flatten([
                 "width-32",
                 "height-32",
                 "items-center",
                 "justify-center",
-                "background-color-gray-100",
-                "border-radius-64",
               ]) as ViewStyle
             }
           />
         </View>
       </View>
-      <View style={style.flatten(["flex-4"]) as ViewStyle}>
+      <View style={style.flatten(["flex-1"]) as ViewStyle}>
         <Text
           style={
             style.flatten([
               "body3",
               "padding-4",
-              "color-dark",
+              "color-white",
               "font-medium",
             ]) as ViewStyle
           }
@@ -125,7 +115,7 @@ export const ActivityRow: FunctionComponent<{
             style.flatten([
               "body3",
               "padding-2",
-              "color-gray-300",
+              "color-white@60%",
               "font-medium",
             ]) as ViewStyle
           }
@@ -135,28 +125,18 @@ export const ActivityRow: FunctionComponent<{
               Confirmed • {moment(details.timestamp).format("hh:mm A")}
             </React.Fragment>
           ) : node.transaction.status === "Pending" ? (
-            <Text style={style.flatten(["color-gray-300", "h7"]) as ViewStyle}>
+            <Text style={style.flatten(["color-white@60%", "h7"]) as ViewStyle}>
               Pending
             </Text>
           ) : (
-            <Text style={style.flatten(["color-gray-300", "h7"]) as ViewStyle}>
+            <Text style={style.flatten(["color-white@60%", "h7"]) as ViewStyle}>
               Error
             </Text>
           )}
         </Text>
       </View>
 
-      <View
-        style={
-          style.flatten([
-            "flex-3",
-            "flex-row",
-            "flex-wrap",
-            "margin-right-16",
-            "justify-end",
-          ]) as ViewStyle
-        }
-      >
+      <View style={style.flatten(["flex-row", "margin-right-16"]) as ViewStyle}>
         <Text
           style={
             style.flatten([
@@ -164,7 +144,7 @@ export const ActivityRow: FunctionComponent<{
               "font-medium",
               details.verb == "Received"
                 ? "color-vibrant-green-500"
-                : "color-dark",
+                : "color-white@60%",
             ]) as ViewStyle
           }
         >
@@ -175,7 +155,7 @@ export const ActivityRow: FunctionComponent<{
             style.flatten([
               "body3",
               "font-medium",
-              "color-gray-300",
+              "color-white@60%",
               "margin-left-4",
             ]) as ViewStyle
           }

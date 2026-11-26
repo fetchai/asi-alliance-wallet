@@ -6,8 +6,5 @@ export * from "./wallet";
 export * from "./window";
 export * from "./ethereum";
 export * from "./cosmjs";
-export * from "./cosmjs-alt";
 export * from "./secretjs";
 export * from "./settled";
-export * from "./json-rpc";
-export * from "./swap";

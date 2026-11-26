@@ -13,7 +13,7 @@ export const DestinationChainSelector: FunctionComponent<{
   ibcChannelConfig: IIBCChannelConfig;
   setIsIBCRegisterPageOpen: any;
 }> = observer(({ ibcChannelConfig, setIsIBCRegisterPageOpen }) => {
-  const { chainStore, ibcChannelStore, analyticsStore } = useStore();
+  const { chainStore, ibcChannelStore } = useStore();
   const ibcChannelInfo = ibcChannelStore.get(chainStore.current.chainId);
 
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -38,18 +38,13 @@ export const DestinationChainSelector: FunctionComponent<{
           type="button"
           id={selectorId}
           className={style["selector"]}
-          onClick={() => {
-            setIsSelectorOpen(!isSelectorOpen);
-            analyticsStore.logEvent("select_chain_click", {
-              pageName: "IBC Transfer",
-            });
-          }}
+          onClick={() => setIsSelectorOpen(!isSelectorOpen)}
         >
           {ibcChannelConfig.channel ? (
             chainStore.getChain(ibcChannelConfig.channel.counterpartyChainId)
               .chainName
           ) : (
-            <div>
+            <div style={{ color: "rgba(255,255,255,0.6)" }}>
               <FormattedMessage id="component.ibc.channel-registrar.chain-selector.placeholder" />
             </div>
           )}
@@ -67,6 +62,7 @@ export const DestinationChainSelector: FunctionComponent<{
           leftImageStyle={{ backgroundColor: "transparent" }}
           style={{
             height: "69px",
+            background: "rgba(255,255,255,0.1)",
             padding: "18px",
             width: "100%",
           }}
@@ -78,37 +74,33 @@ export const DestinationChainSelector: FunctionComponent<{
             e.preventDefault();
             setIsIBCRegisterPageOpen(true);
             setIsSelectorOpen(false);
-            analyticsStore.logEvent("select_new_chain_click", {
-              pageName: "IBC Transfer",
-            });
           }}
         />
-        {ibcChannelInfo
-          .getTransferChannels(chainStore.current.chainId)
-          .map((channel) => {
-            if (!chainStore.hasChain(channel.counterpartyChainId)) {
-              return undefined;
-            }
+        {ibcChannelInfo.getTransferChannels().map((channel) => {
+          if (!chainStore.hasChain(channel.counterpartyChainId)) {
+            return undefined;
+          }
 
-            const chainInfo = chainStore.getChain(channel.counterpartyChainId);
+          const chainInfo = chainStore.getChain(channel.counterpartyChainId);
 
-            if (chainInfo) {
-              return (
-                <Card
-                  heading={chainInfo.chainName}
-                  key={chainInfo.chainId}
-                  onClick={(e: any) => {
-                    e.preventDefault();
-                    ibcChannelConfig.setChannel(channel);
-                    setIsSelectorOpen(false);
-                  }}
-                  subheading={
-                    <div className={style["channel"]}>{channel.channelId}</div>
-                  }
-                />
-              );
-            }
-          })}
+          if (chainInfo) {
+            return (
+              <Card
+                style={{ background: "rgba(255,255,255,0.1)" }}
+                heading={chainInfo.chainName}
+                key={chainInfo.chainId}
+                onClick={(e: any) => {
+                  e.preventDefault();
+                  ibcChannelConfig.setChannel(channel);
+                  setIsSelectorOpen(false);
+                }}
+                subheading={
+                  <div className={style["channel"]}>{channel.channelId}</div>
+                }
+              />
+            );
+          }
+        })}
       </Dropdown>
     </React.Fragment>
   );

@@ -64,7 +64,7 @@ export const WalletConnectApprovalModal: FunctionComponent<{
           mode="outline"
           color="danger"
           onPress={() => {
-            permissionStore.rejectPermissionWithProceedNext(id, () => {});
+            permissionStore.reject(id);
           }}
         />
         <View style={style.get("width-page-pad") as ViewStyle} />
@@ -72,7 +72,7 @@ export const WalletConnectApprovalModal: FunctionComponent<{
           containerStyle={style.get("flex-1")}
           text="Approve"
           onPress={() => {
-            permissionStore.approvePermissionWithProceedNext(id, () => {});
+            permissionStore.approve(id);
           }}
         />
       </View>

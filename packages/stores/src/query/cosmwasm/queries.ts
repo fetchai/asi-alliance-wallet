@@ -1,12 +1,12 @@
 import { QueriesSetBase } from "../queries";
-import { ChainGetter } from "../../chain";
+import { ChainGetter } from "../../common";
+import { KVStore } from "@keplr-wallet/common";
 import { ObservableQueryCw20ContractInfo } from "./cw20-contract-info";
 import { DeepReadonly } from "utility-types";
 import { ObservableQueryCw20BalanceRegistry } from "./cw20-balance";
 import { ObservableQueryNativeFetCosmosBridge } from "./native-fet-bridge";
 import { ObservableQueryBridgeHistory } from "./bridge-history";
 import { ObservableQueryBridgeReverseSwapHash } from "./bridge-reverse-swap-hash";
-import { QuerySharedContext } from "../../common";
 
 export interface CosmwasmQueries {
   cosmwasm: CosmwasmQueriesImpl;
@@ -15,20 +15,20 @@ export interface CosmwasmQueries {
 export const CosmwasmQueries = {
   use(): (
     queriesSetBase: QueriesSetBase,
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter
   ) => CosmwasmQueries {
     return (
       queriesSetBase: QueriesSetBase,
-      sharedContext: QuerySharedContext,
+      kvStore: KVStore,
       chainId: string,
       chainGetter: ChainGetter
     ) => {
       return {
         cosmwasm: new CosmwasmQueriesImpl(
           queriesSetBase,
-          sharedContext,
+          kvStore,
           chainId,
           chainGetter
         ),
@@ -45,33 +45,33 @@ export class CosmwasmQueriesImpl {
 
   constructor(
     base: QueriesSetBase,
-    sharedContext: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter
   ) {
     base.queryBalances.addBalanceRegistry(
-      new ObservableQueryCw20BalanceRegistry(sharedContext)
+      new ObservableQueryCw20BalanceRegistry(kvStore)
     );
 
     this.querycw20ContractInfo = new ObservableQueryCw20ContractInfo(
-      sharedContext,
+      kvStore,
       chainId,
       chainGetter
     );
 
     this.queryNativeFetBridge = new ObservableQueryNativeFetCosmosBridge(
-      sharedContext,
+      kvStore,
       chainGetter
     );
 
     this.queryBridgeHistory = new ObservableQueryBridgeHistory(
-      sharedContext,
+      kvStore,
       chainGetter,
       this.queryNativeFetBridge
     );
 
     this.queryBridgeReverseSwapHash = new ObservableQueryBridgeReverseSwapHash(
-      sharedContext,
+      kvStore,
       chainGetter,
       this.queryNativeFetBridge
     );

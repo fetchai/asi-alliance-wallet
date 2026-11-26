@@ -21,8 +21,6 @@ import { useNotification } from "@components/notification";
 import { isAddress } from "@ethersproject/address";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { TXNTYPE } from "../../../../config";
-import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
-import { isPureEvmChain } from "@utils/filters";
 
 interface FormData {
   contractAddress: string;
@@ -42,6 +40,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     tokensStore,
     analyticsStore,
   } = useStore();
+  const tokensOf = tokensStore.getTokensOf(chainStore.current.chainId);
 
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
@@ -83,8 +82,8 @@ export const AddTokenPage: FunctionComponent = observer(() => {
     ) != null;
 
   const queries = queriesStore.get(chainStore.current.chainId);
-  const current = chainStore.current;
-  const isEvm = isPureEvmChain(current);
+
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const query = isEvm
     ? queries.evm.queryErc20Metadata
     : isSecret20
@@ -168,6 +167,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
       <Form
         className={style["container"]}
         onSubmit={form.handleSubmit(async (data) => {
+          analyticsStore.logEvent("add_token_submit_click");
           if (
             tokenInfo?.decimals != null &&
             tokenInfo.name &&
@@ -186,38 +186,9 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                 interactionInfo.interaction &&
                 tokensStore.waitingSuggestedToken
               ) {
-                await tokensStore.approveSuggestedTokenWithProceedNext(
-                  tokensStore.waitingSuggestedToken.id,
-                  currency,
-                  (proceedNext) => {
-                    if (!proceedNext) {
-                      if (
-                        interactionInfo.interaction &&
-                        !interactionInfo.interactionInternal
-                      ) {
-                        handleExternalInteractionWithNoProceedNext();
-                      }
-                    }
-
-                    if (
-                      interactionInfo.interaction &&
-                      !interactionInfo.interactionInternal &&
-                      isSecret20
-                    ) {
-                      // TODO: secret20의 경우는 서명 페이지로 페이지 자체가 넘어가기 때문에 proceedNext를 처리할 수가 없다.
-                      //       나중에 뭔가 해결법이 생기면 다시 생각해본다...
-                      window.close();
-                    }
-                  }
-                );
+                await tokensStore.approveSuggestedToken(currency);
               } else {
-                await tokensStore.addToken(
-                  chainStore.current.chainId,
-                  currency
-                );
-                analyticsStore.logEvent("save_click", {
-                  pageName: "Add a Token",
-                });
+                await tokensOf.addToken(currency);
               }
             } else {
               let viewingKey = data.viewingKey;
@@ -282,35 +253,9 @@ export const AddTokenPage: FunctionComponent = observer(() => {
                   interactionInfo.interaction &&
                   tokensStore.waitingSuggestedToken
                 ) {
-                  await tokensStore.approveSuggestedTokenWithProceedNext(
-                    tokensStore.waitingSuggestedToken.id,
-                    currency,
-                    (proceedNext) => {
-                      if (!proceedNext) {
-                        if (
-                          interactionInfo.interaction &&
-                          !interactionInfo.interactionInternal
-                        ) {
-                          handleExternalInteractionWithNoProceedNext();
-                        }
-                      }
-
-                      if (
-                        interactionInfo.interaction &&
-                        !interactionInfo.interactionInternal &&
-                        isSecret20
-                      ) {
-                        // TODO: secret20의 경우는 서명 페이지로 페이지 자체가 넘어가기 때문에 proceedNext를 처리할 수가 없다.
-                        //       나중에 뭔가 해결법이 생기면 다시 생각해본다...
-                        window.close();
-                      }
-                    }
-                  );
+                  await tokensStore.approveSuggestedToken(currency);
                 } else {
-                  await tokensStore.addToken(
-                    chainStore.current.chainId,
-                    currency
-                  );
+                  await tokensOf.addToken(currency);
                 }
               }
             }
@@ -348,7 +293,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
 
                 Bech32Address.validate(
                   value,
-                  chainStore.current.bech32Config?.bech32PrefixAccAddr
+                  chainStore.current.bech32Config.bech32PrefixAccAddr
                 );
               } catch {
                 return "Invalid address";
@@ -425,7 +370,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
         {isSecret20 ? (
           <div className="custom-control custom-checkbox mb-2">
             <input
-              className={`${"custom-control-input"} ${style["checkbox"]}`}
+              className="custom-control-input"
               id="viewing-key-checkbox"
               type="checkbox"
               checked={isOpenSecret20ViewingKey}
@@ -434,7 +379,7 @@ export const AddTokenPage: FunctionComponent = observer(() => {
               }}
             />
             <label
-              className={`${"custom-control-label"} ${style["checkboxLabel"]}`}
+              className="custom-control-label"
               htmlFor="viewing-key-checkbox"
               style={{ color: "#666666", paddingTop: "1px" }}
             >
@@ -443,14 +388,13 @@ export const AddTokenPage: FunctionComponent = observer(() => {
           </div>
         ) : null}
         <ButtonV2
-          variant="dark"
           text=""
           disabled={
             isError !== undefined ||
             tokenInfo == null ||
             !accountInfo.isReadyToSendTx
           }
-          dataLoading={
+          data-loading={
             accountInfo.txTypeInProgress === TXNTYPE.createSecret20ViewingKey
           }
           styleProps={{

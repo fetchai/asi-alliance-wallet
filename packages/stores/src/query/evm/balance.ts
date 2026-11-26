@@ -1,29 +1,38 @@
 import { computed, makeObservable, override } from "mobx";
-import { DenomHelper } from "@keplr-wallet/common";
-import { QuerySharedContext } from "../../common";
-import { ObservableJsonRPCQuery } from "../../common";
-import { ChainGetter } from "../../chain";
+import { DenomHelper, KVStore } from "@keplr-wallet/common";
+import { ChainGetter, ObservableJsonRPCQuery } from "../../common";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { BalanceRegistry, ObservableQueryBalanceInner } from "../balances";
 import { Bech32Address } from "@keplr-wallet/cosmos";
+import Axios from "axios";
 import { BigNumber } from "@ethersproject/bignumber";
 
 export class ObservableQueryEvmNativeBalance extends ObservableJsonRPCQuery<string> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly bech32Address: string
   ) {
-    super(kvStore, chainGetter.getChain(chainId).rpc, "", "eth_getBalance", [
-      bech32Address
-        ? Bech32Address.fromBech32(
-            bech32Address,
-            chainGetter.getChain(chainId)?.bech32Config?.bech32PrefixAccAddr
-          ).toHex(true)
-        : "0x0000000000000000000000000000000000000000",
-      "latest",
-    ]);
+    super(
+      kvStore,
+      Axios.create({
+        ...{
+          baseURL: chainGetter.getChain(chainId).rpc,
+        },
+      }),
+      "",
+      "eth_getBalance",
+      [
+        bech32Address
+          ? Bech32Address.fromBech32(
+              bech32Address,
+              chainGetter.getChain(chainId).bech32Config.bech32PrefixAccAddr
+            ).toHex(true)
+          : "0x0000000000000000000000000000000000000000",
+        "latest",
+      ]
+    );
   }
 
   protected override canFetch(): boolean {
@@ -35,7 +44,7 @@ export class ObservableQueryEvmNativeBalanceInner extends ObservableQueryBalance
   protected readonly queryNativeBalance: ObservableQueryEvmNativeBalance;
 
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     denomHelper: DenomHelper,
@@ -113,21 +122,17 @@ export class ObservableQueryEvmNativeBalanceInner extends ObservableQueryBalance
 export class ObservableQueryEvmNativeBalanceRegistry
   implements BalanceRegistry
 {
-  constructor(protected readonly kvStore: QuerySharedContext) {}
+  constructor(protected readonly kvStore: KVStore) {}
 
-  getBalanceImpl(
+  getBalanceInner(
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string,
     minimalDenom: string
   ): ObservableQueryBalanceInner | undefined {
     const denomHelper = new DenomHelper(minimalDenom);
-    const chainInfo = chainGetter.getChain(chainId);
     const isEvm =
-      (chainInfo.features?.includes("eth-key-sign") &&
-        chainInfo.features?.includes("eth-address-gen") &&
-        chainInfo.evm) ??
-      false;
+      chainGetter.getChain(chainId).features?.includes("evm") ?? false;
 
     if (!(isEvm && denomHelper.type === "native")) {
       return;

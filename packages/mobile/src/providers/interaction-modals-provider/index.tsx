@@ -7,6 +7,7 @@ import { WalletConnectApprovalModal } from "modals/wallet-connect-approval";
 import { WCMessageRequester } from "stores/wallet-connect/msg-requester";
 import { WCGoBackToBrowserModal } from "modals/wc-go-back-to-browser";
 import { BackHandler, Platform } from "react-native";
+import { KeyRingStatus } from "@keplr-wallet/background";
 import { NetworkErrorModal } from "modals/network";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { LoadingScreenModal } from "providers/loading-screen/modal";
@@ -38,7 +39,7 @@ export const InteractionModalsProvider: FunctionComponent = observer(
     }, [walletConnectStore.needGoBackToBrowser]);
 
     useEffect(() => {
-      for (const data of permissionStore.waitingPermissionDatas) {
+      for (const data of permissionStore.waitingDatas) {
         // Currently, there is no modal to permit the permission of external apps.
         // All apps should be embedded explicitly.
         // If such apps need the permissions, add these origins to the privileged origins.
@@ -46,10 +47,10 @@ export const InteractionModalsProvider: FunctionComponent = observer(
           data.data.origins.length !== 1 ||
           !WCMessageRequester.isVirtualSessionURL(data.data.origins[0])
         ) {
-          permissionStore.rejectPermissionWithProceedNext(data.id, () => {});
+          permissionStore.reject(data.id);
         }
       }
-    }, [permissionStore, permissionStore.waitingPermissionDatas]);
+    }, [permissionStore, permissionStore.waitingDatas]);
 
     return (
       <React.Fragment>
@@ -58,7 +59,7 @@ export const InteractionModalsProvider: FunctionComponent = observer(
          The user should be able to type password to unlock or create the account if there is no account.
          So, we shouldn't show the loading indicator if the keyring is not unlocked.
          */}
-        {keyRingStore.status === "unlocked" && (
+        {keyRingStore.status === KeyRingStatus.UNLOCKED && (
           <LoadingScreenModal
             isOpen={walletConnectStore.isPendingClientFromDeepLink}
           />
@@ -71,7 +72,16 @@ export const InteractionModalsProvider: FunctionComponent = observer(
             }}
           />
         ) : null}
-        {permissionStore.waitingPermissionDatas.map((data) => {
+        {/*unlockInteractionExists ? (
+          <UnlockModal
+            isOpen={true}
+            close={() => {
+              // noop
+              // Can't close without unlocking.
+            }}
+          />
+        ) : null*/}
+        {permissionStore.waitingDatas.map((data) => {
           if (data.data.origins.length === 1) {
             if (
               WCMessageRequester.isVirtualSessionURL(data.data.origins[0]) &&
@@ -85,12 +95,7 @@ export const InteractionModalsProvider: FunctionComponent = observer(
                 <WalletConnectApprovalModal
                   key={data.id}
                   isOpen={true}
-                  close={() =>
-                    permissionStore.rejectPermissionWithProceedNext(
-                      data.id,
-                      () => {}
-                    )
-                  }
+                  close={() => permissionStore.reject(data.id)}
                   id={data.id}
                   data={data.data}
                 />
@@ -109,12 +114,10 @@ export const InteractionModalsProvider: FunctionComponent = observer(
             signInteractionStore.rejectAll();
           }}
         />
-        {ledgerInitStore.isInitNeeded && (
-          <LedgerGranterModal
-            isOpen={ledgerInitStore.isInitNeeded}
-            close={() => ledgerInitStore.abortAll()}
-          />
-        )}
+        <LedgerGranterModal
+          isOpen={ledgerInitStore.isInitNeeded}
+          close={() => ledgerInitStore.abortAll()}
+        />
         <NetworkErrorModal
           isOpen={openNetworkModel}
           close={() => {

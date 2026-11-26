@@ -14,7 +14,7 @@ export const GasAutoContainer: FunctionComponent<{
       <div className={styleAuto["gasAdjustmentContainer"]}>
         <div
           style={{
-            color: "var(--font-dark)",
+            color: "white",
             display: "flex",
             flexDirection: "column",
             gap: "8px",
@@ -22,7 +22,8 @@ export const GasAutoContainer: FunctionComponent<{
         >
           <div
             style={{
-              color: "var(--font-secondary)",
+              color: "rgba(255,255,255,0.6)",
+              fontFamily: "Lexend",
               fontSize: "14px",
               fontWeight: 400,
             }}
@@ -31,7 +32,8 @@ export const GasAutoContainer: FunctionComponent<{
           </div>
           <Card
             style={{
-              border: "1px solid var(--bg-grey-dark)",
+              background: "rgba(255,255,255,0.1)",
+              color: "rgba(255,255,255,0.6)",
               padding: "12px 18px",
               height: "48px",
             }}
@@ -50,9 +52,9 @@ export const GasAutoContainer: FunctionComponent<{
                     ? gasSimulator.gasAdjustmentRaw
                     : "-"
                 }
-                type="text"
-                inputMode="decimal"
+                type={gasSimulator.gasEstimated != null ? "number" : "text"}
                 readOnly={gasSimulator.gasEstimated == null}
+                step={0.1}
                 onChange={(e) => {
                   e.preventDefault();
 
@@ -65,7 +67,7 @@ export const GasAutoContainer: FunctionComponent<{
 
         <div
           style={{
-            color: "var(--font-dark)",
+            color: "white",
             display: "flex",
             flexDirection: "column",
             gap: "8px",
@@ -73,7 +75,8 @@ export const GasAutoContainer: FunctionComponent<{
         >
           <div
             style={{
-              color: "var(--font-secondary)",
+              color: "rgba(255,255,255,0.6)",
+              fontFamily: "Lexend",
               fontSize: "14px",
               fontWeight: 400,
             }}
@@ -82,7 +85,8 @@ export const GasAutoContainer: FunctionComponent<{
           </div>
           <Card
             style={{
-              border: "1px solid var(--bg-grey-dark)",
+              background: "rgba(255,255,255,0.1)",
+              color: "rgba(255,255,255,0.6)",
               padding: "12px 18px",
               height: "48px",
             }}
@@ -108,18 +112,20 @@ export const GasAutoContainer: FunctionComponent<{
       >
         <div
           style={{
-            color: "var(--font-secondary)",
+            color: "rgba(255,255,255,0.6)",
+            fontFamily: "Lexend",
             fontSize: "14px",
             fontWeight: 400,
           }}
         >
-          Gas Limit
+          Gas amount
         </div>
         <Card
           style={{
-            border: "1px solid var(--bg-grey-dark)",
-            padding: "12px 18px",
+            background: "rgba(255,255,255,0.1)",
+            color: "rgba(255,255,255,0.6)",
             height: "48px",
+            padding: "12px 18px",
           }}
           heading={
             <Input

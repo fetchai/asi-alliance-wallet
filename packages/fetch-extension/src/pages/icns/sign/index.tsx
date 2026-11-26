@@ -76,9 +76,8 @@ export const ICNSAdr36SignPage: FunctionComponent = observer(() => {
               e.preventDefault();
 
               if (icnsInteractionStore.waitingData) {
-                icnsInteractionStore.rejectWithProceedNext(
-                  icnsInteractionStore.waitingData.id,
-                  () => {}
+                icnsInteractionStore.reject(
+                  icnsInteractionStore.waitingData.id
                 );
               }
 
@@ -97,9 +96,8 @@ export const ICNSAdr36SignPage: FunctionComponent = observer(() => {
               e.preventDefault();
 
               if (icnsInteractionStore.waitingData) {
-                icnsInteractionStore.approveWithProceedNext(
-                  icnsInteractionStore.waitingData.id,
-                  () => {}
+                icnsInteractionStore.approve(
+                  icnsInteractionStore.waitingData.id
                 );
               }
 

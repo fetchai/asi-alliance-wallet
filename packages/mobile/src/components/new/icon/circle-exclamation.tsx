@@ -4,7 +4,7 @@ import Svg, { Path } from "react-native-svg";
 export const CircleExclamationIcon: FunctionComponent<{
   size?: number;
   color?: string;
-}> = ({ size = 14, color = "#151a1a" }) => {
+}> = ({ size = 14, color = "white" }) => {
   return (
     <Svg
       width={size}

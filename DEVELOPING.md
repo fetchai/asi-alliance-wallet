@@ -43,7 +43,7 @@
     cp -r $HOME/protoc/bin /usr/local
   ```
 
-- [Node.js v22+](https://nodejs.org/) (see `.nvmrc`)
+- [Node.js v18+](https://nodejs.org/)
 
 ### Install Global Dependencies
 

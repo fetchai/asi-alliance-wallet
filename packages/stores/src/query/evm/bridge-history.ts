@@ -1,6 +1,8 @@
+import { KVStore } from "@keplr-wallet/common";
+import Axios from "axios";
 import { computed, makeObservable } from "mobx";
 import {
-  QuerySharedContext,
+  ChainGetter,
   HasMapStore,
   ObservableJsonRPCQuery,
   nativeFetBridgeInterface,
@@ -10,28 +12,33 @@ import { BridgeHistory } from "../../common/types";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ObservableQueryNativeFetEthBrige } from "./native-fet-bridge";
 import { Bech32Address } from "@keplr-wallet/cosmos";
-import { ChainGetter } from "../../chain";
 
 export class ObservableBridgeHistoryInner extends ObservableJsonRPCQuery<
   NativeBridgeLogResponse[]
 > {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly nativeBridge: ObservableQueryNativeFetEthBrige,
     protected readonly bech32Address: string
   ) {
-    const ethereumURL = chainGetter.getChain("eip155:1").rpc;
+    const ethereumURL = chainGetter.getChain("1").rpc;
+
+    const instance = Axios.create({
+      ...{
+        baseURL: ethereumURL,
+      },
+    });
 
     const ethereumHexAddress = bech32Address
       ? Bech32Address.fromBech32(
           bech32Address,
-          chainGetter.getChain(chainId)?.bech32Config?.bech32PrefixAccAddr
+          chainGetter.getChain(chainId).bech32Config.bech32PrefixAccAddr
         ).toHex(true)
       : "0x0000000000000000000000000000000000000000";
 
-    super(kvStore, ethereumURL, "", "eth_getLogs", [
+    super(kvStore, instance, "", "eth_getLogs", [
       {
         address: nativeBridge.nativeBridgeAddress,
         topics: nativeFetBridgeInterface.encodeFilterTopics("Swap", [
@@ -75,7 +82,7 @@ export class ObservableBridgeHistoryInner extends ObservableJsonRPCQuery<
 
 export class ObservableQueryBridgeHistory extends HasMapStore<ObservableBridgeHistoryInner> {
   constructor(
-    kvStore: QuerySharedContext,
+    kvStore: KVStore,
     chainId: string,
     chainGetter: ChainGetter,
     nativeBridge: ObservableQueryNativeFetEthBrige

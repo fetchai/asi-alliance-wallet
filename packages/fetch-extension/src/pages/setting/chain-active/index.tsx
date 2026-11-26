@@ -55,8 +55,8 @@ export const ChainActivePage: FunctionComponent = observer(() => {
         size="medium"
         style={{ width: "100%" }}
         onClick={() => {
-          analyticsStore.logEvent("add_new_evm_chain_click");
           navigate("/setting/addEvmChain");
+          analyticsStore.logEvent("add_new_evm_chain_click");
         }}
       >
         Add New Evm Chain

@@ -24,9 +24,7 @@ export const MyValidator = observer(() => {
     queries.cosmos.queryDelegations.getQueryBech32Address(
       account.bech32Address
     );
-  const delegations = queryDelegations.delegations.filter((del) =>
-    new Dec(del.balance.amount).gt(new Dec(0))
-  );
+  const delegations = queryDelegations.delegations;
 
   const bondedValidators = queries.cosmos.queryValidators.getQueryStatus(
     Staking.BondStatus.Bonded
@@ -57,183 +55,150 @@ export const MyValidator = observer(() => {
 
     return map;
   }, [validators]);
-
   return (
-    <div
-      className={styles["my-validators-container"]}
-      style={{
-        marginTop: "24px",
-      }}
-    >
-      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-        <div
-          style={{
-            color: "var(--font-dark)",
-            fontSize: "16px",
-            fontWeight: 400,
-          }}
-        >
-          Staked balances
-        </div>
-        <div className={styles["stake-count"]}>{delegations.length}</div>
-      </div>
+    <React.Fragment>
+      {delegations.length > 0 ? (
+        delegations.map((del) => {
+          const val = validatorsMap.get(del.delegation.validator_address);
+          if (!val) {
+            return null;
+          }
 
-      <div
-        className={styles["my-validators-container"]}
-        style={{
-          paddingBottom: "30px",
-        }}
-      >
-        {delegations.length > 0 ? (
-          delegations.map((del) => {
-            const val = validatorsMap.get(del.delegation.validator_address);
-            if (!val) {
-              return null;
-            }
+          const thumbnail =
+            bondedValidators.getValidatorThumbnail(val.operator_address) ||
+            unbondingValidators.getValidatorThumbnail(val.operator_address) ||
+            unbondedValidators.getValidatorThumbnail(val.operator_address);
 
-            const thumbnail =
-              bondedValidators.getValidatorThumbnail(val.operator_address) ||
-              unbondingValidators.getValidatorThumbnail(val.operator_address) ||
-              unbondedValidators.getValidatorThumbnail(val.operator_address);
+          const amount = queryDelegations.getDelegationTo(val.operator_address);
+          const amountFiatCurrency = priceStore.calculatePrice(
+            amount.maxDecimals(5).trim(true).shrink(true),
+            fiatCurrency
+          );
 
-            const amount = queryDelegations.getDelegationTo(
-              val.operator_address
-            );
-            const amountFiatCurrency = priceStore.calculatePrice(
-              amount.maxDecimals(5).trim(true).shrink(true),
-              fiatCurrency
-            );
+          const reward = queries.cosmos.queryRewards
+            .getQueryBech32Address(account.bech32Address)
+            .getStakableRewardOf(val.operator_address);
 
-            const reward = queries.cosmos.queryRewards
-              .getQueryBech32Address(account.bech32Address)
-              .getStakableRewardOf(val.operator_address);
+          const inflation = queries.cosmos.queryInflation;
+          const { inflation: ARR } = inflation;
+          const validatorCom: any = parseFloat(
+            val?.commission.commission_rates.rate || "0"
+          );
+          const APR = ARR.mul(new Dec(1 - validatorCom));
+          return (
+            <GlassCard
+              styleProps={{
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                analyticsStore.logEvent("stake_validator_click", {
+                  pageName: "Stake",
+                });
+                navigate(`/validator/${del.delegation.validator_address}`, {
+                  state: { previousAddress: "stake" },
+                });
+              }}
+              key={del.delegation.validator_address}
+            >
+              <div className={styles["validator-div"]}>
+                {thumbnail ? (
+                  <img src={thumbnail} alt={"validator"} />
+                ) : (
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "28px",
+                      borderRadius: "100%",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      background: "rgba(255, 255, 255, 0.1)",
+                      marginTop: "6px",
+                    }}
+                  >
+                    {val.description.moniker?.toString()[0].toUpperCase()}
+                  </div>
+                )}
 
-            const inflation = queries.cosmos.queryInflation;
-            const { inflation: ARR } = inflation;
-            const validatorCom: any = parseFloat(
-              val?.commission.commission_rates.rate || "0"
-            );
-            const APR = ARR.mul(new Dec(1 - validatorCom));
-
-            const parsedStake =
-              parseFloat(amount?.hideDenom(true).toString()) || 0;
-            const displayAmount =
-              parsedStake >= 0.000001
-                ? amount.maxDecimals(6).trim(true).shrink(true).toString()
-                : `< 0.000001 ${amount?.denom}`;
-
-            return (
-              <GlassCard
-                styleProps={{
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  analyticsStore.logEvent("stake_validator_click", {
-                    pageName: "Stake",
-                  });
-                  navigate(`/validator/${del.delegation.validator_address}`, {
-                    state: { previousAddress: "stake" },
-                  });
-                }}
-                key={del.delegation.validator_address}
-              >
-                <div className={styles["validator-div"]}>
-                  {thumbnail ? (
-                    <img src={thumbnail} alt={"validator"} />
-                  ) : (
-                    <div className={styles["validator-avatar"]}>
-                      {val.description.moniker?.toString()[0].toUpperCase()}
-                    </div>
-                  )}
-
-                  <div className={styles["validator-details"]}>
-                    <div className={styles["validator-top"]}>
-                      <div className={styles["left-col"]}>
-                        <div style={{ fontWeight: 400 }}>
-                          {val.description.moniker?.trim()}
-                        </div>
-                        <div>
-                          <span
-                            className={styles["validator-currency"]}
-                            style={{ color: "var(--font-secondary)" }}
-                          >
-                            {displayAmount}
-                          </span>
-                        </div>
+                <div className={styles["validator-details"]}>
+                  <div className={styles["validator-top"]}>
+                    <div className={styles["left-col"]}>
+                      <div style={{ fontWeight: 400 }}>
+                        {val.description.moniker?.trim()}
                       </div>
-
-                      {amountFiatCurrency && (
-                        <div className={styles["right-col"]}>
-                          <span className={styles["amount"]}>
-                            {amountFiatCurrency
-                              .shrink(true)
-                              .maxDecimals(6)
-                              .trim(true)
-                              .toString()}
-                          </span>
-                          <span
-                            className={styles["validator-currency"]}
-                            style={{ color: "var(--font-secondary)" }}
-                          >
-                            {" "}
-                            {fiatCurrency.toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* for line */}
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "1px",
-                        background: "var(--bg-grey-dark)",
-                      }}
-                    />
-
-                    <div className={styles["validator-bottom"]}>
-                      <div className={styles["left-col"]}>
-                        <div>
-                          <span className={styles["validator-currency"]}>
-                            {`${APR.maxDecimals(2).trim(true).toString()}% APR`}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div
-                        className={styles["right-col"]}
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: 400,
-                        }}
-                      >
-                        <span className={styles["validator-reward"]}>
-                          {reward
-                            .maxDecimals(2)
+                      <div>
+                        <span className={styles["validator-currency"]}>
+                          {amount
+                            .maxDecimals(4)
                             .trim(true)
                             .shrink(true)
                             .toString()}
                         </span>
-                        <span
-                          style={{
-                            marginLeft: "5px",
-                            fontSize: "12px",
-                            color: "var(--font-secondary)",
-                          }}
-                        >
-                          Earned
+                      </div>
+                    </div>
+
+                    {amountFiatCurrency && (
+                      <div className={styles["right-col"]}>
+                        <span>
+                          {amountFiatCurrency
+                            .shrink(true)
+                            .maxDecimals(6)
+                            .trim(true)
+                            .toString()}
+                        </span>
+                        <span className={styles["validator-currency"]}>
+                          {" "}
+                          {fiatCurrency.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* for line */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "1px",
+                      background: "rgba(255,255,255,0.2)",
+                    }}
+                  />
+
+                  <div className={styles["validator-bottom"]}>
+                    <div className={styles["left-col"]}>
+                      <div>
+                        <span className={styles["validator-currency"]}>
+                          {`${APR.maxDecimals(2).trim(true).toString()}% APR`}
                         </span>
                       </div>
                     </div>
+
+                    <div
+                      className={styles["right-col"]}
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 400,
+                      }}
+                    >
+                      <span style={{ fontWeight: 400, color: "white" }}>
+                        {reward
+                          .maxDecimals(2)
+                          .trim(true)
+                          .shrink(true)
+                          .toString()}
+                      </span>
+                      <span style={{ marginLeft: "5px", fontSize: "12px" }}>
+                        Earned
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </GlassCard>
-            );
-          })
-        ) : (
-          <div>No validators yet!</div>
-        )}
-      </div>
-    </div>
+              </div>
+            </GlassCard>
+          );
+        })
+      ) : (
+        <div>No validators yet!</div>
+      )}
+    </React.Fragment>
   );
 });

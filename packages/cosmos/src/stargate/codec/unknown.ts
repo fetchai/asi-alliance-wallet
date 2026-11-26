@@ -19,7 +19,7 @@ export class UnknownMessage implements Any {
 
   toJSON() {
     return {
-      typeUrl: this._typeUrl,
+      type_url: this._typeUrl,
       value: Buffer.from(this._value).toString("base64"),
     };
   }

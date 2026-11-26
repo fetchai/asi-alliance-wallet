@@ -20,7 +20,6 @@ import { observer } from "mobx-react-lite";
 
 export const SendScreen: FunctionComponent = observer(() => {
   const [isNext, setIsNext] = useState(false);
-  const [isMaxAmount, setIsMaxAmount] = useState(false);
   const { chainStore, accountStore, queriesStore } = useStore();
   const style = useStyle();
 
@@ -93,7 +92,7 @@ export const SendScreen: FunctionComponent = observer(() => {
     smartNavigation.setOptions({
       headerLeft: () => (
         <IconButton
-          icon={<HeaderBackButtonIcon color="#151a1a" size={21} />}
+          icon={<HeaderBackButtonIcon color="white" size={21} />}
           backgroundBlur={false}
           onPress={() => {
             if (isNext) {
@@ -106,7 +105,7 @@ export const SendScreen: FunctionComponent = observer(() => {
             style.flatten([
               "width-54",
               "border-width-1",
-              "border-color-gray-100",
+              "border-color-gray-300",
               "padding-x-14",
               "padding-y-6",
               "justify-center",
@@ -131,7 +130,7 @@ export const SendScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="secondary"
+      backgroundMode="image"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -139,15 +138,10 @@ export const SendScreen: FunctionComponent = observer(() => {
         <SendPhase1
           setIsNext={setIsNext}
           sendConfigs={sendConfigs}
-          setIsMaxAmount={setIsMaxAmount}
           noChangeAccount={state.noChangeAccount}
         />
       ) : (
-        <SendPhase2
-          sendConfigs={sendConfigs}
-          setIsNext={setIsNext}
-          isMaxAmount={isMaxAmount}
-        />
+        <SendPhase2 sendConfigs={sendConfigs} setIsNext={setIsNext} />
       )}
     </PageWithScrollView>
   );

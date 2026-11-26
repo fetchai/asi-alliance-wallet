@@ -5,7 +5,6 @@ import { useStore } from "../../stores";
 import { Staking } from "@keplr-wallet/stores";
 import { observer } from "mobx-react-lite";
 import { ValidatorDetails } from "./validator-detail";
-import style from "./validator-detail/style.module.scss";
 
 export const Validator: FunctionComponent = observer(() => {
   const navigate = useNavigate();
@@ -53,7 +52,6 @@ export const Validator: FunctionComponent = observer(() => {
           ? validator.description.moniker
           : validator?.description.website
       }`}
-      headerTitleClass={validator ? style["header-title"] : ""}
       showBottomMenu={false}
       onBackButton={() =>
         previousAddress === "stake"

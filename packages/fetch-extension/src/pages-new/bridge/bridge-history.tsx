@@ -10,7 +10,6 @@ import { BridgeHistory } from "@keplr-wallet/stores";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import { Button } from "reactstrap";
 import restartIcon from "@assets/icon/undo.png";
-import { isPureEvmChain } from "@utils/filters";
 
 export const proposalOptions = {
   ProposalActive: "PROPOSAL_STATUS_VOTING_PERIOD",
@@ -29,8 +28,7 @@ export const BridgeHistoryView: FunctionComponent = observer(() => {
   const { chainStore, accountStore, queriesStore } = useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
-  const current = chainStore.current;
-  const isEvm = isPureEvmChain(current);
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const currentQueriesStore = queriesStore.get(chainStore.current.chainId);
 
   const currentChainBridgeHistoryQuery = isEvm
@@ -87,8 +85,7 @@ export const BridgeHistoryView: FunctionComponent = observer(() => {
 const BridgeStatus: FunctionComponent<{ history: BridgeHistory }> = observer(
   ({ history }) => {
     const { chainStore, queriesStore } = useStore();
-    const current = chainStore.current;
-    const isEvm = isPureEvmChain(current);
+    const isEvm = chainStore.current.features?.includes("evm") ?? false;
     const currentQueriesStore = queriesStore.get(chainStore.current.chainId);
 
     const counterChainSwapStatusQuery = isEvm

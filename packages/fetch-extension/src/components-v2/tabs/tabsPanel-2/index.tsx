@@ -11,7 +11,6 @@ interface Tab {
 export interface TabsProps {
   tabs: Tab[];
   activeTabId?: string;
-  onTabClick?: (tabId: string) => void;
   showTabsOnBottom?: boolean;
   setActiveTab?: any;
   onTabChange?: any;
@@ -24,7 +23,6 @@ export const TabsPanel: React.FC<TabsProps> = ({
   tabs,
   activeTabId,
   showTabsOnBottom,
-  onTabClick,
   setActiveTab,
   onTabChange,
   styleProps,
@@ -70,11 +68,9 @@ export const TabsPanel: React.FC<TabsProps> = ({
                 tab.id === selectedTab ? style["selected"] : ""
               }`}
               style={{
-                color: `${
-                  tab.id === selectedTab ? "#f0f0f0" : "var(--font-secondary)"
-                }`,
+                color: `${tab.id === selectedTab ? "#000D3D" : "#FFF"}`,
                 background: `${
-                  tab.id === selectedTab ? "var(--bg-dark)" : "transparent"
+                  tab.id === selectedTab ? "white" : "transparent"
                 }`,
                 border: `${
                   tab.id === selectedTab ||
@@ -86,13 +82,7 @@ export const TabsPanel: React.FC<TabsProps> = ({
                 borderRadius: `${tab.id === selectedTab ? "10px" : "0px"}`,
               }}
               key={tab.id}
-              type="button"
-              onClick={() => {
-                handleTabClick(tab.id);
-                if (onTabClick) {
-                  onTabClick(tab.id);
-                }
-              }}
+              onClick={() => handleTabClick(tab.id)}
               disabled={tab.disabled || false}
             >
               {tab.id}

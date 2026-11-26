@@ -6,19 +6,11 @@ import { useLanguage } from "../../../languages";
 import { AppCurrency } from "@keplr-wallet/types";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { isPureEvmChain } from "@utils/filters";
 import { separateNumericAndDenom } from "@utils/format";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { WalletStatus } from "@keplr-wallet/stores";
 import { useQuery } from "@tanstack/react-query";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { TXNTYPE } from "../../../config";
-import {
-  checkAddressIsBuySellWhitelisted,
-  useMoonpayCurrency,
-} from "@utils/moonpay-currency";
-import { moonpaySupportedTokensByChainId } from "../../more/token/moonpay/utils";
-import { useClaimFrozenTotal } from "./use-claim-frozen-total";
 
 interface Props {
   tokenState: any;
@@ -32,7 +24,6 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     priceStore,
     keyRingStore,
     activityStore,
-    analyticsStore,
   } = useStore();
   const navigate = useNavigate();
   const language = useLanguage();
@@ -56,17 +47,13 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     (currency: AppCurrency) => currency.coinMinimalDenom === "uusdc"
   );
 
-  const isEvm = isPureEvmChain(current);
-
+  const isEvm = chainStore.current.features?.includes("evm") ?? false;
   const stakable = (() => {
     if (isNoble && hasUSDC) {
       return balanceQuery.getBalanceFromCurrency(hasUSDC);
     }
 
-    return (
-      balanceStakableQuery?.balance ||
-      new CoinPretty(current.currencies[0], new Int(0))
-    );
+    return balanceStakableQuery.balance;
   })();
 
   const delegated = queries.cosmos.queryDelegations
@@ -81,13 +68,6 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
     activityStore.getAddress !== accountInfo.bech32Address ||
     activityStore.getChainId !== current.chainId;
 
-  const { data } = useMoonpayCurrency();
-
-  const currency = current.feeCurrencies?.[0] ?? current.currencies[0];
-  const isClaimPending = Boolean(
-    activityStore.getPendingTxnTypes[TXNTYPE.withdrawRewards]
-  );
-
   const rewards = useQuery({
     queryKey: ["rewards", accountInfo.bech32Address, current.chainId],
     queryFn: async () => {
@@ -96,81 +76,49 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
           accountInfo.bech32Address
         );
         await rewards.waitFreshResponse();
-        return rewards.stakableReward;
+        const stakableRewards = rewards.stakableReward;
+        return stakableRewards;
       }
       return null;
     },
     refetchInterval: 3600 * 1000,
     refetchOnMount: false,
-    enabled: !current?.features?.includes("eth-key-sign"),
     staleTime: accountOrChainChanged ? 0 : 3600 * 1000,
   });
 
-  const allowedTokenList = data?.filter(
-    (item: any) =>
-      item?.type === "crypto" && (item?.isSellSupported || !item.isSuspended)
-  );
-
-  const moonpaySupportedTokens = moonpaySupportedTokensByChainId(
-    current.chainId,
-    allowedTokenList,
-    chainStore.chainInfos
-  );
-
+  const currency = current.feeCurrencies?.[0];
   const stakableReward = rewards?.data || new CoinPretty(currency, new Int(0));
   const stakedSum = delegated.add(unbonding);
-  const liveTotal = stakable.add(stakedSum).add(stakableReward);
-  const { total, isFrozen: isClaimTotalFrozen } = useClaimFrozenTotal({
-    liveTotal,
-    currency,
-    isClaimPending,
-    bech32Address: accountInfo.bech32Address,
-    chainId: current.chainId,
-    isRewardsFetching: rewards.isFetching,
-  });
+  const total = stakable.add(stakedSum).add(stakableReward);
 
   const totalPrice = priceStore.calculatePrice(total, fiatCurrency);
 
   const { numericPart: totalNumber, denomPart: totalDenom } =
-    separateNumericAndDenom(total.shrink(true).trim(true).toString());
+    separateNumericAndDenom(
+      total.shrink(true).trim(true).maxDecimals(6).toString()
+    );
 
   const changeInDollarsValue =
     tokenState.type === "positive"
-      ? tokenState.diff / 100
-      : -tokenState.diff / 100;
+      ? (parseFloat(totalNumber) * tokenState.diff) / 100
+      : -(parseFloat(totalNumber) * tokenState.diff) / 100;
 
   const changeInDollarsClass =
     tokenState.type === "positive"
       ? style["increaseInDollarsGreen"]
       : style["increaseInDollarsOrange"];
 
-  // check if address is whitelisted for Buy/Sell feature
-  const isAddressWhitelisted = accountInfo?.bech32Address
-    ? checkAddressIsBuySellWhitelisted(
-        current.chainId === "eip155:1" || current.chainId === "injective-1"
-          ? accountInfo.ethereumHexAddress || ""
-          : accountInfo.bech32Address
-      )
-    : false;
-
-  const numericValue = Number(totalNumber);
-  const formattedValue =
-    numericValue !== 0 && numericValue < 0.000001
-      ? "< 0.000001"
-      : numericValue.toLocaleString("en-US", {
-          maximumFractionDigits: numericValue < 0.001 ? 6 : 3,
-        });
   return (
     <div className={style["balance-card"]}>
       {isEvm ? (
         <div className={style["balance-field"]}>
           <div className={style["balance"]}>
-            {formattedValue} <div className={style["denom"]}>{totalDenom}</div>
+            {totalNumber} <div className={style["denom"]}>{totalDenom}</div>
           </div>
           <div className={style["inUsd"]}>
             {totalPrice && ` ${totalPrice.toString()} `}
           </div>
-          {tokenState?.diff ? (
+          {tokenState?.diff && (
             <div
               className={` ${
                 tokenState.type === "positive"
@@ -183,41 +131,36 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                   style["changeInDollars"] + " " + changeInDollarsClass
                 }
               >
-                {`${
-                  priceStore.getFiatCurrency(fiatCurrency)?.symbolName
-                }${changeInDollarsValue.toFixed(4)} ${totalDenom}`}
+                {changeInDollarsValue.toFixed(4)} {totalDenom}
               </div>
               <div className={style["changeInPer"]}>
                 ( {tokenState.type === "positive" ? "+" : "-"}
-                {parseFloat(tokenState.percentageDiff).toFixed(1)} %)
+                {parseFloat(tokenState.diff).toFixed(2)} %)
               </div>
               <div className={style["day"]}>{tokenState.time}</div>
             </div>
-          ) : (
-            ""
           )}
         </div>
       ) : (
         <div className={style["balance-field"]}>
           <div className={style["balance"]}>
             {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === "empty" ||
-            (rewards.isFetching && !isClaimTotalFrozen) ? (
-              <Skeleton height="37.5px" width="100px" />
+            keyRingStore.status === 0 ||
+            rewards.isFetching ? (
+              <Skeleton height="37.5px" />
             ) : (
               <React.Fragment>
-                {formattedValue}{" "}
-                <div className={style["denom"]}>{totalDenom}</div>
+                {totalNumber} <div className={style["denom"]}>{totalDenom}</div>
               </React.Fragment>
             )}
           </div>
           <div className={style["inUsd"]}>
             {accountInfo.walletStatus === WalletStatus.Loading ||
-            keyRingStore.status === "empty" ||
-            (rewards.isFetching && !isClaimTotalFrozen) ? (
-              <Skeleton height="21px" width="100px" />
+            keyRingStore.status === 0 ||
+            rewards.isFetching ? (
+              <Skeleton height="21px" />
             ) : totalPrice ? (
-              ` ${totalPrice.toString()} ${fiatCurrency.toUpperCase()}`
+              ` ${totalPrice.toString()} `
             ) : (
               ` ${total
                 .shrink(true)
@@ -227,7 +170,7 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                 .toString()} ${fiatCurrency.toUpperCase()}`
             )}
           </div>
-          {tokenState?.diff ? (
+          {tokenState?.diff && (
             <div
               className={` ${
                 tokenState.type === "positive"
@@ -240,49 +183,23 @@ export const Balances: React.FC<Props> = observer(({ tokenState }) => {
                   style["changeInDollars"] + " " + changeInDollarsClass
                 }
               >
-                {`${tokenState.type === "positive" ? "+" : "-"} ${
-                  priceStore.getFiatCurrency(fiatCurrency)?.symbolName
-                } ${changeInDollarsValue.toFixed(4)}`}
+                {changeInDollarsValue.toFixed(4)} {totalDenom}
               </div>
               <div className={style["changeInPer"]}>
                 ({tokenState.type === "positive" ? "+" : "-"}
-                {parseFloat(tokenState.percentageDiff).toFixed(1)} %)
+                {parseFloat(tokenState.diff).toFixed(2)} %)
               </div>
               <div className={style["day"]}>{tokenState.time}</div>
             </div>
-          ) : (
-            ""
           )}
         </div>
       )}
-      <div className={style["btnContainer"]}>
-        {moonpaySupportedTokens?.length > 0 &&
-        !current.beta &&
-        isAddressWhitelisted ? (
-          <button
-            className={`${style["portfolio"]} ${style["buy"]}`}
-            onClick={() => {
-              navigate("/more/token/moonpay");
-            }}
-          >
-            Buy/Sell
-          </button>
-        ) : (
-          ""
-        )}
-        <button
-          className={style["portfolio"]}
-          onClick={() => {
-            analyticsStore.logEvent("view_portfolio_click", {
-              pageName: "Home",
-            });
-            navigate("/portfolio");
-          }}
-        >
-          Portfolio
-          <img src={require("@assets/svg/chevron-right.svg")} alt="chevron" />
-        </button>
-      </div>
+      <button
+        className={style["portfolio"]}
+        onClick={() => navigate("/portfolio")}
+      >
+        View portfolio
+      </button>
     </div>
   );
 });
