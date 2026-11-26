@@ -1,0 +1,44 @@
+@import "../../styles/var";
+
+.stakeInputDenomSection {
+  font-size: 16px;
+  font-weight: 400;
+  color: $font-secondary;
+  min-width: fit-content;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stakeInput {
+  width: 80%;
+}
+
+.stakeInputAvailableBalance {
+  font-size: 12px;
+  font-weight: 400;
+  color: $font-secondary;
+  padding: 0px 10px;
+  margin-bottom: 4px;
+}
+
+.stakeInputErrorMessage {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #fa8f6b;
+}
+
+.stakeInputContainer {
+  width: 100% !important;
+}
+
+@media screen and (min-width: 600px) {
+  .stakeInputDenomSection {
+    max-width: 30%;
+  }
+
+  .stakeInput {
+    width: 70%;
+  }
+}

@@ -1,5 +1,16 @@
-import { Env, Handler, InternalHandler, Message } from "@keplr-wallet/router";
-import { PushEventDataMsg, PushInteractionDataMsg } from "./messages";
+import {
+  Env,
+  Handler,
+  InternalHandler,
+  KeplrError,
+  Message,
+} from "@keplr-wallet/router";
+import {
+  InteractionIdPingMsg,
+  InteractionPingMsg,
+  PushEventDataMsg,
+  PushInteractionDataMsg,
+} from "./messages";
 import { InteractionForegroundService } from "./service";
 
 export const getHandler: (service: InteractionForegroundService) => Handler = (
@@ -14,8 +25,15 @@ export const getHandler: (service: InteractionForegroundService) => Handler = (
         );
       case PushEventDataMsg:
         return handlePushEventDataMsg(service)(env, msg as PushEventDataMsg);
+      case InteractionPingMsg:
+        return handleInteractionPing(service)(env, msg as InteractionPingMsg);
+      case InteractionIdPingMsg:
+        return handleInteractionIdPing(service)(
+          env,
+          msg as InteractionIdPingMsg
+        );
       default:
-        throw new Error("Unknown msg type");
+        throw new KeplrError("interaction", 110, "Unknown msg type");
     }
   };
 };
@@ -33,5 +51,27 @@ const handlePushEventDataMsg: (
 ) => InternalHandler<PushEventDataMsg> = (service) => {
   return (_, msg) => {
     return service.pushEvent(msg.data);
+  };
+};
+
+const handleInteractionPing: (
+  service: InteractionForegroundService
+) => InternalHandler<InteractionPingMsg> = (service) => {
+  return (_env, msg) => {
+    if (!service.pingHandler) {
+      return false;
+    }
+    return service.pingHandler(msg.windowId, msg.ignoreWindowIdAndForcePing);
+  };
+};
+
+const handleInteractionIdPing: (
+  service: InteractionForegroundService
+) => InternalHandler<InteractionIdPingMsg> = (service) => {
+  return (_env, msg) => {
+    if (!service.interactionIdPingHandler) {
+      return false;
+    }
+    return service.interactionIdPingHandler(msg.interactionId);
   };
 };

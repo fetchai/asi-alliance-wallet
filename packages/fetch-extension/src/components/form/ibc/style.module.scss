@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .chainSelector {
   width: 100%;
   height: 46px;
@@ -43,4 +45,10 @@
   :global(.dropdown-menu.show) {
     width: 100%;
   }
+}
+
+.label {
+  font-weight: 500;
+  font-size: 14px;
+  color: $font-secondary;
 }

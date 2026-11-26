@@ -1,3 +1,16 @@
+@import "../../../../styles/var";
+
+.govt-proposal {
+  color: $font-dark;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  border-radius: 12px;
+  padding: 18px;
+  background: $bg-grey;
+}
+
 .govt-proposal-row-container {
   display: flex;
   flex-direction: column;
@@ -9,7 +22,7 @@
     gap: 6px;
 
     .proposal-number {
-      color: rgba(255, 255, 255, 0.6);
+      color: $font-secondary;
       font-size: 12px;
       font-weight: 400;
       text-transform: uppercase;
@@ -38,11 +51,12 @@
       font-weight: 400;
 
       .proposal-duration-title {
-        color: rgba(255, 255, 255, 0.6);
+        color: $font-secondary;
       }
 
       .proposal-duration-date {
-        color: rgba(255, 255, 255, 1);
+        color: $font-dark;
+        font-size: 14px;
       }
     }
   }

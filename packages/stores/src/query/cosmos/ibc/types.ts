@@ -17,8 +17,8 @@ export type ChannelResponse = {
   proof: string;
   proof_path: string;
   proof_height: {
-    epoch_number: string;
-    epoch_height: string;
+    revision_number: string;
+    revision_height: string;
   };
 };
 
@@ -36,9 +36,33 @@ export type ClientStateResponse = {
   };
 };
 
+export type ClientStateV2Response = {
+  client_state: {
+    "@type": string;
+    data: string;
+    latest_height: {
+      revision_number: string;
+      revision_height: string;
+    };
+  };
+};
+
 export type DenomTraceResponse = {
-  denom_trace: {
-    path: string;
-    base_denom: string;
+  denom: {
+    base: string;
+    trace: {
+      port_id: string;
+      channel_id: string;
+    }[];
+  };
+};
+
+export type DenomTraceV2Response = {
+  denom: {
+    base: string;
+    trace: {
+      port_id: string;
+      channel_id: string;
+    }[];
   };
 };

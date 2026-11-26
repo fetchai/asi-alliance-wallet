@@ -1,6 +1,7 @@
 @import "../../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/functions";
 @import "../../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/mixins";
 @import "../../../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard/custom/variables";
+@import "../../../styles/var";
 
 .container {
   display: flex;
@@ -8,17 +9,23 @@
   height: 100%;
 }
 
+div[class^="innerContainer-sidePanel"] .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
 .mnemonic {
-  font-family: Lexend;
+  font-family: $font-family-base;
   letter-spacing: -0.36px;
   padding: 0px;
   text-align: center;
   background: transparent;
-  color: white;
+  color: $font-dark;
   font-size: 26px;
   margin: auto;
   padding-bottom: 30px;
-  box-shadow: $input-alternative-box-shadow !important;
   margin-top: 0px;
 
   &.alt-hex {
@@ -27,5 +34,42 @@
     &::before {
       content: "0x";
     }
+  }
+}
+
+.alertMessage {
+  font-family: $font-family-base;
+  display: flex;
+  padding: 12px;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
+  border-radius: 12px;
+  background: $bg-red-base;
+  border: none !important;
+  color: $font-dark;
+  margin-top: 16px;
+
+  i {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+
+  img {
+    padding-top: 4px;
+  }
+
+  h1 {
+    font-size: 14px;
+    font-weight: 500;
+    color: $font-dark;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 12px;
+    line-height: 1.57;
+    color: rgba($font-dark, 0.8);
+    margin: 0;
   }
 }

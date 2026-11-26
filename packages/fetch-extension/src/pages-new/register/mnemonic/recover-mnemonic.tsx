@@ -21,6 +21,15 @@ import { Card } from "@components-v2/card";
 import { ImportLedgerPage } from "../ledger";
 import { MigrateEthereumAddressPage } from "../migration";
 import { NewMnemonicStep } from "./hook";
+import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
+import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
+import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
+import { Checkbox } from "@components-v2/checkbox/checkbox";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
+// import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
+// import { BACKGROUND_PORT } from "@keplr-wallet/router";
+// import { RefreshAccountList } from "@keplr-wallet/background";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const bip39 = require("bip39");
@@ -81,7 +90,8 @@ export const RecoverMnemonicIntro: FunctionComponent<{
           e.preventDefault();
 
           registerConfig.setType(TypeRecoverMnemonic);
-          analyticsStore.logEvent("Import account started", {
+          analyticsStore.logEvent("import_a_wallet_click", {
+            pageName: "Register",
             registerType: "seed",
           });
         }}
@@ -126,7 +136,7 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
               height: "32px",
             }}
             style={{
-              backgroundColor: "rgba(255,255,255,0.1)",
+              display: "flex",
               height: "78px",
               fontSize: "14px",
               padding: "18px",
@@ -135,9 +145,10 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
               e.preventDefault();
               setSelectedCard("recover");
               registerConfig.setType(TypeRecoverMnemonic);
-              analyticsStore.logEvent("Import account started", {
-                registerType: "seed",
-              });
+              analyticsStore.logEvent(
+                "use_a_seed_phrase_or_a_private_key_click",
+                { pageName: "Register", registerType: "seed" }
+              );
             }}
             leftImage={keyIcon}
             heading={"Use a seed phrase or a private key"}
@@ -149,7 +160,7 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
                 height: "32px",
               }}
               style={{
-                backgroundColor: "rgba(255,255,255,0.1)",
+                display: "flex",
                 height: "78px",
                 fontSize: "14px",
                 padding: "18px",
@@ -158,8 +169,10 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
                 e.preventDefault();
                 setSelectedCard(AccountSetupType.CONNECT_HARDWARE);
                 registerConfig.setType(TypeRecoverMnemonic);
-                analyticsStore.logEvent("Import account started", {
-                  registerType: "seed",
+                analyticsStore.logEvent("connect_hardware_wallet_click", {
+                  registerType: "ledger",
+                  accountType: "ledger",
+                  pageName: "Register",
                 });
               }}
               leftImage={require("@assets/svg/wireframe/hardware.svg")}
@@ -175,10 +188,11 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
             leftImageStyle={{
               width: "32px",
               height: "32px",
+              background: "white",
             }}
             style={{
-              backgroundColor: "rgba(255,255,255,0.1)",
               height: "78px",
+              display: "flex",
               fontSize: "14px",
               padding: "18px",
             }}
@@ -186,8 +200,10 @@ export const RecoverMnemonicMainPage: FunctionComponent<{
               e.preventDefault();
               setSelectedCard(AccountSetupType.MIGRATE_ETH);
               registerConfig.setType(TypeRecoverMnemonic);
-              analyticsStore.logEvent("Import account started", {
+              analyticsStore.logEvent("migrate_from_eth_click", {
                 registerType: "seed",
+                pageName: "Register",
+                accountType: "mnemonic",
               });
             }}
             leftImage={require("@assets/svg/wireframe/metamask-icon.svg")}
@@ -205,21 +221,31 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const intl = useIntl();
 
   const bip44Option = useBIP44Option();
-
-  const { analyticsStore } = useStore();
+  const { analyticsStore, keyRingStore } = useStore();
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+  const accountList = keyRingStore.keyInfos;
+  const defaultAccountName = getNextDefaultAccountName(accountList);
 
   const {
     register,
     handleSubmit,
-    getValues,
+    watch,
+    trigger,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      name: "",
+      name: defaultAccountName,
       password: "",
       confirmPassword: "",
     },
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
+
+  const [passwordCheckbox, setPasswordCheckbox] = useState(false);
+  const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
+  const { name, password, confirmPassword } = watch();
 
   const [shownMnemonicIndex, setShownMnemonicIndex] = useState(-1);
 
@@ -258,8 +284,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
   const handlePaste = (index: number, value: string) => {
     const words = value
       .trim()
-      .split(" ")
-      .map((word) => word.trim());
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0);
 
     if (words.length === 1) {
       // If the length of pasted words is 1 and the word is guessed as a private key,
@@ -267,6 +294,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
       if (isPrivateKey(words[0])) {
         setSeedType(SeedType.PRIVATE_KEY);
         setSeedWords([words[0]]);
+        setActiveTab(NewMnemonicStep.PRIVATEKEY);
         return;
       }
     }
@@ -275,14 +303,13 @@ export const RecoverMnemonicPage: FunctionComponent<{
       // 12/24 words are treated specially.
       // Regardless of where it is pasted from, if it is a valid seed, it will be processed directly.
       if (bip39.validateMnemonic(words.join(" "))) {
-        if (words.length === 12) {
-          setSeedType(SeedType.WORDS12);
-        } else {
-          setSeedType(SeedType.WORDS24);
-        }
-
+        setSeedType(words.length === 12 ? SeedType.WORDS12 : SeedType.WORDS24);
         setSeedWords(words);
-
+        setActiveTab(
+          words.length === 12
+            ? NewMnemonicStep.WORDS12
+            : NewMnemonicStep.WORDS24
+        );
         return;
       }
     }
@@ -373,6 +400,41 @@ export const RecoverMnemonicPage: FunctionComponent<{
     handleTabChange(activeTab);
   }, [activeTab]);
 
+  const handleTabsClick = (activeTab: any) => {
+    if (activeTab === NewMnemonicStep.WORDS12) {
+      setSeedWords(new Array<string>(12).fill(""));
+    } else if (activeTab === NewMnemonicStep.WORDS24) {
+      setSeedWords(new Array<string>(24).fill(""));
+    } else if (activeTab === NewMnemonicStep.PRIVATEKEY) {
+      setSeedWords(new Array<string>(1).fill(""));
+    }
+  };
+
+  const resetRecoverForm = () => {
+    setShownMnemonicIndex(-1);
+    _setSeedType(SeedType.WORDS12);
+    setSeedWords(new Array<string>(12).fill(""));
+    setSeedWordsError(undefined);
+    setActiveTab(NewMnemonicStep.WORDS12);
+    setSelectedNetworks([]);
+    setPasswordCheckbox(false);
+    setPasswordStrengthScore(0);
+    setValue("name", defaultAccountName);
+    setValue("password", "");
+    setValue("confirmPassword", "");
+  };
+
+  useEffect(() => {
+    if (confirmPassword) {
+      trigger("confirmPassword");
+    }
+  }, [password, trigger]);
+
+  const areInputsEmpty =
+    name === "" ||
+    (registerConfig.mode === "create" &&
+      (password === "" || confirmPassword === ""));
+
   return (
     <React.Fragment>
       {selectedCard === "main" && (
@@ -386,7 +448,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
           <div className={styleRecoverMnemonic["backButtonContainer"]}>
             <BackButton
               onClick={() => {
-                // registerConfig.clear();
+                resetRecoverForm();
                 setSelectedCard("main");
               }}
             />
@@ -394,7 +456,12 @@ export const RecoverMnemonicPage: FunctionComponent<{
           <h1 className={styleRecoverMnemonic["title"]}>Import your wallet</h1>
           <div className={styleRecoverMnemonic["container"]}>
             <div className={styleRecoverMnemonic["tabsContainer"]}>
-              <TabsPanel tabs={tabs} setActiveTab={setActiveTab} />
+              <TabsPanel
+                activeTabId={activeTab}
+                tabs={tabs}
+                setActiveTab={setActiveTab}
+                onTabClick={handleTabsClick}
+              />
             </div>
             <div
               className={classnames(
@@ -425,7 +492,14 @@ export const RecoverMnemonicPage: FunctionComponent<{
                       await registerConfig.createPrivateKey(
                         data.name,
                         privateKey,
-                        data.password
+                        data.password,
+                        {},
+                        selectedNetworks
+                      );
+                      dispatchGlobalEventExceptSelf(
+                        "keplr_new_key_created",
+                        keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1]
+                          .id
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
@@ -440,13 +514,26 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         // Therefore, trim should be done last.
                         seedWords.join(" ").trim(),
                         data.password,
-                        bip44Option.bip44HDPath
+                        bip44Option.bip44HDPath,
+                        {},
+                        selectedNetworks
                       );
                       analyticsStore.setUserProperties({
                         registerType: "seed",
                         accountType: "mnemonic",
                       });
                     }
+                    await keyRingStore.selectKeyRing(
+                      keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+                    );
+                    dispatchGlobalEventExceptSelf(
+                      "keplr_new_key_created",
+                      keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+                    );
+                    // await new InExtensionMessageRequester().sendMessage(
+                    //   BACKGROUND_PORT,
+                    //   new RefreshAccountList()
+                    // );
                   } catch (e) {
                     alert(e.message ? e.message : e.toString());
                     registerConfig.clear();
@@ -461,8 +548,8 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     : {}),
                   ...(seedType === SeedType.PRIVATE_KEY
                     ? {
-                        marginLeft: "170px",
-                        width: "333px",
+                        marginLeft: "145px",
+                        width: "390px",
                         gridTemplateColumns: "1fr",
                       }
                     : {}),
@@ -475,6 +562,9 @@ export const RecoverMnemonicPage: FunctionComponent<{
                   }
                 )}
               >
+                {seedType === SeedType.PRIVATE_KEY && (
+                  <Label className={style["label"]}>Private Key</Label>
+                )}
                 {seedWords.map((word, index) => {
                   return (
                     <div
@@ -486,16 +576,10 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         style={
                           seedType === SeedType.PRIVATE_KEY
                             ? {
-                                color: "white",
-                                background: "rgba(255,255,255,0.1)",
                                 width: "335px",
                                 height: "53px",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
                               }
-                            : {
-                                color: "white",
-                                background: "rgba(255,255,255,0.1)",
-                              }
+                            : {}
                         }
                         type={
                           shownMnemonicIndex === index ? "text" : "password"
@@ -589,27 +673,80 @@ export const RecoverMnemonicPage: FunctionComponent<{
                 </div>
               ) : null}
               <div className={styleRecoverMnemonic["formInnerContainer"]}>
-                <Label
-                  for="name"
-                  style={{
-                    color: "rgba(255,255,255,0.6)",
-                    fontWeight: 400,
-                    fontSize: "15px",
+                {seedType !== SeedType.PRIVATE_KEY && (
+                  <ButtonV2
+                    type="button"
+                    styleProps={{
+                      width: "fit-content",
+                      padding: "10px 20px",
+                      height: "auto",
+                      fontSize: "14px",
+                      marginBottom: "10px",
+                      marginTop: "0px",
+                    }}
+                    text="Clear All"
+                    variant="dark"
+                    onClick={() => {
+                      if (seedType === SeedType.WORDS12) {
+                        setSeedWords(new Array<string>(12).fill(""));
+                      } else if (seedType == SeedType.WORDS24) {
+                        setSeedWords(new Array<string>(24).fill(""));
+                      }
+                    }}
+                  />
+                )}
+                <div>
+                  <Label for="name" className={style["label"]}>
+                    {intl.formatMessage({ id: "register.name" })}
+                  </Label>
+                  <Input
+                    className={styleRecoverMnemonic["addressInput"]}
+                    formGroupClassName={style["inputFormGroup"]}
+                    style={{ width: "333px" }}
+                    type="text"
+                    {...register("name", {
+                      required: intl.formatMessage({
+                        id: "register.name.error.required",
+                      }),
+                      validate: (value: string) =>
+                        validateAccountName(
+                          value,
+                          keyRingStore?.keyInfos,
+                          registerConfig.mode
+                        ),
+                    })}
+                    onChange={(e: any) => {
+                      const trimmedValue = e.target.value.trimStart();
+                      setValue(e.target.name, trimmedValue, {
+                        shouldValidate: true,
+                      });
+                    }}
+                    error={errors.name && errors.name.message}
+                    maxLength={20}
+                  />
+                  <div
+                    className={classNames(
+                      style["label"],
+                      "mb-1 text-xs",
+                      name === defaultAccountName ||
+                        (errors.name && errors.name.message)
+                        ? "invisible"
+                        : "visible"
+                    )}
+                  >
+                    * (Account name for unselected networks will be{" "}
+                    {defaultAccountName})
+                  </div>
+                </div>
+                <SelectNetwork
+                  className={classNames(
+                    seedType === SeedType.PRIVATE_KEY && "mt-[16px]"
+                  )}
+                  selectedNetworks={selectedNetworks}
+                  disabled={name === defaultAccountName}
+                  onMultiSelectChange={(values) => {
+                    setSelectedNetworks(values);
                   }}
-                >
-                  {intl.formatMessage({ id: "register.name" })}
-                </Label>
-                <Input
-                  className={styleRecoverMnemonic["addressInput"]}
-                  style={{ width: "333px" }}
-                  type="text"
-                  {...register("name", {
-                    required: intl.formatMessage({
-                      id: "register.name.error.required",
-                    }),
-                  })}
-                  error={errors.name && errors.name.message}
-                  maxLength={20}
                 />
                 {registerConfig.mode === "create" ? (
                   <React.Fragment>
@@ -618,6 +755,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         required: intl.formatMessage({
                           id: "register.create.input.password.error.required",
                         }),
+                        setValueAs: (value: string) => value.trim(),
                         validate: (password: string): string | undefined => {
                           if (password.length < 8) {
                             return intl.formatMessage({
@@ -626,6 +764,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                           }
                         },
                       })}
+                      placeholder="Enter Password (min 8 characters)"
                       error={errors.password && errors.password.message}
                     />
                     <PasswordInput
@@ -634,22 +773,38 @@ export const RecoverMnemonicPage: FunctionComponent<{
                         required: intl.formatMessage({
                           id: "register.create.input.confirm-password.error.required",
                         }),
+                        setValueAs: (value: string) => value.trim(),
                         validate: (
                           confirmPassword: string
                         ): string | undefined => {
-                          if (
-                            confirmPassword !== getValues()["confirmPassword"]
-                          ) {
+                          if (confirmPassword !== password) {
                             return intl.formatMessage({
                               id: "register.create.input.confirm-password.error.unmatched",
                             });
                           }
                         },
                       })}
+                      placeholder="Confirm Password"
                       error={
                         errors.confirmPassword && errors.confirmPassword.message
                       }
                     />
+                    <div className="pt-2 space-y-1 text-sm">
+                      <PasswordStrengthMeter
+                        password={password}
+                        onStrengthChange={(score) =>
+                          setPasswordStrengthScore(score)
+                        }
+                      />
+                    </div>
+                    {passwordStrengthScore < 3 && password.length >= 8 && (
+                      <Checkbox
+                        isChecked={passwordCheckbox}
+                        className="py-2"
+                        setIsChecked={setPasswordCheckbox}
+                        label="I understand this password is not strong and still want to continue."
+                      />
+                    )}
                   </React.Fragment>
                 ) : null}
                 <div
@@ -659,6 +814,7 @@ export const RecoverMnemonicPage: FunctionComponent<{
                 />
                 <AdvancedBIP44Option bip44Option={bip44Option} />
                 <ButtonV2
+                  variant="dark"
                   text={
                     registerConfig.isLoading ? (
                       <i className="fas fa-spinner fa-spin ml-2" />
@@ -671,7 +827,26 @@ export const RecoverMnemonicPage: FunctionComponent<{
                     height: "56px",
                   }}
                   data-loading={registerConfig.isLoading}
-                  disabled={registerConfig.isLoading}
+                  disabled={
+                    registerConfig.isLoading ||
+                    (registerConfig.mode === "create" &&
+                      (Boolean(
+                        errors?.confirmPassword?.message ||
+                          errors?.password?.message
+                      ) ||
+                        (password !== "" &&
+                          passwordStrengthScore < 3 &&
+                          !passwordCheckbox))) ||
+                    areInputsEmpty ||
+                    (selectedNetworks.length === 0 &&
+                      name !== defaultAccountName)
+                  }
+                  onClick={() => {
+                    analyticsStore.logEvent("register_next_click", {
+                      pageName: "Register",
+                      registerType: "seed",
+                    });
+                  }}
                 />
               </div>
             </Form>
@@ -700,7 +875,7 @@ const IconClosedEye: FunctionComponent<{
   width?: number;
   height?: number;
   color?: string;
-}> = ({ width = 28, height = 29, color = "#C6C6CD" }) => {
+}> = ({ width = 28, height = 29, color = "#101418" }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -725,19 +900,18 @@ const IconOpenEye: FunctionComponent<{
   width?: number;
   height?: number;
   color?: string;
-}> = ({ width = 28, height = 29, color = "#C6C6CD" }) => {
+}> = ({ width = 28, height = 29, color = "#101418" }) => {
   return (
     <svg
-      xmlns="http://www.w3.org/2000/svg"
       width={width}
       height={height}
-      fill="none"
-      viewBox="0 0 28 29"
+      viewBox="0 0 16 13"
+      fill={color}
+      xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill={color} d="M14 18.302a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" />
       <path
+        d="M8 1.9375C6.19531 1.9375 4.74609 2.75781 3.625 3.79688C2.55859 4.78125 1.84766 5.92969 1.46484 6.75C1.84766 7.57031 2.55859 8.74609 3.625 9.73047C4.74609 10.7695 6.19531 11.5625 8 11.5625C9.77734 11.5625 11.2266 10.7695 12.3477 9.73047C13.4141 8.74609 14.1523 7.57031 14.5078 6.75C14.1523 5.92969 13.4141 4.78125 12.375 3.79688C11.2266 2.75781 9.77734 1.9375 8 1.9375ZM2.72266 2.83984C4.00781 1.63672 5.78516 0.625 8 0.625C10.1875 0.625 11.9648 1.63672 13.25 2.83984C14.5352 4.04297 15.3828 5.4375 15.793 6.42188C15.875 6.64062 15.875 6.88672 15.793 7.10547C15.3828 8.0625 14.5352 9.48438 13.25 10.6875C11.9648 11.8906 10.1875 12.875 8 12.875C5.78516 12.875 4.00781 11.8906 2.72266 10.6875C1.4375 9.48438 0.589844 8.0625 0.179688 7.10547C0.0976562 6.88672 0.0976562 6.64062 0.179688 6.42188C0.589844 5.4375 1.4375 4.01562 2.72266 2.83984ZM8 8.9375C9.20312 8.9375 10.1875 7.98047 10.1875 6.75C10.1875 5.54688 9.20312 4.5625 8 4.5625C7.97266 4.5625 7.94531 4.5625 7.94531 4.5625C7.97266 4.72656 8 4.86328 8 5C8 5.98438 7.20703 6.75 6.25 6.75C6.08594 6.75 5.94922 6.75 5.8125 6.69531C5.8125 6.72266 5.8125 6.75 5.8125 6.75C5.8125 7.98047 6.76953 8.9375 8 8.9375ZM8 3.25C9.23047 3.25 10.3789 3.93359 11.0078 5C11.6367 6.09375 11.6367 7.43359 11.0078 8.5C10.3789 9.59375 9.23047 10.25 8 10.25C6.74219 10.25 5.59375 9.59375 4.96484 8.5C4.33594 7.43359 4.33594 6.09375 4.96484 5C5.59375 3.93359 6.74219 3.25 8 3.25Z"
         fill={color}
-        d="M26.843 13.85c-1.447-2.238-3.325-4.139-5.429-5.498-2.328-1.505-4.898-2.3-7.433-2.3-2.325 0-4.611.664-6.796 1.975-2.227 1.336-4.245 3.287-5.998 5.8a1.746 1.746 0 00-.035 1.944c1.445 2.26 3.303 4.164 5.375 5.504 2.332 1.511 4.843 2.277 7.454 2.277 2.555 0 5.13-.79 7.449-2.282 2.103-1.354 3.977-3.262 5.418-5.519a1.76 1.76 0 00-.005-1.9zM14 20.052a5.25 5.25 0 110-10.5 5.25 5.25 0 010 10.5z"
       />
     </svg>
   );

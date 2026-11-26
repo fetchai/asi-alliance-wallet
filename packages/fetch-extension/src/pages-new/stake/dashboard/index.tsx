@@ -1,6 +1,10 @@
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
-import { separateNumericAndDenom } from "@utils/format";
+import {
+  formatBalance,
+  isVestingExpired,
+  separateNumericAndDenom,
+} from "@utils/format";
 
 import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
@@ -10,9 +14,12 @@ import { useStore } from "../../../stores";
 import { EmptyStake } from "./empty-stake";
 import { MyStakes } from "./my-stake/my-stakes";
 import { observer } from "mobx-react-lite";
-import { WalletStatus } from "@keplr-wallet/stores";
+import { VestingType, WalletStatus } from "@keplr-wallet/stores";
 import { Skeleton } from "@components-v2/skeleton-loader";
 import { useLanguage } from "../../../languages";
+import { clearDecimals } from "../../sign/decimals";
+import { MyUnbondingValidators } from "./my-stake/my-unbonding-balances";
+import { Dec } from "@keplr-wallet/unit";
 
 export const Dashboard = observer(() => {
   const { chainStore, accountStore, queriesStore, priceStore } = useStore();
@@ -60,27 +67,96 @@ export const Dashboard = observer(() => {
   );
 
   const stakableReward = rewards.stakableReward;
-  const stakedSum = delegated.add(unbonding);
+  const stakedSum = delegated;
   const stakableBal = stakable.toString();
   const stakedBal = stakedSum.toString();
   const rewardsBal = stakableReward.toString();
+  const unbondingBal = unbonding.toString();
 
-  const { numericPart: stakableBalNumber, denomPart: stakableDenom } =
+  const { numericPart: stakableBalNumber } =
     separateNumericAndDenom(stakableBal);
-  const { numericPart: stakedBalNumber, denomPart: stakedDenom } =
-    separateNumericAndDenom(stakedBal);
-  const { numericPart: rewardsBalNumber, denomPart: rewardDenom } =
-    separateNumericAndDenom(rewardsBal);
+  const { numericPart: stakedBalNumber } = separateNumericAndDenom(stakedBal);
+  const { numericPart: rewardsBalNumber } = separateNumericAndDenom(rewardsBal);
+  const { numericPart: unbondingBalNumber } =
+    separateNumericAndDenom(unbondingBal);
+
+  const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
+    accountInfo.bech32Address
+  ).isVestingAccount;
+
+  const vestingInfo = queries.cosmos.queryAccount.getQueryBech32Address(
+    accountInfo.bech32Address
+  ).vestingAccount;
+  const latestBlockTime = queries.cosmos.queryRPCStatus.latestBlockTime;
+
+  const vestingEndTimeStamp = Number(
+    vestingInfo.base_vesting_account?.end_time
+  );
+  const vestingStartTimeStamp = Number(vestingInfo.start_time);
+
+  const spendableBalances =
+    queries.cosmos.querySpendableBalances.getQueryBech32Address(
+      accountInfo.bech32Address
+    );
+
+  const { numericPart: spendableNumber, denomPart: spendableDenom } =
+    separateNumericAndDenom(spendableBalances.balances.toString());
+
+  function getVestingBalance(balance: number) {
+    return clearDecimals((balance / 10 ** 18).toFixed(20).toString());
+  }
+
+  const vestingBalance = () => {
+    if (vestingInfo["@type"] == VestingType.Continuous.toString()) {
+      if (stakableBalNumber > spendableNumber) {
+        return (Number(stakableBalNumber) - Number(spendableNumber)).toString();
+      } else if (
+        latestBlockTime &&
+        vestingEndTimeStamp > latestBlockTime &&
+        spendableNumber === stakableBalNumber
+      ) {
+        const ov = Number(
+          vestingInfo.base_vesting_account?.original_vesting[0].amount
+        );
+        const vested =
+          ov *
+          ((latestBlockTime - vestingStartTimeStamp) /
+            (vestingEndTimeStamp - vestingStartTimeStamp));
+        return getVestingBalance(ov - vested);
+      }
+
+      return "0";
+    }
+    return vestingInfo.base_vesting_account
+      ? getVestingBalance(
+          Number(vestingInfo.base_vesting_account?.original_vesting[0].amount)
+        )
+      : "0";
+  };
 
   const stakableBalInUI = parseFloat(stakableBalNumber);
   const stakedBalInUI = parseFloat(stakedBalNumber);
   const rewardsBalInUI = parseFloat(rewardsBalNumber);
+  const unbondingBalInUI = parseFloat(unbondingBalNumber);
+  const vestingBalInUI =
+    isVesting && !isVestingExpired(vestingEndTimeStamp)
+      ? parseFloat(vestingBalance().toString())
+      : 0;
+  const stakableBalance = formatBalance(stakable, 2, false);
+  const stakedBalance = formatBalance(stakedSum, 2, false);
+  const rewardsBalance = formatBalance(stakableReward, 2, false);
+  const unbondingBalance = formatBalance(unbonding, 2, false);
 
   const total = stakableBalInUI + stakedBalInUI + rewardsBalInUI;
 
-  const stakablePercentage = total ? (stakableBalInUI / total) * 100 : 0;
+  const stakablePercentage = total ? (spendableNumber / total) * 100 : 0;
   const stakedPercentage = total ? (stakedBalInUI / total) * 100 : 0;
   const rewardsPercentage = total ? (rewardsBalInUI / total) * 100 : 0;
+  const unbondingPercentage = total ? (unbondingBalInUI / total) * 100 : 0;
+  const vestingPercentage =
+    isVesting && !isVestingExpired(vestingEndTimeStamp)
+      ? (Number(vestingBalance()) / total) * 100
+      : 0;
 
   const stakableInFiatCurrency = priceStore
     .calculatePrice(stakable, fiatCurrency)
@@ -91,19 +167,33 @@ export const Dashboard = observer(() => {
   const rewardsInFiatCurrency = priceStore
     .calculatePrice(stakableReward, fiatCurrency)
     ?.toString();
+  const unbondingInFiatCurrency = priceStore
+    .calculatePrice(unbonding, fiatCurrency)
+    ?.toString();
 
   const isLoaded =
     accountInfo.walletStatus === WalletStatus.Loaded &&
     accountInfo.bech32Address &&
     !rewards.isFetching;
 
+  const labels = ["Balance", "Staked", "Rewards", "Vesting"];
+  const data = [spendableNumber, stakedBalInUI, rewardsBalInUI, vestingBalInUI];
+  const backgroundColor = ["#B1FCAB", "#2DA6CF", "#3A5638", "#FAB29B"];
+
+  // add unbonding if available
+  if (unbondingBalInUI > 0) {
+    labels.push("Unbonding");
+    data.push(unbondingBalInUI);
+    backgroundColor.push("#F4B400");
+  }
+
   const doughnutData = {
-    labels: ["Balance", "Staked", "Rewards"],
+    labels,
     datasets: [
       {
-        data: [stakableBalInUI, stakedBalInUI, rewardsBalInUI],
-        backgroundColor: ["#CFC3FE", "#5F38FB", "#F9774B"],
-        hoverBackgroundColor: ["#CFC3FE", "#5F38FB", "#F9774B"],
+        data,
+        backgroundColor,
+        hoverBackgroundColor: backgroundColor,
         borderColor: "transparent",
       },
     ],
@@ -116,12 +206,22 @@ export const Dashboard = observer(() => {
       },
     },
   };
+
+  const hasDelegations =
+    delegations &&
+    delegations.filter((del) => new Dec(del.balance.amount).gt(new Dec(0)))
+      .length > 0;
+
+  const hasUnbonding = parseFloat(unbondingBalNumber) > 0;
+  const hasStakableOrRewards =
+    parseFloat(stakableBalNumber) > 0 ||
+    parseFloat(stakedBalNumber) > 0 ||
+    parseFloat(rewardsBalNumber) > 0 ||
+    parseFloat(unbondingBalNumber) > 0;
+
   return (
     <div className={style["dashboard"]}>
-      {(!isLoaded ||
-        parseFloat(stakableBalNumber) > 0 ||
-        parseFloat(stakedBalNumber) > 0 ||
-        parseFloat(rewardsBalNumber) > 0) && (
+      {(!isLoaded || hasStakableOrRewards) && (
         <div className={style["stake-container"]}>
           <div className={style["legends"]}>
             <div className={style["legend"]}>
@@ -129,8 +229,8 @@ export const Dashboard = observer(() => {
                 src={
                   stakableInFiatCurrency !== undefined &&
                   stakableInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-light-purple-long.svg")
-                    : require("@assets/svg/wireframe/legend-light-purple.svg")
+                    ? require("@assets/svg/wireframe/legend-light-green-long.svg")
+                    : require("@assets/svg/wireframe/legend-light-green.svg")
                 }
                 alt=""
               />
@@ -144,9 +244,9 @@ export const Dashboard = observer(() => {
                 <div className={style["label"]}>Available</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {stakableBalInUI.toFixed(2)} {` ${stakableDenom} `}
+                    {stakableBalance}{" "}
                     <span className={style["label"]}>
-                      ({stakablePercentage.toFixed(1)}%)
+                      ({stakablePercentage.toFixed(2)}%)
                     </span>
                   </div>
                 ) : (
@@ -155,13 +255,7 @@ export const Dashboard = observer(() => {
                 {isLoaded ? (
                   stakableInFiatCurrency !== undefined &&
                   stakableInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {stakableInFiatCurrency}
                     </div>
                   ) : null
@@ -175,8 +269,8 @@ export const Dashboard = observer(() => {
                 src={
                   stakedInFiatCurrency !== undefined &&
                   stakedInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-purple-long.svg")
-                    : require("@assets/svg/wireframe/legend-purple.svg")
+                    ? require("@assets/svg/wireframe/legend-sky-long.svg")
+                    : require("@assets/svg/wireframe/legend-sky.svg")
                 }
                 alt=""
               />
@@ -190,9 +284,9 @@ export const Dashboard = observer(() => {
                 <div className={style["label"]}>Staked</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {stakedBalInUI.toFixed(2)} {` ${stakedDenom} `}
+                    {stakedBalance}{" "}
                     <span className={style["label"]}>
-                      ({stakedPercentage.toFixed(1)}
+                      ({stakedPercentage.toFixed(2)}
                       %)
                     </span>
                   </div>
@@ -202,13 +296,7 @@ export const Dashboard = observer(() => {
                 {isLoaded ? (
                   stakedInFiatCurrency !== undefined &&
                   stakedInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {stakedInFiatCurrency}
                     </div>
                   ) : null
@@ -222,8 +310,8 @@ export const Dashboard = observer(() => {
                 src={
                   rewardsInFiatCurrency !== undefined &&
                   rewardsInFiatCurrency > "$0"
-                    ? require("@assets/svg/wireframe/legend-orange-long.svg")
-                    : require("@assets/svg/wireframe/legend-orange.svg")
+                    ? require("@assets/svg/wireframe/legend-dark-green-long.svg")
+                    : require("@assets/svg/wireframe/legend-dark-green.svg")
                 }
                 alt=""
               />
@@ -237,9 +325,9 @@ export const Dashboard = observer(() => {
                 <div className={style["label"]}>Staking rewards</div>
                 {isLoaded ? (
                   <div className={style["value"]}>
-                    {rewardsBalInUI.toFixed(2)} {` ${rewardDenom} `}
+                    {rewardsBalance}{" "}
                     <span className={style["label"]}>
-                      ({rewardsPercentage.toFixed(1)}%)
+                      ({rewardsPercentage.toFixed(2)}%)
                     </span>
                   </div>
                 ) : (
@@ -248,13 +336,7 @@ export const Dashboard = observer(() => {
                 {isLoaded ? (
                   rewardsInFiatCurrency !== undefined &&
                   rewardsInFiatCurrency > "$0" ? (
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 400,
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
+                    <div className={style["amountInUSD"]}>
                       {rewardsInFiatCurrency}
                     </div>
                   ) : null
@@ -263,30 +345,105 @@ export const Dashboard = observer(() => {
                 )}
               </div>
             </div>
+            {isVesting && !isVestingExpired(vestingEndTimeStamp) && (
+              <div className={style["legend"]}>
+                <img
+                  src={
+                    rewardsInFiatCurrency !== undefined &&
+                    rewardsInFiatCurrency > "$0"
+                      ? require("@assets/svg/wireframe/legend-light-orange.svg")
+                      : require("@assets/svg/wireframe/legend-light-orange.svg")
+                  }
+                  alt=""
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "3px",
+                  }}
+                >
+                  <div className={style["label"]}>Vesting</div>
+                  {isLoaded ? (
+                    <div className={style["value"]}>
+                      {Number(vestingBalance()).toFixed(2)}{" "}
+                      {` ${spendableDenom} `}
+                      <span className={style["label"]}>
+                        ({vestingPercentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  ) : (
+                    <Skeleton height="17.5px" />
+                  )}
+                </div>
+              </div>
+            )}
+            {unbondingBalInUI > 0 && (
+              <div className={style["legend"]}>
+                <img
+                  src={
+                    unbondingInFiatCurrency !== undefined &&
+                    unbondingInFiatCurrency > "$0"
+                      ? require("@assets/svg/wireframe/legend-yellow-long.svg")
+                      : require("@assets/svg/wireframe/legend-yellow.svg")
+                  }
+                  alt=""
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "3px",
+                  }}
+                >
+                  <div className={style["label"]}>Unbonding</div>
+                  {isLoaded ? (
+                    <div className={style["value"]}>
+                      {unbondingBalance}{" "}
+                      <span className={style["label"]}>
+                        ({unbondingPercentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  ) : (
+                    <Skeleton height="17.5px" />
+                  )}
+                  {isLoaded ? (
+                    unbondingInFiatCurrency !== undefined &&
+                    unbondingInFiatCurrency > "$0" ? (
+                      <div className={style["amountInUSD"]}>
+                        {unbondingInFiatCurrency}
+                      </div>
+                    ) : null
+                  ) : (
+                    <Skeleton height="21px" />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className={style["doughnut-graph"]}>
             <Doughnut data={doughnutData} options={doughnutData.options} />
           </div>
         </div>
       )}
-      {isLoaded &&
-        (delegations && delegations.length > 0 ? (
-          <MyStakes rewards={rewards} accountInfo={accountInfo} />
-        ) : (
-          <div
-            style={{
-              paddingTop: !(
-                parseFloat(stakableBalNumber) > 0 ||
-                parseFloat(stakedBalNumber) > 0 ||
-                parseFloat(rewardsBalNumber) > 0
-              )
-                ? "85px"
-                : 0,
-            }}
-          >
-            <EmptyStake />
-          </div>
-        ))}
+      {isLoaded && (hasDelegations || hasUnbonding) ? (
+        <React.Fragment>
+          {hasDelegations && (
+            <MyStakes rewards={rewards} accountInfo={accountInfo} />
+          )}
+          {hasUnbonding && (
+            <MyUnbondingValidators hasDelegations={hasDelegations} />
+          )}
+        </React.Fragment>
+      ) : (
+        <div
+          style={{
+            paddingTop: !hasStakableOrRewards ? "85px" : 0,
+          }}
+        >
+          <EmptyStake />
+        </div>
+      )}
     </div>
   );
 });

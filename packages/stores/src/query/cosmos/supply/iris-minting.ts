@@ -1,6 +1,6 @@
 import { ObservableChainQuery } from "../../chain-query";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryIrisMintingInfation extends ObservableChainQuery<{
   height: string;
@@ -10,7 +10,11 @@ export class ObservableQueryIrisMintingInfation extends ObservableChainQuery<{
     inflation: string;
   };
 }> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
     super(kvStore, chainId, chainGetter, "/mint/params");
   }
 }

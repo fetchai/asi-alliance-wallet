@@ -24,6 +24,7 @@ import { ConfirmCardModel } from "components/new/confirm-modal";
 import { useNetInfo } from "@react-native-community/netinfo";
 import Toast from "react-native-toast-message";
 import { GuideIcon } from "components/new/icon/guide-icon";
+import { DOCS_URL } from "../../config";
 
 export const SettingScreen: FunctionComponent = observer(() => {
   const {
@@ -45,7 +46,9 @@ export const SettingScreen: FunctionComponent = observer(() => {
   const smartNavigation = useSmartNavigation();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
-  const showPrivateData = canShowPrivateData(keyRingStore.keyRingType);
+  const showPrivateData = canShowPrivateData(
+    keyRingStore.selectedKeyInfo?.type ?? ""
+  );
 
   const [openConfirmModel, setConfirmModel] = useState(false);
   const showManageTokenButton = (() => {
@@ -60,8 +63,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollViewInBottomTabView
-      backgroundMode="image"
-      isTransparentHeader={true}
+      backgroundMode="secondary"
+      hasFloatingHeader={true}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       contentContainerStyle={{
         paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
@@ -73,7 +76,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
           style.flatten([
             "h1",
             "font-normal",
-            "color-white",
+            "color-dark",
             "margin-top-16",
             "margin-bottom-20",
           ]) as ViewStyle
@@ -84,7 +87,7 @@ export const SettingScreen: FunctionComponent = observer(() => {
       <SettingSectionTitle title="Account" />
       <SettingItem
         label="Currency"
-        left={<CurrencyIcon size={16} />}
+        left={<CurrencyIcon size={16} color="#151a1a" />}
         right={<Right paragraph={priceStore.defaultVsCurrency.toUpperCase()} />}
         onPress={() => {
           navigation.navigate("Setting", {
@@ -98,13 +101,13 @@ export const SettingScreen: FunctionComponent = observer(() => {
       />
       {showManageTokenButton ? (
         <SettingItem
-          label="Manage tokens"
-          left={<CoinsIcon size={16} />}
+          label="Manage Tokens"
+          left={<CoinsIcon size={16} color="#151a1a" />}
           right={
             <Right
               paragraph={tokensStore
-                .getTokensOf(chainStore.current.chainId)
-                .tokens.length.toString()}
+                .getTokens(chainStore.current.chainId)
+                .length.toString()}
             />
           }
           onPress={() => {
@@ -118,8 +121,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
         />
       ) : null}
       <SettingItem
-        left={<ATIcon size={16} />}
-        label="Address book"
+        left={<ATIcon size={16} color="#151a1a" />}
+        label="Address Book"
         onPress={() => {
           navigation.navigate("AddressBooks", {
             screen: "AddressBook",
@@ -134,8 +137,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
       keychainStore.isBiometrySupported ||
       keychainStore.isBiometryOn ? (
         <SettingItem
-          label="Security & privacy"
-          left={<ShieldIcon size={16} />}
+          label="Security & Privacy"
+          left={<ShieldIcon size={16} color="#151a1a" />}
           onPress={() => {
             navigation.navigate("Setting", {
               screen: "Setting.SecurityAndPrivacy",
@@ -147,10 +150,10 @@ export const SettingScreen: FunctionComponent = observer(() => {
         />
       ) : null}
       <SettingSectionTitle title="Others" />
-      {chainStore.current.govUrl && (
+      {!chainStore.current.features?.includes("evm") && (
         <SettingItem
           label="Proposals"
-          left={<ProposalIcon />}
+          left={<ProposalIcon color="#151a1a" />}
           onPress={() => {
             navigation.navigate("Setting", {
               screen: "Governance",
@@ -163,26 +166,26 @@ export const SettingScreen: FunctionComponent = observer(() => {
       )}
       <SettingItem
         label="Guide"
-        left={<GuideIcon />}
+        left={<GuideIcon color="#151a1a" />}
         onPress={() => {
           if (!networkIsConnected) {
             Toast.show({
               type: "error",
-              text1: "No internet connection",
+              text1: "No Internet Connection",
             });
             return;
           }
           navigation.navigate("Others", {
             screen: "WebView",
             params: {
-              url: "https://fetch.ai/docs/guides/fetch-network/fetch-wallet/mobile-wallet/get-started",
+              url: `${DOCS_URL}/get-started`,
             },
           });
         }}
       />
       <SettingItem
         label="Version"
-        left={<BranchIcon size={16} />}
+        left={<BranchIcon size={16} color="#151a1a" />}
         onPress={() => {
           navigation.navigate("Setting", {
             screen: "Setting.Version",
@@ -190,8 +193,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
         }}
       />
       <SettingItem
-        label="Sign out"
-        left={<SignOutIcon size={16} />}
+        label="Sign Out"
+        left={<SignOutIcon size={16} color="#151a1a" />}
         onPress={() => {
           setConfirmModel(true);
           analyticsStore.logEvent("sign_out_click", {
@@ -204,8 +207,8 @@ export const SettingScreen: FunctionComponent = observer(() => {
       <ConfirmCardModel
         isOpen={openConfirmModel}
         close={() => setConfirmModel(false)}
-        title={"Sign out"}
-        subtitle={"Are you sure you want to sign out?"}
+        title={"Sign Out"}
+        subtitle={"Are You Sure You Want to Sign Out?"}
         confirmButtonText="Confirm"
         select={async (confirm: boolean) => {
           if (confirm) {

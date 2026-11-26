@@ -4,7 +4,7 @@ import Svg, { Path } from "react-native-svg";
 export const CheckIcon: FunctionComponent<{
   size?: number;
   color?: string;
-}> = ({ size = 18, color = "#D0BCFF" }) => {
+}> = ({ size = 18, color = "#151a1a" }) => {
   return (
     <Svg
       width={size}

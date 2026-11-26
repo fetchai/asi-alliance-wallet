@@ -1,20 +1,37 @@
-import { ChainGetter } from "../../../../common";
-import { ObservableChainQuery } from "../../../chain-query";
+import {
+  ObservableQueryTendermint,
+  QuerySharedContext,
+} from "../../../../common";
 import { AnnualProvisions } from "./types";
-import { KVStore } from "@keplr-wallet/common";
+import { ChainGetter } from "../../../../chain";
 import { computed, makeObservable } from "mobx";
 import { CoinPretty, Dec } from "@keplr-wallet/unit";
+import { MintExtension, setupMintExtension } from "@cosmjs/stargate";
 
-export class ObservableQueryJunoAnnualProvisions extends ObservableChainQuery<AnnualProvisions> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
+export class ObservableQueryJunoAnnualProvisions extends ObservableQueryTendermint<AnnualProvisions> {
+  protected readonly chainId: string;
+  protected readonly chainGetter: ChainGetter;
+
+  constructor(
+    kvStore: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as MintExtension;
+        const response = await client.mint.annualProvisions();
+        return { annual_provisions: response.toString() };
+      },
+      setupMintExtension,
       "/cosmos/mint/v1beta1/annual_provisions"
     );
-
     makeObservable(this);
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
   }
 
   @computed
@@ -24,6 +41,10 @@ export class ObservableQueryJunoAnnualProvisions extends ObservableChainQuery<An
     }
 
     const chainInfo = this.chainGetter.getChain(this.chainId);
+
+    if (!chainInfo.stakeCurrency) {
+      return;
+    }
 
     return new CoinPretty(
       chainInfo.stakeCurrency,

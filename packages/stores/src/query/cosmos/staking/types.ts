@@ -1,8 +1,9 @@
+import { Coin } from "@keplr-wallet/types";
 import { CoinPrimitive } from "../../../common";
 
 export type Rewards = {
-  rewards: DelegatorReward[] | null;
-  total: CoinPrimitive[];
+  rewards?: DelegatorReward[] | null;
+  total?: CoinPrimitive[];
 };
 
 export type DelegatorReward = {
@@ -28,6 +29,23 @@ export type Delegation = {
   };
 };
 
+export type InitiaDelegations = {
+  delegation_responses: InitiaDelegation[];
+};
+
+export type InitiaDelegation = {
+  delegation: {
+    delegator_address: string;
+    validator_address: string;
+    // Dec
+    shares: string;
+  };
+  balance: {
+    denom: string;
+    amount: string;
+  }[];
+};
+
 export type UnbondingDelegations = {
   unbonding_responses: UnbondingDelegation[];
   // pagination: {}
@@ -36,14 +54,27 @@ export type UnbondingDelegations = {
 export type UnbondingDelegation = {
   delegator_address: string;
   validator_address: string;
-  entries: [
-    {
-      creation_height: string;
-      completion_time: string;
-      initial_balance: string;
-      balance: string;
-    }
-  ];
+  entries: {
+    creation_height: string;
+    completion_time: string;
+    initial_balance: string;
+    balance: string;
+  }[];
+};
+
+export type InitiaUnbondingDelegations = {
+  unbonding_responses: InitiaUnbondingDelegation[];
+};
+
+export type InitiaUnbondingDelegation = {
+  delegator_address: string;
+  validator_address: string;
+  entries: {
+    creation_height: string;
+    completion_time: string;
+    initial_balance: string;
+    balance: Coin[];
+  }[];
 };
 
 export type Validator = {
@@ -92,6 +123,16 @@ export type Validators = {
   // pagination: {}
 };
 
+export type InitiaValidator = Omit<Validator, "tokens" | "delegator_shares"> & {
+  voting_power: string;
+  tokens: Coin[];
+};
+
+export type InitiaValidators = {
+  validators: InitiaValidator[];
+  // pagination: {}
+};
+
 export enum BondStatus {
   Unbonded = "Unbonded",
   Unbonding = "Unbonding",
@@ -112,8 +153,23 @@ export type StakingParams = {
 export type StakingPool = {
   pool: {
     // Int
-    not_bonded_tokens: string;
+    not_bonded_tokens: string | { denom: string; amount: string }[];
     // Int
-    bonded_tokens: string;
+    bonded_tokens: string | { denom: string; amount: string }[];
+  };
+};
+
+export type BabylonRewardGauges = {
+  reward_gauges: {
+    BTC_STAKER: {
+      coins: {
+        denom: string;
+        amount: string;
+      }[];
+      withdrawn_coins: {
+        denom: string;
+        amount: string;
+      }[];
+    };
   };
 };

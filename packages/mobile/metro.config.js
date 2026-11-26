@@ -1,17 +1,14 @@
-/**
- * Metro configuration for React Native
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
 /* eslint-disable */
-
-const blacklist = require("metro-config/src/defaults/exclusionList");
+const { getDefaultConfig } = require("expo/metro-config");
+const { mergeConfig } = require("@react-native/metro-config");
+const { withWeb3Auth } = require("@web3auth/react-native-sdk/metro-config");
+const exclusionList = require("metro-config/src/defaults/exclusionList");
 const getWorkspaces = require("get-yarn-workspaces");
+const fs = require("fs");
 const path = require("path");
 
-const { getSentryExpoConfig } = require("@sentry/react-native/metro");
+// Expo 52: required so Metro can resolve `.expo/.virtual-metro-entry`
+const defaultConfig = getDefaultConfig(__dirname);
 
 const workspaces = getWorkspaces(__dirname);
 
@@ -24,57 +21,122 @@ const watchFolders = [
   }),
 ];
 
-module.exports = (() => {
-  const {
-    resolver: { sourceExts, assetExts },
-  } = getSentryExpoConfig(__dirname);
+/**
+ * Metro doesn't honor package.json "exports" the same way Node does.
+ * Newer @ledgerhq packages expose deep paths like:
+ *   @ledgerhq/domain-service/signers/index
+ * which map to lib/<subpath>.js. Resolve those explicitly.
+ */
+const resolveLedgerhqSubpath = (moduleName) => {
+  const match = moduleName.match(/^(@ledgerhq\/[^/]+)\/(.+)$/);
+  if (!match) {
+    return null;
+  }
 
-  return {
-    projectRoot: path.resolve(__dirname, "."),
-    watchFolders,
-    resolver: {
-      // For react-native-svg-transformer
-      assetExts: assetExts.filter((ext) => ext !== "svg"),
-      sourceExts: [...sourceExts, "svg"],
-      // To prevent that multiple react instances exist,
-      // add the react in this package to the blacklist,
-      // and use the only react in the root project.
-      blacklistRE: blacklist([/packages\/mobile\/node_modules\/react\/.*/]),
-      extraNodeModules: {
-        components: path.resolve(__dirname, "./src/components"),
-        navigation: path.resolve(__dirname, "./src/navigation"),
-        screens: path.resolve(__dirname, "./src/screens"),
-        hooks: path.resolve(__dirname, "./src/hooks"),
-        assets: path.resolve(__dirname, "./src/assets"),
-        styles: path.resolve(__dirname, "./src/styles"),
-        modals: path.resolve(__dirname, "./src/modals"),
-        providers: path.resolve(__dirname, "./src/providers"),
-        stores: path.resolve(__dirname, "./src/stores"),
-        utils: path.resolve(__dirname, "./src/utils"),
-        crypto: path.resolve(
-          __dirname,
-          "./node_modules/react-native-crypto-polyfill"
-        ),
-        buffer: path.resolve(__dirname, "../../node_modules/buffer"),
-        stream: path.resolve(__dirname, "../../node_modules/stream-browserify"),
-        string_decoder: path.resolve(
-          __dirname,
-          "../../node_modules/string_decoder"
-        ),
-        path: path.resolve(__dirname, "../../node_modules/path-browserify"),
-        http: path.resolve(__dirname, "../../node_modules/http-browserify"),
-        https: path.resolve(__dirname, "../../node_modules/https-browserify"),
-        os: path.resolve(__dirname, "../../node_modules/os-browserify"),
-      },
+  const [, pkg, subpath] = match;
+  let pkgRoot;
+  try {
+    pkgRoot = path.dirname(require.resolve(`${pkg}/package.json`));
+  } catch {
+    return null;
+  }
+
+  const candidates = [
+    path.join(pkgRoot, "lib", `${subpath}.js`),
+    path.join(pkgRoot, "lib", subpath, "index.js"),
+    path.join(pkgRoot, `${subpath}.js`),
+  ];
+
+  for (const filePath of candidates) {
+    if (fs.existsSync(filePath)) {
+      return { filePath, type: "sourceFile" };
+    }
+  }
+
+  return null;
+};
+
+const config = {
+  projectRoot: path.resolve(__dirname, "."),
+  watchFolders: [
+    ...new Set([...(defaultConfig.watchFolders || []), ...watchFolders]),
+  ],
+  watcher: {
+    // Explicitly define watcher to override any unstable/default options from Sentry/Metro.
+    // This resolves the 'unstable_autoSaveCache' warning by using stable alternatives.
+    healthCheck: {
+      enabled: true,
+      interval: 5000, // Similar to debounceMs – checks watcher health every 5s.
+      timeout: 10000, // Adjust as needed.
     },
-    transformer: {
-      babelTransformerPath: require.resolve("react-native-svg-transformer"),
-      getTransformOptions: async () => ({
-        transform: {
-          experimentalImportSupport: false,
-          inlineRequires: true,
-        },
-      }),
+  },
+  resolver: {
+    // For react-native-svg-transformer
+    assetExts: defaultConfig.resolver.assetExts.filter((ext) => ext !== "svg"),
+    sourceExts: [...defaultConfig.resolver.sourceExts, "svg"],
+    // To prevent multiple React instances, block the one in this package and use root's.
+    blockList: exclusionList([/packages\/mobile\/node_modules\/react\/.*/]),
+    // crypto / node:crypto are provided by withWeb3Auth (quick-crypto).
+    extraNodeModules: {
+      ...(defaultConfig.resolver.extraNodeModules || {}),
+      tslib: path.dirname(
+        require.resolve("tslib/tslib.js", { paths: [__dirname] })
+      ),
+      buffer: path.resolve(__dirname, "./node_modules/buffer"),
+      stream: path.resolve(__dirname, "./node_modules/stream-browserify"),
+      string_decoder: path.resolve(__dirname, "./node_modules/string_decoder"),
+      path: path.resolve(__dirname, "./node_modules/path-browserify"),
+      http: path.resolve(__dirname, "./node_modules/http-browserify"),
+      https: path.resolve(__dirname, "./node_modules/https-browserify"),
+      os: path.resolve(__dirname, "./node_modules/os-browserify"),
+      zlib: require.resolve("empty-module"),
     },
-  };
-})();
+    resolveRequest: (context, moduleName, platform) => {
+      const ledgerResolved = resolveLedgerhqSubpath(moduleName);
+      if (ledgerResolved) {
+        return ledgerResolved;
+      }
+
+      // withWeb3Auth enables package exports; Metro can then pick tslib's ESM
+      // entry, which leaves `__extends` undefined under Hermes/CJS interop.
+      if (moduleName === "tslib") {
+        return {
+          filePath: require.resolve("tslib/tslib.js", { paths: [__dirname] }),
+          type: "sourceFile",
+        };
+      }
+
+      // Expo + quick-crypto peer often imports this; pin to CJS entry.
+      if (moduleName === "react-native-quick-base64") {
+        try {
+          return {
+            filePath: require.resolve("react-native-quick-base64", {
+              paths: [__dirname],
+            }),
+            type: "sourceFile",
+          };
+        } catch {
+          // optional peer
+        }
+      }
+
+      // starknet's "browser" field points at index.global.js (IIFE). Metro prefers
+      // that, but the IIFE never assigns module.exports, so require("starknet")
+      // yields {} and `class X extends Account` throws Super expression errors.
+      // Node's require.resolve uses exports.require → dist/index.js instead.
+      if (moduleName === "starknet") {
+        return {
+          filePath: require.resolve("starknet", { paths: [__dirname] }),
+          type: "sourceFile",
+        };
+      }
+
+      return context.resolveRequest(context, moduleName, platform);
+    },
+  },
+  transformer: {
+    babelTransformerPath: require.resolve("react-native-svg-transformer"),
+  },
+};
+
+module.exports = withWeb3Auth(mergeConfig(defaultConfig, config));

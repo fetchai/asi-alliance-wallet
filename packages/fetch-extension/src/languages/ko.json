@@ -337,5 +337,13 @@
   "component.ibc.channel-registrar.chain-selector.add.channel.button": "저장",
 
   "component.waring.experimental-feature.title": "실험적 기능",
-  "component.waring.experimental-feature.paragraph": "용감한 우주 여행자를 위한 기능입니다"
+  "component.waring.experimental-feature.paragraph": "용감한 우주 여행자를 위한 기능입니다",
+
+  "portfolio.detail.vesting-card.paragraph": "귀하의 잔액에는 귀하의 베스팅 일정으로 인해 여전히 잠겨 있는 {vestingBalance} {balanceDenom}이 포함되어 있습니다",
+  "portfolio.detail.vesting-card.calendar.vesting.type": "베스팅 유형",
+  "portfolio.detail.vesting-card.calendar.start.time": "시작 시간",
+  "portfolio.detail.vesting-card.calendar.end.time": "종료 시간",
+  "portfolio.detail.vesting-card.calendar.originally.locked": "원래 잠겨 있음",
+  "portfolio.detail.vesting-card.calendar.currently.locked": "현재 잠겨 있음",
+  "portfolio.detail.vesting-card.calendar.already.unlocked": "이미 잠금 해제됨"
 }

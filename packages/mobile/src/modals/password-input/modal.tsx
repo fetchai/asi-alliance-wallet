@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
-import { ViewStyle } from "react-native";
+import { Alert, ViewStyle } from "react-native";
 import { useStyle } from "styles/index";
 import { CardModal } from "../card";
 import { Button } from "components/button";
@@ -10,12 +10,20 @@ import { EyeIcon } from "components/new/icon/eye";
 import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import { useStore } from "stores/index";
 
+// Wrong-password errors thrown by the keychain store ("Invalid password"),
+// the vault ("User password mac unmatched", "Password unmatched") and the
+// legacy keyring ("Unmatched mac").
+const isWrongPasswordError = (message: string) =>
+  message === "Invalid password" ||
+  message === "Password unmatched" ||
+  /mac unmatched|unmatched mac/i.test(message);
+
 export const PasswordInputModal: FunctionComponent<{
   isOpen: boolean;
   close: () => void;
   title: string;
   /**
-   * If any error thrown in the `onEnterPassword`, the password considered as invalid password.
+   * Wrong-password errors show "Invalid password" on the field. Other failures use Alert.
    * @param password
    */
   onEnterPassword: (password: string) => Promise<void>;
@@ -42,9 +50,19 @@ export const PasswordInputModal: FunctionComponent<{
       setIsInvalidPassword(false);
       setPassword("");
       close();
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
-      setIsInvalidPassword(true);
+      const message =
+        typeof e?.message === "string" && e?.message?.length > 0
+          ? e.message
+          : "Invalid password";
+
+      if (isWrongPasswordError(message)) {
+        setIsInvalidPassword(true);
+      } else {
+        setIsInvalidPassword(false);
+        Alert.alert("Error", "Something went wrong. Please try again.");
+      }
       setPassword("");
     } finally {
       setIsLoading(false);
@@ -56,12 +74,15 @@ export const PasswordInputModal: FunctionComponent<{
   }
 
   return (
-    <CardModal isOpen={isOpen} close={close} title={title}>
+    <CardModal
+      isOpen={isOpen}
+      close={close}
+      title={title}
+      childrenContainerStyle={{ marginTop: 12 }}
+    >
       <InputCardView
         label="Password"
-        labelStyle={
-          style.flatten(["margin-y-0", "margin-bottom-12"]) as ViewStyle
-        }
+        labelStyle={style.flatten(["margin-y-12"]) as ViewStyle}
         keyboardType={"default"}
         rightIcon={
           !showPassword ? (
@@ -104,7 +125,14 @@ export const PasswordInputModal: FunctionComponent<{
         }}
         disabled={!password}
         containerStyle={
-          style.flatten(["border-radius-32", "margin-top-24"]) as ViewStyle
+          style.flatten([
+            "border-radius-32",
+            "margin-top-24",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
         }
       />
       <KeyboardSpacerView />

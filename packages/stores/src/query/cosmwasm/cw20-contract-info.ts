@@ -1,18 +1,25 @@
 import { Cw20ContractTokenInfo } from "./types";
-import { KVStore } from "@keplr-wallet/common";
-import { ObservableChainQueryMap } from "../chain-query";
-import { ChainGetter } from "../../common";
+import { ChainGetter } from "../../chain";
+import { ObservableQueryMap } from "../../common";
 import { computed } from "mobx";
 import { ObservableCosmwasmContractChainQuery } from "./contract-query";
+import { QuerySharedContext } from "../../common";
 
 export class ObservableQueryCw20ContactInfoInner extends ObservableCosmwasmContractChainQuery<Cw20ContractTokenInfo> {
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
-    protected override readonly contractAddress: string
+    protected readonly contractAddress: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, { token_info: {} });
+    super(
+      sharedContext,
+      chainId,
+      chainGetter,
+      contractAddress,
+      { token_info: {} },
+      `cw20-contract-info-${contractAddress}-${chainId}`
+    );
   }
 
   @computed
@@ -25,15 +32,15 @@ export class ObservableQueryCw20ContactInfoInner extends ObservableCosmwasmContr
   }
 }
 
-export class ObservableQueryCw20ContractInfo extends ObservableChainQueryMap<Cw20ContractTokenInfo> {
+export class ObservableQueryCw20ContractInfo extends ObservableQueryMap<Cw20ContractTokenInfo> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly sharedContext: QuerySharedContext,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (contractAddress: string) => {
+    super((contractAddress: string) => {
       return new ObservableQueryCw20ContactInfoInner(
-        this.kvStore,
+        this.sharedContext,
         this.chainId,
         this.chainGetter,
         contractAddress

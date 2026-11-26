@@ -2,10 +2,9 @@ import React, { FunctionComponent } from "react";
 import { useStyle } from "styles/index";
 
 import { TransitionPresets } from "@react-navigation/stack";
-import {
-  BlurHeaderOptionsPreset,
-  TransparentHeaderOptionsPreset,
-} from "components/header";
+import { TransparentHeaderOptionsPreset } from "components/header";
+import { HeaderLeftBackLightButton } from "components/header/button";
+import { getPlatformFontFamily } from "styles/builder/utils";
 import { SendScreen } from "screens/send";
 import { ReceiveScreen } from "screens/receive";
 import { CameraScreen } from "screens/camera";
@@ -31,16 +30,28 @@ export const OtherNavigation: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Send",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Send"
         component={SendScreen}
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Receive",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Receive"
         component={ReceiveScreen}
@@ -48,8 +59,13 @@ export const OtherNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="NativeTokens"
         component={TokenDetail}
@@ -63,8 +79,14 @@ export const OtherNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Rename wallet",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="RenameWallet"
         component={RenameWalletScreen}
@@ -72,8 +94,13 @@ export const OtherNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="DeleteWallet"
         component={DeleteWalletScreen}
@@ -81,8 +108,13 @@ export const OtherNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="ActivityDetails"
         component={ActivityDetails}
@@ -91,7 +123,12 @@ export const OtherNavigation: FunctionComponent = () => {
         options={{
           ...TransparentHeaderOptionsPreset,
           title: "",
-          // Only show the back button.
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="WebView"
         component={WebViewScreen}

@@ -6,52 +6,27 @@ import { observer } from "mobx-react-lite";
 import { Card } from "@components-v2/card";
 
 export const WalletOptions = observer(
-  ({ setIsOptionsOpen, setIsSelectWalletOpen }: any) => {
-    const [accountIndex, setAccountIndex] = useState<number>(0);
+  ({ selectedWalletId }: { selectedWalletId?: string }) => {
+    const [accountIndex, setAccountIndex] = useState<string>("");
 
     const navigate = useNavigate();
     const { keyRingStore, analyticsStore } = useStore();
 
     useEffect(() => {
-      const firstAccountIndex = keyRingStore.multiKeyStoreInfo.findIndex(
-        (value) => value.selected
-      );
-      setAccountIndex(firstAccountIndex);
-    }, [keyRingStore.multiKeyStoreInfo]);
+      let walletId = "";
+      if (selectedWalletId) {
+        walletId = selectedWalletId;
+      } else {
+        const firstAccountIndex = keyRingStore.keyInfos.find(
+          (value) => value.isSelected
+        );
+        walletId = firstAccountIndex?.id || "";
+      }
+      setAccountIndex(walletId);
+    }, [keyRingStore.keyInfos]);
 
     return (
       <div className={style["container"]}>
-        <Card
-          heading={"Add new Wallet"}
-          leftImage={require("@assets/svg/wireframe/plus.svg")}
-          leftImageStyle={{
-            backgroundColor: "transparent",
-            height: "18px",
-            width: "18px",
-          }}
-          onClick={(e: any) => {
-            e.preventDefault();
-            analyticsStore.logEvent("Add additional account started");
-
-            browser.tabs.create({
-              url: "/popup.html#/register",
-            });
-          }}
-        />
-
-        <Card
-          heading={"Change Wallet"}
-          leftImage={require("@assets/svg/wireframe/change.svg")}
-          leftImageStyle={{
-            backgroundColor: "transparent",
-            height: "18px",
-            width: "18px",
-          }}
-          onClick={() => {
-            setIsOptionsOpen(true);
-            setIsSelectWalletOpen(false);
-          }}
-        />
         <Card
           heading={"Rename Wallet"}
           leftImage={require("@assets/svg/wireframe/rename.svg")}
@@ -63,6 +38,9 @@ export const WalletOptions = observer(
           onClick={(e: any) => {
             e.preventDefault();
             e.stopPropagation();
+            analyticsStore.logEvent("rename_wallet_click", {
+              pageName: "Home",
+            });
             navigate(`/setting/keyring/change/name/${accountIndex}`);
           }}
         />
@@ -77,13 +55,11 @@ export const WalletOptions = observer(
           onClick={(e: any) => {
             e.preventDefault();
             e.stopPropagation();
+            analyticsStore.logEvent("delete_wallet_click", {
+              pageName: "Home",
+            });
             navigate(`/setting/clear/${accountIndex}`);
           }}
-          headingStyle={{
-            fontSize: "16px",
-            fontWeight: 400,
-          }}
-          style={{ color: "var(--orange-orange-400, #FA8F6B)" }}
         />
       </div>
     );

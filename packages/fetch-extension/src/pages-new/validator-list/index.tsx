@@ -1,3 +1,4 @@
+import { Dropdown } from "@components-v2/dropdown";
 import { SelectorModal } from "@components-v2/selector-modal/selector";
 import { Staking } from "@keplr-wallet/stores";
 import { Dec } from "@keplr-wallet/unit";
@@ -8,14 +9,13 @@ import { useNavigate } from "react-router";
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { ValidatorsList } from "./validators";
-import { Dropdown } from "@components-v2/dropdown";
 
 type Sort = "APR" | "Voting Power" | "Name";
 
 export const ValidatorListPage: FunctionComponent = observer(() => {
   const navigate = useNavigate();
 
-  const { chainStore, queriesStore } = useStore();
+  const { chainStore, queriesStore, analyticsStore } = useStore();
   const queries = queriesStore.get(chainStore.current.chainId);
 
   const [search, setSearch] = useState("");
@@ -90,17 +90,42 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
     // If inflation is 0 or not fetched properly, there is no need to sort by APY.
     if (apr.toDec().gt(new Dec(0))) {
       return [
-        { label: "APR", key: "APR" },
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "APR",
+          key: "APR",
+          icon: require("@assets/svg/wireframe/percentage.svg"),
+        },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     } else {
       return [
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     }
   }, [apr]);
+
+  const isLoading =
+    bondedValidators.isFetching ||
+    unbondedValidators.isFetching ||
+    unbondingValidators.isFetching;
 
   return (
     <HeaderLayout
@@ -112,62 +137,71 @@ export const ValidatorListPage: FunctionComponent = observer(() => {
       showBottomMenu={false}
       alternativeTitle={"Stake"}
     >
-      <div className={style["searchContainer"]}>
-        <div className={style["searchBox"]}>
-          <input
-            placeholder="Search by validator name or address"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <img src={require("@assets/svg/wireframe/search.svg")} alt="" />
+      <div className={style["validatorListContainer"]}>
+        <div className={style["searchContainer"]}>
+          <div className={style["searchBox"]}>
+            <input
+              placeholder="Search by validator name or address"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <img src={require("@assets/svg/wireframe/search.svg")} alt="" />
+          </div>
         </div>
-      </div>
 
-      <div
-        style={{
-          position: "relative",
-        }}
-      >
         <div
-          className={style["sort-selector"]}
-          onClick={() => setIsSortModalOpen((prev) => !prev)}
+          style={{
+            position: "relative",
+          }}
         >
-          <div>
-            Sort by
-            <span style={{ color: "rgba(255,255,255,1)", marginLeft: "8px" }}>
-              {sort}
-            </span>
-          </div>
-          <div>
-            <img src={require("../../public/assets/svg/wireframe/sort.svg")} />
+          <div
+            className={style["sort-selector"]}
+            onClick={() => {
+              setIsSortModalOpen((prev) => !prev);
+              analyticsStore.logEvent("stake_validator_click", {
+                pageName: "Stake",
+              });
+            }}
+          >
+            <div>
+              Sort by
+              <span className={style["sort-by"]}>{sort}</span>
+            </div>
+            <div>
+              <img src={require("@assets/svg/wireframe/chevron-down.svg")} />
+            </div>
           </div>
         </div>
-      </div>
-
-      {<ValidatorsList filteredValidators={data} />}
-
-      <Dropdown
-        closeClicked={() => {
-          setIsSortModalOpen(false);
-        }}
-        title="Sort By"
-        isOpen={isSortModalOpen}
-        setIsOpen={setIsSortModalOpen}
-        styleProp={{
-          maxHeight: "600px",
-        }}
-      >
-        <SelectorModal
-          close={() => {
+        <ValidatorsList
+          isLoading={isLoading}
+          filteredValidators={data}
+          bondedValidators={bondedValidators}
+          unbondedValidators={unbondedValidators}
+          unbondingValidators={unbondingValidators}
+        />
+        <Dropdown
+          closeClicked={() => {
             setIsSortModalOpen(false);
           }}
+          title="Sort By"
           isOpen={isSortModalOpen}
-          items={items}
-          selectedKey={sort}
-          setSelectedKey={(key) => setSort(key as Sort)}
-          modalPersistent={false}
-        />
-      </Dropdown>
+          setIsOpen={setIsSortModalOpen}
+          styleProp={{
+            maxHeight: "600px",
+          }}
+        >
+          <SelectorModal
+            close={() => {
+              setIsSortModalOpen(false);
+            }}
+            isOpen={isSortModalOpen}
+            items={items}
+            selectedKey={sort}
+            setSelectedKey={(key) => setSort(key as Sort)}
+            modalPersistent={false}
+          />
+        </Dropdown>
+      </div>
     </HeaderLayout>
   );
 });

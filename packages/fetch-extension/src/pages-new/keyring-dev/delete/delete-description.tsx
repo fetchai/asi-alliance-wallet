@@ -5,13 +5,15 @@ import { FormattedMessage } from "react-intl";
 export const DeleteDescription = () => {
   return (
     <div className={style["innerContainer"]}>
-      <img
-        className={style["imgLock"]}
-        src={require("@assets/png/ic_deletewallet.png")}
-        alt="lock"
-      />
+      <div className={style["imageContainer"]}>
+        <img
+          className={style["imgLock"]}
+          src={require("@assets/svg/wireframe/deleteDark.svg")}
+          alt="lock"
+        />
+      </div>
       <div className={style["heading"]}>Delete Wallet</div>
-      <p>
+      <p className={style["subheading"]}>
         <FormattedMessage id="setting.clear.warning" />
       </p>
     </div>

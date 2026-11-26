@@ -1,8 +1,10 @@
 import React, { FunctionComponent } from "react";
-import { useStyle } from "styles/index";
+import { ColorPalette, useStyle } from "styles/index";
 import { Stack } from "./navigation";
 import { TransitionPresets } from "@react-navigation/stack";
 import { TransparentHeaderOptionsPreset } from "components/header";
+import { HeaderLeftBackLightButton } from "components/header/button";
+import { getPlatformFontFamily } from "styles/builder/utils";
 import {
   DelegateScreen,
   RedelegateScreen,
@@ -13,6 +15,15 @@ import {
 } from "screens/stake";
 import { SelectorValidatorDetailsScreen } from "screens/stake/validator-details/selector-validator-details";
 import { ViewStyle } from "react-native";
+
+const lightHeaderOverrides = {
+  headerTitleStyle: {
+    color: ColorPalette["dark"],
+    fontSize: 16,
+    fontFamily: getPlatformFontFamily("400"),
+  },
+  headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
+};
 
 export const StakeNavigation: FunctionComponent = () => {
   const style = useStyle();
@@ -28,7 +39,7 @@ export const StakeNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
+          ...lightHeaderOverrides,
           title: "",
         }}
         name="Staking.Dashboard"
@@ -37,6 +48,7 @@ export const StakeNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
+          ...lightHeaderOverrides,
           title: "Validator Details",
         }}
         name="Validator.Details"
@@ -45,6 +57,7 @@ export const StakeNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
+          ...lightHeaderOverrides,
           title: "Validator Details",
         }}
         name="SelectorValidator.Details"
@@ -53,6 +66,7 @@ export const StakeNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
+          ...lightHeaderOverrides,
           title: "Choose validator",
         }}
         name="Validator.List"
@@ -61,6 +75,7 @@ export const StakeNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
+          ...lightHeaderOverrides,
           title: "Stake",
         }}
         name="Delegate"
@@ -69,6 +84,7 @@ export const StakeNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
+          ...lightHeaderOverrides,
           title: "Unstake",
         }}
         name="Undelegate"
@@ -77,6 +93,7 @@ export const StakeNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
+          ...lightHeaderOverrides,
           title: "Choose Validator",
         }}
         name="Redelegate"

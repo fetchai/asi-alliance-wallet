@@ -88,13 +88,13 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
           }}
         >
           <IconButton
-            icon={<HeaderAddIcon size={19} color="white" />}
+            icon={<HeaderAddIcon size={19} color="#151a1a" />}
             backgroundBlur={false}
             iconStyle={
               style.flatten([
                 "width-54",
                 "border-width-1",
-                "border-color-white@20%",
+                "border-color-gray-100",
                 "padding-x-12",
                 "padding-y-6",
                 "justify-center",
@@ -111,7 +111,8 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
 
   return addressBookConfig.addressBookDatas.length > 0 ? (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
+      hasFloatingHeader={true}
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
     >
@@ -121,12 +122,13 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
           <React.Fragment key={i.toString()}>
             <BlurBackground
               borderRadius={12}
-              blurIntensity={14}
+              backgroundBlur={false}
               containerStyle={
                 style.flatten([
                   "padding-x-18",
                   "padding-y-14",
                   "margin-y-6",
+                  "background-color-white",
                 ]) as ViewStyle
               }
               // enabled={isInTransaction}
@@ -149,7 +151,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                     style={
                       style.flatten([
                         "subtitle2",
-                        "color-white",
+                        "color-dark",
                         "margin-bottom-4",
                       ]) as ViewStyle
                     }
@@ -161,7 +163,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                       style={
                         style.flatten([
                           "body3",
-                          "color-text-low",
+                          "color-gray-400",
                           "margin-bottom-4",
                         ]) as ViewStyle
                       }
@@ -173,7 +175,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                     style={style.flatten([
                       "text-caption1",
                       "font-medium",
-                      "color-white",
+                      "color-gray-400",
                     ])}
                   >
                     {data.address}
@@ -182,7 +184,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
                 <View style={style.flatten(["flex-1"]) as ViewStyle}>
                   <IconButton
                     backgroundBlur={false}
-                    icon={<ThreeDotIcon />}
+                    icon={<ThreeDotIcon color="#151a1a" />}
                     iconStyle={style.flatten(["padding-12"]) as ViewStyle}
                     onPress={() => {
                       setSelectAddress(i);
@@ -245,7 +247,8 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
     </PageWithScrollView>
   ) : (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
+      hasFloatingHeader={true}
       contentContainerStyle={style.flatten(["flex-grow-1"])}
       style={style.flatten(["padding-x-page"]) as ViewStyle}
       scrollEnabled={false}
@@ -264,8 +267,7 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
           style={style.flatten([
             "h3",
             "font-medium",
-            "color-gray-100",
-            "dark:color-platinum-300",
+            "color-dark",
             "text-center",
           ])}
         >
@@ -274,10 +276,17 @@ export const AddressBookScreen: FunctionComponent = observer(() => {
       </View>
       <View style={style.flatten(["margin-top-68", "flex-1"]) as ViewStyle} />
       <Button
-        text="Add an address"
+        text="Add an Address"
         size="large"
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
-        textStyle={style.flatten(["body2", "font-normal"]) as ViewStyle}
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={
+          style.flatten(["body2", "font-normal", "color-white"]) as ViewStyle
+        }
         onPress={() => {
           smartNavigation.navigateSmart("AddAddressBook", {
             chainId,

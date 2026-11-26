@@ -5,10 +5,11 @@ import activityIcon from "@assets/icon/lightning-bolt.svg";
 import moreIcon from "@assets/icon/more.svg";
 import { NotificationSetup } from "@notificationTypes";
 import React, { useEffect, useState } from "react";
-import { CHAIN_ID_FETCHHUB } from "../../config.ui.var";
+
 import { useStore } from "../../stores";
 import style from "./style.module.scss";
 import { Tab } from "./tab";
+import { isFeatureAvailable } from "@utils/index";
 
 interface WalletConfig {
   notiphyWhitelist: string[] | undefined;
@@ -55,7 +56,7 @@ const NotificationTab = () => {
   const [isComingSoon, setIsComingSoon] = useState<boolean>(true);
 
   useEffect(() => {
-    if (keyRingStore.keyRingType === "ledger") {
+    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       setIsComingSoon(true);
     } else {
       setIsComingSoon(
@@ -106,7 +107,7 @@ const ChatTab = () => {
   const [chatDisabled, setChatDisabled] = useState(false);
 
   useEffect(() => {
-    if (keyRingStore.keyRingType === "ledger") {
+    if (keyRingStore.selectedKeyInfo?.type === "ledger") {
       setChatTooltip("Coming soon for ledger");
       setChatDisabled(true);
       return;
@@ -130,7 +131,7 @@ const ChatTab = () => {
     hasFET,
     enabledChainIds,
     config.requiredNative,
-    keyRingStore.keyRingType,
+    keyRingStore.selectedKeyInfo?.type,
     current.chainId,
   ]);
 
@@ -152,12 +153,12 @@ const ActivityTab = () => {
   const [activityDisabled, setActivityDisabled] = useState(false);
 
   useEffect(() => {
-    if (![CHAIN_ID_FETCHHUB].includes(current.chainId)) {
-      setActivityTooltip("Feature not available on this network");
-      setActivityDisabled(true);
-    } else {
+    if (isFeatureAvailable(current.chainId)) {
       setActivityTooltip("");
       setActivityDisabled(false);
+    } else {
+      setActivityTooltip("Feature not available on this network");
+      setActivityDisabled(true);
     }
   }, [current.chainId]);
 

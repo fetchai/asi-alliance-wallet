@@ -1,22 +1,27 @@
-import { DenomHelper, KVStore } from "@keplr-wallet/common";
-import { ChainGetter, QueryResponse } from "../../../common";
-import { computed, makeObservable, override } from "mobx";
+import { BankExtension, setupBankExtension } from "@cosmjs/stargate";
+import { DenomHelper } from "@keplr-wallet/common";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
-import { StoreUtils } from "../../../common";
+import { computed, makeObservable, override } from "mobx";
+import {
+  QueryResponse,
+  StoreUtils,
+  ObservableQueryTendermint,
+  QuerySharedContext,
+} from "../../../common";
 import { BalanceRegistry, ObservableQueryBalanceInner } from "../../balances";
-import { ObservableChainQuery } from "../../chain-query";
 import { Balances } from "./types";
+import { ChainGetter } from "../../../chain";
 
 export class ObservableQueryBalanceNative extends ObservableQueryBalanceInner {
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     denomHelper: DenomHelper,
     protected readonly nativeBalances: ObservableQueryCosmosBalances
   ) {
     super(
-      kvStore,
+      sharedContext,
       chainId,
       chainGetter,
       // No need to set the url
@@ -58,37 +63,52 @@ export class ObservableQueryBalanceNative extends ObservableQueryBalanceInner {
 
     return StoreUtils.getBalanceFromCurrency(
       currency,
-      this.nativeBalances.response.data.balances
+      this.nativeBalances?.response?.data?.balances || []
     );
   }
 }
 
-export class ObservableQueryCosmosBalances extends ObservableChainQuery<Balances> {
+export class ObservableQueryCosmosBalances extends ObservableQueryTendermint<Balances> {
   protected bech32Address: string;
-
   protected duplicatedFetchCheck: boolean = false;
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
-      chainId,
-      chainGetter,
+      sharedContext,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as BankExtension;
+        const result = await client.bank.allBalances(bech32Address);
+        return { balances: result };
+      },
+      setupBankExtension,
       `/cosmos/bank/v1beta1/balances/${bech32Address}?pagination.limit=1000`
     );
-
-    this.bech32Address = bech32Address;
-
     makeObservable(this);
+    this.chainId = chainId;
+    this.bech32Address = bech32Address;
+    this.chainGetter = chainGetter;
   }
 
   protected override canFetch(): boolean {
-    // If bech32 address is empty, it will always fail, so don't need to fetch it.
-    return this.bech32Address.length > 0;
+    /* If bech32 address is empty, it will always fail, so don't need to fetch it.
+    also avoid fetching the endpoint for evm networks*/
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return this.bech32Address.length > 0 && !isEvm;
   }
 
   @override
@@ -113,8 +133,8 @@ export class ObservableQueryCosmosBalances extends ObservableChainQuery<Balances
     // 반환된 response 안의 denom을 등록하도록 시도한다.
     // 어차피 이미 등록되어 있으면 밑의 메소드가 아무 행동도 안하기 때문에 괜찮다.
     // computed를 줄이기 위해서 배열로 한번에 설정하는게 낫다.
-    const denoms = response.data.balances.map((coin) => coin.denom);
-    chainInfo.addUnknownCurrencies(...denoms);
+    const denoms = response?.data?.balances?.map((coin) => coin.denom) || [];
+    chainInfo.addUnknownDenoms(...denoms);
   }
 }
 
@@ -122,17 +142,22 @@ export class ObservableQueryCosmosBalanceRegistry implements BalanceRegistry {
   protected nativeBalances: Map<string, ObservableQueryCosmosBalances> =
     new Map();
 
-  constructor(protected readonly kvStore: KVStore) {}
+  constructor(protected readonly sharedContext: QuerySharedContext) {}
 
-  getBalanceInner(
+  getBalanceImpl(
     chainId: string,
     chainGetter: ChainGetter,
     bech32Address: string,
     minimalDenom: string
-  ): ObservableQueryBalanceInner | undefined {
+  ) {
     const denomHelper = new DenomHelper(minimalDenom);
+    const chainInfo = chainGetter.getChain(chainId);
     const isEvm =
-      chainGetter.getChain(chainId).features?.includes("evm") ?? false;
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
 
     if (denomHelper.type !== "native" || isEvm) {
       return;
@@ -144,7 +169,7 @@ export class ObservableQueryCosmosBalanceRegistry implements BalanceRegistry {
       this.nativeBalances.set(
         key,
         new ObservableQueryCosmosBalances(
-          this.kvStore,
+          this.sharedContext,
           chainId,
           chainGetter,
           bech32Address
@@ -153,7 +178,7 @@ export class ObservableQueryCosmosBalanceRegistry implements BalanceRegistry {
     }
 
     return new ObservableQueryBalanceNative(
-      this.kvStore,
+      this.sharedContext,
       chainId,
       chainGetter,
       denomHelper,

@@ -1,0 +1,14 @@
+@import "../../styles/var";
+
+.textarea {
+  background: transparent !important;
+  color: $font-dark !important;
+  box-shadow: none !important;
+  border: 1px solid $border-grey !important;
+}
+
+.label {
+  color: $font-secondary !important;
+  font-size: 0.875rem;
+  font-weight: 400;
+}

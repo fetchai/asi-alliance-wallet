@@ -28,7 +28,7 @@ export const DeleteWallet: FunctionComponent = () => {
   const navigate = useNavigate();
   const intl = useIntl();
 
-  const { index = "-1 " } = useParams<{ index: string }>();
+  const { index = "" } = useParams<{ index: string }>();
 
   const [loading, setLoading] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
@@ -46,19 +46,21 @@ export const DeleteWallet: FunctionComponent = () => {
   });
 
   useEffect(() => {
-    if (parseInt(index).toString() !== index) {
-      throw new Error("Invalid index");
+    if (!index || !keyRingStore.keyInfos.find((item) => item.id === index)) {
+      throw new Error("Invalid account id");
     }
-  }, [index]);
+  }, [index, keyRingStore]);
 
   const keyStore = useMemo(() => {
-    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
-  }, [keyRingStore.multiKeyStoreInfo, index]);
+    return keyRingStore.keyInfos.find((keyInfo) => keyInfo.id === index);
+  }, [keyRingStore.keyInfos, index]);
 
   const onBackUpMnemonicButtonClick = useCallback(
     (e: MouseEvent) => {
       e.preventDefault();
-
+      analyticsStore.logEvent("back_up_mnemonic_seed_click", {
+        pageName: "Home",
+      });
       navigate(`/more/export/${index}`);
     },
     [navigate, index]
@@ -68,6 +70,10 @@ export const DeleteWallet: FunctionComponent = () => {
     <HeaderLayout
       showTopMenu={true}
       canChangeChainInfo={false}
+      smallTitle={true}
+      alternativeTitle={intl.formatMessage({
+        id: "setting.clear.confirm.title",
+      })}
       showBottomMenu={false}
       showChainName={false}
       onBackButton={useCallback(() => {
@@ -92,35 +98,42 @@ export const DeleteWallet: FunctionComponent = () => {
               marginTop: "0px",
             }}
             error={errors.password && errors.password.message}
+            passwordLabel="Enter Password"
+            floatLabel={true}
             {...register("password", {
               required: intl.formatMessage({
                 id: "setting.clear.input.password.error.required",
               }),
             })}
+            containerStyle={{ width: "100%" }}
           />
 
           <div>
-            {keyStore.type === "mnemonic" && (
+            {keyStore?.type === "mnemonic" && (
               <Alert className={style["alert"]}>
                 <div>
-                  <div className={style["text"]}>
-                    <FormattedMessage id="setting.clear.alert" />
+                  <div className={style["textContainer"]}>
+                    <img
+                      className={style["warningIcon"]}
+                      src={require("@assets/svg/wireframe/warning.svg")}
+                      alt=""
+                    />
+                    <div className={style["text"]}>
+                      <FormattedMessage id="setting.clear.alert" />
+                    </div>
                   </div>
                 </div>
               </Alert>
             )}
-            {keyStore.type === "mnemonic" && (
+            {keyStore?.type === "mnemonic" && (
               <ButtonV2
                 styleProps={{
                   height: "56px",
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.4)",
-                  color: "white",
                   marginTop: "0px",
                   fontSize: "16px",
                   fontWeight: 400,
                 }}
-                data-loading={loading}
+                dataLoading={loading}
                 text={""}
                 onClick={onBackUpMnemonicButtonClick}
               >
@@ -129,12 +142,18 @@ export const DeleteWallet: FunctionComponent = () => {
             )}
 
             <ButtonV2
+              variant="dark"
               styleProps={{
                 height: "56px",
               }}
-              data-loading={loading}
+              dataLoading={loading}
               text={""}
-              onClick={() => setIsConfirmationOpen(true)}
+              onClick={() => {
+                setIsConfirmationOpen(true);
+                analyticsStore.logEvent("confirm_click", {
+                  pageName: "Home",
+                });
+              }}
             >
               <FormattedMessage id="setting.clear.button.confirm" />
             </ButtonV2>
@@ -144,12 +163,12 @@ export const DeleteWallet: FunctionComponent = () => {
 
       {/* Confirmation Dropdown */}
       <Dropdown
-        styleProp={{ height: "220px", maxHeight: "220px" }}
+        styleProp={{ height: "250px", maxHeight: "250px" }}
         setIsOpen={setIsConfirmationOpen}
         isOpen={isConfirmationOpen}
         title=""
         closeClicked={() => setIsConfirmationOpen(true)}
-        showCloseIcon={false}
+        showCloseIcon={true}
       >
         <div className={style["confimation-container"]}>
           <div className={style["confimation-text-container"]}>
@@ -165,38 +184,35 @@ export const DeleteWallet: FunctionComponent = () => {
             <ButtonV2
               styleProps={{
                 height: "56px",
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.4)",
                 marginTop: "0px",
               }}
               data-loading={loading}
               text={""}
-              onClick={() => setIsConfirmationOpen(false)}
+              onClick={() => {
+                setIsConfirmationOpen(false);
+                analyticsStore.logEvent("delete_account_click", {
+                  action: "Cancel",
+                });
+              }}
             >
               <FormattedMessage id="setting.clear.confirm.button-cancel" />
             </ButtonV2>
 
             <ButtonV2
+              variant="dark"
               styleProps={{
                 height: "56px",
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.4)",
                 marginTop: "0px",
               }}
-              data-loading={loading}
+              dataLoading={loading}
               text={""}
               onClick={handleSubmit(async (data) => {
                 setLoading(true);
                 try {
                   // Make sure that password is valid and keyring is cleared.
-                  await keyRingStore.deleteKeyRing(
-                    parseInt(index),
-                    data.password
-                  );
+                  await keyRingStore.deleteKeyRing(index, data.password);
                   analyticsStore.logEvent("delete_account_click", {
-                    action: "Yes",
+                    action: "Remove",
                   });
                   navigate("/");
                 } catch (e) {

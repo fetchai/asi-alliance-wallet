@@ -6,17 +6,18 @@ import { DenomHelper, ExtensionKVStore } from "@keplr-wallet/common";
 import { useStore } from "../../stores";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useGasSimulator } from "@keplr-wallet/hooks";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useLanguage } from "../../languages";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import { observer } from "mobx-react-lite";
 import { TransxStatus } from "@components-v2/transx-status";
-import { useLocation } from "react-router";
 import { TXNTYPE } from "../../config";
 import { FeeButtons } from "@components-v2/form/fee-buttons-v2";
-import { getPathname } from "@utils/pathname";
 import { useNotification } from "@components/notification";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { getPathname } from "@utils/pathname";
+import { removeComma } from "@utils/format";
+import { isPureEvmChain } from "@utils/filters";
 
 interface SendPhase2Props {
   sendConfigs?: any;
@@ -26,6 +27,7 @@ interface SendPhase2Props {
   fromPhase1: boolean;
   configs: any;
   setFromPhase1: any;
+  balance: CoinPretty;
 }
 
 export const SendPhase2: React.FC<SendPhase2Props> = observer(
@@ -36,6 +38,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     trnsxStatus,
     fromPhase1,
     configs,
+    balance,
     setFromPhase1,
   }) => {
     const {
@@ -44,24 +47,26 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
       priceStore,
       analyticsStore,
       activityStore,
+      keyRingStore,
     } = useStore();
     const accountInfo = accountStore.getAccount(chainStore.current.chainId);
     const navigate = useNavigate();
     const notification = useNotification();
     const location = useLocation();
-    const { isFromPhase1 } = location.state || {};
+    const { isFromPhase1, isMaxAmount } = location.state || {};
     const language = useLanguage();
     const fiatCurrency = language.fiatCurrency;
+    const current = chainStore.current;
+    const isEvm = isPureEvmChain(current);
     const convertToUsd = (currency: any) => {
       const value = priceStore.calculatePrice(currency, fiatCurrency);
-      const inUsd = value && value.shrink(true).maxDecimals(6).toString();
-      return inUsd;
+      return value && value.shrink(true).maxDecimals(6).toString();
     };
     const intl = useIntl();
 
     useEffect(() => {
       if (isFromPhase1 !== undefined) setFromPhase1(isFromPhase1);
-      if (configs?.amount && fromPhase1 == false && sendConfigs) {
+      if (configs?.amount && !fromPhase1 && sendConfigs) {
         sendConfigs.amountConfig.setAmount(configs.amount);
         sendConfigs.amountConfig.setSendCurrency(configs.sendCurr);
       }
@@ -171,33 +176,57 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
     const txStateIsValid = sendConfigError == null;
 
     const decimals = sendConfigs.amountConfig.sendCurrency.coinDecimals;
+
+    const parseAmount = (amount: string, decimals: number) => {
+      const decimalAmount = new Dec(amount ? amount : "0");
+
+      const scaledAmount = decimalAmount
+        .mul(DecUtils.getTenExponentNInPrecisionRange(decimals))
+        .truncate()
+        .toString();
+
+      return BigInt(scaledAmount);
+    };
+
+    useEffect(() => {
+      const fee = sendConfigs.feeConfig.fee;
+      if (!fee || !balance) return;
+
+      const maxAmount = balance.sub(fee);
+      if (maxAmount.toDec().isNegative()) return;
+
+      if (isMaxAmount) {
+        sendConfigs.amountConfig.setAmount(
+          removeComma(maxAmount.shrink(true).hideDenom(true).toString())
+        );
+      }
+    }, [
+      isMaxAmount,
+      sendConfigs.feeConfig.fee,
+      sendConfigs.feeConfig.feeType,
+      balance,
+    ]);
+
+    const sendAmount = new CoinPretty(
+      sendConfigs.amountConfig?.sendCurrency,
+      sendConfigs.amountConfig
+        ? parseAmount(sendConfigs.amountConfig.amount, decimals)
+        : new Int(0)
+    );
+
     return (
       <div>
         <div className={style["editCard"]}>
           <div>
             <div className={style["amountInUsd"]}>
-              {convertToUsd(
-                sendConfigs.amountConfig
-                  ? new CoinPretty(
-                      sendConfigs.amountConfig?.sendCurrency,
-                      BigInt(sendConfigs.amountConfig.amount * 10 ** decimals)
-                    )
-                  : new CoinPretty(
-                      sendConfigs.amountConfig?.sendCurrency,
-                      new Int(0)
-                    )
-              )}{" "}
-              {fiatCurrency.toUpperCase()}
+              {convertToUsd(sendAmount)} {fiatCurrency.toUpperCase()}
             </div>
             <div className={style["amount"]}>
-              {parseFloat(sendConfigs.amountConfig.amount)
-                .toFixed(6)
-                .toString()}{" "}
-              {sendConfigs.amountConfig.sendCurrency.coinDenom}
+              {sendAmount.shrink(true).trim(true).toString()}
             </div>
           </div>
           <button onClick={() => setIsNext(false)} className={style["edit"]}>
-            Edit
+            <img src={require("@assets/svg/edit-icon.svg")} alt="" />
           </button>
         </div>
         <AddressInput
@@ -205,10 +234,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           memoConfig={configs ? configs.memo : sendConfigs.memoConfig}
           label={intl.formatMessage({ id: "send.input.recipient" })}
           value={configs ? configs.recipient : ""}
+          pageName="Send"
         />
-
         <MemoInput
-          memoConfig={configs ? configs.memo : sendConfigs.memoConfig}
+          memoConfig={sendConfigs.memoConfig}
+          value={configs ? configs.memo : undefined}
           label={intl.formatMessage({ id: "send.input.memo" })}
         />
 
@@ -218,26 +248,28 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
           }}
         />
 
-        <FeeButtons
-          feeConfig={sendConfigs.feeConfig}
-          gasConfig={sendConfigs.gasConfig}
-          priceStore={priceStore}
-          label={intl.formatMessage({ id: "send.input.fee" })}
-          feeSelectLabels={{
-            low: intl.formatMessage({ id: "fee-buttons.select.low" }),
-            average: intl.formatMessage({
-              id: "fee-buttons.select.average",
-            }),
-            high: intl.formatMessage({ id: "fee-buttons.select.high" }),
-          }}
-          gasLabel={intl.formatMessage({ id: "send.input.gas" })}
-          gasSimulator={gasSimulator}
-        />
+        <div className={style["transactionFeeContainer"]}>
+          <FeeButtons
+            feeConfig={sendConfigs.feeConfig}
+            gasConfig={sendConfigs.gasConfig}
+            priceStore={priceStore}
+            label={intl.formatMessage({ id: "send.input.fee" })}
+            feeSelectLabels={{
+              low: intl.formatMessage({ id: "fee-buttons.select.low" }),
+              average: intl.formatMessage({
+                id: "fee-buttons.select.average",
+              }),
+              high: intl.formatMessage({ id: "fee-buttons.select.high" }),
+            }}
+            gasLabel={intl.formatMessage({ id: "send.input.gas" })}
+            gasSimulator={gasSimulator}
+          />
+        </div>
         <ButtonV2
-          text="Review transaction"
-          gradientText=""
+          variant="dark"
+          text="Review Transaction"
           styleProps={{
-            width: "336px",
+            width: "94%",
             padding: "12px",
             height: "56px",
             margin: "0 auto",
@@ -250,6 +282,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
             e.preventDefault();
             if (accountInfo.isReadyToSendMsgs && txStateIsValid) {
               try {
+                analyticsStore.logEvent("send_txn_click", { pageName: "Send" });
                 const stdFee = sendConfigs.feeConfig.toStdFee();
 
                 const tx = accountInfo.makeSendTokenTx(
@@ -290,11 +323,12 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                             },
                           });
                         },
+                        isEVM: isEvm,
                       };
                       navigateOnTxnEvents(txnNavigationOptions);
                     },
                     onBroadcasted: () => {
-                      analyticsStore.logEvent("Send token tx broadcasted", {
+                      analyticsStore.logEvent("send_txn_broadcasted", {
                         chainId: chainStore.current.chainId,
                         chainName: chainStore.current.chainName,
                         feeType: sendConfigs.feeConfig.feeType,
@@ -320,11 +354,15 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                             },
                           });
                         },
+                        isEVM: isEvm,
                       };
                       navigateOnTxnEvents(txnNavigationOptions);
+                      if (keyRingStore.selectedKeyInfo?.type === "ledger") {
+                        navigate("/send");
+                      }
                     },
                     onFulfill: (tx: any) => {
-                      const istxnSuccess = tx.code ? false : true;
+                      const istxnSuccess = !tx.code;
                       const txnNavigationOptions = {
                         redirect: () => {
                           navigate("/send", {
@@ -349,6 +387,7 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                             },
                           });
                         },
+                        isEVM: isEvm,
                       };
                       navigateOnTxnEvents(txnNavigationOptions);
                     },
@@ -356,7 +395,11 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                 );
                 if (!isDetachedPage) {
                   const currentPathName = getPathname();
-                  if (currentPathName === "send") {
+                  if (
+                    currentPathName === "send" ||
+                    currentPathName === "sign" ||
+                    currentPathName === "sign-ethereum"
+                  ) {
                     navigate("/send", {
                       replace: true,
                       state: { trnsxStatus: "pending", isNext: true },
@@ -364,8 +407,31 @@ export const SendPhase2: React.FC<SendPhase2Props> = observer(
                   }
                 }
               } catch (e) {
+                analyticsStore.logEvent("send_txn_broadcasted_fail", {
+                  chainId: chainStore.current.chainId,
+                  chainName: chainStore.current.chainName,
+                  feeType: sendConfigs.feeConfig.feeType,
+                  message: e?.message ?? "",
+                });
+
+                notification.push({
+                  type: "warning",
+                  placement: "top-center",
+                  duration: 5,
+                  content: e?.message || `Transaction Failed`,
+                  canDelete: true,
+                  transition: {
+                    duration: 0.25,
+                  },
+                });
+
                 const currentPathName = getPathname();
-                if (!isDetachedPage && currentPathName === "send") {
+                if (
+                  !isDetachedPage &&
+                  (currentPathName === "send" ||
+                    currentPathName === "sign" ||
+                    currentPathName === "sign-ethereum")
+                ) {
                   navigate("/send", {
                     replace: true,
                     state: {

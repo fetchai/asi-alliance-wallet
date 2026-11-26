@@ -2,7 +2,8 @@ import React, { FunctionComponent } from "react";
 import { useStyle } from "styles/index";
 import { TransitionPresets } from "@react-navigation/stack";
 import {
-  BlurHeaderOptionsPreset,
+  HeaderLeftBackLightButton,
+  HeaderOnSecondaryScreenOptionsPreset,
   TransparentHeaderOptionsPreset,
 } from "components/header";
 import { RegisterIntroScreen } from "screens/register";
@@ -44,8 +45,7 @@ export const RegisterNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "",
         }}
         name="Register.NewMnemonic"
@@ -53,8 +53,7 @@ export const RegisterNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "",
         }}
         name="Register.VerifyMnemonic"
@@ -62,9 +61,12 @@ export const RegisterNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "Import wallet",
+          headerTitleStyle: {
+            color: style.flatten(["color-dark"]).color,
+            fontSize: 16,
+          },
         }}
         name="Register.RecoverMnemonic"
         component={RecoverMnemonicScreen}
@@ -72,16 +74,15 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.MigrateETH"
         component={MigrateETHScreen}
       />
       <Stack.Screen
         options={{
-          ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
+          ...HeaderOnSecondaryScreenOptionsPreset,
           title: "",
         }}
         name="Register.CreateAccount"
@@ -90,8 +91,8 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.Ledger"
         component={LedgerScreen}
@@ -100,6 +101,7 @@ export const RegisterNavigation: FunctionComponent = () => {
         options={{
           ...TransparentHeaderOptionsPreset,
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.TorusSignIn"
         component={TorusSignInScreen}
@@ -107,8 +109,8 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.ImportFromExtension.Intro"
         component={ImportFromExtensionIntroScreen}
@@ -123,8 +125,8 @@ export const RegisterNavigation: FunctionComponent = () => {
       <Stack.Screen
         options={{
           ...TransparentHeaderOptionsPreset,
-          // Only show the back button.
           title: "",
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Register.ImportFromExtension.SetPassword"
         component={ImportFromExtensionSetPasswordScreen}

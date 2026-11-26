@@ -7,10 +7,8 @@ import { NativeTokens } from "./native-tokens";
 export const TokensView: FunctionComponent = observer(() => {
   return (
     <div className={styleToken["tokenContainnerInner"]}>
-      <div>
-        <NativeTokens />
-        <Tokens />
-      </div>
+      <NativeTokens />
+      <Tokens />
     </div>
   );
 });

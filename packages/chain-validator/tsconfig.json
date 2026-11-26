@@ -6,7 +6,7 @@
     "declaration": true,
     "rootDir": "src",
     "jsx": "react",
-    "skipLibCheck": true
+    "skipLibCheck": true,
   },
   "include": [
     "src/**/*"

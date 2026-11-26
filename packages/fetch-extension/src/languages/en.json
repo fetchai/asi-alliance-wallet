@@ -32,7 +32,7 @@
   "main.evmos.dashboard.paragraph": "View ERC-20 and IBC tokens",
   "main.evmos.dashboard.button": "View",
 
-  "main.address.copied": "Address copied!",
+  "main.address.copied": "Address Copied!",
   "main.name.copied": "Name copied!",
 
   "main.suggest.chain.link": "Add Suggest Chains",
@@ -93,7 +93,7 @@
   "setting.address-book.confirm.delete-address.paragraph": "Are you sure you want to delete this address?",
   "setting.address-book.button.save": "Save",
 
-  "setting.export-to-mobile": "Link Fetch Mobile Wallet",
+  "setting.export-to-mobile": "Link ASI Alliance Mobile Wallet",
   "setting.export-to-mobile.input.password": "Password",
   "setting.export-to-mobile.input.password.error.required": "Password is required",
   "setting.export-to-mobile.input.password.error.invalid": "Invalid password",
@@ -119,7 +119,7 @@
 
   "setting.keyring": "Select Account",
   "setting.keyring.button.add": "Add Account",
-  "setting.keyring.unnamed-account": "Fetch Wallet Account",
+  "setting.keyring.unnamed-account": "ASI Alliance Wallet Account",
   "setting.keyring.selected-account": "(Selected)",
 
   "setting.keyring.change.password": "Reset Password",
@@ -142,7 +142,7 @@
   "setting.clear": "Delete Wallet",
   "setting.clear.alert": "Make sure you’ve backed up your mnemonic seed before proceeding.",
   "setting.clear.button.back-up": "Back up mnemonic seed",
-  "setting.clear.warning": "You will no longer have access to your wallet on Fetch Wallet",
+  "setting.clear.warning": "You will no longer have access to your wallet on ASI Alliance Wallet",
   "setting.clear.input.password": "Password",
   "setting.clear.input.password.error.required": "Password is required",
   "setting.clear.input.password.error.invalid": "Invalid password",
@@ -177,7 +177,7 @@
   "setting.autolock.duration": "Set the duration (unit: minutes)",
   "setting.autolock.description": "With Auto-Lock enabled, Wallet will lock when the device is in sleep mode",
   "setting.autolock.error.required": "Duration is required",
-  "setting.autolock.error.out-of-range": "It cannot be less than 0 or greater than 4320(3days)",
+  "setting.autolock.error.out-of-range": "It cannot be less than 0 or greater than 4320(3 days)",
 
   "setting.developer-mode": "Developer Mode",
 
@@ -205,7 +205,7 @@
   "register.create.toggle.word24": "24 words",
   "register.create.input.password": "New Password (minimum 8 characters)",
   "register.create.input.password.error.required": "Password is required",
-  "register.create.input.password.error.too-short": "Too short password",
+  "register.create.input.password.error.too-short": "Too short password (minimum 8 characters)",
   "register.create.input.confirm-password": "Confirm password",
   "register.create.input.confirm-password.error.required": "Confirm password is required",
   "register.create.input.confirm-password.error.unmatched": "Password should match",
@@ -249,7 +249,7 @@
   "chain.suggested.tooltip": "Chain info being added is from this web",
   "chain.switch.tooltip": "ChainId to switch is from this web",
   "chain.suggested.developer.checkbox": "Use this as the preferred code string and override info registered on the community repo",
-  "chain.suggested.paragraph": "<b>{host}</b> would like to add blockchain <b>{chainId}</b> to Fetch Wallet.",
+  "chain.suggested.paragraph": "<b>{host}</b> would like to add blockchain <b>{chainId}</b> to ASI Alliance Wallet.",
   "chain.switch.paragraph": "<b>{host}</b> would like to switch to blockchain <b>{chainId}</b>",
   "chain.suggested.approve-info.title": "Before You Approve",
   "chain.suggested.approve-info.content": "Keplr recommends that ‘suggest chain’ info be managed by the community. At this time, this chain’s info has not been registered.",
@@ -279,7 +279,7 @@
   "addressBook.delete.title": "Delete entry from Address-Book",
 
   "access.title": "Requesting Connection",
-  "access.paragraph": "<b>{host}</b> is requesting to connect to your Fetch Wallet account on <b>{chainId}</b>.",
+  "access.paragraph": "<b>{host}</b> is requesting to connect to your ASI Alliance Wallet account on <b>{chainId}</b>.",
   "access.permission.title": "By approving this request, the website will:",
   "access.permission.account": "Know your wallet address",
   "access.permission.tx-request": "Be able to request signatures for txs",
@@ -287,8 +287,8 @@
   "access.button.approve": "Approve",
   "access.button.reject": "Reject",
 
-  "permissions.grant.get-chain-infos.description.title": "<b>{host}</b> is requesting to connect to your Keplr.",
-  "permissions.grant.get-chain-infos.description.list1": "Get the list of all chains on your Keplr Wallet",
+  "permissions.grant.get-chain-infos.description.title": "<b>{host}</b> is requesting to connect to your ASI Alliance Wallet.",
+  "permissions.grant.get-chain-infos.description.list1": "Get the list of all chains on your ASI Alliance Wallet",
 
   "access.viewing-key.title": "Requesting Viewing Key",
   "access.viewing-key.paragraph": "<b>{host}</b> is requesting to get your token's viewing key on <b>{contractAddress}</b>.",
@@ -299,7 +299,7 @@
 
   "lock.input.password": "Password",
   "lock.input.password.error.required": "Empty password",
-  "lock.input.password.error.invalid": "Invalid password",
+  "lock.input.password.error.invalid": "Your password is incorrect",
   "lock.alert.capslock": "CapsLock is on",
   "lock.button.unlock": "Unlock",
 
@@ -365,6 +365,8 @@
   "sign.list.message.cosmos-sdk/MsgGrant.staking.content": "Grant <b>{grantType}</b> permission to <b>{grantee}</b> until <b>{expirationDate}</b>{br}{validatorListType} Validators: <b>{validators}</b>{br}Max Amount: <b>{maxAmount}</b>",
   "sign.list.message.cosmos-sdk/MsgGrant.staking.validatorAllowedLabel": "Allowed",
   "sign.list.message.cosmos-sdk/MsgGrant.staking.validatorDeniedLabel": "Denied",
+  "sign.list.message.cosmos-sdk/MsgSubmitProposal.title": "Submit Proposal",
+  "sign.list.message.cosmos-sdk/MsgSubmitProposal.content": "Submitting {proposalType} by <b>{proposer}</b>",
   "sign.list.message.cosmos-sdk/MsgRevoke.title": "Revoke",
   "sign.list.message.cosmos-sdk/MsgRevoke.content": "Revoke <b>{revokeType}</b> permission from <b>{grantee}</b>",
 
@@ -375,7 +377,7 @@
   "sign.list.message.wasm/MsgExecuteContract.title": "Execute Contract",
   "sign.list.message.wasm/MsgExecuteContract.content": "Execute contract <b>{address}</b><only-sent-exist> by sending <b>{sent}</b></only-sent-exist>",
   "sign.list.message.wasm/MsgExecuteContract.content.badge.secret-wasm": "Encrypted",
-  "sign.list.message.wasm/MsgExecuteContract.content.warning.secret-wasm.failed-decryption": "Failed to decrypt Secret message. This may be due to Fetch Wallet viewing key not matching the transaction viewing key.",
+  "sign.list.message.wasm/MsgExecuteContract.content.warning.secret-wasm.failed-decryption": "Failed to decrypt Secret message. This may be due to ASI Alliance Wallet viewing key not matching the transaction viewing key.",
 
   "sign.list.message.cyber/Link.title": "Cyberlink",
   "sign.list.message.cyber/Link.content": "<b>{neuron}</b> create link {br}<b>{link}</b>",
@@ -395,6 +397,8 @@
   "ledger.confirm.success.paragraph": "This page will automatically close in 3 seconds",
   "ledger.confirm.rejected": "Rejected by Ledger",
   "ledger.confirm.rejected.paragraph": "This page will automatically close in 3 seconds",
+  "ledger.cosmos": "Cosmos",
+  "ledger.ethereum": "Ethereum",
 
   "fee-buttons.select.low": "Low",
   "fee-buttons.select.average": "Average",
@@ -451,5 +455,15 @@
   "search.no-result-found": "No results found.",
   "search.refine.search": "Please refine your search.",
   "sign.in.google": "Continue with Google",
-  "sign.in.auth-powered": "Powered by Web3Auth"
+  "sign.in.auth-powered": "Powered by Web3Auth",
+
+  "portfolio.detail.vesting-card.paragraph": "Your balance includes {vestingBalance} {balanceDenom} that are still locked due to your vesting schedule",
+  "portfolio.detail.vesting-card.calendar.vesting.type": "Vesting type",
+  "portfolio.detail.vesting-card.calendar.start.time": "Start time",
+  "portfolio.detail.vesting-card.calendar.end.time": "End time",
+  "portfolio.detail.vesting-card.calendar.originally.locked": "Originally locked",
+  "portfolio.detail.vesting-card.calendar.currently.locked": "Currently locked",
+  "portfolio.detail.vesting-card.calendar.already.unlocked": "Already unlocked",
+  "portfolio.detail.vesting-card.calendar.learn.more": "Learn more",
+  "portfolio.detail.vesting-card.calendar.show/hide.calendar": "{calendarType} calendar"
 }

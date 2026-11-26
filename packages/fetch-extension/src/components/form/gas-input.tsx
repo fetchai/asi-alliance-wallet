@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useState } from "react";
 import { FormGroup, Input, Label } from "reactstrap";
-import { IGasConfig } from "@keplr-wallet/hooks";
+import { IGasConfig, MAX_GAS_LIMIT_DIGITS } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
 
 export interface GasInputProps {
@@ -29,12 +29,15 @@ export const GasInput: FunctionComponent<GasInputProps> = observer(
         <Input
           id={inputId}
           className="form-control-alternative"
-          type="number"
-          step={1}
-          min={0}
+          type="text"
+          inputMode="numeric"
+          maxLength={MAX_GAS_LIMIT_DIGITS}
           value={gasConfig.gasRaw}
           onChange={(e) => {
-            gasConfig.setGas(e.target.value);
+            const value = e.target.value
+              .replace(/[^0-9]/g, "")
+              .slice(0, MAX_GAS_LIMIT_DIGITS);
+            gasConfig.setGas(value);
             e.preventDefault();
           }}
           autoComplete="off"

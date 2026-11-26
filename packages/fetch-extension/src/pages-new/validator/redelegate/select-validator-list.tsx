@@ -5,12 +5,14 @@ import { ValidatorCardV2 } from "@components-v2/validator-card";
 import { Dec } from "@keplr-wallet/unit";
 import style from "./style.module.scss";
 import { observer } from "mobx-react-lite";
+import { NoResults } from "@components-v2/no-results";
 
 type Sort = "APR" | "Voting Power" | "Name";
 
 type ValidatorData = Staking.Validator;
 export const SelectValidatorList = observer(
   ({
+    isLoading,
     filteredValidators,
     selectedValidator,
     setShowValidatorListDropDown,
@@ -19,6 +21,7 @@ export const SelectValidatorList = observer(
     sort,
     setIsSortModalOpen,
   }: {
+    isLoading: boolean;
     filteredValidators: ValidatorData[];
     selectedValidator: ValidatorData;
     setShowValidatorListDropDown: React.Dispatch<React.SetStateAction<boolean>>;
@@ -29,7 +32,7 @@ export const SelectValidatorList = observer(
     sort: Sort;
     setIsSortModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   }) => {
-    const { chainStore } = useStore();
+    const { chainStore, analyticsStore } = useStore();
 
     const [search, setSearch] = useState("");
 
@@ -98,14 +101,10 @@ export const SelectValidatorList = observer(
           >
             <div>
               Sort by
-              <span style={{ color: "rgba(255,255,255,1)", marginLeft: "8px" }}>
-                {sort}
-              </span>
+              <span className={style["sort-by"]}>{sort}</span>
             </div>
             <div>
-              <img
-                src={require("../../../public/assets/svg/wireframe/sort.svg")}
-              />
+              <img src={require("@assets/svg/wireframe/chevron-down.svg")} />
             </div>
           </div>
         </div>
@@ -119,15 +118,21 @@ export const SelectValidatorList = observer(
                   setClickedValidator(validator);
                   setShowValidatorListDropDown(false);
                   setShowValidatorDropdown(true);
+                  analyticsStore.logEvent("stake_validator_click", {
+                    pageName: "Validator Details",
+                  });
                 }}
                 selected={selectedValidator === validator}
               />
             </React.Fragment>
           ))
-        ) : (
-          <div style={{ textAlign: "center", color: "white" }}>
-            No Validators Found
+        ) : isLoading ? (
+          <div className={style["loading-message"]}>
+            Loading Validators...
+            <i className="fas fa-spinner fa-spin ml-2 mr-2" />
           </div>
+        ) : (
+          <NoResults message="No Validators found" />
         )}
       </React.Fragment>
     );

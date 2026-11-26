@@ -28,6 +28,7 @@ export const ProgressBar = ({
         display: "flex",
         alignItems: "center",
         position: "relative",
+        backgroundColor: "var(--card-bg)",
       }}
     >
       <div
@@ -46,11 +47,17 @@ export const ProgressBar = ({
           justifyContent: "center",
           alignItems: "center",
           paddingLeft: "18px",
+          color: "var(--font-dark)",
         }}
       >
         {title}
         {isShowPercentage && (
-          <span style={{ color: "rgba(255,255,255,0.6)", margin: "0 6px" }}>
+          <span
+            style={{
+              color: "var(--font-secondary)",
+              margin: "0 6px",
+            }}
+          >
             {progressWidth}%
           </span>
         )}
@@ -59,9 +66,10 @@ export const ProgressBar = ({
             style={{
               display: "flex",
               gap: "6px",
+              background: "var(--bg-dark)",
+              color: "white",
               justifyContent: "center",
               alignItems: "center",
-              border: "1px solid rgba(255, 255, 255, 0.6)",
               borderRadius: "4px",
               padding: "4px 8px",
             }}
@@ -73,7 +81,7 @@ export const ProgressBar = ({
                 fontWeight: 500,
               }}
             >
-              You voted
+              YOUR VOTE
             </div>
           </span>
         )}

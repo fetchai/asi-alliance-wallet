@@ -6,18 +6,24 @@ import { ValidatorCardV2 } from "@components-v2/validator-card";
 import { useNotification } from "@components/notification";
 import { useDelegateTxConfig } from "@keplr-wallet/hooks";
 import { Staking } from "@keplr-wallet/stores";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
 import { HeaderLayout } from "@layouts-v2/header-layout";
+import { formatBalance, removeComma } from "@utils/format";
+import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useEffect, useState } from "react";
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { useIntl } from "react-intl";
 import { useLocation, useNavigate } from "react-router";
 import { Alert, FormGroup } from "reactstrap";
 import { TXNTYPE } from "../../../config";
-import { useStore } from "../../../stores";
 import { useLanguage } from "../../../languages";
+import { useStore } from "../../../stores";
 import style from "./style.module.scss";
-import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
 
 export const Delegate: FunctionComponent = observer(() => {
   const location = useLocation();
@@ -37,6 +43,7 @@ export const Delegate: FunctionComponent = observer(() => {
   } = useStore();
 
   const [isToggleClicked, setIsToggleClicked] = useState<boolean>(false);
+  const [_, setIsMaxAmount] = useState<boolean>(false);
 
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
@@ -90,12 +97,7 @@ export const Delegate: FunctionComponent = observer(() => {
   const FiatCurrency = inputInFiatCurrency
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
-
-  const availableBalance = `${balance
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${FiatCurrency}`;
+  const availableBalance = `${formatBalance(balance)}${FiatCurrency}`;
 
   const bondedValidators = queries.cosmos.queryValidators.getQueryStatus(
     Staking.BondStatus.Bonded
@@ -127,10 +129,11 @@ export const Delegate: FunctionComponent = observer(() => {
           duration: 0.25,
         },
       });
-
-      analyticsStore.logEvent("Stake tx broadcasted", {
+      analyticsStore.logEvent("stake_txn_broadcasted", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
+        validatorName: validator?.description.moniker,
+        feeType: sendConfigs.feeConfig.feeType,
       });
     },
     onFulfill: (tx: any) => {
@@ -151,6 +154,7 @@ export const Delegate: FunctionComponent = observer(() => {
   };
   const stakeClicked = async () => {
     try {
+      analyticsStore.logEvent("stake_txn_click", { pageName: "Stake" });
       await account.cosmos
         .makeDelegateTx(sendConfigs.amountConfig.amount, validatorAddress)
         .send(
@@ -170,6 +174,12 @@ export const Delegate: FunctionComponent = observer(() => {
           duration: 0.25,
         },
       });
+      analyticsStore.logEvent("stake_txn_broadcasted_fail", {
+        chainId: chainStore.current.chainId,
+        chainName: chainStore.current.chainName,
+        feeType: sendConfigs.feeConfig.feeType,
+        message: e?.message ?? "",
+      });
     } finally {
       const txnNavigationOptions = {
         redirect: () => {
@@ -187,6 +197,29 @@ export const Delegate: FunctionComponent = observer(() => {
 
   const intl = useIntl();
 
+  const onMaxButtonClick = useCallback(() => {
+    setIsMaxAmount((prev) => {
+      if (!prev) {
+        const fees = sendConfigs.feeConfig.getFeeTypePrettyForFeeCurrency(
+          sendConfigs?.feeConfig?.feeCurrencies?.[0],
+          sendConfigs.feeConfig.feeType ?? "average"
+        );
+
+        const actualAmount = balance
+          .sub(fees)
+          .shrink(true)
+          .hideDenom(true)
+          .toString();
+
+        sendConfigs.amountConfig.setAmount(removeComma(actualAmount));
+      } else {
+        sendConfigs.amountConfig.setAmount("");
+      }
+
+      return !prev;
+    });
+  }, [balance, sendConfigs]);
+
   return (
     <HeaderLayout
       smallTitle={true}
@@ -198,7 +231,7 @@ export const Delegate: FunctionComponent = observer(() => {
       onBackButton={() => navigate(-1)}
     >
       {validator && (
-        <div style={{ color: "white", paddingBottom: "48px" }}>
+        <div style={{ color: "var(--font-dark)", paddingBottom: "48px" }}>
           <ValidatorCardV2 validator={validator} />
 
           <FormGroup
@@ -211,26 +244,16 @@ export const Delegate: FunctionComponent = observer(() => {
             <StakeInput
               label="Amount"
               amountConfig={sendConfigs.amountConfig}
+              availableBalance={availableBalance}
               isToggleClicked={isToggleClicked}
             />
-
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: 400,
-                color: "rgba(255,255,255,0.6)",
-                marginTop: "8px",
-              }}
-            >
-              {`${intl.formatMessage({
-                id: "unstake.available",
-              })} ${availableBalance}`}
-            </div>
 
             <UseMaxButton
               amountConfig={sendConfigs.amountConfig}
               isToggleClicked={isToggleClicked}
+              disableAllBalance={balance.toDec().lte(new Dec(0))}
               setIsToggleClicked={setIsToggleClicked}
+              onMaxButtonClick={onMaxButtonClick}
             />
 
             <MemoInput memoConfig={sendConfigs.memoConfig} />
@@ -247,8 +270,9 @@ export const Delegate: FunctionComponent = observer(() => {
             </Alert>
             <ButtonV2
               text=""
+              variant="dark"
               styleProps={{
-                width: "336px",
+                width: "94%",
                 padding: "12px",
                 height: "56px",
                 margin: "0 auto",
@@ -266,7 +290,6 @@ export const Delegate: FunctionComponent = observer(() => {
                 if (activityStore.getPendingTxnTypes[TXNTYPE.delegate]) return;
                 stakeClicked();
               }}
-              btnBgEnabled={true}
             >
               {intl.formatMessage({
                 id: "unstake.confirm",

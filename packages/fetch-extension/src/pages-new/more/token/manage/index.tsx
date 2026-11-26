@@ -75,6 +75,9 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
           className={style["plusIcon"]}
           onClick={() => {
             navigate("/more/token/add");
+            analyticsStore.logEvent("add_token_icon_click", {
+              pageName: "Manage Tokens",
+            });
           }}
         >
           {" "}
@@ -177,9 +180,13 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
                         }),
                       })
                     ) {
-                      await tokensStore
-                        .getTokensOf(chainStore.current.chainId)
-                        .removeToken(cosmwasmToken);
+                      analyticsStore.logEvent("token_delete_click", {
+                        action: confirm ? "Yes" : "No",
+                      });
+                      await tokensStore.removeToken(
+                        chainStore.current.chainId,
+                        { currency: cosmwasmToken }
+                      );
                     }
                   }}
                 />
@@ -189,7 +196,6 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
               <Card
                 key={cosmwasmToken.contractAddress}
                 style={{
-                  background: "rgba(255,255,255,0.1)",
                   width: "92%",
                 }}
                 heading={cosmwasmToken.coinDenom}
@@ -207,23 +213,19 @@ export const ManageTokenPage: FunctionComponent = observer(() => {
             );
           })
         ) : (
-          <div
-            style={{
-              width: "90%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              flexDirection: "column",
-            }}
-          >
+          <div className={style["noTokenWrapper"]}>
             <NoToken />
             <ButtonV2
               styleProps={{
                 height: "56px",
               }}
+              variant="dark"
               text="Add Token"
               onClick={() => {
                 navigate("/more/token/add");
+                analyticsStore.logEvent("add_token_click", {
+                  pageName: "Manage Tokens",
+                });
               }}
             />
           </div>

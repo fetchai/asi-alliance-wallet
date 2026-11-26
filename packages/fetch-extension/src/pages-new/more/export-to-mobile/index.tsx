@@ -6,7 +6,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 // @ts-ignore
 import QRCode from "qrcode.react";
 import style from "./style.module.scss";
-import WalletConnect from "@walletconnect/client";
 import { Buffer } from "buffer/";
 import { Alert, Form } from "reactstrap";
 import { observer } from "mobx-react-lite";
@@ -24,6 +23,7 @@ import { Dropdown } from "@components-v2/dropdown";
 import { PasswordInput } from "@components-v2/form";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
+import { useNotification } from "@components/notification";
 
 export interface QRCodeSharedData {
   // The uri for the wallet connect
@@ -62,7 +62,6 @@ export const ExportToMobilePage: FunctionComponent = () => {
       setIsDropdownOpen(false);
     }
   }, [exportKeyRingDatas]);
-
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -94,11 +93,12 @@ export const ExportToMobilePage: FunctionComponent = () => {
         }}
         isOpen={isDropdownOpen}
         setIsOpen={setIsDropdownOpen}
-        title=""
-        showCloseIcon={false}
+        title="Enter your password to view your QR code"
+        showCloseIcon={true}
       >
         <EnterPasswordToExportKeyRingView
           onSetExportKeyRingDatas={setExportKeyRingDatas}
+          setIsDropdownOpen={setIsDropdownOpen}
         />
       </Dropdown>
     </HeaderLayout>
@@ -111,7 +111,8 @@ interface FormData {
 
 export const EnterPasswordToExportKeyRingView: FunctionComponent<{
   onSetExportKeyRingDatas: (datas: ExportKeyRingData[]) => void;
-}> = observer(({ onSetExportKeyRingDatas }) => {
+  setIsDropdownOpen: any;
+}> = observer(({ onSetExportKeyRingDatas, setIsDropdownOpen }) => {
   const { keyRingStore } = useStore();
 
   const intl = useIntl();
@@ -126,28 +127,34 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
       password: "",
     },
   });
-
+  const navigate = useNavigate();
+  const notification = useNotification();
   const [loading, setLoading] = useState(false);
 
   return (
     <div className={style["container"]}>
-      <div
-        style={{
-          fontSize: "18px",
-          fontWeight: 400,
-          textAlign: "center",
-          padding: "0 22px",
-        }}
-      >
-        Enter your password to view your QR code
-      </div>
       <Form
         onSubmit={handleSubmit(async (data) => {
           setLoading(true);
           try {
-            onSetExportKeyRingDatas(
-              await keyRingStore.exportKeyRingDatas(data.password)
+            const keyRingData = await keyRingStore.exportKeyRingDatas(
+              data.password
             );
+            if (keyRingData.length == 0) {
+              notification.push({
+                type: "danger",
+                placement: "top-center",
+                duration: 5,
+                content: `The Ledger account cannot be exported`,
+                canDelete: true,
+                transition: {
+                  duration: 0.5,
+                },
+              });
+              setIsDropdownOpen(false);
+              navigate("/more");
+            }
+            onSetExportKeyRingDatas(keyRingData);
           } catch (e) {
             console.log("Fail to decrypt: " + e.message);
             setError("password", {
@@ -170,6 +177,7 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
         />
 
         <ButtonV2
+          type="submit"
           text={
             loading ? (
               <i className="fas fa-spinner fa-spin ml-2" />
@@ -180,7 +188,8 @@ export const EnterPasswordToExportKeyRingView: FunctionComponent<{
           styleProps={{
             height: "56px",
           }}
-          data-loading={loading}
+          variant="dark"
+          dataLoading={loading}
           disabled={loading}
         />
       </Form>
@@ -194,210 +203,122 @@ const QRCodeView: FunctionComponent<{
   cancel: () => void;
 }> = observer(({ keyRingData, cancel }) => {
   const { chainStore } = useStore();
-
   const navigate = useNavigate();
+
   const confirm = useConfirm();
   const intl = useIntl();
 
-  const [connector, setConnector] = useState<WalletConnect | undefined>();
-  const [qrCodeData, setQRCodeData] = useState<QRCodeSharedData | undefined>();
+  const [qrFrames, setQRFrames] = useState<string[]>([]);
+  const [currentFrame, setCurrentFrame] = useState(0);
 
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
   const [isExpired, setIsExpired] = useState(false);
-  const processOnce = useRef(false);
 
   const [addressBookConfigMap] = useState(
     () =>
       new AddressBookConfigMap(new ExtensionKVStore("address-book"), chainStore)
   );
 
+  // 30-second expiry
   useEffect(() => {
     const id = setTimeout(() => {
-      if (processOnce.current) {
-        return;
-      }
-      // Hide qr code after 30 seconds.
       setIsExpired(true);
 
       confirm
         .confirm({
-          paragraph: intl.formatMessage(
-            {
-              id: "setting.export-to-mobile.qr-code-view.session-expired",
-            },
-            {
-              forceYes: true,
-            }
-          ),
+          paragraph: intl.formatMessage({
+            id: "setting.export-to-mobile.qr-code-view.session-expired",
+          }),
           hideNoButton: true,
+          yes: "OK",
         })
         .then(() => {
-          cancelRef.current();
+          navigate("/");
         });
     }, 30000);
 
     return () => {
       clearTimeout(id);
     };
-  }, [confirm, intl]);
+  }, [confirm, intl, navigate]);
 
+  // Encrypt all keyring data + address books and split into QR frames
   useEffect(() => {
     (async () => {
-      const connector = new WalletConnect({
-        bridge: "https://wc-bridge.keplr.app",
-      });
+      const keyBytes = new Uint8Array(32);
+      crypto.getRandomValues(keyBytes);
+      const key = Buffer.from(keyBytes);
 
-      if (connector.connected) {
-        await connector.killSession();
-      }
+      const ivBytes = new Uint8Array(16);
+      crypto.getRandomValues(ivBytes);
+      const iv = Buffer.from(ivBytes);
 
-      setConnector(connector);
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (connector) {
-      connector.on("display_uri", (error, payload) => {
-        if (error) {
-          console.log(error);
-          navigate("/");
-          return;
+      const addressBooks: { [chainId: string]: AddressBookData[] } = {};
+      for (const chainInfo of chainStore.chainInfosInUI) {
+        const config = addressBookConfigMap.getAddressBookConfig(
+          chainInfo.chainId
+        );
+        await config.waitLoaded();
+        const data = toJS(config.addressBookDatas) as AddressBookData[];
+        if (data.length > 0) {
+          addressBooks[chainInfo.chainId] = data;
         }
-
-        const bytes = new Uint8Array(32);
-        crypto.getRandomValues(bytes);
-        const password = Buffer.from(bytes).toString("hex");
-
-        const uri = payload.params[0] as string;
-        setQRCodeData({
-          wcURI: uri,
-          sharedPassword: password,
-        });
-      });
-
-      connector.createSession();
-    }
-  }, [connector, navigate]);
-
-  const onConnect = (error: any) => {
-    if (error) {
-      console.log(error);
-      navigate("/");
-    }
-  };
-  const onConnectRef = useRef(onConnect);
-  onConnectRef.current = onConnect;
-
-  const onCallRequest = (error: any, payload: any) => {
-    if (!connector || !qrCodeData) {
-      return;
-    }
-
-    if (
-      isExpired ||
-      error ||
-      payload.method !== "keplr_request_export_keyring_datas_wallet_connect_v1"
-    ) {
-      console.log(error, payload?.method);
-      navigate("/");
-    } else {
-      if (processOnce.current) {
-        return;
       }
-      processOnce.current = true;
 
-      const buf = Buffer.from(JSON.stringify(keyRingData));
-
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      const iv = Buffer.from(bytes);
+      const buf = Buffer.from(
+        JSON.stringify({ keyRingDatas: keyRingData, addressBooks })
+      );
 
       const counter = new Counter(0);
       counter.setBytes(iv);
-      const aesCtr = new AES.ModeOfOperation.ctr(
-        Buffer.from(qrCodeData.sharedPassword, "hex"),
-        counter
-      );
+      const aesCtr = new AES.ModeOfOperation.ctr(key, counter);
+      const ciphertext = Buffer.from(aesCtr.encrypt(buf)).toString("hex");
 
-      (async () => {
-        const addressBooks: {
-          [chainId: string]: AddressBookData[] | undefined;
-        } = {};
+      // 800 hex chars = 400 bytes per chunk keeps each QR frame under ~1100 chars
+      const CHUNK_HEX = 800;
+      const chunks: string[] = [];
+      for (let i = 0; i < ciphertext.length; i += CHUNK_HEX) {
+        chunks.push(ciphertext.slice(i, i + CHUNK_HEX));
+      }
 
-        if (payload.params && payload.params.length > 0) {
-          for (const chainId of payload.params[0].addressBookChainIds ?? []) {
-            const addressBookConfig =
-              addressBookConfigMap.getAddressBookConfig(chainId);
+      const keyHex = key.toString("hex");
+      const ivHex = iv.toString("hex");
 
-            await addressBookConfig.waitLoaded();
-
-            addressBooks[chainId] = toJS(
-              addressBookConfig.addressBookDatas
-            ) as AddressBookData[];
-          }
-        }
-
-        const response: WCExportKeyRingDatasResponse = {
-          encrypted: {
-            ciphertext: Buffer.from(aesCtr.encrypt(buf)).toString("hex"),
-            // Hex encoded
-            iv: iv.toString("hex"),
-          },
-          addressBooks,
+      const frames = chunks.map((chunk, index) => {
+        const frame: Record<string, unknown> = {
+          type: "fetch-direct-export",
+          total: chunks.length,
+          index,
+          data: chunk,
         };
-
-        connector.approveRequest({
-          id: payload.id,
-          result: [response],
-        });
-
-        navigate("/");
-      })();
-    }
-  };
-  const onCallRequestRef = useRef(onCallRequest);
-  onCallRequestRef.current = onCallRequest;
-
-  useEffect(() => {
-    if (connector && qrCodeData) {
-      connector.on("connect", (error) => {
-        onConnectRef.current(error);
+        if (index === 0) {
+          frame["key"] = keyHex;
+          frame["iv"] = ivHex;
+        }
+        return JSON.stringify(frame);
       });
 
-      connector.on("call_request", (error, payload) => {
-        onCallRequestRef.current(error, payload);
-      });
-    }
-  }, [connector, qrCodeData]);
+      setQRFrames(frames);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Cycle through frames at 600ms each
   useEffect(() => {
-    if (connector) {
-      return () => {
-        // Kill session after 5 seconds.
-        // Delay is needed because it is possible for wc to being processing the request.
-        setTimeout(() => {
-          connector.killSession().catch(console.log);
-        }, 5000);
-      };
-    }
-  }, [connector]);
+    if (qrFrames.length === 0) return;
+    const id = setInterval(() => {
+      setCurrentFrame((f) => (f + 1) % qrFrames.length);
+    }, 600);
+    return () => clearInterval(id);
+  }, [qrFrames]);
 
   return (
     <div className={style["container"]}>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "24px",
-          padding: "20px",
-        }}
-      >
+      <div>
         <QRCode
           bgColor="transparent"
-          fgColor="white"
+          fgColor="black"
           size={180}
           value={(() => {
             if (isExpired) {
@@ -406,21 +327,14 @@ const QRCodeView: FunctionComponent<{
               });
             }
 
-            if (qrCodeData) {
-              return JSON.stringify(qrCodeData);
+            if (qrFrames.length > 0) {
+              return qrFrames[currentFrame];
             }
 
             return "";
           })()}
         />
-        <div
-          style={{
-            fontSize: "18px",
-            fontWeight: 400,
-            lineHeight: "28.8px",
-            textAlign: "center",
-          }}
-        >
+        <div className={style["message"]}>
           Scan this QR code on ASI Mobile Wallet to export your accounts.
         </div>
         <Alert className={style["alert"]}>

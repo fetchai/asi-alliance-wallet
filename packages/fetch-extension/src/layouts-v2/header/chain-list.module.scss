@@ -1,9 +1,10 @@
+@import "../../styles//var";
+
 .chainListContainer {
   .chain-title {
     padding: 18px 12px;
     font-size: 14px;
-    color: white;
-    opacity: 0.8;
+    color: $font-dark;
   }
   overflow-y: auto;
 

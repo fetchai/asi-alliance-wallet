@@ -10,27 +10,47 @@ import { useStore } from "../../../stores";
 import style from "./style.module.scss";
 import { ToggleSwitchButton } from "@components-v2/buttons/toggle-switch-button";
 import { ButtonV2 } from "@components-v2/buttons/button";
-import { getFilteredChainValues } from "@utils/filters";
+import {
+  getFilteredChainValues,
+  isCosmosTabChain,
+  isEvmTabChain,
+} from "@utils/filters";
+import { NoResults } from "@components-v2/no-results";
 
 export const ManageNetworks: FunctionComponent = observer(() => {
   const intl = useIntl();
   const navigate = useNavigate();
 
-  const { chainStore } = useStore();
+  const { chainStore, analyticsStore } = useStore();
 
   const [cosmosSearchTerm, setCosmosSearchTerm] = useState("");
   const [evmSearchTerm, setEvmSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("Cosmos");
 
-  const mainChainList = chainStore.chainInfos.filter(
-    (chainInfo) => !chainInfo.beta && !chainInfo.features?.includes("evm")
+  const mainChainList = chainStore.chainInfos.filter((chainInfo) =>
+    isCosmosTabChain(chainInfo)
   );
 
   const evmChainList = chainStore.chainInfos.filter((chainInfo) =>
-    chainInfo.features?.includes("evm")
+    isEvmTabChain(chainInfo)
   );
 
-  const disabledChainList = chainStore.disabledChainInfosInUI;
+  const isChainEnabled = (chainId: string) => {
+    return (
+      chainStore.isEnabledChain(chainId) && chainStore.hasModularChain(chainId)
+    );
+  };
+
+  const onToggleChain = async (chainId: string) => {
+    const isEnabled = isChainEnabled(chainId);
+    if (isEnabled) {
+      await chainStore.disableChainInfoInUI(chainId);
+    } else {
+      await chainStore.enableChainInfoInUI(chainId);
+    }
+    await chainStore.updateChainInfosFromBackground();
+    await chainStore.updateEnabledChainIdentifiersFromBackground();
+  };
 
   const tabs = [
     {
@@ -42,23 +62,46 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             searchTerm={cosmosSearchTerm}
             valuesArray={mainChainList}
             filterFunction={getFilteredChainValues}
-            itemsStyleProp={{ height: "360px" }}
+            midElement={
+              <ButtonV2
+                styleProps={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "48px",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                }}
+                onClick={(e: any) => {
+                  e.preventDefault();
+                  navigate("/setting/addCosmosChain");
+                }}
+                gradientText={""}
+                text="Add Custom Cosmos Network"
+              />
+            }
+            emptyContent={<NoResults styles={{ height: "250px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
                 key={index}
                 leftImage={
-                  chainInfo.raw.chainSymbolImageUrl !== undefined
-                    ? chainInfo.raw.chainSymbolImageUrl
+                  chainInfo.embedded.chainSymbolImageUrl !== undefined
+                    ? chainInfo.embedded.chainSymbolImageUrl
                     : chainInfo.chainName
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
-                    checked={!disabledChainList.includes(chainInfo)}
-                    onChange={() => {
-                      chainStore.toggleChainInfoInUI(chainInfo.chainId);
+                    checked={chainStore.isEnabledChain(chainInfo.chainId)}
+                    onChange={async () => {
+                      await onToggleChain(chainInfo.chainId);
                     }}
                   />
                 }
@@ -77,49 +120,52 @@ export const ManageNetworks: FunctionComponent = observer(() => {
             onSearchTermChange={setEvmSearchTerm}
             valuesArray={evmChainList}
             filterFunction={getFilteredChainValues}
+            midElement={
+              <ButtonV2
+                styleProps={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "48px",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                }}
+                onClick={(e: any) => {
+                  e.preventDefault();
+                  navigate("/setting/addEvmChain");
+                }}
+                gradientText={""}
+                text={"Add Custom EVM Network"}
+              />
+            }
+            emptyContent={<NoResults styles={{ height: "290px" }} />}
             renderResult={(chainInfo, index) => (
               <Card
                 key={index}
                 leftImage={
-                  chainInfo.raw.chainSymbolImageUrl !== undefined
-                    ? chainInfo.raw.chainSymbolImageUrl
+                  chainInfo.embedded.chainSymbolImageUrl !== undefined
+                    ? chainInfo.embedded.chainSymbolImageUrl
                     : chainInfo.chainName
                     ? chainInfo.chainName[0].toUpperCase()
                     : ""
                 }
+                leftImageStyle={{
+                  backgroundColor: !chainInfo.embedded.chainSymbolImageUrl
+                    ? "#dddfdf"
+                    : "transparent",
+                }}
                 heading={chainInfo.chainName}
                 rightContent={
                   <ToggleSwitchButton
-                    checked={!disabledChainList.includes(chainInfo)}
-                    onChange={() => {
-                      chainStore.toggleChainInfoInUI(chainInfo.chainId);
+                    checked={chainStore.isEnabledChain(chainInfo.chainId)}
+                    onChange={async () => {
+                      await onToggleChain(chainInfo.chainId);
                     }}
                   />
                 }
               />
             )}
           />
-          <div style={{ width: "100%" }}>
-            <ButtonV2
-              styleProps={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.4)",
-                color: "white",
-                height: "48px",
-                fontSize: "14px",
-                fontWeight: 400,
-              }}
-              onClick={(e: any) => {
-                e.preventDefault();
-                navigate("/setting/addEvmChain");
-              }}
-              gradientText={""}
-              text={"Add custom EVM network"}
-            />
-          </div>
         </div>
       ),
     },
@@ -143,7 +189,15 @@ export const ManageNetworks: FunctionComponent = observer(() => {
       }}
     >
       <div className={style["chainListContainer"]}>
-        <TabsPanel onTabChange={setSelectedTab} tabs={tabs} />
+        <TabsPanel
+          onTabChange={(tabId: string) => {
+            setSelectedTab;
+            analyticsStore.logEvent(`${tabId.toLowerCase()}_tab_click`, {
+              pageName: "Home",
+            });
+          }}
+          tabs={tabs}
+        />
       </div>
     </HeaderLayout>
   );

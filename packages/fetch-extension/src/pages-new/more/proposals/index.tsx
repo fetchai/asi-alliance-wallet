@@ -7,21 +7,16 @@ import { Dropdown } from "@components-v2/dropdown";
 import { useDropdown } from "@components-v2/dropdown/dropdown-context";
 import { SearchBar } from "@components-v2/search-bar";
 import { HeaderLayout } from "@layouts-v2/header-layout";
-import { fetchProposals, fetchVote } from "@utils/fetch-proposals";
-import { getFilteredProposals } from "@utils/filters";
+import { getFilteredProposals, isPureEvmChain } from "@utils/filters";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { ProposalType } from "src/@types/proposal-type";
-import {
-  CHAIN_ID_DORADO,
-  CHAIN_ID_ERIDANUS,
-  CHAIN_ID_FETCHHUB,
-} from "../../../config.ui.var";
 import { ErrorActivity } from "../../activity/error-activity";
-import { NoActivity } from "../../activity/no-activity";
 import { UnsupportedNetwork } from "../../activity/unsupported-network";
 import { GovtProposalRow } from "./proposal-row";
 import style from "./style.module.scss";
+import { NoResults } from "@components-v2/no-results";
+import { type ObservableQueryProposal as ProposalType } from "@keplr-wallet/stores";
+import { Governance } from "@keplr-wallet/stores";
 
 export const proposalOptions = {
   ProposalActive: "PROPOSAL_STATUS_VOTING_PERIOD",
@@ -37,7 +32,7 @@ export const Proposals = observer(() => {
   >("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const { chainStore, accountStore, proposalStore } = useStore();
+  const { chainStore, accountStore, proposalStore, queriesStore } = useStore();
   const accountInfo = accountStore.getAccount(chainStore.current.chainId);
 
   const current = chainStore.current;
@@ -46,60 +41,57 @@ export const Proposals = observer(() => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isError, setIsError] = useState(false);
   const [proposals, setProposals] = useState<ProposalType[]>([]);
-
+  const queries = queriesStore.get(chainStore.current.chainId);
   const storedProposals = proposalStore.proposals;
 
   // Get proposals
   useEffect(() => {
     (async () => {
       try {
-        // if proposals are available don't fetch from api
+        // if proposals are available don't fetch from query
         if (storedProposals?.allProposals?.length > 0) {
           setProposals(storedProposals.allProposals);
           return;
         }
         setIsLoading(true);
-        const response = await fetchProposals(chainStore.current.chainId);
         const votedProposals: ProposalType[] = [];
-        const allProposals = response.proposals
-          .reverse()
-          .filter(
-            (proposal: any) =>
-              proposal.status !== "PROPOSAL_STATUS_DEPOSIT_PERIOD"
+        await queries.cosmos.queryGovernance.waitFreshResponse();
+        const govProposals = queries.cosmos.queryGovernance.proposals;
+        const allProposals = govProposals.filter(
+          (proposal) =>
+            proposal.proposalStatus !== Governance.ProposalStatus.DEPOSIT_PERIOD
+        );
+        let activeProposals = allProposals.filter((proposal) => {
+          return (
+            proposal.proposalStatus === Governance.ProposalStatus.VOTING_PERIOD
           );
-        let activeProposals = allProposals.filter((proposal: ProposalType) => {
-          return proposal.status === proposalOptions.ProposalActive;
         });
 
-        const promises = activeProposals.map(async (proposal: ProposalType) => {
+        const promises = activeProposals.map(async (proposal) => {
           try {
-            const vote = await fetchVote(
-              proposal.proposal_id,
-              accountInfo.bech32Address,
-              chainStore.current.rest
-            );
-            if (vote.vote.option && vote.vote.option != "Unspecified")
-              return proposal.proposal_id;
+            const vote = queries.cosmos.queryProposalVote.getVote(
+              proposal.id,
+              accountInfo.bech32Address
+            )?.vote;
+            if (vote && vote != "Unspecified") return proposal.id;
           } catch (e) {}
         });
         const voteArray = await Promise.all(promises);
 
-        activeProposals = activeProposals.filter((proposal: ProposalType) => {
-          if (voteArray.indexOf(proposal.proposal_id) != -1) {
+        activeProposals = activeProposals.filter((proposal) => {
+          if (voteArray.indexOf(proposal.id) != -1) {
             votedProposals.push(proposal);
             return false;
           }
           return true;
         });
-        const closedProposals = allProposals.filter(
-          (proposal: ProposalType) => {
-            return (
-              proposal.status === proposalOptions.ProposalPassed ||
-              proposal.status === proposalOptions.ProposalRejected ||
-              proposal.status === proposalOptions.ProposalFailed
-            );
-          }
-        );
+        const closedProposals = allProposals.filter((proposal) => {
+          return (
+            proposal.proposalStatus === Governance.ProposalStatus.PASSED ||
+            proposal.proposalStatus === Governance.ProposalStatus.REJECTED ||
+            proposal.proposalStatus === Governance.ProposalStatus.FAILED
+          );
+        });
         setProposals(allProposals);
         setIsLoading(false);
         proposalStore.setProposalsInStore({
@@ -131,6 +123,8 @@ export const Proposals = observer(() => {
     setProposals(newProposal);
   };
 
+  const isProposalsSupported = !isPureEvmChain(current);
+
   return (
     <HeaderLayout
       showTopMenu={true}
@@ -149,31 +143,52 @@ export const Proposals = observer(() => {
           >
             <div className={style["filter-toggle"]}>
               <div className={style["filter-heading"]}>
-                Filter
                 <img
                   src={require("@assets/svg/wireframe/filter.svg")}
                   alt="filter"
                   className={style["arrow-icon"]}
                 />
+                Filters
               </div>
             </div>
           </div>
         </div>
       }
     >
-      {isChainIdSupported(current.chainId) ? (
+      {!(!isProposalsSupported || current.chainId === "noble-1") ? (
         isError ? (
           <ErrorActivity />
+        ) : isLoading ? (
+          <div className={style["activity-loading"]}>
+            Loading... <i className="fas fa-spinner fa-spin ml-2 mr-2" />
+          </div>
         ) : proposals && Object.keys(proposals).length > 0 ? (
           <GovtProposal
             proposals={proposals}
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
           />
-        ) : isLoading ? (
-          <div className={style["activity-loading"]}>Loading Proposals...</div>
         ) : (
-          <NoActivity label="No Activity Yet" />
+          <NoResults
+            styles={{
+              height: "410px",
+              rowGap: "0px",
+            }}
+            contentStyles={{
+              color: "var(--font-dark)",
+              textAlign: "center",
+              fontSize: "24px",
+              lineHeight: "34px",
+              width: "320px",
+            }}
+            icon={
+              <img
+                src={require("@assets/svg/wireframe/no-activity.svg")}
+                style={{ marginBottom: "24px" }}
+                alt=""
+              />
+            }
+          />
         )
       ) : (
         <UnsupportedNetwork chainID={current.chainName} />
@@ -201,9 +216,11 @@ const GovtProposal = ({
   onSearchTermChange: React.Dispatch<React.SetStateAction<string>>;
 }) => {
   const navigate = useNavigate();
+  const { analyticsStore } = useStore();
   return (
     <SearchBar
       valuesArray={proposals}
+      placeholder="Search by title or Proposal ID"
       filterFunction={getFilteredProposals}
       searchTerm={searchTerm}
       onSearchTermChange={onSearchTermChange}
@@ -212,16 +229,20 @@ const GovtProposal = ({
         flexDirection: "column",
         gap: "16px",
       }}
-      renderResult={(proposal: ProposalType, index) => (
+      emptyContent={<NoResults message="No Proposals Found" />}
+      renderResult={(proposal, index) => (
         <div
           style={{
             cursor: "pointer",
           }}
           onClick={() => {
-            navigate(`/proposal-detail/${proposal.proposal_id}`);
+            navigate(`/proposal-detail/${proposal.id}`);
+            analyticsStore.logEvent("proposal_item_click", {
+              pageName: "More",
+            });
           }}
         >
-          <GovtProposalRow key={index} proposal={proposal} />
+          <GovtProposalRow key={index} proposal={proposal.raw} />
         </div>
       )}
     />
@@ -246,7 +267,6 @@ const GovtProposalFilterDropdown = ({
   handleFilterChange: () => Promise<void>;
 }) => {
   const filters = ["Active", "Voted", "Closed"];
-
   useEffect(() => {
     setSelectedFilter(appliedFilter);
   }, [isOpen]);
@@ -288,10 +308,8 @@ const GovtProposalFilterDropdown = ({
         <ButtonV2
           text=""
           disabled={selectedFilter === appliedFilter}
+          variant="dark"
           styleProps={{
-            border: "1px solid rgba(255,255,255,0.4)",
-            background: selectedFilter === appliedFilter ? "transparent" : "",
-            color: selectedFilter === appliedFilter ? "white" : "",
             height: "56px",
             display: "flex",
             alignItems: "center",
@@ -307,15 +325,5 @@ const GovtProposalFilterDropdown = ({
         </ButtonV2>
       </div>
     </Dropdown>
-  );
-};
-
-const isChainIdSupported = (chainId: string) => {
-  return (
-    chainId === CHAIN_ID_FETCHHUB ||
-    chainId === CHAIN_ID_DORADO ||
-    chainId === CHAIN_ID_ERIDANUS ||
-    chainId === "test" ||
-    chainId === "test-local"
   );
 };

@@ -4,6 +4,28 @@ import { ChainGetter } from "@keplr-wallet/stores";
 import { action, computed, makeObservable, observable } from "mobx";
 import { useState } from "react";
 
+// Keep below Number.MAX_SAFE_INTEGER so fee math stays finite in JS.
+export const MAX_GAS_LIMIT = 999_999_999_999_999;
+export const MAX_GAS_LIMIT_DIGITS = 15;
+
+function isAllowedGasRaw(gas: string): boolean {
+  if (gas === "") {
+    return true;
+  }
+  if (gas.includes(".") || !/^\d+$/.test(gas)) {
+    return false;
+  }
+  if (gas.length > MAX_GAS_LIMIT_DIGITS) {
+    return false;
+  }
+  const parsed = Number.parseInt(gas, 10);
+  return (
+    !Number.isNaN(parsed) &&
+    Number.isSafeInteger(parsed) &&
+    parsed <= MAX_GAS_LIMIT
+  );
+}
+
 export class GasConfig extends TxChainSetter implements IGasConfig {
   /*
    This field is used to handle the value from the input more flexibly.
@@ -52,14 +74,24 @@ export class GasConfig extends TxChainSetter implements IGasConfig {
       return 0;
     }
 
-    const r = parseInt(this._gasRaw);
-    return Number.isNaN(r) ? 0 : r;
+    const r = parseInt(this._gasRaw, 10);
+    if (Number.isNaN(r) || !Number.isFinite(r) || r > MAX_GAS_LIMIT) {
+      return 0;
+    }
+    return r;
   }
 
   @action
   setGas(gas: number | string) {
     if (typeof gas === "number") {
-      this._gasRaw = Math.floor(gas).toString();
+      if (!Number.isFinite(gas)) {
+        return;
+      }
+      const floored = Math.floor(gas);
+      if (!Number.isSafeInteger(floored) || floored > MAX_GAS_LIMIT) {
+        return;
+      }
+      this._gasRaw = floored.toString();
       return;
     }
 
@@ -68,12 +100,9 @@ export class GasConfig extends TxChainSetter implements IGasConfig {
       return;
     }
 
-    // Gas must not be floated.
-    if (!gas.includes(".")) {
-      if (!Number.isNaN(Number.parseInt(gas))) {
-        this._gasRaw = gas;
-        return;
-      }
+    // Gas must not be floated / oversized (avoids Infinity fee math crashes).
+    if (isAllowedGasRaw(gas)) {
+      this._gasRaw = gas;
     }
   }
 
@@ -83,7 +112,11 @@ export class GasConfig extends TxChainSetter implements IGasConfig {
       return new Error("Gas not set");
     }
 
-    if (this._gasRaw && Number.isNaN(this._gasRaw)) {
+    if (this._gasRaw && !isAllowedGasRaw(this._gasRaw)) {
+      return new Error("Gas is too large");
+    }
+
+    if (this._gasRaw && Number.isNaN(Number.parseInt(this._gasRaw, 10))) {
       return new Error("Gas is not valid number");
     }
 

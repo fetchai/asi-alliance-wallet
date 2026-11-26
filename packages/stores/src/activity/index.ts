@@ -1,12 +1,12 @@
 import { KVStore, toGenerator } from "@keplr-wallet/common";
-import { TendermintTxTracer } from "@keplr-wallet/cosmos";
 import { action, flow, makeObservable, observable } from "mobx";
 import {
   updateNodeOnTxnCompleted,
   updateProposalNodeOnTxnCompleted,
   TXNTYPE,
 } from "../account";
-import { ChainGetter } from "src/common";
+import { ChainGetter } from "../chain";
+import { CosmosTxTracer } from "../account/cosmos-tx-tracer";
 
 export class ActivityStore {
   @observable
@@ -39,6 +39,7 @@ export class ActivityStore {
     [TXNTYPE.redelegate]: false,
     [TXNTYPE.undelegate]: false,
     [TXNTYPE.withdrawRewards]: false,
+    [TXNTYPE.govSubmitProposal]: false,
   };
 
   // updates or adds new nodes to the list
@@ -260,28 +261,40 @@ export class ActivityStore {
           ? savedPendingTxnTypes
           : this.pendingTxnTypes;
 
-      const txTracer = new TendermintTxTracer(
+      const txTracer = new CosmosTxTracer(
         this.chainGetter.getChain(this.chainId).rpc,
         "/websocket",
         {}
       );
 
-      Object.values(this.nodes).map((node: any) => {
-        const txHash = Uint8Array.from(Buffer.from(node.id, "hex"));
-        txTracer.traceTx(txHash).then((tx) => {
-          updateNodeOnTxnCompleted(node.type, tx, node.id, this);
-          this.removePendingTxn(node.id);
+      Object.values(this.nodes)
+        .filter(
+          (item: any) =>
+            item?.transaction?.status !== "Success" &&
+            item?.transaction?.status !== "Failed"
+        )
+        .map((node: any) => {
+          const txHash = Uint8Array.from(Buffer.from(node.id, "hex"));
+          txTracer.traceTx(txHash).then((tx) => {
+            updateNodeOnTxnCompleted(node.type, tx, node.id, this);
+            this.removePendingTxn(node.id);
+          });
         });
-      });
 
-      Object.values(this.proposalNodes).map((node: any) => {
-        const txId = node.transaction.id;
-        const txHash = Uint8Array.from(Buffer.from(txId, "hex"));
-        txTracer.traceTx(txHash).then((tx) => {
-          updateProposalNodeOnTxnCompleted(tx, node.id, this);
-          this.removePendingTxn(txId);
+      Object.values(this.proposalNodes)
+        .filter(
+          (item: any) =>
+            item?.transaction?.status !== "Success" &&
+            item?.transaction?.status !== "Failed"
+        )
+        .map((node: any) => {
+          const txId = node.transaction.id;
+          const txHash = Uint8Array.from(Buffer.from(txId, "hex"));
+          txTracer.traceTx(txHash).then((tx) => {
+            updateProposalNodeOnTxnCompleted(tx, node.id, this);
+            this.removePendingTxn(txId);
+          });
         });
-      });
 
       if (Object.keys(this.pendingTxn).length === 0) {
         this.resetPendingTxnTypes();

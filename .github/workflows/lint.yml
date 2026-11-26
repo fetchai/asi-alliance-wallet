@@ -16,14 +16,14 @@ on:
 jobs:
   lint:
     name: Lint code base
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v3
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '22'
       - run: npm install --global yarn
       - run: yarn install --immutable
       - run: yarn ci-lint

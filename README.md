@@ -13,6 +13,10 @@ You can find the latest versions of the official managed releases on these links
 
 - [Browser Extension](https://chrome.google.com/webstore/detail/fetch-wallet/ellkdbaphhldpeajbepobaecooaoafpg)
     - Fetch officially supports Chrome, Firefox.
+    - [iOS App](https://apps.apple.com/in/app/asi-alliance-wallet/id1641087356)
+    - [Android App](https://play.google.com/store/apps/details?id=com.fetchai.wallet)
+   
+For help using ASI Alliance Wallet, Visit our [Doc](https://network.fetch.ai/docs/guides/asi-wallet/web-wallet/get-started).
 
 ## Building browser extension locally
 
@@ -34,8 +38,22 @@ You can find the latest versions of the official managed releases on these links
     cp -r $HOME/protoc/bin /usr/local
   ```
 
-- [Node.js v18+](https://nodejs.org/)
+- [Node.js v22+](https://nodejs.org/) (see `.nvmrc`)
 
+### Requirements
+
+- protoc v21.3 (recommended)
+
+  ```sh
+    # This script is example for mac arm64 user. for other OS, replace URL(starts with https://..) to be matched with your OS from https://github.com/protocolbuffers/protobuf/releases/tag/v21.3
+    curl -Lo protoc-21.3.zip https://github.com/protocolbuffers/protobuf/releases/download/v21.3/protoc-21.3-osx-aarch_64.zip 
+    unzip protoc-21.3.zip -d $HOME/protoc
+    cp -r $HOME/protoc/include /usr/local
+    cp -r $HOME/protoc/bin /usr/local
+  ```
+  
+- [Node.js v22+](https://nodejs.org/) (see `.nvmrc`)
+  
 Clone this repo and run:
 
 Install global npm dependencies:

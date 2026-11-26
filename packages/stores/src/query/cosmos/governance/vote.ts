@@ -1,28 +1,37 @@
-import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
-import { ProposalVoter } from "./types";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { ObservableQueryMap, ObservableQueryTendermint } from "../../../common";
+import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
+import { QueryVoteResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
+import { VoteOption } from "cosmjs-types/cosmos/gov/v1beta1/gov";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
-export class ObservableQueryProposalVoteInner extends ObservableChainQuery<ProposalVoter> {
+export class ObservableQueryProposalVoteInner extends ObservableQueryTendermint<QueryVoteResponse> {
   protected proposalId: string;
   protected bech32Address: string;
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     proposalsId: string,
     bech32Address: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
       kvStore,
-      chainId,
-      chainGetter,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as GovExtension;
+        const result = await client.gov.vote(proposalsId, bech32Address);
+        return result;
+      },
+      setupGovExtension,
       `/cosmos/gov/v1beta1/proposals/${proposalsId}/votes/${bech32Address}`
     );
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
 
     this.proposalId = proposalsId;
     this.bech32Address = bech32Address;
@@ -34,13 +43,13 @@ export class ObservableQueryProposalVoteInner extends ObservableChainQuery<Propo
     }
 
     switch (this.response.data.vote.option) {
-      case "VOTE_OPTION_YES":
+      case VoteOption.VOTE_OPTION_YES:
         return "Yes";
-      case "VOTE_OPTION_ABSTAIN":
+      case VoteOption.VOTE_OPTION_ABSTAIN:
         return "Abstain";
-      case "VOTE_OPTION_NO":
+      case VoteOption.VOTE_OPTION_NO:
         return "No";
-      case "VOTE_OPTION_NO_WITH_VETO":
+      case VoteOption.VOTE_OPTION_NO_WITH_VETO:
         return "NoWithVeto";
       default:
         return "Unspecified";
@@ -48,18 +57,26 @@ export class ObservableQueryProposalVoteInner extends ObservableChainQuery<Propo
   }
 
   protected override canFetch(): boolean {
-    // If bech32 address is empty, it will always fail, so don't need to fetch it.
-    return this.bech32Address.length > 0;
+    /* If bech32 address is empty, it will always fail, so don't need to fetch it.
+    also avoid fetching the endpoint for evm networks */
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return this.bech32Address.length > 0 && !isEvm;
   }
 }
 
-export class ObservableQueryProposalVote extends ObservableChainQueryMap<ProposalVoter> {
+export class ObservableQueryProposalVote extends ObservableQueryMap<QueryVoteResponse> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: QuerySharedContext,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (param: string) => {
+    super((param: string) => {
       const { proposalId, voter } = JSON.parse(param);
 
       return new ObservableQueryProposalVoteInner(

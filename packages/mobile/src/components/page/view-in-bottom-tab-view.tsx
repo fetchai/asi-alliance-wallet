@@ -8,7 +8,7 @@ import { BackgroundMode } from "./background";
 export const PageWithViewInBottomTabView: FunctionComponent<
   ViewProps & {
     backgroundMode: BackgroundMode;
-    isTransparentHeader?: boolean;
+    hasFloatingHeader?: boolean;
   }
 > = (props) => {
   const style = useStyle();

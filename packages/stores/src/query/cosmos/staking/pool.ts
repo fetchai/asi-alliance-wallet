@@ -1,28 +1,48 @@
-import { ObservableChainQuery } from "../../chain-query";
-import { StakingPool } from "./types";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { ObservableQueryTendermint } from "../../../common";
 import { computed, makeObservable } from "mobx";
 import { CoinPretty } from "@keplr-wallet/unit";
+import { setupStakingExtension, StakingExtension } from "@cosmjs/stargate";
+import { QueryPoolResponse } from "cosmjs-types/cosmos/staking/v1beta1/query";
+import { QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 
-export class ObservableQueryStakingPool extends ObservableChainQuery<StakingPool> {
-  constructor(kvStore: KVStore, chainId: string, chainGetter: ChainGetter) {
-    super(kvStore, chainId, chainGetter, "/cosmos/staking/v1beta1/pool");
+export class ObservableQueryStakingPool extends ObservableQueryTendermint<QueryPoolResponse> {
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
 
+  constructor(
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
+  ) {
+    const chainInfo = chainGetter.getChain(chainId);
+    super(
+      sharedContext,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as StakingExtension;
+        const result = await client.staking.pool();
+        return result;
+      },
+      setupStakingExtension,
+      "/cosmos/staking/v1beta1/pool"
+    );
     makeObservable(this);
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
   }
 
   @computed
   get notBondedTokens(): CoinPretty {
     const chainInfo = this.chainGetter.getChain(this.chainId);
 
-    if (!this.response) {
+    if (!this.response && chainInfo.stakeCurrency) {
       return new CoinPretty(chainInfo.stakeCurrency, 0);
     }
 
     return new CoinPretty(
-      chainInfo.stakeCurrency,
-      this.response.data.pool.not_bonded_tokens
+      chainInfo.stakeCurrency || chainInfo.currencies[0],
+      this?.response?.data.pool.notBondedTokens || "0"
     );
   }
 
@@ -31,12 +51,15 @@ export class ObservableQueryStakingPool extends ObservableChainQuery<StakingPool
     const chainInfo = this.chainGetter.getChain(this.chainId);
 
     if (!this.response) {
-      return new CoinPretty(chainInfo.stakeCurrency, 0);
+      return new CoinPretty(
+        chainInfo.stakeCurrency || chainInfo.currencies[0],
+        0
+      );
     }
 
     return new CoinPretty(
-      chainInfo.stakeCurrency,
-      this.response.data.pool.bonded_tokens
+      chainInfo.stakeCurrency || chainInfo.currencies[0],
+      this.response.data.pool.bondedTokens
     );
   }
 }

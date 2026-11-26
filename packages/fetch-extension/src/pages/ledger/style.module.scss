@@ -1,9 +1,22 @@
+@import "../../styles/var";
+
 .container {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #000d3d;
-  background-image: url("../../public/assets/svg/wireframe/bg.svg");
+  padding: 0;
+}
+
+.ledgerWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  height: 95%;
+}
+
+.ledgerInnerContainer {
+  width: 390px;
 }
 
 .confirmLedgerDialog {
@@ -22,7 +35,7 @@
 
   p {
     font-size: 20px;
-    color: white;
+    color: $font-dark;
 
     margin: 0;
     padding: 30px 0 50px 0;
@@ -43,6 +56,16 @@
   flex: 1;
 }
 
+.webIdWarning {
+  font-size: 14px;
+  margin-bottom: 20px;
+  color: $font-secondary;
+
+  & a {
+    color: $link-green;
+  }
+}
+
 .signCompleteDialog {
   height: 100%;
   display: flex;
@@ -59,8 +82,7 @@
 
   p {
     font-size: 20px;
-    color: #32325d;
-    color: white;
+    color: $font-dark;
 
     margin: 0;
     padding: 30px 0 50px 0;
@@ -68,26 +90,60 @@
 
   .subParagraph {
     font-size: 16px;
-    color: white;
+    color: $font-secondary;
+  }
+}
+
+.logoInnerContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 32px 0;
+
+  &.justify-center {
+    justify-content: center;
+  }
+
+  .icon {
+    width: 215px;
   }
 }
 
 .instructions {
-  padding-top: 20px;
-
-  height: 100%;
+  width: 390px;
+  margin: 0px auto;
+  height: 720px;
+  border-radius: 25px;
+  background-color: $card-bg;
   display: flex;
   flex-direction: column;
+
+  .backButton {
+    display: flex;
+    text-align: left;
+    padding: 0px;
+    margin-bottom: 26px;
+  }
+}
+
+.pageTitle {
+  font-size: 32px;
+  color: $font-dark;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-weight: 400;
+  align-items: center;
 }
 
 .instruction {
   margin-bottom: 30px;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding: 20px;
+  border-radius: 20px;
 
-  color: white;
+  color: $font-secondary;
 
   display: flex;
+  align-items: center;
 
   .icon {
     img {
@@ -96,17 +152,20 @@
     min-width: 50px;
     display: flex;
     justify-content: center;
-    margin-top: 6px;
     margin-right: 20px;
+  }
+
+  &.selected {
+    background-color: $bg-green-base;
   }
 
   &.pass {
     h1 {
-      color: #aaaaaa;
+      color: $font-dark;
     }
 
     p {
-      color: #aaaaaa;
+      color: $font-secondary;
     }
   }
 
@@ -114,7 +173,7 @@
     h1 {
       font-size: 24px;
       font-weight: bold;
-      color: white;
+      color: $font-dark;
       margin-bottom: 8px;
     }
 
@@ -122,57 +181,60 @@
       font-size: 16px;
       line-height: 1.5;
       letter-spacing: -0.3px;
-
+      color: $font-secondary;
       margin-bottom: 10px;
     }
   }
 }
 
 .ledgerCheckbox {
-  margin-left: 15px;
-  margin-top: 6px;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  background: white;
+  border: 1.5px solid $border-grey;
 
   &:checked {
-    accent-color: #010d3e !important;
+    accent-color: $bg-green-base !important;
     background: transparent !important;
-    opacity: 1;
-    border-color: white !important;
+    opacity: 1 !important;
+    border-color: transparent !important;
   }
 
   &:not(:disabled):active {
     ~ .ledgerCheckboxLabel {
       &::before {
         background-color: transparent !important;
-        border-color: white !important;
+        border-color: transparent !important;
       }
     }
   }
 
   &:checked ~ .ledgerCheckboxLabel::before {
-    border-color: white !important;
+    border-color: transparent !important;
     background-color: transparent !important;
   }
 
   &:focus:not(:checked) ~ .ledgerCheckboxLabel {
     &::before {
-      border-color: white !important;
+      border-color: $border-grey !important;
     }
   }
 }
 
 .ledgerCheckboxLabel {
+  color: $font-secondary;
+  padding-top: 1px;
+  margin-top: 12px;
+  margin-bottom: 24px;
+
   &::before {
-    margin-left: 15px;
-    margin-top: 5px;
     border-radius: 0.25rem !important;
-    border: 1px solid white;
+    border: 1px solid $border-grey;
     background: transparent !important;
   }
 
   &::after {
-    border: 1px solid white;
+    border: 1px solid transparent;
     border-radius: 0.25rem !important;
-    margin-left: 15px;
-    margin-top: 5px;
   }
 }

@@ -1,24 +1,31 @@
 import { TransportIniter } from "./options";
 import TransportWebHID from "@ledgerhq/hw-transport-webhid";
 import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { publicKeyConvert, signatureImport } from "secp256k1";
 import Eth from "@ledgerhq/hw-app-eth";
 import { EthSignType } from "@keplr-wallet/types";
-import { BIP44HDPath, EIP712MessageValidator } from "../keyring";
+import { BIP44HDPath } from "../keyring";
+import { EIP712MessageValidator } from "../keyring/eip712";
 import { serialize } from "@ethersproject/transactions";
 import { Buffer } from "buffer/";
 import { domainHash, messageHash } from "../keyring/utils";
 import { CosmosApp } from "@keplr-wallet/ledger-cosmos";
+import {
+  ErrCodeAppNotInitialised,
+  ErrCodeDeviceLocked,
+  ErrCodeUnsupportedApp,
+  ErrFailedGetPublicKey,
+  ErrFailedGetVersion,
+  ErrFailedInit,
+  ErrFailedSign,
+  ErrModuleLedgerSign,
+} from "./types";
+import { KeplrError as WalletError } from "@keplr-wallet/router";
 
 export enum LedgerApp {
   Cosmos = "cosmos",
   Ethereum = "ethereum",
-}
-
-export enum LedgerInitErrorOn {
-  Transport,
-  App,
-  Unknown,
 }
 
 export const LedgerWebUSBIniter: TransportIniter = async () => {
@@ -28,15 +35,6 @@ export const LedgerWebUSBIniter: TransportIniter = async () => {
 export const LedgerWebHIDIniter: TransportIniter = async () => {
   return await TransportWebHID.create();
 };
-
-export class LedgerInitError extends Error {
-  constructor(public readonly errorOn: LedgerInitErrorOn, message?: string) {
-    super(message);
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, LedgerInitError.prototype);
-  }
-}
 
 export class Ledger {
   constructor(
@@ -50,7 +48,17 @@ export class Ledger {
     app: LedgerApp,
     cosmosLikeApp: string
   ): Promise<Ledger> {
-    const transport = await transportIniter(...initArgs);
+    let transport;
+    try {
+      transport = await transportIniter(...initArgs);
+    } catch (e) {
+      throw new WalletError(
+        ErrModuleLedgerSign,
+        ErrFailedInit,
+        "Connect and unlock your Ledger device."
+      );
+    }
+
     try {
       if (app === LedgerApp.Ethereum) {
         const ethereumApp = new Eth(transport);
@@ -72,7 +80,11 @@ export class Ledger {
       // However, it is almost same as that the device is not unlocked to user-side.
       // So, handle this case as initializing failed in `Transport`.
       if (versionResponse.deviceLocked) {
-        throw new Error("Device is on screen saver");
+        throw new WalletError(
+          ErrModuleLedgerSign,
+          ErrCodeDeviceLocked,
+          "Unlock your Ledger device."
+        );
       }
 
       let appName = "";
@@ -83,7 +95,11 @@ export class Ledger {
         console.log(e);
       }
       if (appName && appName !== cosmosLikeApp) {
-        throw new Error("Invalid cosmos app selected");
+        throw new WalletError(
+          ErrModuleLedgerSign,
+          ErrCodeUnsupportedApp,
+          "Invalid cosmos app selected"
+        );
       }
 
       return ledger;
@@ -91,11 +107,25 @@ export class Ledger {
       if (transport) {
         await transport.close();
       }
-      if (e.message === "Device is on screen saver") {
-        throw new LedgerInitError(LedgerInitErrorOn.Transport, e.message);
+
+      if (
+        e.message === "Device is on screen saver" ||
+        e.message?.includes("Unknown Status Code: 21781")
+      ) {
+        throw new WalletError(
+          ErrModuleLedgerSign,
+          ErrCodeDeviceLocked,
+          "Unlock your Ledger device."
+        );
       }
 
-      throw new LedgerInitError(LedgerInitErrorOn.App, e.message);
+      throw new WalletError(
+        ErrModuleLedgerSign,
+        ErrCodeAppNotInitialised,
+        `Open the ${
+          app === LedgerApp.Ethereum ? "Ethereum" : cosmosLikeApp
+        } app on Ledger and try again.`
+      );
     }
   }
 
@@ -108,13 +138,21 @@ export class Ledger {
     testMode: boolean;
   }> {
     if (!this.cosmosApp) {
-      throw new Error("Cosmos App not initialized");
+      throw new WalletError(
+        ErrModuleLedgerSign,
+        ErrCodeAppNotInitialised,
+        "Please initialize Cosmos app first"
+      );
     }
 
     const result = await this.cosmosApp.getVersion();
 
     if (result.error_message !== "No errors") {
-      throw new Error(result.error_message);
+      throw new WalletError(
+        ErrModuleLedgerSign,
+        ErrFailedGetVersion,
+        result.error_message
+      );
     }
 
     return {
@@ -130,7 +168,11 @@ export class Ledger {
   async getPublicKey(app: LedgerApp, fields: BIP44HDPath): Promise<Uint8Array> {
     if (app === LedgerApp.Ethereum) {
       if (!this.ethereumApp) {
-        throw new Error("Ethereum App not initialized");
+        throw new WalletError(
+          ErrModuleLedgerSign,
+          ErrCodeAppNotInitialised,
+          "Please initialize Ethereum app first"
+        );
       }
 
       try {
@@ -142,11 +184,15 @@ export class Ledger {
         // Compress the public key
         return publicKeyConvert(pubKey, true);
       } catch (e: any) {
-        throw new Error(e);
+        throw new WalletError(ErrModuleLedgerSign, e);
       }
     } else {
       if (!this.cosmosApp) {
-        throw new Error("Cosmos App not initialized");
+        throw new WalletError(
+          ErrModuleLedgerSign,
+          ErrCodeAppNotInitialised,
+          "Please initialize Cosmos app first"
+        );
       }
 
       const result = await this.cosmosApp.getPublicKey(
@@ -155,7 +201,11 @@ export class Ledger {
         fields.addressIndex
       );
       if (result.error_message !== "No errors") {
-        throw new Error(result.error_message);
+        throw new WalletError(
+          ErrModuleLedgerSign,
+          ErrFailedGetPublicKey,
+          result.error_message
+        );
       }
 
       return result.compressed_pk;
@@ -164,7 +214,11 @@ export class Ledger {
 
   async sign(fields: BIP44HDPath, message: Uint8Array): Promise<Uint8Array> {
     if (!this.cosmosApp) {
-      throw new Error("Cosmos App not initialized");
+      throw new WalletError(
+        ErrModuleLedgerSign,
+        ErrCodeAppNotInitialised,
+        "Please initialize Cosmos app first"
+      );
     }
 
     const result = await this.cosmosApp.sign(
@@ -174,7 +228,11 @@ export class Ledger {
       message
     );
     if (result.error_message !== "No errors") {
-      throw new Error(result.error_message);
+      throw new WalletError(
+        ErrModuleLedgerSign,
+        ErrFailedSign,
+        result.error_message
+      );
     }
 
     // Parse a DER ECDSA signature
@@ -187,7 +245,11 @@ export class Ledger {
     message: Uint8Array
   ) {
     if (!this.ethereumApp) {
-      throw new Error("Ethereum App not initialized");
+      throw new WalletError(
+        ErrModuleLedgerSign,
+        ErrCodeAppNotInitialised,
+        "Please initialize Ethereum app first"
+      );
     }
 
     const formattedPath = Ledger.pathToString(Ledger.createPath(60, fields));

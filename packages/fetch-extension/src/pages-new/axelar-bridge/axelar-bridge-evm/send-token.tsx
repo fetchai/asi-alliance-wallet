@@ -5,7 +5,7 @@ import { useStore } from "../../../stores";
 import style from "../style.module.scss";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router";
-import { formatActivityHash } from "@utils/format";
+import { formatToTruncated } from "@utils/format";
 import { ButtonV2 } from "@components-v2/buttons/button";
 
 interface SendTokenProps {
@@ -72,7 +72,7 @@ export const SendToken: React.FC<SendTokenProps> = observer(
                   type: "success",
                   placement: "top-center",
                   duration: 5,
-                  content: `Transaction successful with hash: ${formatActivityHash(
+                  content: `Transaction successful with hash: ${formatToTruncated(
                     e.transactionHash
                   )}`,
                   canDelete: true,

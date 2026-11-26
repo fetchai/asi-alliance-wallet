@@ -11,7 +11,6 @@ import {
   ZeroAmountError,
   useUndelegateTxConfig,
 } from "@keplr-wallet/hooks";
-import { CoinPretty, Int } from "@keplr-wallet/unit";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { observer } from "mobx-react-lite";
 import React, { useEffect, useMemo, useState } from "react";
@@ -23,6 +22,8 @@ import { useStore } from "../../../stores";
 import style from "./style.module.scss";
 import { useLanguage } from "../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { Staking } from "@keplr-wallet/stores";
+import { formatBalance } from "@utils/format";
 
 export const Unstake = observer(() => {
   const location = useLocation();
@@ -68,33 +69,26 @@ export const Unstake = observer(() => {
     return value && value.shrink(true).maxDecimals(6).toString();
   };
 
-  const queryBalances = queriesStore
-    .get(sendConfigs.amountConfig.chainId)
-    .queryBalances.getQueryBech32Address(sendConfigs.amountConfig.sender);
-
-  const queryBalance = queryBalances.balances.find(
-    (bal) =>
-      sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-      bal.currency.coinMinimalDenom
-  );
-  const balance = queryBalance
-    ? queryBalance.balance
-    : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
-
   useEffect(() => {
-    const inputValueInUsd = convertToUsd(balance);
+    const inputValueInUsd = convertToUsd(stakedAmount);
     setInputInFiatCurrency(inputValueInUsd);
-  }, [sendConfigs.amountConfig.amount]);
+  }, [stakedAmount]);
 
   const FiatCurrency = inputInFiatCurrency
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
-
-  const availableBalance = `${balance
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${FiatCurrency}`;
+  const queries = queriesStore.get(chainStore.current.chainId);
+  const availableBalance = `${formatBalance(stakedAmount)}${FiatCurrency}`;
+  const validator =
+    queries.cosmos.queryValidators
+      .getQueryStatus(Staking.BondStatus.Bonded)
+      .getValidator(validatorAddress) ||
+    queries.cosmos.queryValidators
+      .getQueryStatus(Staking.BondStatus.Unbonding)
+      .getValidator(validatorAddress) ||
+    queries.cosmos.queryValidators
+      .getQueryStatus(Staking.BondStatus.Unbonded)
+      .getValidator(validatorAddress);
 
   const errorText: string | undefined = useMemo(() => {
     if (error) {
@@ -138,10 +132,11 @@ export const Unstake = observer(() => {
           duration: 0.25,
         },
       });
-
-      analyticsStore.logEvent("Unstake tx broadcasted", {
+      analyticsStore.logEvent("unstake_txn_broadcasted", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
+        validatorName: validator?.description.moniker,
+        feeType: sendConfigs.feeConfig.feeType,
       });
     },
     onFulfill: (tx: any) => {
@@ -163,6 +158,9 @@ export const Unstake = observer(() => {
 
   const unstakeClicked = async () => {
     try {
+      analyticsStore.logEvent("unstake_txn_click", {
+        pageName: "Stake Validator",
+      });
       await account.cosmos
         .makeUndelegateTx(amountConfig.amount, validatorAddress)
         .send(feeConfig.toStdFee(), memoConfig.memo, undefined, txnResult);
@@ -176,6 +174,12 @@ export const Unstake = observer(() => {
         transition: {
           duration: 0.25,
         },
+      });
+      analyticsStore.logEvent("unstake_txn_broadcasted_fail", {
+        chainId: chainStore.current.chainId,
+        chainName: chainStore.current.chainName,
+        feeType: sendConfigs.feeConfig.feeType,
+        message: e?.message ?? "",
       });
     } finally {
       const txnNavigationOptions = {
@@ -210,23 +214,13 @@ export const Unstake = observer(() => {
       >
         <div className={style["unstake-container"]}>
           <div className={style["current-stake"]}>
-            <div
-              style={{
-                color: "rgba(255,255,255,0.6)",
-                fontSize: "14px",
-                fontWeight: 400,
-                lineHeight: "17.5px",
-              }}
-            >
+            <div className={style["current-stake-label"]}>
               {intl.formatMessage({
                 id: "unstake.current-staked",
               })}
             </div>
-            <div
-              className={style["value"]}
-              style={{ fontWeight: 500, lineHeight: "17.5px" }}
-            >
-              {stakedAmount.maxDecimals(4).trim(true).toString()}
+            <div className={style["current-stake-value"]}>
+              {stakedAmount.maxDecimals(6).trim(true).shrink(true).toString()}
             </div>
           </div>
 
@@ -235,20 +229,8 @@ export const Unstake = observer(() => {
               label="Amount"
               amountConfig={sendConfigs.amountConfig}
               isToggleClicked={isToggleClicked}
+              availableBalance={availableBalance}
             />
-
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: 400,
-                color: "rgba(255,255,255,0.6)",
-                marginTop: "8px",
-              }}
-            >
-              {`${intl.formatMessage({
-                id: "unstake.available",
-              })} ${availableBalance}`}
-            </div>
 
             <UseMaxButton
               amountConfig={sendConfigs.amountConfig}
@@ -269,9 +251,10 @@ export const Unstake = observer(() => {
             </div>
           </Alert>
           <ButtonV2
+            variant="dark"
             text=""
             styleProps={{
-              width: "336px",
+              width: "94%",
               padding: "12px",
               height: "56px",
               margin: "0 auto",
@@ -289,7 +272,6 @@ export const Unstake = observer(() => {
               if (activityStore.getPendingTxnTypes[TXNTYPE.undelegate]) return;
               unstakeClicked();
             }}
-            btnBgEnabled={true}
           >
             {intl.formatMessage({
               id: "unstake.confirm",

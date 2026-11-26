@@ -1,10 +1,11 @@
 import { IMemoConfig } from "@keplr-wallet/hooks";
 import { observer } from "mobx-react-lite";
-import React, { FunctionComponent, useMemo, useState } from "react";
+import React, { FunctionComponent, useEffect, useMemo, useState } from "react";
 import { FormFeedback, Input } from "reactstrap";
 import style from "./memo.module.scss";
 export interface MemoInputProps {
   memoConfig: IMemoConfig;
+  value?: string;
   label?: string;
   className?: string;
   rows?: number;
@@ -13,7 +14,7 @@ export interface MemoInputProps {
 
 // TODO: Handle the max memo bytes length for each chain.
 export const MemoInput: FunctionComponent<MemoInputProps> = observer(
-  ({ memoConfig, rows, disabled = false }) => {
+  ({ memoConfig, value, rows, disabled = false }) => {
     const [inputId] = useState(() => {
       const bytes = new Uint8Array(4);
       crypto.getRandomValues(bytes);
@@ -30,26 +31,18 @@ export const MemoInput: FunctionComponent<MemoInputProps> = observer(
       }
     }, [error]);
 
+    useEffect(() => {
+      if (value) {
+        memoConfig.setMemo(value);
+      }
+    }, [value]);
+
     return (
       <React.Fragment>
         <div className={style["label"]}>Memo</div>
-        <div
-          style={{
-            opacity: "0.8",
-            fontWeight: 400,
-            background: "rgba(255, 255, 255, 0.1)",
-            marginBottom: 0,
-            borderRadius: "12px",
-            height: "48px",
-          }}
-        >
+        <div className={style["inputContainer"]}>
           <Input
             className={style["input"]}
-            style={{
-              fontWeight: 400,
-              background: "rgba(255, 255, 255, 0.1)",
-              padding: "12px 18px",
-            }}
             id={inputId}
             placeholder="Optional"
             type="textarea"

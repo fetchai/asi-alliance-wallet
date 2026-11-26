@@ -2,7 +2,6 @@
 
 html[data-keystone-page] {
   body {
-    background-color: var(--white);
     @media (min-height: ($popup-size-height + 1)) {
       margin-top: calc((100vh - 580px) / 2);
     }

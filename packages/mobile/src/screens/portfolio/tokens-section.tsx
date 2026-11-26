@@ -13,7 +13,11 @@ import {
   ParamListBase,
   useNavigation,
 } from "@react-navigation/native";
-import { separateNumericAndDenom } from "utils/format/format";
+import {
+  formatFiatBalance,
+  numberLocalFormat,
+  separateNumericAndDenom,
+} from "utils/format/format";
 
 export const TokensSection: FunctionComponent = observer(() => {
   const style = useStyle();
@@ -58,7 +62,7 @@ export const TokensSection: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
 
   function balanceCoinDenom(balance: CoinPretty): string {
@@ -141,13 +145,15 @@ export const TokensSection: FunctionComponent = observer(() => {
                 />
               }
               title={token.balance.currency.coinDenom}
-              subtitle={`${token.balance
-                .trim(true)
-                .shrink(true)
-                .maxDecimals(6)
-                .upperCase(true)
-                .hideDenom(true)
-                .toString()} ${balanceCoinDenom(token.balance)}`}
+              subtitle={`${numberLocalFormat(
+                token.balance
+                  .trim(true)
+                  .shrink(true)
+                  .maxDecimals(6)
+                  .upperCase(true)
+                  .hideDenom(true)
+                  .toString()
+              )} ${balanceCoinDenom(token.balance)}`}
               trailingStart={amount}
               trailingEnd={currency}
             />

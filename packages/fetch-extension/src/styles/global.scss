@@ -39,8 +39,14 @@ $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
   src: url(../public/assets/font/Lexend-VariableFont_wght.ttf);
 }
 
-$font-family-base: "Lexand", sans-serif;
-$body-color: black;
+@font-face {
+  font-family: HankenGrotesk;
+  font-weight: 500;
+  src: url(../public/assets/font/HankenGrotesk-VariableFont_wght.ttf);
+}
+
+$font-family-base: "HankenGrotesk", sans-serif;
+$body-color: #151a1a;
 @import "../../../../node_modules/argon-dashboard-react/src/assets/scss/argon-dashboard-react";
 
 @import url("https://fonts.googleapis.com/css?family=Courier+Prime&display=swap");
@@ -48,12 +54,23 @@ $body-color: black;
 @import "var";
 
 html {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  min-width: 360px;
+  overflow: auto;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+html.extension-popup {
   width: $popup-size-width;
   height: $popup-size-height;
-  margin: auto;
-  background-color: white;
-
-  overflow: auto;
+  min-width: $popup-size-width;
+  min-height: $popup-size-height;
+  max-width: $popup-size-width;
+  max-height: $popup-size-height;
+  overflow: hidden;
 }
 
 /* width */
@@ -77,10 +94,30 @@ html {
 }
 
 body {
-  width: $popup-size-width;
-  height: $popup-size-height;
+  --neutral: #{$neutral};
+  --link-green: #{$link-green};
+  --card-bg: #{$card-bg};
+  --bg-dark: #{$bg-dark};
+  --font-dark: #{$font-dark};
+  --font-secondary: #{$font-secondary};
+  --font-grey: #{$font-grey};
+  --bg-index: #{$bg-index};
+  --bg-green-lightest: #{$bg-green-lightest};
+  --bg-green-light: #{$bg-green-light};
+  --bg-green-base: #{$bg-green-base};
+  --bg-green-dark: #{$bg-green-dark};
+  --bg-red-base: #{$bg-red-base};
+  --bg-red-40: #{$bg-red-40};
+  --bg-grey: #{$bg-grey};
+  --bg-grey-dark: #{$bg-grey-dark};
+  --border-grey: #{$border-grey};
+  --border-sky-focus: #{$border-sky-focus};
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  min-width: 360px;
 
-  background-color: $background-color;
+  background-color: transparent !important;
 
   &[data-lang="ko"] {
     word-break: keep-all;
@@ -90,9 +127,25 @@ body {
   }
 }
 
-#app {
+html.extension-popup body {
   width: $popup-size-width;
   height: $popup-size-height;
+  min-width: $popup-size-width;
+  min-height: $popup-size-height;
+  max-width: $popup-size-width;
+  max-height: $popup-size-height;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+html.extension-popup #app {
+  width: $popup-size-width;
+  height: $popup-size-height;
+  overflow: hidden;
 }
 
 @keyframes spinAround {
@@ -111,14 +164,11 @@ body {
   position: absolute;
   width: auto;
 }
-.invalid-feedback {
-  margin-top: 20px;
-}
 .form-control {
-  color: black;
+  color: $font-dark;
 
   &:focus {
-    color: black;
+    color: $font-dark;
   }
 }
 

@@ -235,10 +235,17 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
           selectedSeed === SeedType.PRIVATE_KEY ? "Private key" : undefined
         }
         labelStyle={
-          style.flatten(["margin-top-0", "padding-top-0"]) as ViewStyle
+          style.flatten([
+            "margin-top-0",
+            "padding-top-0",
+            "color-gray-300",
+          ]) as ViewStyle
         }
         containerStyle={[style.flatten(["margin-4", "flex-1"])] as ViewStyle}
-        inputStyle={style.flatten(["text-center"]) as ViewStyle}
+        inputContainerStyle={
+          style.flatten(["background-color-gray-5"]) as ViewStyle
+        }
+        inputStyle={style.flatten(["text-center", "color-dark"]) as ViewStyle}
         value={items.item}
         multiline={selectedSeed === SeedType.PRIVATE_KEY}
         numberOfLines={selectedSeed === SeedType.PRIVATE_KEY ? 2 : 1}
@@ -251,16 +258,39 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       contentContainerStyle={style.get("flex-grow-1")}
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
     >
-      <View style={style.flatten(["height-page-pad"]) as ViewStyle} />
-
+      <Text
+        style={
+          style.flatten([
+            "h1",
+            "color-black",
+            "margin-y-10",
+            "font-medium",
+          ]) as ViewStyle
+        }
+      >
+        Import your wallet
+      </Text>
+      <Text
+        style={
+          style.flatten([
+            "body2",
+            "color-gray-400",
+            "margin-bottom-16",
+          ]) as ViewStyle
+        }
+      >
+        Enter your recovery phrase or private key
+      </Text>
       <TabBarView
         listItem={SeedType}
         selected={selectedSeed}
         setSelected={setSelectedSeed}
+        unselectedTextColorToken="color-gray-300"
+        backgroundColorToken="background-color-gray-5"
       />
       <View>
         <FlatList
@@ -311,21 +341,17 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
         />
         {emptyList.length !== seedWords.length ? (
           <Button
-            text="Paste all from clipboard"
+            text="Paste All from Clipboard"
             size="large"
             mode="outline"
             textStyle={
-              style.flatten([
-                "color-white",
-                "body3",
-                "font-normal",
-              ]) as ViewStyle
+              style.flatten(["color-dark", "body3", "font-normal"]) as ViewStyle
             }
             containerStyle={
               style.flatten([
                 "border-radius-32",
                 "margin-y-12",
-                "border-color-white@40%",
+                "border-color-gray-100",
               ]) as ViewStyle
             }
             onPress={async () => {
@@ -339,7 +365,13 @@ export const RecoverMnemonicScreen: FunctionComponent = () => {
       </View>
       <View style={style.flatten(["flex-1"])} />
       <Button
-        containerStyle={style.flatten(["border-radius-32"]) as ViewStyle}
+        containerStyle={
+          style.flatten([
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
+        }
+        textStyle={style.flatten(["color-white"]) as ViewStyle}
         text="Next"
         size="large"
         onPress={() => {

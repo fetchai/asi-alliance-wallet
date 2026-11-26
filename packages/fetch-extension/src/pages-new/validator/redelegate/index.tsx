@@ -7,7 +7,7 @@ import { SelectorModal } from "@components-v2/selector-modal/selector";
 import { useNotification } from "@components/notification";
 import { useRedelegateTxConfig } from "@keplr-wallet/hooks";
 import { Staking } from "@keplr-wallet/stores";
-import { CoinPretty, Dec, Int } from "@keplr-wallet/unit";
+import { Dec } from "@keplr-wallet/unit";
 import { HeaderLayout } from "@layouts-v2/header-layout";
 import { observer } from "mobx-react-lite";
 import React, { useEffect, useMemo, useState } from "react";
@@ -23,6 +23,7 @@ import { TXNTYPE } from "../../../config";
 import { useIntl } from "react-intl";
 import { useLanguage } from "../../../languages";
 import { navigateOnTxnEvents } from "@utils/navigate-txn-event";
+import { formatBalance } from "@utils/format";
 
 type Sort = "APR" | "Voting Power" | "Name";
 
@@ -76,6 +77,11 @@ export const Redelegate = observer(() => {
     ...unbondedValidators.validators,
     ...unbondingValidators.validators,
   ].filter((validator) => validator.operator_address != validatorAddress);
+
+  const isLoading =
+    bondedValidators.isFetching ||
+    unbondedValidators.isFetching ||
+    unbondingValidators.isFetching;
 
   const [selectedValidator, setSelectedValidator] = useState<Staking.Validator>(
     validatorsList[0]
@@ -131,38 +137,21 @@ export const Redelegate = observer(() => {
     sendConfigs.feeConfig.error;
   const txStateIsValid = sendConfigError == null;
 
-  const queryBalances = queriesStore
-    .get(sendConfigs.amountConfig.chainId)
-    .queryBalances.getQueryBech32Address(sendConfigs.amountConfig.sender);
-
-  const queryBalance = queryBalances.balances.find(
-    (bal) =>
-      sendConfigs.amountConfig.sendCurrency.coinMinimalDenom ===
-      bal.currency.coinMinimalDenom
-  );
-  const balance = queryBalance
-    ? queryBalance.balance
-    : new CoinPretty(sendConfigs.amountConfig.sendCurrency, new Int(0));
-
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency, fiatCurrency);
     return value && value.shrink(true).maxDecimals(6).toString();
   };
 
   useEffect(() => {
-    const inputValueInUsd = convertToUsd(balance);
+    const inputValueInUsd = convertToUsd(stakedAmount);
     setInputInFiatCurrency(inputValueInUsd);
-  }, [sendConfigs.amountConfig.amount]);
+  }, [stakedAmount]);
 
   const FiatCurrency = inputInFiatCurrency
     ? ` (${inputInFiatCurrency} ${fiatCurrency.toUpperCase()})`
     : "";
 
-  const availableBalance = `${balance
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${FiatCurrency}`;
+  const availableBalance = `${formatBalance(stakedAmount)}${FiatCurrency}`;
 
   const notification = useNotification();
 
@@ -179,9 +168,12 @@ export const Redelegate = observer(() => {
         },
       });
 
-      analyticsStore.logEvent("Redelegate tx broadcasted", {
+      analyticsStore.logEvent("redelegate_txn_broadcasted", {
         chainId: chainStore.current.chainId,
         chainName: chainStore.current.chainName,
+        validatorName: validator?.description.moniker,
+        toValidatorName: validator?.description.moniker,
+        feeType: sendConfigs.feeConfig.feeType,
       });
     },
     onFulfill: (tx: any) => {
@@ -203,6 +195,9 @@ export const Redelegate = observer(() => {
 
   const redelegateClicked = async () => {
     try {
+      analyticsStore.logEvent("redelegate_txn_click", {
+        pageName: "Stake Validator",
+      });
       await account.cosmos
         .makeBeginRedelegateTx(
           amountConfig.amount,
@@ -220,6 +215,12 @@ export const Redelegate = observer(() => {
         transition: {
           duration: 0.25,
         },
+      });
+      analyticsStore.logEvent("redelegate_txn_broadcasted_fail", {
+        chainId: chainStore.current.chainId,
+        chainName: chainStore.current.chainName,
+        feeType: sendConfigs.feeConfig.feeType,
+        message: e?.message ?? "",
       });
     } finally {
       const txnNavigationOptions = {
@@ -241,14 +242,34 @@ export const Redelegate = observer(() => {
     // If inflation is 0 or not fetched properly, there is no need to sort by APY.
     if (apr.toDec().gt(new Dec(0))) {
       return [
-        { label: "APR", key: "APR" },
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "APR",
+          key: "APR",
+          icon: require("@assets/svg/wireframe/percentage.svg"),
+        },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     } else {
       return [
-        { label: "Voting Power", key: "Voting Power" },
-        { label: "Name", key: "Name" },
+        {
+          label: "Voting Power",
+          key: "Voting Power",
+          icon: require("@assets/svg/wireframe/voting-power.svg"),
+        },
+        {
+          label: "Name",
+          key: "Name",
+          icon: require("@assets/svg/wireframe/user.svg"),
+        },
       ];
     }
   }, [apr]);
@@ -275,33 +296,21 @@ export const Redelegate = observer(() => {
         >
           <div className={style["redelegate-container"]}>
             <div className={style["current-stake"]}>
-              <div
-                style={{
-                  color: "rgba(255,255,255,0.6)",
-                  fontSize: "14px",
-                  fontWeight: 400,
-                  lineHeight: "17.5px",
-                }}
-              >
+              <div className={style["current-stake-label"]}>
                 {intl.formatMessage({
                   id: "unstake.current-staked",
                 })}
               </div>
-              <div
-                className={style["value"]}
-                style={{ fontWeight: 500, lineHeight: "17.5px" }}
-              >
-                {stakedAmount.maxDecimals(4).trim(true).toString()}
+              <div className={style["current-stake-value"]}>
+                {stakedAmount.maxDecimals(6).trim(true).shrink(true).toString()}
               </div>
             </div>
 
             <InputField
               label="From"
               disabled={true}
+              inputContainerClassName={style["fromValidatorInput"]}
               value={validator.description.moniker}
-              labelStyle={{
-                color: "rgba(255,255,255,0.4)",
-              }}
             />
 
             <ChooseValidator
@@ -315,20 +324,8 @@ export const Redelegate = observer(() => {
                 label="Amount"
                 amountConfig={sendConfigs.amountConfig}
                 isToggleClicked={isToggleClicked}
+                availableBalance={availableBalance}
               />
-
-              <div
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 400,
-                  color: "rgba(255,255,255,0.6)",
-                  marginTop: "8px",
-                }}
-              >
-                {`${intl.formatMessage({
-                  id: "unstake.available",
-                })} ${availableBalance}`}
-              </div>
 
               <UseMaxButton
                 amountConfig={sendConfigs.amountConfig}
@@ -339,9 +336,10 @@ export const Redelegate = observer(() => {
               <MemoInput memoConfig={sendConfigs.memoConfig} />
             </div>
             <ButtonV2
+              variant="dark"
               text=""
               styleProps={{
-                width: "336px",
+                width: "94%",
                 padding: "12px",
                 height: "56px",
                 margin: "0 auto",
@@ -360,7 +358,6 @@ export const Redelegate = observer(() => {
                   return;
                 redelegateClicked();
               }}
-              btnBgEnabled={true}
             >
               {intl.formatMessage({
                 id: "unstake.confirm",
@@ -379,11 +376,12 @@ export const Redelegate = observer(() => {
           isOpen={showValidatorListDropDown}
           setIsOpen={setShowValidatorListDropDown}
           styleProp={{
-            maxHeight: "600px",
-            top: 0,
+            maxHeight: "99vh",
+            top: "1vh",
           }}
         >
           <SelectValidatorList
+            isLoading={isLoading}
             filteredValidators={validatorsList}
             selectedValidator={selectedValidator}
             setShowValidatorDropdown={setShowValidatorDropdown}
@@ -403,9 +401,8 @@ export const Redelegate = observer(() => {
           isOpen={showValidatorDropdown}
           setIsOpen={setShowValidatorDropdown}
           styleProp={{
-            maxHeight: "600px",
+            maxHeight: "100%",
             top: 0,
-            justifyContent: "center",
           }}
         >
           <RedelegateValidatorDetail

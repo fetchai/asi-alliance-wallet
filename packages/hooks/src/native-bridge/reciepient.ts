@@ -15,7 +15,7 @@ export class NativeBridgeRecipientConfig extends RecipientConfig {
 
   // reverse tje chain id for fetchub and ethereum
   override get chainId(): string {
-    return super.chainId === "1" ? "fetchhub-4" : "1";
+    return super.chainId === "eip155:1" ? "fetchhub-4" : "eip155:1";
   }
 }
 

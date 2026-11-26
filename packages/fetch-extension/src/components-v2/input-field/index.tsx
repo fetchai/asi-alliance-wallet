@@ -7,14 +7,19 @@ import {
   inputContainerStyle,
   inputStyle,
 } from "./utils";
+import classNames from "classnames";
 
 interface Props {
   label: string;
   disabled?: boolean;
   value: string | number | undefined;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBeforeInput?: (e: React.FormEvent<HTMLInputElement>) => void;
+  inputContainerClassName?: string;
+  inputClassname?: string;
   placeholder?: string;
   rightIcon?: ReactElement;
+  bottomContent?: ReactElement;
   onClick?: () => void;
   labelStyle?: CSSProperties;
 }
@@ -26,14 +31,18 @@ export const InputField = ({
   onChange,
   placeholder,
   rightIcon,
+  bottomContent,
+  inputClassname,
+  inputContainerClassName,
   onClick,
+  onBeforeInput,
   labelStyle,
 }: Props) => {
   return (
     <div className={style["row-outer"]} onClick={onClick}>
       <div
         style={{
-          color: "rgba(255, 255, 255, 0.6)",
+          color: "var(--font-secondary)",
           ...labelStyle,
         }}
         className={style[`label`]}
@@ -41,24 +50,31 @@ export const InputField = ({
         {label}
       </div>
 
-      <div
-        className={style["input"]}
-        style={disabled ? disabledContainerStyle : inputContainerStyle}
-      >
-        <Input
-          width={"100%"}
-          className="form-control-alternative"
-          type={typeof value === "string" ? "text" : "number"}
-          value={value}
-          placeholder={placeholder ? placeholder : ""}
-          onChange={onChange}
-          disabled={disabled}
-          style={disabled ? disabledStyle : inputStyle}
-          min={0}
-          autoComplete="off"
-        />
+      <div className={style["input"]}>
+        <div
+          className={classNames(
+            style["inputContainer"],
+            inputContainerClassName
+          )}
+          style={disabled ? disabledContainerStyle : inputContainerStyle}
+        >
+          <Input
+            width={"100%"}
+            className={classNames("form-control-alternative", inputClassname)}
+            type={typeof value === "string" ? "text" : "number"}
+            value={value}
+            placeholder={placeholder ? placeholder : ""}
+            onChange={onChange}
+            onBeforeInput={onBeforeInput}
+            disabled={disabled}
+            style={disabled ? disabledStyle : inputStyle}
+            min={0}
+            autoComplete="off"
+          />
 
-        {rightIcon && rightIcon}
+          {rightIcon && rightIcon}
+        </div>
+        {bottomContent && bottomContent}
       </div>
     </div>
   );

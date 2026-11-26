@@ -15,6 +15,8 @@ import { useNotification } from "@components/notification";
 import { validateAgentAddress } from "@utils/validate-agent";
 import style from "../style.module.scss";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import { useStore } from "../../../../stores";
+import { validateWalletName } from "@utils/index";
 /**
  *
  * @param closeModal
@@ -37,7 +39,7 @@ export const AddAddress: FunctionComponent<{
     const [name, setName] = useState("");
     const location = useLocation();
     const notification = useNotification();
-
+    const { analyticsStore } = useStore();
     const chatSectionParams =
       (location.state as chatSectionParams) || defaultParamValues;
     useEffect(() => {
@@ -53,6 +55,21 @@ export const AddAddress: FunctionComponent<{
       memoConfig,
       recipientConfig,
     ]);
+
+    const trimmedName = name.trim();
+    const { isValidFormat, containsLetterOrNumber } = validateWalletName(
+      trimmedName,
+      [],
+      "create"
+    );
+    const nameError =
+      name.length === 0
+        ? undefined
+        : !isValidFormat
+        ? "Only letters, numbers and basic symbols (_-.@()) are allowed."
+        : !containsLetterOrNumber
+        ? "Nickname must contain at least one letter or number."
+        : undefined;
 
     return (
       <HeaderLayout
@@ -82,10 +99,13 @@ export const AddAddress: FunctionComponent<{
             {intl.formatMessage({ id: "setting.address-book.name" })}
           </Label>
           <Input
+            formGroupClassName={style["formGroupInput"]}
             className={style["input"]}
             type="text"
+            placeholder="Enter nickname"
             autoComplete="off"
             value={name}
+            error={nameError}
             onChange={(e) => {
               setName(e.target.value.substring(0, 30));
             }}
@@ -102,9 +122,10 @@ export const AddAddress: FunctionComponent<{
           />
           <div style={{ flex: 1 }} />
           <ButtonV2
+            variant="dark"
             disabled={
-              !name ||
-              name.trim() === "" ||
+              !trimmedName ||
+              nameError != null ||
               (recipientConfig.error != null &&
                 validateAgentAddress(recipientConfig.rawRecipient)) ||
               memoConfig.error != null
@@ -112,7 +133,9 @@ export const AddAddress: FunctionComponent<{
             onClick={async (e: any) => {
               e.preventDefault();
               e.stopPropagation();
-
+              analyticsStore.logEvent("save_new_address_click", {
+                pageName: "Add an Address",
+              });
               if (!recipientConfig.recipient) {
                 throw new Error("Invalid address");
               }
@@ -125,7 +148,7 @@ export const AddAddress: FunctionComponent<{
               /// Validating a new address is unique in the address book
               if (index < 0 && addressIndex < 0) {
                 addressBookConfig.addAddressBook({
-                  name: name.trim(),
+                  name: trimmedName,
                   address: recipientConfig.recipient,
                   memo: memoConfig.memo,
                 });
@@ -137,7 +160,7 @@ export const AddAddress: FunctionComponent<{
                 /// [addressIndex === -1] replacing old address to unique address
                 /// [index === addressIndex] if the index and address index is same that means we are dealing with unique address
                 addressBookConfig.editAddressBookAt(index, {
-                  name: name.trim(),
+                  name: trimmedName,
                   address: recipientConfig.recipient,
                   memo: memoConfig.memo,
                 });

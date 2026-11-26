@@ -10,12 +10,14 @@ import {
 } from "reactstrap";
 
 import { Buffer } from "buffer/";
+import style from "./textarea.module.scss";
 
 export interface TextareaProps {
   type?: string;
-
+  formGroupClassName?: string;
+  formFeedbackClassName?: string;
   label?: string;
-  error?: string;
+  error?: React.ReactNode;
 }
 
 // eslint-disable-next-line react/display-name
@@ -40,21 +42,29 @@ export const TextArea = forwardRef<
   });
 
   return (
-    <FormGroup>
+    <FormGroup className={props.formGroupClassName}>
       {label ? (
-        <Label for={inputId} className="form-control-label">
+        <Label for={inputId} className={style["label"]}>
           {label}
         </Label>
       ) : null}
       <ReactStrapInput
         id={inputId}
-        className={classnames("form-control-alternative", props.className)}
+        className={classnames(
+          "form-control-alternative",
+          props.className,
+          style["textarea"]
+        )}
         type={type ?? ("textarea" as any)}
         innerRef={ref}
         invalid={error != null}
         {...attributes}
       />
-      {error ? <FormFeedback>{error}</FormFeedback> : null}
+      {error ? (
+        <FormFeedback className={props.formFeedbackClassName}>
+          {error}
+        </FormFeedback>
+      ) : null}
     </FormGroup>
   );
 });

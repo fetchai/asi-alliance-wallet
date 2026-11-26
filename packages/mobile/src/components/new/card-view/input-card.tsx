@@ -54,7 +54,7 @@ export const InputCardView = React.forwardRef<TextInput, InputCardViewProps>(
           <Text
             style={
               [
-                style.flatten(["color-white@60%", "margin-y-12", "body3"]),
+                style.flatten(["color-gray-400", "margin-y-12", "body3"]),
                 labelStyle,
               ] as ViewStyle
             }
@@ -68,18 +68,21 @@ export const InputCardView = React.forwardRef<TextInput, InputCardViewProps>(
           containerStyle={
             [
               style.flatten(
-                ["padding-x-18", "padding-y-12", "flex-row"],
-                isFocused || error
-                  ? [
-                      // The order is important.
-                      // The border color has different priority according to state.
-                      // The more in front, the lower the priority.
-                      "border-width-1",
-                      isFocused ? "border-color-indigo" : undefined,
-                      error ? "border-color-red-250" : undefined,
-                      !(props.editable ?? true) && "background-color-gray-50",
-                    ]
-                  : []
+                [
+                  "padding-x-18",
+                  "padding-y-12",
+                  "flex-row",
+                  "border-width-1",
+                  "border-color-gray-100",
+                ],
+                [
+                  // The order is important.
+                  // The border color has different priority according to state.
+                  // The more in front, the lower the priority.
+                  isFocused && "border-color-sky-focus",
+                  error ? "border-color-red-250" : undefined,
+                  !(props.editable ?? true) && "background-color-gray-50",
+                ]
               ),
               inputContainerStyle,
               // { paddingVertical: 9 },
@@ -90,9 +93,13 @@ export const InputCardView = React.forwardRef<TextInput, InputCardViewProps>(
             <TextInput
               keyboardType={
                 keyboardType ??
-                (Platform.OS === "ios" ? "ascii-capable" : "visible-password")
+                (Platform.OS === "ios"
+                  ? "ascii-capable"
+                  : restProps.secureTextEntry
+                  ? "default"
+                  : "visible-password")
               }
-              placeholderTextColor={style.flatten(["color-white@60%"]).color}
+              placeholderTextColor={style.flatten(["color-gray-300"]).color}
               onChangeText={(text) => {
                 if (onChangeText) {
                   onChangeText(removeEmojis(text));
@@ -102,7 +109,7 @@ export const InputCardView = React.forwardRef<TextInput, InputCardViewProps>(
                 [
                   style.flatten([
                     "body3",
-                    "color-white",
+                    "color-dark",
                     "padding-0",
                     "justify-center",
                   ]),

@@ -31,7 +31,7 @@ export const ValidatorCard = ({
       className={styleValidators["item"]}
       onClick={() => {
         analyticsStore.logEvent("stake_validator_click", {
-          pageName: "Validator Tab",
+          pageName: "Validator Details",
         });
         navigate(`/validators/${validator.operator_address}/stake`);
       }}

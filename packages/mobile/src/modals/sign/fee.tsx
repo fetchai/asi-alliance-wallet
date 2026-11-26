@@ -9,6 +9,7 @@ import { KeplrSignOptions } from "@keplr-wallet/types";
 import { IconButton } from "components/new/button/icon";
 import { GearIcon } from "components/new/icon/gear-icon";
 import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-modal";
+import { formatFeeAmount } from "utils/format/format";
 
 export const FeeInSign: FunctionComponent<{
   isInternal: boolean;
@@ -54,33 +55,47 @@ export const FeeInSign: FunctionComponent<{
             }
           >
             <Text
-              style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}
+              style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}
             >
               Transaction fee:
             </Text>
             <View
-              style={style.flatten(["flex-row", "items-center"]) as ViewStyle}
+              style={
+                [
+                  style.flatten([
+                    "flex-row",
+                    "items-center",
+                    "flex-1",
+                    "justify-end",
+                  ]),
+                ] as ViewStyle
+              }
             >
               <Text
+                numberOfLines={1}
                 style={
-                  style.flatten([
-                    "body3",
-                    "color-white",
-                    "margin-right-6",
-                  ]) as ViewStyle
+                  [
+                    style.flatten([
+                      "body3",
+                      "color-dark",
+                      "margin-x-6",
+                      "flex-shrink-1",
+                    ]),
+                  ] as ViewStyle
                 }
               >
-                {feeConfig
-                  .getFeeTypePretty(
-                    feeConfig.feeType ? feeConfig.feeType : "average"
-                  )
-                  .hideIBCMetadata(true)
-                  .trim(true)
-                  .toMetricPrefix(isEvm)}
+                {formatFeeAmount(
+                  feeConfig
+                    .getFeeTypePretty(
+                      feeConfig.feeType ? feeConfig.feeType : "average"
+                    )
+                    .hideIBCMetadata(true),
+                  isEvm
+                )}
               </Text>
               <IconButton
                 backgroundBlur={false}
-                icon={<GearIcon />}
+                icon={<GearIcon color={style.flatten(["color-dark"]).color} />}
                 iconStyle={
                   style.flatten([
                     "width-32",
@@ -88,7 +103,7 @@ export const FeeInSign: FunctionComponent<{
                     "items-center",
                     "justify-center",
                     "border-width-1",
-                    "border-color-white@40%",
+                    "border-color-gray-100",
                   ]) as ViewStyle
                 }
                 onPress={() => setFeeModal(true)}
@@ -112,43 +127,56 @@ export const FeeInSign: FunctionComponent<{
           ) : null}
         </React.Fragment>
       ) : (
-        <View style={style.flatten(["padding-bottom-28"]) as ViewStyle}>
+        <View
+          style={
+            style.flatten([
+              "flex-row",
+              "justify-between",
+              "items-center",
+              "margin-y-12",
+            ]) as ViewStyle
+          }
+        >
+          <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
+            Transaction fee:
+          </Text>
           <View
             style={
               style.flatten([
+                "flex-1",
                 "flex-row",
-                "items-center",
-                "margin-bottom-4",
+                "flex-wrap",
+                "justify-end",
+                "items-end",
+                "margin-left-6",
               ]) as ViewStyle
             }
           >
             <Text
               style={
                 style.flatten([
-                  "padding-y-4",
-                  "color-gray-200",
-                  "margin-y-4",
+                  "body3",
+                  "color-dark",
+                  "text-right",
                 ]) as ViewStyle
               }
             >
-              Fee
+              {formatFeeAmount(fee, isEvm)}
             </Text>
-            <View style={style.get("flex-1")} />
-            <Text
-              style={style.flatten(["body3", "color-text-low"]) as ViewStyle}
-            >
-              {price ? price.toString() : "-"}
-            </Text>
-          </View>
-          <View style={style.flatten(["flex-row"])}>
-            <View style={style.get("flex-1")} />
-            <Text
-              style={
-                style.flatten(["subtitle1", "color-gray-300"]) as ViewStyle
-              }
-            >
-              {fee.trim(true).toString()}
-            </Text>
+            {price ? (
+              <Text
+                style={
+                  style.flatten([
+                    "body3",
+                    "color-gray-300",
+                    "margin-left-1",
+                    "text-right",
+                  ]) as ViewStyle
+                }
+              >
+                ({price.toString()})
+              </Text>
+            ) : null}
           </View>
         </View>
       )}

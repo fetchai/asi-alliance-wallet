@@ -4,7 +4,9 @@
   display: flex;
   height: 86px;
   filter: drop-shadow(0px 0px 8px rgba(0, 0, 0, 0.1));
-  width: 354px;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
   overflow: hidden;
   margin-left: 5px;
   padding: 0px 12px 0px 12px;
@@ -13,7 +15,6 @@
 .tab {
   font-size: $xs;
   color: #fff;
-  flex: 1;
   display: flex;
   justify-content: center;
   flex-direction: column;
@@ -24,6 +25,7 @@
   img {
     object-fit: contain;
   }
+
   .tab-icon {
     width: 60px;
     height: 32px;
@@ -32,16 +34,17 @@
 
     &.active {
       border-radius: 100px;
-      background: rgba(255, 255, 255, 0.2);
+      background: $bg-grey-dark;
     }
   }
 
   .title {
-    color: #fff;
+    color: $font-secondary !important;
     font-size: $xs;
     font-weight: 400;
+
     &.active {
-      color: rgba(255, 255, 255, 0.6);
+      color: $font-dark !important;
     }
   }
 }
@@ -60,24 +63,26 @@
   right: 215px;
   top: 5px;
 }
+
 .actions {
   display: flex;
   justify-content: space-around;
 }
 
-.toggle,
-.toggle:hover {
+.toggle {
   z-index: 300;
-  width: 335px;
-  border: 0px;
-  background: transparent;
+  width: 48px;
+  height: 48px;
+  border-radius: 48px;
+  border: none;
+  background: $bg-green-base;
   padding: 0px;
 }
-.toggle:focus {
-  border: 0px;
-  background: transparent;
-  padding: 0px;
+
+.toggle:hover .toggle:focus {
+  opacity: 0.7;
 }
+
 .overlay {
   overflow: hidden;
   opacity: 0.9;

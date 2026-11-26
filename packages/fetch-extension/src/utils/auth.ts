@@ -8,7 +8,7 @@ import {
 } from "@keplr-wallet/background/build/messaging";
 import { InExtensionMessageRequester } from "@keplr-wallet/router-extension";
 import { rawSecp256k1PubkeyToRawAddress } from "@cosmjs/amino";
-import { toBase64, Bech32, fromHex } from "@cosmjs/encoding";
+import { toBase64, toBech32, fromHex } from "@cosmjs/encoding";
 import { serializeSignDoc } from "@keplr-wallet/cosmos";
 import { AGENT_FEEDBACK_URL, GRAPHQL_URL } from "../config.ui.var";
 
@@ -87,7 +87,7 @@ export const getJWT = async (chainId: string, url: string) => {
 
   if (!pubKey.publicKey) throw new Error("public key not found");
 
-  const addr = Bech32.encode(
+  const addr = toBech32(
     "fetch",
     rawSecp256k1PubkeyToRawAddress(fromHex(pubKey.publicKey))
   );

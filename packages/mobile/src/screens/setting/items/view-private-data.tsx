@@ -7,8 +7,9 @@ import { getPrivateDataTitle } from "screens/setting/screens/view-private-data";
 import { useStyle } from "styles/index";
 import { ViewStyle } from "react-native";
 import { KeyIconSmall } from "components/new/icon/key";
+import { observer } from "mobx-react-lite";
 
-export const SettingViewPrivateDataItem: FunctionComponent = () => {
+export const SettingViewPrivateDataItem: FunctionComponent = observer(() => {
   const { keyRingStore, analyticsStore } = useStore();
 
   const style = useStyle();
@@ -16,16 +17,18 @@ export const SettingViewPrivateDataItem: FunctionComponent = () => {
   const smartNavigation = useSmartNavigation();
 
   const [isOpenModal, setIsOpenModal] = useState(false);
+  const selectedKeyInfo = keyRingStore.selectedKeyInfo;
+  const selectedKeyType = selectedKeyInfo?.type ?? "";
 
   return (
     <React.Fragment>
       <SettingItem
-        label={getPrivateDataTitle(keyRingStore.keyRingType)}
-        left={<KeyIconSmall />}
+        label={getPrivateDataTitle(selectedKeyType)}
+        left={<KeyIconSmall color="#151a1a" />}
         onPress={() => {
           setIsOpenModal(true);
           analyticsStore.logEvent("view_mnemonic_seed_click", {
-            pageName: "More",
+            pageName: "Security & Privacy",
           });
         }}
         style={style.flatten(["height-72", "padding-18"]) as ViewStyle}
@@ -33,21 +36,22 @@ export const SettingViewPrivateDataItem: FunctionComponent = () => {
       <PasswordInputModal
         isOpen={isOpenModal}
         close={() => setIsOpenModal(false)}
-        title={"Enter your password to view your mnemonic seed"}
+        title={`Enter your password to view your ${
+          selectedKeyType === "mnemonic" ? "mnemonic seed" : "private key"
+        }`}
         onEnterPassword={async (password) => {
-          const index = keyRingStore.multiKeyStoreInfo.findIndex(
-            (keyStore) => keyStore.selected
-          );
-
-          if (index >= 0) {
-            const privateData = await keyRingStore.showKeyRing(index, password);
+          if (selectedKeyInfo) {
+            const privateData = await keyRingStore.showKeyRing(
+              selectedKeyInfo.id,
+              password
+            );
             smartNavigation.navigateSmart("Setting.ViewPrivateData", {
               privateData,
-              privateDataType: keyRingStore.keyRingType,
+              privateDataType: selectedKeyType,
             });
           }
         }}
       />
     </React.Fragment>
   );
-};
+});

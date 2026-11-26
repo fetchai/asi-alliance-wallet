@@ -1,3 +1,5 @@
+import moment from "moment";
+
 export function formatTimestamp(timestamp: number, duration: string): string {
   const date = new Date(timestamp);
 
@@ -32,3 +34,11 @@ export function formatTimestamp(timestamp: number, duration: string): string {
 
   return new Intl.DateTimeFormat("en-US", options).format(date);
 }
+
+export const convertEpochToDate = (
+  epochTime: number,
+  formatType: string = "DD-MMM-YYYY"
+) => {
+  const date = new Date(epochTime * 1000); // Multiply by 1000 to convert seconds to milliseconds
+  return moment(date).format(formatType);
+};

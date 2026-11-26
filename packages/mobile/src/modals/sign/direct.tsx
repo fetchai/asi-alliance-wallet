@@ -5,20 +5,39 @@ import {
   MsgDelegate,
   MsgUndelegate,
 } from "@keplr-wallet/proto-types/cosmos/staking/v1beta1/tx";
-import { MsgVote } from "@keplr-wallet/proto-types/cosmos/gov/v1beta1/tx";
+import {
+  MsgVote,
+  MsgSubmitProposal,
+} from "@keplr-wallet/proto-types/cosmos/gov/v1beta1/tx";
 import { MsgWithdrawDelegatorReward } from "@keplr-wallet/proto-types/cosmos/distribution/v1beta1/tx";
-import { MsgExecuteContract } from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
+import {
+  MsgExecuteContract,
+  MsgInstantiateContract,
+} from "@keplr-wallet/proto-types/cosmwasm/wasm/v1/tx";
 import { MsgTransfer } from "@keplr-wallet/proto-types/ibc/applications/transfer/v1/tx";
+import {
+  MsgGrant,
+  MsgRevoke,
+} from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/tx";
+import { GenericAuthorization } from "@keplr-wallet/proto-types/cosmos/authz/v1beta1/authz";
+import { SendAuthorization } from "@keplr-wallet/proto-types/cosmos/bank/v1beta1/authz";
+import { StakeAuthorization } from "@keplr-wallet/proto-types/cosmos/staking/v1beta1/authz";
 import { AnyWithUnpacked, UnknownMessage } from "@keplr-wallet/cosmos";
 import {
   renderMsgBeginRedelegate,
   renderMsgDelegate,
   renderMsgExecuteContract,
+  renderMsgInstantiateContract,
   renderMsgSend,
+  renderMsgSubmitProposal,
   renderMsgUndelegate,
   renderMsgTransfer,
   renderMsgVote,
   renderMsgWithdrawDelegatorReward,
+  renderGenericMsgGrant,
+  renderStakeMsgGrant,
+  renderSendMsgGrant,
+  renderMsgRevoke,
   renderUnknownMessage,
 } from "./messages";
 import { Buffer } from "buffer/";
@@ -72,6 +91,28 @@ export function renderDirectMessage(
           }
           break;
         }
+        case "/cosmos.gov.v1beta1.MsgSubmitProposal": {
+          const value = msg.unpacked as MsgSubmitProposal;
+          if (value.content && value.proposer) {
+            return renderMsgSubmitProposal(
+              value.proposer,
+              value.content,
+              value.initialDeposit
+            );
+          }
+          break;
+        }
+        case "/cosmwasm.wasm.v1.MsgInstantiateContract": {
+          const instantiateMsg = msg.unpacked as MsgInstantiateContract;
+          return renderMsgInstantiateContract(
+            currencies,
+            instantiateMsg.funds,
+            instantiateMsg.admin,
+            instantiateMsg.codeId,
+            instantiateMsg.label,
+            JSON.parse(Buffer.from(instantiateMsg.msg).toString())
+          );
+        }
         case "/cosmwasm.wasm.v1.MsgExecuteContract": {
           const executeMsg = msg.unpacked as MsgExecuteContract;
           return renderMsgExecuteContract(
@@ -86,6 +127,40 @@ export function renderDirectMessage(
               ).toString()
             )
           );
+        }
+        case "/cosmos.authz.v1beta1.MsgGrant": {
+          const grantMsg = msg.unpacked as MsgGrant;
+          switch (grantMsg.grant?.authorization?.typeUrl) {
+            case "/cosmos.bank.v1beta1.SendAuthorization":
+              return renderSendMsgGrant(
+                currencies,
+                grantMsg.grantee,
+                grantMsg.grant.expiration,
+                SendAuthorization.decode(grantMsg.grant.authorization.value)
+              );
+            case "/cosmos.staking.v1beta1.StakeAuthorization":
+              return renderStakeMsgGrant(
+                currencies,
+                grantMsg.grantee,
+                grantMsg.grant.expiration,
+                StakeAuthorization.decode(grantMsg.grant.authorization.value)
+              );
+            default:
+              return renderGenericMsgGrant(
+                grantMsg.grantee,
+                grantMsg.grant?.expiration,
+                grantMsg.grant?.authorization?.typeUrl ===
+                  "/cosmos.authz.v1beta1.GenericAuthorization"
+                  ? GenericAuthorization.decode(
+                      grantMsg.grant!.authorization!.value
+                    ).msg
+                  : grantMsg.grant!.authorization!.typeUrl
+              );
+          }
+        }
+        case "/cosmos.authz.v1beta1.MsgRevoke": {
+          const revokeMsg = msg.unpacked as MsgRevoke;
+          return renderMsgRevoke(revokeMsg.msgTypeUrl, revokeMsg.grantee);
         }
         case "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward": {
           const withdrawMsg = msg.unpacked as MsgWithdrawDelegatorReward;

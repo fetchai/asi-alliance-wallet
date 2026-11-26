@@ -11,15 +11,21 @@ import {
 import { useStore } from "../../stores";
 import { CoinPretty, Dec, DecUtils, Int } from "@keplr-wallet/unit";
 import { InputField } from "@components-v2/input-field";
-import { parseDollarAmount } from "@utils/format";
+import {
+  parseDollarAmount,
+  validateDecimalPlaces,
+  hasValidDecimals,
+} from "@utils/format";
 import { useIntl } from "react-intl";
 import { useLanguage } from "../../languages";
+import style from "./stake-input.module.scss";
 
 export const StakeInput: FunctionComponent<{
   label: string;
+  availableBalance?: string;
   isToggleClicked?: boolean;
   amountConfig: IAmountConfig;
-}> = observer(({ label, amountConfig, isToggleClicked }) => {
+}> = observer(({ label, amountConfig, availableBalance, isToggleClicked }) => {
   const { priceStore } = useStore();
   const [inputInFiatCurrency, setInputInFiatCurrency] = useState<
     string | undefined
@@ -89,6 +95,8 @@ export const StakeInput: FunctionComponent<{
     <div>
       <InputField
         label={label}
+        inputClassname={style["stakeInput"]}
+        inputContainerClassName={style["stakeInputContainer"]}
         value={
           isToggleClicked
             ? parseDollarAmount(inputInFiatCurrency).toString()
@@ -96,21 +104,29 @@ export const StakeInput: FunctionComponent<{
         }
         placeholder={`0`}
         rightIcon={
-          <div
-            style={{
-              fontSize: "14px",
-              fontWeight: 400,
-              color: "rgba(255,255,255,0.6)",
-            }}
-          >
+          <div className={style["stakeInputDenomSection"]}>
             {isToggleClicked
               ? fiatCurrency.toUpperCase()
               : amountConfig.sendCurrency.coinDenom}
           </div>
         }
         onChange={(e) => {
-          let value = e.target.value;
-          if (validateDecimalNumber(value)) {
+          let value = e.target.value.replace(/[^0-9.]/g, "");
+
+          if (value === "") {
+            amountConfig.setAmount("");
+            return;
+          }
+
+          if (!validateDecimalPlaces(value)) {
+            return;
+          }
+
+          if (
+            validateDecimalNumber(value) &&
+            Number(value) < 10 ** 18 &&
+            hasValidDecimals(value)
+          ) {
             if (value !== "0") {
               // Remove leading zeros
               for (let i = 0; i < value.length; i++) {
@@ -126,18 +142,23 @@ export const StakeInput: FunctionComponent<{
               : amountConfig.setAmount(value);
           }
         }}
+        onBeforeInput={(e) => {
+          const data = (e as any).data;
+          if (data && !/[0-9.]/.test(data)) {
+            e.preventDefault();
+          }
+        }}
+        bottomContent={
+          <div className={style["stakeInputAvailableBalance"]}>
+            {`${intl.formatMessage({
+              id: "unstake.available",
+            })} ${availableBalance}`}
+          </div>
+        }
       />
 
       {error && (
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#fa8f6b",
-            marginTop: "6px",
-          }}
-        >
-          {errorText}
-        </div>
+        <div className={style["stakeInputErrorMessage"]}>{errorText}</div>
       )}
     </div>
   );

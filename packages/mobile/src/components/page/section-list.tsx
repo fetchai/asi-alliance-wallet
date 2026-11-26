@@ -2,11 +2,11 @@ import React, { FunctionComponent } from "react";
 import {
   Animated,
   Platform,
-  SafeAreaView,
   SectionListProps,
   StyleSheet,
   ViewStyle,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useStyle } from "styles/index";
 import { KeyboardAwareSectionList } from "react-native-keyboard-aware-scroll-view";
 import { usePageRegisterScrollYValue, useSetFocusedScreen } from "./utils";
@@ -20,7 +20,7 @@ export const PageWithSectionList: FunctionComponent<
   SectionListProps<any, any> & {
     containerStyle?: ViewStyle;
     backgroundMode: BackgroundMode;
-    isTransparentHeader?: boolean;
+    hasFloatingHeader?: boolean;
   }
 > = (props) => {
   const style = useStyle();
@@ -34,7 +34,7 @@ export const PageWithSectionList: FunctionComponent<
     containerStyle,
     backgroundMode,
     indicatorStyle,
-    isTransparentHeader,
+    hasFloatingHeader,
     ...restProps
   } = props;
 
@@ -42,9 +42,12 @@ export const PageWithSectionList: FunctionComponent<
     <React.Fragment>
       <ScreenBackground
         backgroundMode={backgroundMode}
-        isTransparentHeader={isTransparentHeader}
+        hasFloatingHeader={hasFloatingHeader}
       />
       <SafeAreaView
+        {...(Platform.OS === "android"
+          ? { edges: ["left", "right", "bottom"] as const }
+          : {})}
         style={StyleSheet.flatten([
           style.flatten(
             ["flex-1"],

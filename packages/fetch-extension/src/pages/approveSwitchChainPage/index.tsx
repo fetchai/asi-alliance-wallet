@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Button } from "reactstrap";
+import { ButtonV2 } from "@components-v2/buttons/button";
 
 import style from "./style.module.scss";
 import { EmptyLayout } from "@layouts/empty-layout";
@@ -12,6 +12,7 @@ import classNames from "classnames";
 import { GithubIcon } from "@components/icon";
 import { useStore } from "../../stores";
 import { messageAndGroupListenerUnsubscribe } from "@graphQL/messages-api";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
   const {
@@ -48,7 +49,7 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
   }
 
   return (
-    <EmptyLayout style={{ height: "100%" }}>
+    <EmptyLayout className={style["emptyLayout"]} style={{ height: "100%" }}>
       {isLoadingPlaceholder ? (
         <div className={style["container"]}>
           <div className={style["content"]}>
@@ -144,7 +145,7 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
                   <div className={style["imageBackground"]} />
                   <img
                     className={style["logoImage"]}
-                    src={require("@assets/logo-256.svg")}
+                    src={require("@assets/png/White-black-circle.png")}
                     alt="chain logo"
                   />
                 </div>
@@ -157,7 +158,7 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
                   <div className={style["imageBackground"]} />
                   <img
                     className={style["logoImage"]}
-                    src={require("../../public/assets/logo-256.svg")}
+                    src={require("@assets/png/White-black-circle.png")}
                     alt="keplr logo"
                   />
                 </div>
@@ -190,7 +191,7 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
                   > */}
                   <div className={style["item"]}>
                     <FormattedMessage id="chain.suggested.community-driven" />
-                    <GithubIcon />
+                    <GithubIcon fill="white" />
                   </div>
                   {/* </a> */}
                 </div>
@@ -211,12 +212,14 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
             </div>
           }
           <div className={style["buttons"]}>
-            <Button
-              className={style["button"]}
-              color="danger"
-              outline
+            <ButtonV2
+              styleProps={{
+                padding: "10px",
+                height: "40px",
+                fontSize: "0.9rem",
+              }}
               disabled={!chainSwitchStore.waitingSuggestedChainId}
-              data-loading={chainSwitchStore.isLoading}
+              dataLoading={chainSwitchStore.isLoading}
               onClick={async (e: any) => {
                 e.preventDefault();
 
@@ -231,14 +234,17 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
                   navigate("/");
                 }
               }}
-            >
-              <FormattedMessage id="chain.suggested.button.reject" />
-            </Button>
-            <Button
-              className={style["button"]}
-              color="primary"
+              text={<FormattedMessage id="chain.suggested.button.reject" />}
+            />
+            <ButtonV2
+              variant="dark"
+              styleProps={{
+                padding: "10px",
+                height: "40px",
+                fontSize: "0.9rem",
+              }}
               disabled={!chainSwitchStore.waitingSuggestedChainId}
-              data-loading={chainSwitchStore.isLoading}
+              dataLoading={chainSwitchStore.isLoading}
               onClick={async (e: any) => {
                 e.preventDefault();
 
@@ -259,14 +265,13 @@ export const ApproveSwitchChainPage: FunctionComponent = observer(() => {
                   interactionInfo.interaction &&
                   !interactionInfo.interactionInternal
                 ) {
-                  window.close();
+                  handleExternalInteractionWithNoProceedNext();
                 } else {
                   navigate("/");
                 }
               }}
-            >
-              <FormattedMessage id="chain.suggested.button.approve" />
-            </Button>
+              text={<FormattedMessage id="chain.suggested.button.approve" />}
+            />
           </div>
         </div>
       )}

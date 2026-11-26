@@ -15,6 +15,11 @@ import {
   ICNSAdr36Signatures,
   ChainInfoWithoutEndpoints,
   SecretUtils,
+  SettledResponses,
+  DirectAuxSignResponse,
+  IEthereumProvider,
+  SupportedPaymentType,
+  SignPsbtOptions,
 } from "@keplr-wallet/types";
 import {
   Bech32Address,
@@ -25,9 +30,15 @@ import {
   CosmJSOfflineSigner,
   CosmJSOfflineSignerOnlyAmino,
 } from "@keplr-wallet/provider";
-import { Mnemonic, PrivKeySecp256k1 } from "@keplr-wallet/crypto";
+import { Hash, Mnemonic, PrivKeySecp256k1 } from "@keplr-wallet/crypto";
 import Long from "long";
 import { SignDoc } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
+import EventEmitter from "events";
+import {
+  Call,
+  DeployAccountSignerDetails,
+  InvocationsSignerDetails,
+} from "starknet";
 
 export class MockKeplr implements Keplr {
   readonly version: string = "0.0.1";
@@ -73,6 +84,11 @@ export class MockKeplr implements Keplr {
     public readonly mnemonic: string
   ) {}
 
+  ping(): Promise<void> {
+    // noop.
+    return Promise.resolve();
+  }
+
   enable(): Promise<void> {
     // noop.
     return Promise.resolve(undefined);
@@ -105,16 +121,46 @@ export class MockKeplr implements Keplr {
       name: "mock",
       algo: "secp256k1",
       pubKey: wallet.getPubKey().toBytes(),
-      address: wallet.getPubKey().getAddress(),
+      address: wallet.getPubKey().getCosmosAddress(),
       bech32Address: new Bech32Address(
-        wallet.getPubKey().getAddress()
+        wallet.getPubKey().getCosmosAddress()
       ).toBech32(
-        this.chainInfos.find((c) => c.chainId === chainId)!.bech32Config
-          .bech32PrefixAccAddr
+        this.chainInfos.find((c) => c.chainId === chainId)?.bech32Config
+          ?.bech32PrefixAccAddr ?? ""
       ),
+      ethereumHexAddress: new Bech32Address(
+        wallet.getPubKey().getCosmosAddress()
+      ).toHex(true),
       isNanoLedger: false,
       isKeystone: false,
     };
+  }
+
+  async getKeysSettled(chainIds: string[]): Promise<SettledResponses<Key>> {
+    return chainIds.map((chainId) => {
+      const wallet = this.getWallet(chainId);
+
+      return {
+        status: "fulfilled",
+        value: {
+          name: "mock",
+          algo: "secp256k1",
+          pubKey: wallet.getPubKey().toBytes(),
+          address: wallet.getPubKey().getCosmosAddress(),
+          bech32Address: new Bech32Address(
+            wallet.getPubKey().getCosmosAddress()
+          ).toBech32(
+            this.chainInfos.find((c) => c.chainId === chainId)!.bech32Config
+              .bech32PrefixAccAddr
+          ),
+          ethereumHexAddress: new Bech32Address(
+            wallet.getPubKey().getCosmosAddress()
+          ).toHex(true),
+          isNanoLedger: false,
+          isKeystone: false,
+        },
+      };
+    });
   }
 
   signArbitrary(
@@ -132,6 +178,34 @@ export class MockKeplr implements Keplr {
     _signature: StdSignature
   ): Promise<boolean> {
     throw new Error("Not implemented");
+  }
+
+  signFigureMarketsAuth(
+    _chainId: string,
+    _signer: string,
+    _message: string
+  ): Promise<{
+    signedMessage: string;
+    signature: StdSignature;
+  }> {
+    throw new Error("Not implemented");
+  }
+
+  signDirectWithMessages(
+    _chainId: string,
+    _signer: string,
+    // base64 encoded protobuf messages.
+    _messages: string[],
+    _signDirectWithMessagesOptions: {
+      memo?: string;
+      sync?: boolean;
+      timeoutHeight?: number;
+      gasAdjustment?: number;
+    }
+  ): Promise<{
+    txHash: string;
+  }> {
+    throw new Error("Not yet implemented");
   }
 
   signEthereum(
@@ -153,7 +227,10 @@ export class MockKeplr implements Keplr {
     throw new Error("Not implemented");
   }
 
-  getOfflineSigner(chainId: string): OfflineAminoSigner & OfflineDirectSigner {
+  getOfflineSigner(
+    chainId: string,
+    _?: KeplrSignOptions
+  ): OfflineAminoSigner & OfflineDirectSigner {
     return new CosmJSOfflineSigner(chainId, this);
   }
 
@@ -182,13 +259,15 @@ export class MockKeplr implements Keplr {
       throw new Error("Unmatched signer");
     }
 
-    const signature = wallet.sign(serializeSignDoc(signDoc));
+    const signature = wallet.signDigest32(
+      Hash.sha256(serializeSignDoc(signDoc))
+    );
 
     return {
       signed: signDoc,
       signature: encodeSecp256k1Signature(
         wallet.getPubKey().toBytes(),
-        signature
+        new Uint8Array([...signature.r, ...signature.s])
       ),
     };
   }
@@ -218,15 +297,17 @@ export class MockKeplr implements Keplr {
       throw new Error("Unmatched signer");
     }
 
-    const signature = wallet.sign(
-      SignDoc.encode(
-        SignDoc.fromPartial({
-          bodyBytes: signDoc.bodyBytes!,
-          authInfoBytes: signDoc.authInfoBytes!,
-          chainId: signDoc.chainId!,
-          accountNumber: signDoc.accountNumber!.toString(),
-        })
-      ).finish()
+    const signature = wallet.signDigest32(
+      Hash.sha256(
+        SignDoc.encode(
+          SignDoc.fromPartial({
+            bodyBytes: signDoc.bodyBytes!,
+            authInfoBytes: signDoc.authInfoBytes!,
+            chainId: signDoc.chainId!,
+            accountNumber: signDoc.accountNumber!.toString(),
+          })
+        ).finish()
+      )
     );
 
     return {
@@ -238,9 +319,40 @@ export class MockKeplr implements Keplr {
       },
       signature: encodeSecp256k1Signature(
         wallet.getPubKey().toBytes(),
-        signature
+        new Uint8Array([
+          ...signature.r.map((b) => (Math.random() > 0.5 ? 0 : b)),
+          ...signature.s.map((b) => (Math.random() > 0.5 ? 0 : b)),
+        ])
       ),
     };
+  }
+
+  signDirectAux(
+    _chainId: string,
+    _signer: string,
+    _signDoc: {
+      bodyBytes?: Uint8Array | null;
+      publicKey?: {
+        typeUrl: string;
+        value: Uint8Array;
+      } | null;
+      chainId?: string | null;
+      accountNumber?: Long | null;
+      sequence?: Long | null;
+      tip?: {
+        amount: {
+          denom: string;
+          amount: string;
+        }[];
+        tipper: string;
+      } | null;
+    },
+    _signOptions?: Exclude<
+      KeplrSignOptions,
+      "preferNoSetFee" | "disableBalanceCheck"
+    >
+  ): Promise<DirectAuxSignResponse> {
+    throw new Error("Not implemented");
   }
 
   suggestToken(): Promise<void> {
@@ -255,12 +367,16 @@ export class MockKeplr implements Keplr {
   }
 
   getOfflineSignerAuto(
-    _chainId: string
+    _chainId: string,
+    _?: KeplrSignOptions
   ): Promise<OfflineAminoSigner | OfflineDirectSigner> {
     throw new Error("Not implemented");
   }
 
-  getOfflineSignerOnlyAmino(chainId: string): OfflineAminoSigner {
+  getOfflineSignerOnlyAmino(
+    chainId: string,
+    _?: KeplrSignOptions
+  ): OfflineAminoSigner {
     return new CosmJSOfflineSignerOnlyAmino(chainId, this);
   }
 
@@ -282,6 +398,12 @@ export class MockKeplr implements Keplr {
     throw new Error("Not yet implemented");
   }
 
+  getChainInfoWithoutEndpoints(
+    _chainId: string
+  ): Promise<ChainInfoWithoutEndpoints> {
+    throw new Error("Not yet implemented");
+  }
+
   disable(_chainIds?: string | string[]): Promise<void> {
     throw new Error("Not yet implemented");
   }
@@ -291,5 +413,131 @@ export class MockKeplr implements Keplr {
     editable?: boolean | undefined;
   }): Promise<string> {
     throw new Error("Not yet implemented");
+  }
+
+  sendEthereumTx(_chainId: string, _tx: Uint8Array): Promise<string> {
+    throw new Error("Not yet implemented");
+  }
+
+  suggestERC20(_chainId: string, _contractAddress: string): Promise<void> {
+    throw new Error("Not yet implemented");
+  }
+
+  getStarknetKey(_chainId: string): Promise<{
+    name: string;
+    hexAddress: string;
+    pubKey: Uint8Array;
+    address: Uint8Array;
+    isNanoLedger: boolean;
+  }> {
+    throw new Error("Not implemented");
+  }
+
+  getStarknetKeysSettled(_chainIds: string[]): Promise<
+    SettledResponses<{
+      name: string;
+      hexAddress: string;
+      pubKey: Uint8Array;
+      address: Uint8Array;
+      isNanoLedger: boolean;
+    }>
+  > {
+    throw new Error("Not implemented");
+  }
+
+  signStarknetTx(): Promise<{
+    transactions: Call[];
+    details: InvocationsSignerDetails;
+    signature: string[];
+  }> {
+    throw new Error("Not implemented");
+  }
+
+  signStarknetDeployAccountTransaction(): Promise<{
+    transaction: DeployAccountSignerDetails;
+    signature: string[];
+  }> {
+    throw new Error("Not implemented");
+  }
+
+  getBitcoinKey(_chainId: string): Promise<{
+    name: string;
+    pubKey: Uint8Array;
+    address: string;
+    paymentType: SupportedPaymentType;
+    isNanoLedger: boolean;
+  }> {
+    throw new Error("Not yet implemented");
+  }
+
+  getBitcoinKeysSettled(_chainIds: string[]): Promise<
+    SettledResponses<{
+      name: string;
+      pubKey: Uint8Array;
+      address: string;
+      paymentType: SupportedPaymentType;
+      isNanoLedger: boolean;
+    }>
+  > {
+    throw new Error("Not yet implemented");
+  }
+
+  signPsbt(
+    _chainId: string,
+    _psbtHex: string,
+    _options?: SignPsbtOptions
+  ): Promise<string> {
+    throw new Error("Not yet implemented");
+  }
+
+  signPsbts(
+    _chainId: string,
+    _psbtsHexes: string[],
+    _options?: SignPsbtOptions
+  ): Promise<string[]> {
+    throw new Error("Not yet implemented");
+  }
+
+  public readonly ethereum = new MockEthereumProvider();
+
+  // TODO: 이거 마지막에 꼭 구현해야한다.
+  //       일단은 다른게 더 급해서 일단 any로 처리
+  public readonly starknet = {} as any;
+
+  // TODO: 이거 마지막에 꼭 구현해야한다.
+  //       일단은 다른게 더 급해서 일단 any로 처리
+  public readonly bitcoin = {} as any;
+}
+
+class MockEthereumProvider extends EventEmitter implements IEthereumProvider {
+  readonly chainId: string | null = null;
+  readonly selectedAddress: string | null = null;
+
+  readonly networkVersion: string | null = null;
+
+  readonly isKeplr: boolean = true;
+  readonly isMetaMask: boolean = true;
+
+  constructor() {
+    super();
+  }
+
+  isConnected(): boolean {
+    throw new Error("Method not implemented.");
+  }
+
+  request<T>({}: {
+    method: string;
+    params?: unknown[] | Record<string, unknown>;
+  }): Promise<T> {
+    throw new Error("Not yet implemented");
+  }
+
+  enable(): Promise<string[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  net_version(): Promise<string> {
+    throw new Error("Method not implemented.");
   }
 }

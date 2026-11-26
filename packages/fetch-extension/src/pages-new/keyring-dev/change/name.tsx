@@ -3,13 +3,17 @@ import { HeaderLayout } from "@layouts-v2/header-layout";
 import { useNavigate, useParams } from "react-router";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Input } from "@components/form";
-import { Form, Label } from "reactstrap";
+import { Form } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { useStore } from "../../../stores";
 import { observer } from "mobx-react-lite";
 import styleName from "./name.module.scss";
-import { KeyRingStatus } from "@keplr-wallet/background";
 import { ButtonV2 } from "@components-v2/buttons/button";
+import classNames from "classnames";
+import { validateWalletName } from "@utils/index";
+import { useInteractionInfo } from "@hooks/interaction";
+import { InteractionWaitingData } from "@keplr-wallet/background";
+import { handleExternalInteractionWithNoProceedNext } from "@utils/side-panel";
 
 interface FormData {
   name: string;
@@ -17,13 +21,24 @@ interface FormData {
 
 export const ChangeNamePageV2: FunctionComponent = observer(() => {
   const navigate = useNavigate();
-  const { index = "-1 " } = useParams<{ index: string }>();
+  const { index = "" } = useParams<{ index: string }>();
 
   const intl = useIntl();
 
-  const { keyRingStore } = useStore();
+  const { keyRingStore, chainStore, interactionStore } = useStore();
 
-  const waitingNameData = keyRingStore.waitingNameData?.data;
+  const chainId = chainStore.current.chainId;
+  const chainName = chainStore.current.chainName;
+  const handleRejectChangeKeyRingName = () =>
+    interactionStore.rejectAll("change-keyring-name");
+
+  const interactionData: InteractionWaitingData | undefined =
+    interactionStore.getAllData("change-keyring-name")[0];
+
+  const interactionInfo = useInteractionInfo({
+    onWindowClose: handleRejectChangeKeyRingName,
+    onUnmount: handleRejectChangeKeyRingName,
+  });
 
   const {
     register,
@@ -38,28 +53,47 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
   });
 
   useEffect(() => {
-    if (waitingNameData?.defaultName) {
-      setValue("name", waitingNameData.defaultName);
+    if (interactionData?.data) {
+      const defaultName = (interactionData.data as any).defaultName;
+      if (defaultName) {
+        setValue("name", defaultName);
+      }
     }
-  }, [waitingNameData, setValue]);
+  }, [interactionData?.data, setValue]);
 
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [accountNameValidationError, setAccountNameValidationError] =
+    useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+
+  const getNameByChain = (meta?: { [key: string]: string }) => {
+    return meta?.["nameByChain"]
+      ? JSON.parse(meta["nameByChain"])?.[chainId]
+      : undefined;
+  };
 
   const keyStore = useMemo(() => {
-    return keyRingStore.multiKeyStoreInfo[parseInt(index)];
-  }, [keyRingStore.multiKeyStoreInfo, index]);
+    return keyRingStore.keyInfos.find((keyInfo) => keyInfo.id === index);
+  }, [keyRingStore.keyInfos, index]);
 
-  const isKeyStoreReady = keyRingStore.status === KeyRingStatus.UNLOCKED;
+  const keyRingMeta = keyStore?.insensitive["keyRingMeta"] as any;
+  const isKeyStoreReady = keyRingStore.status === "unlocked";
+  const accountName = getNameByChain(keyRingMeta) || keyStore?.name;
 
   useEffect(() => {
-    if (parseInt(index).toString() !== index) {
+    if (keyStore?.id !== index) {
       throw new Error("Invalid keyring index, check the url");
     }
-  }, [index]);
+  }, [index, keyStore]);
 
   if (isKeyStoreReady && keyStore == null) {
     return null;
   }
+
+  const notEditable =
+    interactionData?.data != null &&
+    (interactionData.data as any).editable === false;
 
   return (
     <HeaderLayout
@@ -81,19 +115,45 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           setLoading(true);
           try {
             // Close the popup by external change name message
-            if (waitingNameData != null) {
-              await keyRingStore.approveChangeName(data.name);
-              window.close();
-              return;
+            // Close the popup by external change name messag
+            if (index) {
+              const trimmedName = data.name.trim();
+              if (
+                interactionInfo.interaction &&
+                !interactionInfo.interactionInternal
+              ) {
+                await interactionStore.approveWithProceedNextV2(
+                  interactionStore
+                    .getAllData("change-keyring-name")
+                    .map((data) => data.id),
+                  trimmedName,
+                  (proceedNext) => {
+                    if (!proceedNext) {
+                      handleExternalInteractionWithNoProceedNext();
+                    }
+                  }
+                );
+              } else {
+                const nameByChain = keyRingMeta?.nameByChain
+                  ? JSON.parse(keyRingMeta?.nameByChain)
+                  : {};
+
+                const updatedAccountNames = {
+                  ...nameByChain,
+                  [chainId]: data.name?.trim(),
+                };
+
+                // Make sure that name is changed
+                // keep the default name, just update nameByChain
+                await keyRingStore.changeKeyRingName(
+                  index,
+                  keyStore?.name || "",
+                  updatedAccountNames
+                );
+
+                navigate("/");
+              }
             }
-
-            // Make sure that name is changed
-            await keyRingStore.updateNameKeyRing(
-              parseInt(index),
-              data.name.trim()
-            );
-
-            navigate("/");
           } catch (e) {
             console.log("Fail to decrypt: " + e.message);
             setError("name", {
@@ -105,42 +165,90 @@ export const ChangeNamePageV2: FunctionComponent = observer(() => {
           }
         })}
       >
-        <Label className={styleName["label"]}>
+        {/* <Label for="walletName" className={styleName["label"]}>
           {intl.formatMessage({
             id: "setting.keyring.change.previous-name",
           })}
-        </Label>
+        </Label> */}
         <Input
+          label={intl.formatMessage({
+            id: "setting.keyring.change.previous-name",
+          })}
           type="text"
+          formGroupClassName={styleName["formGroup"]}
+          floatLabel={true}
           className={styleName["input"]}
-          value={keyStore?.meta?.["name"] ?? ""}
+          value={accountName ?? ""}
           readOnly={true}
           style={{ opacity: 0.6 }}
         />
-
-        <Label className={styleName["label"]}>
-          {intl.formatMessage({
+        <Input
+          label={intl.formatMessage({
             id: "setting.keyring.change.input.name",
           })}
-        </Label>
-        <Input
           type="text"
-          className={styleName["input"]}
-          error={errors.name && errors.name.message}
+          formGroupClassName={classNames(styleName["formGroup"], "!mb-0")}
+          floatLabel={true}
+          className={classNames(styleName["input"], styleName["inputWithInfo"])}
+          error={
+            accountNameValidationError
+              ? errorMessage
+              : errors.name && errors.name.message
+          }
           {...register("name", {
             required: intl.formatMessage({
               id: "setting.keyring.change.input.name.error.required",
             }),
           })}
+          onChange={(e) => {
+            setErrorMessage("");
+            const trimmedValue = e.target.value.trimStart();
+            setValue(e.target.name as keyof FormData, trimmedValue);
+            setNewAccountName(trimmedValue);
+            const { isValid, isValidFormat, containsLetterOrNumber } =
+              validateWalletName(trimmedValue, keyRingStore?.keyInfos);
+            const isEmpty = trimmedValue === "";
+            if (!isValid || isEmpty) {
+              setErrorMessage(
+                !isValidFormat
+                  ? "Only letters, numbers and basic symbols (_-.@#()) are allowed."
+                  : isEmpty
+                  ? "Account name cannot be empty"
+                  : !containsLetterOrNumber
+                  ? "Account name must contain at least one letter or number."
+                  : "Account name already exists, please try different name"
+              );
+            }
+            setAccountNameValidationError(!isValid || isEmpty);
+          }}
           maxLength={20}
           autoFocus
-          readOnly={waitingNameData !== undefined && !waitingNameData?.editable}
+          append={
+            <div
+              className={classNames(
+                styleName["labelNetworkSelector"],
+                newAccountName === accountName ||
+                  accountNameValidationError ||
+                  (errors.name && errors.name.message)
+                  ? "invisible"
+                  : "visible"
+              )}
+            >
+              This will update the account name for the selected network (
+              {chainName}) only. Other networks will keep their current account
+              name.
+            </div>
+          }
+          readOnly={notEditable}
         />
 
         <div style={{ flex: 1 }} />
         <ButtonV2
-          data-loading={loading}
-          disabled={loading}
+          variant="dark"
+          dataLoading={loading}
+          disabled={
+            loading || accountNameValidationError || newAccountName === ""
+          }
           text={
             loading ? (
               <i className="fas fa-spinner fa-spin ml-2" />

@@ -43,7 +43,7 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
         <Form>
           <h1>Add IBC channel</h1>
           <FormGroup>
-            <Label for="chain-dropdown" className="form-control-label">
+            <Label for="chain-dropdown" className={style["label"]}>
               <FormattedMessage id="component.ibc.channel-registrar.chain-selector.label" />
             </Label>
             <ButtonDropdown
@@ -73,7 +73,9 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
                           key={chainInfo.chainId}
                           onClick={(e) => {
                             e.preventDefault();
-
+                            analyticsStore.logEvent("select_chain_click", {
+                              pageName: "Add IBC Chain",
+                            });
                             setSelectedChainId(chainInfo.chainId);
                             setError("");
                           }}
@@ -102,6 +104,11 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
                 isNaN(parseFloat(field)) ? field : `channel-${field}`
               );
               setError("");
+              analyticsStore.logEvent("add_ibc_channel_name_click", {
+                chainId: chainStore.current.chainId,
+                chainName: chainStore.current.chainName,
+                pageName: "Add IBC Chain",
+              });
             }}
             error={error}
           />
@@ -119,6 +126,7 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
               analyticsStore.logEvent("save_ibc_channel_name_click", {
                 chainId: chainStore.current.chainId,
                 chainName: chainStore.current.chainName,
+                pageName: "Add IBC Chain",
               });
               const queries = queriesStore.get(chainStore.current.chainId);
 
@@ -158,17 +166,19 @@ export const IBCChannelRegistrarModal: FunctionComponent<{
               if (channel && clientState && error === "") {
                 await ibcChannelStore
                   .get(chainStore.current.chainId)
-                  .addChannel({
+                  .addChannel(chainStore.current.chainId, {
                     portId: "transfer",
                     channelId,
                     counterpartyChainId: selectedChainId,
                   });
 
-                await ibcChannelStore.get(selectedChainId).addChannel({
-                  portId: channel.data.channel.counterparty.port_id,
-                  channelId: channel.data.channel.counterparty.channel_id,
-                  counterpartyChainId: chainStore.current.chainId,
-                });
+                await ibcChannelStore
+                  .get(selectedChainId)
+                  .addChannel(chainStore.current.chainId, {
+                    portId: channel.data.channel.counterparty.port_id,
+                    channelId: channel.data.channel.counterparty.channel_id,
+                    counterpartyChainId: chainStore.current.chainId,
+                  });
 
                 closeModal();
               }

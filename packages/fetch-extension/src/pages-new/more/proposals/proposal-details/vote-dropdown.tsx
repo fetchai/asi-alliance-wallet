@@ -14,7 +14,7 @@ interface VoteDropdownProps {
   proposal: ObservableQueryProposal | undefined;
 }
 
-const voteArr = ["Unspecified", "Yes", "No", "NoWithVeto", "Abstain"];
+const voteArr = ["Unspecified", "Yes", "No", "No With Veto", "Abstain"];
 
 export const VoteDropdown = ({ proposal }: VoteDropdownProps) => {
   const navigate = useNavigate();
@@ -146,6 +146,7 @@ export const VoteDropdown = ({ proposal }: VoteDropdownProps) => {
       </div>
 
       <ButtonV2
+        variant="dark"
         text="Submit"
         styleProps={{
           padding: "12px",

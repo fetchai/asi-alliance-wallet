@@ -17,7 +17,6 @@
   border: 0;
   margin: 0;
   padding: 0;
-  background: transparent;
 
   &:global(.modal-content) {
     box-shadow: none;
@@ -42,13 +41,13 @@
 }
 
 .label {
-  color: rgba(255, 255, 255, 0.6);
+  color: $font-secondary;
   font-size: 14px;
   margin-bottom: 0px;
 }
 .input {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: transparent;
+  color: $font-secondary;
   border-radius: 12px;
   margin-bottom: 0px;
   &::placeholder {
@@ -56,6 +55,16 @@
   }
 }
 .input:focus {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  color: rgba($font-dark, 0.8);
+}
+
+.rightIcon {
+  height: 10px;
+}
+
+.rightIconContainer {
+  margin-left: 6px;
+  border: 1px solid $neutral;
+  border-radius: 6px;
+  padding: 0px 5px 1px;
 }

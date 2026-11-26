@@ -1,5 +1,6 @@
+import { ChainInfoWithSuggestedOptions } from "@fetchai/wallet-types";
 import { Bech32Address } from "@keplr-wallet/cosmos";
-import { ChainInfo } from "@keplr-wallet/types";
+import { ChainInfo, ModularChainInfo } from "@keplr-wallet/types";
 
 const LOCAL_TEST_NETWORK_CONFIG: ChainInfo = {
   rpc: "http://localhost:26657",
@@ -17,7 +18,7 @@ const LOCAL_TEST_NETWORK_CONFIG: ChainInfo = {
     coinType: 118,
   },
   bech32Config: Bech32Address.defaultBech32Config("fetch"),
-  type: "testnet",
+  isTestnet: true,
   currencies: [
     {
       coinDenom: "stake",
@@ -61,7 +62,7 @@ const REMOTE_TEST_NETWORK_CONFIG: ChainInfo = {
     coinType: 118,
   },
   bech32Config: Bech32Address.defaultBech32Config("fetch"),
-  type: "testnet",
+  isTestnet: true,
   currencies: [
     {
       coinDenom: "stake",
@@ -89,19 +90,23 @@ const REMOTE_TEST_NETWORK_CONFIG: ChainInfo = {
   chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
 };
 
-const EmbedChainInfos: ChainInfo[] = [
+const EmbedChainInfos: (
+  | ChainInfo
+  | ModularChainInfo
+  | ChainInfoWithSuggestedOptions
+)[] = [
   {
     rpc: "https://rpc-fetchhub.fetch-ai.com",
     rest: "https://rest-fetchhub.fetch-ai.com",
     chainId: "fetchhub-4",
-    chainName: "fetch",
+    chainName: "Fetchhub",
     stakeCurrency: {
       coinDenom: "FET",
       coinMinimalDenom: "afet",
       coinDecimals: 18,
       coinGeckoId: "fetch-ai",
       coinImageUrl:
-        "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
+        "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/fetchhub/fet.png",
     },
     bip44: {
       coinType: 118,
@@ -114,7 +119,7 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDecimals: 18,
         coinGeckoId: "fetch-ai",
         coinImageUrl:
-          "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
+          "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/fetchhub/fet.png",
       },
       {
         coinDenom: "MOBX",
@@ -141,23 +146,26 @@ const EmbedChainInfos: ChainInfo[] = [
         coinImageUrl:
           "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
         gasPriceStep: {
-          low: 0,
-          average: 5000000000,
-          high: 6250000000,
+          low: 0.025,
+          average: 0.025,
+          high: 0.035,
         },
       },
     ],
     features: ["cosmwasm"],
     walletUrlForStaking: "https://browse-fetchhub.fetch.ai/validators",
     govUrl: "https://www.mintscan.io/fetchai/proposals/",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/main/images/fetchhub/fet.png",
+    updateFromRepoDisabled: true,
   },
   {
-    rpc: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
-    rest: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
-    chainId: "1",
+    rpc: "https://evm-1.keplr.app",
+    rest: "https://evm-1.keplr.app",
+    // rpc: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
+    // rest: "https://mainnet.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
+    chainId: "eip155:1",
     chainName: "Ethereum",
-    explorerUrl: "https://etherscan.io",
-    hideInUI: true,
     stakeCurrency: {
       coinDenom: "ETH",
       coinMinimalDenom: "eth",
@@ -167,6 +175,11 @@ const EmbedChainInfos: ChainInfo[] = [
     bip44: {
       coinType: 60,
     },
+    evm: {
+      chainId: 1,
+      rpc: "https://evm-1.keplr.app",
+      websocket: "wss://evm-1.keplr.app/websocket",
+    },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
       {
@@ -174,6 +187,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "eth",
         coinDecimals: 18,
         coinGeckoId: "ethereum",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/ethereum/images/eth-white.png",
       },
       {
         coinDenom: "FET",
@@ -187,7 +202,8 @@ const EmbedChainInfos: ChainInfo[] = [
           "https://assets.coingecko.com/coins/images/5681/thumb/Fetch.jpg?1572098136",
       },
     ],
-    chainSymbolImageUrl: require("./public/assets/svg/wireframe/eth.svg"),
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/ethereum/images/eth-white.png",
     feeCurrencies: [
       {
         coinDenom: "ETH",
@@ -201,25 +217,31 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
-    features: ["evm"],
+    features: ["eth-key-sign", "eth-address-gen"],
+    updateFromRepoDisabled: true,
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
   },
   {
     rpc: "https://bsc-dataseed.binance.org",
     rest: "https://bsc-dataseed.binance.org/",
-    chainId: "56",
+    chainId: "eip155:56",
     chainName: "Binance Smart Chain",
-    explorerUrl: "https://bscscan.com",
     hideInUI: true,
     stakeCurrency: {
       coinDenom: "BNB",
       coinMinimalDenom: "bnb",
       coinDecimals: 18,
       coinGeckoId: "binancecoin",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/binancesmartchain/images/bnb.png",
     },
     bip44: {
       coinType: 60,
+    },
+    evm: {
+      chainId: 56,
+      rpc: "https://bsc-dataseed.binance.org",
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
@@ -228,6 +250,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "bnb",
         coinDecimals: 18,
         coinGeckoId: "binancecoin",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/binancesmartchain/images/bnb.png",
       },
       // {
       // coinDenom: "USDT",
@@ -244,6 +268,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "bnb",
         coinDecimals: 18,
         coinGeckoId: "binancecoin",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/binancesmartchain/images/bnb.png",
         gasPriceStep: {
           low: 3000000000,
           average: 3000000000,
@@ -251,26 +277,31 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
-    features: ["evm"],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/_non-cosmos/binancesmartchain/images/bnb.png",
+    features: ["eth-key-sign", "eth-address-gen"],
     // walletUrlForStaking: "https://browse-bnbhub.bnb.ai/validators",
     // govUrl: "https://bnbstation.azoyalabs.com/mainnet/governance/",
   },
   {
     rpc: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     rest: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c/",
-    chainId: "5",
+    chainId: "eip155:5",
     chainName: "Goerli-eth (Testnet)",
-
     stakeCurrency: {
       coinDenom: "ETH",
       coinMinimalDenom: "eth",
       coinDecimals: 18,
       coinGeckoId: "ethereum",
     },
-    type: "testnet",
+    isTestnet: true,
     hideInUI: true,
     bip44: {
       coinType: 60,
+    },
+    evm: {
+      chainId: 5,
+      rpc: "https://goerli.infura.io/v3/f40158f0c03842f5a18e409ffe09192c",
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
     currencies: [
@@ -304,12 +335,11 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
-    features: ["evm"],
-    explorerUrl: "https://goerli.etherscan.io",
+    features: ["eth-key-sign", "eth-address-gen"],
   },
   {
-    rpc: "https://rpc-cosmoshub.keplr.app",
-    rest: "https://lcd-cosmoshub.keplr.app",
+    rpc: "https://cosmos-rpc.publicnode.com:443",
+    rest: "https://cosmos-rest.publicnode.com",
     chainId: "cosmoshub-4",
     chainName: "Cosmos Hub",
     stakeCurrency: {
@@ -317,7 +347,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uatom",
       coinDecimals: 6,
       coinGeckoId: "cosmos",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/atom.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -337,7 +368,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uatom",
         coinDecimals: 6,
         coinGeckoId: "cosmos",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/atom.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
       },
     ],
     feeCurrencies: [
@@ -346,18 +378,17 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uatom",
         coinDecimals: 6,
         coinGeckoId: "cosmos",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/atom.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
       },
     ],
     features: ["ibc-transfer", "ibc-go"],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/atom.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/cosmos/txs/{txHash}",
-    },
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png",
+    updateFromRepoDisabled: true,
   },
   {
-    rpc: "https://rpc-osmosis.keplr.app",
+    rpc: "https://osmosis-rpc.publicnode.com:443",
     rest: "https://lcd-osmosis.keplr.app",
     chainId: "osmosis-1",
     chainName: "Osmosis",
@@ -418,10 +449,7 @@ const EmbedChainInfos: ChainInfo[] = [
     ],
     // chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/osmo.png",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/osmosis.svg"),
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/osmosis/txs/{txHash}",
-    },
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc.osmotest5.osmosis.zone",
@@ -444,7 +472,7 @@ const EmbedChainInfos: ChainInfo[] = [
         ? "https://wallet.keplr.app/chains/osmosis"
         : "http://localhost:8080/chains/osmosis",
     bip44: { coinType: 118 },
-    type: "testnet",
+    isTestnet: true,
     bech32Config: Bech32Address.defaultBech32Config("osmo"),
     currencies: [
       {
@@ -480,6 +508,7 @@ const EmbedChainInfos: ChainInfo[] = [
       "wasmd_0.24+",
       "osmosis-txfees",
     ],
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-secret.keplr.app",
@@ -492,7 +521,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uscrt",
       coinDecimals: 6,
       coinGeckoId: "secret",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/secret.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/secretnetwork/images/scrt.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -517,7 +547,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uscrt",
         coinDecimals: 6,
         coinGeckoId: "secret",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/secret.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/secretnetwork/images/scrt.png",
       },
     ],
     feeCurrencies: [
@@ -526,7 +557,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uscrt",
         coinDecimals: 6,
         coinGeckoId: "secret",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/secret.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/secretnetwork/images/scrt.png",
         gasPriceStep: {
           low: 0.2,
           average: 0.25,
@@ -536,10 +568,10 @@ const EmbedChainInfos: ChainInfo[] = [
     ],
     features: ["secretwasm", "ibc-go", "ibc-transfer"],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/secret.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/secretnetwork/images/scrt.png",
   },
   {
-    rpc: "https://rpc-akash.keplr.app",
+    rpc: "https://akash-rpc.publicnode.com:443",
     rest: "https://lcd-akash.keplr.app",
     chainId: "akashnet-2",
     chainName: "Akash",
@@ -548,7 +580,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uakt",
       coinDecimals: 6,
       coinGeckoId: "akash-network",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/akash.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/akash/images/akt.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -568,7 +601,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uakt",
         coinDecimals: 6,
         coinGeckoId: "akash-network",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/akash.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/akash/images/akt.png",
       },
     ],
     feeCurrencies: [
@@ -577,63 +611,75 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uakt",
         coinDecimals: 6,
         coinGeckoId: "akash-network",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/akash.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/akash/images/akt.png",
       },
     ],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/akash.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/akash/images/akt.png",
     features: ["ibc-transfer"],
+    updateFromRepoDisabled: true,
   },
+  // {
+  //   rpc: "https://rpc-mars.keplr.app",
+  //   rest: "https://lcd-mars.keplr.app",
+  //   chainId: "mars-1",
+  //   chainName: "Mars Hub",
+  //   stakeCurrency: {
+  //     coinDenom: "MARS",
+  //     coinMinimalDenom: "umars",
+  //     coinDecimals: 6,
+  //     coinImageUrl:
+  //       "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  //   },
+  //   walletUrl:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/mars"
+  //       : "http://localhost:8080/chains/mars",
+  //   walletUrlForStaking:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/mars"
+  //       : "http://localhost:8080/chains/mars",
+  //   bip44: {
+  //     coinType: 118,
+  //   },
+  //   alternativeBIP44s: [
+  //     {
+  //       coinType: 330,
+  //     },
+  //   ],
+  //   bech32Config: Bech32Address.defaultBech32Config("mars"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "MARS",
+  //       coinMinimalDenom: "umars",
+  //       coinDecimals: 6,
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "MARS",
+  //       coinMinimalDenom: "umars",
+  //       coinDecimals: 6,
+  //       coinGeckoId: "mars-protocol-a7fcbcfb-fd61-4017-92f0-7ee9f9cc6da3",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  //       gasPriceStep: {
+  //         low: 0,
+  //         average: 0,
+  //         high: 0.01,
+  //       },
+  //     },
+  //   ],
+  //   features: [],
+  //   chainSymbolImageUrl:
+  //     "https://raw.githubusercontent.com/cosmos/chain-registry/master/mars/images/mars-icon.png",
+  // },
   {
-    rpc: "https://rpc-mars.keplr.app",
-    rest: "https://lcd-mars.keplr.app",
-    chainId: "mars-1",
-    chainName: "Mars Hub",
-    stakeCurrency: {
-      coinDenom: "MARS",
-      coinMinimalDenom: "umars",
-      coinDecimals: 6,
-    },
-    walletUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/mars"
-        : "http://localhost:8080/chains/mars",
-    walletUrlForStaking:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/mars"
-        : "http://localhost:8080/chains/mars",
-    bip44: {
-      coinType: 118,
-    },
-    alternativeBIP44s: [
-      {
-        coinType: 330,
-      },
-    ],
-    bech32Config: Bech32Address.defaultBech32Config("mars"),
-    currencies: [
-      {
-        coinDenom: "MARS",
-        coinMinimalDenom: "umars",
-        coinDecimals: 6,
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "MARS",
-        coinMinimalDenom: "umars",
-        coinDecimals: 6,
-        gasPriceStep: {
-          low: 0,
-          average: 0,
-          high: 0.01,
-        },
-      },
-    ],
-    features: [],
-  },
-  {
-    rpc: "https://rpc-crypto-org.keplr.app",
-    rest: "https://lcd-crypto-org.keplr.app",
+    rpc: "https://rpc.mainnet.crypto.org",
+    rest: "https://rest.mainnet.crypto.org",
     chainId: "crypto-org-chain-mainnet-1",
     chainName: "Crypto.org",
     hideInUI: true,
@@ -642,7 +688,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "basecro",
       coinDecimals: 8,
       coinGeckoId: "crypto-com-chain",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/crypto-org.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/cryptoorgchain/images/cronos.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -670,7 +717,7 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDecimals: 8,
         coinGeckoId: "crypto-com-chain",
         coinImageUrl:
-          "https://dhj8dql1kzq2v.cloudfront.net/white/crypto-org.png",
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/cryptoorgchain/images/cronos.png",
       },
     ],
     feeCurrencies: [
@@ -680,7 +727,7 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDecimals: 8,
         coinGeckoId: "crypto-com-chain",
         coinImageUrl:
-          "https://dhj8dql1kzq2v.cloudfront.net/white/crypto-org.png",
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/cryptoorgchain/images/cronos.png",
         gasPriceStep: {
           low: 0.025,
           average: 0.03,
@@ -689,61 +736,64 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/crypto-org.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/cryptoorgchain/images/cronos.png",
     features: ["ibc-transfer"],
   },
-  {
-    rpc: "https://rpc-iov.keplr.app",
-    rest: "https://lcd-iov.keplr.app",
-    chainId: "iov-mainnet-ibc",
-    chainName: "Starname",
-    hideInUI: true,
-    stakeCurrency: {
-      coinDenom: "IOV",
-      coinMinimalDenom: "uiov",
-      coinDecimals: 6,
-      coinGeckoId: "starname",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/starname.png",
-    },
-    walletUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/starname"
-        : "http://localhost:8080/chains/starname",
-    walletUrlForStaking:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/starname"
-        : "http://localhost:8080/chains/starname",
-    bip44: {
-      coinType: 234,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("star"),
-    currencies: [
-      {
-        coinDenom: "IOV",
-        coinMinimalDenom: "uiov",
-        coinDecimals: 6,
-        coinGeckoId: "starname",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/starname.png",
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "IOV",
-        coinMinimalDenom: "uiov",
-        coinDecimals: 6,
-        coinGeckoId: "starname",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/starname.png",
-        gasPriceStep: {
-          low: 1,
-          average: 2,
-          high: 3,
-        },
-      },
-    ],
-    chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/starname.png",
-    features: ["ibc-transfer"],
-  },
+  // {
+  //   rpc: "https://rpc-iov.keplr.app",
+  //   rest: "https://lcd-iov.keplr.app",
+  //   chainId: "iov-mainnet-ibc",
+  //   chainName: "Starname",
+  //   hideInUI: true,
+  //   stakeCurrency: {
+  //     coinDenom: "IOV",
+  //     coinMinimalDenom: "uiov",
+  //     coinDecimals: 6,
+  //     coinGeckoId: "starname",
+  //     coinImageUrl:
+  //       "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //   },
+  //   walletUrl:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/starname"
+  //       : "http://localhost:8080/chains/starname",
+  //   walletUrlForStaking:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/starname"
+  //       : "http://localhost:8080/chains/starname",
+  //   bip44: {
+  //     coinType: 234,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("star"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "IOV",
+  //       coinMinimalDenom: "uiov",
+  //       coinDecimals: 6,
+  //       coinGeckoId: "starname",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "IOV",
+  //       coinMinimalDenom: "uiov",
+  //       coinDecimals: 6,
+  //       coinGeckoId: "starname",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //       gasPriceStep: {
+  //         low: 1,
+  //         average: 2,
+  //         high: 3,
+  //       },
+  //     },
+  //   ],
+  //   chainSymbolImageUrl:
+  //     "https://raw.githubusercontent.com/cosmos/chain-registry/master/starname/images/iov.png",
+  //   features: ["ibc-transfer"],
+  // },
   {
     rpc: "https://rpc-sifchain.keplr.app",
     rest: "https://lcd-sifchain.keplr.app",
@@ -755,7 +805,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "rowan",
       coinDecimals: 18,
       coinGeckoId: "sifchain",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/sifchain.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/sifchain/images/rowan.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -775,7 +826,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "rowan",
         coinDecimals: 18,
         coinGeckoId: "sifchain",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/sifchain.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/sifchain/images/rowan.png",
       },
       {
         coinDenom: "Tether USDT",
@@ -1204,7 +1256,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "rowan",
         coinDecimals: 18,
         coinGeckoId: "sifchain",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/sifchain.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/sifchain/images/rowan.png",
         gasPriceStep: {
           low: 1000000000000,
           average: 1500000000000,
@@ -1213,11 +1266,11 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/sifchain.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/sifchain/images/rowan.png",
     features: [],
   },
   {
-    rpc: "https://rpc-certik.keplr.app",
+    rpc: "https://shentu-rpc.publicnode.com:443",
     rest: "https://lcd-certik.keplr.app",
     chainId: "shentu-2.2",
     chainName: "Shentu",
@@ -1246,6 +1299,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uctk",
         coinDecimals: 6,
         coinGeckoId: "certik",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/shentu/images/ctk.png",
       },
     ],
     feeCurrencies: [
@@ -1254,9 +1309,14 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uctk",
         coinDecimals: 6,
         coinGeckoId: "certik",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/shentu/images/ctk.png",
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/shentu/images/ctk.png",
     features: ["ibc-transfer", "ibc-go"],
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-iris.keplr.app",
@@ -1269,7 +1329,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uiris",
       coinDecimals: 6,
       coinGeckoId: "iris-network",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/iris.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/irisnet/images/iris.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -1301,7 +1362,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uiris",
         coinDecimals: 6,
         coinGeckoId: "iris-network",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/iris.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/irisnet/images/iris.png",
       },
     ],
     feeCurrencies: [
@@ -1310,7 +1372,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uiris",
         coinDecimals: 6,
         coinGeckoId: "iris-network",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/iris.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/irisnet/images/iris.png",
         gasPriceStep: {
           low: 0.2,
           average: 0.3,
@@ -1318,7 +1381,8 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/iris.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/irisnet/images/iris.png",
     features: ["ibc-transfer", "ibc-go"],
   },
   {
@@ -1332,7 +1396,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uregen",
       coinDecimals: 6,
       coinGeckoId: "regen",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/regen.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/regen/images/regen.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -1352,7 +1417,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uregen",
         coinDecimals: 6,
         coinGeckoId: "regen",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/regen.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/regen/images/regen.png",
       },
     ],
     feeCurrencies: [
@@ -1361,10 +1427,12 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uregen",
         coinDecimals: 6,
         coinGeckoId: "regen",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/regen.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/regen/images/regen.png",
       },
     ],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/regen.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/regen/images/regen.png",
     features: ["ibc-go", "ibc-transfer"],
   },
   {
@@ -1423,11 +1491,11 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/persistence.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/persistence/images/xprt.png",
     features: ["ibc-transfer", "ibc-go"],
   },
   {
-    rpc: "https://rpc-sentinel.keplr.app",
+    rpc: "https://sentinel-rpc.publicnode.com:443",
     rest: "https://lcd-sentinel.keplr.app",
     chainId: "sentinelhub-2",
     chainName: "Sentinel",
@@ -1437,7 +1505,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "udvpn",
       coinDecimals: 6,
       coinGeckoId: "sentinel",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/sentinel.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/sentinel/images/dvpn.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -1457,7 +1526,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "udvpn",
         coinDecimals: 6,
         coinGeckoId: "sentinel",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/sentinel.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/sentinel/images/dvpn.png",
       },
     ],
     feeCurrencies: [
@@ -1466,7 +1536,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "udvpn",
         coinDecimals: 6,
         coinGeckoId: "sentinel",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/sentinel.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/sentinel/images/dvpn.png",
         gasPriceStep: {
           low: 0.1,
           average: 0.25,
@@ -1475,8 +1546,9 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/sentinel.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/sentinel/images/dvpn.png",
     features: ["ibc-transfer"],
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-ixo.keplr.app",
@@ -1518,7 +1590,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinGeckoId: "ixo",
       },
     ],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/ixo.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/impacthub/images/ixo.png",
     features: ["ibc-transfer"],
   },
   {
@@ -1643,7 +1716,8 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/ngm.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/emoney/images/ngm.png",
     features: ["ibc-transfer"],
   },
   {
@@ -1708,7 +1782,7 @@ const EmbedChainInfos: ChainInfo[] = [
     ],
     features: ["ibc-go"],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/agoric.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/agoric/images/Agoric-logo-color.png",
   },
   {
     rpc: "https://rpc-cyber.keplr.app",
@@ -1740,6 +1814,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "boot",
         coinDecimals: 0,
         coinGeckoId: "bostrom",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/bostrom/images/boot.png",
       },
       {
         coinDenom: "H",
@@ -1768,6 +1844,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "boot",
         coinDecimals: 0,
         coinGeckoId: "bostrom",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/bostrom/images/boot.png",
         gasPriceStep: {
           low: 0,
           average: 0,
@@ -1775,10 +1853,12 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/bostrom/images/boot.png",
     features: ["ibc-transfer", "cosmwasm", "ibc-go"],
   },
   {
-    rpc: "https://rpc-juno.keplr.app",
+    rpc: "https://juno-rpc.publicnode.com:443",
     rest: "https://lcd-juno.keplr.app",
     chainId: "juno-1",
     chainName: "Juno",
@@ -1788,7 +1868,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "ujuno",
       coinDecimals: 6,
       coinGeckoId: "juno-network",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/juno.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/juno/images/juno.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -1808,7 +1889,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ujuno",
         coinDecimals: 6,
         coinGeckoId: "juno-network",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/juno.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/juno/images/juno.png",
       },
     ],
     feeCurrencies: [
@@ -1817,7 +1899,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ujuno",
         coinDecimals: 6,
         coinGeckoId: "juno-network",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/juno.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/juno/images/juno.png",
         gasPriceStep: {
           low: 0.001,
           average: 0.0025,
@@ -1837,14 +1920,12 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     features: ["cosmwasm", "ibc-transfer", "ibc-go", "wasmd_0.24+"],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/juno.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/juno/txs/{txHash}",
-    },
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/juno/images/juno.png",
+    updateFromRepoDisabled: true,
   },
   {
-    rpc: "https://rpc-stargaze.keplr.app",
+    rpc: "https://stargaze-rpc.publicnode.com:443",
     rest: "https://lcd-stargaze.keplr.app",
     chainId: "stargaze-1",
     chainName: "Stargaze",
@@ -1854,7 +1935,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "ustars",
       coinDecimals: 6,
       coinGeckoId: "stargaze",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/stargaze.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/stargaze/images/stars.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -1874,7 +1956,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ustars",
         coinDecimals: 6,
         coinGeckoId: "stargaze",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/stargaze.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/stargaze/images/stars.png",
       },
     ],
     feeCurrencies: [
@@ -1883,16 +1966,14 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ustars",
         coinDecimals: 6,
         coinGeckoId: "stargaze",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/stargaze.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/stargaze/images/stars.png",
       },
     ],
     features: ["ibc-transfer", "ibc-go"],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/stargaze.png",
-    txExplorer: {
-      name: "Mintscan",
-      txUrl: "https://www.mintscan.io/stargaze/txs/{txHash}",
-    },
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/stargaze/images/stars.png",
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-axelar.keplr.app",
@@ -1904,7 +1985,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uaxl",
       coinDecimals: 6,
       coinGeckoId: "axelar",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/axelar.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/axelar/images/axl.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -1924,7 +2006,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uaxl",
         coinDecimals: 6,
         coinGeckoId: "axelar",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/axelar.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/axelar/images/axl.png",
       },
       {
         coinDenom: "WETH",
@@ -2041,7 +2124,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uaxl",
         coinDecimals: 6,
         coinGeckoId: "axelar",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/axelar.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/axelar/images/axl.png",
         gasPriceStep: {
           low: 0.007,
           average: 0.007,
@@ -2051,11 +2135,11 @@ const EmbedChainInfos: ChainInfo[] = [
     ],
     features: ["ibc-transfer", "ibc-go", "axelar-evm-bridge"],
     chainSymbolImageUrl:
-      "https://dhj8dql1kzq2v.cloudfront.net/white/axelar.png",
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/axelar/images/axl.png",
   },
   {
-    rpc: "https://rpc-sommelier.keplr.app",
-    rest: "https://lcd-sommelier.keplr.app",
+    rpc: "https://rpc.cosmos.directory/sommelier",
+    rest: "https://rest.cosmos.directory/sommelier",
     chainId: "sommelier-3",
     chainName: "Sommelier",
     hideInUI: true,
@@ -2064,7 +2148,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "usomm",
       coinDecimals: 6,
       coinGeckoId: "sommelier",
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/somm.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/sommelier/images/somm.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -2084,7 +2169,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "usomm",
         coinDecimals: 6,
         coinGeckoId: "sommelier",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/somm.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/sommelier/images/somm.png",
       },
     ],
     feeCurrencies: [
@@ -2093,11 +2179,14 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "usomm",
         coinDecimals: 6,
         coinGeckoId: "sommelier",
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/somm.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/sommelier/images/somm.png",
       },
     ],
     features: ["ibc-transfer", "ibc-go"],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/somm.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/sommelier/images/somm.png",
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-umee.keplr.app",
@@ -2109,7 +2198,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinDenom: "UMEE",
       coinMinimalDenom: "uumee",
       coinDecimals: 6,
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/umee.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/umee/images/umee.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -2128,7 +2218,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "UMEE",
         coinMinimalDenom: "uumee",
         coinDecimals: 6,
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/umee.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/umee/images/umee.png",
       },
     ],
     feeCurrencies: [
@@ -2136,7 +2227,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "UMEE",
         coinMinimalDenom: "uumee",
         coinDecimals: 6,
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/umee.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/umee/images/umee.png",
         gasPriceStep: {
           low: 0.05,
           average: 0.06,
@@ -2145,7 +2237,8 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     features: ["ibc-transfer", "ibc-go"],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/umee.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/umee/images/umee.png",
   },
   {
     rpc: "https://rpc-gravity-bridge.keplr.app",
@@ -2157,7 +2250,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinDenom: "GRAV",
       coinMinimalDenom: "ugraviton",
       coinDecimals: 6,
-      coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/grav.png",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/gravitybridge/images/grav.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -2176,7 +2270,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "GRAV",
         coinMinimalDenom: "ugraviton",
         coinDecimals: 6,
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/grav.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/gravitybridge/images/grav.png",
       },
     ],
     feeCurrencies: [
@@ -2184,7 +2279,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "GRAV",
         coinMinimalDenom: "ugraviton",
         coinDecimals: 6,
-        coinImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/grav.png",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/gravitybridge/images/grav.png",
       },
       {
         coinDenom: "USDC",
@@ -2208,7 +2304,8 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     features: ["ibc-transfer", "ibc-go"],
-    chainSymbolImageUrl: "https://dhj8dql1kzq2v.cloudfront.net/white/grav.png",
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/gravitybridge/images/grav.png",
   },
   {
     rpc: "https://rpc-tgrade.keplr.app",
@@ -2221,6 +2318,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "utgd",
       coinDecimals: 6,
       coinGeckoId: "tgrade",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/tgrade/images/tgrade-logo-gradient_h.png",
     },
     bip44: {
       coinType: 118,
@@ -2232,6 +2331,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "utgd",
         coinDecimals: 6,
         coinGeckoId: "tgrade",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/tgrade/images/tgrade-logo-gradient_h.png",
       },
     ],
     feeCurrencies: [
@@ -2240,6 +2341,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "utgd",
         coinDecimals: 6,
         coinGeckoId: "tgrade",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/tgrade/images/tgrade-logo-gradient_h.png",
         gasPriceStep: {
           low: 0.05,
           average: 0.05,
@@ -2247,10 +2350,12 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    walletUrlForStaking:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/tgrade/images/tgrade-logo-gradient_h.png",
     features: ["cosmwasm", "ibc-transfer", "ibc-go", "wasmd_0.24+"],
   },
   {
-    rpc: "https://rpc-stride.keplr.app",
+    rpc: "https://stride-rpc.publicnode.com:443",
     rest: "https://lcd-stride.keplr.app",
     chainId: "stride-1",
     chainName: "Stride",
@@ -2260,6 +2365,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "ustrd",
       coinDecimals: 6,
       coinGeckoId: "stride",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/stride/images/strd.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -2279,6 +2386,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ustrd",
         coinDecimals: 6,
         coinGeckoId: "stride",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/stride/images/strd.png",
       },
       {
         coinDenom: "stATOM",
@@ -2307,6 +2416,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ustrd",
         coinDecimals: 6,
         coinGeckoId: "stride",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/stride/images/strd.png",
         gasPriceStep: {
           low: 0,
           average: 0,
@@ -2314,61 +2425,71 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/stride/images/strd.png",
     features: ["ibc-transfer", "ibc-go"],
+    updateFromRepoDisabled: true,
   },
-  {
-    rpc: "https://rpc-evmos.keplr.app",
-    rest: "https://lcd-evmos.keplr.app",
-    chainId: "evmos_9001-2",
-    chainName: "Evmos",
-    hideInUI: true,
-    stakeCurrency: {
-      coinDenom: "EVMOS",
-      coinMinimalDenom: "aevmos",
-      coinDecimals: 18,
-      coinGeckoId: "evmos",
-    },
-    walletUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/evmos"
-        : "http://localhost:8080/chains/evmos",
-    walletUrlForStaking:
-      process.env.NODE_ENV === "production"
-        ? "https://wallet.keplr.app/chains/evmos"
-        : "http://localhost:8080/chains/evmos",
-    bip44: {
-      coinType: 60,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("evmos"),
-    currencies: [
-      {
-        coinDenom: "EVMOS",
-        coinMinimalDenom: "aevmos",
-        coinDecimals: 18,
-        coinGeckoId: "evmos",
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "EVMOS",
-        coinMinimalDenom: "aevmos",
-        coinDecimals: 18,
-        coinGeckoId: "evmos",
-        gasPriceStep: {
-          low: 25000000000,
-          average: 25000000000,
-          high: 40000000000,
-        },
-      },
-    ],
-    features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
-  },
+  // {
+  //   rpc: "https://rpc-evmos.keplr.app",
+  //   rest: "https://lcd-evmos.keplr.app",
+  //   chainId: "evmos_9001-2",
+  //   chainName: "Evmos",
+  //   hideInUI: true,
+  //   stakeCurrency: {
+  //     coinDenom: "EVMOS",
+  //     coinMinimalDenom: "aevmos",
+  //     coinDecimals: 18,
+  //     coinGeckoId: "evmos",
+  //     coinImageUrl:
+  //       "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //   },
+  //   walletUrl:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/evmos"
+  //       : "http://localhost:8080/chains/evmos",
+  //   walletUrlForStaking:
+  //     process.env.NODE_ENV === "production"
+  //       ? "https://wallet.keplr.app/chains/evmos"
+  //       : "http://localhost:8080/chains/evmos",
+  //   bip44: {
+  //     coinType: 60,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("evmos"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "EVMOS",
+  //       coinMinimalDenom: "aevmos",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "evmos",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "EVMOS",
+  //       coinMinimalDenom: "aevmos",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "evmos",
+  //       coinImageUrl:
+  //         "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //       gasPriceStep: {
+  //         low: 25000000000,
+  //         average: 25000000000,
+  //         high: 40000000000,
+  //       },
+  //     },
+  //   ],
+  //   chainSymbolImageUrl:
+  //     "https://raw.githubusercontent.com/cosmos/chain-registry/master/evmos/images/evmos.png",
+  //   features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
+  // },
   {
     rpc: "https://rpc-injective.keplr.app",
     rest: "https://lcd-injective.keplr.app",
     chainId: "injective-1",
     chainName: "Injective",
-    hideInUI: true,
     stakeCurrency: {
       coinDenom: "INJ",
       coinMinimalDenom: "inj",
@@ -2409,10 +2530,16 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     features: ["ibc-transfer", "ibc-go", "eth-address-gen", "eth-key-sign"],
+    evm: {
+      chainId: 1776,
+      rpc: "https://sentry.evm-rpc.injective.network",
+      websocket: "wss://sentry.evm-ws.injective.network",
+    },
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/Injective-logo 2.svg"),
+    updateFromRepoDisabled: true,
   },
   {
-    rpc: "https://rpc-kava.keplr.app",
+    rpc: "https://kava-rpc.publicnode.com:443",
     rest: "https://lcd-kava.keplr.app",
     chainId: "kava_2222-10",
     chainName: "Kava",
@@ -2422,6 +2549,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "ukava",
       coinDecimals: 6,
       coinGeckoId: "kava",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/kava/images/kava.png",
     },
     walletUrl:
       process.env.NODE_ENV === "production"
@@ -2440,6 +2569,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ukava",
         coinDecimals: 6,
         coinGeckoId: "kava",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/kava/images/kava.png",
       },
       {
         coinDenom: "SWP",
@@ -2485,6 +2616,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ukava",
         coinDecimals: 6,
         coinGeckoId: "kava",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/kava/images/kava.png",
         gasPriceStep: {
           low: 0.05,
           average: 0.1,
@@ -2492,6 +2625,9 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/kava/images/kava.png",
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-quicksilver.keplr.app",
@@ -2504,6 +2640,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uqck",
       coinDecimals: 6,
       coinGeckoId: "quicksilver",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/quicksilver/images/qck.png",
     },
     walletUrlForStaking:
       process.env.NODE_ENV === "production"
@@ -2526,6 +2664,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uqck",
         coinDecimals: 6,
         coinGeckoId: "quicksilver",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/quicksilver/images/qck.png",
       },
     ],
     feeCurrencies: [
@@ -2534,6 +2674,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uqck",
         coinDecimals: 6,
         coinGeckoId: "quicksilver",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/quicksilver/images/qck.png",
         gasPriceStep: {
           low: 0,
           average: 0.0001,
@@ -2541,10 +2683,12 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/quicksilver/images/qck.png",
     features: [],
   },
   {
-    rpc: "https://rpc-phoenix.keplr.app",
+    rpc: "https://terra-rpc.publicnode.com:443",
     rest: "https://lcd-phoenix.keplr.app",
     chainId: "phoenix-1",
     chainName: "Terra",
@@ -2554,6 +2698,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uluna",
       coinDecimals: 6,
       coinGeckoId: "terra-luna-2",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra2/images/luna.png",
     },
     walletUrlForStaking:
       process.env.NODE_ENV === "production"
@@ -2576,6 +2722,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uluna",
         coinDecimals: 6,
         coinGeckoId: "terra-luna-2",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra2/images/luna.png",
       },
     ],
     feeCurrencies: [
@@ -2584,6 +2732,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uluna",
         coinDecimals: 6,
         coinGeckoId: "terra-luna-2",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra2/images/luna.png",
         gasPriceStep: {
           low: 0.15,
           average: 0.25,
@@ -2591,10 +2741,13 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra2/images/luna.png",
     features: [],
+    updateFromRepoDisabled: true,
   },
   {
-    rpc: "https://rpc-columbus.keplr.app",
+    rpc: "https://terra-classic-rpc.publicnode.com:443",
     rest: "https://lcd-columbus.keplr.app",
     chainId: "columbus-5",
     chainName: "Terra Classic",
@@ -2604,6 +2757,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uluna",
       coinDecimals: 6,
       coinGeckoId: "terra-luna",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra/images/luna.png",
     },
     bip44: {
       coinType: 330,
@@ -2622,6 +2777,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uluna",
         coinDecimals: 6,
         coinGeckoId: "terra-luna",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra/images/luna.png",
       },
       {
         coinDenom: "USTC",
@@ -2636,6 +2793,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uluna",
         coinDecimals: 6,
         coinGeckoId: "terra-luna",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra/images/luna.png",
         gasPriceStep: {
           low: 28.325,
           average: 28.325,
@@ -2654,7 +2813,10 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/terra/images/luna.png",
     features: ["terra-classic-fee"],
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://rpc-quasar.keplr.app",
@@ -2667,6 +2829,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uqsr",
       coinDecimals: 6,
       coinGeckoId: "quasar-2",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/quasar/images/quasar.png",
     },
     bip44: {
       coinType: 118,
@@ -2685,6 +2849,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uqsr",
         coinDecimals: 6,
         coinGeckoId: "quasar-2",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/quasar/images/quasar.png",
       },
     ],
     feeCurrencies: [
@@ -2723,10 +2889,12 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/quasar/images/quasar.png",
     features: [],
   },
   {
-    rpc: "https://rpc-noble.keplr.app",
+    rpc: "https://rpc.cosmos.directory/noble",
     rest: "https://lcd-noble.keplr.app",
     chainId: "noble-1",
     chainName: "Noble",
@@ -2735,6 +2903,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinDenom: "STAKE",
       coinMinimalDenom: "ustake",
       coinDecimals: 6,
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/noble/images/stake.png",
     },
     bip44: {
       coinType: 118,
@@ -2752,6 +2922,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinDenom: "STAKE",
         coinMinimalDenom: "ustake",
         coinDecimals: 6,
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/noble/images/stake.png",
       },
       {
         coinDenom: "USDC",
@@ -2777,10 +2949,13 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/noble/images/stake.png",
     features: [],
+    updateFromRepoDisabled: true,
   },
   {
-    rpc: "https://rpc-omniflixhub.keplr.app",
+    rpc: "https://omniflix-rpc.publicnode.com:443",
     rest: "https://lcd-omniflixhub.keplr.app",
     chainId: "omniflixhub-1",
     chainName: "OmniFlix",
@@ -2790,6 +2965,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "uflix",
       coinDecimals: 6,
       coinGeckoId: "omniflix-network",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/omniflixhub/images/flix.png",
     },
     bip44: {
       coinType: 118,
@@ -2808,6 +2985,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uflix",
         coinDecimals: 6,
         coinGeckoId: "omniflix-network",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/omniflixhub/images/flix.png",
       },
     ],
     feeCurrencies: [
@@ -2816,6 +2995,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "uflix",
         coinDecimals: 6,
         coinGeckoId: "omniflix-network",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/omniflixhub/images/flix.png",
         gasPriceStep: {
           low: 0.001,
           average: 0.0025,
@@ -2823,11 +3004,14 @@ const EmbedChainInfos: ChainInfo[] = [
         },
       },
     ],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/omniflixhub/images/flix.png",
     features: [],
+    updateFromRepoDisabled: true,
   },
   {
-    rpc: "https://rpc-kyve.keplr.app",
-    rest: "https://lcd-kyve.keplr.app",
+    rpc: "https://rpc.kyve.network",
+    rest: "https://api.kyve.network",
     chainId: "kyve-1",
     chainName: "KYVE",
     hideInUI: true,
@@ -2836,6 +3020,8 @@ const EmbedChainInfos: ChainInfo[] = [
       coinMinimalDenom: "ukyve",
       coinDecimals: 6,
       coinGeckoId: "kyve-network",
+      coinImageUrl:
+        "https://raw.githubusercontent.com/cosmos/chain-registry/master/kyve/images/kyve.png",
     },
     bip44: {
       coinType: 118,
@@ -2854,6 +3040,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ukyve",
         coinDecimals: 6,
         coinGeckoId: "kyve-network",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/kyve/images/kyve.png",
       },
     ],
     feeCurrencies: [
@@ -2862,6 +3050,8 @@ const EmbedChainInfos: ChainInfo[] = [
         coinMinimalDenom: "ukyve",
         coinDecimals: 6,
         coinGeckoId: "kyve-network",
+        coinImageUrl:
+          "https://raw.githubusercontent.com/cosmos/chain-registry/master/kyve/images/kyve.png",
         gasPriceStep: {
           low: 0.02,
           average: 0.03,
@@ -2870,6 +3060,9 @@ const EmbedChainInfos: ChainInfo[] = [
       },
     ],
     features: [],
+    chainSymbolImageUrl:
+      "https://raw.githubusercontent.com/cosmos/chain-registry/master/kyve/images/kyve.png",
+    updateFromRepoDisabled: true,
   },
   {
     rpc: "https://axelartest-rpc.quickapi.com:443",
@@ -2892,7 +3085,7 @@ const EmbedChainInfos: ChainInfo[] = [
       bech32PrefixConsPub: "axelarvalconspub",
     },
     bip44: { coinType: 118 },
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "AXL",
@@ -2916,8 +3109,8 @@ const EmbedChainInfos: ChainInfo[] = [
     rpc: "https://rpc-dorado.fetch.ai",
     rest: "https://rest-dorado.fetch.ai",
     chainId: "dorado-1",
-    chainName: "Dorado",
-    hideInUI: true,
+    chainName: "Dorado Testnet",
+    hideInUI: false,
     stakeCurrency: {
       coinDenom: "TESTFET",
       coinMinimalDenom: "atestfet",
@@ -2928,7 +3121,7 @@ const EmbedChainInfos: ChainInfo[] = [
       coinType: 118,
     },
     bech32Config: Bech32Address.defaultBech32Config("fetch"),
-    type: "testnet",
+    isTestnet: true,
     currencies: [
       {
         coinDenom: "TESTFET",
@@ -2959,54 +3152,104 @@ const EmbedChainInfos: ChainInfo[] = [
     walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
     govUrl: "https://explore-dorado.fetch.ai/proposals/",
     chainSymbolImageUrl: require("./public/assets/svg/wireframe/dorado.svg"),
+    updateFromRepoDisabled: true,
   },
-  {
-    rpc: "https://rpc-eridanus-1.fetch.ai",
-    rest: "https://rest-eridanus-1.fetch.ai",
-    chainId: "eridanus-1",
-    chainName: "Eridanus Testnet",
-    stakeCurrency: {
-      coinDenom: "TESTASI",
-      coinMinimalDenom: "atestasi",
-      coinDecimals: 18,
-      coinGeckoId: "fetch-ai",
-    },
-    type: "testnet",
-    bip44: {
-      coinType: 118,
-    },
-    bech32Config: Bech32Address.defaultBech32Config("asi"),
-    currencies: [
-      {
-        coinDenom: "TESTASI",
-        coinMinimalDenom: "atestasi",
-        coinDecimals: 18,
-        coinGeckoId: "fetch-ai",
-      },
-      {
-        coinDenom: "MOBX",
-        coinMinimalDenom: "nanomobx",
-        coinDecimals: 9,
-      },
-    ],
-    feeCurrencies: [
-      {
-        coinDenom: "TESTASI",
-        coinMinimalDenom: "atestasi",
-        coinDecimals: 18,
-        coinGeckoId: "fetch-ai",
-        gasPriceStep: {
-          low: 0,
-          average: 5000000000,
-          high: 6250000000,
-        },
-      },
-    ],
-    features: ["cosmwasm"],
-    chainSymbolImageUrl: require("./public/assets/png/Black-white-circle.png"),
-    walletUrlForStaking: "https://explore-eridanus-1.fetch.ai/validators",
-    govUrl: "https://explore-eridanus-1.fetch.ai/proposals/",
-  },
+  // {
+  //   rpc: "https://rpc-gemini.fetch.ai",
+  //   rest: "https://rest-gemini.fetch.ai",
+  //   chainId: "gemini-1",
+  //   chainName: "Gemini Testnet",
+  //   hideInUI: false,
+  //   stakeCurrency: {
+  //     coinDenom: "TESTFET",
+  //     coinMinimalDenom: "atestfet",
+  //     coinDecimals: 18,
+  //     coinGeckoId: "fetch-ai",
+  //   },
+  //   bip44: {
+  //     coinType: 118,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("fetch"),
+  //   isTestnet: true,
+  //   currencies: [
+  //     {
+  //       coinDenom: "TESTFET",
+  //       coinMinimalDenom: "atestfet",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //     },
+  //     {
+  //       coinDenom: "MOBX",
+  //       coinMinimalDenom: "nanomobx",
+  //       coinDecimals: 9,
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "TESTFET",
+  //       coinMinimalDenom: "atestfet",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //       gasPriceStep: {
+  //         low: 0,
+  //         average: 5000000000,
+  //         high: 6250000000,
+  //       },
+  //     },
+  //   ],
+  //   features: ["cosmwasm"],
+  //   walletUrlForStaking: "https://browse-dorado.fetch.ai/validators",
+  //   govUrl: "https://explore-dorado.fetch.ai/proposals/",
+  //   updateFromRepoDisabled: true,
+  // },
+  // {
+  //   rpc: "https://rpc-eridanus-1.fetch.ai",
+  //   rest: "https://rest-eridanus-1.fetch.ai",
+  //   chainId: "eridanus-1",
+  //   chainName: "Eridanus Testnet",
+  //   hideInUI: true,
+  //   stakeCurrency: {
+  //     coinDenom: "TESTASI",
+  //     coinMinimalDenom: "atestasi",
+  //     coinDecimals: 18,
+  //     coinGeckoId: "fetch-ai",
+  //   },
+  //   isTestnet: true,
+  //   bip44: {
+  //     coinType: 118,
+  //   },
+  //   bech32Config: Bech32Address.defaultBech32Config("asi"),
+  //   currencies: [
+  //     {
+  //       coinDenom: "TESTASI",
+  //       coinMinimalDenom: "atestasi",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //     },
+  //     {
+  //       coinDenom: "MOBX",
+  //       coinMinimalDenom: "nanomobx",
+  //       coinDecimals: 9,
+  //     },
+  //   ],
+  //   feeCurrencies: [
+  //     {
+  //       coinDenom: "TESTASI",
+  //       coinMinimalDenom: "atestasi",
+  //       coinDecimals: 18,
+  //       coinGeckoId: "fetch-ai",
+  //       gasPriceStep: {
+  //         low: 0,
+  //         average: 5000000000,
+  //         high: 6250000000,
+  //       },
+  //     },
+  //   ],
+  //   features: ["cosmwasm"],
+  //   chainSymbolImageUrl: require("./public/assets/png/Black-white-circle.png"),
+  //   walletUrlForStaking: "https://explore-eridanus-1.fetch.ai/validators",
+  //   govUrl: "https://explore-eridanus-1.fetch.ai/proposals/",
+  // },
 ];
 
 // The origins that are able to pass any permission that external webpages can have.
@@ -3030,6 +3273,7 @@ export enum TXNTYPE {
   undelegate = "undelegate",
   redelegate = "redelegate",
   govVote = "govVote",
+  govSubmitProposal = "govSubmitProposal",
   nativeBridgeSend = "nativeBridgeSend",
   approval = "approval",
   createSecret20ViewingKey = "createSecret20ViewingKey",

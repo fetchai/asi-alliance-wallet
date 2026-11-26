@@ -24,7 +24,7 @@ export function AddComma(
   }
 
   const dotAndElementAfterDot: any[] = GetDotAndElementAfterDot(array);
-  // console.log('dotAndElementAfterDot',dotAndElementAfterDot);
+
   function AddCommaForInteger(numberInteger: number) {
     const integer = Math.floor(numberInteger);
     const integerPartString = integer.toString();

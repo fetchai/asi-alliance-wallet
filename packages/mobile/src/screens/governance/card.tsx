@@ -25,13 +25,18 @@ export const GovernanceProposalStatusChip: FunctionComponent<{
             style.flatten([
               "text-caption2",
               "font-medium",
-              "color-indigo-900",
+              "color-dark",
               "margin-y-4",
               "margin-x-8",
               "text-center",
             ]) as ViewStyle
           }
-          containerStyle={style.flatten(["background-color-white"])}
+          containerStyle={
+            style.flatten([
+              "background-color-gray-50",
+              "margin-top-16",
+            ]) as ViewStyle
+          }
         />
       );
     case Governance.ProposalStatus.VOTING_PERIOD:
@@ -44,12 +49,17 @@ export const GovernanceProposalStatusChip: FunctionComponent<{
             style.flatten([
               "text-caption2",
               "font-medium",
-              "color-indigo-900",
+              "color-dark",
               "margin-y-4",
               "margin-x-8",
             ]) as ViewStyle
           }
-          containerStyle={style.flatten(["background-color-white"])}
+          containerStyle={
+            {
+              ...style.flatten(["margin-top-16"]),
+              backgroundColor: "#e0fedd",
+            } as ViewStyle
+          }
         />
       );
     case Governance.ProposalStatus.PASSED:
@@ -68,7 +78,10 @@ export const GovernanceProposalStatusChip: FunctionComponent<{
             ]) as ViewStyle
           }
           containerStyle={
-            style.flatten(["background-color-vibrant-green-500"]) as ViewStyle
+            style.flatten([
+              "background-color-vibrant-green-500",
+              "margin-top-16",
+            ]) as ViewStyle
           }
         />
       );
@@ -87,7 +100,12 @@ export const GovernanceProposalStatusChip: FunctionComponent<{
               "margin-x-8",
             ]) as ViewStyle
           }
-          containerStyle={style.flatten(["background-color-vibrant-red-500"])}
+          containerStyle={
+            style.flatten([
+              "background-color-vibrant-red-500",
+              "margin-top-16",
+            ]) as ViewStyle
+          }
         />
       );
     case Governance.ProposalStatus.FAILED:
@@ -105,7 +123,12 @@ export const GovernanceProposalStatusChip: FunctionComponent<{
               "margin-x-8",
             ]) as ViewStyle
           }
-          containerStyle={style.flatten(["background-color-vibrant-red-500"])}
+          containerStyle={
+            style.flatten([
+              "background-color-vibrant-red-500",
+              "margin-top-16",
+            ]) as ViewStyle
+          }
         />
       );
     default:
@@ -123,7 +146,12 @@ export const GovernanceProposalStatusChip: FunctionComponent<{
               "margin-x-8",
             ]) as ViewStyle
           }
-          containerStyle={style.flatten(["background-color-vibrant-red-500"])}
+          containerStyle={
+            style.flatten([
+              "background-color-vibrant-red-500",
+              "margin-top-16",
+            ]) as ViewStyle
+          }
         />
       );
   }
@@ -169,11 +197,12 @@ export const GovernanceCardBody: FunctionComponent<{
           marginTop: 16,
         },
       ]}
-      boneColor={style.get("color-white@20%").color}
-      highlightColor={style.get("color-white@60%").color}
+      boneColor={"#DCDCE3"}
+      highlightColor={"#F6F6F6"}
     >
       <RectButton
         style={style.flatten(["padding-18"]) as ViewStyle}
+        underlayColor="#e0fedd"
         onPress={() => {
           navigation.navigateSmart("Governance.Details", {
             proposalId: proposal?.id,
@@ -187,12 +216,12 @@ export const GovernanceCardBody: FunctionComponent<{
           style={
             style.flatten([
               "text-caption2",
-              "color-white@60%",
+              "color-gray-300",
               "margin-bottom-6",
             ]) as ViewStyle
           }
         >{`PROPOSAL #${proposal?.id}`}</Text>
-        <Text style={style.flatten(["body3", "color-white"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
           {proposal?.title}
         </Text>
         <View
@@ -220,7 +249,7 @@ export const GovernanceCardBody: FunctionComponent<{
                 style={
                   style.flatten([
                     "text-caption2",
-                    "color-white@60%",
+                    "color-gray-300",
                     "margin-bottom-6",
                   ]) as ViewStyle
                 }
@@ -229,7 +258,7 @@ export const GovernanceCardBody: FunctionComponent<{
               </Text>
               <Text
                 style={
-                  style.flatten(["text-caption2", "color-white"]) as ViewStyle
+                  style.flatten(["text-caption2", "color-dark"]) as ViewStyle
                 }
               >
                 {moment(proposal?.raw.voting_start_time)
@@ -242,7 +271,7 @@ export const GovernanceCardBody: FunctionComponent<{
                 style={
                   style.flatten([
                     "text-caption2",
-                    "color-white@60%",
+                    "color-gray-300",
                     "margin-bottom-6",
                   ]) as ViewStyle
                 }
@@ -251,7 +280,7 @@ export const GovernanceCardBody: FunctionComponent<{
               </Text>
               <Text
                 style={
-                  style.flatten(["text-caption2", "color-white"]) as ViewStyle
+                  style.flatten(["text-caption2", "color-dark"]) as ViewStyle
                 }
               >
                 {moment(proposal?.raw.voting_end_time)

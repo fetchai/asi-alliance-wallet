@@ -1,8 +1,9 @@
 import { EthermintChainIdHelper } from "@keplr-wallet/cosmos";
+import { Fee } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
+import { StdFee } from "@keplr-wallet/types";
+import { ActivityStore } from "../activity";
+import { Node, ProposalNode } from "./cosmos";
 import { ProtoMsgsOrWithAminoMsgs } from "./types";
-import { ProposalNode } from "./cosmos";
-import { Node } from "./cosmos";
-import { ActivityStore } from "src/activity";
 
 export function txEventsWithPreOnFulfill(
   onTxEvents:
@@ -221,6 +222,19 @@ export const getJson = (addresses: any, type: string) => {
     };
   }
 
+  if (type === "govSubmitProposal") {
+    json = {
+      type: addresses.content.type,
+      title: addresses.content.value.title,
+      content: addresses.content,
+      amount: addresses.initial_deposit?.map((deposit: any) => ({
+        denom: deposit.denom,
+        amount: deposit.amount,
+      }))?.[0],
+      proposer: addresses.proposer,
+    };
+  }
+
   return JSON.stringify(json);
 };
 
@@ -234,6 +248,7 @@ export enum TXNTYPE {
   govVote = "govVote",
   nativeBridgeSend = "nativeBridgeSend",
   approval = "approval",
+  govSubmitProposal = "govSubmitProposal",
   createSecret20ViewingKey = "createSecret20ViewingKey",
 }
 
@@ -281,6 +296,11 @@ export const getNodes = (msgs: any, type: string) => {
     signerAddress = msgs.aminoMsgs[0].value.sender;
   }
 
+  if (type === TXNTYPE.govSubmitProposal) {
+    balanceOffset = `-${msgs.aminoMsgs[0].value.initial_deposit[0].amount}`;
+    signerAddress = msgs.aminoMsgs[0].value.proposer;
+  }
+
   return { nodes, balanceOffset, signerAddress };
 };
 
@@ -303,12 +323,33 @@ export const updateNodeOnTxnCompleted = (
 ) => {
   if (type === "withdrawRewards") {
     let sum = 0;
+    if (tx.log) {
+      try {
+        JSON.parse(tx.log).map((txn: any, index: number) => {
+          const currentAmount = parseAmount(txn.events[0].attributes[1].value);
+          activityStore.updateTxnJson(txId, index, currentAmount);
+          sum += Number(currentAmount[0]);
+        });
+      } catch (e) {
+        console.warn("Failed to parse tx.log, falling back to events", e);
+      }
+    }
 
-    JSON.parse(tx.log).map((txn: any, index: number) => {
-      const currentAmount = parseAmount(txn.events[0].attributes[1].value);
-      activityStore.updateTxnJson(txId, index, currentAmount);
-      sum += Number(currentAmount[0]);
-    });
+    // fallback: events (new SDKs)
+    if (!tx.log && Array.isArray(tx.events)) {
+      tx.events.forEach((event: any) => {
+        if (event.type !== "coin_received") return;
+
+        const amountAttr = event.attributes?.find(
+          (a: any) => a.key === "amount"
+        );
+
+        if (!amountAttr?.value) return;
+        const currentAmount = parseAmount(amountAttr.value);
+        activityStore.updateTxnJson(txId, 0, currentAmount);
+        sum += Number(currentAmount[0]);
+      });
+    }
     activityStore.updateTxnBalance(txId, sum);
   }
 
@@ -447,3 +488,12 @@ export const getActivityNode = ({
 
   return newNode;
 };
+
+export function protoFeeToStdFee(fee?: Fee): StdFee {
+  return {
+    amount: fee?.amount ?? [],
+    gas: fee?.gasLimit?.toString() || "0",
+    ...(fee?.granter ? { granter: fee.granter } : {}),
+    ...(fee?.payer ? { payer: fee.payer } : {}),
+  };
+}

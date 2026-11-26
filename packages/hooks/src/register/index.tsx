@@ -1,8 +1,9 @@
 import React, { FunctionComponent, useState } from "react";
-import { KeyRingStore } from "@keplr-wallet/stores";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { KeyRingStore } from "@keplr-wallet/stores-core";
 import { action, computed, flow, makeObservable, observable } from "mobx";
 import { Mnemonic, RNG } from "@keplr-wallet/crypto";
-import { BIP44HDPath } from "@keplr-wallet/background";
+import { BIP44HDPath, MultiAccounts } from "@keplr-wallet/background";
 
 export type RegisterMode = "create" | "add";
 
@@ -53,7 +54,7 @@ export class RegisterConfig {
 
   @computed
   get mode(): RegisterMode {
-    return this.keyRingStore.multiKeyStoreInfo.length === 0 ? "create" : "add";
+    return this.keyRingStore.keyInfos.length === 0 ? "create" : "add";
   }
 
   get isLoading(): boolean {
@@ -111,6 +112,25 @@ export class RegisterConfig {
   @action
   clear() {
     this.setType("");
+    // Wipe sensitive registration state — the private key must not persist
+    // in memory after the user backs out or completes registration.
+    this._privateKey = "";
+    this._email = "";
+  }
+
+  @action
+  protected getNextDefaultAccountName(prefix = "account"): string {
+    const items = this.keyRingStore.keyInfos;
+    if (items.length === 0) {
+      return `${prefix}-1`;
+    }
+    // if any account is deleted in between
+    // we still want to increment the account number based on the last account
+    const lastName = items[items.length - 1]?.name || "";
+    const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
+    const lastNum = match ? Number(match[1]) : 0;
+
+    return `${prefix}-${lastNum + 1}`;
   }
 
   // Create or add the mnemonic account.
@@ -121,28 +141,44 @@ export class RegisterConfig {
     mnemonic: string,
     password: string,
     bip44HDPath: BIP44HDPath,
-    meta: Record<string, string> = {}
+    meta: Record<string, string> = {},
+    selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
+    const defaultName = this.getNextDefaultAccountName();
+
+    if (selectedNetworks.length > 0) {
+      Object.assign(meta, {
+        nameByChain: JSON.stringify(
+          Object.fromEntries(
+            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+          )
+        ),
+      });
+    }
+
     try {
       if (this.mode === "create") {
-        yield this.keyRingStore.createMnemonicKey(
+        yield this.keyRingStore.newMnemonicKey(
           mnemonic,
+          bip44HDPath,
+          defaultName,
           password,
           {
-            name,
+            name: defaultName,
             ...meta,
-          },
-          bip44HDPath
+          }
         );
       } else {
-        yield this.keyRingStore.addMnemonicKey(
+        yield this.keyRingStore.newMnemonicKey(
           mnemonic,
+          bip44HDPath,
+          defaultName,
+          password,
           {
-            name,
+            name: defaultName,
             ...meta,
-          },
-          bip44HDPath
+          }
         );
       }
       this._isFinalized = true;
@@ -154,24 +190,17 @@ export class RegisterConfig {
   // Create or add the keystone account.
   // If the mode is "add", password will be ignored.
   @flow
-  *createKeystone(name: string, password: string, bip44HDPath: BIP44HDPath) {
+  *createKeystone(
+    name: string,
+    password: string,
+    multiAccounts: MultiAccounts
+  ) {
     this._isLoading = true;
     try {
       if (this.mode === "create") {
-        yield this.keyRingStore.createKeystoneKey(
-          password,
-          {
-            name,
-          },
-          bip44HDPath
-        );
+        yield this.keyRingStore.newKeystoneKey(multiAccounts, name, password);
       } else {
-        yield this.keyRingStore.addKeystoneKey(
-          {
-            name,
-          },
-          bip44HDPath
-        );
+        yield this.keyRingStore.newKeystoneKey(multiAccounts, name, password);
       }
       this._isFinalized = true;
     } finally {
@@ -183,29 +212,50 @@ export class RegisterConfig {
   // If the mode is "add", password will be ignored.
   @flow
   *createLedger(
+    pubkey: Uint8Array,
     name: string,
     password: string,
     bip44HDPath: BIP44HDPath,
-    cosmosLikeApp: string
+    cosmosLikeApp: string,
+    selectedNetworks: string[] = [],
+    meta: Record<string, string> = {}
   ) {
     this._isLoading = true;
+    const defaultName = this.getNextDefaultAccountName();
+    if (selectedNetworks.length > 0) {
+      Object.assign(meta, {
+        nameByChain: JSON.stringify(
+          Object.fromEntries(
+            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+          )
+        ),
+      });
+    }
+
     try {
       if (this.mode === "create") {
-        yield this.keyRingStore.createLedgerKey(
+        yield this.keyRingStore.newLedgerKey(
+          pubkey,
+          cosmosLikeApp,
+          bip44HDPath,
+          defaultName,
           password,
           {
-            name,
-          },
-          bip44HDPath,
-          cosmosLikeApp
+            name: defaultName,
+            ...meta,
+          }
         );
       } else {
-        yield this.keyRingStore.addLedgerKey(
-          {
-            name,
-          },
+        yield this.keyRingStore.newLedgerKey(
+          pubkey,
+          cosmosLikeApp,
           bip44HDPath,
-          cosmosLikeApp
+          defaultName,
+          password,
+          {
+            name: defaultName,
+            ...meta,
+          }
         );
       }
       this._isFinalized = true;
@@ -221,24 +271,50 @@ export class RegisterConfig {
     name: string,
     privateKey: Uint8Array,
     password: string,
-    meta: Record<string, string> = {}
+    meta: Record<string, string> = {},
+    selectedNetworks: string[] = []
   ) {
     this._isLoading = true;
+    const defaultName = this.getNextDefaultAccountName();
+
+    if (selectedNetworks.length > 0) {
+      Object.assign(meta, {
+        nameByChain: JSON.stringify(
+          Object.fromEntries(
+            selectedNetworks.map((id) => [id, name || defaultName]) // only selected networks
+          )
+        ),
+      });
+    }
+
     try {
       if (this.mode === "create") {
-        yield this.keyRingStore.createPrivateKey(privateKey, password, {
-          name,
-          ...meta,
-        });
+        yield this.keyRingStore.newPrivateKeyKey(
+          privateKey,
+          {
+            name: defaultName,
+            ...meta,
+          },
+          defaultName,
+          password
+        );
       } else {
-        yield this.keyRingStore.addPrivateKey(privateKey, {
-          name,
-          ...meta,
-        });
+        yield this.keyRingStore.newPrivateKeyKey(
+          privateKey,
+          {
+            name: defaultName,
+            ...meta,
+          },
+          defaultName,
+          password
+        );
       }
       this._isFinalized = true;
     } finally {
       this._isLoading = false;
+      // The private key was imported into the encrypted vault (or the
+      // attempt failed) — wipe the in-memory copy either way.
+      this._privateKey = "";
     }
   }
 
@@ -278,7 +354,7 @@ export const useRegisterConfig = (
   keyRingStore: KeyRingStore,
   initialOptions: RegisterOption[],
   rng: RNG = (array) => {
-    return Promise.resolve(crypto.getRandomValues(array));
+    return Promise.resolve(crypto.getRandomValues(array as Uint8Array)) as any;
   }
 ) => {
   const [txConfig] = useState(

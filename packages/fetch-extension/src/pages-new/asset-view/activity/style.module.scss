@@ -1,9 +1,18 @@
+@import "../../../styles/var";
+
 .block {
   font-weight: 500;
   display: flex;
   color: black;
   align-items: center;
   font-size: 15px;
+}
+
+.heading {
+  color: $font-dark;
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 24px;
 }
 
 .container {

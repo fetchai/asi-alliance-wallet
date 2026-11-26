@@ -86,7 +86,7 @@ export const SimpleCardView: FunctionComponent<{
             <Text
               style={
                 [
-                  style.flatten(["h6", "color-white", "font-normal"]),
+                  style.flatten(["h6", "color-dark", "font-normal"]),
                   headingStyle,
                 ] as ViewStyle
               }

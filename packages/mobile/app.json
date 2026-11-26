@@ -1,58 +1,55 @@
 {
   "name": "mobile",
-  "displayName": "ASI Alliance Wallet",
-  "expo": {
-    "name": "ASI Alliance Wallet",
-    "slug": "FetchWallet",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "scheme": "fetchwallet",
-    "assetBundlePatterns": ["**/*"],
-    "ios": {
-      "bundleIdentifier": "com.fetchai.wallet",
-      "permissions": [
-        "CAMERA",
-        "BLUETOOTH_ADMIN",
-        "BLUETOOTH_CONNECT",
-        "BLUETOOTH_ADVERTISE",
-        "BLUETOOTH_SCAN",
-        "BLUETOOTH",
-        "ACCESS_FINE_LOCATION"
-      ]
-    },
-    "android": {
-      "package": "com.fetchai.wallet",
-      "permissions": [
-        "CAMERA",
-        "BLUETOOTH_ADMIN",
-        "BLUETOOTH_CONNECT",
-        "BLUETOOTH_ADVERTISE",
-        "BLUETOOTH_SCAN",
-        "BLUETOOTH",
-        "ACCESS_FINE_LOCATION"
-      ]
-    },
-    "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow ASI Alliance Wallet to access your camera."
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow ASI Alliance Wallet to use your location."
-        }
-      ],
-      [
-        "@sentry/react-native/expo",
-        {
-          "url": "https://sentry.io/",
-          "project": "fetch-mobile",
-          "organization": "fetchai-ft"
-        }
-      ]
+  "slug": "FetchWallet",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "scheme": "fetchwallet",
+  "assetBundlePatterns": ["**/*"],
+  "ios": {
+    "bundleIdentifier": "com.fetchai.wallet",
+    "permissions": [
+      "CAMERA",
+      "BLUETOOTH_ADMIN",
+      "BLUETOOTH_CONNECT",
+      "BLUETOOTH_ADVERTISE",
+      "BLUETOOTH_SCAN",
+      "BLUETOOTH",
+      "ACCESS_FINE_LOCATION"
     ]
-  }
+  },
+  "android": {
+    "package": "com.fetchai.wallet",
+    "permissions": [
+      "CAMERA",
+      "BLUETOOTH_ADMIN",
+      "BLUETOOTH_CONNECT",
+      "BLUETOOTH_ADVERTISE",
+      "BLUETOOTH_SCAN",
+      "BLUETOOTH",
+      "ACCESS_FINE_LOCATION"
+    ]
+  },
+  "plugins": [
+    [
+      "expo-camera",
+      {
+        "cameraPermission": "Allow ASI Alliance Wallet to access your camera."
+      }
+    ],
+    [
+      "expo-location",
+      {
+        "locationAlwaysAndWhenInUsePermission": "Allow ASI Alliance Wallet to use your location."
+      }
+    ],
+    [
+      "@sentry/react-native/expo",
+      {
+        "url": "https://sentry.io/",
+        "project": "fetch-mobile",
+        "organization": "fetchai-ft"
+      }
+    ],
+    "expo-secure-store"
+  ]
 }

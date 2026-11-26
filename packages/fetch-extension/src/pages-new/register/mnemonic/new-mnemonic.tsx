@@ -28,10 +28,16 @@ import {
 import { useStore } from "../../../stores";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useNotification } from "@components/notification";
-import { AuthIntro } from "../auth";
+import { AuthIntro, AuthPage } from "../auth";
 import { Card } from "@components-v2/card";
 import keyIcon from "@assets/svg/wireframe/key-icon.png";
 import { TabsPanel } from "@components-v2/tabs/tabsPanel-2";
+import { SelectNetwork } from "../select-network";
+import classNames from "classnames";
+import { getNextDefaultAccountName, validateAccountName } from "@utils/index";
+import { PasswordStrengthMeter } from "@components-v2/password-strength/password-strength-meter";
+import { Checkbox } from "@components-v2/checkbox/checkbox";
+import { dispatchGlobalEventExceptSelf } from "@utils/global-events";
 
 export const TypeNewMnemonic = "new-mnemonic";
 
@@ -51,27 +57,8 @@ export const NewMnemonicIntro: FunctionComponent<{
     <React.Fragment>
       {" "}
       <div className="flex flex-col">
-        <div
-          style={{
-            fontSize: "36px",
-            color: "white",
-            fontWeight: 400,
-          }}
-        >
-          Welcome to your
-        </div>
-        <div
-          style={{
-            fontSize: "36px",
-            color: "transparent",
-            fontWeight: 400,
-            background:
-              "linear-gradient(270deg, #F9774B 5.16%, #CF447B 86.63%)",
-            backgroundClip: "text",
-          }}
-        >
-          ASI Alliance Wallet
-        </div>
+        <div className={style["welcomeText"]}>Welcome to your</div>
+        <div className={style["welcomeText"]}>ASI Alliance Wallet</div>
       </div>
       <div className={style["titleText"]}>Choose how you want to proceed</div>
       <div
@@ -80,7 +67,7 @@ export const NewMnemonicIntro: FunctionComponent<{
           e.preventDefault();
 
           registerConfig.setType(TypeNewMnemonic);
-          analyticsStore.logEvent("Create account started", {
+          analyticsStore.logEvent("create_a_new_wallet_click", {
             registerType: "seed",
           });
         }}
@@ -106,6 +93,47 @@ export const NewMnemonicPage: FunctionComponent<{
   const [isMainPage, setIsMainPage] = useState(true);
   const { analyticsStore } = useStore();
   const [continueClicked, setContinueClicked] = useState(false);
+  const [authClicked, setAuthClicked] = useState(false);
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
+
+  function decideView() {
+    if (authClicked) {
+      return (
+        <AuthPage
+          registerConfig={registerConfig}
+          selectedNetworks={selectedNetworks}
+          setSelectedNetworks={setSelectedNetworks}
+        />
+      );
+    }
+
+    if (!isMainPage) {
+      if (newMnemonicConfig.mode === "generate") {
+        return (
+          <GenerateMnemonicModePage
+            registerConfig={registerConfig}
+            newMnemonicConfig={newMnemonicConfig}
+            bip44Option={bip44Option}
+            isMainPage={isMainPage}
+            continueClicked={continueClicked}
+            setContinueClicked={setContinueClicked}
+            selectedNetworks={selectedNetworks}
+            setSelectedNetworks={setSelectedNetworks}
+          />
+        );
+      } else if (newMnemonicConfig.mode === "verify") {
+        return (
+          <VerifyMnemonicModePage
+            registerConfig={registerConfig}
+            newMnemonicConfig={newMnemonicConfig}
+            bip44Option={bip44Option}
+            setContinueClicked={setContinueClicked}
+            selectedNetworks={selectedNetworks}
+          />
+        );
+      }
+    }
+  }
 
   return (
     <React.Fragment>
@@ -120,11 +148,17 @@ export const NewMnemonicPage: FunctionComponent<{
           {/* <div className={style["newMnemonicText"]}>
             Enter your password to sign in
           </div> */}
-          <AuthIntro registerConfig={registerConfig} />
+          <AuthIntro
+            registerConfig={registerConfig}
+            onClick={() => {
+              setAuthClicked(true);
+              setIsMainPage(false);
+            }}
+          />
           <Card
             leftImageStyle={{ height: "32px", width: "32px" }}
             style={{
-              backgroundColor: "rgba(255,255,255,0.1)",
+              display: "flex",
               height: "78px",
               fontSize: "14px",
             }}
@@ -132,7 +166,7 @@ export const NewMnemonicPage: FunctionComponent<{
               e.preventDefault();
               setIsMainPage(false);
               registerConfig.setType(TypeNewMnemonic);
-              analyticsStore.logEvent("Create account started", {
+              analyticsStore.logEvent("create_new_seed_phrase_click", {
                 registerType: "seed",
               });
             }}
@@ -143,24 +177,7 @@ export const NewMnemonicPage: FunctionComponent<{
           <div onClick={() => setIsMainPage(false)} />
         </React.Fragment>
       )}
-      {!isMainPage && newMnemonicConfig.mode === "generate" ? (
-        <GenerateMnemonicModePage
-          registerConfig={registerConfig}
-          newMnemonicConfig={newMnemonicConfig}
-          bip44Option={bip44Option}
-          isMainPage={isMainPage}
-          continueClicked={continueClicked}
-          setContinueClicked={setContinueClicked}
-        />
-      ) : null}
-      {!isMainPage && newMnemonicConfig.mode === "verify" ? (
-        <VerifyMnemonicModePage
-          registerConfig={registerConfig}
-          newMnemonicConfig={newMnemonicConfig}
-          bip44Option={bip44Option}
-          setContinueClicked={setContinueClicked}
-        />
-      ) : null}
+      {decideView()}
     </React.Fragment>
   );
 });
@@ -172,6 +189,8 @@ interface GenerateMnemonicModePageProps {
   isMainPage: boolean;
   continueClicked: boolean;
   setContinueClicked: any;
+  selectedNetworks: string[];
+  setSelectedNetworks: React.Dispatch<React.SetStateAction<string[]>>;
 }
 export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
   observer(
@@ -182,23 +201,36 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       isMainPage,
       continueClicked,
       setContinueClicked,
+      selectedNetworks,
+      setSelectedNetworks,
     }) => {
       const intl = useIntl();
       const notification = useNotification();
+      const { keyRingStore } = useStore();
+      const accountList = keyRingStore.keyInfos;
+      const defaultAccountName = getNextDefaultAccountName(accountList);
+      const [passwordCheckbox, setPasswordCheckbox] = useState(false);
+      const [passwordStrengthScore, setPasswordStrengthScore] = useState(0);
+
       const {
         register,
         handleSubmit,
-        getValues,
         setValue,
+        trigger,
+        watch,
         formState: { errors },
       } = useForm<FormData>({
         defaultValues: {
-          name: newMnemonicConfig.name,
+          name: defaultAccountName,
           words: newMnemonicConfig.mnemonic,
           password: "",
           confirmPassword: "",
         },
+        mode: "onChange",
+        reValidateMode: "onChange",
       });
+
+      const { name, password, confirmPassword } = watch();
 
       const tabs = [
         { id: NewMnemonicStep.WORDS12 },
@@ -206,7 +238,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
       ];
       const [checkBox1Checked, setCheckBox1Checked] = useState(false);
       const [checkBox2Checked, setCheckBox2Checked] = useState(false);
-
+      const { analyticsStore } = useStore();
       const [activeTab, setActiveTab] = useState(tabs[0].id);
 
       useEffect(() => {
@@ -218,6 +250,12 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
 
         handleTabChange(activeTab);
       }, [activeTab]);
+
+      useEffect(() => {
+        if (confirmPassword) {
+          trigger("confirmPassword");
+        }
+      }, [password, trigger]);
 
       const handleCopyClicked = useCallback(async () => {
         await navigator.clipboard.writeText(newMnemonicConfig.mnemonic);
@@ -233,6 +271,11 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
         });
       }, []);
 
+      const areInputsEmpty =
+        name === "" ||
+        (registerConfig.mode === "create" &&
+          (password === "" || confirmPassword === ""));
+
       return (
         <div>
           {!isMainPage && !continueClicked ? (
@@ -242,22 +285,12 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   registerConfig.clear();
                 }}
               />
-              <div
-                style={{
-                  marginTop: "24px",
-                }}
-              >
-                <div style={{ color: "white", fontSize: "32px" }}>
+              <div className={style2["recoveryPhraseSection"]}>
+                <div className={style2["recoveryTitle"]}>
                   Save your recovery
                 </div>
-                <div style={{ color: "white", fontSize: "32px" }}> phrase</div>
-                <div
-                  style={{
-                    color: "rgba(255,255,255,0.8)",
-                    fontSize: "16px",
-                    marginTop: "12px",
-                  }}
-                >
+                <div className={style2["recoveryTitle"]}>phrase</div>
+                <div className={style2["subtitle"]}>
                   These words below will let you recover your wallet if you lose
                   your device. We recommend writing down your recovery phrase
                   and storing it in a secure offline location, and never share
@@ -306,24 +339,24 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
               </label>
               <AdvancedBIP44Option bip44Option={bip44Option} />
               <ButtonV2
+                variant="dark"
                 styleProps={{ marginBottom: "20px", height: "56px" }}
                 disabled={!checkBox1Checked || !checkBox2Checked}
-                onClick={() => setContinueClicked(true)}
+                onClick={() => {
+                  analyticsStore.logEvent("register_next_click", {
+                    pageName: "Register",
+                    registerType: "seed",
+                    accountType: "mnemonic",
+                  });
+                  setContinueClicked(true);
+                }}
                 text=""
               >
                 Continue
               </ButtonV2>
             </div>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                width: "333px",
-                marginLeft: "7%",
-              }}
-            >
+            <div className={style["newWalletContainer"]}>
               <BackButton
                 onClick={() => {
                   setContinueClicked(false);
@@ -343,39 +376,56 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                   newMnemonicConfig.setMode("verify");
                 })}
               >
-                <Label
-                  for="name"
-                  style={{
-                    color: "rgba(255,255,255,0.6)",
-                    fontWeight: 400,
-                    fontSize: "15px",
-                  }}
-                >
+                <Label for="name" className={style2["label"]}>
                   {intl.formatMessage({ id: "register.name" })}
                 </Label>
                 <Input
                   className={style2["addressInput"]}
+                  formGroupClassName={style["inputFormGroup"]}
                   type="text"
                   {...register("name", {
                     required: intl.formatMessage({
                       id: "register.name.error.required",
                     }),
+                    validate: (value: string) =>
+                      validateAccountName(
+                        value,
+                        keyRingStore?.keyInfos,
+                        registerConfig.mode
+                      ),
                   })}
-                  onChange={(event) => {
-                    const trimmedValue = event.target.value.trimStart();
-                    setValue(event.target.name as keyof FormData, trimmedValue);
+                  error={errors.name && errors.name.message}
+                  onChange={(e: any) => {
+                    const trimmedValue = e.target.value.trimStart();
+                    setValue(e.target.name, trimmedValue, {
+                      shouldValidate: true,
+                    });
                   }}
-                  // error={errors.name && errors.name.message}
                   maxLength={20}
                   style={{
                     width: "333px !important",
                   }}
                 />
-                {errors.name && errors.name.message && (
-                  <div className={style2["addressErrorText"]}>
-                    address is required
-                  </div>
-                )}
+                <div
+                  className={classNames(
+                    style["label"],
+                    "mb-1 text-xs",
+                    name === defaultAccountName ||
+                      (errors.name && errors.name.message)
+                      ? "invisible"
+                      : "visible"
+                  )}
+                >
+                  * (Account name for unselected networks will be{" "}
+                  {defaultAccountName})
+                </div>
+                <SelectNetwork
+                  selectedNetworks={selectedNetworks}
+                  disabled={name === defaultAccountName}
+                  onMultiSelectChange={(values) => {
+                    setSelectedNetworks(values);
+                  }}
+                />
                 {registerConfig.mode === "create" ? (
                   <div style={{ marginTop: "-20px" }}>
                     <PasswordInput
@@ -383,6 +433,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                         required: intl.formatMessage({
                           id: "register.create.input.password.error.required",
                         }),
+                        setValueAs: (value: string) => value.trim(),
                         validate: (password: string): string | undefined => {
                           if (password.length < 8) {
                             return intl.formatMessage({
@@ -391,6 +442,7 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                           }
                         },
                       })}
+                      placeholder="Enter Password (min 8 characters)"
                       error={errors.password && errors.password.message}
                     />
                     <PasswordInput
@@ -399,24 +451,56 @@ export const GenerateMnemonicModePage: React.FC<GenerateMnemonicModePageProps> =
                         required: intl.formatMessage({
                           id: "register.create.input.confirm-password.error.required",
                         }),
+                        setValueAs: (value: string) => value.trim(),
                         validate: (
                           confirmPassword: string
                         ): string | undefined => {
-                          if (confirmPassword !== getValues()["password"]) {
+                          if (confirmPassword !== password) {
                             return intl.formatMessage({
                               id: "register.create.input.confirm-password.error.unmatched",
                             });
                           }
                         },
                       })}
+                      placeholder="Confirm Password"
                       error={
                         errors.confirmPassword && errors.confirmPassword.message
                       }
                     />
+                    <div className="pt-2 space-y-1 text-sm">
+                      <PasswordStrengthMeter
+                        password={password}
+                        onStrengthChange={(score) =>
+                          setPasswordStrengthScore(score)
+                        }
+                      />
+                    </div>
+                    {passwordStrengthScore < 3 && password.length >= 8 && (
+                      <Checkbox
+                        isChecked={passwordCheckbox}
+                        className="py-2"
+                        setIsChecked={setPasswordCheckbox}
+                        label="I understand this password is not strong and still want to continue."
+                      />
+                    )}
                   </div>
                 ) : null}
                 <ButtonV2
-                  disabled={!!errors.password?.message}
+                  variant="dark"
+                  disabled={
+                    !!errors.password?.message ||
+                    (registerConfig.mode === "create" &&
+                      (Boolean(
+                        errors?.confirmPassword?.message ||
+                          errors?.password?.message
+                      ) ||
+                        (password !== "" &&
+                          passwordStrengthScore < 3 &&
+                          !passwordCheckbox))) ||
+                    areInputsEmpty ||
+                    (selectedNetworks.length === 0 &&
+                      name !== defaultAccountName)
+                  }
                   text={""}
                   styleProps={{ marginBottom: "20px", height: "56px" }}
                 >
@@ -435,8 +519,15 @@ export const VerifyMnemonicModePage: FunctionComponent<{
   newMnemonicConfig: NewMnemonicConfig;
   bip44Option: BIP44Option;
   setContinueClicked: any;
+  selectedNetworks: string[];
 }> = observer(
-  ({ registerConfig, newMnemonicConfig, bip44Option, setContinueClicked }) => {
+  ({
+    registerConfig,
+    newMnemonicConfig,
+    bip44Option,
+    setContinueClicked,
+    selectedNetworks,
+  }) => {
     const wordsSlice = useMemo(() => {
       const words = newMnemonicConfig.mnemonic.split(" ");
       for (let i = 0; i < words.length; i++) {
@@ -473,7 +564,7 @@ export const VerifyMnemonicModePage: FunctionComponent<{
       setRandomizedWords(words);
     }, [newMnemonicConfig.mnemonic]);
 
-    const { analyticsStore } = useStore();
+    const { analyticsStore, keyRingStore } = useStore();
 
     const handleClickFirstButton = (word: string, index: number) => {
       if (!clickedButtons.includes(index)) {
@@ -545,12 +636,14 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 <Button
                   className={style["button"]}
                   key={word + i.toString()}
-                  onClick={() =>
-                    handleClickFirstButton(
-                      word,
-                      rowIndex * firstButtonsPerRow + i
-                    )
-                  }
+                  onClick={() => {
+                    if (word !== " ") {
+                      handleClickFirstButton(
+                        word,
+                        rowIndex * firstButtonsPerRow + i
+                      );
+                    }
+                  }}
                 >
                   {word}
                 </Button>
@@ -558,6 +651,24 @@ export const VerifyMnemonicModePage: FunctionComponent<{
             </div>
           ))}
         </div>
+        <ButtonV2
+          styleProps={{
+            width: "fit-content",
+            padding: "10px 20px",
+            height: "auto",
+            fontSize: "14px",
+          }}
+          text="Clear All"
+          variant="dark"
+          onClick={() => {
+            setSuggestedWords(
+              Array(
+                newMnemonicConfig.numWords === NumWords.WORDS12 ? 12 : 24
+              ).fill(" ")
+            );
+            setDisabledButtons([]);
+          }}
+        />
         <hr />
         <div>
           <div className={style["buttons"]}>
@@ -573,9 +684,14 @@ export const VerifyMnemonicModePage: FunctionComponent<{
             ))}
           </div>
         </div>
-
         <ButtonV2
           text=""
+          variant={
+            registerConfig.isLoading ||
+            suggestedWords.join(" ") !== wordsSlice.join(" ")
+              ? "light"
+              : "dark"
+          }
           disabled={
             registerConfig.isLoading ||
             suggestedWords.join(" ") !== wordsSlice.join(" ")
@@ -585,11 +701,6 @@ export const VerifyMnemonicModePage: FunctionComponent<{
             marginBottom: "20px",
             height: "56px",
             borderRadius: "100px",
-            background:
-              registerConfig.isLoading ||
-              suggestedWords.join(" ") !== wordsSlice.join(" ")
-                ? "transparent"
-                : "white",
           }}
           onClick={async (e: any) => {
             e.preventDefault();
@@ -598,11 +709,26 @@ export const VerifyMnemonicModePage: FunctionComponent<{
                 newMnemonicConfig.name,
                 newMnemonicConfig.mnemonic,
                 newMnemonicConfig.password,
-                bip44Option.bip44HDPath
+                bip44Option.bip44HDPath,
+                {},
+                selectedNetworks
               );
+              // if we already have accounts, switch to the newly created account
+              if (registerConfig.mode !== "create") {
+                await keyRingStore.selectKeyRing(
+                  keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+                );
+                dispatchGlobalEventExceptSelf(
+                  "keplr_new_key_created",
+                  keyRingStore.keyInfos[keyRingStore.keyInfos.length - 1].id
+                );
+              }
               analyticsStore.setUserProperties({
                 registerType: "seed",
                 accountType: "mnemonic",
+              });
+              analyticsStore.logEvent("register_done_click", {
+                registerType: "seed",
               });
             } catch (e) {
               alert(e.message ? e.message : e.toString());

@@ -1,49 +1,32 @@
-import { KVStore } from "@keplr-wallet/common";
-import {
-  ObservableChainQuery,
-  ObservableChainQueryMap,
-} from "../../chain-query";
-import { ChainGetter } from "../../../common";
+import { ObservableQueryMap, ObservableQueryTendermint } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { DenomTraceResponse } from "./types";
-import { autorun, computed } from "mobx";
+import { computed } from "mobx";
+import { camelToSnake } from "../../../common";
+import { IbcExtension, setupIbcExtension } from "@cosmjs/stargate";
+import { QuerySharedContext } from "../../../common";
 
-export class ObservableChainQueryDenomTrace extends ObservableChainQuery<DenomTraceResponse> {
+export class ObservableChainQueryDenomTrace extends ObservableQueryTendermint<DenomTraceResponse> {
   protected disposer?: () => void;
 
   constructor(
-    kvStore: KVStore,
+    sharedContext: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly hash: string
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
     super(
-      kvStore,
-      chainId,
-      chainGetter,
-      `/ibc/applications/transfer/v1beta1/denom_traces/${hash}`
+      sharedContext,
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as IbcExtension;
+        const response = await client.ibc.transfer.denomTrace(this.hash);
+        return camelToSnake(response) as DenomTraceResponse;
+      },
+      setupIbcExtension,
+      `/ibc/apps/transfer/v1/denom_traces/${hash}`
     );
-  }
-
-  protected override onStart() {
-    super.onStart();
-
-    return new Promise<void>((resolve) => {
-      this.disposer = autorun(() => {
-        const chainInfo = this.chainGetter.getChain(this.chainId);
-        if (chainInfo.features && chainInfo.features.includes("ibc-go")) {
-          this.setUrl(`/ibc/apps/transfer/v1/denom_traces/${this.hash}`);
-        }
-        resolve();
-      });
-    });
-  }
-
-  protected override onStop() {
-    if (this.disposer) {
-      this.disposer();
-      this.disposer = undefined;
-    }
-    super.onStop();
   }
 
   @computed
@@ -55,22 +38,10 @@ export class ObservableChainQueryDenomTrace extends ObservableChainQuery<DenomTr
       return [];
     }
 
-    const rawPaths = this.response.data.denom_trace.path.split("/");
-
-    if (rawPaths.length % 2 !== 0) {
-      console.log("Failed to parse paths", rawPaths);
-      return [];
-    }
-
-    const rawPathChunks: string[][] = [];
-    for (let i = 0; i < rawPaths.length; i += 2) {
-      rawPathChunks.push(rawPaths.slice(i, i + 2));
-    }
-
-    return rawPathChunks.map((chunk) => {
+    return this.response.data.denom.trace.map((hop) => {
       return {
-        portId: chunk[0],
-        channelId: chunk[1],
+        portId: hop.port_id,
+        channelId: hop.channel_id,
       };
     });
   }
@@ -80,7 +51,7 @@ export class ObservableChainQueryDenomTrace extends ObservableChainQuery<DenomTr
       return undefined;
     }
 
-    return this.response.data.denom_trace.base_denom;
+    return this.response.data.denom.base;
   }
 
   @computed
@@ -104,17 +75,17 @@ export class ObservableChainQueryDenomTrace extends ObservableChainQuery<DenomTr
   }
 }
 
-export class ObservableQueryDenomTrace extends ObservableChainQueryMap<DenomTraceResponse> {
+export class ObservableQueryDenomTrace extends ObservableQueryMap<DenomTraceResponse> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    sharedContext: QuerySharedContext,
+    chainId: string,
+    chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (hash: string) => {
+    super((hash: string) => {
       return new ObservableChainQueryDenomTrace(
-        this.kvStore,
-        this.chainId,
-        this.chainGetter,
+        sharedContext,
+        chainId,
+        chainGetter,
         hash
       );
     });

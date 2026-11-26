@@ -1,35 +1,67 @@
-import { ObservableChainQuery } from "../../chain-query";
-import { Proposal, ProposalStatus, ProposalTally } from "./types";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../../common";
+import { ObservableQueryTendermint, QuerySharedContext } from "../../../common";
+import { ChainGetter } from "../../../chain";
 import { computed, makeObservable } from "mobx";
-import { DeepReadonly } from "utility-types";
 import { CoinPretty, Dec, DecUtils, Int, IntPretty } from "@keplr-wallet/unit";
 import { ObservableQueryGovernance } from "./proposals";
+import { GovExtension, setupGovExtension } from "@cosmjs/stargate";
+import { QueryTallyResultResponse } from "cosmjs-types/cosmos/gov/v1beta1/query";
+import { Proposal, ProposalStatus } from "./types";
 
-export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally> {
+export class ObservableQueryProposal extends ObservableQueryTendermint<QueryTallyResultResponse> {
+  protected readonly chainGetter: ChainGetter;
+  protected readonly chainId: string;
+
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
     protected readonly _raw: Proposal,
     protected readonly governance: ObservableQueryGovernance
   ) {
+    const chainInfo = chainGetter.getChain(chainId);
+    const proposalId = _raw.proposal_id;
     super(
       kvStore,
-      chainId,
-      chainGetter,
-      `/cosmos/gov/v1beta1/proposals/${_raw.proposal_id}/tally`
+      chainInfo.rpc,
+      async (queryClient) => {
+        const client = queryClient as unknown as GovExtension;
+        const result = await client.gov.tally(proposalId);
+        return result;
+      },
+      setupGovExtension,
+      `/cosmos/gov/v1beta1/proposals/${proposalId}/tally`
     );
     makeObservable(this);
+    this.chainId = chainId;
+    this.chainGetter = chainGetter;
   }
 
   protected override canFetch(): boolean {
-    return this.proposalStatus === ProposalStatus.VOTING_PERIOD;
+    // avoid fetching the endpoint for evm networks
+    const chainInfo = this.chainGetter.getChain(this.chainId);
+    const isEvm =
+      Boolean(
+        chainInfo.features?.includes("eth-key-sign") &&
+          chainInfo.features?.includes("eth-address-gen") &&
+          chainInfo.evm
+      ) ?? false;
+    return this.proposalStatus === ProposalStatus.VOTING_PERIOD && !isEvm;
   }
 
-  get raw(): DeepReadonly<Proposal> {
+  get raw() {
     return this._raw;
+  }
+
+  get id(): string {
+    return this.raw.proposal_id;
+  }
+
+  get title(): string {
+    return this.raw.content.title;
+  }
+
+  get description(): string {
+    return this.raw.content.description;
   }
 
   get proposalStatus(): ProposalStatus {
@@ -47,18 +79,6 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
       default:
         return ProposalStatus.UNSPECIFIED;
     }
-  }
-
-  get id(): string {
-    return this.raw.proposal_id;
-  }
-
-  get title(): string {
-    return this.raw.content.title;
-  }
-
-  get description(): string {
-    return this.raw.content.description;
   }
 
   @computed
@@ -104,19 +124,19 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
     if (this.proposalStatus !== ProposalStatus.VOTING_PERIOD) {
       return {
         yes: new IntPretty(new Int(this.raw.final_tally_result.yes))
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         no: new IntPretty(new Int(this.raw.final_tally_result.no))
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         abstain: new IntPretty(new Int(this.raw.final_tally_result.abstain))
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         noWithVeto: new IntPretty(
           new Int(this.raw.final_tally_result.no_with_veto)
         )
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
       };
     }
 
@@ -124,36 +144,36 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
       return {
         yes: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         no: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         abstain: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
         noWithVeto: new IntPretty(new Int(0))
           .ready(false)
-          .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-          .maxDecimals(stakeCurrency.coinDecimals),
+          .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+          .maxDecimals(stakeCurrency?.coinDecimals || 0),
       };
     }
 
     return {
       yes: new IntPretty(new Int(this.response.data.tally.yes))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
       no: new IntPretty(new Int(this.response.data.tally.no))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
       abstain: new IntPretty(new Int(this.response.data.tally.abstain))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
-      noWithVeto: new IntPretty(new Int(this.response.data.tally.no_with_veto))
-        .moveDecimalPointLeft(stakeCurrency.coinDecimals)
-        .maxDecimals(stakeCurrency.coinDecimals),
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
+      noWithVeto: new IntPretty(new Int(this.response.data.tally.noWithVeto))
+        .moveDecimalPointLeft(stakeCurrency?.coinDecimals || 0)
+        .maxDecimals(stakeCurrency?.coinDecimals || 0),
     };
   }
 
@@ -167,7 +187,10 @@ export class ObservableQueryProposal extends ObservableChainQuery<ProposalTally>
 
     const stakeCurrency = this.chainGetter.getChain(this.chainId).stakeCurrency;
 
-    return new CoinPretty(stakeCurrency, tallySum);
+    return new CoinPretty(
+      stakeCurrency || this.chainGetter.getChain(this.chainId).currencies[0],
+      tallySum
+    );
   }
 
   @computed

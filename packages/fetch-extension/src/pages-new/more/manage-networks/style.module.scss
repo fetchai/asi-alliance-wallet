@@ -53,3 +53,7 @@
     }
   }
 }
+
+div[class^="innerContainer-sidePanel"] .chainListContainer {
+  overflow-y: visible !important;
+}

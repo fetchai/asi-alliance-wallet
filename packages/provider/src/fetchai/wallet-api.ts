@@ -3,14 +3,15 @@ import {
   AccountsApi,
   AddressBookApi,
   AddressBookEntry,
-  NetworkConfig,
   NetworksApi,
   SigningApi,
   WalletApi,
   WalletStatus,
+  ChainInfoWithCoreTypes,
 } from "@fetchai/wallet-types";
 import {
   AminoSignResponse,
+  ChainInfo,
   DirectSignResponse,
   EthSignType,
   KeplrIntereactionOptions,
@@ -114,19 +115,19 @@ export class InjectedFetchAccount implements AccountsApi {
 export class InjectedFetchNetworks implements NetworksApi {
   constructor(protected readonly proxy: Proxy) {}
 
-  async getNetwork(): Promise<NetworkConfig> {
+  async getNetwork(): Promise<ChainInfoWithCoreTypes | undefined> {
     return await this.requestViaProxy("getNetwork", []);
   }
 
-  async switchToNetwork(network: NetworkConfig): Promise<void> {
-    return await this.requestViaProxy("switchToNetwork", [network]);
+  async switchToNetwork(chain: ChainInfo): Promise<void> {
+    return await this.requestViaProxy("switchToNetwork", [chain]);
   }
 
   async switchToNetworkByChainId(chainId: string): Promise<void> {
     return await this.requestViaProxy("switchToNetworkByChainId", [chainId]);
   }
 
-  async listNetworks(): Promise<NetworkConfig[]> {
+  async listNetworks(): Promise<ChainInfoWithCoreTypes[]> {
     return await this.requestViaProxy("listNetworks", []);
   }
 

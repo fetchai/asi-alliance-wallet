@@ -184,7 +184,7 @@ export const FetchhubBridge: FunctionComponent<{
       }}
     >
       <Card
-        style={{ background: "rgba(255,255,255,0.1)", marginBottom: "18px" }}
+        style={{ marginBottom: "18px" }}
         heading={`Native to ERC20 Limit: ${limit} FET`}
       />
       <div className={style["formInnerContainer"]}>
@@ -200,18 +200,29 @@ export const FetchhubBridge: FunctionComponent<{
           recipientConfig={nativeBridgeConfig.recipientConfig}
           value={""}
         />
-        {keyRingStore.keyRingType !== "ledger" && (
+        {keyRingStore.selectedKeyInfo?.type !== "ledger" && (
           <div
             className={style["addressSelector"]}
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              nativeBridgeConfig.recipientConfig.setRawRecipient(
-                accountStore.getAccount("1").ethereumHexAddress
-              );
+              const ethAddress =
+                accountStore.getAccount("eip155:1").ethereumHexAddress;
+              nativeBridgeConfig.recipientConfig.setRawRecipient(ethAddress);
+              await navigator.clipboard.writeText(ethAddress);
+              notification.push({
+                placement: "top-center",
+                type: "success",
+                duration: 2,
+                content: "Address Copied",
+                canDelete: true,
+                transition: {
+                  duration: 0.25,
+                },
+              });
             }}
           >
             Bridge to your Ethereum address:{" "}
-            {accountStore.getAccount("1").ethereumHexAddress}
+            {accountStore.getAccount("eip155:1").ethereumHexAddress}
           </div>
         )}
         <div className={style["hr"]} />
@@ -224,9 +235,7 @@ export const FetchhubBridge: FunctionComponent<{
         {fee && (
           <Card
             style={{
-              background: "rgba(255, 255, 255, 0.1)",
               marginTop: "18px",
-              color: "rgba(255,255,255,0.8)",
             }}
             heading={"Bridging fee"}
             subheading={
@@ -250,8 +259,9 @@ export const FetchhubBridge: FunctionComponent<{
         />
 
         <ButtonV2
+          variant="dark"
           styleProps={{
-            width: "336px",
+            width: "94%",
             padding: "12px",
             height: "56px",
             margin: "0 auto",

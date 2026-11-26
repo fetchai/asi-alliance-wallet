@@ -1,10 +1,18 @@
 import React from "react";
 import style from "./style.module.scss";
-import { formatActivityHash } from "@utils/format";
+import { formatToTruncated } from "@utils/format";
 import { ButtonV2 } from "@components-v2/buttons/button";
 import { useNavigate } from "react-router";
 import { AppCurrency } from "@keplr-wallet/types";
 import { DetailRow } from "./detail-row";
+import { useStore } from "../../../stores";
+import { useNotification } from "@components/notification";
+import {
+  CHAIN_ID_DORADO,
+  CHAIN_ID_FETCHHUB,
+  CHAIN_ID_GEMINI,
+} from "../../../config.ui.var";
+import { explorerBaseURL } from "@utils/index";
 
 export const DetailRows = ({ details }: { details: any }) => {
   const currency: AppCurrency = {
@@ -16,14 +24,37 @@ export const DetailRows = ({ details }: { details: any }) => {
   const fees = JSON.parse(details.fees);
   const { feeNumber, feeAlphabetic } = details;
   const navigate = useNavigate();
+  const notification = useNotification();
+  const { chainStore, analyticsStore } = useStore();
+  const chainId = chainStore.current.chainId;
+
   const handleClick = () => {
-    const mintscanURL = `https://www.mintscan.io/fetchai/tx/${details.hash}/`;
-    window.open(mintscanURL, "_blank");
+    const explorerURL = explorerBaseURL(chainId);
+    if (!explorerURL) {
+      return;
+    }
+    const url = `${explorerURL}/transactions/${details.hash}/`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    analyticsStore.logEvent("view_on_mintscan_click", {
+      chainId,
+      chainName: chainStore.current.chainName,
+      pageName: "Activity Detail",
+    });
   };
   const handleValidatorClicked = () => {
     navigate(`/validator/${details.validatorAddress}/delegate`);
+    analyticsStore.logEvent("stake_click", {
+      chainId: chainStore.current.chainId,
+      chainName: chainStore.current.chainName,
+      pageName: "Activity Detail",
+    });
   };
   const handleSendClicked = () => {
+    analyticsStore.logEvent("send_click", {
+      chainId: chainStore.current.chainId,
+      chainName: chainStore.current.chainName,
+      pageName: "Activity Detail",
+    });
     navigate("/send", {
       replace: true,
       state: {
@@ -41,13 +72,38 @@ export const DetailRows = ({ details }: { details: any }) => {
     });
   };
 
+  async function copyAddress(address: string) {
+    await navigator.clipboard.writeText(address);
+    notification.push({
+      placement: "top-center",
+      type: "success",
+      duration: 2,
+      content: "Transaction Hash Copied",
+      canDelete: true,
+      transition: {
+        duration: 0.25,
+      },
+    });
+  }
+
   return (
     <div className={style["detail-rows"]}>
       <DetailRow
         label="Transaction Hash"
-        value={formatActivityHash(details.hash)}
+        value={formatToTruncated(details.hash)}
+        onClick={() => copyAddress(details.hash)}
       />
       <DetailRow label="Chain ID" value={details.chainId} />
+      {details.verb === "Governance Proposal" && (
+        <React.Fragment>
+          {details.proposalType && (
+            <DetailRow label="Proposal Type" value={details.proposalType} />
+          )}
+          {details.proposalTitle && (
+            <DetailRow label="Proposal Title" value={details.proposalTitle} />
+          )}
+        </React.Fragment>
+      )}
       {details.verb !== "Sent" &&
         details.verb !== "Unstaked" &&
         details.verb !== "Smart Contract Interaction" && (
@@ -62,14 +118,21 @@ export const DetailRows = ({ details }: { details: any }) => {
               label="Fees"
               value={fees.length > 0 ? `${feeNumber} ${feeAlphabetic}` : "-"}
             />
-            <DetailRow
-              label="Memo"
-              value={details.memo == "" ? "-" : details.memo}
-            />
           </React.Fragment>
         )}
       <DetailRow
-        label={`Total ${details.verb === "Sent" ? "estimated" : "amount"}`}
+        label="Memo"
+        value={details.memo.length > 0 ? details.memo : "-"}
+        showTooltip={details.memo.length > 0}
+      />
+      <DetailRow
+        label={`Total ${
+          details.verb === "Sent"
+            ? "estimated"
+            : details.verb === "Governance Proposal"
+            ? "deposit"
+            : "amount"
+        }`}
         value={`${details.amountNumber} ${details.amountAlphabetic}`}
       />
       <div
@@ -82,9 +145,6 @@ export const DetailRows = ({ details }: { details: any }) => {
           <div className={style["buttons"]} style={{ width: "100%" }}>
             <ButtonV2
               styleProps={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.6",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -118,34 +178,38 @@ export const DetailRows = ({ details }: { details: any }) => {
                 </React.Fragment>
               )}
             </ButtonV2>{" "}
+            {[CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
+              chainId
+            ) &&
+              ["Success", "Failed"].includes(details.status) && (
+                <ButtonV2
+                  styleProps={{
+                    height: "48px",
+                    marginTop: 0,
+                  }}
+                  text=""
+                  onClick={handleClick}
+                >
+                  View on explorer
+                </ButtonV2>
+              )}
+          </div>
+        ) : (
+          [CHAIN_ID_DORADO, CHAIN_ID_FETCHHUB, CHAIN_ID_GEMINI].includes(
+            chainId
+          ) &&
+          ["Success", "Failed"].includes(details.status) && (
             <ButtonV2
               styleProps={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.6",
                 height: "48px",
                 marginTop: 0,
               }}
-              text=""
               onClick={handleClick}
+              text=""
             >
-              View on Mintscan
+              View on explorer
             </ButtonV2>
-          </div>
-        ) : (
-          <ButtonV2
-            styleProps={{
-              background: "transparent",
-              color: "white",
-              border: "1px solid rgba(255, 255, 255, 0.6",
-              height: "48px",
-              marginTop: 0,
-            }}
-            onClick={handleClick}
-            text=""
-          >
-            View on Mintscan
-          </ButtonV2>
+          )
         )}
       </div>
     </div>

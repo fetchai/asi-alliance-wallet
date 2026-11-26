@@ -8,32 +8,25 @@ import {
   DirectSignResponse,
   OfflineDirectSigner,
   EthSignType,
+  Key,
+  ChainInfo,
 } from "@keplr-wallet/types";
 import { Bech32Address } from "@keplr-wallet/cosmos";
 import {
   EnableAccessMsg,
-  StatusMsg,
-  UnlockWalletMsg,
-  LockWalletMsg,
   SwitchAccountMsg,
-  ListAccountsMsg,
   GetNetworkMsg,
-  ListNetworksMsg,
-  CurrentAccountMsg,
-  RequestSignAminoMsgFetchSigning,
-  RequestSignDirectMsgFetchSigning,
-  RequestVerifyADR36AminoSignDocFetchSigning,
-  AddNetworkAndSwitchMsg,
   SwitchNetworkByChainIdMsg,
-  GetAccountMsg,
   ListEntriesMsg,
   AddEntryMsg,
   UpdateEntryMsg,
   DeleteEntryMsg,
-  RestoreWalletMsg,
-  GetKeyMsgFetchSigning,
-  DisableAccessMsg,
-} from "../types";
+  GetChainInfosWithCoreTypesMsg,
+  LockKeyRingMsg,
+  GetKeyRingStatusOnlyMsg,
+  GetCosmosKeysForEachVaultSettledMsg,
+  GetKeyRingStatusMsg,
+} from "../types/msgs";
 import deepmerge from "deepmerge";
 
 import { BACKGROUND_PORT, MessageRequester } from "@keplr-wallet/router";
@@ -48,7 +41,7 @@ import {
   WalletStatus,
   AddressBookApi,
   AddressBookEntry,
-  NetworkConfig,
+  ChainInfoWithCoreTypes,
 } from "@fetchai/wallet-types";
 
 import {
@@ -65,59 +58,68 @@ export class FetchWalletApi implements WalletApi {
     public accounts: AccountsApi,
     public signing: SigningApi,
     public addressBook: AddressBookApi,
-    protected readonly requester: MessageRequester
+    protected readonly requester: MessageRequester,
+    public readonly keplr: Keplr
   ) {}
 
   async status(): Promise<WalletStatus> {
-    return await this.requester.sendMessage(BACKGROUND_PORT, new StatusMsg());
+    const res = await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new GetKeyRingStatusOnlyMsg()
+    );
+    switch (res.status) {
+      case "empty":
+        return WalletStatus.EMPTY;
+      case "locked":
+        return WalletStatus.LOCKED;
+      case "unlocked":
+        return WalletStatus.UNLOCKED;
+      default:
+        return WalletStatus.NOTLOADED;
+    }
   }
 
   async unlockWallet(): Promise<void> {
-    await this.requester.sendMessage(BACKGROUND_PORT, new UnlockWalletMsg());
+    const network = await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new GetNetworkMsg()
+    );
+    const chainId = network?.chainId || "";
+    await this.keplr.enable(chainId);
   }
 
   async lockWallet(): Promise<void> {
-    await this.requester.sendMessage(BACKGROUND_PORT, new LockWalletMsg());
+    await this.requester.sendMessage(BACKGROUND_PORT, new LockKeyRingMsg());
   }
 
   async restoreWallet(): Promise<WalletStatus> {
-    return await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new RestoreWalletMsg()
-    );
+    // Keyring loads at background init; no separate restore step remains.
+    return this.status();
   }
 
   async enable(chainIds: string | string[]): Promise<void> {
-    if (typeof chainIds === "string") {
-      chainIds = [chainIds];
-    }
-
-    await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new EnableAccessMsg(chainIds)
-    );
+    await this.keplr.enable(chainIds);
   }
 
   async disable(chainIds?: string | string[]): Promise<void> {
-    if (typeof chainIds === "string") {
-      chainIds = [chainIds];
-    }
-
-    await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new DisableAccessMsg(chainIds ?? [])
-    );
+    await this.keplr.disable(chainIds);
   }
 }
 
 export class FetchAccount implements AccountsApi {
-  constructor(protected readonly requester: MessageRequester) {}
+  constructor(
+    protected readonly requester: MessageRequester,
+    public keplr: Keplr
+  ) {}
 
   async currentAccount(): Promise<Account> {
-    return await this.requester.sendMessage(
+    const network = await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new CurrentAccountMsg()
+      new GetNetworkMsg()
     );
+    const chainId = network?.chainId || "";
+    const key = await this.keplr.getKey(chainId);
+    return { ...key, EVMAddress: key.ethereumHexAddress };
   }
 
   async switchAccount(address: string): Promise<void> {
@@ -128,41 +130,62 @@ export class FetchAccount implements AccountsApi {
   }
 
   async listAccounts(): Promise<Account[]> {
-    return await this.requester.sendMessage(
+    const network = await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new ListAccountsMsg()
+      new GetNetworkMsg()
     );
+    const chainId = network?.chainId || "";
+    if (!chainId) {
+      return [];
+    }
+
+    const keyInfos = await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new GetKeyRingStatusMsg()
+    );
+    const vaultIds = keyInfos.keyInfos.map((keyInfo: any) => keyInfo.id);
+    const accountsResponse: any = await this.requester.sendMessage(
+      BACKGROUND_PORT,
+      new GetCosmosKeysForEachVaultSettledMsg(chainId, vaultIds)
+    );
+    const accounts: Key[] = accountsResponse.map((item: any) => item.value);
+    const accountsTransformed = accounts.map((item) => ({
+      ...item,
+      EVMAddress: item.ethereumHexAddress,
+    }));
+    return accountsTransformed;
   }
 
   async getAccount(address: string): Promise<Account | null> {
-    return await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new GetAccountMsg(address)
+    const accounts = await this.listAccounts();
+    const foundAccount = accounts?.find(
+      (item) => item.bech32Address === address || item.EVMAddress === address
     );
+    return foundAccount ? foundAccount : null;
   }
 }
 
 export class FetchNetworks implements NetworksApi {
-  constructor(protected readonly requester: MessageRequester) {}
+  constructor(
+    protected readonly requester: MessageRequester,
+    public readonly keplr: Keplr
+  ) {}
 
-  async getNetwork(): Promise<NetworkConfig> {
+  async getNetwork(): Promise<ChainInfoWithCoreTypes | undefined> {
     return await this.requester.sendMessage(
       BACKGROUND_PORT,
       new GetNetworkMsg()
     );
   }
 
-  async switchToNetwork(network: NetworkConfig): Promise<void> {
+  async switchToNetwork(chain: ChainInfo): Promise<void> {
     // Add network
-    await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new AddNetworkAndSwitchMsg(network)
-    );
+    await this.keplr.experimentalSuggestChain(chain);
 
     // enable access
     await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new EnableAccessMsg([network.chainId])
+      new EnableAccessMsg([chain.chainId])
     );
   }
 
@@ -173,24 +196,27 @@ export class FetchNetworks implements NetworksApi {
     );
   }
 
-  async listNetworks(): Promise<NetworkConfig[]> {
-    return await this.requester.sendMessage(
+  async listNetworks(): Promise<ChainInfoWithCoreTypes[]> {
+    const chainInfo = await this.requester.sendMessage(
       BACKGROUND_PORT,
-      new ListNetworksMsg()
+      new GetChainInfosWithCoreTypesMsg()
     );
+
+    return chainInfo.chainInfos;
   }
 }
 
 export class FetchSigning implements SigningApi {
   public defaultOptions: KeplrIntereactionOptions = {};
 
-  constructor(protected readonly requester: MessageRequester) {}
+  constructor(
+    protected readonly requester: MessageRequester,
+    public keplr: Keplr
+  ) {}
 
   async getCurrentKey(chainId: string): Promise<Account> {
-    return await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new GetKeyMsgFetchSigning(chainId)
-    );
+    const key = await this.keplr.getKey(chainId);
+    return { ...key, EVMAddress: key.ethereumHexAddress };
   }
 
   async signAmino(
@@ -199,13 +225,12 @@ export class FetchSigning implements SigningApi {
     signDoc: StdSignDoc,
     signOptions: KeplrSignOptions = {}
   ): Promise<AminoSignResponse> {
-    const msg = new RequestSignAminoMsgFetchSigning(
+    return await this.keplr.signAmino(
       chainId,
       signer,
       signDoc,
       deepmerge(this.defaultOptions.sign ?? {}, signOptions)
     );
-    return await this.requester.sendMessage(BACKGROUND_PORT, msg);
   }
 
   async signDirect(
@@ -219,30 +244,17 @@ export class FetchSigning implements SigningApi {
     },
     signOptions: KeplrSignOptions = {}
   ): Promise<DirectSignResponse> {
-    const msg = new RequestSignDirectMsgFetchSigning(
+    return await this.keplr.signDirect(
       chainId,
       signer,
       {
         bodyBytes: signDoc.bodyBytes,
         authInfoBytes: signDoc.authInfoBytes,
         chainId: signDoc.chainId,
-        accountNumber: signDoc.accountNumber
-          ? signDoc.accountNumber.toString()
-          : null,
+        accountNumber: signDoc?.accountNumber,
       },
       deepmerge(this.defaultOptions.sign ?? {}, signOptions)
     );
-    const response = await this.requester.sendMessage(BACKGROUND_PORT, msg);
-
-    return {
-      signed: {
-        bodyBytes: response.signed.bodyBytes,
-        authInfoBytes: response.signed.authInfoBytes,
-        chainId: response.signed.chainId,
-        accountNumber: Long.fromString(response.signed.accountNumber),
-      },
-      signature: response.signature,
-    };
   }
 
   async signArbitrary(
@@ -250,14 +262,7 @@ export class FetchSigning implements SigningApi {
     signer: string,
     data: string | Uint8Array
   ): Promise<StdSignature> {
-    let isADR36WithString: boolean;
-    [data, isADR36WithString] = this.getDataForADR36(data);
-    const signDoc = this.getADR36SignDoc(signer, data);
-    const msg = new RequestSignAminoMsgFetchSigning(chainId, signer, signDoc, {
-      isADR36WithString,
-    });
-    const signData = await this.requester.sendMessage(BACKGROUND_PORT, msg);
-    return signData.signature;
+    return await this.keplr.signArbitrary(chainId, signer, data);
   }
 
   async verifyArbitrary(
@@ -266,33 +271,20 @@ export class FetchSigning implements SigningApi {
     data: string | Uint8Array,
     signature: StdSignature
   ): Promise<boolean> {
-    if (typeof data === "string") {
-      data = Buffer.from(data);
-    }
-
-    return await this.requester.sendMessage(
-      BACKGROUND_PORT,
-      new RequestVerifyADR36AminoSignDocFetchSigning(
-        chainId,
-        signer,
-        data,
-        signature
-      )
-    );
+    return await this.keplr.verifyArbitrary(chainId, signer, data, signature);
   }
 
   async signEthereum(
     data: string | Uint8Array,
     type: EthSignType
   ): Promise<Uint8Array> {
-    let isADR36WithString: boolean;
-    [data, isADR36WithString] = this.getDataForADR36(data);
+    [data] = this.getDataForADR36(data);
 
     const network = await this.requester.sendMessage(
       BACKGROUND_PORT,
       new GetNetworkMsg()
     );
-    const chainId = network.chainId;
+    const chainId = network?.chainId || "";
     const key = await this.getCurrentKey(chainId);
 
     let signer;
@@ -300,23 +292,14 @@ export class FetchSigning implements SigningApi {
       signer = key.bech32Address;
     } else {
       signer = new Bech32Address(key.address).toBech32(
-        network.bech32Config.bech32PrefixAccAddr
+        network?.bech32Config?.bech32PrefixAccAddr || ""
       );
     }
-
-    const signDoc = this.getADR36SignDoc(signer, data);
 
     if (data === "") {
       throw new Error("Signing empty data is not supported.");
     }
-
-    const msg = new RequestSignAminoMsgFetchSigning(chainId, signer, signDoc, {
-      isADR36WithString,
-      ethSignType: type,
-    });
-    const signature = (await this.requester.sendMessage(BACKGROUND_PORT, msg))
-      .signature;
-    return Buffer.from(signature.signature, "base64");
+    return await this.keplr.signEthereum(chainId, signer, data, type);
   }
 
   async getOfflineSigner(
@@ -405,11 +388,12 @@ export class ExtensionCoreFetchWallet implements FetchBrowserWallet {
     this.keplr = keplr;
     this.version = version;
     this.wallet = new FetchWalletApi(
-      new FetchNetworks(_requester),
-      new FetchAccount(_requester),
-      new FetchSigning(_requester),
+      new FetchNetworks(_requester, this.keplr),
+      new FetchAccount(_requester, this.keplr),
+      new FetchSigning(_requester, this.keplr),
       new FetchAddressBook(_requester),
-      _requester
+      _requester,
+      this.keplr
     );
   }
 }

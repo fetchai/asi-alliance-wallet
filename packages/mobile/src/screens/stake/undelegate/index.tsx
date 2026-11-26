@@ -26,6 +26,11 @@ import { TransactionFeeModel } from "components/new/fee-modal/transection-fee-mo
 import Toast from "react-native-toast-message";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { txnTypeKey } from "components/new/txn-status.tsx";
+import {
+  formatBalance,
+  formatFiatBalance,
+  formatFeeAmount,
+} from "utils/format/format";
 
 export const UndelegateScreen: FunctionComponent = observer(() => {
   const route = useRoute<
@@ -116,7 +121,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
   useEffect(() => {
     const inputValueInUsd = convertToUsd(staked);
@@ -127,22 +132,20 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
     ? ` (${inputInUsd} ${priceStore.defaultVsCurrency.toUpperCase()})`
     : "";
 
-  const availableBalance = `${staked
-    .trim(true)
-    .shrink(true)
-    .maxDecimals(6)
-    .toString()}${Usd}`;
-
   const isEvm = chainStore.current.features?.includes("evm") ?? false;
-  const feePrice = sendConfigs.feeConfig.getFeeTypePretty(
-    sendConfigs.feeConfig.feeType ? sendConfigs.feeConfig.feeType : "average"
-  );
+  const feePrice = sendConfigs.feeConfig.isManual
+    ? sendConfigs.feeConfig.fee
+    : sendConfigs.feeConfig.getFeeTypePretty(
+        sendConfigs.feeConfig.feeType
+          ? sendConfigs.feeConfig.feeType
+          : "average"
+      );
 
   const unstakeBalance = async () => {
     if (!networkIsConnected) {
       Toast.show({
         type: "error",
-        text1: "No internet connection",
+        text1: "No Internet Connection",
       });
       return;
     }
@@ -180,7 +183,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         ) {
           Toast.show({
             type: "error",
-            text1: "Transaction rejected",
+            text1: "Transaction Rejected",
           });
           return;
         } else {
@@ -203,39 +206,41 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
 
   return (
     <PageWithScrollView
-      backgroundMode="image"
+      backgroundMode="secondary"
       style={style.flatten(["padding-x-page", "overflow-scroll"]) as ViewStyle}
       contentContainerStyle={style.get("flex-grow-1")}
     >
-      <View
-        style={
-          [
+      <View style={style.flatten(["margin-y-16"]) as ViewStyle}>
+        <Text
+          style={
             style.flatten([
-              "flex-row",
-              "items-center",
-              "border-width-1",
-              "border-color-white@20%",
-              "border-radius-12",
-              "padding-12",
-              "justify-between",
-              "margin-y-16",
-            ]),
-          ] as ViewStyle
-        }
-      >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+              "body3",
+              "color-gray-300",
+              "margin-bottom-8",
+            ]) as ViewStyle
+          }
+        >
           Current staked amount
         </Text>
-        <Text style={style.flatten(["subtitle3", "color-white"]) as ViewStyle}>
-          {staked.trim(true).shrink(true).maxDecimals(6).toString()}
-        </Text>
+        <View
+          style={{
+            backgroundColor: "#f6f6f6",
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 12,
+          }}
+        >
+          <Text style={style.flatten(["body3", "color-dark"]) as ViewStyle}>
+            {formatBalance(staked)}
+          </Text>
+        </View>
       </View>
       <StakeAmountInput
         label="Amount"
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -248,12 +253,12 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
       <Text
         style={
           style.flatten([
-            "color-white@60%",
+            "color-gray-300",
             "text-caption2",
             "margin-top-8",
           ]) as ViewStyle
         }
-      >{`Available: ${availableBalance}`}</Text>
+      >{`Available: ${formatBalance(staked)}${Usd}`}</Text>
       <UseMaxButton
         amountConfig={sendConfigs.amountConfig}
         isToggleClicked={isToggleClicked}
@@ -265,7 +270,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         labelStyle={
           style.flatten([
             "body3",
-            "color-white@60%",
+            "color-gray-300",
             "padding-y-0",
             "margin-y-0",
             "margin-bottom-8",
@@ -280,7 +285,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           style.flatten([
             "margin-y-16",
             "padding-12",
-            "background-color-cardColor@25%",
+            "background-color-gray-50",
             "flex-row",
             "border-radius-12",
           ]) as ViewStyle
@@ -294,7 +299,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           <CircleExclamationIcon />
         </View>
         <Text
-          style={style.flatten(["body3", "color-white", "flex-1"]) as ViewStyle}
+          style={style.flatten(["body3", "color-dark", "flex-1"]) as ViewStyle}
         >
           Your tokens will go through a 21-day unstaking process
         </Text>
@@ -309,20 +314,37 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
           ]) as ViewStyle
         }
       >
-        <Text style={style.flatten(["body3", "color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["body3", "color-gray-300"]) as ViewStyle}>
           Transaction fee:
         </Text>
-        <View style={style.flatten(["flex-row", "items-center"]) as ViewStyle}>
-          <Text
-            style={
+        <View
+          style={
+            [
               style.flatten([
-                "body3",
-                "color-white",
-                "margin-right-6",
-              ]) as ViewStyle
+                "flex-row",
+                "items-center",
+                "flex-1",
+                "justify-end",
+              ]),
+            ] as ViewStyle
+          }
+        >
+          <Text
+            numberOfLines={1}
+            style={
+              [
+                style.flatten([
+                  "body3",
+                  "color-dark",
+                  "margin-x-6",
+                  "flex-shrink-1",
+                ]),
+              ] as ViewStyle
             }
           >
-            {feePrice.hideIBCMetadata(true).trim(true).toMetricPrefix(isEvm)}
+            {feePrice
+              ? formatFeeAmount(feePrice.hideIBCMetadata(true), isEvm)
+              : ""}
           </Text>
           <IconButton
             backgroundBlur={false}
@@ -330,8 +352,8 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
               <GearIcon
                 color={
                   activityStore.getPendingTxnTypes[txnTypeKey.undelegate]
-                    ? style.get("color-white@20%").color
-                    : "white"
+                    ? "#DCDCE3"
+                    : "#151a1a"
                 }
               />
             }
@@ -343,8 +365,8 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
                 "justify-center",
                 "border-width-1",
                 activityStore.getPendingTxnTypes[txnTypeKey.undelegate]
-                  ? "border-color-white@20%"
-                  : "border-color-white@40%",
+                  ? "border-color-gray-100"
+                  : "border-color-gray-100",
               ]) as ViewStyle
             }
             disable={activityStore.getPendingTxnTypes[txnTypeKey.undelegate]}
@@ -372,9 +394,13 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         text="Confirm"
         disabled={!account.isReadyToSendTx || !txStateIsValid}
         loading={activityStore.getPendingTxnTypes[txnTypeKey.undelegate]}
-        textStyle={style.flatten(["body2"]) as ViewStyle}
+        textStyle={style.flatten(["body2", "color-white"]) as ViewStyle}
         containerStyle={
-          style.flatten(["margin-top-16", "border-radius-32"]) as ViewStyle
+          style.flatten([
+            "margin-top-16",
+            "border-radius-32",
+            "background-color-dark",
+          ]) as ViewStyle
         }
         onPress={unstakeBalance}
       />
@@ -386,8 +412,7 @@ export const UndelegateScreen: FunctionComponent = observer(() => {
         }}
         txnHash={txnHash}
         chainId={chainStore.current.chainId}
-        buttonText="Go to activity screen"
-        onHomeClick={() => navigation.navigate("ActivityTab", {})}
+        onHomeClick={() => navigation.navigate("Home", {})}
         onTryAgainClick={unstakeBalance}
       />
       <TransactionFeeModel

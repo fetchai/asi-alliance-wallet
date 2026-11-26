@@ -8,10 +8,11 @@ export const TokenGraphSection: FunctionComponent<{
   totalNumber: string;
   totalDenom: string;
   tokenName?: string;
-}> = observer(({ totalNumber, totalDenom, tokenName }) => {
+}> = observer(({ tokenName }) => {
   const style = useStyle();
 
   const [tokenState, setTokenState] = useState({
+    percentageDiff: 0,
     diff: 0,
     time: "TODAY",
     type: "positive",
@@ -19,8 +20,8 @@ export const TokenGraphSection: FunctionComponent<{
 
   const changeInDollarsValue =
     tokenState.type === "positive"
-      ? (parseFloat(totalNumber) * tokenState.diff) / 100
-      : -(parseFloat(totalNumber) * tokenState.diff) / 100;
+      ? tokenState.diff / 100
+      : -tokenState.diff / 100;
 
   return (
     <React.Fragment>
@@ -36,9 +37,12 @@ export const TokenGraphSection: FunctionComponent<{
               ) as ViewStyle
             }
           >
-            {changeInDollarsValue.toFixed(4)} {totalDenom}(
+            {changeInDollarsValue.toFixed(4)} (
             {tokenState.type === "positive" ? "+" : "-"}
-            {tokenState.diff.toFixed(2)})
+            {Number.isNaN(parseFloat(tokenState?.percentageDiff?.toString()))
+              ? "0"
+              : parseFloat(tokenState?.percentageDiff?.toString()).toFixed(1)}
+            %)
           </Text>
           <Text style={style.flatten(["color-gray-300", "h7"]) as ViewStyle}>
             {`  ${tokenState.time}`}

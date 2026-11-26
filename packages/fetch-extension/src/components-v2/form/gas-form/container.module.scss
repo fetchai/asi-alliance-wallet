@@ -1,3 +1,5 @@
+@import "../../../styles/var";
+
 .container {
   background: transparent;
   .autoButtonGroup {
@@ -10,7 +12,7 @@
       font-weight: 400;
       font-size: 14px;
       line-height: 150%;
-      color: white;
+      color: rgba($font-dark, 0.66);
       margin-right: 16px;
     }
   }

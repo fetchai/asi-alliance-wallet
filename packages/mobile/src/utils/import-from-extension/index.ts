@@ -7,7 +7,7 @@ import WalletConnect from "@walletconnect/client";
 import AES, { Counter } from "aes-js";
 import { Buffer } from "buffer/";
 import { ExportKeyRingData } from "@keplr-wallet/background";
-import { KeyRingStore } from "@keplr-wallet/stores";
+import { KeyRingStore } from "@keplr-wallet/stores-core";
 import { Hash } from "@keplr-wallet/crypto";
 
 export interface QRCodeSharedData {
@@ -29,10 +29,36 @@ export interface WCExportKeyRingDatasResponse {
   addressBooks: { [chainId: string]: AddressBookData[] | undefined };
 }
 
+export interface DirectExportFrame {
+  type: "fetch-direct-export";
+  total: number;
+  index: number;
+  key?: string;
+  iv?: string;
+  data: string;
+}
+
+interface DirectExportPayload {
+  keyRingDatas: ExportKeyRingData[];
+  addressBooks: { [chainId: string]: AddressBookData[] | undefined };
+}
+
+// Module-level state for accumulating animated QR frames across scans
+let directExportSession: {
+  key: string;
+  iv: string;
+  total: number;
+  chunks: Map<number, string>;
+} | null = null;
+
 export function parseQRCodeDataForImportFromExtension(
   data: string
-): QRCodeSharedData {
-  const sharedData = JSON.parse(data) as QRCodeSharedData;
+): QRCodeSharedData | DirectExportFrame {
+  const parsed = JSON.parse(data);
+  if (parsed.type === "fetch-direct-export") {
+    return parsed as DirectExportFrame;
+  }
+  const sharedData = parsed as QRCodeSharedData;
   if (!sharedData.wcURI || !sharedData.sharedPassword) {
     throw new Error("Invalid qr code");
   }
@@ -40,14 +66,19 @@ export function parseQRCodeDataForImportFromExtension(
 }
 
 export async function importFromExtension(
-  sharedData: QRCodeSharedData,
+  sharedData: QRCodeSharedData | DirectExportFrame,
   chainIdsForAddressBook: string[]
 ): Promise<{
   KeyRingDatas: ExportKeyRingData[];
   addressBooks: { [chainId: string]: AddressBookData[] | undefined };
 }> {
+  if ("type" in sharedData && sharedData.type === "fetch-direct-export") {
+    return handleDirectExportFrame(sharedData);
+  }
+
+  const wcSharedData = sharedData as QRCodeSharedData;
   const connector = new WalletConnect({
-    uri: sharedData.wcURI,
+    uri: wcSharedData.wcURI,
   });
 
   if (connector.connected) {
@@ -81,7 +112,7 @@ export async function importFromExtension(
   const counter = new Counter(0);
   counter.setBytes(Buffer.from(result.encrypted.iv, "hex"));
   const aesCtr = new AES.ModeOfOperation.ctr(
-    Buffer.from(sharedData.sharedPassword, "hex"),
+    Buffer.from(wcSharedData.sharedPassword, "hex"),
     counter
   );
 
@@ -97,6 +128,64 @@ export async function importFromExtension(
     KeyRingDatas: exportedKeyRingDatas,
     addressBooks: result.addressBooks,
   };
+}
+
+function handleDirectExportFrame(frame: DirectExportFrame): Promise<{
+  KeyRingDatas: ExportKeyRingData[];
+  addressBooks: { [chainId: string]: AddressBookData[] | undefined };
+}> {
+  if (frame.index === 0) {
+    if (!frame.key || !frame.iv) {
+      throw new Error("Invalid QR: frame 0 missing key/iv");
+    }
+    // Only start a new session if IV differs (i.e. a new export was initiated)
+    if (!directExportSession || directExportSession.iv !== frame.iv) {
+      directExportSession = {
+        key: frame.key,
+        iv: frame.iv,
+        total: frame.total,
+        chunks: new Map(),
+      };
+    }
+  }
+
+  if (!directExportSession) {
+    throw new Error("Waiting for QR frame 0 — keep scanning");
+  }
+
+  directExportSession.chunks.set(frame.index, frame.data);
+
+  if (directExportSession.chunks.size < directExportSession.total) {
+    throw new Error(
+      `Scanning QR: ${directExportSession.chunks.size}/${directExportSession.total} frames collected`
+    );
+  }
+
+  // All chunks received — assemble ciphertext and decrypt
+  const session = directExportSession;
+  directExportSession = null;
+
+  const ciphertext = Array.from(
+    { length: session.total },
+    (_, i) => session.chunks.get(i) ?? ""
+  ).join("");
+
+  const counter = new Counter(0);
+  counter.setBytes(Buffer.from(session.iv, "hex"));
+  const aesCtr = new AES.ModeOfOperation.ctr(
+    Buffer.from(session.key, "hex"),
+    counter
+  );
+
+  const decrypted = aesCtr.decrypt(Buffer.from(ciphertext, "hex"));
+  const payload = JSON.parse(
+    Buffer.from(decrypted).toString()
+  ) as DirectExportPayload;
+
+  return Promise.resolve({
+    KeyRingDatas: payload.keyRingDatas,
+    addressBooks: payload.addressBooks,
+  });
 }
 
 function sortedObject(obj: any): any {
@@ -159,15 +248,11 @@ export async function registerExportedKeyRingDatas(
   // KeyRing Store would be restored when init.
   // So, there is no need to wait.
   // In fact, at this point, restore is complete.
-  for (const keyStore of keyRingStore.multiKeyStoreInfo) {
-    if (
-      keyStore.meta &&
-      keyStore.meta["exportKeyRingDataDuplicationCheckKey"]
-    ) {
-      duplicationCheck.set(
-        keyStore.meta["exportKeyRingDataDuplicationCheckKey"],
-        true
-      );
+  for (const keyInfo of keyRingStore.keyInfos) {
+    const meta =
+      (keyInfo.insensitive?.["keyRingMeta"] as Record<string, any>) ?? {};
+    if (meta["exportKeyRingDataDuplicationCheckKey"]) {
+      duplicationCheck.set(meta["exportKeyRingDataDuplicationCheckKey"], true);
     }
   }
 

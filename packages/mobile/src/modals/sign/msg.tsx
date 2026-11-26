@@ -8,12 +8,19 @@ export const Msg: FunctionComponent<{
   const style = useStyle();
 
   return (
-    <View style={style.flatten(["padding-16"]) as ViewStyle}>
+    <View
+      style={
+        [
+          style.flatten(["padding-16"]),
+          { backgroundColor: "#f6f6f6", borderRadius: 12 },
+        ] as ViewStyle
+      }
+    >
       <Text
         style={
           style.flatten([
             "h6",
-            "color-white",
+            "color-dark",
             "font-normal",
             "margin-bottom-2",
           ]) as ViewStyle

@@ -1,35 +1,38 @@
 export const inputContainerStyle = {
   color: "white",
   borderRadius: "12px",
-  background: "rgba(255,255,255,0.1)",
+  background: "white",
   paddingRight: "18px",
   fontWeight: 400,
-  height: "48px",
+  height: "35px",
 };
 
 export const disabledContainerStyle = {
   color: "rgba(255,255,255,0.4)",
   borderRadius: "12px",
   background: "transparent",
-  border: "1px solid rgba(255,255,255,0.2)",
+  border: "1px solid white",
   fontWeight: 400,
-  height: "48px",
+  height: "35px",
 };
 
 export const inputStyle = {
-  color: "white",
+  color: "var(--font-dark)",
   borderRadius: "12px",
+  boxShadow: "none",
   background: "transparent",
-  padding: "2px 18px",
+  padding: "4px 10px",
   fontWeight: 400,
-  height: "48px",
+  height: "35px",
 };
 
 export const disabledStyle = {
-  color: "rgba(255,255,255,0.4)",
+  color: "var(--font-dark)",
+  opacity: "0.9",
+  boxShadow: "none",
   borderRadius: "12px",
   background: "transparent",
   fontWeight: 400,
-  padding: "0px 18px",
-  height: "48px",
+  padding: "4px 10px",
+  height: "35px",
 };

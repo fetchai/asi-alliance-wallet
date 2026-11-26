@@ -6,8 +6,12 @@ import React, {
   useState,
 } from "react";
 import {
+  Alert,
+  AppState,
+  BackHandler,
   Image,
   Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -21,7 +25,6 @@ import delay from "delay";
 import { useStore } from "stores/index";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { KeyRingStatus } from "@keplr-wallet/background";
 import { KeychainStore } from "stores/keychain";
 import { IAccountStore } from "@keplr-wallet/stores";
 import { autorun } from "mobx";
@@ -34,27 +37,39 @@ import { IconButton } from "components/new/button/icon";
 import { HideEyeIcon } from "components/new/icon/hide-eye-icon";
 import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  isLaunchCoverVisible,
+  onLaunchCoverHidden,
+} from "components/page/launch-cover";
 
 let splashScreenHided = false;
 async function hideSplashScreen() {
   if (!splashScreenHided) {
-    if (await SplashScreen.hideAsync()) {
-      splashScreenHided = true;
-    }
+    await SplashScreen.hideAsync();
+    splashScreenHided = true;
   }
 }
 
 async function waitAccountLoad(
   accountStore: IAccountStore,
-  chainId: string
+  chainId: string,
+  timeoutMs: number = 8000
 ): Promise<void> {
   if (accountStore.getAccount(chainId).bech32Address) {
     return;
   }
 
   return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      if (disposer) {
+        disposer();
+      }
+      resolve();
+    }, timeoutMs);
+
     const disposer = autorun(() => {
       if (accountStore.getAccount(chainId).bech32Address) {
+        clearTimeout(timer);
         resolve();
         if (disposer) {
           disposer();
@@ -77,7 +92,8 @@ enum AutoBiomtricStatus {
 const useAutoBiomtric = (
   keychainStore: KeychainStore,
   tryEnabled: boolean,
-  callback: (isLoading: boolean) => void
+  callback: (isLoading: boolean) => void,
+  onError?: (e: Error) => void
 ) => {
   const [status, setStatus] = useState(AutoBiomtricStatus.NO_NEED);
   const tryBiometricAutoOnce = useRef(false);
@@ -97,12 +113,20 @@ const useAutoBiomtric = (
       tryBiometricAutoOnce.current = true;
       (async () => {
         try {
+          // iOS only: if Face ID/Touch ID is not enrolled in Settings, skip the
+          // native prompt entirely to avoid the system "incorrect passphrase" dialog.
+          if (Platform.OS === "ios" && !keychainStore.isBiometrySupported) {
+            setStatus(AutoBiomtricStatus.FAILED);
+            callback(false);
+            return;
+          }
           callback(true);
           await keychainStore.tryUnlockWithBiometry();
           setStatus(AutoBiomtricStatus.SUCCESS);
         } catch (e) {
           console.log(e);
           setStatus(AutoBiomtricStatus.FAILED);
+          if (onError) onError(e);
         } finally {
           callback(false);
         }
@@ -125,6 +149,7 @@ export const UnlockScreen: FunctionComponent = observer(() => {
     accountStore,
     chainStore,
     analyticsStore,
+    interactionStore,
   } = useStore();
 
   const style = useStyle();
@@ -134,21 +159,68 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   const safeAreaInsets = useSafeAreaInsets();
 
   const navigateToHomeOnce = useRef(false);
+  const biometricNeedsReset = useRef(false);
   const navigateToHome = useCallback(async () => {
-    if (!navigateToHomeOnce.current) {
-      analyticsStore.logEvent("sign_in_click");
-      // Wait the account of selected chain is loaded.
-      await waitAccountLoad(accountStore, chainStore.current.chainId);
-      navigation.dispatch(StackActions.replace("MainTabDrawer"));
+    if (navigateToHomeOnce.current) {
+      return;
     }
     navigateToHomeOnce.current = true;
-  }, [accountStore, chainStore, navigation]);
+    try {
+      analyticsStore.logEvent("sign_in_click");
+      // Wait briefly for the selected chain account; never block navigation forever
+      // if key/address fetch is slow or failing after unlock.
+      await waitAccountLoad(accountStore, chainStore.current.chainId);
+      navigation.dispatch(StackActions.replace("MainTabDrawer"));
+    } catch (e) {
+      console.log("[Unlock] navigateToHome failed, forcing home", e);
+      navigateToHomeOnce.current = false;
+      navigation.dispatch(StackActions.replace("MainTabDrawer"));
+    }
+  }, [accountStore, analyticsStore, chainStore, navigation]);
+
+  const [isAppActive, setIsAppActive] = useState(
+    AppState.currentState === "active"
+  );
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      setIsAppActive(next === "active");
+    });
+    return () => sub.remove();
+  }, []);
+
+  const [launchCoverGone, setLaunchCoverGone] = useState(
+    () => !isLaunchCoverVisible()
+  );
+  useEffect(() => {
+    if (Platform.OS !== "android" || launchCoverGone) {
+      return;
+    }
+    return onLaunchCoverHidden(() => setLaunchCoverGone(true));
+  }, [launchCoverGone]);
+
+  const needsKeyStoreMigration =
+    keyRingStore.needMigration || keyRingStore.isMigrating;
 
   const autoBiometryStatus = useAutoBiomtric(
     keychainStore,
-    keyRingStore.status === KeyRingStatus.LOCKED,
+    keyRingStore.status === "locked" &&
+      isAppActive &&
+      launchCoverGone &&
+      !needsKeyStoreMigration,
     (isLoading) => {
       setIsBiometricLoading(isLoading);
+    },
+    (e) => {
+      if (e?.message?.includes("Unmatched mac")) {
+        biometricNeedsReset.current = true;
+        keychainStore.reset();
+        Toast.show({
+          type: "error",
+          text1: "Biometric Verification Failed",
+          text2:
+            "Your password or biometric data has changed. Sign in with your password to re-enable it.",
+        });
+      }
     }
   );
 
@@ -161,7 +233,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   }, [autoBiometryStatus, navigation]);
 
   useEffect(() => {
-    if (keyRingStore.status === KeyRingStatus.LOCKED) hideSplashScreen();
+    if (Platform.OS === "ios" && keyRingStore.status === "locked") {
+      hideSplashScreen();
+    }
   }, [keyRingStore.status]);
 
   const [password, setPassword] = useState("");
@@ -169,27 +243,99 @@ export const UnlockScreen: FunctionComponent = observer(() => {
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const isUnlockBusy = isLoading || keyRingStore.isMigrating;
+
+  useEffect(() => {
+    if (Platform.OS !== "android" || !isUnlockBusy) {
+      return;
+    }
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, [isUnlockBusy]);
 
   const tryBiometric = useCallback(async () => {
+    if (keyRingStore.status === "unlocked" || isBiometricLoading) {
+      return;
+    }
+    // iOS only: if Face ID/Touch ID is not enrolled in Settings, show a clear
+    // message instead of triggering the system "incorrect passphrase" dialog.
+    if (Platform.OS === "ios" && !keychainStore.isBiometrySupported) {
+      const biometryLabel =
+        keychainStore.biometryType === "FaceID"
+          ? "Face ID"
+          : keychainStore.biometryType === "TouchID"
+          ? "Touch ID"
+          : "Face ID";
+      Toast.show({
+        type: "error",
+        text1: `${biometryLabel} not available`,
+        text2: `Please enable ${biometryLabel} in iOS Settings and try again.`,
+      });
+      return;
+    }
     try {
       setIsBiometricLoading(true);
       // Because javascript is synchronous language, the loadnig state change would not delivered to the UI thread
       // So to make sure that the loading state changes, just wait very short time.
       await delay(10);
       await keychainStore.tryUnlockWithBiometry();
+      // Navigation is handled by the unlocked-status effect; clear loading if
+      // we are still on this screen briefly.
+      setIsBiometricLoading(false);
     } catch (e) {
       console.log(e);
-      if (!e.message.includes("code: 13")) {
+      const msg: string = e?.message ?? "";
+      const biometryLabel =
+        keychainStore.biometryType === "FaceID"
+          ? "Face ID"
+          : keychainStore.biometryType === "TouchID"
+          ? "Touch ID"
+          : "Biometric authentication";
+      if (msg.includes("Unmatched mac")) {
+        biometricNeedsReset.current = true;
+        keychainStore.reset();
         Toast.show({
           type: "error",
-          text1: `${e.message.slice(e.message.indexOf("msg:") + 5)}`,
+          text1: "Biometric Verification Failed",
+          text2:
+            "Your password or biometric data has changed. Sign in with your password to re-enable it.",
+        });
+      } else if (
+        msg.includes("code: 13") ||
+        String(e?.code) === "-2" ||
+        msg.toLowerCase().includes("user cancel") ||
+        msg.toLowerCase().includes("cancelled by user")
+      ) {
+        // User dismissed the prompt — no toast needed
+        // code: 13 = Android BiometricPrompt.ERROR_NEGATIVE_BUTTON (Cancel button pressed)
+        // e.code "-2" = iOS LAErrorUserCancel
+      } else if (
+        Platform.OS === "ios" &&
+        (msg.toLowerCase().includes("lockout") ||
+          String(e?.code) === "-8" ||
+          msg.toLowerCase().includes("too many"))
+      ) {
+        Toast.show({
+          type: "error",
+          text1: `Too many failed ${biometryLabel} attempts`,
+          text2: "Sign in with your password and try again later.",
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: `${biometryLabel} unavailable`,
+          text2:
+            "Please ensure it is set up and this app has permission in Settings.",
         });
       }
       setIsBiometricLoading(false);
     }
-  }, [keychainStore]);
+  }, [keychainStore, keyRingStore.status, isBiometricLoading]);
 
   const tryUnlock = async () => {
+    if (isUnlockBusy) {
+      return;
+    }
     try {
       setShowPassword(false);
       setIsLoading(true);
@@ -198,6 +344,9 @@ export const UnlockScreen: FunctionComponent = observer(() => {
       // before the actually decryption is complete.
       // So to make sure that the loading state changes, just wait very short time.
       await delay(10);
+      if (keyRingStore.needMigration) {
+        await keyRingStore.checkLegacyKeyRingPassword(password);
+      }
       await keyRingStore.unlock(password);
     } catch (e) {
       console.log(e);
@@ -209,11 +358,12 @@ export const UnlockScreen: FunctionComponent = observer(() => {
 
   const routeToRegisterOnce = useRef(false);
   useEffect(() => {
-    // If the keyring is empty,
-    // route to the register screen.
+    // Only trust "empty" after keyring has finished its first status fetch.
+    // A premature empty (e.g. vault not loaded yet) would wipe the user into onboarding.
     if (
       !routeToRegisterOnce.current &&
-      keyRingStore.status === KeyRingStatus.EMPTY
+      keyRingStore.isInitialized &&
+      keyRingStore.status === "empty"
     ) {
       (async () => {
         routeToRegisterOnce.current = true;
@@ -227,45 +377,116 @@ export const UnlockScreen: FunctionComponent = observer(() => {
         hideSplashScreen();
       })();
     }
-  }, [keyRingStore.status, navigation]);
+  }, [keyRingStore.isInitialized, keyRingStore.status, navigation]);
 
   useEffect(() => {
-    if (keyRingStore.status === KeyRingStatus.UNLOCKED) {
-      navigateToHome();
-    }
-  }, [keyRingStore.status, navigateToHome]);
+    if (keyRingStore.status === "unlocked") {
+      // Approve all waiting interaction for the enabling key ring.
+      const interactions = interactionStore.getAllData("unlock");
+      if (interactions.length > 0) {
+        interactionStore.approveWithProceedNextV2(
+          interactions.map((interaction) => interaction.id),
+          {},
+          () => {
+            // noop
+          }
+        );
+      }
 
-  if (
-    [KeyRingStatus.EMPTY, KeyRingStatus.NOTLOADED].includes(keyRingStore.status)
-  ) {
-    return null;
+      if (biometricNeedsReset.current) {
+        biometricNeedsReset.current = false;
+        const biometryLabel =
+          keychainStore.biometryType === "FaceID"
+            ? "Face ID"
+            : keychainStore.biometryType === "TouchID"
+            ? "Touch ID"
+            : "Biometric Login";
+        Alert.alert(
+          `Re-enable ${biometryLabel}`,
+          `Your ${biometryLabel} was disabled because your credentials changed. Re-enable it now?`,
+          [
+            {
+              text: "Not Now",
+              style: "cancel",
+              onPress: () => navigateToHome(),
+            },
+            {
+              text: "Re-enable",
+              onPress: async () => {
+                try {
+                  await keychainStore.turnOnBiometry(password);
+                } catch (e) {
+                  console.log(e);
+                }
+                navigateToHome();
+              },
+            },
+          ]
+        );
+      } else {
+        navigateToHome();
+      }
+    }
+  }, [
+    keyRingStore.status,
+    navigateToHome,
+    keychainStore,
+    password,
+    interactionStore,
+  ]);
+
+  if (keyRingStore.status === "empty" || keyRingStore.status === "not-loaded") {
+    if (Platform.OS === "ios") {
+      return null;
+    }
+    return (
+      <View
+        style={
+          {
+            flex: 1,
+            backgroundColor: "#FFFFFF",
+            justifyContent: "center",
+            alignItems: "center",
+          } as ViewStyle
+        }
+      >
+        <Image
+          source={require("assets/logo/logo-black.png")}
+          style={{
+            width: 219,
+            height: 49,
+          }}
+          resizeMode="contain"
+          fadeDuration={0}
+        />
+      </View>
+    );
   }
 
   return (
     <React.Fragment>
       <ScreenBackground
-        backgroundMode="image"
+        backgroundMode="secondary"
         backgroundBlur={true}
-        isTransparentHeader={true}
+        hasFloatingHeader={true}
       />
       <View
-        style={
-          [
-            style.flatten(["flex", "flex-1", "justify-between"]),
-            {
-              paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
-            },
-          ] as ViewStyle
-        }
+        style={StyleSheet.flatten([
+          style.flatten(["flex", "flex-1", "justify-between"]),
+          {
+            paddingTop: Platform.OS === "ios" ? safeAreaInsets.top + 10 : 48,
+          },
+        ])}
       >
         <KeyboardAwareScrollView
           contentContainerStyle={style.flatten(["flex-grow-1"]) as ViewStyle}
         >
           <View style={style.flatten(["items-center"]) as ViewStyle}>
             <Image
-              source={require("assets/logo/logo.png")}
+              source={require("assets/logo/logo-black.png")}
               style={{
                 aspectRatio: 2.977,
+                height: 60,
               }}
               resizeMode="contain"
               fadeDuration={0}
@@ -276,20 +497,30 @@ export const UnlockScreen: FunctionComponent = observer(() => {
               style.flatten(["margin-x-page", "margin-top-34"]) as ViewStyle
             }
           >
-            <Text style={style.flatten(["h2", "font-medium", "color-white"])}>
-              Welcome back
+            <Text style={style.flatten(["h2", "font-medium", "color-dark"])}>
+              {needsKeyStoreMigration ? "Upgrade required" : "Welcome Back"}
             </Text>
             <Text
               style={
                 style.flatten([
                   "h6",
                   "font-medium",
-                  "color-gray-100",
+                  "color-gray-300",
                   "margin-top-12",
                 ]) as ViewStyle
               }
             >
-              Enter your password or use biometric authentication to sign in
+              {needsKeyStoreMigration
+                ? "A one-time wallet upgrade is needed. Enter your password and keep the app open until it finishes."
+                : Platform.OS === "ios"
+                ? `Enter your password or use ${
+                    keychainStore.biometryType === "FaceID"
+                      ? "Face ID"
+                      : keychainStore.biometryType === "TouchID"
+                      ? "Touch ID"
+                      : "biometric authentication"
+                  } to sign in`
+                : "Enter your password or use biometric authentication to sign in"}
             </Text>
             <InputCardView
               label={"Password"}
@@ -314,6 +545,8 @@ export const UnlockScreen: FunctionComponent = observer(() => {
                 )
               }
               containerStyle={style.flatten(["margin-y-20"]) as ViewStyle}
+              labelStyle={{ color: "#737676" } as ViewStyle}
+              inputStyle={{ color: style.get("color-dark").color } as ViewStyle}
               secureTextEntry={!showPassword}
               value={password}
               returnKeyType="done"
@@ -326,42 +559,64 @@ export const UnlockScreen: FunctionComponent = observer(() => {
             />
             <Button
               containerStyle={
-                style.flatten(["border-radius-32", "margin-y-10"]) as ViewStyle
+                style.flatten([
+                  "border-radius-32",
+                  "margin-y-10",
+                  "background-color-dark",
+                ]) as ViewStyle
               }
-              text="Sign in"
+              textStyle={style.flatten(["color-white"]) as ViewStyle}
+              text={needsKeyStoreMigration ? "Upgrade and sign in" : "Sign In"}
               size="large"
-              loading={isLoading}
+              loading={isUnlockBusy}
               rippleColor="black@10%"
               onPress={tryUnlock}
-              disabled={password.length === 0}
+              disabled={password.length === 0 || isUnlockBusy}
             />
           </View>
           <View style={style.get("flex-4")} />
-          {keychainStore.isBiometryOn ? (
+          {keychainStore.isBiometryOn && !needsKeyStoreMigration ? (
             <TouchableOpacity onPress={tryBiometric} activeOpacity={1}>
               <View
                 style={
-                  style.flatten([
-                    "flex",
-                    "margin-bottom-40",
-                    "margin-top-10",
+                  StyleSheet.flatten([
+                    style.flatten(["flex", "margin-top-10"]),
+                    {
+                      marginBottom:
+                        Platform.OS === "android"
+                          ? 40 +
+                            (safeAreaInsets.bottom > 0
+                              ? safeAreaInsets.bottom
+                              : 48)
+                          : 40,
+                    },
                   ]) as ViewStyle
                 }
               >
                 <View style={style.flatten(["items-center"]) as ViewStyle}>
-                  {Platform.OS === "android" ? (
-                    <FingerprintIcon color={style.get("color-white").color} />
+                  {keychainStore.biometryType === "FaceID" ||
+                  (Platform.OS === "ios" &&
+                    keychainStore.biometryType !== "TouchID") ? (
+                    <FaceDetectIcon color={"#151a1a"} />
                   ) : (
-                    <FaceDetectIcon color={style.get("color-blue-400").color} />
+                    <FingerprintIcon color={"#151a1a"} />
                   )}
                 </View>
                 <Button
-                  textStyle={style.flatten(["color-white", "h5"]) as ViewStyle}
-                  text="Use biometric authentication"
+                  textStyle={style.flatten(["color-dark", "h5"]) as ViewStyle}
+                  text={
+                    keychainStore.biometryType === "FaceID"
+                      ? "Use Face ID"
+                      : keychainStore.biometryType === "TouchID"
+                      ? "Use Touch ID"
+                      : Platform.OS === "ios"
+                      ? "Use Face ID"
+                      : "Use Biometric Authentication"
+                  }
                   mode="text"
                   loading={isBiometricLoading}
                   showLoadingSpinner={true}
-                  loaderColor="white"
+                  loaderColor={style.get("color-dark").color}
                 />
               </View>
             </TouchableOpacity>

@@ -13,7 +13,7 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
   chainInfo: {
     [x: string]: any;
     chainName: string;
-    stakeCurrency: Currency;
+    stakeCurrency?: Currency;
   };
   size: number;
 
@@ -28,7 +28,7 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
   const style = useStyle();
 
   const currencyImageUrl =
-    chainInfo?.["_chainInfo"]?.chainSymbolImageUrl ?? currency.coinImageUrl;
+    chainInfo?.chainSymbolImageUrl ?? currency.coinImageUrl;
 
   return (
     <View
@@ -44,9 +44,11 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
             height: size * imageScale,
           }}
           resizeMode={FastImage.resizeMode.contain}
-          source={{
-            uri: currencyImageUrl,
-          }}
+          source={
+            typeof currencyImageUrl === "number"
+              ? currencyImageUrl
+              : { uri: currencyImageUrl }
+          }
         />
       ) : (
         <IconButton
@@ -54,7 +56,7 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
             <VectorCharacter
               char={currency.coinDenom[0]}
               height={Math.floor(size * 0.3)}
-              color="white"
+              color={style.flatten(["color-dark"]).color}
             />
           }
           iconStyle={
@@ -63,6 +65,8 @@ export const TokenSymbolUsingChainInfo: FunctionComponent<{
               "height-32",
               "items-center",
               "justify-center",
+              "background-color-gray-100",
+              "border-radius-64",
             ]) as ViewStyle
           }
           containerStyle={{

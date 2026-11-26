@@ -71,7 +71,6 @@ export const AddressInputCard: FunctionComponent<{
     const [isOpenModal, setIsOpenModal] = useState(false);
     const { chainStore, analyticsStore, accountStore } = useStore();
 
-    const [permission, requestPermission] = Camera.useCameraPermissions();
     const [openCameraModel, setIsOpenCameraModel] = useState(false);
     const [modelStatus, setModelStatus] = useState(ModelStatus.First);
     const [isFocused, setIsFocused] = useState(false);
@@ -126,7 +125,7 @@ export const AddressInputCard: FunctionComponent<{
               style.flatten([
                 "padding-y-4",
                 "margin-y-8",
-                "color-white@60%",
+                "color-gray-400",
                 "body3",
               ]) as ViewStyle
             }
@@ -140,148 +139,138 @@ export const AddressInputCard: FunctionComponent<{
           containerStyle={
             [
               style.flatten(
-                ["padding-x-18", "padding-y-12"],
-                isFocused || errorText
-                  ? [
-                      // The order is important.
-                      // The border color has different priority according to state.
-                      // The more in front, the lower the priority.
-                      "border-width-1",
-                      isFocused ? "border-color-indigo" : undefined,
-                      errorText ? "border-color-red-250" : undefined,
-                    ]
-                  : []
+                [
+                  "padding-x-18",
+                  "padding-y-12",
+                  "flex-row",
+                  "border-width-1",
+                  "border-color-gray-100",
+                ],
+                [
+                  isFocused && "border-color-sky-focus",
+                  errorText ? "border-color-red-250" : undefined,
+                ]
               ),
               backgroundContainerStyle,
             ] as ViewStyle
           }
         >
-          <View style={style.flatten(["flex-row"])}>
-            <View
-              style={style.flatten(["flex-3", "justify-center"]) as ViewStyle}
-            >
-              <TextInput
-                placeholderTextColor={style.flatten(["color-white@60%"]).color}
-                style={
-                  [
-                    style.flatten(["body3", "color-white", "padding-0"]),
-                    Platform.select({
-                      ios: {},
-                      android: {
-                        // On android, the text input's height does not equals to the line height by strange.
-                        // To fix this problem, set the height explicitly.
-                        height: 19,
-                      },
-                    }),
-                  ] as ViewStyle
-                }
-                keyboardType={
-                  Platform.OS === "ios" ? "ascii-capable" : "visible-password"
-                }
-                returnKeyType="done"
-                placeholder={placeholderText}
-                value={recipientConfig.rawRecipient}
-                multiline={true}
-                editable={editable}
-                onChangeText={(text) => {
-                  if (
-                    // If icns is possible and users enters ".", complete bech32 prefix automatically.
-                    "isICNSEnabled" in recipientConfig &&
-                    recipientConfig.isICNSEnabled &&
-                    text.length > 0 &&
-                    text[text.length - 1] === "." &&
-                    numOfCharacter(text, ".") === 1 &&
-                    numOfCharacter(recipientConfig.rawRecipient, ".") === 0
-                  ) {
-                    text = text + recipientConfig.icnsExpectedBech32Prefix;
-                  }
-                  recipientConfig.setRawRecipient(text);
-                }}
-                onFocus={(e) => {
-                  setIsFocused(true);
-
-                  if (onFocus) {
-                    onFocus(e);
-                  }
-                }}
-                onBlur={(e) => {
-                  setIsFocused(false);
-
-                  if (onBlur) {
-                    onBlur(e);
-                  }
-                }}
-              />
-            </View>
-            <View
+          <View
+            style={style.flatten(["flex-3", "justify-center"]) as ViewStyle}
+          >
+            <TextInput
+              placeholderTextColor={style.flatten(["color-gray-300"]).color}
               style={
-                style.flatten([
-                  "items-end",
-                  "justify-center",
-                  "margin-left-20",
-                ]) as ViewStyle
+                [
+                  style.flatten(["body3", "color-dark", "padding-0"]),
+                  Platform.select({
+                    ios: {},
+                    android: {
+                      // On android, the text input's height does not equals to the line height by strange.
+                      // To fix this problem, set the height explicitly.
+                      height: 19,
+                    },
+                  }),
+                ] as ViewStyle
               }
-            >
-              <View style={style.flatten(["flex-row", "items-center"])}>
-                <Divider
-                  containerStyle={style.flatten(["height-16"]) as ViewStyle}
-                />
-                <IconButton
-                  icon={
-                    <QRCodeIcon
-                      size={16}
-                      color={
-                        buttonDisable
-                          ? style.get("color-white@20%").color
-                          : "white"
-                      }
-                    />
-                  }
-                  borderRadius={0}
-                  backgroundBlur={false}
-                  disable={buttonDisable}
-                  onPress={() => {
-                    if (permission?.status == PermissionStatus.UNDETERMINED) {
+              keyboardType={
+                Platform.OS === "ios" ? "ascii-capable" : "visible-password"
+              }
+              returnKeyType="done"
+              placeholder={placeholderText}
+              value={recipientConfig.rawRecipient}
+              editable={editable}
+              onChangeText={(text) => {
+                if (
+                  // If icns is possible and users enters ".", complete bech32 prefix automatically.
+                  "isICNSEnabled" in recipientConfig &&
+                  recipientConfig.isICNSEnabled &&
+                  text.length > 0 &&
+                  text[text.length - 1] === "." &&
+                  numOfCharacter(text, ".") === 1 &&
+                  numOfCharacter(recipientConfig.rawRecipient, ".") === 0
+                ) {
+                  text = text + recipientConfig.icnsExpectedBech32Prefix;
+                }
+                recipientConfig.setRawRecipient(text);
+              }}
+              onFocus={(e) => {
+                setIsFocused(true);
+
+                if (onFocus) {
+                  onFocus(e);
+                }
+              }}
+              onBlur={(e) => {
+                setIsFocused(false);
+
+                if (onBlur) {
+                  onBlur(e);
+                }
+              }}
+            />
+          </View>
+          <View
+            style={
+              style.flatten([
+                "items-end",
+                "justify-center",
+                "margin-left-20",
+              ]) as ViewStyle
+            }
+          >
+            <View style={style.flatten(["flex-row", "items-center"])}>
+              <Divider
+                containerStyle={style.flatten(["height-16"]) as ViewStyle}
+              />
+              <IconButton
+                icon={
+                  <QRCodeIcon
+                    size={16}
+                    color={buttonDisable ? "#DCDCE3" : "#151a1a"}
+                  />
+                }
+                borderRadius={0}
+                backgroundBlur={false}
+                disable={buttonDisable}
+                onPress={async () => {
+                  const permission = await Camera.getCameraPermissionsAsync();
+                  if (permission?.status == PermissionStatus.UNDETERMINED) {
+                    setIsOpenCameraModel(true);
+                  } else {
+                    if (!permission?.granted) {
+                      setModelStatus(ModelStatus.Second);
                       setIsOpenCameraModel(true);
                     } else {
-                      if (!permission?.granted) {
-                        setModelStatus(ModelStatus.Second);
-                        setIsOpenCameraModel(true);
-                      } else {
-                        analyticsStore.logEvent("recipient_address_click", {
-                          pageName,
-                        });
-                        smartNavigation.navigateSmart("Camera", {
-                          showMyQRButton: false,
-                          recipientConfig: recipientConfig,
-                        });
-                      }
+                      analyticsStore.logEvent("recipient_address_click", {
+                        pageName,
+                      });
+                      smartNavigation.navigateSmart("Camera", {
+                        showMyQRButton: false,
+                        recipientConfig: recipientConfig,
+                      });
                     }
-                  }}
-                  iconStyle={style.flatten(["margin-x-18"]) as ViewStyle}
-                />
-                <IconButton
-                  icon={
-                    <ATIcon
-                      size={16}
-                      color={
-                        buttonDisable
-                          ? style.get("color-white@20%").color
-                          : "white"
-                      }
-                    />
                   }
-                  borderRadius={0}
-                  backgroundBlur={false}
-                  disable={buttonDisable}
-                  onPress={() => {
-                    analyticsStore.logEvent("recipient_address_click", {
-                      pageName,
-                    });
-                    setIsOpenModal(true);
-                  }}
-                />
-              </View>
+                }}
+                iconStyle={style.flatten(["margin-x-18"]) as ViewStyle}
+              />
+              <IconButton
+                icon={
+                  <ATIcon
+                    size={16}
+                    color={buttonDisable ? "#DCDCE3" : "#151a1a"}
+                  />
+                }
+                borderRadius={0}
+                backgroundBlur={false}
+                disable={buttonDisable}
+                onPress={() => {
+                  analyticsStore.logEvent("recipient_address_click", {
+                    pageName,
+                  });
+                  setIsOpenModal(true);
+                }}
+              />
             </View>
           </View>
         </BlurBackground>
@@ -301,6 +290,10 @@ export const AddressInputCard: FunctionComponent<{
           title="Choose recipient"
           close={() => setIsOpenModal(false)}
           addressBookConfig={addressBookConfig}
+          onSelectRecipient={(address) => {
+            recipientConfig.setRawRecipient(address);
+            setIsOpenModal(false);
+          }}
           addAddressBook={(add) => {
             if (add) {
               analyticsStore.logEvent("add_new_address_click", {
@@ -334,11 +327,9 @@ export const AddressInputCard: FunctionComponent<{
           isOpen={openCameraModel}
           close={() => setIsOpenCameraModel(false)}
           onPress={async () => {
-            const permissionStatus = await requestPermission();
-            if (
-              !permission?.granted &&
-              permissionStatus.status === PermissionStatus.DENIED
-            ) {
+            const permissionStatus =
+              await Camera.requestCameraPermissionsAsync();
+            if (permissionStatus.status === PermissionStatus.DENIED) {
               if (permissionStatus.canAskAgain) {
                 setIsOpenCameraModel(false);
               } else {

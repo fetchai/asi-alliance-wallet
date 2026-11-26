@@ -5,11 +5,14 @@ import { ChainIdHelper } from "@keplr-wallet/cosmos";
 import { AppCurrency } from "@keplr-wallet/types";
 import { useLanguage } from "../../../languages";
 import { useNavigate } from "react-router";
-import { separateNumericAndDenom } from "@utils/format";
+import { isPureEvmChain } from "@utils/filters";
+import { formatBalance } from "@utils/format";
 import { getTokenIcon } from "@utils/get-token-icon";
 import { observer } from "mobx-react-lite";
+import styles from "@components-v2/card/style.module.scss";
 export const NativeTokens = observer(() => {
-  const { chainStore, accountStore, queriesStore, priceStore } = useStore();
+  const { chainStore, accountStore, queriesStore, priceStore, analyticsStore } =
+    useStore();
   const [nativeToken, setNativeToken] = useState<any>("");
   const [tokenIcon, setTokenIcon] = useState<string>("");
 
@@ -33,8 +36,12 @@ export const NativeTokens = observer(() => {
   useEffect(() => {
     setNativeToken(balanceQuery.balances[0]);
   }, []);
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const isEvm = isPureEvmChain(current);
   const accountInfo = accountStore.getAccount(current.chainId);
+
+  const isVesting = queries.cosmos.queryAccount.getQueryBech32Address(
+    accountInfo.bech32Address
+  ).isVestingAccount;
 
   const balanceQuery = queries.queryBalances.getQueryBech32Address(
     accountInfo.bech32Address
@@ -70,37 +77,34 @@ export const NativeTokens = observer(() => {
   const language = useLanguage();
   const fiatCurrency = language.fiatCurrency;
 
-  const { numericPart: _totalNumber, denomPart: totalDenom } =
-    separateNumericAndDenom(
-      total.shrink(true).trim(true).maxDecimals(6).toString()
-    );
   const totalPrice = priceStore.calculatePrice(total, fiatCurrency);
 
   const NativeTokenDetailsString = encodeURIComponent(
     JSON.stringify(nativeToken.balance?.currency)
   );
   const NativeTokenBalance = {
-    balance: total.shrink(true).trim(true).maxDecimals(6).toString(),
+    balance: total.shrink(true).trim(true).toString(),
     balanceInUsd: totalPrice && totalPrice.toString(),
   };
   const NativeTokenBalanceString = encodeURIComponent(
     JSON.stringify(NativeTokenBalance)
   );
+
+  const formattedValue = formatBalance(total, 6);
+  const denom = total.currency.coinDenom;
   return (
     <React.Fragment>
       {isEvm ? (
         <Card
           subheadingStyle={{
             fontSize: "14px",
-            color: "rgb(128, 141, 160)",
           }}
           style={{
-            background: "rgba(255,255,255,0.1)",
             marginBottom: "8px",
           }}
-          leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
-          heading={totalDenom}
-          subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}
+          leftImage={tokenIcon ? tokenIcon : denom.toUpperCase()[0]}
+          heading={denom}
+          subheading={formattedValue}
           rightContent={totalPrice && <div>{totalPrice.toString()}</div>}
           onClick={() => {
             navigate({
@@ -111,12 +115,15 @@ export const NativeTokens = observer(() => {
         />
       ) : (
         <Card
-          subheadingStyle={{ fontSize: "14px", color: "rgb(128, 141, 160)" }}
-          style={{ background: "rgba(255,255,255,0.1)", marginBottom: "8px" }}
-          leftImage={tokenIcon ? tokenIcon : totalDenom.toUpperCase()[0]}
-          heading={totalDenom}
-          subheading={total.shrink(true).trim(true).maxDecimals(6).toString()}
+          subheadingStyle={{ fontSize: "14px", fontWeight: 400 }}
+          style={{ marginBottom: "8px" }}
+          leftImage={tokenIcon ? tokenIcon : denom.toUpperCase()[0]}
+          heading={denom}
+          subheading={formattedValue}
           onClick={() => {
+            analyticsStore.logEvent("native_token_click", {
+              pageName: "Portfolio",
+            });
             navigate({
               pathname: "/asset",
               search: `?tokenDetails=${NativeTokenDetailsString}&balance=${NativeTokenBalanceString}`,
@@ -124,16 +131,53 @@ export const NativeTokens = observer(() => {
           }}
           rightContent={
             totalPrice && (
-              <div>
+              <div
+                style={{
+                  display: "flex",
+                  columnGap: "3px",
+                  alignItems: "center",
+                }}
+              >
                 {totalPrice.toString()}{" "}
                 <span
                   style={{
-                    color: "rgba(255,255,255,0.4)",
+                    color: "var(--font-secondary)",
+                    fontSize: "12px",
+                    fontWeight: 400,
                   }}
                 >
                   {fiatCurrency.toUpperCase()}
                 </span>
               </div>
+            )
+          }
+          bottomContent={
+            isVesting && (
+              <React.Fragment>
+                <div
+                  className={styles["pCenter"]}
+                  style={{ marginRight: "8px" }}
+                >
+                  <img
+                    src={require(`@assets/svg/wireframe/stake.svg`)}
+                    className={styles["pImage"]}
+                    alt={"Stake_icon"}
+                  />
+                  <p className={styles["text"]} style={{ color: "white" }}>
+                    {`Staked`}
+                  </p>
+                </div>
+                <div className={styles["pCenter"]}>
+                  <img
+                    src={require(`@assets/svg/wireframe/lock.svg`)}
+                    className={styles["pImage"]}
+                    alt={"Vesting_lock_icon"}
+                  />
+                  <p className={styles["text"]} style={{ color: "white" }}>
+                    {`Vesting`}
+                  </p>
+                </div>
+              </React.Fragment>
             )
           }
         />

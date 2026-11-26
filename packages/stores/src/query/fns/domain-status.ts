@@ -1,21 +1,28 @@
 import { ObservableCosmwasmContractChainQuery } from "../cosmwasm/contract-query";
-import { KVStore } from "@keplr-wallet/common";
-import { ChainGetter } from "../../common";
+import { QuerySharedContext } from "../../common";
+import { ChainGetter } from "../../chain";
+import { ObservableQueryMap } from "../../common";
 import { computed } from "mobx";
-import { ObservableChainQueryMap } from "../chain-query";
 import { DomainStatus, OwnedDomainStatus } from "./types";
 
 export class ObservableQueryDomainStatusInner extends ObservableCosmwasmContractChainQuery<DomainStatus> {
   constructor(
-    kvStore: KVStore,
+    kvStore: QuerySharedContext,
     chainId: string,
     chainGetter: ChainGetter,
-    protected override readonly contractAddress: string,
+    protected readonly contractAddress: string,
     protected readonly domain: string
   ) {
-    super(kvStore, chainId, chainGetter, contractAddress, {
-      get_domain_status: { domain: domain },
-    });
+    super(
+      kvStore,
+      chainId,
+      chainGetter,
+      contractAddress,
+      {
+        get_domain_status: { domain: domain },
+      },
+      `domain-status-${contractAddress}-${domain}-${chainId}`
+    );
   }
 
   @computed
@@ -29,13 +36,13 @@ export class ObservableQueryDomainStatusInner extends ObservableCosmwasmContract
   }
 }
 
-export class ObservableQueryDomainStatus extends ObservableChainQueryMap<DomainStatus> {
+export class ObservableQueryDomainStatus extends ObservableQueryMap<DomainStatus> {
   constructor(
-    protected override readonly kvStore: KVStore,
-    protected override readonly chainId: string,
-    protected override readonly chainGetter: ChainGetter
+    protected readonly kvStore: QuerySharedContext,
+    protected readonly chainId: string,
+    protected readonly chainGetter: ChainGetter
   ) {
-    super(kvStore, chainId, chainGetter, (key: string) => {
+    super((key: string) => {
       const split = key.split("/");
       return new ObservableQueryDomainStatusInner(
         this.kvStore,

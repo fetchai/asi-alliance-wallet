@@ -4,7 +4,7 @@ import Svg, { Path, Rect } from "react-native-svg";
 export const KeyIconSmall: FunctionComponent<{
   size?: number;
   color?: any;
-}> = ({ size = 16, color = "white" }) => {
+}> = ({ size = 16, color = "#151a1a" }) => {
   return (
     <Svg
       width={size}

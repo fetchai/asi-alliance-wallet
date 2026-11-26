@@ -6,6 +6,7 @@ import { SearchIcon } from "components/new/icon/search-icon";
 import { IAmountConfig } from "@keplr-wallet/hooks";
 import { useStore } from "stores/index";
 import { CoinPretty, Int } from "@keplr-wallet/unit";
+import { formatFiatBalance } from "utils/format/format";
 import { TokenCardView } from "../card-view/token-card-view";
 import { EmptyView } from "../empty";
 import { InputCardView } from "../card-view/input-card";
@@ -19,8 +20,14 @@ export const AssetCardModel: FunctionComponent<{
 }> = ({ close, title, isOpen, amountConfig }) => {
   const style = useStyle();
   const safeAreaInsets = useSafeAreaInsets();
-  const { queriesStore, priceStore, analyticsStore } = useStore();
+  const { queriesStore, priceStore, analyticsStore, accountStore, chainStore } =
+    useStore();
   const [search, setSearch] = useState("");
+
+  const chainId = chainStore.current.chainId;
+  const account = accountStore.getAccount(chainId);
+  const queries = queriesStore.get(chainId);
+
   const queryBalances = queriesStore
     .get(amountConfig.chainId)
     .queryBalances.getQueryBech32Address(amountConfig.sender);
@@ -36,7 +43,6 @@ export const AssetCardModel: FunctionComponent<{
 
   const [filterCurrencies, setFilterCurrencies] =
     useState(selectableCurrencies);
-  // console.log(selectableCurrencies);
 
   useEffect(() => {
     const searchTrim = search.trim();
@@ -48,13 +54,12 @@ export const AssetCardModel: FunctionComponent<{
 
   const convertToUsd = (currency: any) => {
     const value = priceStore.calculatePrice(currency);
-    return value && value.shrink(true).maxDecimals(6).toString();
+    return value ? formatFiatBalance(value) : undefined;
   };
   const balancesMap = new Map(
-    queryBalances.balances.map((bal) => [
-      bal.currency.coinMinimalDenom,
-      bal.balance,
-    ])
+    queries.cosmos.querySpendableBalances
+      .getQueryBech32Address(account.bech32Address)
+      .balances.map((b) => [b.currency.coinMinimalDenom, b])
   );
 
   if (!isOpen) {
@@ -89,7 +94,6 @@ export const AssetCardModel: FunctionComponent<{
     >
       <InputCardView
         placeholder="Search"
-        placeholderTextColor={"white"}
         value={search}
         onChangeText={(text: string) => {
           setSearch(text);
@@ -124,7 +128,7 @@ export const AssetCardModel: FunctionComponent<{
                   [
                     currency.coinMinimalDenom ===
                       amountConfig.sendCurrency.coinMinimalDenom &&
-                      "background-color-indigo",
+                      "background-color-green-250",
                   ]
                 ) as ViewStyle
               }

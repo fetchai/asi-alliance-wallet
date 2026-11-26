@@ -44,7 +44,7 @@ export const LineGraphView: FunctionComponent<{
   tokenState?: any;
   height?: number;
 }> = ({ tokenName, setTokenState, height }) => {
-  const [activeTab, setActiveTab] = useState<any>(tabs[0]);
+  const [activeTab, setActiveTab] = useState(tabs[0]);
   const [loading, setLoading] = useState<boolean>(false);
 
   return (
@@ -57,7 +57,12 @@ export const LineGraphView: FunctionComponent<{
         loading={loading}
         setLoading={setLoading}
       />
-      <TabPanel tabs={tabs} setActiveTab={setActiveTab} activeTab={activeTab} />
+      <TabPanel
+        tabs={tabs}
+        setActiveTab={setActiveTab}
+        activeTab={activeTab}
+        variant="light"
+      />
     </React.Fragment>
   );
 };

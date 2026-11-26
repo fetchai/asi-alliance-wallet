@@ -44,7 +44,7 @@
 }
 
 .tabContainer {
-  height: 342px;
+  height: 100%;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -55,13 +55,13 @@
 }
 
 .message {
-  margin-bottom: 0px;
-  height: 400px;
-  font-size: 12px;
-  overflow: visible;
-  background: transparent;
-  word-wrap: break-word;
+  overflow-y: auto;
+  font-family: monospace;
   white-space: pre-wrap;
-  color: white;
-  font-size: Lexend;
+  word-break: break-word;
+  color: $font-dark;
+  background: $card-bg;
+  border-radius: 10px;
+  padding: 10px;
+  word-wrap: break-word;
 }

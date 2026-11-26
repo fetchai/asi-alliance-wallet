@@ -2,12 +2,21 @@ import React, { FunctionComponent } from "react";
 import { useStyle } from "styles/index";
 import { TransitionPresets } from "@react-navigation/stack";
 import { Stack } from "./navigation";
-import { ViewStyle } from "react-native";
+import { Platform, ViewStyle } from "react-native";
 import {
-  BlurHeaderOptionsPreset,
   HeaderRightButton,
+  HeaderOnSecondaryScreenOptionsPreset,
   TransparentHeaderOptionsPreset,
 } from "components/header";
+
+// On iOS, list content scrolls behind the transparent header — use an opaque/blur
+// header to cover it. Android is unaffected so keep the transparent header there.
+const SecondaryScreenHeaderPreset =
+  Platform.OS === "ios"
+    ? HeaderOnSecondaryScreenOptionsPreset
+    : TransparentHeaderOptionsPreset;
+import { HeaderLeftBackLightButton } from "components/header/button";
+import { getPlatformFontFamily } from "styles/builder/utils";
 import { useStore } from "stores/index";
 import {
   NavigationProp,
@@ -21,6 +30,7 @@ import {
 import { IconButton } from "components/new/button/icon";
 import { HeaderAddIcon } from "components/header/icon";
 import { SecurityAndPrivacyScreen } from "screens/setting/screens/security-and-privacy";
+import { ChangePasswordScreen } from "screens/setting/screens/security-and-privacy/change-password";
 import { ViewPrivateDataScreen } from "screens/setting/screens/view-private-data";
 import { FetchVersionScreen } from "screens/setting/screens/version";
 import { CurrencyScreen } from "screens/setting/screens/currency";
@@ -42,16 +52,28 @@ export const MoreNavigation: FunctionComponent = () => {
     >
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Add a token",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Setting.AddToken"
         component={SettingAddTokenScreen}
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "Manage tokens",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
           headerRight: () => (
             <HeaderRightButton
               onPress={() => {
@@ -62,13 +84,13 @@ export const MoreNavigation: FunctionComponent = () => {
               }}
             >
               <IconButton
-                icon={<HeaderAddIcon size={19} color="white" />}
+                icon={<HeaderAddIcon size={19} color="#151a1a" />}
                 backgroundBlur={false}
                 iconStyle={
                   style.flatten([
                     "width-54",
                     "border-width-1",
-                    "border-color-white@20%",
+                    "border-color-gray-100",
                     "padding-x-12",
                     "padding-y-6",
                     "justify-center",
@@ -84,32 +106,69 @@ export const MoreNavigation: FunctionComponent = () => {
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
-
+          ...TransparentHeaderOptionsPreset,
           title: "Security & Privacy",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Setting.SecurityAndPrivacy"
         component={SecurityAndPrivacyScreen}
       />
       <Stack.Screen
+        options={{
+          ...TransparentHeaderOptionsPreset,
+          title: "Change Password",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
+        }}
+        name="Setting.ChangePassword"
+        component={ChangePasswordScreen}
+      />
+      <Stack.Screen
         name="Setting.ViewPrivateData"
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         component={ViewPrivateDataScreen}
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...TransparentHeaderOptionsPreset,
           title: "App version",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Setting.Version"
         component={FetchVersionScreen}
       />
       <Stack.Screen
         options={{
-          ...BlurHeaderOptionsPreset,
+          ...SecondaryScreenHeaderPreset,
           title: "Currency",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Setting.Currency"
         component={CurrencyScreen}
@@ -118,6 +177,12 @@ export const MoreNavigation: FunctionComponent = () => {
         options={{
           ...TransparentHeaderOptionsPreset,
           title: "Proposals",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Governance"
         component={GovernanceScreen}
@@ -126,6 +191,12 @@ export const MoreNavigation: FunctionComponent = () => {
         options={{
           ...TransparentHeaderOptionsPreset,
           title: "",
+          headerTitleStyle: {
+            color: style.get("color-dark").color,
+            fontSize: 16,
+            fontFamily: getPlatformFontFamily("400"),
+          },
+          headerLeft: (props: any) => <HeaderLeftBackLightButton {...props} />,
         }}
         name="Governance.Details"
         component={GovernanceDetailsScreen}

@@ -4,6 +4,7 @@ import {
   AppState,
   AppStateStatus,
   Image,
+  Linking,
   Platform,
   Text,
   View,
@@ -16,15 +17,19 @@ import { State } from "react-native-ble-plx";
 import TransportBLE, {
   bleManager,
 } from "@ledgerhq/react-native-hw-transport-ble";
-import { getLastUsedLedgerDeviceId } from "utils/ledger";
+import {
+  getLastUsedLedgerDeviceId,
+  setLastUsedLedgerDeviceId,
+} from "utils/ledger";
 import { useUnmount } from "hooks/use-unmount";
 import LottieView from "lottie-react-native";
 import { Button } from "components/button";
 import { BlurButton } from "components/new/button/blur-button";
 import { CheckIcon } from "components/new/icon/check";
-import Toast from "react-native-toast-message";
 import { LedgerErrorView } from "./ledger-error-view";
 import { LedgerNanoBLESelector } from "./ledger-selector";
+import Toast from "react-native-toast-message";
+import { DOCS_URL } from "../../config";
 
 enum BLEPermissionGrantStatus {
   NotInit = "notInit",
@@ -46,7 +51,8 @@ export enum BluetoothMode {
 export const LedgerGranterModal: FunctionComponent<{
   isOpen: boolean;
   close: () => void;
-}> = observer(({ isOpen, close }) => {
+  onSelectDevice?: (deviceId: string) => Promise<void>;
+}> = observer(({ isOpen, close, onSelectDevice }) => {
   const { ledgerInitStore } = useStore();
 
   const style = useStyle();
@@ -103,6 +109,13 @@ export const LedgerGranterModal: FunctionComponent<{
     if (!resumed.current) {
       ledgerInitStore.abortAll();
     }
+
+    setBluetoothMode(BluetoothMode.Ledger);
+    setIsPairingText("Waiting for bluetooth signal...");
+    setMainContent(
+      "press and hold two buttons at the same time and enter your pin"
+    );
+    setIsPaired(false);
   });
 
   useEffect(() => {
@@ -160,10 +173,9 @@ export const LedgerGranterModal: FunctionComponent<{
           next: (e: { type: string; descriptor: any }) => {
             if (e.type === "add") {
               const device = e.descriptor;
-              if (!_devices.find((d) => d.id === device.id)) {
-                console.log(
-                  `Ledger device found (id: ${device.id}, name: ${device.name})`
-                );
+              const isDevice = !_devices.find((d) => d.id === device.id);
+
+              if (isDevice) {
                 _devices = [
                   ..._devices,
                   {
@@ -172,9 +184,6 @@ export const LedgerGranterModal: FunctionComponent<{
                   },
                 ];
                 setDevices(_devices);
-                setMainContent("Choose a wallet to connect");
-                setBluetoothMode(BluetoothMode.Device);
-              } else if (bluetoothMode != BluetoothMode.Device) {
                 setMainContent("Choose a wallet to connect");
                 setBluetoothMode(BluetoothMode.Device);
               }
@@ -313,7 +322,7 @@ export const LedgerGranterModal: FunctionComponent<{
               style={
                 style.flatten([
                   "body3",
-                  "color-white",
+                  "color-dark",
                   "text-center",
                 ]) as ViewStyle
               }
@@ -326,7 +335,7 @@ export const LedgerGranterModal: FunctionComponent<{
               style={
                 style.flatten([
                   "body3",
-                  "color-white",
+                  "color-dark",
                   "text-center",
                   "margin-bottom-24",
                 ]) as ViewStyle
@@ -341,13 +350,12 @@ export const LedgerGranterModal: FunctionComponent<{
               <BlurButton
                 text={pairingText}
                 backgroundBlur={false}
-                leftIcon={paired ? <CheckIcon color="black" size={14} /> : null}
+                leftIcon={
+                  paired ? <CheckIcon color="#151a1a" size={14} /> : null
+                }
                 leftIconStyle={style.flatten(["margin-right-8"]) as ViewStyle}
                 textStyle={
-                  style.flatten(
-                    ["text-caption2"],
-                    [paired && "color-black"]
-                  ) as ViewStyle
+                  style.flatten(["text-caption2", "color-dark"]) as ViewStyle
                 }
                 containerStyle={
                   style.flatten(
@@ -355,7 +363,7 @@ export const LedgerGranterModal: FunctionComponent<{
                     [
                       paired
                         ? "background-color-vibrant-green-500"
-                        : "background-color-indigo-800",
+                        : "background-color-gray-100",
                     ]
                   ) as ViewStyle
                 }
@@ -373,15 +381,23 @@ export const LedgerGranterModal: FunctionComponent<{
               containerStyle={
                 style.flatten([
                   "margin-top-24",
-                  "border-color-white@40%",
+                  "border-color-gray-200",
                   "border-radius-32",
                 ]) as ViewStyle
               }
-              textStyle={style.flatten(["color-white", "body3"]) as ViewStyle}
+              textStyle={style.flatten(["color-dark", "body3"]) as ViewStyle}
               onPress={() =>
-                Toast.show({
-                  type: "error",
-                  text1: "Under development",
+                Linking.canOpenURL(
+                  `${DOCS_URL}/get-started#connect-ledger`
+                ).then((supported) => {
+                  if (supported) {
+                    Linking.openURL(`${DOCS_URL}/get-started#connect-ledger`);
+                  } else {
+                    Toast.show({
+                      type: "error",
+                      text1: "Unable to Open Browser",
+                    });
+                  }
                 })
               }
             />
@@ -399,7 +415,13 @@ export const LedgerGranterModal: FunctionComponent<{
                   setIsPaired={setIsPaired}
                   onCanResume={async () => {
                     resumed.current = true;
-                    await ledgerInitStore.resumeAll(device.id);
+                    // Signing connects to this device again later.
+                    await setLastUsedLedgerDeviceId(device.id);
+                    if (onSelectDevice) {
+                      await onSelectDevice(device.id);
+                    } else {
+                      await ledgerInitStore.resumeAll(device.id);
+                    }
                   }}
                 />
               );
@@ -410,7 +432,7 @@ export const LedgerGranterModal: FunctionComponent<{
           style={
             style.flatten([
               "subtitle3",
-              "color-white",
+              "color-dark",
               "text-center",
               "margin-y-20",
             ]) as ViewStyle

@@ -1,5 +1,9 @@
 import { Buffer } from "buffer/";
 import { AGENT_ADDRESS } from "../../config";
+import { Platform } from "react-native";
+import { KeyInfo } from "@keplr-wallet/background";
+import { RegisterMode } from "@keplr-wallet/hooks";
+import { CoinPretty, Dec, DecUtils, PricePretty } from "@keplr-wallet/unit";
 
 export const separateNumericAndDenom = (value: any) => {
   const data = value ? value.split(" ") : ["", ""];
@@ -19,7 +23,7 @@ export const parseDollarAmount = (dollarString: any) => {
   return 0;
 };
 
-export const formatActivityHash = (address: string) => {
+export const formatToTruncated = (address: string) => {
   if (address?.length > 12)
     return (
       address.substring(0, 8) +
@@ -111,4 +115,228 @@ export const removeEmojis = (text: string) => {
     /([\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F700}-\u{1F77F}]|[\u{1F780}-\u{1F7FF}]|[\u{1F800}-\u{1F8FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}-\u{2B55}]|[\u{2300}-\u{23FF}]|[\u{2C60}-\u{2C7F}]|[\u{2B06}-\u{2B07}]|[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F700}-\u{1F77F}]|[\u{1F780}-\u{1F7FF}]|[\u{1F800}-\u{1F8FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}-\u{2B55}]|[\u{2300}-\u{23FF}]|[\u{2C60}-\u{2C7F}]|[\u{2B06}-\u{2B07}])/gu;
 
   return text.replace(emojiRegex, "");
+};
+
+export function enumFromStringValue<T>(
+  enm: { [s: string]: T },
+  value: string
+): T | undefined {
+  return (Object.values(enm) as unknown as string[]).includes(value)
+    ? (value as unknown as T)
+    : undefined;
+}
+
+export const getEnumKeyByEnumValue = <T extends Record<string, string>>(
+  value: string,
+  _enum: T
+) => {
+  return Object.keys(_enum).find(
+    (key) => _enum[key as keyof typeof _enum] === value
+  );
+};
+
+export const isVestingExpired = (timestamp: number) =>
+  Math.floor(Date.now() / 1000) > timestamp;
+
+export const removeTrailingZeros = (number: string) => {
+  const splitNumber = number.split(".");
+  const countStartNumber = splitNumber[0].length;
+  const decimal =
+    countStartNumber > 3
+      ? 2
+      : countStartNumber == 3
+      ? 3
+      : countStartNumber > 1
+      ? 4
+      : 6;
+  return Number(number)
+    .toFixed(decimal)
+    .toString()
+    .replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, "$1");
+};
+
+export const removeComma = (value: string) => value.replace(/,/g, "");
+
+const feeMetricPrefixes: { exponent: number; prefix: string; evm: string }[] = [
+  { exponent: 3, prefix: "milli", evm: "pwei" },
+  { exponent: 6, prefix: "micro", evm: "twei" },
+  { exponent: 9, prefix: "nano", evm: "gwei" },
+  { exponent: 12, prefix: "pico", evm: "mwei" },
+  { exponent: 15, prefix: "femto", evm: "kwei" },
+  { exponent: 18, prefix: "atto", evm: "wei" },
+];
+
+/**
+ * Formats a fee amount. Replaces CoinPretty.toMetricPrefix, which drops the
+ * integer part (52.49… → "494932908094.26 pico") and the leading zeros of the
+ * fraction (0.5 → "5"). Amounts below 0.001 use a metric prefix computed from
+ * the whole value; everything else is shown in the base denom.
+ */
+export const formatFeeAmount = (fee: CoinPretty, isEvm = false): string => {
+  const amount = fee.toDec();
+  if (amount.isZero() || amount.gte(new Dec("0.001"))) {
+    return fee.maxDecimals(6).trim(true).toString();
+  }
+
+  const one = new Dec(1);
+  const metric =
+    feeMetricPrefixes.find(({ exponent }) =>
+      amount.mul(DecUtils.getTenExponentN(exponent)).gte(one)
+    ) ?? feeMetricPrefixes[feeMetricPrefixes.length - 1];
+
+  const numberPart = fee
+    .moveDecimalPointRight(metric.exponent)
+    .maxDecimals(4)
+    .trim(true)
+    .hideDenom(true)
+    .toString();
+  const denom = fee.hideAmount(true).toString();
+  return `${numberPart} ${isEvm ? metric.evm : metric.prefix} ${denom}`;
+};
+
+export const formatBalance = (
+  balance: CoinPretty,
+  maxDecimals = 10,
+  useCoinPrettyFormatting = true
+) => {
+  const minimumValue = 1 / Math.pow(10, maxDecimals);
+  const shrunkBase = balance.shrink(true).trim(true);
+  const shrunk = useCoinPrettyFormatting
+    ? shrunkBase.maxDecimals(maxDecimals)
+    : balance.shrink(true);
+  // Use pre-maxDecimals dec so truncation doesn't cause a truly non-zero value to appear zero
+  const dec = shrunkBase.toDec();
+  const numericValue = Number(dec.toString());
+  if (!dec.isZero() && numericValue < minimumValue) {
+    return `< ${minimumValue.toFixed(maxDecimals)} ${
+      balance.currency.coinDenom
+    }`;
+  }
+  if (dec.isZero()) {
+    return useCoinPrettyFormatting
+      ? shrunk.maxDecimals(0).toString()
+      : `0 ${balance.currency.coinDenom}`;
+  }
+  if (useCoinPrettyFormatting) {
+    const formatted = shrunk.toString();
+    if (Platform.OS === "android") {
+      const spaceIdx = formatted.indexOf(" ");
+      const numStr = formatted.slice(0, spaceIdx);
+      const denom = formatted.slice(spaceIdx);
+      return `${Number(numStr).toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: maxDecimals,
+      })}${denom}`;
+    }
+    return formatted;
+  }
+  return `${numericValue.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDecimals,
+  })} ${balance.currency.coinDenom}`;
+};
+
+export const formatFiatBalance = (balance: PricePretty, maxDecimals = 2) => {
+  const dec = balance.toDec();
+  if (dec.isZero()) {
+    return "0";
+  }
+  const numericValue = Number(dec.toString());
+  const minimumValue = 1 / Math.pow(10, maxDecimals);
+  if (numericValue < minimumValue) {
+    return `< ${minimumValue.toFixed(maxDecimals)}`;
+  }
+  return `${balance?.symbol} ${numericValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: maxDecimals,
+  })}`;
+};
+
+export const numberLocalFormat = (number: string) => {
+  if (Platform.OS == "android") {
+    return Number(number).toLocaleString("en-US");
+  }
+  return number;
+};
+
+export const getNextDefaultAccountName = (
+  items: KeyInfo[],
+  prefix = "account"
+): string => {
+  if (items.length === 0) {
+    return `${prefix}-1`;
+  }
+  const lastName = items[items.length - 1]?.name || "";
+  const match = lastName.match(new RegExp(`^${prefix}-(\\d+)$`));
+  const lastNum = match ? Number(match[1]) : 0;
+  return `${prefix}-${lastNum + 1}`;
+};
+
+export const validateWalletName = (
+  value: string,
+  keyInfos: KeyInfo[],
+  registerConfigMode?: RegisterMode
+) => {
+  const alreadyImportedWalletNames = [
+    ...new Set(
+      keyInfos?.flatMap((item) => {
+        const meta =
+          (item.insensitive?.["keyRingMeta"] as Record<string, any>) ?? {};
+        const defaultName = item.name;
+        const nameByChainRaw =
+          meta["nameByChain"] ?? item.insensitive?.["nameByChain"];
+        const chainNames = nameByChainRaw
+          ? Object.values(
+              typeof nameByChainRaw === "string"
+                ? JSON.parse(nameByChainRaw)
+                : nameByChainRaw
+            )
+          : [];
+        return [defaultName, ...chainNames].filter(Boolean);
+      }) ?? []
+    ),
+  ];
+
+  let nameAlreadyExists = false;
+  if (!registerConfigMode || registerConfigMode !== "create") {
+    nameAlreadyExists = alreadyImportedWalletNames.includes(value);
+  }
+
+  const allowedPattern = /^[a-zA-Z0-9 @_\-\.\(\)]*$/;
+  const isValidFormat = allowedPattern.test(value);
+  const containsLetterOrNumber = /[a-zA-Z0-9]/.test(value);
+
+  return {
+    isValidFormat,
+    nameAlreadyExists,
+    containsLetterOrNumber,
+    isValid: isValidFormat && !nameAlreadyExists && containsLetterOrNumber,
+  };
+};
+
+export const validateAccountName = (
+  value: string,
+  keyInfos: KeyInfo[],
+  mode: RegisterMode
+): string | undefined => {
+  const trimmedValue = value.trimStart();
+  const isEmpty = trimmedValue === "";
+  const { isValid, isValidFormat, containsLetterOrNumber } = validateWalletName(
+    trimmedValue,
+    keyInfos,
+    mode
+  );
+
+  if (!isValid || isEmpty) {
+    if (!isValidFormat) {
+      return "Only letters, numbers and basic symbols (_-.@#()) are allowed.";
+    }
+    if (isEmpty) {
+      return "Account name cannot be empty";
+    }
+    if (!containsLetterOrNumber) {
+      return "Account name must contain at least one letter or number.";
+    }
+    return "Account name already exists, please try a different name";
+  }
 };

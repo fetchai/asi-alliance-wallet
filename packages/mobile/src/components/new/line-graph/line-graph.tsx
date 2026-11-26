@@ -104,15 +104,15 @@ export const LineGraph: FunctionComponent<{
 
         if (chartDataList.length > 0) {
           const firstValue = chartDataList[0].value || 0;
-          let lastValue = chartDataList[chartDataList.length - 1].value || 0;
+          const lastValue = chartDataList[chartDataList.length - 1].value || 0;
           const diff = lastValue - firstValue;
-          lastValue = lastValue > 0 ? lastValue : 1;
-          const percentageDiff = (diff / lastValue) * 100;
+          const percentageDiff = firstValue > 0 ? (diff / firstValue) * 100 : 0;
           const type = diff >= 0 ? "positive" : "negative";
           const timestamp = new Date().getTime();
 
           tokenState = {
-            diff: Math.abs(percentageDiff),
+            percentageDiff: Math.abs(percentageDiff),
+            diff: diff * 100,
             time: getTimeLabel(),
             timestamp,
             type,
@@ -192,22 +192,20 @@ export const LineGraph: FunctionComponent<{
   }, [cacheKey]);
 
   return (
-    <View
-      style={[style.flatten(["margin-top-24", "overflow-hidden"])] as ViewStyle}
-    >
+    <View style={[style.flatten(["margin-top-18"])] as ViewStyle}>
       <Text
         style={
           style.flatten([
             "text-caption2",
             "text-center",
-            "color-white",
+            "color-dark",
           ]) as ViewStyle
         }
       >
         {`${
           chainStore.current.currencies[0].coinDenom
         }/${priceStore.defaultVsCurrency.toUpperCase()} `}
-        <Text style={style.flatten(["color-white@60%"]) as ViewStyle}>
+        <Text style={style.flatten(["color-gray-300"]) as ViewStyle}>
           {`${
             priceStore.supportedVsCurrencies[priceStore.defaultVsCurrency]
               ?.symbol
@@ -217,9 +215,17 @@ export const LineGraph: FunctionComponent<{
       <View
         style={
           style.flatten(
+            ["margin-top-10"],
             loading ? ["items-center", "justify-center"] : []
           ) as ViewStyle
         }
+        // react-native-gifted-charts (iOS) and the Android PanResponder both
+        // mount an invisible touch-capture layer that bleeds a few pixels
+        // above the chart's own box, stealing taps meant for the "View
+        // Portfolio" button rendered just above it. `none` removes this
+        // whole subtree from hit-testing so those taps pass through — this
+        // does trade away the long-press scrub/tooltip on iOS.
+        pointerEvents="none"
       >
         {Platform.OS == "ios" ? (
           <IOSLineChart
@@ -246,13 +252,13 @@ export const LineGraph: FunctionComponent<{
           <BlurButton
             text={"Updating the chart"}
             backgroundBlur={false}
-            textStyle={style.flatten(["body3"]) as ViewStyle}
+            textStyle={style.flatten(["body3", "color-dark"]) as ViewStyle}
             containerStyle={
-              style.flatten([
-                "padding-x-12",
-                "background-color-indigo-800",
-                "absolute",
-              ]) as ViewStyle
+              {
+                ...style.flatten(["padding-x-12", "absolute"]),
+                backgroundColor: style.get("background-color-green-250")
+                  .backgroundColor,
+              } as ViewStyle
             }
           />
         )}

@@ -39,6 +39,7 @@ export const Button: FunctionComponent<{
   leftIcon,
   rightIcon,
   loading = false,
+  loaderColor,
   showLoadingSpinner = false,
   disabled = false,
   onPress,
@@ -163,25 +164,18 @@ export const Button: FunctionComponent<{
 
     switch (mode) {
       case "fill":
+        if (color === "primary") {
+          return "#333333";
+        }
         return style.get(`color-${baseColor}-500` as any).color;
       case "light":
         if (color === "primary") {
-          return (
-            style.flatten([
-              `color-${baseColor}-200`,
-              "dark:color-platinum-600",
-            ] as any) as any
-          ).color;
+          return "#d0d0d0";
         }
         return style.get(`color-${baseColor}-200` as any).color;
       default:
         if (color === "primary") {
-          return (
-            style.flatten([
-              `color-${baseColor}-100`,
-              "dark:color-platinum-300",
-            ] as any) as any
-          ).color;
+          return "#e0e0e0";
         }
         return (
           style.flatten([
@@ -201,12 +195,7 @@ export const Button: FunctionComponent<{
       const baseColor = color === "primary" ? "blue" : "red";
 
       if (color === "primary") {
-        return (
-          style.flatten([
-            `color-${baseColor}-200`,
-            "dark:color-platinum-300",
-          ] as any) as any
-        ).color;
+        return "#e0e0e0";
       }
       return (
         style.flatten([
@@ -221,7 +210,7 @@ export const Button: FunctionComponent<{
     }
 
     if (color === "primary") {
-      return style.get("color-platinum-600").color;
+      return "#333333";
     } else {
       return style.get("color-platinum-500").color;
     }
@@ -376,7 +365,7 @@ export const Button: FunctionComponent<{
           >
             {showLoadingSpinner ? (
               <LoadingSpinner
-                color={style.flatten(["color-white"]).color}
+                color={loaderColor ?? style.flatten(["color-white"]).color}
                 size={20}
               />
             ) : (

@@ -154,7 +154,7 @@ export const AddMember: FunctionComponent = observer(() => {
         //check if searchedVal is valid address
         Bech32Address.validate(
           searchedVal,
-          chainStore.current.bech32Config.bech32PrefixAccAddr
+          chainStore.current.bech32Config?.bech32PrefixAccAddr
         );
 
         let isAlreadyMember;

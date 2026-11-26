@@ -52,10 +52,11 @@ export const TimelineView: FunctionComponent<{
           )}
           {!lastIndex && <View style={[styles.connector]} />}
         </View>
-        <View style={style.flatten(["flex-1", "flex-row"]) as ViewStyle}>
+        {(item.leadingTitle || item.leadingSubtitle) && (
           <View
             style={
               style.flatten([
+                "flex-1",
                 "items-start",
                 "flex-column",
                 "justify-center",
@@ -68,15 +69,17 @@ export const TimelineView: FunctionComponent<{
               </Text>
             )}
             {item.leadingSubtitle && (
-              <Text style={style.flatten(["color-white"]) as ViewStyle}>
+              <Text style={style.flatten(["color-dark"]) as ViewStyle}>
                 {item.leadingSubtitle}
               </Text>
             )}
           </View>
-          <View style={style.flatten(["flex-1"]) as ViewStyle} />
+        )}
+        {(item.trailingTitle || item.trailingSubtitle) && (
           <View
             style={
               style.flatten([
+                "flex-1",
                 "items-end",
                 "flex-column",
                 "justify-center",
@@ -88,19 +91,19 @@ export const TimelineView: FunctionComponent<{
                 style={
                   trailingTitleStyle
                     ? trailingTitleStyle
-                    : (style.flatten(["color-white"]) as ViewStyle)
+                    : (style.flatten(["color-dark"]) as ViewStyle)
                 }
               >
                 {item.trailingTitle}
               </Text>
             )}
             {item.trailingSubtitle && (
-              <Text style={style.flatten(["color-white"]) as ViewStyle}>
+              <Text style={style.flatten(["color-gray-300"]) as ViewStyle}>
                 {item.trailingSubtitle}
               </Text>
             )}
           </View>
-        </View>
+        )}
       </View>
     );
   };
@@ -121,8 +124,7 @@ export const styles = StyleSheet.create({
   connector: {
     height: 40,
     width: 1,
-    backgroundColor: "white",
-    opacity: 0.3,
+    backgroundColor: "rgba(0,0,0,0.15)",
   },
   dotContainer: {
     backgroundColor: "#D9F3FD",

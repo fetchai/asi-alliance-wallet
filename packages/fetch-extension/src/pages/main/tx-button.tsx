@@ -40,7 +40,13 @@ export const TxButtonView: FunctionComponent = observer(() => {
     accountInfo.bech32Address
   );
 
-  const isEvm = chainStore.current.features?.includes("evm") ?? false;
+  const current = chainStore.current;
+  const isEvm =
+    Boolean(
+      current.features?.includes("eth-key-sign") &&
+        current.features?.includes("eth-address-gen") &&
+        current.evm
+    ) ?? false;
 
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
 
@@ -143,7 +149,7 @@ export const TxButtonView: FunctionComponent = observer(() => {
         onClick={(e) => {
           e.preventDefault();
           if (hasAssets) {
-            analyticsStore.logEvent("send_click", { pageName: "Home Tab" });
+            analyticsStore.logEvent("send_click", { pageName: "Home" });
             navigate("/send");
           }
         }}

@@ -43,6 +43,7 @@ const MigrationSelectionPage: FunctionComponent<{
     <div className={style["migrateContainer"]}>
       <BackButton onClick={props.onBack} />
       <ButtonV2
+        variant="dark"
         text=""
         onClick={() => props.setMode(MigrationMode.METAMASK_PRIVATE_KEY)}
       >
